@@ -152,7 +152,35 @@ class UpgradeManagerTest {
 	}
 
 	@Test
-	void sameVersionOfferShouldReportInstalledWithoutUpgrading() throws Exception {
+	void sameVersionOfferWithoutIdentityShouldReportInstalled() throws Exception {
+		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
+			launches.incrementAndGet()
+		);
+		final CountDownLatch idle = expectState(manager, UpgradeState.IDLE);
+
+		// An offer without a package identity hash: version equality is the only evidence
+		manager.onPackageOffer(
+			new PackageOffer(
+				UpgradeManager.PACKAGE_NAME,
+				CURRENT_VERSION,
+				"https://repo.example.com/metricshub.pkg",
+				new byte[] { 1 },
+				new byte[0],
+				Map.of()
+			)
+		);
+
+		assertTrue(idle.await(10, TimeUnit.SECONDS));
+		assertEquals(0, launches.get());
+		assertFalse(Files.exists(tempDir.resolve(UpgradeLock.LOCK_FILE_NAME)));
+	}
+
+	@Test
+	void sameVersionOfferMatchingInstalledIdentityShouldReportInstalled() throws Exception {
+		// The installed identity is known and matches the offered hash {7, 7}
+		new UpgradeTransactionStore(tempDir).writeInstalledPackage(
+			new UpgradeTransactionStore.InstalledPackageRecord(CURRENT_VERSION, "0707")
+		);
 		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
 			launches.incrementAndGet()
 		);
@@ -162,7 +190,6 @@ class UpgradeManagerTest {
 
 		assertTrue(idle.await(10, TimeUnit.SECONDS));
 		assertEquals(0, launches.get());
-		assertFalse(Files.exists(tempDir.resolve(UpgradeLock.LOCK_FILE_NAME)));
 	}
 
 	@Test
@@ -218,29 +245,32 @@ class UpgradeManagerTest {
 	}
 
 	@Test
-	void sameVersionOfferWithDifferentIdentityShouldTriggerTheUpgrade() throws Exception {
+	void sameVersionOfferWithUnknownIdentityShouldInstall() throws Exception {
 		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
 			launches.incrementAndGet()
 		);
 
-		// First same-version offer: the unknown installed identity adopts the offered hash
-		final CountDownLatch idle = expectState(manager, UpgradeState.IDLE);
-		manager.onPackageOffer(offer(CURRENT_VERSION));
-		assertTrue(idle.await(10, TimeUnit.SECONDS));
-		assertEquals(0, launches.get());
-
-		// Second same-version offer with a DIFFERENT identity hash: a hotfix must be installed
+		// The offer carries an identity hash but the installed identity is unknown (the normal
+		// state of an agent whose package was never installed through OpAMP): the package must be
+		// installed, not assumed present
 		final CountDownLatch restarting = expectState(manager, UpgradeState.RESTARTING);
-		manager.onPackageOffer(
-			new PackageOffer(
-				UpgradeManager.PACKAGE_NAME,
-				CURRENT_VERSION,
-				"https://repo.example.com/metricshub.pkg",
-				new byte[] { 1 },
-				new byte[] { 9, 9 },
-				Map.of()
-			)
+		manager.onPackageOffer(offer(CURRENT_VERSION));
+		assertTrue(restarting.await(10, TimeUnit.SECONDS));
+		assertEquals(1, launches.get());
+	}
+
+	@Test
+	void sameVersionOfferWithDifferentIdentityShouldTriggerTheUpgrade() throws Exception {
+		// The installed identity is known but differs from the offered hash {7, 7}: a hotfix
+		new UpgradeTransactionStore(tempDir).writeInstalledPackage(
+			new UpgradeTransactionStore.InstalledPackageRecord(CURRENT_VERSION, "0909")
 		);
+		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
+			launches.incrementAndGet()
+		);
+
+		final CountDownLatch restarting = expectState(manager, UpgradeState.RESTARTING);
+		manager.onPackageOffer(offer(CURRENT_VERSION));
 		assertTrue(restarting.await(10, TimeUnit.SECONDS));
 		assertEquals(1, launches.get());
 	}

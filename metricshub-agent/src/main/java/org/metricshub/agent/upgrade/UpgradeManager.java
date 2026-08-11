@@ -76,7 +76,7 @@ public class UpgradeManager {
 	private final RunnerLauncher runnerLauncher;
 	private final ExecutorService worker;
 
-	private volatile UpgradeStatusListener statusListener = event -> {};
+	private volatile UpgradeStatusListener statusListener = _ -> {};
 	private volatile String installedHashHex;
 
 	private final Object snapshotLock = new Object();
@@ -153,7 +153,7 @@ public class UpgradeManager {
 	 * @param listener the status listener
 	 */
 	public void setStatusListener(final UpgradeStatusListener listener) {
-		this.statusListener = listener != null ? listener : event -> {};
+		this.statusListener = listener != null ? listener : _ -> {};
 	}
 
 	/**
@@ -317,16 +317,8 @@ public class UpgradeManager {
 			return;
 		}
 
-		if (VersionHelper.isSameVersion(current, offer.version()) && !hasDifferentPackageIdentity(offer)) {
+		if (VersionHelper.isSameVersion(current, offer.version()) && hasSameInstalledIdentity(offer)) {
 			log.info("The offered version {} is already installed.", offer.version());
-			// The agent runs the offered version: adopt the offered identity hash so the fleet
-			// state converges even for packages that were not installed through OpAMP.
-			if (installedHashHex == null && offer.packageHash() != null && offer.packageHash().length > 0) {
-				installedHashHex = offer.packageHashHex();
-				transactionStore.writeInstalledPackage(
-					new UpgradeTransactionStore.InstalledPackageRecord(current, installedHashHex)
-				);
-			}
 			publish(
 				UpgradeEvent.of(
 					PACKAGE_NAME,
@@ -557,19 +549,21 @@ public class UpgradeManager {
 	}
 
 	/**
-	 * Indicates whether the offered package identity differs from the installed one. Per the
-	 * OpAMP specification, package identity is defined by the offered package hash: a differing
-	 * hash must be installed even when the version string is unchanged (same-version hotfix). An
-	 * offer without a hash, or an unknown installed identity, is treated as identical.
+	 * Indicates whether the offered package identity matches the installed one. Per the OpAMP
+	 * specification, package identity is defined by the offered package hash: a same-version
+	 * offer is only "already installed" when its identity is known to match. An unknown installed
+	 * identity (a package never installed through OpAMP) therefore triggers the installation —
+	 * the identity is learned once the runner confirms it. An offer without a hash carries no
+	 * identity, so version equality is the only available evidence.
 	 *
 	 * @param offer the package offer
-	 * @return {@code true} when the offered identity is known to differ from the installed one
+	 * @return {@code true} when the offered identity is not known to differ from the installed one
 	 */
-	private boolean hasDifferentPackageIdentity(final PackageOffer offer) {
-		if (offer.packageHash() == null || offer.packageHash().length == 0 || installedHashHex == null) {
-			return false;
+	private boolean hasSameInstalledIdentity(final PackageOffer offer) {
+		if (offer.packageHash() == null || offer.packageHash().length == 0) {
+			return true;
 		}
-		return !installedHashHex.equalsIgnoreCase(offer.packageHashHex());
+		return installedHashHex != null && installedHashHex.equalsIgnoreCase(offer.packageHashHex());
 	}
 
 	/**

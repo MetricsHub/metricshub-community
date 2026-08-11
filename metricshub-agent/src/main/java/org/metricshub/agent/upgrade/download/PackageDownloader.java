@@ -137,6 +137,18 @@ public class PackageDownloader {
 	}
 
 	/**
+	 * Returns the time remaining before the given absolute deadline, with a one-millisecond
+	 * floor so timeout-based APIs receive a positive value and expire immediately once the
+	 * deadline has passed.
+	 *
+	 * @param deadlineMs the absolute deadline, epoch milliseconds
+	 * @return the remaining duration in milliseconds, at least 1
+	 */
+	private static long remainingMillis(final long deadlineMs) {
+		return Math.max(1, deadlineMs - System.currentTimeMillis());
+	}
+
+	/**
 	 * Closes a stream best-effort, used by the download deadline watchdog.
 	 *
 	 * @param stream the stream to close
@@ -206,8 +218,10 @@ public class PackageDownloader {
 		try {
 			Files.createDirectories(targetFile.getParent());
 
+			// One absolute deadline bounds the whole attempt: redirect hops, headers and body
+			final long deadlineMs = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(config.getDownloadTimeout());
 			final HttpClient httpClient = createHttpClient(config);
-			final HttpResponse<InputStream> response = sendFollowingRedirects(httpClient, offer, config, uri);
+			final HttpResponse<InputStream> response = sendFollowingRedirects(httpClient, offer, config, uri, deadlineMs);
 			if (response.statusCode() != 200) {
 				throw new UpgradeException("The package repository answered with HTTP status " + response.statusCode());
 			}
@@ -224,13 +238,13 @@ public class PackageDownloader {
 			}
 
 			// The request timeout only bounds the exchange up to the response headers: a watchdog
-			// closes the body stream at the download deadline so a repository stalling mid-body
-			// cannot block the upgrade worker forever.
+			// closes the body stream at the remaining attempt deadline so a repository stalling
+			// mid-body cannot block the upgrade worker forever.
 			final InputStream body = response.body();
 			final ScheduledFuture<?> watchdog = BODY_WATCHDOG.schedule(
 				() -> closeQuietly(body),
-				config.getDownloadTimeout(),
-				TimeUnit.SECONDS
+				remainingMillis(deadlineMs),
+				TimeUnit.MILLISECONDS
 			);
 			final byte[] actualSha256;
 			try {
@@ -272,6 +286,7 @@ public class PackageDownloader {
 	 * @param offer      the package offer
 	 * @param config     the upgrade configuration
 	 * @param initialUri the validated initial download URI
+	 * @param deadlineMs the absolute deadline (epoch milliseconds) of the whole download attempt
 	 * @return the final, non-redirect response
 	 * @throws UpgradeException     when a redirect hop is not acceptable or too many hops occur
 	 * @throws IOException          on I/O failure
@@ -281,14 +296,15 @@ public class PackageDownloader {
 		final HttpClient httpClient,
 		final PackageOffer offer,
 		final UpgradeConfig config,
-		final URI initialUri
+		final URI initialUri,
+		final long deadlineMs
 	) throws UpgradeException, IOException, InterruptedException {
 		final String offeredHost = initialUri.getHost();
 		URI currentUri = initialUri;
 		for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
 			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(currentUri)
-				.timeout(Duration.ofSeconds(config.getDownloadTimeout()))
+				.timeout(Duration.ofMillis(remainingMillis(deadlineMs)))
 				.GET();
 			if (currentUri.getHost() != null && currentUri.getHost().equalsIgnoreCase(offeredHost)) {
 				offer.headers().forEach(requestBuilder::header);

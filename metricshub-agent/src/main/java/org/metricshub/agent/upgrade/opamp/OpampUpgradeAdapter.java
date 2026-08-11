@@ -79,7 +79,7 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 	 * upgrade transition occurring during the handoff could otherwise be overwritten by that
 	 * older snapshot.
 	 */
-	public void republishSnapshot() {
+	public synchronized void republishSnapshot() {
 		final PackageStatusSink sink = statusSink;
 		if (sink != null) {
 			sink.report(toPackageStatus(upgradeManager.getCurrentSnapshot()));
@@ -131,7 +131,7 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 	 *
 	 * @param event the upgrade event
 	 */
-	private void forwardEvent(final UpgradeEvent event) {
+	private synchronized void forwardEvent(final UpgradeEvent event) {
 		final PackageStatusSink sink = statusSink;
 		if (sink == null) {
 			return;
