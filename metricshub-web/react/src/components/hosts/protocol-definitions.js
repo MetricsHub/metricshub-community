@@ -577,8 +577,7 @@ export const PROTOCOL_FIELDS = {
 			label: "Trust all certificates",
 			type: "boolean",
 			advanced: true,
-			helperText:
-				"Trusts all server certificates and skips hostname verification over HTTPS (default: true)",
+			helperText: "Trusts all server certificates and skips hostname verification over HTTPS",
 			showIf: (values) =>
 				String(values.protocol ?? "")
 					.trim()
