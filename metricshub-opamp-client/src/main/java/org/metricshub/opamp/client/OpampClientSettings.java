@@ -113,7 +113,7 @@ public class OpampClientSettings {
 	 * @param instanceUidFile the file persisting the agent instance UID
 	 * @param reportHealth    whether the agent health is reported
 	 */
-	OpampClientSettings(
+	public OpampClientSettings(
 		@NonNull final URI endpoint,
 		final Map<String, String> headers,
 		final String certificateFile,
