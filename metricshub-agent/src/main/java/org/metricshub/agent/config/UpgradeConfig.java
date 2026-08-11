@@ -120,4 +120,12 @@ public class UpgradeConfig {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private String trustedCertificateFile;
+
+	/**
+	 * Substring the Windows MSI Authenticode signer subject must contain for the package to be
+	 * installed.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private String msiSignatureSubjectContains = "MetricsHub";
 }

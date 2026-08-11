@@ -42,8 +42,8 @@ import org.metricshub.agent.upgrade.api.UpgradeStatusListener;
 import org.metricshub.agent.upgrade.download.PackageDownloader;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.agent.upgrade.runner.RunnerLauncher;
+import org.metricshub.agent.upgrade.runner.RunnerLauncherFactory;
 import org.metricshub.agent.upgrade.runner.RunnerMarkers;
-import org.metricshub.agent.upgrade.runner.UnsupportedRunnerLauncher;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransactionStore;
 import org.metricshub.agent.upgrade.validate.PackageValidator;
@@ -80,7 +80,8 @@ public class UpgradeManager {
 	private final PackageDownloader downloader;
 	private final PackageValidator validator;
 	private final DeploymentDetector deploymentDetector;
-	private final RunnerLauncher runnerLauncher;
+	private final RunnerLauncher runnerLauncherOverride;
+	private final RunnerLauncherFactory runnerLauncherFactory;
 	private final ExecutorService worker;
 
 	private volatile UpgradeStatusListener statusListener = _ -> {};
@@ -102,12 +103,13 @@ public class UpgradeManager {
 			new PackageDownloader(),
 			new PackageValidator(),
 			new DeploymentDetector(),
-			new UnsupportedRunnerLauncher()
+			null,
+			new RunnerLauncherFactory()
 		);
 	}
 
 	/**
-	 * Creates the manager with caller-provided collaborators (used by tests).
+	 * Creates the manager with a fixed runner launcher (used by tests).
 	 *
 	 * @param currentVersionSupplier supplies the version the agent currently runs
 	 * @param configSupplier         supplies the upgrade configuration
@@ -115,7 +117,7 @@ public class UpgradeManager {
 	 * @param downloader             the package downloader
 	 * @param validator              the package validator
 	 * @param deploymentDetector     the deployment detector
-	 * @param runnerLauncher         the detached runner launcher
+	 * @param runnerLauncher         the detached runner launcher used for every deployment
 	 */
 	UpgradeManager(
 		final Supplier<String> currentVersionSupplier,
@@ -126,6 +128,42 @@ public class UpgradeManager {
 		final DeploymentDetector deploymentDetector,
 		final RunnerLauncher runnerLauncher
 	) {
+		this(
+			currentVersionSupplier,
+			configSupplier,
+			stagingDirectory,
+			downloader,
+			validator,
+			deploymentDetector,
+			runnerLauncher,
+			null
+		);
+	}
+
+	/**
+	 * Canonical constructor. Exactly one of {@code runnerLauncherOverride} and
+	 * {@code runnerLauncherFactory} is used: the override, when set, is used for every deployment
+	 * (tests); otherwise the factory selects the launcher matching the detected deployment kind.
+	 *
+	 * @param currentVersionSupplier  supplies the version the agent currently runs
+	 * @param configSupplier          supplies the upgrade configuration
+	 * @param stagingDirectory        the upgrade staging directory
+	 * @param downloader              the package downloader
+	 * @param validator               the package validator
+	 * @param deploymentDetector      the deployment detector
+	 * @param runnerLauncherOverride  a fixed launcher, or {@code null} to use the factory
+	 * @param runnerLauncherFactory   the launcher factory, or {@code null} when an override is set
+	 */
+	UpgradeManager(
+		final Supplier<String> currentVersionSupplier,
+		final Supplier<UpgradeConfig> configSupplier,
+		final Path stagingDirectory,
+		final PackageDownloader downloader,
+		final PackageValidator validator,
+		final DeploymentDetector deploymentDetector,
+		final RunnerLauncher runnerLauncherOverride,
+		final RunnerLauncherFactory runnerLauncherFactory
+	) {
 		this.currentVersionSupplier = currentVersionSupplier;
 		this.configSupplier = configSupplier;
 		this.stagingDirectory = stagingDirectory;
@@ -134,13 +172,28 @@ public class UpgradeManager {
 		this.downloader = downloader;
 		this.validator = validator;
 		this.deploymentDetector = deploymentDetector;
-		this.runnerLauncher = runnerLauncher;
+		this.runnerLauncherOverride = runnerLauncherOverride;
+		this.runnerLauncherFactory = runnerLauncherFactory;
 		this.worker = Executors.newSingleThreadExecutor(runnable -> {
 			final Thread thread = new Thread(runnable, "metricshub-upgrade");
 			thread.setDaemon(true);
 			return thread;
 		});
 		loadInstalledPackageIdentity();
+	}
+
+	/**
+	 * Resolves the runner launcher for the current offer: the fixed override when set, otherwise
+	 * the factory's launcher for the detected deployment kind.
+	 *
+	 * @param config the current upgrade configuration
+	 * @return the runner launcher to use
+	 */
+	private RunnerLauncher resolveRunnerLauncher(final UpgradeConfig config) {
+		if (runnerLauncherOverride != null) {
+			return runnerLauncherOverride;
+		}
+		return runnerLauncherFactory.forDeployment(deploymentDetector.detect(), config.getMsiSignatureSubjectContains());
 	}
 
 	/**
@@ -473,7 +526,7 @@ public class UpgradeManager {
 
 			transaction.setInstallStartedAt(System.currentTimeMillis());
 			persistAndPublish(transaction, UpgradeState.INSTALLING, null);
-			runnerLauncher.launch(transaction, stagedPackage, stagingDirectory);
+			resolveRunnerLauncher(config).launch(transaction, stagedPackage, stagingDirectory);
 
 			persistAndPublish(transaction, UpgradeState.RESTARTING, null);
 			log.info(
