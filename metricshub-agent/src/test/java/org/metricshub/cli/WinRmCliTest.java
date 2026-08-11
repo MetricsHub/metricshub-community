@@ -2,6 +2,7 @@ package org.metricshub.cli;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,6 +63,20 @@ public class WinRmCliTest {
 		assertTrue(parameterException.getMessage().contains("Invalid authentication schema"));
 		winRmCli.setAuthentications(List.of("NTLM", "KERBEROS"));
 		assertDoesNotThrow(() -> winRmCli.validate());
+	}
+
+	@Test
+	void testTrustAllCertificatesOption() {
+		initCli();
+		// Not specified: left undefined so that the extension's own default (true) applies
+		commandLine.parseArgs("host", "--query", WINRM_TEST_QUERY);
+		assertNull(winRmCli.getTrustAllCertificates());
+
+		commandLine.parseArgs("host", "--query", WINRM_TEST_QUERY, "--trust-all-certificates", "false");
+		assertEquals(Boolean.FALSE, winRmCli.getTrustAllCertificates());
+
+		commandLine.parseArgs("host", "--query", WINRM_TEST_QUERY, "--trust-all-certificates", "true");
+		assertEquals(Boolean.TRUE, winRmCli.getTrustAllCertificates());
 	}
 
 	@Test

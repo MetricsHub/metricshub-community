@@ -1,7 +1,9 @@
 package org.metricshub.cli.service.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -63,6 +65,13 @@ class WinRmConfigCliTest {
 				.build();
 			// Check the resulting WinRm configuration
 			assertEquals(expected, winRmConfiguration);
+
+			// Certificates are trusted unless the CLI explicitly opts out
+			assertTrue(winRmConfiguration.isTrustAllCertificates());
+			winRmConfigCli.setTrustAllCertificates(false);
+			winRmConfiguration = (WinRmConfiguration) winRmConfigCli.toConfiguration(null, null);
+			assertFalse(winRmConfiguration.isTrustAllCertificates());
+			winRmConfigCli.setTrustAllCertificates(null);
 
 			// Check null password and null username
 			winRmConfigCli.setPassword(null);
