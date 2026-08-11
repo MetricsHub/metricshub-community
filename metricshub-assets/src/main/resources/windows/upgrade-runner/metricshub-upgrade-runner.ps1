@@ -9,6 +9,9 @@
 # The agent is the only writer of the upgrade transaction; this runner writes only runner.result
 # and runner.log in the staging directory.
 #
+# The service name is supplied by the agent (-Service), so any edition works: "MetricsHub
+# Community", "MetricsHub Enterprise", ...
+#
 # Exit codes: 0 success, 2 usage, 10 hash mismatch, 12 install failed, 13 service did not come
 #             back up, 14 signature invalid.
 

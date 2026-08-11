@@ -193,7 +193,7 @@ public class UpgradeManager {
 		if (runnerLauncherOverride != null) {
 			return runnerLauncherOverride;
 		}
-		return runnerLauncherFactory.forDeployment(deploymentDetector.detect(), config.getMsiSignatureSubjectContains());
+		return runnerLauncherFactory.forDeployment(deploymentDetector.detect(), config);
 	}
 
 	/**

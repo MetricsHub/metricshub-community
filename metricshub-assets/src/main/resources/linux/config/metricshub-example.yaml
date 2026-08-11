@@ -26,6 +26,7 @@ otel:
 # upgrade:
 #   enabled: true
 #   allowDowngrade: false
+#   # serviceName: metricshub-community-service.service # Discovered automatically; pin it if needed
 #   hostAllowlist: [ repo.metricshub.com ]
 #   # trustedCertificateFile: /opt/metricshub/security/repo-ca.pem # Trusted certificate (PEM) for the package repository
 

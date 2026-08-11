@@ -29,7 +29,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.upgrade.UpgradeException;
+import org.metricshub.agent.upgrade.VersionHelper;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 
 /**
@@ -39,11 +41,6 @@ import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
  */
 @Slf4j
 public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
-
-	/**
-	 * Default systemd service unit of the MetricsHub agent.
-	 */
-	public static final String DEFAULT_SERVICE_UNIT = "metricshub-community-service.service";
 
 	/**
 	 * Name of the shipped runner script and its staged copy.
@@ -60,12 +57,14 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 	 * Creates the launcher with production wiring.
 	 *
 	 * @param runnerScriptDirectorySupplier supplies the directory holding the shipped runner script
+	 * @param serviceUnit                   the systemd unit of the running edition, resolved by
+	 *                                      {@link ServiceNameResolver}
 	 */
-	public LinuxSystemdRunnerLauncher(final Supplier<Path> runnerScriptDirectorySupplier) {
+	public LinuxSystemdRunnerLauncher(final Supplier<Path> runnerScriptDirectorySupplier, final String serviceUnit) {
 		this(
 			runnerScriptDirectorySupplier,
 			new ProcessCommandExecutor(),
-			DEFAULT_SERVICE_UNIT,
+			serviceUnit,
 			() -> Files.exists(Path.of("/run/systemd/system")),
 			() -> "0".equals(System.getProperty("metricshub.test.uid", String.valueOf(nativeUid())))
 		);
@@ -140,6 +139,10 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 		command.add("--unit=metricshub-upgrade-" + transaction.getUpgradeId());
 		command.add("--collect");
 		command.add("--property=Type=oneshot");
+		// Without an explicit timeout the transient unit inherits the manager's
+		// DefaultTimeoutStartSec (commonly 90s) and systemd would kill the runner mid-installation,
+		// after it already stopped the agent
+		command.add("--property=TimeoutStartSec=" + installTimeoutSeconds(transaction));
 		command.add("/bin/sh");
 		command.add(stagedScript.toAbsolutePath().toString());
 		command.add("--package");
@@ -152,7 +155,37 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 		command.add(serviceUnit);
 		command.add("--staging");
 		command.add(stagingDirectory.toAbsolutePath().toString());
+		command.add("--mode");
+		command.add(installMode(transaction));
 		return command;
+	}
+
+	/**
+	 * Returns the installation timeout to apply to the transient unit, falling back to the
+	 * configured default when the transaction carries none.
+	 *
+	 * @param transaction the upgrade transaction
+	 * @return the timeout in seconds
+	 */
+	private static long installTimeoutSeconds(final UpgradeTransaction transaction) {
+		final long timeout = transaction.getInstallTimeoutSeconds();
+		return timeout > 0 ? timeout : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT;
+	}
+
+	/**
+	 * Selects the package-manager operation from the transaction versions: a same-version offer
+	 * must be reinstalled (the package manager would otherwise consider the installed version
+	 * current and change nothing) and an older offer must be downgraded explicitly.
+	 *
+	 * @param transaction the upgrade transaction
+	 * @return {@code install}, {@code reinstall} or {@code downgrade}
+	 */
+	static String installMode(final UpgradeTransaction transaction) {
+		final int comparison = VersionHelper.compare(transaction.getToVersion(), transaction.getFromVersion());
+		if (comparison == 0) {
+			return "reinstall";
+		}
+		return comparison < 0 ? "downgrade" : "install";
 	}
 
 	/**

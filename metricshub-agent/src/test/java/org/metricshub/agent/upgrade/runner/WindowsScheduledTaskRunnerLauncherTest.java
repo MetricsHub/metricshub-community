@@ -62,18 +62,46 @@ class WindowsScheduledTaskRunnerLauncherTest {
 		assertTrue(create.contains("SYSTEM"));
 		assertTrue(create.contains("HIGHEST"));
 		assertTrue(create.contains("ONCE"));
-		// The PowerShell invocation is a single argument carrying every runner parameter
-		final String powershell = create.get(create.size() - 1);
-		assertTrue(powershell.contains("-ExecutionPolicy Bypass"));
-		assertTrue(powershell.contains("-Sha256 cafebabe"));
-		assertTrue(powershell.contains("-Service \"MetricsHub Community\""));
-		assertTrue(powershell.contains("-SignatureSubjectContains \"MetricsHub\""));
-		assertTrue(powershell.contains(staging.resolve(WindowsScheduledTaskRunnerLauncher.SCRIPT_NAME).toString()));
+
+		// schtasks limits the /TR value to 262 characters, so it points at the generated wrapper
+		// instead of carrying the whole PowerShell invocation
+		final String taskRun = create.get(create.size() - 1);
+		assertTrue(taskRun.length() < 262, "The /TR value must stay well under the schtasks limit");
+		assertTrue(taskRun.contains(WindowsScheduledTaskRunnerLauncher.LAUNCH_WRAPPER_NAME));
+
+		// The wrapper carries every runner parameter
+		final Path wrapper = staging.resolve(WindowsScheduledTaskRunnerLauncher.LAUNCH_WRAPPER_NAME);
+		assertTrue(Files.isRegularFile(wrapper));
+		final String wrapperContent = Files.readString(wrapper);
+		assertTrue(wrapperContent.contains("-ExecutionPolicy Bypass"));
+		assertTrue(wrapperContent.contains("-Sha256 cafebabe"));
+		assertTrue(wrapperContent.contains("-Service \"MetricsHub Community\""));
+		assertTrue(wrapperContent.contains("-SignatureSubjectContains \"MetricsHub\""));
+		assertTrue(wrapperContent.contains(staging.resolve(WindowsScheduledTaskRunnerLauncher.SCRIPT_NAME).toString()));
 
 		assertEquals(List.of("schtasks", "/Run", "/TN", WindowsScheduledTaskRunnerLauncher.TASK_NAME), commands.get(1));
 
 		// The script was staged out of the install tree, which msiexec is about to replace
 		assertTrue(Files.isRegularFile(staging.resolve(WindowsScheduledTaskRunnerLauncher.SCRIPT_NAME)));
+	}
+
+	@Test
+	void enterpriseServiceNameShouldBeHonored() throws Exception {
+		final Path shippedDir = shippedScriptDir();
+		final Path staging = Files.createDirectories(tempDir.resolve("staging-ent"));
+		final WindowsScheduledTaskRunnerLauncher launcher = new WindowsScheduledTaskRunnerLauncher(
+			() -> shippedDir,
+			command -> 0,
+			"MetricsHub Enterprise",
+			"MetricsHub"
+		);
+
+		launcher.launch(transaction(), staging.resolve("p.msi"), staging);
+
+		final String wrapperContent = Files.readString(
+			staging.resolve(WindowsScheduledTaskRunnerLauncher.LAUNCH_WRAPPER_NAME)
+		);
+		assertTrue(wrapperContent.contains("-Service \"MetricsHub Enterprise\""));
 	}
 
 	@Test

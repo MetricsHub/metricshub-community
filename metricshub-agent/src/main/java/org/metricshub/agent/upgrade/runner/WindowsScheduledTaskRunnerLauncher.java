@@ -21,6 +21,9 @@ package org.metricshub.agent.upgrade.runner;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,11 +42,6 @@ import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 
 	/**
-	 * Default Windows service name of the MetricsHub agent.
-	 */
-	public static final String DEFAULT_SERVICE_NAME = "MetricsHub Community";
-
-	/**
 	 * Name of the one-shot scheduled task.
 	 */
 	static final String TASK_NAME = "MetricsHub Upgrade";
@@ -52,6 +50,13 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 	 * Name of the shipped runner script and its staged copy.
 	 */
 	static final String SCRIPT_NAME = "metricshub-upgrade-runner.ps1";
+
+	/**
+	 * Name of the generated wrapper the scheduled task actually runs. {@code schtasks /Create}
+	 * limits its {@code /TR} value to 262 characters, which the full PowerShell invocation exceeds,
+	 * so the parameters live in this wrapper instead.
+	 */
+	static final String LAUNCH_WRAPPER_NAME = "metricshub-upgrade-launch.cmd";
 
 	private final Supplier<Path> runnerScriptDirectorySupplier;
 	private final CommandExecutor commandExecutor;
@@ -62,13 +67,16 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 	 * Creates the launcher with production wiring.
 	 *
 	 * @param runnerScriptDirectorySupplier supplies the directory holding the shipped runner script
+	 * @param serviceName                   the Windows service name of the running edition, resolved
+	 *                                      by {@link ServiceNameResolver}
 	 * @param signatureSubjectContains      the required substring of the MSI Authenticode signer
 	 */
 	public WindowsScheduledTaskRunnerLauncher(
 		final Supplier<Path> runnerScriptDirectorySupplier,
+		final String serviceName,
 		final String signatureSubjectContains
 	) {
-		this(runnerScriptDirectorySupplier, new ProcessCommandExecutor(), DEFAULT_SERVICE_NAME, signatureSubjectContains);
+		this(runnerScriptDirectorySupplier, new ProcessCommandExecutor(), serviceName, signatureSubjectContains);
 	}
 
 	/**
@@ -99,7 +107,8 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 			stagingDirectory.resolve(SCRIPT_NAME)
 		);
 
-		final List<String> createCommand = buildCreateCommand(transaction, stagedPackage, stagingDirectory, stagedScript);
+		final Path wrapper = writeLaunchWrapper(transaction, stagedPackage, stagingDirectory, stagedScript);
+		final List<String> createCommand = buildCreateCommand(wrapper);
 		log.info("Registering the detached upgrade scheduled task.");
 		final int createExit = commandExecutor.run(createCommand);
 		if (createExit != 0) {
@@ -113,23 +122,24 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 	}
 
 	/**
-	 * Builds the {@code schtasks /Create} command registering the one-shot SYSTEM task that runs
-	 * the PowerShell runner.
+	 * Writes the wrapper script the scheduled task runs. Every runner parameter lives here rather
+	 * than in the {@code /TR} value, which {@code schtasks} limits to 262 characters — the full
+	 * PowerShell invocation (script, package and staging paths plus a 64-character hash) exceeds
+	 * that on ordinary installations.
 	 *
 	 * @param transaction      the upgrade transaction (supplies the expected hash)
 	 * @param stagedPackage    the staged MSI file
 	 * @param stagingDirectory the staging directory
 	 * @param stagedScript     the staged runner script
-	 * @return the command and its arguments
+	 * @return the wrapper path
+	 * @throws IOException when the wrapper cannot be written
 	 */
-	List<String> buildCreateCommand(
+	Path writeLaunchWrapper(
 		final UpgradeTransaction transaction,
 		final Path stagedPackage,
 		final Path stagingDirectory,
 		final Path stagedScript
-	) {
-		// The whole PowerShell invocation is one /TR argument; ProcessBuilder passes it as a single
-		// argv element, so no manual quoting of the outer string is needed.
+	) throws IOException {
 		final String powershell =
 			"powershell -NoProfile -ExecutionPolicy Bypass -File \"" +
 			stagedScript.toAbsolutePath() +
@@ -145,6 +155,20 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 			signatureSubjectContains +
 			"\"";
 
+		final Path wrapper = stagingDirectory.resolve(LAUNCH_WRAPPER_NAME);
+		Files.createDirectories(stagingDirectory);
+		Files.writeString(wrapper, "@echo off\r\n" + powershell + "\r\n", StandardCharsets.US_ASCII);
+		return wrapper;
+	}
+
+	/**
+	 * Builds the {@code schtasks /Create} command registering the one-shot SYSTEM task that runs
+	 * the wrapper.
+	 *
+	 * @param wrapper the generated wrapper script
+	 * @return the command and its arguments
+	 */
+	List<String> buildCreateCommand(final Path wrapper) {
 		final List<String> command = new ArrayList<>();
 		command.add("schtasks");
 		command.add("/Create");
@@ -160,7 +184,8 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 		command.add("/ST");
 		command.add("00:00");
 		command.add("/TR");
-		command.add(powershell);
+		// Quoted so a path containing spaces stays a single token for schtasks
+		command.add("\"" + wrapper.toAbsolutePath() + "\"");
 		return command;
 	}
 }

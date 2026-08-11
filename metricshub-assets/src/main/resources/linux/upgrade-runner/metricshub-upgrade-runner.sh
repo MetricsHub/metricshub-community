@@ -13,8 +13,13 @@
 #   --package <file>    Absolute path of the staged package to install
 #   --sha256 <hex>      Expected SHA-256 of the package, lowercase hexadecimal
 #   --type <deb|rpm>    Package type
-#   --service <unit>    systemd service unit of the MetricsHub agent
+#   --service <unit>    systemd service unit of the MetricsHub agent, supplied by the agent so any
+#                       edition works (metricshub-community-service.service,
+#                       metricshub-enterprise-service.service, ...)
 #   --staging <dir>     Staging directory receiving runner.result and runner.log
+#   --mode <mode>       install (newer version), reinstall (same version hotfix) or downgrade
+#                       (older version); selects the package-manager operation so the package is
+#                       really replaced instead of being reported as already current
 #
 # Exit codes: 0 success, 2 usage, 10 hash mismatch, 11 stop failed, 12 install failed,
 #             13 service did not come back up.
@@ -26,6 +31,7 @@ SHA256=""
 PKG_TYPE=""
 SERVICE=""
 STAGING=""
+MODE="install"
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -34,6 +40,7 @@ while [ $# -gt 0 ]; do
 		--type) PKG_TYPE="$2"; shift 2 ;;
 		--service) SERVICE="$2"; shift 2 ;;
 		--staging) STAGING="$2"; shift 2 ;;
+		--mode) MODE="$2"; shift 2 ;;
 		*) echo "Unknown argument: $1" >&2; exit 2 ;;
 	esac
 done
@@ -58,7 +65,7 @@ finish() {
 	exit "$2"
 }
 
-log "Starting upgrade: package=$PACKAGE type=$PKG_TYPE service=$SERVICE"
+log "Starting upgrade: package=$PACKAGE type=$PKG_TYPE mode=$MODE service=$SERVICE"
 
 # 1. Re-verify the package hash right before installing.
 ACTUAL_SHA256=$(sha256sum "$PACKAGE" 2>>"$LOG" | awk '{print $1}')
@@ -75,24 +82,49 @@ fi
 
 # 3. Install the package, preferring the package manager (dependency resolution), falling back to
 #    the low-level tool. On failure, bring the previous version's service back up.
+# A same-version offer needs an explicit reinstall (the package manager otherwise considers the
+# installed version current and exits successfully without replacing anything), and an older offer
+# needs an explicit downgrade.
 INSTALL_RC=1
 if [ "$PKG_TYPE" = "deb" ]; then
 	if command -v apt-get >/dev/null 2>&1; then
-		DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades "$PACKAGE" >>"$LOG" 2>&1
+		case "$MODE" in
+			reinstall)
+				DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "$PACKAGE" >>"$LOG" 2>&1
+				;;
+			downgrade)
+				DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades "$PACKAGE" >>"$LOG" 2>&1
+				;;
+			*)
+				DEBIAN_FRONTEND=noninteractive apt-get install -y "$PACKAGE" >>"$LOG" 2>&1
+				;;
+		esac
 		INSTALL_RC=$?
 	else
+		# dpkg -i unpacks the given package whatever its version, so it covers every mode
 		dpkg -i "$PACKAGE" >>"$LOG" 2>&1
 		INSTALL_RC=$?
 	fi
 elif [ "$PKG_TYPE" = "rpm" ]; then
 	if command -v dnf >/dev/null 2>&1; then
-		dnf -y install "$PACKAGE" >>"$LOG" 2>&1
+		case "$MODE" in
+			reinstall) dnf -y reinstall "$PACKAGE" >>"$LOG" 2>&1 ;;
+			downgrade) dnf -y downgrade "$PACKAGE" >>"$LOG" 2>&1 ;;
+			*) dnf -y install "$PACKAGE" >>"$LOG" 2>&1 ;;
+		esac
 		INSTALL_RC=$?
 	elif command -v yum >/dev/null 2>&1; then
-		yum -y install "$PACKAGE" >>"$LOG" 2>&1
+		case "$MODE" in
+			reinstall) yum -y reinstall "$PACKAGE" >>"$LOG" 2>&1 ;;
+			downgrade) yum -y downgrade "$PACKAGE" >>"$LOG" 2>&1 ;;
+			*) yum -y install "$PACKAGE" >>"$LOG" 2>&1 ;;
+		esac
 		INSTALL_RC=$?
 	else
-		rpm -Uvh --replacepkgs "$PACKAGE" >>"$LOG" 2>&1
+		case "$MODE" in
+			downgrade) rpm -Uvh --replacepkgs --oldpackage "$PACKAGE" >>"$LOG" 2>&1 ;;
+			*) rpm -Uvh --replacepkgs "$PACKAGE" >>"$LOG" 2>&1 ;;
+		esac
 		INSTALL_RC=$?
 	fi
 else

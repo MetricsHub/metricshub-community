@@ -20,13 +20,19 @@ class LinuxSystemdRunnerLauncherTest {
 	Path tempDir;
 
 	private UpgradeTransaction transaction(final String kind) {
+		return transaction(kind, "3.9.05", "3.10.00");
+	}
+
+	private UpgradeTransaction transaction(final String kind, final String fromVersion, final String toVersion) {
 		return UpgradeTransaction.builder()
 			.upgradeId("abc-123")
 			.packageName("metricshub")
-			.toVersion("3.10.00")
+			.fromVersion(fromVersion)
+			.toVersion(toVersion)
 			.sha256("deadbeef")
 			.deploymentKind(kind)
 			.state(UpgradeState.INSTALLING)
+			.installTimeoutSeconds(1800)
 			.build();
 	}
 
@@ -64,6 +70,10 @@ class LinuxSystemdRunnerLauncherTest {
 		assertTrue(command.contains("deb"));
 		assertTrue(command.contains("metricshub-community-service.service"));
 		assertTrue(command.contains("deadbeef"));
+		// The transient unit must not inherit the manager's DefaultTimeoutStartSec (commonly 90s)
+		assertTrue(command.contains("--property=TimeoutStartSec=1800"));
+		// A newer version is a plain install
+		assertEquals("install", command.get(command.indexOf("--mode") + 1));
 		// The script was staged out of the install tree and made executable
 		final Path stagedScript = staging.resolve(LinuxSystemdRunnerLauncher.SCRIPT_NAME);
 		assertTrue(Files.isRegularFile(stagedScript));
@@ -117,6 +127,35 @@ class LinuxSystemdRunnerLauncherTest {
 		);
 
 		assertThrows(UpgradeException.class, () -> launcher.launch(transaction("rpm"), staging.resolve("p.rpm"), staging));
+	}
+
+	@Test
+	void installModeShouldFollowTheVersionComparison() {
+		assertEquals("install", LinuxSystemdRunnerLauncher.installMode(transaction("deb", "3.9.05", "3.10.00")));
+		// A same-version hotfix must be reinstalled, otherwise the package manager changes nothing
+		assertEquals("reinstall", LinuxSystemdRunnerLauncher.installMode(transaction("deb", "3.10.00", "3.10.00")));
+		assertEquals("downgrade", LinuxSystemdRunnerLauncher.installMode(transaction("deb", "3.10.00", "3.9.05")));
+	}
+
+	@Test
+	void enterpriseUnitShouldBeHonored() throws Exception {
+		final Path shippedDir = shippedScriptDir();
+		final Path staging = Files.createDirectories(tempDir.resolve("staging-ent"));
+		final AtomicReference<List<String>> captured = new AtomicReference<>();
+		final LinuxSystemdRunnerLauncher launcher = new LinuxSystemdRunnerLauncher(
+			() -> shippedDir,
+			command -> {
+				captured.set(command);
+				return 0;
+			},
+			"metricshub-enterprise-service.service",
+			() -> true,
+			() -> true
+		);
+
+		launcher.launch(transaction("rpm"), staging.resolve("p.rpm"), staging);
+
+		assertTrue(captured.get().contains("metricshub-enterprise-service.service"));
 	}
 
 	@Test
