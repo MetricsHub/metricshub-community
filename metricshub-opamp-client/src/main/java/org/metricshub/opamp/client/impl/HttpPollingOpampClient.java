@@ -68,6 +68,11 @@ public class HttpPollingOpampClient implements OpampClient {
 	private static final String POLLING_THREAD_NAME = "metricshub-opamp-client";
 	private static final Duration DISCONNECT_TIMEOUT = Duration.ofSeconds(5);
 
+	/**
+	 * Required length in bytes of an OpAMP agent instance UID.
+	 */
+	private static final int INSTANCE_UID_LENGTH = 16;
+
 	private final OpampClientSettings settings;
 	private final OpampClientCallbacks callbacks;
 	private final OpampTransport transport;
@@ -322,7 +327,7 @@ public class HttpPollingOpampClient implements OpampClient {
 		retrySchedule.reset();
 		if (!connected) {
 			connected = true;
-			callbacks.onConnect();
+			safely("onConnect", callbacks::onConnect);
 		}
 
 		if (response.hasAgentIdentification()) {
@@ -341,7 +346,7 @@ public class HttpPollingOpampClient implements OpampClient {
 			dispatchPackagesAvailable(response);
 		}
 
-		callbacks.onMessage(response);
+		safely("onMessage", () -> callbacks.onMessage(response));
 		return nextDelay;
 	}
 
@@ -354,7 +359,7 @@ public class HttpPollingOpampClient implements OpampClient {
 	 */
 	private Duration processErrorResponse(final ServerErrorResponse errorResponse) {
 		log.warn("The OpAMP server reported an error: {} - {}", errorResponse.getType(), errorResponse.getErrorMessage());
-		callbacks.onErrorResponse(errorResponse);
+		safely("onErrorResponse", () -> callbacks.onErrorResponse(errorResponse));
 		if (errorResponse.getType() == ServerErrorResponseType.ServerErrorResponseType_Unavailable) {
 			final Duration floor = errorResponse.hasRetryInfo()
 				? Duration.ofNanos(errorResponse.getRetryInfo().getRetryAfterNanoseconds())
@@ -365,12 +370,22 @@ public class HttpPollingOpampClient implements OpampClient {
 	}
 
 	/**
-	 * Adopts the new instance UID assigned by the server and persists it.
+	 * Adopts the new instance UID assigned by the server and persists it. A malformed UID (the
+	 * OpAMP specification requires exactly 16 bytes) is rejected without touching the in-memory or
+	 * the persisted identity, so a bad server response cannot permanently poison the client.
 	 *
-	 * @param newInstanceUid the new instance UID; empty values are ignored
+	 * @param newInstanceUid the new instance UID; empty and malformed values are ignored
 	 */
 	private void adoptNewInstanceUid(final ByteString newInstanceUid) {
 		if (newInstanceUid.isEmpty()) {
+			return;
+		}
+		if (newInstanceUid.size() != INSTANCE_UID_LENGTH) {
+			log.warn(
+				"The OpAMP server assigned a malformed instance UID of {} bytes ({} expected); it is ignored.",
+				newInstanceUid.size(),
+				INSTANCE_UID_LENGTH
+			);
 			return;
 		}
 		// The new identity must be used for all further communication even when persisting it
@@ -433,8 +448,25 @@ public class HttpPollingOpampClient implements OpampClient {
 		connected = false;
 		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
 		log.warn("OpAMP exchange failed ({}); next attempt in {} seconds.", error.getMessage(), delay.toSeconds());
-		callbacks.onConnectFailed(error, delay);
+		safely("onConnectFailed", () -> callbacks.onConnectFailed(error, delay));
 		return delay;
+	}
+
+	/**
+	 * Invokes a client callback, containing any failure it may throw: a consumer callback must
+	 * never be able to break the polling chain (a failure escaping the poll loop's catch block
+	 * would skip the rescheduling and stop the client permanently).
+	 *
+	 * @param name     the callback name, used for logging
+	 * @param callback the callback invocation
+	 */
+	private static void safely(final String name, final Runnable callback) {
+		try {
+			callback.run();
+		} catch (Exception e) {
+			log.error("The OpAMP client callback {} failed: {}", name, e.getMessage());
+			log.debug("The OpAMP client callback {} failed:", name, e);
+		}
 	}
 
 	/**

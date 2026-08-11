@@ -283,6 +283,68 @@ class HttpPollingOpampClientTest {
 	}
 
 	@Test
+	void malformedNewInstanceUidShouldBeIgnored() throws Exception {
+		newClient(null, null);
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setAgentIdentification(
+						AgentIdentification.newBuilder().setNewInstanceUid(ByteString.copyFrom(new byte[] { 1, 2, 3 })).build()
+					)
+					.build()
+			)
+		);
+		client.start();
+
+		final AgentToServer first = transport.awaitRequest(AWAIT);
+		final AgentToServer second = transport.awaitRequest(AWAIT);
+
+		// A UID that is not 16 bytes long is rejected: the client keeps its own identity and the
+		// persisted identity is untouched
+		assertEquals(first.getInstanceUid(), second.getInstanceUid());
+		assertEquals(16, second.getInstanceUid().size());
+		assertEquals(
+			UuidV7.toCanonicalString(first.getInstanceUid().toByteArray()),
+			Files.readString(tempDir.resolve("instance-uid")).trim()
+		);
+	}
+
+	@Test
+	void failingCallbacksShouldNotBreakThePollingChain() throws Exception {
+		final CountDownLatch pollsAfterFailure = new CountDownLatch(3);
+		final OpampClientCallbacks throwingCallbacks = new OpampClientCallbacks() {
+			@Override
+			public void onConnect() {
+				throw new IllegalStateException("Simulated onConnect failure");
+			}
+
+			@Override
+			public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
+				throw new IllegalStateException("Simulated onConnectFailed failure");
+			}
+
+			@Override
+			public void onMessage(final ServerToAgent message) {
+				throw new IllegalStateException("Simulated onMessage failure");
+			}
+		};
+
+		newClient(throwingCallbacks, null);
+		// First exchange fails at the transport level (onConnectFailed throws), the rest succeed
+		// (onConnect and onMessage throw)
+		transport.enqueue(RecordingTransport.ScriptedReply.networkFailure());
+		client.start();
+
+		// The polling chain must survive every callback failure
+		for (int i = 0; i < 3; i++) {
+			transport.awaitRequest(AWAIT);
+			pollsAfterFailure.countDown();
+		}
+		assertEquals(0, pollsAfterFailure.getCount());
+		assertTrue(client.isStarted());
+	}
+
+	@Test
 	void stopShouldSendAgentDisconnect() throws Exception {
 		newClient(null, null);
 		client.start();
