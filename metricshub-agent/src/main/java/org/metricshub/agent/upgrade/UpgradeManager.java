@@ -28,9 +28,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HexFormat;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.UpgradeConfig;
@@ -64,6 +66,11 @@ public class UpgradeManager {
 	 * Name of the top-level package this agent manages.
 	 */
 	public static final String PACKAGE_NAME = "metricshub";
+
+	/**
+	 * Delay in seconds between two deferred reconciliation checks of a pending installation.
+	 */
+	static final long RECONCILE_RETRY_DELAY_SECONDS = 30;
 
 	private final Supplier<String> currentVersionSupplier;
 	private final Supplier<UpgradeConfig> configSupplier;
@@ -195,6 +202,7 @@ public class UpgradeManager {
 	public void reconcileOnStartup() {
 		final UpgradeTransaction transaction = transactionStore.read();
 		if (transaction == null) {
+			RunnerMarkers.clear(stagingDirectory);
 			lock.releaseStale();
 			return;
 		}
@@ -221,37 +229,7 @@ public class UpgradeManager {
 					null
 				)
 			);
-			if (VersionHelper.isSameVersion(transaction.getFromVersion(), transaction.getToVersion())) {
-				// Same-version hotfix: the running version is identical whether or not the
-				// installer ran, so the verdict relies on the runner's completion marker.
-				if (RunnerMarkers.installSucceeded(stagingDirectory)) {
-					finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
-				} else {
-					finishReconciliation(
-						transaction,
-						UpgradeState.FAILED,
-						"The installation of the same-version package " +
-							transaction.getToVersion() +
-							" could not be verified (" +
-							RunnerMarkers.readResult(stagingDirectory).orElse("no runner result marker") +
-							")",
-						current
-					);
-				}
-			} else if (VersionHelper.isSameVersion(current, transaction.getToVersion())) {
-				finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
-			} else {
-				finishReconciliation(
-					transaction,
-					UpgradeState.FAILED,
-					"The agent restarted with version " +
-						current +
-						" while version " +
-						transaction.getToVersion() +
-						" was expected",
-					current
-				);
-			}
+			resolveInstallPhase(transaction, current);
 		} else if (state == UpgradeState.SUCCEEDED || state == UpgradeState.FAILED) {
 			if (state == UpgradeState.SUCCEEDED) {
 				adoptInstalledIdentity(transaction);
@@ -277,6 +255,115 @@ public class UpgradeManager {
 				current
 			);
 		}
+	}
+
+	/**
+	 * Resolves a transaction interrupted during the installation phase.
+	 * <p>
+	 * A changed running version is definitive evidence. Otherwise the runner's completion marker
+	 * decides; while the marker is absent and the configured installation deadline
+	 * ({@code installStartedAt + installTimeoutSeconds}) has not elapsed, the runner may still be
+	 * working (the service manager can restart the agent early), so the transaction is kept
+	 * pending, reported as {@code Installing}, and re-checked periodically.
+	 * </p>
+	 *
+	 * @param transaction the pending install-phase transaction
+	 * @param current     the running agent version
+	 */
+	private void resolveInstallPhase(final UpgradeTransaction transaction, final String current) {
+		final boolean sameVersionHotfix = VersionHelper.isSameVersion(
+			transaction.getFromVersion(),
+			transaction.getToVersion()
+		);
+
+		if (!sameVersionHotfix && VersionHelper.isSameVersion(current, transaction.getToVersion())) {
+			finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
+			return;
+		}
+
+		if (RunnerMarkers.readResult(stagingDirectory).isPresent()) {
+			// The runner finished: its result decides (for same-version hotfixes the version can
+			// never decide; for version upgrades reaching this point the version did not change)
+			if (sameVersionHotfix && RunnerMarkers.installSucceeded(stagingDirectory)) {
+				finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
+			} else {
+				finishReconciliation(
+					transaction,
+					UpgradeState.FAILED,
+					"The installation of package " +
+						transaction.getToVersion() +
+						" did not complete successfully (" +
+						RunnerMarkers.readResult(stagingDirectory).orElse("no runner result marker") +
+						")",
+					current
+				);
+			}
+			return;
+		}
+
+		final long deadlineMs =
+			transaction.getInstallStartedAt() + TimeUnit.SECONDS.toMillis(transaction.getInstallTimeoutSeconds());
+		if (transaction.getInstallStartedAt() > 0 && System.currentTimeMillis() < deadlineMs) {
+			// The runner may still be working: keep the transaction (and the lock) and re-check
+			log.info(
+				"The upgrade to version {} is still within its installation deadline; the verdict is deferred.",
+				transaction.getToVersion()
+			);
+			publish(
+				UpgradeEvent.of(
+					PACKAGE_NAME,
+					UpgradeState.INSTALLING,
+					current,
+					installedHash(),
+					transaction.getToVersion(),
+					hashOf(transaction),
+					null
+				)
+			);
+			scheduleReconciliationRetry();
+			return;
+		}
+
+		finishReconciliation(
+			transaction,
+			UpgradeState.FAILED,
+			sameVersionHotfix
+				? "The installation of the same-version package " +
+					transaction.getToVersion() +
+					" could not be verified within the installation timeout"
+				: "The agent restarted with version " +
+					current +
+					" while version " +
+					transaction.getToVersion() +
+					" was expected",
+			current
+		);
+	}
+
+	/**
+	 * Schedules a deferred re-check of the pending install-phase transaction.
+	 */
+	private void scheduleReconciliationRetry() {
+		try {
+			CompletableFuture.runAsync(
+				this::retryPendingReconciliation,
+				CompletableFuture.delayedExecutor(RECONCILE_RETRY_DELAY_SECONDS, TimeUnit.SECONDS, worker)
+			);
+		} catch (RejectedExecutionException e) {
+			log.warn("The upgrade worker rejected the reconciliation retry: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Re-checks a still-pending install-phase transaction. No-op when the transaction was
+	 * resolved in the meantime.
+	 */
+	private void retryPendingReconciliation() {
+		final UpgradeTransaction transaction = transactionStore.read();
+		if (transaction == null || transaction.getState() == null || !transaction.getState().isInstallPhase()) {
+			return;
+		}
+		resolveInstallPhase(transaction, currentVersion());
 	}
 
 	/**
@@ -337,6 +424,9 @@ public class UpgradeManager {
 			log.warn("Ignoring the package offer for version {}: another upgrade is already in progress.", offer.version());
 			return;
 		}
+
+		// A marker left by a previous attempt must never bless this one
+		RunnerMarkers.clear(stagingDirectory);
 
 		UpgradeTransaction transaction = null;
 		try {

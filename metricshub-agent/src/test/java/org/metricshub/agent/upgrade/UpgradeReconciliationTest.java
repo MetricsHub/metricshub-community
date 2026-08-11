@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.config.UpgradeConfig;
@@ -42,6 +43,14 @@ class UpgradeReconciliationTest {
 	}
 
 	private UpgradeTransaction pendingTransaction(final UpgradeState state, final Path stagedFile) throws IOException {
+		return pendingTransaction(state, stagedFile, System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2));
+	}
+
+	private UpgradeTransaction pendingTransaction(
+		final UpgradeState state,
+		final Path stagedFile,
+		final long installStartedAt
+	) throws IOException {
 		final UpgradeTransaction transaction = UpgradeTransaction.builder()
 			.upgradeId("pending")
 			.packageName(UpgradeManager.PACKAGE_NAME)
@@ -49,8 +58,8 @@ class UpgradeReconciliationTest {
 			.toVersion("3.10.00")
 			.packageHash("0506")
 			.state(state)
-			.createdAt(System.currentTimeMillis())
-			.installStartedAt(System.currentTimeMillis())
+			.createdAt(installStartedAt)
+			.installStartedAt(installStartedAt)
 			.installTimeoutSeconds(1800)
 			.packageFile(stagedFile != null ? stagedFile.toString() : null)
 			.build();
@@ -127,6 +136,48 @@ class UpgradeReconciliationTest {
 	}
 
 	@Test
+	void pendingInstallationWithinDeadlineShouldBeDeferred() throws IOException {
+		// The runner started moments ago and its deadline has not elapsed: no verdict yet
+		pendingTransaction(UpgradeState.INSTALLING, null, System.currentTimeMillis());
+		Files.createDirectories(tempDir);
+		Files.createFile(tempDir.resolve(UpgradeLock.LOCK_FILE_NAME));
+
+		final UpgradeManager manager = newManager("3.9.05");
+		manager.reconcileOnStartup();
+
+		final UpgradeEvent last = events.get(events.size() - 1);
+		assertEquals(UpgradeState.INSTALLING, last.state());
+		// The transaction and the lock are retained while the installation may still complete
+		org.junit.jupiter.api.Assertions.assertNotNull(new UpgradeTransactionStore(tempDir).read());
+		assertTrue(Files.exists(tempDir.resolve(UpgradeLock.LOCK_FILE_NAME)));
+	}
+
+	@Test
+	void deferredVerdictShouldResolveOnceTheMarkerArrives() throws IOException {
+		final UpgradeTransaction transaction = pendingTransaction(
+			UpgradeState.RESTARTING,
+			null,
+			System.currentTimeMillis()
+		);
+		transaction.setFromVersion("3.10.00");
+		transaction.setToVersion("3.10.00");
+		new UpgradeTransactionStore(tempDir).write(transaction);
+
+		final UpgradeManager manager = newManager("3.10.00");
+		manager.reconcileOnStartup();
+		assertEquals(UpgradeState.INSTALLING, events.get(events.size() - 1).state());
+
+		// The runner finishes and writes its result: the next check resolves the verdict
+		Files.writeString(
+			tempDir.resolve(org.metricshub.agent.upgrade.runner.RunnerMarkers.RESULT_FILE_NAME),
+			"INSTALL_OK"
+		);
+		manager.reconcileOnStartup();
+
+		assertEquals(UpgradeState.SUCCEEDED, events.get(events.size() - 1).state());
+	}
+
+	@Test
 	void sameVersionHotfixShouldSucceedWithTheRunnerMarker() throws IOException {
 		final UpgradeTransaction transaction = pendingTransaction(UpgradeState.RESTARTING, null);
 		transaction.setFromVersion("3.10.00");
@@ -171,12 +222,20 @@ class UpgradeReconciliationTest {
 	}
 
 	@Test
-	void missingTransactionShouldLeaveTheManagerIdle() {
+	void missingTransactionShouldLeaveTheManagerIdle() throws IOException {
+		Files.createDirectories(tempDir);
+		Files.writeString(
+			tempDir.resolve(org.metricshub.agent.upgrade.runner.RunnerMarkers.RESULT_FILE_NAME),
+			"INSTALL_OK"
+		);
+
 		final UpgradeManager manager = newManager("3.9.05");
 		manager.reconcileOnStartup();
 
 		assertTrue(events.isEmpty());
 		assertEquals(UpgradeState.IDLE, manager.getCurrentSnapshot().state());
+		// A stale runner marker is cleared so it can never bless a later installation
+		assertFalse(Files.exists(tempDir.resolve(org.metricshub.agent.upgrade.runner.RunnerMarkers.RESULT_FILE_NAME)));
 	}
 
 	@Test
