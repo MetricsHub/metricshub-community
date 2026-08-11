@@ -110,6 +110,42 @@ class UpgradeReconciliationTest {
 	}
 
 	@Test
+	void sameVersionHotfixShouldRequireTheRunnerMarker() throws IOException {
+		final UpgradeTransaction transaction = pendingTransaction(UpgradeState.RESTARTING, null);
+		transaction.setFromVersion("3.10.00");
+		transaction.setToVersion("3.10.00");
+		new UpgradeTransactionStore(tempDir).write(transaction);
+
+		// The running version is identical before and after: without the runner marker the
+		// installation cannot be considered successful
+		final UpgradeManager manager = newManager("3.10.00");
+		manager.reconcileOnStartup();
+
+		final UpgradeEvent verdict = events.get(events.size() - 1);
+		assertEquals(UpgradeState.FAILED, verdict.state());
+		assertTrue(verdict.errorMessage().contains("could not be verified"));
+	}
+
+	@Test
+	void sameVersionHotfixShouldSucceedWithTheRunnerMarker() throws IOException {
+		final UpgradeTransaction transaction = pendingTransaction(UpgradeState.RESTARTING, null);
+		transaction.setFromVersion("3.10.00");
+		transaction.setToVersion("3.10.00");
+		new UpgradeTransactionStore(tempDir).write(transaction);
+		Files.writeString(
+			tempDir.resolve(org.metricshub.agent.upgrade.runner.RunnerMarkers.RESULT_FILE_NAME),
+			"INSTALL_OK"
+		);
+
+		final UpgradeManager manager = newManager("3.10.00");
+		manager.reconcileOnStartup();
+
+		assertEquals(UpgradeState.SUCCEEDED, events.get(events.size() - 1).state());
+		// The marker is cleared so it can never influence the next upgrade
+		assertFalse(Files.exists(tempDir.resolve(org.metricshub.agent.upgrade.runner.RunnerMarkers.RESULT_FILE_NAME)));
+	}
+
+	@Test
 	void preInstallInterruptionShouldFail() throws IOException {
 		pendingTransaction(UpgradeState.DOWNLOADING, null);
 

@@ -40,6 +40,7 @@ import org.metricshub.agent.upgrade.api.UpgradeStatusListener;
 import org.metricshub.agent.upgrade.download.PackageDownloader;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.agent.upgrade.runner.RunnerLauncher;
+import org.metricshub.agent.upgrade.runner.RunnerMarkers;
 import org.metricshub.agent.upgrade.runner.UnsupportedRunnerLauncher;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransactionStore;
@@ -220,7 +221,24 @@ public class UpgradeManager {
 					null
 				)
 			);
-			if (VersionHelper.isSameVersion(current, transaction.getToVersion())) {
+			if (VersionHelper.isSameVersion(transaction.getFromVersion(), transaction.getToVersion())) {
+				// Same-version hotfix: the running version is identical whether or not the
+				// installer ran, so the verdict relies on the runner's completion marker.
+				if (RunnerMarkers.installSucceeded(stagingDirectory)) {
+					finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
+				} else {
+					finishReconciliation(
+						transaction,
+						UpgradeState.FAILED,
+						"The installation of the same-version package " +
+							transaction.getToVersion() +
+							" could not be verified (" +
+							RunnerMarkers.readResult(stagingDirectory).orElse("no runner result marker") +
+							")",
+						current
+					);
+				}
+			} else if (VersionHelper.isSameVersion(current, transaction.getToVersion())) {
 				finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
 			} else {
 				finishReconciliation(
@@ -483,6 +501,7 @@ public class UpgradeManager {
 		}
 		transactionStore.archive(transaction);
 		deleteStagedFile(transaction);
+		RunnerMarkers.clear(stagingDirectory);
 		lock.releaseStale();
 		if (verdict == UpgradeState.SUCCEEDED) {
 			adoptInstalledIdentity(transaction);

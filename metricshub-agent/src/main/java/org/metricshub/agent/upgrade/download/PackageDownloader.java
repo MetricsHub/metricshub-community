@@ -41,6 +41,10 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +64,15 @@ public class PackageDownloader {
 	private static final long PROGRESS_EMIT_INTERVAL_MS = 1000;
 	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(30);
 	private static final int MAX_REDIRECTS = 5;
+
+	/**
+	 * Watchdog closing body streams whose download exceeded the configured deadline.
+	 */
+	private static final ScheduledExecutorService BODY_WATCHDOG = Executors.newSingleThreadScheduledExecutor(runnable -> {
+		final Thread thread = new Thread(runnable, "metricshub-upgrade-download-watchdog");
+		thread.setDaemon(true);
+		return thread;
+	});
 
 	/**
 	 * Downloads the offered package into the given directory, retrying up to the configured
@@ -121,6 +134,20 @@ public class PackageDownloader {
 			throw new UpgradeException("Package download host is not in the configured allowlist: " + host);
 		}
 		return uri;
+	}
+
+	/**
+	 * Closes a stream best-effort, used by the download deadline watchdog.
+	 *
+	 * @param stream the stream to close
+	 */
+	private static void closeQuietly(final InputStream stream) {
+		try {
+			log.warn("The package download exceeded the configured timeout; aborting the transfer.");
+			stream.close();
+		} catch (IOException e) {
+			log.debug("Cannot close the timed-out download stream: {}", e.getMessage());
+		}
 	}
 
 	/**
@@ -196,7 +223,21 @@ public class PackageDownloader {
 				);
 			}
 
-			final byte[] actualSha256 = streamToFile(response.body(), partFile, contentLength, config, progressListener);
+			// The request timeout only bounds the exchange up to the response headers: a watchdog
+			// closes the body stream at the download deadline so a repository stalling mid-body
+			// cannot block the upgrade worker forever.
+			final InputStream body = response.body();
+			final ScheduledFuture<?> watchdog = BODY_WATCHDOG.schedule(
+				() -> closeQuietly(body),
+				config.getDownloadTimeout(),
+				TimeUnit.SECONDS
+			);
+			final byte[] actualSha256;
+			try {
+				actualSha256 = streamToFile(body, partFile, contentLength, config, progressListener);
+			} finally {
+				watchdog.cancel(false);
+			}
 
 			if (offer.sha256() == null || offer.sha256().length == 0) {
 				throw new UpgradeException("The package offer does not carry the mandatory SHA-256 content hash");
@@ -261,7 +302,7 @@ public class PackageDownloader {
 				return response;
 			}
 
-			try (InputStream discarded = response.body()) {
+			try (var _ = response.body()) {
 				// Drop the redirect body
 			}
 			final String location = response

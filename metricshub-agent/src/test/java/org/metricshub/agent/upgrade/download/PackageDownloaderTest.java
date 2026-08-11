@@ -63,6 +63,18 @@ class PackageDownloaderTest {
 			exchange.sendResponseHeaders(302, -1);
 			exchange.close();
 		});
+		server.createContext("/stall/", exchange -> {
+			// Send the headers and a partial body, then stall without closing (long enough for
+			// the 2-second download deadline of the test to fire first)
+			exchange.sendResponseHeaders(200, packageContent.length);
+			exchange.getResponseBody().write(packageContent, 0, 1024);
+			exchange.getResponseBody().flush();
+			try {
+				Thread.sleep(8_000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		});
 		server.start();
 	}
 
@@ -130,6 +142,27 @@ class PackageDownloaderTest {
 		);
 
 		assertTrue(failure.getMessage().contains("maximum"));
+	}
+
+	@Test
+	void stalledBodyShouldBeAbortedAtTheDownloadDeadline() {
+		final UpgradeConfig shortTimeout = UpgradeConfig.builder().downloadTimeout(2).downloadRetries(1).build();
+
+		final long startedMs = System.currentTimeMillis();
+		assertThrows(UpgradeException.class, () ->
+			downloader.download(
+				offer(baseUrl() + "/stall/metricshub.deb", packageSha256),
+				shortTimeout,
+				tempDir,
+				(p, r) -> {}
+			)
+		);
+
+		final long elapsedMs = System.currentTimeMillis() - startedMs;
+		assertTrue(
+			elapsedMs < 30_000,
+			"The stalled download must be aborted at the deadline, but took " + elapsedMs + " ms"
+		);
 	}
 
 	@Test
