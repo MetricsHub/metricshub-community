@@ -84,6 +84,29 @@ class ServiceNameResolverTest {
 	}
 
 	@Test
+	void sideBySideEditionsBothRunningShouldFailExplicitly() throws Exception {
+		writeUnit("metricshub-community-service.service");
+		writeUnit("metricshub-enterprise-service.service");
+
+		// Both services are active: picking one would risk driving the wrong edition
+		final ServiceNameResolver resolver = linuxResolver(command -> List.of("active"));
+
+		final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> resolver.resolve(null));
+		assertTrue(failure.getMessage().contains("upgrade.serviceName"));
+	}
+
+	@Test
+	void sideBySideEditionsNoneRunningShouldFailExplicitly() throws Exception {
+		writeUnit("metricshub-community-service.service");
+		writeUnit("metricshub-enterprise-service.service");
+
+		final ServiceNameResolver resolver = linuxResolver(command -> List.of("inactive"));
+
+		final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> resolver.resolve(null));
+		assertTrue(failure.getMessage().contains("upgrade.serviceName"));
+	}
+
+	@Test
 	void windowsServicesShouldBeDiscoveredFromTheRegistry() {
 		final ServiceNameResolver resolver = windowsResolver(command ->
 			command.contains("query")

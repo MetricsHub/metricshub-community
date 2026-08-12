@@ -28,7 +28,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.AgentConstants;
@@ -49,7 +48,9 @@ import org.metricshub.engine.common.helpers.LocalOsHandler;
  *       {@code metricshub-*-service.service} unit files on Linux, {@code MetricsHub *} service
  *       registry keys on Windows;</li>
  *   <li>when several candidates exist (both editions installed side by side), the one that is
- *       currently running — the agent performing the upgrade is that service.</li>
+ *       currently running — the agent performing the upgrade is that service. When several (or
+ *       none) are running, the choice is ambiguous and resolution fails, requiring
+ *       {@code upgrade.serviceName}: guessing could drive the wrong edition's service.</li>
  * </ol>
  */
 @Slf4j
@@ -114,7 +115,8 @@ public class ServiceNameResolver {
 	 * @param configuredServiceName the explicitly configured service name, or {@code null}/blank
 	 *                              to discover it
 	 * @return the resolved service name
-	 * @throws IllegalStateException when no service can be resolved
+	 * @throws IllegalStateException when no service can be resolved, or when several are
+	 *                               installed and the running one cannot be singled out
 	 */
 	public String resolve(final String configuredServiceName) {
 		if (configuredServiceName != null && !configuredServiceName.isBlank()) {
@@ -132,17 +134,19 @@ public class ServiceNameResolver {
 		}
 
 		// Several editions are installed side by side: the agent driving the upgrade is the
-		// running one
-		final Optional<String> running = candidates.stream().filter(this::isRunning).findFirst();
-		if (running.isPresent()) {
-			return running.get();
+		// running one — but only when exactly one is running. Guessing here would let an
+		// Enterprise-triggered upgrade stop and restart the Community service (or vice versa).
+		final List<String> running = candidates.stream().filter(this::isRunning).toList();
+		if (running.size() == 1) {
+			return running.get(0);
 		}
-		log.warn(
-			"Several MetricsHub services are installed ({}) and none is reported running; using {}. Set upgrade.serviceName to pin it.",
-			candidates,
-			candidates.get(0)
+		throw new IllegalStateException(
+			"Several MetricsHub services are installed (" +
+				candidates +
+				") and " +
+				(running.isEmpty() ? "none is" : "several are") +
+				" reported running; set upgrade.serviceName explicitly"
 		);
-		return candidates.get(0);
 	}
 
 	/**
