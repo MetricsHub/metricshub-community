@@ -25,9 +25,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.programmable.configuration.ProgrammableConfigurationProvider;
-import org.metricshub.programmable.configuration.VelocityConfigurationLoader;
+import org.metricshub.engine.extension.IConfigurationProvider;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.springframework.stereotype.Service;
@@ -92,9 +92,15 @@ public class VelocityTemplateService {
 		}
 
 		try {
-			final var loader = new VelocityConfigurationLoader(vmPath, ProgrammableConfigurationProvider.getTools());
-			final String result = loader.generateYamlDangerous();
-			return result;
+			final IConfigurationProvider provider = findProviderFor(fileName);
+			return provider
+				.renderTemplate(vmPath)
+				.orElseThrow(() ->
+					new ConfigFilesException(
+						ConfigFilesException.Code.VALIDATION_FAILED,
+						"Velocity template evaluation returned no content."
+					)
+				);
 		} catch (ConfigFilesException e) {
 			throw e;
 		} catch (Exception e) {
@@ -132,5 +138,37 @@ public class VelocityTemplateService {
 			);
 		}
 		return agentContext.getConfigDirectory();
+	}
+
+	/**
+	 * Finds the configuration provider extension able to handle the given template file,
+	 * based on its file extension.
+	 *
+	 * @param fileName the template file name (for example {@code my-config.vm})
+	 * @return the matching {@link IConfigurationProvider}
+	 * @throws ConfigFilesException if no provider handles the file, or the extension manager
+	 *                              is unavailable
+	 */
+	private IConfigurationProvider findProviderFor(final String fileName) throws ConfigFilesException {
+		final var agentContext = agentContextHolder.getAgentContext();
+		if (agentContext == null || agentContext.getExtensionManager() == null) {
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
+				"Extension manager is not available."
+			);
+		}
+		final String lowerCaseName = fileName.toLowerCase(Locale.ROOT);
+		return agentContext
+			.getExtensionManager()
+			.getConfigurationProviderExtensions()
+			.stream()
+			.filter(provider -> provider.getFileExtensions().stream().anyMatch(lowerCaseName::endsWith))
+			.findFirst()
+			.orElseThrow(() ->
+				new ConfigFilesException(
+					ConfigFilesException.Code.VALIDATION_FAILED,
+					"No configuration provider found for template '" + fileName + "'."
+				)
+			);
 	}
 }

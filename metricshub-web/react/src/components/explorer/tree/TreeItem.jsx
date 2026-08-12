@@ -1,6 +1,7 @@
 import * as React from "react";
 import { TreeItem } from "@mui/x-tree-view";
-import { Box, Typography } from "@mui/material";
+import { Box, Chip, Tooltip, Typography } from "@mui/material";
+import PushPinIcon from "@mui/icons-material/PushPin";
 import NodeTypeIcons from "./icons/NodeTypeIcons";
 
 /**
@@ -11,6 +12,7 @@ import NodeTypeIcons from "./icons/NodeTypeIcons";
  * @param {string} [props.type] - Backend node type
  * @param {boolean} props.isFolder - Whether the node represents a folder/branch
  * @param {boolean} [props.isSelected] - Whether the node is currently selected
+ * @param {string} [props.badge] - Optional badge ("draft" shows the Draft chip)
  * @param {React.ReactNode} [props.right] - Optional right-aligned adornment
  */
 const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
@@ -18,9 +20,12 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 	type,
 	isFolder,
 	isSelected,
+	badge,
 	right,
+	disabled = false,
+	disabledTitle,
 }) {
-	return (
+	const label = (
 		<Box
 			sx={{
 				width: "100%",
@@ -28,6 +33,8 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 				alignItems: "center",
 				justifyContent: "space-between",
 				pr: 1,
+				// Read-only nodes (configured outside metricshub-ui.yaml) are dimmed and not clickable.
+				...(disabled ? { opacity: 0.5, cursor: "default" } : {}),
 			}}
 		>
 			<Box sx={{ display: "flex", alignItems: "center", minWidth: 0, gap: 1 }}>
@@ -40,14 +47,38 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 						fontWeight: isSelected ? "bold" : isFolder ? 500 : 470,
 						overflow: "hidden",
 						textOverflow: "ellipsis",
+						...(disabled ? { color: "text.disabled" } : {}),
 					}}
 				>
 					{name}
 				</Typography>
+				{badge === "draft" ? (
+					<Chip
+						label="Draft"
+						size="small"
+						color="secondary"
+						icon={<PushPinIcon style={{ fontSize: 12 }} />}
+						sx={{
+							height: 18,
+							fontSize: "0.65rem",
+							flexShrink: 0,
+							"& .MuiChip-label": { px: 0.75 },
+						}}
+					/>
+				) : null}
 			</Box>
 			{right || null}
 		</Box>
 	);
+
+	if (disabled && disabledTitle) {
+		return (
+			<Tooltip title={disabledTitle} placement="right">
+				{label}
+			</Tooltip>
+		);
+	}
+	return label;
 });
 
 /**
@@ -71,7 +102,10 @@ const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, selectedNo
 					type={node.type}
 					isFolder={isFolder}
 					isSelected={isSelected}
+					badge={node.badge}
 					right={right}
+					disabled={node.disabled}
+					disabledTitle={node.disabledTitle}
 				/>
 			}
 			slotProps={{ content: { sx: { width: "100%" } } }}

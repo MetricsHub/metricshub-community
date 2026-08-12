@@ -1,69 +1,58 @@
 package org.metricshub.engine.extension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Engine
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.ServiceLoader.Provider;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
-import org.metricshub.engine.strategy.IStrategy;
-import org.metricshub.engine.telemetry.TelemetryManager;
 
 class ExtensionLoaderTest {
 
 	@Test
-	void testConvertProviderStreamToList() throws IOException {
-		// Initialize the extension loader using a non existent file because this test doesn't rely on the extension directory
-		final ExtensionLoader extensionLoader = new ExtensionLoader(new File("fake" + UUID.randomUUID().toString()));
+	void testLoadFromMissingDirectoryReturnsEmptyManager() throws IOException {
+		// A non-existent directory yields an empty (but non-null) manager rather than failing.
+		final ExtensionLoader extensionLoader = new ExtensionLoader(new File("fake" + UUID.randomUUID()));
 
-		// Create the expected extension implementation
-		final IStrategyProviderExtension expected = new TestStrategyProvider();
+		final ExtensionManager extensionManager = extensionLoader.load();
 
-		// Call the converter method which transforms the extension provider stream to a list of extensions
-		final List<IStrategyProviderExtension> strategyProviderExtensions = extensionLoader.convertProviderStreamToList(
-			Stream.of(
-				new Provider<IStrategyProviderExtension>() {
-					@Override
-					public Class<? extends IStrategyProviderExtension> type() {
-						return TestStrategyProvider.class;
-					}
-
-					@Override
-					public IStrategyProviderExtension get() {
-						return expected;
-					}
-				}
-			)
+		assertNotNull(extensionManager, "The extension manager must never be null");
+		assertTrue(extensionManager.getProtocolExtensions().isEmpty(), "No protocol extension should be loaded");
+		assertTrue(
+			extensionManager.getConfigurationProviderExtensions().isEmpty(),
+			"No configuration provider extension should be loaded"
 		);
-
-		// Check the expected results
-		assertEquals(1, strategyProviderExtensions.size());
-		assertEquals(expected, strategyProviderExtensions.get(0));
 	}
 
-	class TestStrategyProvider implements IStrategyProviderExtension {
+	@Test
+	void testLoadIsMemoized() throws IOException {
+		final ExtensionLoader extensionLoader = new ExtensionLoader(new File("fake" + UUID.randomUUID()));
 
-		@Override
-		public List<IStrategy> generate(TelemetryManager telemetryManager, Long strategyTime) {
-			return List.of(
-				new IStrategy() {
-					@Override
-					public void run() {}
+		final ExtensionManager first = extensionLoader.load();
+		final ExtensionManager second = extensionLoader.load();
 
-					@Override
-					public long getStrategyTimeout() {
-						return 0;
-					}
-
-					@Override
-					public Long getStrategyTime() {
-						return System.currentTimeMillis();
-					}
-				}
-			);
-		}
+		assertTrue(first == second, "load() must return the same memoized instance");
 	}
 }

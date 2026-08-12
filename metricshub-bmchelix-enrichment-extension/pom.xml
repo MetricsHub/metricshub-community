@@ -142,6 +142,19 @@
 					</execution>
 				</executions>
 			</plugin>
+
+			<!-- Maven Jar Plugin: stamp the stable extension id used by the dependency graph -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<MetricsHub-Extension-Id>${project.artifactId}</MetricsHub-Extension-Id>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>

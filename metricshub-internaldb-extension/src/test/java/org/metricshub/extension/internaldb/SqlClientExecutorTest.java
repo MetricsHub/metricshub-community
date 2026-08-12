@@ -1,5 +1,26 @@
 package org.metricshub.extension.internaldb;
 
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Internal DB Extension
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2026 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
@@ -376,5 +397,104 @@ class SqlClientExecutorTest {
 		);
 
 		assertEquals(expectedResult, result);
+	}
+
+	/**
+	 * Builds an executor whose telemetry manager exposes a single source table under {@code TAB1_REF}.
+	 */
+	private static SqlClientExecutor executorWithSource(final List<List<String>> rows) {
+		final Map<String, SourceTable> mapSources = new HashMap<>();
+		mapSources.put(TAB1_REF, SourceTable.builder().table(rows).build());
+
+		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
+		connectorNamespaces.put(CONNECTOR_ID, ConnectorNamespace.builder().sourceTables(mapSources).build());
+
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder().hostname("localhost").hostId("localhost").hostType(DeviceKind.LINUX).build()
+			)
+			.hostProperties(HostProperties.builder().connectorNamespaces(connectorNamespaces).isLocalhost(true).build())
+			.build();
+
+		return SqlClientExecutor.builder().telemetryManager(telemetryManager).connectorId(CONNECTOR_ID).build();
+	}
+
+	private static SqlTable table(final String alias, final String source, final SqlColumn... columns) {
+		return SqlTable.builder().alias(alias).columns(Arrays.asList(columns)).source(source).build();
+	}
+
+	private static SqlColumn column(final String name, final int number, final String type) {
+		return SqlColumn.builder().name(name).number(number).type(type).build();
+	}
+
+	@Test
+	void testCreateTableQueryRejectsInvalidDefinitions() {
+		final SqlClientExecutor executor = executorWithSource(List.of(List.of(LOWERCASE_A)));
+		final SqlColumn valid = column("COL1", 1, "VARCHAR(255)");
+		final String query = "SELECT COL1 FROM T1;";
+
+		// Invalid aliases: blank, embedded space, quote, semicolon.
+		for (final String alias : new String[] { " ", "T 1", "T\"1", "T1;" }) {
+			assertEquals(new ArrayList<>(), executor.executeQuery(List.of(table(alias, TAB1_REF, valid)), query));
+		}
+
+		// Invalid column name (blank), invalid type (blank) and invalid number (< 1).
+		assertEquals(
+			new ArrayList<>(),
+			executor.executeQuery(List.of(table("T1", TAB1_REF, column(" ", 1, "VARCHAR(255)"))), query)
+		);
+		assertEquals(
+			new ArrayList<>(),
+			executor.executeQuery(List.of(table("T1", TAB1_REF, column("COL1", 1, " "))), query)
+		);
+		assertEquals(
+			new ArrayList<>(),
+			executor.executeQuery(List.of(table("T1", TAB1_REF, column("COL1", 0, "VARCHAR(255)"))), query)
+		);
+	}
+
+	@Test
+	void testInsertSkipsMissingOrEmptySourceAndBadValues() {
+		final SqlTable sqlTable = table("T1", TAB1_REF, column("COL1", 1, "VARCHAR(255)"));
+		final String query = "SELECT COL1 FROM T1;";
+
+		// Source reference not found in the namespace: the table is created but stays empty.
+		final SqlClientExecutor noSource = executorWithSource(List.of(List.of(LOWERCASE_A)));
+		assertEquals(
+			new ArrayList<>(),
+			noSource.executeQuery(
+				List.of(table("T1", "${source::monitors.cpu.discovery.sources.missing}", column("COL1", 1, "VARCHAR(255)"))),
+				query
+			)
+		);
+
+		// Empty source table: INSERT is skipped, SELECT returns no rows.
+		final SqlClientExecutor emptySource = executorWithSource(new ArrayList<>());
+		assertEquals(new ArrayList<>(), emptySource.executeQuery(List.of(sqlTable), query));
+
+		// A value that cannot be converted to the column type exercises the non-persisted branch
+		// and makes the batch INSERT fail: the table is created but stays empty.
+		final SqlClientExecutor badValue = executorWithSource(List.of(List.of("not-a-number")));
+		final List<List<String>> result = badValue.executeQuery(
+			List.of(table("T1", TAB1_REF, column("COL1", 1, "INT"))),
+			"SELECT COUNT(*) FROM T1;"
+		);
+		assertEquals(List.of(List.of("0")), result);
+	}
+
+	@Test
+	void testLargeSourceTableTriggersIntermediateBatches() {
+		// 1000 rows hit the periodic batch execution boundary (batchSize = 1000).
+		final List<List<String>> rows = new ArrayList<>();
+		for (int i = 0; i < 1000; i++) {
+			rows.add(List.of(Integer.toString(i)));
+		}
+		final SqlClientExecutor executor = executorWithSource(rows);
+
+		final List<List<String>> result = executor.executeQuery(
+			List.of(table("T1", TAB1_REF, column("COL1", 1, "INT"))),
+			"SELECT COUNT(*) FROM T1;"
+		);
+		assertEquals(List.of(List.of("1000")), result);
 	}
 }

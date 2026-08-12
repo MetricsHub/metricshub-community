@@ -32,7 +32,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.awaitility.Durations;
@@ -42,10 +44,13 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.dto.RestartStatus;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestAck;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestResult;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 class AgentLifecycleServiceTest {
 
@@ -207,8 +212,10 @@ class AgentLifecycleServiceTest {
 		assertEquals(RestartRequestResult.COALESCED, coalescedAck.result());
 		assertTrue(coalescedAck.requestId() > queuedAck.requestId(), "Request ids must be monotonically increasing");
 
-		// The discarded (older pending) context should be closed by the service so we don't leak it
-		verify(olderPending, times(1)).close();
+		// The discarded (older pending) supplier is dropped WITHOUT being invoked: suppliers are
+		// lazy (they build a full context with freshly reloaded extensions), so instantiating one
+		// on the coalescing caller's thread just to close it would be wasted, blocking work.
+		verify(olderPending, never()).close();
 
 		releaseFirstRestart.countDown();
 
@@ -346,5 +353,171 @@ class AgentLifecycleServiceTest {
 		when(context.getTaskSchedulingService()).thenReturn(scheduling);
 		when(context.getOtelCollectorProcessService()).thenReturn(otel);
 		return context;
+	}
+
+	/**
+	 * Builds a mock context whose {@link AgentContext#getExtensionManager()} returns {@code manager}.
+	 */
+	private static AgentContext mockContext(final ExtensionManager manager) {
+		final AgentContext context = mockContext();
+		when(context.getExtensionManager()).thenReturn(manager);
+		return context;
+	}
+
+	@Test
+	void testExtensionReloadDefersOldLoaderClose() {
+		final ExtensionManager oldManager = mock(ExtensionManager.class);
+		final ExtensionManager newManager = mock(ExtensionManager.class);
+
+		// An extension reload swaps in a different manager (e.g. the /restart endpoint).
+		agentLifecycleService.restart(mockContext(oldManager), mockContext(newManager));
+
+		// The orphaned manager is not closed immediately; the close is deferred by the grace delay.
+		verify(oldManager, never()).close();
+		verify(newManager, never()).close();
+	}
+
+	@Test
+	void testOrphanedManagerClosedAfterGracePeriod() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+
+		// Two back-to-back restarts: each orphaned manager gets its own full grace window.
+		final AgentContext c1 = mockContext(m1);
+		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0
+
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, times(1)).close());
+		verify(m1, never()).close();
+	}
+
+	@Test
+	void testReusedManagerIsNeverScheduledForClose() {
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+
+		// A configuration-file reload reuses the same manager (m1 -> m1): nothing is orphaned.
+		final AgentContext c1 = mockContext(m1);
+		agentLifecycleService.restart(c1, mockContext(m1));
+
+		Awaitility.await()
+			.pollDelay(Duration.ofMillis(300))
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m1, never()).close());
+	}
+
+	@Test
+	void testRetirementWaitsForOldSchedulerTermination() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+		agentLifecycleService.setRetirementRecheckMs(50L);
+
+		// The replaced context's scheduler is still alive (a collection may run with an unbounded
+		// job timeout). Extract the mocks first so Mockito's DSL is not confused by nested calls.
+		final AgentContext outgoing = mockContext(m0);
+		final ScheduledThreadPoolExecutor oldExecutor = new ScheduledThreadPoolExecutor(1);
+		final ThreadPoolTaskScheduler oldScheduler = mock(ThreadPoolTaskScheduler.class);
+		when(oldScheduler.getScheduledThreadPoolExecutor()).thenReturn(oldExecutor);
+		final TaskSchedulingService outgoingScheduling = outgoing.getTaskSchedulingService();
+		when(outgoingScheduling.getTaskScheduler()).thenReturn(oldScheduler);
+
+		agentLifecycleService.restart(outgoing, mockContext(m1));
+
+		// Well past the grace delay, the manager must NOT be closed while the old scheduler lives.
+		Awaitility.await()
+			.pollDelay(Duration.ofMillis(300))
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, never()).close());
+
+		// Once the old scheduler terminates, the next recheck retires the orphaned manager.
+		oldExecutor.shutdown();
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, times(1)).close());
+	}
+
+	@Test
+	void testRetirementWaitsForRequestSideReaders() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+		agentLifecycleService.setRetirementRecheckMs(50L);
+
+		// A request-side reader (HTTP/MCP operation) entered under the outgoing generation.
+		final AgentContextReaderTracker tracker = new AgentContextReaderTracker(agentContextHolder);
+		agentLifecycleService.setReaderTracker(tracker);
+		final long outgoingGeneration = agentContextHolder.getGeneration();
+		tracker.acquire(outgoingGeneration);
+
+		agentLifecycleService.restart(mockContext(m0), mockContext(m1)); // orphans m0
+
+		// Not closed while the reader lease is held, well past the grace delay.
+		Awaitility.await()
+			.pollDelay(Duration.ofMillis(300))
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, never()).close());
+
+		// Releasing the lease lets the next recheck retire the orphaned manager.
+		tracker.release(outgoingGeneration);
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, times(1)).close());
+	}
+
+	@Test
+	void testShutdownClosesPendingOrphanedManagersImmediately() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		// Long grace: the scheduled close cannot have fired yet when shutdown() runs.
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(60_000L);
+		agentLifecycleService.restart(mockContext(m0), mockContext(m1)); // orphans m0
+		verify(m0, never()).close();
+
+		// Process exit: pending retirements are flushed immediately.
+		agentLifecycleService.shutdown();
+		verify(m0, times(1)).close();
+		verify(m1, never()).close();
+	}
+
+	@Test
+	void testFailedRestartReleasesNeverActivatedReloadedManager() {
+		final ExtensionManager bootManager = mock(ExtensionManager.class);
+		final ExtensionManager reloadedManager = mock(ExtensionManager.class);
+
+		// A boot context carrying its own manager, with a scheduler that throws on stop() so the
+		// restart fails before the context is swapped in. Extract the scheduler mock first so
+		// Mockito's stubbing DSL is not confused by the nested mock call.
+		final AgentContext boot = mockContext(bootManager);
+		final TaskSchedulingService bootScheduler = boot.getTaskSchedulingService();
+		doAnswer(_ -> {
+			throw new IllegalStateException("boom");
+		})
+			.when(bootScheduler)
+			.stop();
+
+		final AgentContextHolder holder = new AgentContextHolder(boot);
+		final AgentLifecycleService service = new AgentLifecycleService(holder);
+		try {
+			service.restartAsync(() -> mockContext(reloadedManager));
+
+			Awaitility.await()
+				.atMost(Durations.FIVE_SECONDS)
+				.untilAsserted(() -> assertEquals(RestartStatus.State.FAILED, service.getRestartStatus().getState()));
+
+			// The reloaded context never became active, so its freshly reloaded extension loaders
+			// are released immediately; the active (boot) manager is left untouched.
+			verify(reloadedManager, times(1)).close();
+			verify(bootManager, never()).close();
+		} finally {
+			service.shutdown();
+		}
 	}
 }

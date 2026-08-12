@@ -160,4 +160,9 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	public Set<String> getFileExtensions() {
 		return Set.of(".vm");
 	}
+
+	@Override
+	public Optional<String> renderTemplate(final Path templateFile) throws Exception {
+		return Optional.of(new VelocityConfigurationLoader(templateFile, TOOLS).generateYamlDangerous());
+	}
 }

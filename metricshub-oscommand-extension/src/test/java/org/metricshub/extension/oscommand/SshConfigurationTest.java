@@ -83,6 +83,37 @@ class SshConfigurationTest {
 	}
 
 	@Test
+	void testValidateConfigurationRequiresPasswordOrPrivateKeyForRemoteHost() {
+		final String resourceKey = "remote-host";
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+			.username("username")
+			.timeout(120L)
+			.hostname("remote.example.com")
+			.build();
+
+		assertThrows(InvalidConfigurationException.class, () -> sshConfiguration.validateConfiguration(resourceKey));
+
+		sshConfiguration.setPassword("password".toCharArray());
+		assertDoesNotThrow(() -> sshConfiguration.validateConfiguration(resourceKey));
+
+		sshConfiguration.setPassword(null);
+		sshConfiguration.setPrivateKey("/tmp/ssh-key.txt");
+		assertDoesNotThrow(() -> sshConfiguration.validateConfiguration(resourceKey));
+	}
+
+	@Test
+	void testValidateConfigurationSkipsAuthForLocalhost() {
+		final String resourceKey = "local-host";
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+			.username("username")
+			.timeout(120L)
+			.hostname("localhost")
+			.build();
+
+		assertDoesNotThrow(() -> sshConfiguration.validateConfiguration(resourceKey));
+	}
+
+	@Test
 	void testCopy() {
 		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.password(PASSWORD.toCharArray())

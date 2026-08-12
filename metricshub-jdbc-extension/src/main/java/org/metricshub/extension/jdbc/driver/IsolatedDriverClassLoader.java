@@ -21,6 +21,8 @@ package org.metricshub.extension.jdbc.driver;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
@@ -121,5 +123,33 @@ public class IsolatedDriverClassLoader extends URLClassLoader {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Defines (once) a copy of {@link IsolatedDriverDeregistrar} <em>inside this loader</em> and
+	 * returns it. {@link java.sql.DriverManager} only exposes registrations to callers whose loader
+	 * can see the driver class, so deregistering a driver this loader defined requires the call to
+	 * originate from a class this loader defined. The class bytes are read from the parent (the
+	 * JDBC extension jar) and re-defined here.
+	 *
+	 * @return the deregistrar class defined by this loader; never {@code null}.
+	 * @throws IOException when the helper's class bytes cannot be read from the parent.
+	 */
+	Class<?> defineDeregistrar() throws IOException {
+		final String helperName = IsolatedDriverDeregistrar.class.getName();
+		synchronized (getClassLoadingLock(helperName)) {
+			final Class<?> existing = findLoadedClass(helperName);
+			if (existing != null) {
+				return existing;
+			}
+			final String resource = helperName.replace('.', '/') + ".class";
+			try (InputStream in = getParent().getResourceAsStream(resource)) {
+				if (in == null) {
+					throw new IOException("Cannot read the class bytes of " + helperName + " from the parent loader");
+				}
+				final byte[] bytes = in.readAllBytes();
+				return defineClass(helperName, bytes, 0, bytes.length);
+			}
+		}
 	}
 }

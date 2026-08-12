@@ -23,6 +23,7 @@ package org.metricshub.agent;
 
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
+import java.util.ServiceConfigurationError;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
@@ -35,6 +36,7 @@ import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.MetricsHubAgentServer;
 import org.metricshub.web.service.AgentLifecycleService;
 import picocli.CommandLine;
@@ -146,10 +148,36 @@ public class MetricsHubAgentApplication implements Runnable {
 	 * @param agentContextHolder the shared holder, always read to get the freshest context
 	 */
 	void onConfigurationChange(final AgentContextHolder agentContextHolder) {
+		// The comparison build below invokes extension providers on this watcher thread — covered
+		// by neither the scheduler-termination check nor the servlet reader tracker. Lease the
+		// current generation so a concurrent /restart cannot retire the reused manager's loaders
+		// while this reload is still using them.
+		final AgentContextReaderTracker readerTracker = MetricsHubAgentServer.getBean(AgentContextReaderTracker.class);
+		final long generation = agentContextHolder.getGeneration();
+		if (readerTracker != null) {
+			readerTracker.acquire(generation);
+		}
+		try {
+			doOnConfigurationChange(agentContextHolder);
+		} finally {
+			if (readerTracker != null) {
+				readerTracker.release(generation);
+			}
+		}
+	}
+
+	/**
+	 * Performs the configuration-change handling under the reader lease taken by
+	 * {@link #onConfigurationChange(AgentContextHolder)}.
+	 *
+	 * @param agentContextHolder the shared holder, always read to get the freshest context
+	 */
+	private void doOnConfigurationChange(final AgentContextHolder agentContextHolder) {
 		final AgentContext currentContext = agentContextHolder.getAgentContext();
 
-		// Build the new agent context eagerly so we can compare configurations
-		final AgentContext newAgentContext = loadNewAgentContext();
+		// Build the new agent context eagerly so we can compare configurations, reusing the
+		// boot-time extension manager (extensions do not change while the agent is running).
+		final AgentContext newAgentContext = loadNewAgentContext(currentContext.getExtensionManager());
 
 		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(currentContext)
@@ -169,11 +197,13 @@ public class MetricsHubAgentApplication implements Runnable {
 					newAgentContext.close();
 					return;
 				}
-				// The lifecycle service always accepts the request (SCHEDULED, QUEUED or
-				// COALESCED). Ownership of newAgentContext is now with the service — do NOT
-				// close it here. On COALESCED the service itself closes the previously queued
-				// context.
-				lifecycle.restartAsync(() -> newAgentContext);
+				// A full restart reloads the extensions as well, so a file-triggered restart picks up new
+				// or updated extension jars exactly like the /restart endpoint. The comparison context only
+				// reused the current manager to diff the configuration and is no longer needed; the restart
+				// rebuilds a context with a freshly loaded extension manager, and AgentLifecycleService
+				// releases the previous loaders after a grace delay.
+				newAgentContext.close();
+				lifecycle.restartAsync(this::reloadExtensionsAndBuildContext);
 			}
 			case LOCAL_ONLY ->
 				// ReloadService already grafted the required TelemetryManagers from newAgentContext
@@ -187,16 +217,44 @@ public class MetricsHubAgentApplication implements Runnable {
 	}
 
 	/**
-	 * Loads a new AgentContext which will be used in the reload service
+	 * Reloads the extensions and builds the {@link AgentContext} served to a full restart. When the
+	 * context construction fails (for example, an invalid reloaded configuration), the freshly
+	 * loaded manager's isolated class loaders are closed before propagating, so repeated failed
+	 * restarts cannot accumulate open jar handles.
+	 *
+	 * @return the new context carrying a freshly loaded {@link ExtensionManager}
 	 */
-	private synchronized AgentContext loadNewAgentContext() {
+	private AgentContext reloadExtensionsAndBuildContext() {
+		final ExtensionManager reloadedExtensionManager = ConfigHelper.loadExtensionManager();
 		try {
-			// Initialize the application context
-			return new AgentContext(alternateConfigDirectory, ConfigHelper.loadExtensionManager());
+			return loadNewAgentContext(reloadedExtensionManager);
+		} catch (Exception | ServiceConfigurationError | LinkageError e) {
+			// A provider invoked during the context build can throw linkage/service errors too:
+			// close the freshly loaded manager and surface a failure the lifecycle service records.
+			reloadedExtensionManager.close();
+			throw new IllegalStateException("Failed to build the reloaded AgentContext: " + e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Loads a new AgentContext which will be used in the reload service.
+	 * <p>
+	 * The {@link ExtensionManager} is loaded once at boot and carried forward across configuration
+	 * reloads rather than rebuilt (the watcher observes the configuration directory, not the
+	 * extensions directory); only a full restart supplies a freshly reloaded manager via
+	 * {@link #reloadExtensionsAndBuildContext()}.
+	 * </p>
+	 *
+	 * @param extensionManager the extension manager to carry in the new context
+	 */
+	private synchronized AgentContext loadNewAgentContext(final ExtensionManager extensionManager) {
+		try {
+			// Initialize the application context reusing the boot-time extension manager
+			return new AgentContext(alternateConfigDirectory, extensionManager);
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to reload the Agent.", e);
-			throw new IllegalStateException("Error dectected during MetricsHub agent reloading.", e);
+			throw new IllegalStateException("Error detected during MetricsHub agent reloading.", e);
 		}
 	}
 

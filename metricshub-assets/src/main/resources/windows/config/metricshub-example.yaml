@@ -232,6 +232,8 @@ resourceGroups:
       #       port: 5985
       #       protocol: http
       #       authentications: [ntlm, kerberos]
+      #       # Trusts all server certificates and skips hostname verification over HTTPS (default: true)
+      #       trustAllCertificates: true
 
       #═══════════════════════════════════════════════════
       # ESXi Host Configuration through WBEM service

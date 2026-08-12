@@ -46,8 +46,13 @@ export const getMetricLabel = (key) => {
 
 /**
  * Checks if a metric should be displayed as a utilization bar.
- * Returns true if unit === "1" and the metric name does not contain ".limit".
- * Metrics with ".limit" in their name are threshold values, not utilization percentages.
+ * Returns true if unit === "1" and the metric name is neither a threshold (".limit") nor a
+ * ratio (".ratio").
+ *
+ * Metrics with ".limit" are threshold values, not utilization percentages. Metrics with
+ * ".ratio" (e.g. a data-reduction ratio) are unbounded multipliers — a value of 3.12 means
+ * 312%, not a 3.12% share of a whole — so they are shown as a percentage value (value × 100)
+ * rather than a 0-100% utilization bar with a "remaining" segment.
  *
  * @param {string} unit - The unit of the metric
  * @param {string} [metricName] - The name of the metric (optional)
@@ -56,6 +61,7 @@ export const getMetricLabel = (key) => {
 export const isUtilizationUnit = (unit, metricName) => {
 	if (unit !== "1") return false;
 	if (metricName && metricName.includes(".limit")) return false;
+	if (metricName && metricName.includes(".ratio")) return false;
 	return true;
 };
 

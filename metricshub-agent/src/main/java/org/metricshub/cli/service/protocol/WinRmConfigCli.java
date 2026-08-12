@@ -22,6 +22,7 @@ package org.metricshub.cli.service.protocol;
  */
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -123,6 +124,15 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 	@Option(names = "--winrm-hostname", order = 9, paramLabel = "HOSTNAME", description = "Hostname for WinRM")
 	private String hostname;
 
+	@Option(
+		names = "--winrm-trust-all-certificates",
+		order = 10,
+		paramLabel = "true|false",
+		arity = "1",
+		description = "Trusts all server certificates and skips hostname verification over HTTPS (default: true)"
+	)
+	private Boolean trustAllCertificates;
+
 	/**
 	 * @param defaultUsername Username specified at the top level of the CLI (with the --username option)
 	 * @param defaultPassword Password specified at the top level of the CLI (with the --password option)
@@ -147,6 +157,9 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("protocol", new TextNode(protocol));
 		configuration.set("authentications", getAuthentications());
 		configuration.set("timeout", new TextNode(timeout));
+		if (trustAllCertificates != null) {
+			configuration.set("trustAllCertificates", BooleanNode.valueOf(trustAllCertificates));
+		}
 		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		return CliExtensionManager.getExtensionManagerSingleton()

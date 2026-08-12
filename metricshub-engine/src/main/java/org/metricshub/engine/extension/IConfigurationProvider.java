@@ -4,7 +4,7 @@ package org.metricshub.engine.extension;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Engine
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -24,6 +24,7 @@ package org.metricshub.engine.extension;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -44,4 +45,21 @@ public interface IConfigurationProvider {
 	 * @return A collection of file extensions.
 	 */
 	Set<String> getFileExtensions();
+
+	/**
+	 * Render the given template file into its resulting configuration content, without
+	 * parsing it into configuration fragments.
+	 * <p>
+	 * This is used by tooling (for example, the web configuration editor) to preview the
+	 * output a provider produces from a single template. Providers that do not support
+	 * template rendering return an empty {@link Optional}.
+	 *
+	 * @param templateFile The path to the template file to render.
+	 * @return An {@link Optional} containing the rendered content, or empty if this provider
+	 *         does not handle the given file.
+	 * @throws Exception if the template cannot be rendered.
+	 */
+	default Optional<String> renderTemplate(Path templateFile) throws Exception {
+		return Optional.empty();
+	}
 }

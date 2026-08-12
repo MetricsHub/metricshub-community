@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.extension.ExtensionLoader;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IStrategyProviderExtension;
+import org.metricshub.engine.strategy.IStrategy;
 
 class ExtensionLoaderIT {
 
@@ -22,6 +23,9 @@ class ExtensionLoaderIT {
 		final List<IStrategyProviderExtension> strategyProviderExtensions =
 			extensionManager.getStrategyProviderExtensions();
 		assertEquals(1, strategyProviderExtensions.size());
-		assertEquals("StrategyProvider", strategyProviderExtensions.get(0).getClass().getSimpleName());
+		// The extension instance is wrapped in a TCCL-managing proxy, so assert its behavior rather
+		// than its concrete class name (which is now a dynamic proxy).
+		final List<IStrategy> strategies = strategyProviderExtensions.get(0).generate(null, 0L);
+		assertEquals(1, strategies.size());
 	}
 }
