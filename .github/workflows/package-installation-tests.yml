@@ -377,6 +377,78 @@ jobs:
         name: package-test-result-${{ matrix.id }}
         path: results/*
 
+  linux-upgrade-tests:
+    name: Linux upgrade test (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: debian12-amd64-deb
+            osLabel: Debian 12 (systemd)
+            packageType: deb
+            packagePattern: metricshub-community_*_amd64.deb
+          - id: ubi9-amd64-rpm
+            osLabel: Red Hat UBI 9 (systemd)
+            packageType: rpm
+            packagePattern: metricshub-community-*.x86_64.rpm
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+
+    - name: Download Linux packages
+      uses: actions/download-artifact@v8
+      with:
+        name: ${{ inputs.linuxArtifact }}
+        path: packages
+
+    - name: Run the detached upgrade runner scenarios
+      shell: bash
+      run: |
+        bash .github/scripts/upgrade-test-linux.sh \
+          '${{ matrix.id }}-upgrade-test' \
+          '${{ matrix.osLabel }}' \
+          '${{ matrix.packageType }}' \
+          '${{ matrix.packagePattern }}'
+
+    - name: Upload test result
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: package-test-result-upgrade-${{ matrix.id }}
+        path: results/*
+
+  windows-upgrade-tests:
+    name: Windows upgrade test (windows-x64-msi)
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+
+    - name: Download Windows packages
+      uses: actions/download-artifact@v8
+      with:
+        name: ${{ inputs.windowsArtifact }}
+        path: packages
+
+    - name: Run the detached upgrade runner scenarios
+      shell: pwsh
+      run: |
+        .github/scripts/upgrade-test-windows.ps1 `
+          -IdPrefix 'windows-x64-msi-upgrade-test' `
+          -PackagePattern 'metricshub-community-*.msi'
+
+    - name: Upload test result
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: package-test-result-upgrade-windows-x64-msi
+        path: results/*
+
   package-test-report:
     name: Package installation report
     runs-on: ubuntu-latest
@@ -384,6 +456,8 @@ jobs:
     needs:
     - linux-install-tests
     - windows-install-tests
+    - linux-upgrade-tests
+    - windows-upgrade-tests
 
     steps:
     - name: Download test result artifacts
