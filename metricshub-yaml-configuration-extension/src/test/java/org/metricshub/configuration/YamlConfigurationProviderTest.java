@@ -1,6 +1,7 @@
 package org.metricshub.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -133,20 +134,44 @@ class YamlConfigurationProviderTest {
 	}
 
 	@Test
-	void testAlternateCaseUiFileIsARegularFragment(@TempDir Path tempDir) throws IOException {
-		// Only the canonical name written by the UI is a UI fragment: an alternate-case
-		// variant is a regular fragment, merged before the canonical file.
+	void testAlternateCaseUiFileFollowsFilesystemSemantics(@TempDir Path tempDir) throws IOException {
+		// The UI file is identified by filesystem identity, mirroring how the UI resolves
+		// the file it reads and writes.
 		Files.writeString(tempDir.resolve("METRICSHUB-UI.YAML"), "key1: alternateCase");
 
 		final Collection<JsonNode> uiFragments = provider.loadUiFragments(tempDir);
-		assertTrue(uiFragments.isEmpty(), "An alternate-case variant must not be returned by loadUiFragments()");
-
 		final Collection<JsonNode> configurations = provider.load(tempDir);
-		assertEquals(1, configurations.size(), "An alternate-case variant must be loaded as a regular fragment");
-		assertEquals(
-			"alternateCase",
-			getJsonNodeAsText(configurations.iterator().next(), "key1"),
-			"The alternate-case variant content must be loaded by load()"
+
+		if (Files.exists(tempDir.resolve(YamlConfigurationProvider.UI_CONFIGURATION_FILENAME))) {
+			// Case-insensitive filesystem (e.g. Windows): the variant IS the UI file
+			assertEquals(1, uiFragments.size(), "On a case-insensitive filesystem the variant is the UI file");
+			assertTrue(configurations.isEmpty(), "The UI file must not be loaded as a regular fragment");
+			assertEquals(
+				"alternateCase",
+				getJsonNodeAsText(uiFragments.iterator().next(), "key1"),
+				"The UI file content must be loaded by loadUiFragments()"
+			);
+		} else {
+			// Case-sensitive filesystem: the variant is a distinct, hand-made regular fragment
+			assertTrue(uiFragments.isEmpty(), "A distinct alternate-case file must not be a UI fragment");
+			assertEquals(1, configurations.size(), "A distinct alternate-case file is a regular fragment");
+			assertEquals(
+				"alternateCase",
+				getJsonNodeAsText(configurations.iterator().next(), "key1"),
+				"The alternate-case variant content must be loaded by load()"
+			);
+		}
+	}
+
+	@Test
+	void testIsUiConfigurationFileWhenComparisonFails(@TempDir Path tempDir) throws IOException {
+		Files.writeString(tempDir.resolve(YamlConfigurationProvider.UI_CONFIGURATION_FILENAME), "key1: uiValue");
+
+		// The given path does not exist: Files.isSameFile fails and the file is
+		// conservatively treated as a regular fragment.
+		assertFalse(
+			YamlConfigurationProvider.isUiConfigurationFile(tempDir.resolve("missing.yaml")),
+			"A path that cannot be compared must not be classified as the UI configuration file"
 		);
 	}
 

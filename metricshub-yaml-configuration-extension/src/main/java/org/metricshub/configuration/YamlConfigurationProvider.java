@@ -106,16 +106,24 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 	/**
 	 * Checks whether the given path is the UI managed configuration file.
 	 * <p>
-	 * The match is exact (case-sensitive): the UI always writes the canonical
-	 * {@value #UI_CONFIGURATION_FILENAME} name. On case-sensitive filesystems an
-	 * alternate-case variant is a different, hand-made file: it is deliberately treated
-	 * as a regular fragment, so the canonical UI file is always merged after it.
+	 * The comparison relies on filesystem identity ({@link Files#isSameFile}) against the
+	 * canonical {@value #UI_CONFIGURATION_FILENAME} sibling, mirroring how the UI resolves
+	 * the file it reads and writes. On case-insensitive filesystems (e.g. Windows) an
+	 * alternate-case variant is the UI file itself and is deferred accordingly, while on
+	 * case-sensitive filesystems it is a distinct, hand-made file treated as a regular
+	 * fragment and therefore merged before the UI configuration.
 	 *
-	 * @param path The path to check.
-	 * @return {@code true} if the file name is exactly {@value #UI_CONFIGURATION_FILENAME}.
+	 * @param path The path to check (an existing file).
+	 * @return {@code true} if the path designates the UI managed configuration file.
 	 */
-	private static boolean isUiConfigurationFile(final Path path) {
-		return UI_CONFIGURATION_FILENAME.equals(path.getFileName().toString());
+	static boolean isUiConfigurationFile(final Path path) {
+		final Path uiConfigurationFile = path.resolveSibling(UI_CONFIGURATION_FILENAME);
+		try {
+			return Files.exists(uiConfigurationFile) && Files.isSameFile(path, uiConfigurationFile);
+		} catch (IOException e) {
+			log.debug("Cannot compare '{}' with the UI configuration file '{}'. Exception:", path, uiConfigurationFile, e);
+			return false;
+		}
 	}
 
 	/**
