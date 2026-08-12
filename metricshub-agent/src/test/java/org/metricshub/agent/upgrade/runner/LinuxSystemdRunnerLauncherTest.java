@@ -67,6 +67,9 @@ class LinuxSystemdRunnerLauncherTest {
 		assertEquals("systemd-run", command.get(0));
 		assertTrue(command.contains("--unit=metricshub-upgrade-abc-123"));
 		assertTrue(command.contains("--collect"));
+		// The launch must return once the unit is queued: a oneshot start job only completes when
+		// the runner exits, and the runner stops this very agent
+		assertTrue(command.contains("--no-block"));
 		assertTrue(command.contains("--property=Type=oneshot"));
 		assertTrue(command.contains("deb"));
 		assertTrue(command.contains("metricshub-community-service.service"));

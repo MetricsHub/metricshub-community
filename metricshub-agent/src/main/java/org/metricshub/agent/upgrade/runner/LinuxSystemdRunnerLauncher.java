@@ -138,6 +138,11 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 		command.add("systemd-run");
 		command.add("--unit=metricshub-upgrade-" + transaction.getUpgradeId());
 		command.add("--collect");
+		// Return once the unit is queued: without --no-block, systemd-run waits for the oneshot
+		// start job to complete — i.e. until the runner exits — so the runner would stop the agent
+		// while launch() is still blocked (and the executor's timeout would fail the upgrade while
+		// the unit keeps running)
+		command.add("--no-block");
 		command.add("--property=Type=oneshot");
 		// Without an explicit timeout the transient unit inherits the manager's
 		// DefaultTimeoutStartSec (commonly 90s) and systemd would kill the runner mid-installation,
