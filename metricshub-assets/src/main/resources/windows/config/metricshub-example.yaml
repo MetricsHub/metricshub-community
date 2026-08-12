@@ -28,6 +28,7 @@ otel:
 #   allowDowngrade: false
 #   # serviceName: MetricsHub Community # Discovered automatically; pin it if needed
 #   hostAllowlist: [ repo.metricshub.com ]
+#   # installTimeout: 30m # Deadline for the detached installation (default: 30m)
 #   # trustedCertificateFile: C:\ProgramData\MetricsHub\security\repo-ca.pem # Trusted certificate (PEM) for the package repository
 
 # Simple resource configuration
