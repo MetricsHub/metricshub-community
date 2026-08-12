@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import lombok.Builder;
 import lombok.Data;
@@ -55,10 +56,24 @@ public class ConfigurationService {
 	public JsonNode loadConfiguration(final ExtensionManager extensionManager) {
 		final JsonNode mergedConfiguration = JsonNodeFactory.instance.objectNode();
 
-		extensionManager
-			.getConfigurationProviderExtensions()
+		final var configurationProviders = extensionManager.getConfigurationProviderExtensions();
+
+		configurationProviders.forEach((IConfigurationProvider configurationProvider) -> {
+			var fragments = configurationProvider.load(configDirectory);
+			if (fragments != null) {
+				deepMergeFragments(mergedConfiguration, fragments);
+			}
+		});
+
+		// Fragments deferred by the providers (e.g. metricshub-ui.yaml) are merged once every
+		// regular fragment of every provider is in, so they always take precedence. Providers
+		// are sorted by loadLastOrder so the UI configuration also wins over any other
+		// deferred fragment.
+		configurationProviders
+			.stream()
+			.sorted(Comparator.comparingInt(IConfigurationProvider::loadLastOrder))
 			.forEach((IConfigurationProvider configurationProvider) -> {
-				var fragments = configurationProvider.load(configDirectory);
+				var fragments = configurationProvider.loadLast(configDirectory);
 				if (fragments != null) {
 					deepMergeFragments(mergedConfiguration, fragments);
 				}

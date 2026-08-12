@@ -46,6 +46,13 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 
 	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
 
+	/**
+	 * Name of the UI managed configuration file. It is excluded from the regular
+	 * {@link #load(Path)} pass and only returned by {@link #loadLast(Path)} so it is
+	 * always merged after every other configuration fragment.
+	 */
+	static final String UI_CONFIGURATION_FILENAME = "metricshub-ui.yaml";
+
 	@Override
 	public Collection<JsonNode> load(final Path configDirectory) {
 		final List<JsonNode> configurations = new ArrayList<>();
@@ -57,6 +64,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 					String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
 					return getFileExtensions().stream().anyMatch(fileName::endsWith);
 				})
+				.filter((Path path) -> !isUiConfigurationFile(path))
 				.forEach((Path path) ->
 					readFragment(path).ifPresent((JsonNode jsonNode) -> {
 						configurations.add(jsonNode);
@@ -71,6 +79,45 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 		final int size = configurations.size();
 		log.info("Loaded {} YAML configuration fragment{} from '{}'.", size, size > 1 ? "s" : "", configDirectory);
 		return configurations;
+	}
+
+	@Override
+	public Collection<JsonNode> loadLast(final Path configDirectory) {
+		final List<JsonNode> configurations = new ArrayList<>();
+
+		try (Stream<Path> stream = Files.list(configDirectory)) {
+			stream
+				.filter((Path path) -> !Files.isDirectory(path))
+				.filter(YamlConfigurationProvider::isUiConfigurationFile)
+				.forEach((Path path) ->
+					readFragment(path).ifPresent((JsonNode jsonNode) -> {
+						configurations.add(jsonNode);
+						log.debug("Successfully loaded UI YAML configuration fragment: '{}'", path);
+					})
+				);
+		} catch (IOException e) {
+			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
+			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
+		}
+
+		return configurations;
+	}
+
+	@Override
+	public int loadLastOrder() {
+		// This provider defers the UI configuration file, which must win over any other
+		// deferred fragment: merge it after every other provider's loadLast pass.
+		return Integer.MAX_VALUE;
+	}
+
+	/**
+	 * Checks whether the given path is the UI managed configuration file.
+	 *
+	 * @param path The path to check.
+	 * @return {@code true} if the file name matches {@value #UI_CONFIGURATION_FILENAME} (case-insensitive).
+	 */
+	private static boolean isUiConfigurationFile(final Path path) {
+		return UI_CONFIGURATION_FILENAME.equalsIgnoreCase(path.getFileName().toString());
 	}
 
 	/**

@@ -24,6 +24,7 @@ package org.metricshub.engine.extension;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -38,6 +39,36 @@ public interface IConfigurationProvider {
 	 * @return A collection of {@link JsonNode} representing the configuration fragments.
 	 */
 	Collection<JsonNode> load(Path path);
+
+	/**
+	 * Load configuration fragments that must be applied last, after the regular
+	 * fragments of <b>all</b> providers have been merged.
+	 * <p>
+	 * This lets a provider defer specific fragments (for example, the UI managed
+	 * {@code metricshub-ui.yaml} file) so they always take precedence over any other
+	 * configuration source, regardless of provider discovery order or file listing order.
+	 * Providers with no such fragments return an empty collection.
+	 *
+	 * @param path The path to the configuration directory.
+	 * @return A collection of {@link JsonNode} representing the configuration fragments to merge last.
+	 */
+	default Collection<JsonNode> loadLast(Path path) {
+		return Collections.emptyList();
+	}
+
+	/**
+	 * Order of this provider within the {@link #loadLast(Path)} merge pass.
+	 * <p>
+	 * When several providers return deferred fragments, they are merged in ascending
+	 * order: fragments from providers with a greater order are merged later and thus
+	 * take precedence. The provider managing the UI configuration file returns
+	 * {@link Integer#MAX_VALUE} so it is always merged last.
+	 *
+	 * @return The merge order of this provider's deferred fragments. Defaults to {@code 0}.
+	 */
+	default int loadLastOrder() {
+		return 0;
+	}
 
 	/**
 	 * Get the set of the file extensions that this configuration provider can handle.

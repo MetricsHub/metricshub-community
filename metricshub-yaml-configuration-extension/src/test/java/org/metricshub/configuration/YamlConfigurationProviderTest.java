@@ -85,6 +85,63 @@ class YamlConfigurationProviderTest {
 	}
 
 	@Test
+	void testLoadExcludesUiConfigurationFile(@TempDir Path tempDir) throws IOException {
+		Files.writeString(tempDir.resolve("config1.yaml"), "key1: value1");
+		Files.writeString(tempDir.resolve(YamlConfigurationProvider.UI_CONFIGURATION_FILENAME), "key1: uiValue");
+
+		final Collection<JsonNode> configurations = provider.load(tempDir);
+
+		assertEquals(1, configurations.size(), "load() should skip the UI configuration file");
+		assertEquals(
+			"value1",
+			getJsonNodeAsText(configurations.iterator().next(), "key1"),
+			"Only config1.yaml should be loaded by load()"
+		);
+	}
+
+	@Test
+	void testLoadLastReturnsOnlyUiConfigurationFile(@TempDir Path tempDir) throws IOException {
+		Files.writeString(tempDir.resolve("config1.yaml"), "key1: value1");
+		Files.writeString(tempDir.resolve(YamlConfigurationProvider.UI_CONFIGURATION_FILENAME), "key1: uiValue");
+
+		// Create an empty directory to make sure directories are skipped
+		Files.createDirectories(tempDir.resolve("additional-dir"));
+
+		final Collection<JsonNode> configurations = provider.loadLast(tempDir);
+
+		assertEquals(1, configurations.size(), "loadLast() should return only the UI configuration file");
+		assertEquals(
+			"uiValue",
+			getJsonNodeAsText(configurations.iterator().next(), "key1"),
+			"loadLast() should load the UI configuration fragment"
+		);
+	}
+
+	@Test
+	void testLoadLastWithoutUiConfigurationFile(@TempDir Path tempDir) throws IOException {
+		Files.writeString(tempDir.resolve("config1.yaml"), "key1: value1");
+
+		final Collection<JsonNode> configurations = provider.loadLast(tempDir);
+
+		assertTrue(configurations.isEmpty(), "loadLast() should be empty when the UI configuration file is absent");
+	}
+
+	@Test
+	void testLoadLastWithInvalidDirectory(@TempDir Path tempDir) {
+		final Collection<JsonNode> configurations = provider.loadLast(tempDir.resolve("invalid-dir"));
+		assertTrue(configurations.isEmpty(), "Invalid directory should yield no configurations");
+	}
+
+	@Test
+	void testLoadLastOrderIsMaximum() {
+		assertEquals(
+			Integer.MAX_VALUE,
+			provider.loadLastOrder(),
+			"The UI configuration fragment must be merged after every other deferred fragment"
+		);
+	}
+
+	@Test
 	void testLoadWithInvalidYaml(@TempDir Path tempDir) throws IOException {
 		final Path invalidYaml = tempDir.resolve("invalid.yaml");
 		Files.writeString(invalidYaml, "key: : : value");
