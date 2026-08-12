@@ -48,8 +48,8 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 
 	/**
 	 * Name of the UI managed configuration file. It is excluded from the regular
-	 * {@link #load(Path)} pass and only returned by {@link #loadLast(Path)} so it is
-	 * always merged after every other configuration fragment.
+	 * {@link #load(Path)} pass and only returned by {@link #loadUiFragments(Path)} so it
+	 * is always merged after every other configuration fragment.
 	 */
 	static final String UI_CONFIGURATION_FILENAME = "metricshub-ui.yaml";
 
@@ -82,7 +82,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 	}
 
 	@Override
-	public Collection<JsonNode> loadLast(final Path configDirectory) {
+	public Collection<JsonNode> loadUiFragments(final Path configDirectory) {
 		final List<JsonNode> configurations = new ArrayList<>();
 
 		try (Stream<Path> stream = Files.list(configDirectory)) {
@@ -101,13 +101,6 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 		}
 
 		return configurations;
-	}
-
-	@Override
-	public int loadLastOrder() {
-		// This provider defers the UI configuration file, which must win over any other
-		// deferred fragment: merge it after every other provider's loadLast pass.
-		return Integer.MAX_VALUE;
 	}
 
 	/**

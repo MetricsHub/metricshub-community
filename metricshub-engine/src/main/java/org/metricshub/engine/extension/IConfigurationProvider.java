@@ -41,33 +41,19 @@ public interface IConfigurationProvider {
 	Collection<JsonNode> load(Path path);
 
 	/**
-	 * Load configuration fragments that must be applied last, after the regular
-	 * fragments of <b>all</b> providers have been merged.
+	 * Load the fragments of the UI managed configuration file ({@code metricshub-ui.yaml}).
 	 * <p>
-	 * This lets a provider defer specific fragments (for example, the UI managed
-	 * {@code metricshub-ui.yaml} file) so they always take precedence over any other
-	 * configuration source, regardless of provider discovery order or file listing order.
-	 * Providers with no such fragments return an empty collection.
+	 * These fragments are merged after the regular {@link #load(Path)} fragments of
+	 * <b>all</b> providers, so the UI configuration always takes precedence over any
+	 * other configuration source, regardless of provider discovery order or file
+	 * listing order. Providers that do not manage the UI configuration return an
+	 * empty collection.
 	 *
 	 * @param path The path to the configuration directory.
-	 * @return A collection of {@link JsonNode} representing the configuration fragments to merge last.
+	 * @return A collection of {@link JsonNode} representing the UI configuration fragments.
 	 */
-	default Collection<JsonNode> loadLast(Path path) {
+	default Collection<JsonNode> loadUiFragments(Path path) {
 		return Collections.emptyList();
-	}
-
-	/**
-	 * Order of this provider within the {@link #loadLast(Path)} merge pass.
-	 * <p>
-	 * When several providers return deferred fragments, they are merged in ascending
-	 * order: fragments from providers with a greater order are merged later and thus
-	 * take precedence. The provider managing the UI configuration file returns
-	 * {@link Integer#MAX_VALUE} so it is always merged last.
-	 *
-	 * @return The merge order of this provider's deferred fragments. Defaults to {@code 0}.
-	 */
-	default int loadLastOrder() {
-		return 0;
 	}
 
 	/**
