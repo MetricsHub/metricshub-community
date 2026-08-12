@@ -31,9 +31,13 @@ import org.metricshub.agent.upgrade.UpgradeException;
 
 /**
  * Copies the detached runner script from the (package-owned) installation tree into the staging
- * directory before launching it. Running the script from a copy is required on Windows, where the
- * MSI would otherwise fail to replace a file locked by the executing runner, and is harmless on
- * Linux.
+ * directory before launching it. The runner must only ever execute the staged copy: the shipped
+ * script is part of the package being replaced. On Windows the MSI major upgrade
+ * ({@code RemoveExistingProducts} scheduled before {@code CostInitialize}) deletes the whole
+ * installation tree before laying down the new files — the installed script disappears
+ * mid-upgrade, and a script still running from that tree would trip the files-in-use check. On
+ * Linux, dpkg/rpm atomically swap the installed script. The staging directory is created at
+ * runtime and belongs to no package file table, so the copy survives the very upgrade it drives.
  */
 public class RunnerScripts {
 
