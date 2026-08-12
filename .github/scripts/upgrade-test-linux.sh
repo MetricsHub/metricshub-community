@@ -176,13 +176,16 @@ log "Installed baseline version: ${INSTALLED_BEFORE}"
 
 docker exec "${CONTAINER}" mkdir -p "${STAGING}"
 
-# Launches the runner exactly as LinuxSystemdRunnerLauncher does and waits for runner.result.
+# Launches the runner exactly as LinuxSystemdRunnerLauncher does and waits for its verdict.
+# The verdict is read from the RESULT line of runner.log, not from the runner.result marker: the
+# marker is consumed by the running agent (startup reconciliation clears stale markers), so
+# reading the file races the agent — the log line is written in the same breath and is durable.
 # $1 = staged package path (in container), $2 = expected sha256, $3 = mode, $4 = wait seconds
 run_runner() {
 	local staged_package="$1" sha256="$2" mode="$3" wait_seconds="$4"
 	local unit="metricshub-upgrade-ci-$(date +%s)"
-	docker exec "${CONTAINER}" sh -c "rm -f '${STAGING}/runner.result' && cp /tmp/runner/metricshub-upgrade-runner.sh '${STAGING}/metricshub-upgrade-runner.sh' && chmod 700 '${STAGING}/metricshub-upgrade-runner.sh'"
-	# This function is command-substituted: its stdout must carry only the marker, so the
+	docker exec "${CONTAINER}" sh -c "rm -f '${STAGING}/runner.result' '${STAGING}/runner.log' && cp /tmp/runner/metricshub-upgrade-runner.sh '${STAGING}/metricshub-upgrade-runner.sh' && chmod 700 '${STAGING}/metricshub-upgrade-runner.sh'"
+	# This function is command-substituted: its stdout must carry only the verdict, so the
 	# systemd-run status text (e.g. "Running as unit: ...") is silenced and diverted to stderr
 	docker exec "${CONTAINER}" systemd-run \
 		--quiet \
@@ -199,13 +202,24 @@ run_runner() {
 		--staging "${STAGING}" \
 		--mode "${mode}" 1>&2
 	for _ in $(seq 1 $((wait_seconds / 2))); do
-		if docker exec "${CONTAINER}" test -f "${STAGING}/runner.result"; then
+		if docker exec "${CONTAINER}" grep -q " RESULT: " "${STAGING}/runner.log" 2>/dev/null; then
 			break
 		fi
 		sleep 2
 	done
-	docker exec "${CONTAINER}" cat "${STAGING}/runner.result" 2>/dev/null || echo "NO_RESULT"
+	docker exec "${CONTAINER}" sed -n 's/.* RESULT: \(.*\) (exit [0-9]*)$/\1/p' "${STAGING}/runner.log" 2>/dev/null |
+		tail -n 1 |
+		grep . ||
+		echo "NO_RESULT"
 }
+
+# The mode the agent itself would compute for this offer (VersionHelper.installMode): the deb
+# scenario upgrades from the older baseline, the rpm scenario re-offers the installed version
+if [ "${PACKAGE_TYPE}" = "deb" ]; then
+	MODE="install"
+else
+	MODE="reinstall"
+fi
 
 # ------------------------------------------------------------------------------------------------
 # Scenario 1 - corrupted package: hash re-check fails, the installed service is untouched
@@ -214,7 +228,7 @@ log "Scenario: corrupted package"
 # Corrupt by appending: package formats contain zero-padded regions, so overwriting a fixed
 # offset can be a no-op; appending always changes the hash
 docker exec "${CONTAINER}" sh -c "cp /tmp/packages/${PACKAGE_NAME} ${STAGING}/corrupted.${PACKAGE_TYPE} && printf 'CORRUPTED-BY-CI' >> ${STAGING}/corrupted.${PACKAGE_TYPE}"
-RESULT=$(run_runner "${STAGING}/corrupted.${PACKAGE_TYPE}" "${PACKAGE_SHA256}" "install" 120)
+RESULT=$(run_runner "${STAGING}/corrupted.${PACKAGE_TYPE}" "${PACKAGE_SHA256}" "${MODE}" 120)
 
 SCENARIO="${ID_PREFIX}-corrupted"
 if [ "${RESULT}" != "INSTALL_FAILED exit=10 step=verify" ]; then
@@ -231,11 +245,9 @@ fi
 # Scenario 2 - real installation through the runner (deb: upgrade, rpm: same-version reinstall)
 # ------------------------------------------------------------------------------------------------
 if [ "${PACKAGE_TYPE}" = "deb" ]; then
-	MODE="install"
 	SCENARIO="${ID_PREFIX}-upgrade"
 	log "Scenario: upgrade 1.0.0 -> built version"
 else
-	MODE="reinstall"
 	SCENARIO="${ID_PREFIX}-reinstall"
 	log "Scenario: same-version reinstall (hotfix path)"
 fi
