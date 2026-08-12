@@ -55,14 +55,23 @@ public class ConfigurationService {
 	public JsonNode loadConfiguration(final ExtensionManager extensionManager) {
 		final JsonNode mergedConfiguration = JsonNodeFactory.instance.objectNode();
 
-		extensionManager
-			.getConfigurationProviderExtensions()
-			.forEach((IConfigurationProvider configurationProvider) -> {
-				var fragments = configurationProvider.load(configDirectory);
-				if (fragments != null) {
-					deepMergeFragments(mergedConfiguration, fragments);
-				}
-			});
+		final var configurationProviders = extensionManager.getConfigurationProviderExtensions();
+
+		configurationProviders.forEach((IConfigurationProvider configurationProvider) -> {
+			var fragments = configurationProvider.load(configDirectory);
+			if (fragments != null) {
+				deepMergeFragments(mergedConfiguration, fragments);
+			}
+		});
+
+		// The UI configuration fragments (metricshub-ui.yaml) are merged once every regular
+		// fragment of every provider is in, so the UI configuration always takes precedence.
+		configurationProviders.forEach((IConfigurationProvider configurationProvider) -> {
+			var fragments = configurationProvider.loadUiFragments(configDirectory);
+			if (fragments != null) {
+				deepMergeFragments(mergedConfiguration, fragments);
+			}
+		});
 
 		return mergedConfiguration;
 	}

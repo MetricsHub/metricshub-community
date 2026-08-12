@@ -86,6 +86,8 @@ This is the page your example URL opens. It is a **single scrollable page** with
 | `UiConfig` | Spring MVC configuration serving the built React app (static assets + SPA fallback). |
 | `ConfigHelper` (touched) | Agent config helper; branch changes align UI-written YAML with what the agent loader accepts. |
 
+**Configuration precedence:** `metricshub-ui.yaml` is loaded through the dedicated `IConfigurationProvider.loadUiFragments` pass and merged by the agent's `ConfigurationService` **after** the regular fragments of every configuration provider (other YAML files, Velocity `.vm` templates, …). Settings written by the UI therefore always override the same settings defined in any other configuration file, regardless of file naming or provider discovery order.
+
 ### DTOs (`org.metricshub.web.dto.uiconfig`)
 
 | DTO | Purpose |

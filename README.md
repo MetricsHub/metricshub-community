@@ -50,7 +50,7 @@ This is a multi-module project:
 * **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
 * **metricshub-emulation-extension**: Replays recorded protocol exchanges (HTTP, SNMP, WMI, WBEM, SSH, IPMI, JDBC, JMX) from local files, enabling offline testing and development without live infrastructure.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
-* **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory.
+* **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory. The UI-managed `metricshub-ui.yaml` file is handled separately: it is always merged last, after the fragments of every configuration provider, so settings configured through the web UI override every other configuration source.
 * **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts.
 * **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
