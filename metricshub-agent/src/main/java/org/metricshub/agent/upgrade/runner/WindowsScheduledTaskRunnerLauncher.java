@@ -29,14 +29,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.upgrade.UpgradeException;
+import org.metricshub.agent.upgrade.VersionHelper;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 
 /**
  * Launches the detached upgrade runner on Windows as a one-shot Scheduled Task running as SYSTEM.
  * A scheduled task runs under the Task Scheduler service, outside the agent service's process
- * tree, so it survives NSSM terminating that tree when the "MetricsHub Community" service is
- * stopped by msiexec.
+ * tree, so it survives NSSM terminating that tree when the MetricsHub service is stopped by
+ * msiexec.
  */
 @Slf4j
 public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
@@ -153,12 +155,27 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 			stagingDirectory.toAbsolutePath() +
 			"\" -SignatureSubjectContains \"" +
 			signatureSubjectContains +
-			"\"";
+			"\" -Mode " +
+			VersionHelper.installMode(transaction.getFromVersion(), transaction.getToVersion()) +
+			" -InstallTimeoutSeconds " +
+			installTimeoutSeconds(transaction);
 
 		final Path wrapper = stagingDirectory.resolve(LAUNCH_WRAPPER_NAME);
 		Files.createDirectories(stagingDirectory);
 		Files.writeString(wrapper, "@echo off\r\n" + powershell + "\r\n", StandardCharsets.US_ASCII);
 		return wrapper;
+	}
+
+	/**
+	 * Returns the installation timeout to hand to the runner, falling back to the configured
+	 * default when the transaction carries none.
+	 *
+	 * @param transaction the upgrade transaction
+	 * @return the timeout in seconds
+	 */
+	private static long installTimeoutSeconds(final UpgradeTransaction transaction) {
+		final long timeout = transaction.getInstallTimeoutSeconds();
+		return timeout > 0 ? timeout : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT;
 	}
 
 	/**

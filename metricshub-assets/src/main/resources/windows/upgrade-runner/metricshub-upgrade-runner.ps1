@@ -3,8 +3,16 @@
 # Launched by the MetricsHub agent through a one-shot Scheduled Task so it runs outside the agent
 # service's process tree (NSSM terminates that tree when the service stops). It re-verifies the
 # staged MSI, checks its Authenticode signature, installs it (msiexec stops and restarts the
-# "MetricsHub Community" service through the WiX ServiceControl elements), waits for the service to
-# come back up, and records the outcome in a result marker file the agent reads when it restarts.
+# MetricsHub service through the WiX ServiceControl elements), waits for the service to come back
+# up, and records the outcome in a result marker file the agent reads when it restarts.
+#
+# -Mode reinstall selects explicit same-version reinstall semantics (REINSTALL=ALL
+# REINSTALLMODE=vamus): a same-version hotfix would otherwise leave the installed files untouched,
+# since plain /i does not replace files whose version did not increase and the WiX upgrade table
+# excludes the current version from major-upgrade replacement.
+#
+# -InstallTimeoutSeconds bounds the msiexec run: without it a hung installer would block this
+# runner forever after the agent service was stopped, leaving the host unmonitored.
 #
 # The agent is the only writer of the upgrade transaction; this runner writes only runner.result
 # and runner.log in the staging directory.
@@ -13,7 +21,7 @@
 # Community", "MetricsHub Enterprise", ...
 #
 # Exit codes: 0 success, 2 usage, 10 hash mismatch, 12 install failed, 13 service did not come
-#             back up, 14 signature invalid.
+#             back up, 14 signature invalid, 15 installation timed out.
 
 [CmdletBinding()]
 param(
@@ -21,7 +29,9 @@ param(
 	[Parameter(Mandatory = $true)][string]$Sha256,
 	[Parameter(Mandatory = $true)][string]$Service,
 	[Parameter(Mandatory = $true)][string]$Staging,
-	[string]$SignatureSubjectContains = "MetricsHub"
+	[string]$SignatureSubjectContains = "MetricsHub",
+	[string]$Mode = "install",
+	[long]$InstallTimeoutSeconds = 1800
 )
 
 $ErrorActionPreference = "Stop"
@@ -66,11 +76,23 @@ try {
 		Complete-Run "INSTALL_FAILED exit=14 step=signature" 14
 	}
 
-	# 3. Install the MSI. msiexec stops, removes, installs and restarts the service itself.
+	# 3. Install the MSI. msiexec stops, removes, installs and restarts the service itself. A
+	# same-version hotfix needs REINSTALL=ALL REINSTALLMODE=vamus to actually replace the files.
 	$msiLog = Join-Path $Staging "msiexec.log"
-	$process = Start-Process -FilePath "msiexec.exe" `
-		-ArgumentList @("/i", "`"$Package`"", "/qn", "/norestart", "/L*v", "`"$msiLog`"") `
-		-Wait -PassThru
+	$msiArgs = @("/i", "`"$Package`"")
+	if ($Mode -eq "reinstall") {
+		$msiArgs += @("REINSTALL=ALL", "REINSTALLMODE=vamus")
+	}
+	$msiArgs += @("/qn", "/norestart", "/L*v", "`"$msiLog`"")
+	$process = Start-Process -FilePath "msiexec.exe" -ArgumentList $msiArgs -PassThru
+	# Bound the installer run: -Wait has no timeout and a hung msiexec would leave the agent down
+	$timeoutMs = [int][Math]::Min([long]$InstallTimeoutSeconds * 1000, [int]::MaxValue)
+	if (-not $process.WaitForExit($timeoutMs)) {
+		Write-Log "msiexec did not complete within $InstallTimeoutSeconds seconds; terminating it"
+		try { $process.Kill() } catch { }
+		try { Start-Service -Name $Service } catch { }
+		Complete-Run "INSTALL_FAILED exit=15 step=timeout" 15
+	}
 	$exitCode = $process.ExitCode
 	Write-Log "msiexec exited with code $exitCode"
 	# 0 = success, 3010 = success, reboot required

@@ -22,7 +22,11 @@
 #                       really replaced instead of being reported as already current
 #
 # Exit codes: 0 success, 2 usage, 10 hash mismatch, 11 stop failed, 12 install failed,
-#             13 service did not come back up.
+#             13 service did not come back up, 15 terminated on installation timeout.
+#
+# The transient unit carries TimeoutStartSec=<install timeout>, so systemd TERMinates this
+# script when the deadline elapses; the TERM trap restarts the service and records the failure
+# so the agent never stays down without a verdict.
 
 set -u
 
@@ -59,11 +63,23 @@ log() {
 
 # Writes the result marker and exits. $1 = marker content, $2 = exit code.
 finish() {
+	# A verdict is being finalized: a late TERM must not overwrite it
+	trap - TERM INT
 	# Write atomically so the agent never reads a half-written marker
 	printf '%s\n' "$1" > "$RESULT.tmp" && mv -f "$RESULT.tmp" "$RESULT"
 	log "RESULT: $1 (exit $2)"
 	exit "$2"
 }
+
+# systemd kills the transient unit when the installation timeout elapses (TimeoutStartSec).
+# Restart the service and record the failure so the agent does not stay down without a verdict.
+on_terminated() {
+	trap - TERM INT
+	log "Terminated (installation timeout); restarting $SERVICE"
+	systemctl start "$SERVICE" >>"$LOG" 2>&1 || true
+	finish "INSTALL_FAILED exit=15 step=timeout" 15
+}
+trap on_terminated TERM INT
 
 log "Starting upgrade: package=$PACKAGE type=$PKG_TYPE mode=$MODE service=$SERVICE"
 

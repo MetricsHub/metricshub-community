@@ -156,7 +156,7 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 		command.add("--staging");
 		command.add(stagingDirectory.toAbsolutePath().toString());
 		command.add("--mode");
-		command.add(installMode(transaction));
+		command.add(VersionHelper.installMode(transaction.getFromVersion(), transaction.getToVersion()));
 		return command;
 	}
 
@@ -170,22 +170,6 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 	private static long installTimeoutSeconds(final UpgradeTransaction transaction) {
 		final long timeout = transaction.getInstallTimeoutSeconds();
 		return timeout > 0 ? timeout : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT;
-	}
-
-	/**
-	 * Selects the package-manager operation from the transaction versions: a same-version offer
-	 * must be reinstalled (the package manager would otherwise consider the installed version
-	 * current and change nothing) and an older offer must be downgraded explicitly.
-	 *
-	 * @param transaction the upgrade transaction
-	 * @return {@code install}, {@code reinstall} or {@code downgrade}
-	 */
-	static String installMode(final UpgradeTransaction transaction) {
-		final int comparison = VersionHelper.compare(transaction.getToVersion(), transaction.getFromVersion());
-		if (comparison == 0) {
-			return "reinstall";
-		}
-		return comparison < 0 ? "downgrade" : "install";
 	}
 
 	/**

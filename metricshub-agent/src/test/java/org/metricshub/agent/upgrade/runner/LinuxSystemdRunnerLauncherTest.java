@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.upgrade.UpgradeException;
 import org.metricshub.agent.upgrade.UpgradeState;
+import org.metricshub.agent.upgrade.VersionHelper;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 
 class LinuxSystemdRunnerLauncherTest {
@@ -131,10 +132,10 @@ class LinuxSystemdRunnerLauncherTest {
 
 	@Test
 	void installModeShouldFollowTheVersionComparison() {
-		assertEquals("install", LinuxSystemdRunnerLauncher.installMode(transaction("deb", "3.9.05", "3.10.00")));
+		assertEquals("install", VersionHelper.installMode("3.9.05", "3.10.00"));
 		// A same-version hotfix must be reinstalled, otherwise the package manager changes nothing
-		assertEquals("reinstall", LinuxSystemdRunnerLauncher.installMode(transaction("deb", "3.10.00", "3.10.00")));
-		assertEquals("downgrade", LinuxSystemdRunnerLauncher.installMode(transaction("deb", "3.10.00", "3.9.05")));
+		assertEquals("reinstall", VersionHelper.installMode("3.10.00", "3.10.00"));
+		assertEquals("downgrade", VersionHelper.installMode("3.10.00", "3.9.05"));
 	}
 
 	@Test

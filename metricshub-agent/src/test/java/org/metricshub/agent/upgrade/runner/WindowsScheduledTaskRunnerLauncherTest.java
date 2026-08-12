@@ -77,6 +77,9 @@ class WindowsScheduledTaskRunnerLauncherTest {
 		assertTrue(wrapperContent.contains("-Sha256 cafebabe"));
 		assertTrue(wrapperContent.contains("-Service \"MetricsHub Community\""));
 		assertTrue(wrapperContent.contains("-SignatureSubjectContains \"MetricsHub\""));
+		assertTrue(wrapperContent.contains("-Mode install"));
+		// The transaction carries no timeout: the configured default applies
+		assertTrue(wrapperContent.contains("-InstallTimeoutSeconds 1800"));
 		assertTrue(wrapperContent.contains(staging.resolve(WindowsScheduledTaskRunnerLauncher.SCRIPT_NAME).toString()));
 
 		assertEquals(List.of("schtasks", "/Run", "/TN", WindowsScheduledTaskRunnerLauncher.TASK_NAME), commands.get(1));
@@ -102,6 +105,37 @@ class WindowsScheduledTaskRunnerLauncherTest {
 			staging.resolve(WindowsScheduledTaskRunnerLauncher.LAUNCH_WRAPPER_NAME)
 		);
 		assertTrue(wrapperContent.contains("-Service \"MetricsHub Enterprise\""));
+	}
+
+	@Test
+	void sameVersionOfferShouldRequestExplicitReinstall() throws Exception {
+		final Path shippedDir = shippedScriptDir();
+		final Path staging = Files.createDirectories(tempDir.resolve("staging-hotfix"));
+		final WindowsScheduledTaskRunnerLauncher launcher = new WindowsScheduledTaskRunnerLauncher(
+			() -> shippedDir,
+			command -> 0,
+			"MetricsHub Community",
+			"MetricsHub"
+		);
+		final UpgradeTransaction hotfix = UpgradeTransaction.builder()
+			.upgradeId("win-2")
+			.packageName("metricshub")
+			.fromVersion("3.10.00")
+			.toVersion("3.10.00")
+			.sha256("cafebabe")
+			.deploymentKind("MSI")
+			.state(UpgradeState.INSTALLING)
+			.installTimeoutSeconds(600)
+			.build();
+
+		launcher.launch(hotfix, staging.resolve("p.msi"), staging);
+
+		final String wrapperContent = Files.readString(
+			staging.resolve(WindowsScheduledTaskRunnerLauncher.LAUNCH_WRAPPER_NAME)
+		);
+		// A same-version hotfix must be applied with explicit reinstall semantics
+		assertTrue(wrapperContent.contains("-Mode reinstall"));
+		assertTrue(wrapperContent.contains("-InstallTimeoutSeconds 600"));
 	}
 
 	@Test
