@@ -313,11 +313,14 @@ public class UpgradeManager {
 	/**
 	 * Resolves a transaction interrupted during the installation phase.
 	 * <p>
-	 * A changed running version is definitive evidence. Otherwise the runner's completion marker
-	 * decides; while the marker is absent and the configured installation deadline
-	 * ({@code installStartedAt + installTimeoutSeconds}) has not elapsed, the runner may still be
-	 * working (the service manager can restart the agent early), so the transaction is kept
-	 * pending, reported as {@code Installing}, and re-checked periodically.
+	 * The runner's completion marker decides the verdict: the running version alone is never
+	 * sufficient for success, because package hooks or the MSI service controls can start the
+	 * upgraded agent while the installer is still finalizing — and may yet fail. While the marker
+	 * is absent and the installation deadline ({@code installStartedAt + installTimeoutSeconds})
+	 * has not elapsed, the transaction is kept pending, reported as {@code Installing}, and
+	 * re-checked periodically. Once the deadline elapses without a marker, a running target
+	 * version is accepted as evidence of success (the runner died without reporting), otherwise
+	 * the upgrade failed.
 	 * </p>
 	 *
 	 * @param transaction the pending install-phase transaction
@@ -328,16 +331,12 @@ public class UpgradeManager {
 			transaction.getFromVersion(),
 			transaction.getToVersion()
 		);
-
-		if (!sameVersionHotfix && VersionHelper.isSameVersion(current, transaction.getToVersion())) {
-			finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
-			return;
-		}
+		final boolean runningTargetVersion = VersionHelper.isSameVersion(current, transaction.getToVersion());
 
 		if (RunnerMarkers.readResult(stagingDirectory).isPresent()) {
-			// The runner finished: its result decides (for same-version hotfixes the version can
-			// never decide; for version upgrades reaching this point the version did not change)
-			if (sameVersionHotfix && RunnerMarkers.installSucceeded(stagingDirectory)) {
+			// The runner finished: its verdict decides. A running target version alone is not
+			// success — the installer may have started the upgraded agent and failed afterwards.
+			if (RunnerMarkers.installSucceeded(stagingDirectory) && (sameVersionHotfix || runningTargetVersion)) {
 				finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
 			} else {
 				finishReconciliation(
@@ -347,6 +346,8 @@ public class UpgradeManager {
 						transaction.getToVersion() +
 						" did not complete successfully (" +
 						RunnerMarkers.readResult(stagingDirectory).orElse("no runner result marker") +
+						", running version " +
+						current +
 						")",
 					current
 				);
@@ -355,7 +356,7 @@ public class UpgradeManager {
 		}
 
 		final long deadlineMs =
-			transaction.getInstallStartedAt() + TimeUnit.SECONDS.toMillis(transaction.getInstallTimeoutSeconds());
+			transaction.getInstallStartedAt() + TimeUnit.SECONDS.toMillis(effectiveInstallTimeoutSeconds(transaction));
 		if (transaction.getInstallStartedAt() > 0 && System.currentTimeMillis() < deadlineMs) {
 			// The runner may still be working: keep the transaction (and the lock) and re-check
 			log.info(
@@ -377,6 +378,18 @@ public class UpgradeManager {
 			return;
 		}
 
+		if (runningTargetVersion && !sameVersionHotfix) {
+			// Deadline elapsed without a runner marker, but the desired version is running: the
+			// runner died without reporting (crash, forced kill) yet the observable state is the
+			// target state
+			log.warn(
+				"The upgrade to version {} produced no runner result before its deadline, but the target version is running; reporting success.",
+				transaction.getToVersion()
+			);
+			finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
+			return;
+		}
+
 		finishReconciliation(
 			transaction,
 			UpgradeState.FAILED,
@@ -391,6 +404,19 @@ public class UpgradeManager {
 					" was expected",
 			current
 		);
+	}
+
+	/**
+	 * Returns the effective installation timeout of a transaction, substituting the configured
+	 * default for nonpositive persisted values so the reconciler and the detached runner apply
+	 * the same deadline.
+	 *
+	 * @param transaction the pending transaction
+	 * @return the timeout in seconds
+	 */
+	private static long effectiveInstallTimeoutSeconds(final UpgradeTransaction transaction) {
+		final long timeout = transaction.getInstallTimeoutSeconds();
+		return timeout > 0 ? timeout : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT;
 	}
 
 	/**
@@ -496,7 +522,10 @@ public class UpgradeManager {
 				.deploymentKind(deploymentDetector.detect().name())
 				.state(UpgradeState.UPDATE_AVAILABLE)
 				.createdAt(System.currentTimeMillis())
-				.installTimeoutSeconds(config.getInstallTimeout())
+				// Normalized so the runner and the startup reconciler apply the same deadline
+				.installTimeoutSeconds(
+					config.getInstallTimeout() > 0 ? config.getInstallTimeout() : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT
+				)
 				.build();
 			persistAndPublish(transaction, UpgradeState.UPDATE_AVAILABLE, null);
 
