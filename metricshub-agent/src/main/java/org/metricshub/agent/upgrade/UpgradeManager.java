@@ -42,8 +42,8 @@ import org.metricshub.agent.upgrade.api.UpgradeStatusListener;
 import org.metricshub.agent.upgrade.download.PackageDownloader;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.agent.upgrade.runner.RunnerLauncher;
+import org.metricshub.agent.upgrade.runner.RunnerLauncherFactory;
 import org.metricshub.agent.upgrade.runner.RunnerMarkers;
-import org.metricshub.agent.upgrade.runner.UnsupportedRunnerLauncher;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransaction;
 import org.metricshub.agent.upgrade.transaction.UpgradeTransactionStore;
 import org.metricshub.agent.upgrade.validate.PackageValidator;
@@ -80,7 +80,8 @@ public class UpgradeManager {
 	private final PackageDownloader downloader;
 	private final PackageValidator validator;
 	private final DeploymentDetector deploymentDetector;
-	private final RunnerLauncher runnerLauncher;
+	private final RunnerLauncher runnerLauncherOverride;
+	private final RunnerLauncherFactory runnerLauncherFactory;
 	private final ExecutorService worker;
 
 	private volatile UpgradeStatusListener statusListener = _ -> {};
@@ -102,12 +103,13 @@ public class UpgradeManager {
 			new PackageDownloader(),
 			new PackageValidator(),
 			new DeploymentDetector(),
-			new UnsupportedRunnerLauncher()
+			null,
+			new RunnerLauncherFactory()
 		);
 	}
 
 	/**
-	 * Creates the manager with caller-provided collaborators (used by tests).
+	 * Creates the manager with a fixed runner launcher (used by tests).
 	 *
 	 * @param currentVersionSupplier supplies the version the agent currently runs
 	 * @param configSupplier         supplies the upgrade configuration
@@ -115,7 +117,7 @@ public class UpgradeManager {
 	 * @param downloader             the package downloader
 	 * @param validator              the package validator
 	 * @param deploymentDetector     the deployment detector
-	 * @param runnerLauncher         the detached runner launcher
+	 * @param runnerLauncher         the detached runner launcher used for every deployment
 	 */
 	UpgradeManager(
 		final Supplier<String> currentVersionSupplier,
@@ -126,6 +128,42 @@ public class UpgradeManager {
 		final DeploymentDetector deploymentDetector,
 		final RunnerLauncher runnerLauncher
 	) {
+		this(
+			currentVersionSupplier,
+			configSupplier,
+			stagingDirectory,
+			downloader,
+			validator,
+			deploymentDetector,
+			runnerLauncher,
+			null
+		);
+	}
+
+	/**
+	 * Canonical constructor. Exactly one of {@code runnerLauncherOverride} and
+	 * {@code runnerLauncherFactory} is used: the override, when set, is used for every deployment
+	 * (tests); otherwise the factory selects the launcher matching the detected deployment kind.
+	 *
+	 * @param currentVersionSupplier  supplies the version the agent currently runs
+	 * @param configSupplier          supplies the upgrade configuration
+	 * @param stagingDirectory        the upgrade staging directory
+	 * @param downloader              the package downloader
+	 * @param validator               the package validator
+	 * @param deploymentDetector      the deployment detector
+	 * @param runnerLauncherOverride  a fixed launcher, or {@code null} to use the factory
+	 * @param runnerLauncherFactory   the launcher factory, or {@code null} when an override is set
+	 */
+	UpgradeManager(
+		final Supplier<String> currentVersionSupplier,
+		final Supplier<UpgradeConfig> configSupplier,
+		final Path stagingDirectory,
+		final PackageDownloader downloader,
+		final PackageValidator validator,
+		final DeploymentDetector deploymentDetector,
+		final RunnerLauncher runnerLauncherOverride,
+		final RunnerLauncherFactory runnerLauncherFactory
+	) {
 		this.currentVersionSupplier = currentVersionSupplier;
 		this.configSupplier = configSupplier;
 		this.stagingDirectory = stagingDirectory;
@@ -134,13 +172,28 @@ public class UpgradeManager {
 		this.downloader = downloader;
 		this.validator = validator;
 		this.deploymentDetector = deploymentDetector;
-		this.runnerLauncher = runnerLauncher;
+		this.runnerLauncherOverride = runnerLauncherOverride;
+		this.runnerLauncherFactory = runnerLauncherFactory;
 		this.worker = Executors.newSingleThreadExecutor(runnable -> {
 			final Thread thread = new Thread(runnable, "metricshub-upgrade");
 			thread.setDaemon(true);
 			return thread;
 		});
 		loadInstalledPackageIdentity();
+	}
+
+	/**
+	 * Resolves the runner launcher for the current offer: the fixed override when set, otherwise
+	 * the factory's launcher for the detected deployment kind.
+	 *
+	 * @param config the current upgrade configuration
+	 * @return the runner launcher to use
+	 */
+	private RunnerLauncher resolveRunnerLauncher(final UpgradeConfig config) {
+		if (runnerLauncherOverride != null) {
+			return runnerLauncherOverride;
+		}
+		return runnerLauncherFactory.forDeployment(deploymentDetector.detect(), config);
 	}
 
 	/**
@@ -260,11 +313,14 @@ public class UpgradeManager {
 	/**
 	 * Resolves a transaction interrupted during the installation phase.
 	 * <p>
-	 * A changed running version is definitive evidence. Otherwise the runner's completion marker
-	 * decides; while the marker is absent and the configured installation deadline
-	 * ({@code installStartedAt + installTimeoutSeconds}) has not elapsed, the runner may still be
-	 * working (the service manager can restart the agent early), so the transaction is kept
-	 * pending, reported as {@code Installing}, and re-checked periodically.
+	 * The runner's completion marker decides the verdict: the running version alone is never
+	 * sufficient for success, because package hooks or the MSI service controls can start the
+	 * upgraded agent while the installer is still finalizing — and may yet fail. While the marker
+	 * is absent and the installation deadline ({@code installStartedAt + installTimeoutSeconds})
+	 * has not elapsed, the transaction is kept pending, reported as {@code Installing}, and
+	 * re-checked periodically. Once the deadline elapses without a marker, a running target
+	 * version is accepted as evidence of success (the runner died without reporting), otherwise
+	 * the upgrade failed.
 	 * </p>
 	 *
 	 * @param transaction the pending install-phase transaction
@@ -275,16 +331,12 @@ public class UpgradeManager {
 			transaction.getFromVersion(),
 			transaction.getToVersion()
 		);
-
-		if (!sameVersionHotfix && VersionHelper.isSameVersion(current, transaction.getToVersion())) {
-			finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
-			return;
-		}
+		final boolean runningTargetVersion = VersionHelper.isSameVersion(current, transaction.getToVersion());
 
 		if (RunnerMarkers.readResult(stagingDirectory).isPresent()) {
-			// The runner finished: its result decides (for same-version hotfixes the version can
-			// never decide; for version upgrades reaching this point the version did not change)
-			if (sameVersionHotfix && RunnerMarkers.installSucceeded(stagingDirectory)) {
+			// The runner finished: its verdict decides. A running target version alone is not
+			// success — the installer may have started the upgraded agent and failed afterwards.
+			if (RunnerMarkers.installSucceeded(stagingDirectory) && (sameVersionHotfix || runningTargetVersion)) {
 				finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
 			} else {
 				finishReconciliation(
@@ -294,6 +346,8 @@ public class UpgradeManager {
 						transaction.getToVersion() +
 						" did not complete successfully (" +
 						RunnerMarkers.readResult(stagingDirectory).orElse("no runner result marker") +
+						", running version " +
+						current +
 						")",
 					current
 				);
@@ -302,7 +356,7 @@ public class UpgradeManager {
 		}
 
 		final long deadlineMs =
-			transaction.getInstallStartedAt() + TimeUnit.SECONDS.toMillis(transaction.getInstallTimeoutSeconds());
+			transaction.getInstallStartedAt() + TimeUnit.SECONDS.toMillis(effectiveInstallTimeoutSeconds(transaction));
 		if (transaction.getInstallStartedAt() > 0 && System.currentTimeMillis() < deadlineMs) {
 			// The runner may still be working: keep the transaction (and the lock) and re-check
 			log.info(
@@ -324,6 +378,18 @@ public class UpgradeManager {
 			return;
 		}
 
+		if (runningTargetVersion && !sameVersionHotfix) {
+			// Deadline elapsed without a runner marker, but the desired version is running: the
+			// runner died without reporting (crash, forced kill) yet the observable state is the
+			// target state
+			log.warn(
+				"The upgrade to version {} produced no runner result before its deadline, but the target version is running; reporting success.",
+				transaction.getToVersion()
+			);
+			finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
+			return;
+		}
+
 		finishReconciliation(
 			transaction,
 			UpgradeState.FAILED,
@@ -338,6 +404,19 @@ public class UpgradeManager {
 					" was expected",
 			current
 		);
+	}
+
+	/**
+	 * Returns the effective installation timeout of a transaction, substituting the configured
+	 * default for nonpositive persisted values so the reconciler and the detached runner apply
+	 * the same deadline.
+	 *
+	 * @param transaction the pending transaction
+	 * @return the timeout in seconds
+	 */
+	private static long effectiveInstallTimeoutSeconds(final UpgradeTransaction transaction) {
+		final long timeout = transaction.getInstallTimeoutSeconds();
+		return timeout > 0 ? timeout : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT;
 	}
 
 	/**
@@ -443,7 +522,10 @@ public class UpgradeManager {
 				.deploymentKind(deploymentDetector.detect().name())
 				.state(UpgradeState.UPDATE_AVAILABLE)
 				.createdAt(System.currentTimeMillis())
-				.installTimeoutSeconds(config.getInstallTimeout())
+				// Normalized so the runner and the startup reconciler apply the same deadline
+				.installTimeoutSeconds(
+					config.getInstallTimeout() > 0 ? config.getInstallTimeout() : UpgradeConfig.DEFAULT_INSTALL_TIMEOUT
+				)
 				.build();
 			persistAndPublish(transaction, UpgradeState.UPDATE_AVAILABLE, null);
 
@@ -473,7 +555,7 @@ public class UpgradeManager {
 
 			transaction.setInstallStartedAt(System.currentTimeMillis());
 			persistAndPublish(transaction, UpgradeState.INSTALLING, null);
-			runnerLauncher.launch(transaction, stagedPackage, stagingDirectory);
+			resolveRunnerLauncher(config).launch(transaction, stagedPackage, stagingDirectory);
 
 			persistAndPublish(transaction, UpgradeState.RESTARTING, null);
 			log.info(

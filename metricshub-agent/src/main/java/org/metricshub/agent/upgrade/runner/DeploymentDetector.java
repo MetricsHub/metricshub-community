@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 
 /**
@@ -46,9 +47,10 @@ public class DeploymentDetector {
 	static final String LINUX_PACKAGE_NAME = "metricshub";
 
 	/**
-	 * Windows service registry key of the MetricsHub Community service.
+	 * Registry path holding the Windows service keys, searched for a MetricsHub service of any
+	 * edition.
 	 */
-	static final String WINDOWS_SERVICE_REGISTRY_KEY = "HKLM\\SYSTEM\\CurrentControlSet\\Services\\MetricsHub Community";
+	static final String WINDOWS_SERVICES_REGISTRY_KEY = "HKLM\\SYSTEM\\CurrentControlSet\\Services";
 
 	/**
 	 * Runs a probe command and reports whether it succeeded, so tests can substitute a fake.
@@ -110,7 +112,17 @@ public class DeploymentDetector {
 			return DeploymentKind.DOCKER;
 		}
 		if (LocalOsHandler.isWindows()) {
-			return probe.succeeds("reg", "query", WINDOWS_SERVICE_REGISTRY_KEY) ? DeploymentKind.MSI : DeploymentKind.ARCHIVE;
+			// Matches the service of any edition (MetricsHub Community, MetricsHub Enterprise, ...)
+			return probe.succeeds(
+					"reg",
+					"query",
+					WINDOWS_SERVICES_REGISTRY_KEY,
+					"/k",
+					"/f",
+					AgentConstants.PRODUCT_WIN_DIR_NAME + "*"
+				)
+				? DeploymentKind.MSI
+				: DeploymentKind.ARCHIVE;
 		}
 		if (probe.succeeds("dpkg", "-s", LINUX_PACKAGE_NAME)) {
 			return DeploymentKind.DEB;

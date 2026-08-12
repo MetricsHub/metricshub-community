@@ -197,6 +197,60 @@ class UpgradeReconciliationTest {
 	}
 
 	@Test
+	void versionMatchWithinDeadlineShouldAwaitTheRunnerMarker() throws IOException {
+		// Package hooks (or the MSI service controls) can start the upgraded agent while the
+		// installer is still finalizing: the target version running is not yet a success
+		pendingTransaction(UpgradeState.RESTARTING, null, System.currentTimeMillis());
+		Files.createDirectories(tempDir);
+		Files.createFile(tempDir.resolve(UpgradeLock.LOCK_FILE_NAME));
+
+		final UpgradeManager manager = newManager("3.10.00");
+		manager.reconcileOnStartup();
+
+		assertEquals(UpgradeState.INSTALLING, events.get(events.size() - 1).state());
+		org.junit.jupiter.api.Assertions.assertNotNull(new UpgradeTransactionStore(tempDir).read());
+	}
+
+	@Test
+	void versionMatchWithFailureMarkerShouldFail() throws IOException {
+		// The installer started the upgraded agent, then failed during finalization: the runner's
+		// verdict wins over the running version
+		pendingTransaction(UpgradeState.RESTARTING, null, System.currentTimeMillis());
+		Files.writeString(
+			tempDir.resolve(org.metricshub.agent.upgrade.runner.RunnerMarkers.RESULT_FILE_NAME),
+			"INSTALL_FAILED exit=12 step=install"
+		);
+
+		final UpgradeManager manager = newManager("3.10.00");
+		manager.reconcileOnStartup();
+
+		final UpgradeEvent verdict = events.get(events.size() - 1);
+		assertEquals(UpgradeState.FAILED, verdict.state());
+		assertTrue(verdict.errorMessage().contains("INSTALL_FAILED exit=12 step=install"));
+	}
+
+	@Test
+	void nonpositivePersistedTimeoutShouldFallBackToTheDefaultDeadline() throws IOException {
+		// A transaction persisted with a nonpositive timeout must not produce an already-expired
+		// deadline: the runner is granted the default timeout, so the verdict is deferred
+		final UpgradeTransaction transaction = pendingTransaction(
+			UpgradeState.RESTARTING,
+			null,
+			System.currentTimeMillis()
+		);
+		transaction.setFromVersion("3.10.00");
+		transaction.setToVersion("3.10.00");
+		transaction.setInstallTimeoutSeconds(0);
+		new UpgradeTransactionStore(tempDir).write(transaction);
+
+		final UpgradeManager manager = newManager("3.10.00");
+		manager.reconcileOnStartup();
+
+		assertEquals(UpgradeState.INSTALLING, events.get(events.size() - 1).state());
+		org.junit.jupiter.api.Assertions.assertNotNull(new UpgradeTransactionStore(tempDir).read());
+	}
+
+	@Test
 	void preInstallInterruptionShouldFail() throws IOException {
 		pendingTransaction(UpgradeState.DOWNLOADING, null);
 

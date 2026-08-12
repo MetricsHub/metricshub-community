@@ -59,4 +59,10 @@ if [ -d /opt/metricshub ]; then
 
 fi
 
+# Remove the upgrade staging directory on package removal (not on upgrade, where a pending
+# upgrade transaction must survive)
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  rm -rf /opt/metricshub/lib/upgrade
+fi
+
 exit 0

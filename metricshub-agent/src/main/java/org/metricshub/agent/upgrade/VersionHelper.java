@@ -81,6 +81,23 @@ public class VersionHelper {
 	}
 
 	/**
+	 * Selects the installer operation for an accepted offer: a same-version offer must be
+	 * reinstalled explicitly (the installer would otherwise consider the installed version current
+	 * and change nothing) and an older offer must be downgraded explicitly.
+	 *
+	 * @param fromVersion the currently installed version
+	 * @param toVersion   the offered version
+	 * @return {@code install}, {@code reinstall} or {@code downgrade}
+	 */
+	public static String installMode(final String fromVersion, final String toVersion) {
+		final int comparison = compare(toVersion, fromVersion);
+		if (comparison == 0) {
+			return "reinstall";
+		}
+		return comparison < 0 ? "downgrade" : "install";
+	}
+
+	/**
 	 * Compares two version segments, numerically when both are numeric.
 	 *
 	 * @param left  the first segment

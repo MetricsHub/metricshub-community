@@ -58,7 +58,7 @@ class OpAmpServiceTest {
 		factoryInvocations = 0;
 
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
-		when(agentContext.getAgentConfig()).thenAnswer(invocation -> agentConfig);
+		when(agentContext.getAgentConfig()).thenAnswer(_ -> agentConfig);
 		when(agentContext.getAgentInfo()).thenReturn(agentInfo);
 		when(agentInfo.getAttributes()).thenReturn(
 			Map.of("service.name", "MetricsHub Agent", "version", "3.9.05", "host.name", "test-host")
@@ -145,7 +145,7 @@ class OpAmpServiceTest {
 	@Test
 	void clientStartFailureShouldBeContained() {
 		agentConfig.setOpamp(enabledConfig(ENDPOINT));
-		final OpAmpService failingService = new OpAmpService(agentContextHolder, settings -> {
+		final OpAmpService failingService = new OpAmpService(agentContextHolder, _ -> {
 			throw new IllegalStateException("Simulated client creation failure");
 		});
 
@@ -168,7 +168,7 @@ class OpAmpServiceTest {
 	void startupFailureShouldBeRetriedOnTheNextTick() {
 		agentConfig.setOpamp(enabledConfig(ENDPOINT));
 		final AtomicReference<Boolean> failFirstAttempt = new AtomicReference<>(true);
-		final OpAmpService retryingService = new OpAmpService(agentContextHolder, settings -> {
+		final OpAmpService retryingService = new OpAmpService(agentContextHolder, _ -> {
 			factoryInvocations++;
 			if (Boolean.TRUE.equals(failFirstAttempt.getAndSet(false))) {
 				throw new IllegalStateException("Simulated transient startup failure");
@@ -211,7 +211,7 @@ class OpAmpServiceTest {
 		);
 		when(client.packageStatusSink()).thenReturn(clientSink);
 
-		final OpAmpService service = new OpAmpService(agentContextHolder, adapter, settings -> {
+		final OpAmpService service = new OpAmpService(agentContextHolder, adapter, _ -> {
 			factoryInvocations++;
 			return client;
 		});
@@ -228,7 +228,7 @@ class OpAmpServiceTest {
 		final org.metricshub.opamp.client.packages.OpampPackagesHandler handler = mock(
 			org.metricshub.opamp.client.packages.OpampPackagesHandler.class
 		);
-		final OpAmpService service = new OpAmpService(agentContextHolder, handler, settings -> {
+		final OpAmpService service = new OpAmpService(agentContextHolder, handler, _ -> {
 			factoryInvocations++;
 			return client;
 		});

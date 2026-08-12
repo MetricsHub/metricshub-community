@@ -120,4 +120,21 @@ public class UpgradeConfig {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private String trustedCertificateFile;
+
+	/**
+	 * Name of the service the detached upgrade runner must stop and restart
+	 * ({@code metricshub-<edition>-service.service} on Linux, {@code MetricsHub <Edition>} on
+	 * Windows). Left empty, it is discovered from the installed services, so each edition works
+	 * without configuration.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private String serviceName;
+
+	/**
+	 * Substring the Windows MSI Authenticode signer subject must contain for the package to be
+	 * installed.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private String msiSignatureSubjectContains = "MetricsHub";
 }
