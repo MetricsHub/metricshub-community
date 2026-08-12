@@ -133,6 +133,24 @@ class YamlConfigurationProviderTest {
 	}
 
 	@Test
+	void testAlternateCaseUiFileIsARegularFragment(@TempDir Path tempDir) throws IOException {
+		// Only the canonical name written by the UI is a UI fragment: an alternate-case
+		// variant is a regular fragment, merged before the canonical file.
+		Files.writeString(tempDir.resolve("METRICSHUB-UI.YAML"), "key1: alternateCase");
+
+		final Collection<JsonNode> uiFragments = provider.loadUiFragments(tempDir);
+		assertTrue(uiFragments.isEmpty(), "An alternate-case variant must not be returned by loadUiFragments()");
+
+		final Collection<JsonNode> configurations = provider.load(tempDir);
+		assertEquals(1, configurations.size(), "An alternate-case variant must be loaded as a regular fragment");
+		assertEquals(
+			"alternateCase",
+			getJsonNodeAsText(configurations.iterator().next(), "key1"),
+			"The alternate-case variant content must be loaded by load()"
+		);
+	}
+
+	@Test
 	void testLoadWithInvalidYaml(@TempDir Path tempDir) throws IOException {
 		final Path invalidYaml = tempDir.resolve("invalid.yaml");
 		Files.writeString(invalidYaml, "key: : : value");

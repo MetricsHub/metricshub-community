@@ -105,12 +105,17 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 
 	/**
 	 * Checks whether the given path is the UI managed configuration file.
+	 * <p>
+	 * The match is exact (case-sensitive): the UI always writes the canonical
+	 * {@value #UI_CONFIGURATION_FILENAME} name. On case-sensitive filesystems an
+	 * alternate-case variant is a different, hand-made file: it is deliberately treated
+	 * as a regular fragment, so the canonical UI file is always merged after it.
 	 *
 	 * @param path The path to check.
-	 * @return {@code true} if the file name matches {@value #UI_CONFIGURATION_FILENAME} (case-insensitive).
+	 * @return {@code true} if the file name is exactly {@value #UI_CONFIGURATION_FILENAME}.
 	 */
 	private static boolean isUiConfigurationFile(final Path path) {
-		return UI_CONFIGURATION_FILENAME.equalsIgnoreCase(path.getFileName().toString());
+		return UI_CONFIGURATION_FILENAME.equals(path.getFileName().toString());
 	}
 
 	/**
