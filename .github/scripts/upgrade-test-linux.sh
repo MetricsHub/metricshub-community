@@ -211,7 +211,9 @@ run_runner() {
 # Scenario 1 - corrupted package: hash re-check fails, the installed service is untouched
 # ------------------------------------------------------------------------------------------------
 log "Scenario: corrupted package"
-docker exec "${CONTAINER}" sh -c "cp /tmp/packages/${PACKAGE_NAME} ${STAGING}/corrupted.${PACKAGE_TYPE} && dd if=/dev/zero of=${STAGING}/corrupted.${PACKAGE_TYPE} bs=1 count=64 seek=1024 conv=notrunc status=none"
+# Corrupt by appending: package formats contain zero-padded regions, so overwriting a fixed
+# offset can be a no-op; appending always changes the hash
+docker exec "${CONTAINER}" sh -c "cp /tmp/packages/${PACKAGE_NAME} ${STAGING}/corrupted.${PACKAGE_TYPE} && printf 'CORRUPTED-BY-CI' >> ${STAGING}/corrupted.${PACKAGE_TYPE}"
 RESULT=$(run_runner "${STAGING}/corrupted.${PACKAGE_TYPE}" "${PACKAGE_SHA256}" "install" 120)
 
 SCENARIO="${ID_PREFIX}-corrupted"

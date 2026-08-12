@@ -181,9 +181,9 @@ New-Item -ItemType Directory -Path $staging -Force | Out-Null
 Write-Host '=== Scenario: corrupted package'
 $corrupted = Join-Path $staging 'corrupted.msi'
 Copy-Item -Path $package.FullName -Destination $corrupted -Force
-$bytes = [System.IO.File]::ReadAllBytes($corrupted)
-for ($i = 1024; $i -lt 1088; $i++) { $bytes[$i] = 0 }
-[System.IO.File]::WriteAllBytes($corrupted, $bytes)
+# Corrupt by appending: the MSI compound-document format contains zero-padded regions, so
+# overwriting a fixed offset can be a no-op; appending always changes the hash
+[System.IO.File]::AppendAllText($corrupted, 'CORRUPTED-BY-CI')
 
 $result = Invoke-Runner $corrupted $packageSha256 $serviceName 'MetricsHub' 'install' 120
 $scenario = "$IdPrefix-corrupted"
