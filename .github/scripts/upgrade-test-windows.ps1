@@ -95,10 +95,18 @@ function Invoke-Runner([string]$package, [string]$sha256, [string]$serviceName, 
 		if (Test-Path (Join-Path $staging 'runner.result')) { break }
 		Start-Sleep -Seconds 2
 	}
-	if (Test-Path (Join-Path $staging 'runner.result')) {
-		return (Get-Content (Join-Path $staging 'runner.result') -Raw).Trim()
+	if (-not (Test-Path (Join-Path $staging 'runner.result'))) {
+		return 'NO_RESULT'
 	}
-	return 'NO_RESULT'
+	# Complete-Run writes the marker before deleting the one-shot task: wait for the cleanup so
+	# consecutive scenarios never race the shared task name and the post-run /Query is reliable
+	$cleanupDeadline = (Get-Date).AddSeconds(60)
+	while ((Get-Date) -lt $cleanupDeadline) {
+		schtasks /Query /TN 'MetricsHub Upgrade' 2>&1 | Out-Null
+		if ($LASTEXITCODE -ne 0) { break }
+		Start-Sleep -Seconds 2
+	}
+	return (Get-Content (Join-Path $staging 'runner.result') -Raw).Trim()
 }
 
 # --------------------------------------------------------------------------------------------
