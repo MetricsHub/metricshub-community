@@ -98,4 +98,38 @@ public class OpampClientSettings {
 	 */
 	@Builder.Default
 	boolean reportHealth = true;
+
+	/**
+	 * Creates the settings, storing an immutable copy of the headers so a caller-supplied mutable
+	 * map can neither be mutated after construction (silently dropping authentication from later
+	 * requests) nor be mutated concurrently while a request iterates it.
+	 *
+	 * @param endpoint        the OpAMP server endpoint
+	 * @param headers         the headers sent with every request; {@code null} means none
+	 * @param certificateFile the trusted certificate (PEM) path, or {@code null}
+	 * @param pollInterval    the interval between two polls
+	 * @param requestTimeout  the timeout of one HTTP exchange
+	 * @param maxBackoff      the maximum backoff delay
+	 * @param instanceUidFile the file persisting the agent instance UID
+	 * @param reportHealth    whether the agent health is reported
+	 */
+	public OpampClientSettings(
+		@NonNull final URI endpoint,
+		final Map<String, String> headers,
+		final String certificateFile,
+		final Duration pollInterval,
+		final Duration requestTimeout,
+		final Duration maxBackoff,
+		@NonNull final Path instanceUidFile,
+		final boolean reportHealth
+	) {
+		this.endpoint = endpoint;
+		this.headers = headers == null ? Map.of() : Map.copyOf(headers);
+		this.certificateFile = certificateFile;
+		this.pollInterval = pollInterval;
+		this.requestTimeout = requestTimeout;
+		this.maxBackoff = maxBackoff;
+		this.instanceUidFile = instanceUidFile;
+		this.reportHealth = reportHealth;
+	}
 }
