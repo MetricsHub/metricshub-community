@@ -455,7 +455,9 @@ public class HttpPollingOpampClient implements OpampClient {
 	/**
 	 * Invokes a client callback, containing any failure it may throw: a consumer callback must
 	 * never be able to break the polling chain (a failure escaping the poll loop's catch block
-	 * would skip the rescheduling and stop the client permanently).
+	 * would skip the rescheduling and stop the client permanently). Errors such as
+	 * {@link AssertionError} are contained too; only {@link VirtualMachineError}s (e.g.
+	 * {@link OutOfMemoryError}) are rethrown, as the JVM is no longer trustworthy.
 	 *
 	 * @param name     the callback name, used for logging
 	 * @param callback the callback invocation
@@ -463,7 +465,9 @@ public class HttpPollingOpampClient implements OpampClient {
 	private static void safely(final String name, final Runnable callback) {
 		try {
 			callback.run();
-		} catch (Exception e) {
+		} catch (VirtualMachineError e) {
+			throw e;
+		} catch (Throwable e) {
 			log.error("The OpAMP client callback {} failed: {}", name, e.getMessage());
 			log.debug("The OpAMP client callback {} failed:", name, e);
 		}

@@ -345,6 +345,25 @@ class HttpPollingOpampClientTest {
 	}
 
 	@Test
+	void errorThrowingCallbacksShouldNotBreakThePollingChain() throws Exception {
+		final OpampClientCallbacks throwingCallbacks = new OpampClientCallbacks() {
+			@Override
+			public void onConnect() {
+				throw new AssertionError("Simulated onConnect assertion failure");
+			}
+		};
+
+		newClient(throwingCallbacks, null);
+		client.start();
+
+		// The polling chain must survive callbacks throwing Errors, not only Exceptions
+		for (int i = 0; i < 3; i++) {
+			transport.awaitRequest(AWAIT);
+		}
+		assertTrue(client.isStarted());
+	}
+
+	@Test
 	void stopShouldSendAgentDisconnect() throws Exception {
 		newClient(null, null);
 		client.start();
