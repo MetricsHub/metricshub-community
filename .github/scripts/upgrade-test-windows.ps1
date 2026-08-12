@@ -1,5 +1,7 @@
-# Drives the detached Windows upgrade runner (metricshub-upgrade-runner.ps1) end-to-end on the
-# CI host and asserts the outcome.
+# Drives the detached Windows upgrade runner (metricshub-upgrade-runner.ps1) end-to-end and
+# asserts the outcome. The runner is launched through the same one-shot SYSTEM scheduled task and
+# launch wrapper the agent's WindowsScheduledTaskRunnerLauncher creates, so task creation, wrapper
+# quoting, SYSTEM permissions and detachment are covered too.
 #
 # Scenarios:
 #   corrupted  - a corrupted staged MSI with the pristine hash: the runner must fail with exit 10
@@ -68,14 +70,26 @@ function Get-MetricsHubProducts {
 		Where-Object { $_.DisplayName -like 'MetricsHub*' }
 }
 
-# Runs the runner script the way the wrapper does and waits for runner.result.
+# Launches the runner exactly as WindowsScheduledTaskRunnerLauncher does: a launch wrapper in the
+# staging directory and a one-shot SYSTEM scheduled task pointing at it, so the test also covers
+# task creation, wrapper quoting, SYSTEM permissions and the runner's own task cleanup.
 function Invoke-Runner([string]$package, [string]$sha256, [string]$serviceName, [string]$subject, [string]$mode, [int]$waitSeconds) {
 	Remove-Item -Path (Join-Path $staging 'runner.result') -Force -ErrorAction SilentlyContinue
-	Copy-Item -Path $runnerScript -Destination (Join-Path $staging 'metricshub-upgrade-runner.ps1') -Force
-	& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $staging 'metricshub-upgrade-runner.ps1') `
-		-Package $package -Sha256 $sha256 -Service $serviceName -Staging $staging `
-		-SignatureSubjectContains $subject -Mode $mode -InstallTimeoutSeconds 900 2>&1 |
-		Out-File -FilePath (Join-Path $staging 'runner-invocation.log') -Encoding utf8
+	$stagedScript = Join-Path $staging 'metricshub-upgrade-runner.ps1'
+	Copy-Item -Path $runnerScript -Destination $stagedScript -Force
+
+	$powershell = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + $stagedScript + '"' +
+		' -Package "' + $package + '" -Sha256 ' + $sha256 +
+		' -Service "' + $serviceName + '" -Staging "' + $staging + '"' +
+		' -SignatureSubjectContains "' + $subject + '" -Mode ' + $mode + ' -InstallTimeoutSeconds 900'
+	$wrapper = Join-Path $staging 'metricshub-upgrade-launch.cmd'
+	Set-Content -Path $wrapper -Value ("@echo off`r`n" + $powershell + "`r`n") -Encoding Ascii -NoNewline
+
+	& schtasks /Create /TN 'MetricsHub Upgrade' /F /RU SYSTEM /RL HIGHEST /SC ONCE /ST 00:00 /TR "`"$wrapper`"" | Out-Null
+	if ($LASTEXITCODE -ne 0) { return "SCHTASKS_CREATE_FAILED exit=$LASTEXITCODE" }
+	& schtasks /Run /TN 'MetricsHub Upgrade' | Out-Null
+	if ($LASTEXITCODE -ne 0) { return "SCHTASKS_RUN_FAILED exit=$LASTEXITCODE" }
+
 	$deadline = (Get-Date).AddSeconds($waitSeconds)
 	while ((Get-Date) -lt $deadline) {
 		if (Test-Path (Join-Path $staging 'runner.result')) { break }
@@ -183,6 +197,8 @@ Copy-Item -Path $package.FullName -Destination $stagedMsi -Force
 $result = Invoke-Runner $stagedMsi $packageSha256 $serviceName 'MetricsHub' 'reinstall' 600
 $scenario = "$IdPrefix-reinstall"
 $products = @(Get-MetricsHubProducts)
+schtasks /Query /TN 'MetricsHub Upgrade' 2>&1 | Out-Null
+$taskStillPresent = ($LASTEXITCODE -eq 0)
 if ($result -ne 'INSTALL_OK') {
 	Write-Result $scenario 'failed' "expected 'INSTALL_OK', got '$result'"
 } elseif ((Get-Service -Name $serviceName).Status -ne 'Running') {
@@ -191,6 +207,8 @@ if ($result -ne 'INSTALL_OK') {
 	Write-Result $scenario 'failed' "expected a single registry product, found $($products.Count)"
 } elseif ($products[0].DisplayVersion -ne $expectedVersion) {
 	Write-Result $scenario 'failed' "registry DisplayVersion is '$($products[0].DisplayVersion)', expected '$expectedVersion'"
+} elseif ($taskStillPresent) {
+	Write-Result $scenario 'failed' 'the runner did not delete its one-shot scheduled task'
 } else {
 	Write-Result $scenario 'passed' "runner reinstalled $expectedVersion, single registry product, service running"
 }
