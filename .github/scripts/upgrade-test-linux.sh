@@ -182,7 +182,10 @@ run_runner() {
 	local staged_package="$1" sha256="$2" mode="$3" wait_seconds="$4"
 	local unit="metricshub-upgrade-ci-$(date +%s)"
 	docker exec "${CONTAINER}" sh -c "rm -f '${STAGING}/runner.result' && cp /tmp/runner/metricshub-upgrade-runner.sh '${STAGING}/metricshub-upgrade-runner.sh' && chmod 700 '${STAGING}/metricshub-upgrade-runner.sh'"
+	# This function is command-substituted: its stdout must carry only the marker, so the
+	# systemd-run status text (e.g. "Running as unit: ...") is silenced and diverted to stderr
 	docker exec "${CONTAINER}" systemd-run \
+		--quiet \
 		--unit="${unit}" \
 		--collect \
 		--no-block \
@@ -194,7 +197,7 @@ run_runner() {
 		--type "${PACKAGE_TYPE}" \
 		--service "${SERVICE_UNIT}" \
 		--staging "${STAGING}" \
-		--mode "${mode}"
+		--mode "${mode}" 1>&2
 	for _ in $(seq 1 $((wait_seconds / 2))); do
 		if docker exec "${CONTAINER}" test -f "${STAGING}/runner.result"; then
 			break
