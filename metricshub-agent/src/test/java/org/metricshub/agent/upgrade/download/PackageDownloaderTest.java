@@ -102,7 +102,7 @@ class PackageDownloaderTest {
 			offer(baseUrl() + "/repo/metricshub-3.10.00.deb", packageSha256),
 			config(),
 			tempDir,
-			(percent, rate) -> lastPercent[0] = percent
+			(percent, _) -> lastPercent[0] = percent
 		);
 
 		assertEquals("metricshub-3.10.00.deb", staged.getFileName().toString());
@@ -118,7 +118,7 @@ class PackageDownloaderTest {
 				offer(baseUrl() + "/repo/metricshub.deb", new byte[] { 9, 9, 9 }),
 				config(),
 				tempDir,
-				(p, r) -> {}
+				(_, _) -> {}
 			)
 		);
 
@@ -129,7 +129,7 @@ class PackageDownloaderTest {
 	@Test
 	void httpErrorShouldFail() {
 		assertThrows(UpgradeException.class, () ->
-			downloader.download(offer(baseUrl() + "/missing/metricshub.deb", packageSha256), config(), tempDir, (p, r) -> {})
+			downloader.download(offer(baseUrl() + "/missing/metricshub.deb", packageSha256), config(), tempDir, (_, _) -> {})
 		);
 	}
 
@@ -138,7 +138,7 @@ class PackageDownloaderTest {
 		final UpgradeConfig tinyCap = UpgradeConfig.builder().maxPackageSizeBytes(1024).downloadRetries(1).build();
 
 		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			downloader.download(offer(baseUrl() + "/repo/metricshub.deb", packageSha256), tinyCap, tempDir, (p, r) -> {})
+			downloader.download(offer(baseUrl() + "/repo/metricshub.deb", packageSha256), tinyCap, tempDir, (_, _) -> {})
 		);
 
 		assertTrue(failure.getMessage().contains("maximum"));
@@ -154,7 +154,7 @@ class PackageDownloaderTest {
 				offer(baseUrl() + "/stall/metricshub.deb", packageSha256),
 				shortTimeout,
 				tempDir,
-				(p, r) -> {}
+				(_, _) -> {}
 			)
 		);
 
@@ -171,7 +171,7 @@ class PackageDownloaderTest {
 			offer(baseUrl() + "/redirect-same-host/metricshub.deb", packageSha256),
 			config(),
 			tempDir,
-			(p, r) -> {}
+			(_, _) -> {}
 		);
 
 		assertArrayEquals(packageContent, Files.readAllBytes(staged));
@@ -189,7 +189,7 @@ class PackageDownloaderTest {
 				offer(baseUrl() + "/redirect-other-host/metricshub.deb", packageSha256),
 				allowlisted,
 				tempDir,
-				(p, r) -> {}
+				(_, _) -> {}
 			)
 		);
 
