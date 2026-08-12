@@ -73,8 +73,12 @@ function Get-MetricsHubProducts {
 # Launches the runner exactly as WindowsScheduledTaskRunnerLauncher does: a launch wrapper in the
 # staging directory and a one-shot SYSTEM scheduled task pointing at it, so the test also covers
 # task creation, wrapper quoting, SYSTEM permissions and the runner's own task cleanup.
+# The verdict is read from the RESULT line of runner.log, not from the runner.result marker: the
+# marker is consumed by the running agent (startup reconciliation clears stale markers), so
+# reading the file races the agent — the log line is written in the same breath and is durable.
 function Invoke-Runner([string]$package, [string]$sha256, [string]$serviceName, [string]$subject, [string]$mode, [int]$waitSeconds) {
-	Remove-Item -Path (Join-Path $staging 'runner.result') -Force -ErrorAction SilentlyContinue
+	$runnerLog = Join-Path $staging 'runner.log'
+	Remove-Item -Path (Join-Path $staging 'runner.result'), $runnerLog -Force -ErrorAction SilentlyContinue
 	$stagedScript = Join-Path $staging 'metricshub-upgrade-runner.ps1'
 	Copy-Item -Path $runnerScript -Destination $stagedScript -Force
 
@@ -92,13 +96,13 @@ function Invoke-Runner([string]$package, [string]$sha256, [string]$serviceName, 
 
 	$deadline = (Get-Date).AddSeconds($waitSeconds)
 	while ((Get-Date) -lt $deadline) {
-		if (Test-Path (Join-Path $staging 'runner.result')) { break }
+		if ((Test-Path $runnerLog) -and (Select-String -Path $runnerLog -Pattern ' RESULT: ' -Quiet)) { break }
 		Start-Sleep -Seconds 2
 	}
-	if (-not (Test-Path (Join-Path $staging 'runner.result'))) {
+	if (-not ((Test-Path $runnerLog) -and (Select-String -Path $runnerLog -Pattern ' RESULT: ' -Quiet))) {
 		return 'NO_RESULT'
 	}
-	# Complete-Run writes the marker before deleting the one-shot task: wait for the cleanup so
+	# The runner logs the verdict before deleting the one-shot task: wait for the cleanup so
 	# consecutive scenarios never race the shared task name and the post-run /Query is reliable
 	$cleanupDeadline = (Get-Date).AddSeconds(60)
 	while ((Get-Date) -lt $cleanupDeadline) {
@@ -106,7 +110,11 @@ function Invoke-Runner([string]$package, [string]$sha256, [string]$serviceName, 
 		if ($LASTEXITCODE -ne 0) { break }
 		Start-Sleep -Seconds 2
 	}
-	return (Get-Content (Join-Path $staging 'runner.result') -Raw).Trim()
+	$verdict = Select-String -Path $runnerLog -Pattern ' RESULT: (.+) \(exit \d+\)$' | Select-Object -Last 1
+	if ($verdict) {
+		return $verdict.Matches[0].Groups[1].Value
+	}
+	return 'NO_RESULT'
 }
 
 # --------------------------------------------------------------------------------------------
@@ -185,7 +193,7 @@ Copy-Item -Path $package.FullName -Destination $corrupted -Force
 # overwriting a fixed offset can be a no-op; appending always changes the hash
 [System.IO.File]::AppendAllText($corrupted, 'CORRUPTED-BY-CI')
 
-$result = Invoke-Runner $corrupted $packageSha256 $serviceName 'MetricsHub' 'install' 120
+$result = Invoke-Runner $corrupted $packageSha256 $serviceName 'MetricsHub' 'reinstall' 120
 $scenario = "$IdPrefix-corrupted"
 if ($result -ne 'INSTALL_FAILED exit=10 step=verify') {
 	Write-Result $scenario 'failed' "expected 'INSTALL_FAILED exit=10 step=verify', got '$result'"
