@@ -160,8 +160,10 @@ public class VelocityTemplateService {
 		}
 		String lowerCaseName = fileName.toLowerCase(Locale.ROOT);
 		if (lowerCaseName.endsWith(ConfigurationFilesService.DRAFT_EXTENSION)) {
-			lowerCaseName =
-				lowerCaseName.substring(0, lowerCaseName.length() - ConfigurationFilesService.DRAFT_EXTENSION.length());
+			lowerCaseName = lowerCaseName.substring(
+				0,
+				lowerCaseName.length() - ConfigurationFilesService.DRAFT_EXTENSION.length()
+			);
 		}
 		final String providerLookupName = lowerCaseName;
 		return agentContext
