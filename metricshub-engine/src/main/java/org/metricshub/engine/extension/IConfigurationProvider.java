@@ -24,6 +24,7 @@ package org.metricshub.engine.extension;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -38,6 +39,22 @@ public interface IConfigurationProvider {
 	 * @return A collection of {@link JsonNode} representing the configuration fragments.
 	 */
 	Collection<JsonNode> load(Path path);
+
+	/**
+	 * Load the fragments of the UI managed configuration file ({@code metricshub-ui.yaml}).
+	 * <p>
+	 * These fragments are merged after the regular {@link #load(Path)} fragments of
+	 * <b>all</b> providers, so the UI configuration always takes precedence over any
+	 * other configuration source, regardless of provider discovery order or file
+	 * listing order. Providers that do not manage the UI configuration return an
+	 * empty collection.
+	 *
+	 * @param path The path to the configuration directory.
+	 * @return A collection of {@link JsonNode} representing the UI configuration fragments.
+	 */
+	default Collection<JsonNode> loadUiFragments(Path path) {
+		return Collections.emptyList();
+	}
 
 	/**
 	 * Get the set of the file extensions that this configuration provider can handle.

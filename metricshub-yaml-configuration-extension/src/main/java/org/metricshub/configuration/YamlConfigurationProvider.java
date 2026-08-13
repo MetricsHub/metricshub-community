@@ -46,6 +46,13 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 
 	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
 
+	/**
+	 * Name of the UI managed configuration file. It is excluded from the regular
+	 * {@link #load(Path)} pass and only returned by {@link #loadUiFragments(Path)} so it
+	 * is always merged after every other configuration fragment.
+	 */
+	static final String UI_CONFIGURATION_FILENAME = "metricshub-ui.yaml";
+
 	@Override
 	public Collection<JsonNode> load(final Path configDirectory) {
 		final List<JsonNode> configurations = new ArrayList<>();
@@ -57,6 +64,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 					String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
 					return getFileExtensions().stream().anyMatch(fileName::endsWith);
 				})
+				.filter((Path path) -> !isUiConfigurationFile(path))
 				.forEach((Path path) ->
 					readFragment(path).ifPresent((JsonNode jsonNode) -> {
 						configurations.add(jsonNode);
@@ -71,6 +79,51 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 		final int size = configurations.size();
 		log.info("Loaded {} YAML configuration fragment{} from '{}'.", size, size > 1 ? "s" : "", configDirectory);
 		return configurations;
+	}
+
+	@Override
+	public Collection<JsonNode> loadUiFragments(final Path configDirectory) {
+		final List<JsonNode> configurations = new ArrayList<>();
+
+		try (Stream<Path> stream = Files.list(configDirectory)) {
+			stream
+				.filter((Path path) -> !Files.isDirectory(path))
+				.filter(YamlConfigurationProvider::isUiConfigurationFile)
+				.forEach((Path path) ->
+					readFragment(path).ifPresent((JsonNode jsonNode) -> {
+						configurations.add(jsonNode);
+						log.debug("Successfully loaded UI YAML configuration fragment: '{}'", path);
+					})
+				);
+		} catch (IOException e) {
+			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
+			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
+		}
+
+		return configurations;
+	}
+
+	/**
+	 * Checks whether the given path is the UI managed configuration file.
+	 * <p>
+	 * The comparison relies on filesystem identity ({@link Files#isSameFile}) against the
+	 * canonical {@value #UI_CONFIGURATION_FILENAME} sibling, mirroring how the UI resolves
+	 * the file it reads and writes. On case-insensitive filesystems (e.g. Windows) an
+	 * alternate-case variant is the UI file itself and is deferred accordingly, while on
+	 * case-sensitive filesystems it is a distinct, hand-made file treated as a regular
+	 * fragment and therefore merged before the UI configuration.
+	 *
+	 * @param path The path to check (an existing file).
+	 * @return {@code true} if the path designates the UI managed configuration file.
+	 */
+	static boolean isUiConfigurationFile(final Path path) {
+		final Path uiConfigurationFile = path.resolveSibling(UI_CONFIGURATION_FILENAME);
+		try {
+			return Files.exists(uiConfigurationFile) && Files.isSameFile(path, uiConfigurationFile);
+		} catch (IOException e) {
+			log.debug("Cannot compare '{}' with the UI configuration file '{}'. Exception:", path, uiConfigurationFile, e);
+			return false;
+		}
 	}
 
 	/**
