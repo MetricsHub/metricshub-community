@@ -84,7 +84,7 @@ public class OtelConfigurationFilesService {
 	/**
 	 * Extension for draft configuration files.
 	 */
-	private static final String DRAFT_EXTENSION = ".draft";
+	private static final String DRAFT_EXTENSION = ConfigurationFilesService.DRAFT_EXTENSION;
 
 	/**
 	 * Name of the backup directory for OTEL configuration files.

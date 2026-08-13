@@ -110,10 +110,9 @@ function OtelConfigEditorContainer(props) {
 			.then((saved) => {
 				if (!saved) return null;
 				navigate(paths.configurationOtelFile(targetName), { replace: true });
-				return new Promise((resolve) => setTimeout(resolve, 50));
-			})
-			.then(() => {
-				dispatch(deleteOtelConfig(selected));
+				return new Promise((resolve) => setTimeout(resolve, 50)).then(() =>
+					dispatch(deleteOtelConfig(selected)),
+				);
 			})
 			.catch((e) => {
 				setDialog({ open: true, message: e?.message || "Validation failed" });

@@ -85,7 +85,7 @@ public class ConfigurationFilesService {
 	/**
 	 * Extension for draft configuration files.
 	 */
-	private static final String DRAFT_EXTENSION = ".draft";
+	public static final String DRAFT_EXTENSION = ".draft";
 
 	/**
 	 * Name of the backup directory for configuration files.
