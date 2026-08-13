@@ -40,6 +40,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class VelocityTemplateService {
 
+	/**
+	 * Extension for draft configuration files.
+	 */
+	private static final String DRAFT_EXTENSION = ".draft";
+
 	private final AgentContextHolder agentContextHolder;
 
 	/**
@@ -142,7 +147,8 @@ public class VelocityTemplateService {
 
 	/**
 	 * Finds the configuration provider extension able to handle the given template file,
-	 * based on its file extension.
+	 * based on its file extension. Draft templates (for example {@code my-config.vm.draft})
+	 * are matched against the provider of their base file.
 	 *
 	 * @param fileName the template file name (for example {@code my-config.vm})
 	 * @return the matching {@link IConfigurationProvider}
@@ -157,12 +163,16 @@ public class VelocityTemplateService {
 				"Extension manager is not available."
 			);
 		}
-		final String lowerCaseName = fileName.toLowerCase(Locale.ROOT);
+		String lowerCaseName = fileName.toLowerCase(Locale.ROOT);
+		if (lowerCaseName.endsWith(DRAFT_EXTENSION)) {
+			lowerCaseName = lowerCaseName.substring(0, lowerCaseName.length() - DRAFT_EXTENSION.length());
+		}
+		final String providerLookupName = lowerCaseName;
 		return agentContext
 			.getExtensionManager()
 			.getConfigurationProviderExtensions()
 			.stream()
-			.filter(provider -> provider.getFileExtensions().stream().anyMatch(lowerCaseName::endsWith))
+			.filter(provider -> provider.getFileExtensions().stream().anyMatch(providerLookupName::endsWith))
 			.findFirst()
 			.orElseThrow(() ->
 				new ConfigFilesException(
