@@ -41,6 +41,7 @@ const HostProtocolConfigStep = ({
 	const fields = PROTOCOL_FIELDS[protocol] || [];
 	const protocolLabel = PROTOCOL_OPTIONS.find((p) => p.id === protocol)?.label || protocol;
 	const isLocal = isLocalhostHost(hostId, hostName);
+	const hostNames = React.useMemo(() => getHostNames(hostName), [hostName]);
 
 	const fieldRequired = (field) => {
 		if (isLocal && (isAuthFieldOptionalOnLocalhost(field.name) || field.type === "authChoice")) {
@@ -77,7 +78,7 @@ const HostProtocolConfigStep = ({
 				isRequired={fieldRequired}
 				allowPasswordReveal={allowPasswordReveal}
 				deferEncryptUntilSave={deferEncryptUntilSave}
-				hostNameCount={getHostNames(hostName).length}
+				hostNames={hostNames}
 			/>
 		</Stack>
 	);

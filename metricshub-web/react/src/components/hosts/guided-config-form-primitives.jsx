@@ -79,6 +79,15 @@ export const filledInputNoLabelSx = {
 	...guidedConfigPlaceholderSx,
 };
 
+/** Same look as the protocol form fields, with a softened focus (no primary glow). */
+export const searchFieldSx = {
+	...filledInputNoLabelSx,
+	"& .MuiInputBase-root.Mui-focused": {
+		borderColor: "text.secondary",
+		boxShadow: "none",
+	},
+};
+
 /** Outlined panel used for stepper rail, protocol forms, and info cards. */
 export const guidedConfigBorderedPanelSx = {
 	borderRadius: 2,

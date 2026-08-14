@@ -19,18 +19,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
 import SearchIcon from "@mui/icons-material/Search";
-import { filledInputNoLabelSx } from "./guided-config-form-primitives";
+import { searchFieldSx } from "./guided-config-form-primitives";
 import { ProtocolFieldStartAdornment } from "./protocol-form-primitives";
 import { scrollbarSx } from "../split-screen/SplitScreen";
-
-/** Same look as the protocol form fields, with a softened focus (no primary glow). */
-const SEARCH_FIELD_SX = {
-	...filledInputNoLabelSx,
-	"& .MuiInputBase-root.Mui-focused": {
-		borderColor: "text.secondary",
-		boxShadow: "none",
-	},
-};
 
 /**
  * @param {{ status: "testing" | "success" | "error" | "warning" } | undefined} result
@@ -190,7 +181,7 @@ const ProtocolTestHostnameDialog = ({
 					placeholder="Search hostnames…"
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
-					sx={SEARCH_FIELD_SX}
+					sx={searchFieldSx}
 					slotProps={{
 						input: {
 							startAdornment: (

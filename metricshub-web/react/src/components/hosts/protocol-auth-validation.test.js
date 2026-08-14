@@ -47,31 +47,28 @@ describe("collectProtocolConfigErrors SSH credentials", () => {
 	});
 });
 
-// Protocol hostnames are matched to host.name entries by position, so when the
-// protocol declares hostnames it must declare exactly one per host.name entry.
-describe("collectProtocolConfigErrors protocol hostname count", () => {
+// Protocol hostnames are matched to host.name entries by position. Partial
+// override arrays are valid: blank slots fall back to the host.name entry at
+// payload build (buildProtocolHostnamePayload), so no count check applies.
+describe("collectProtocolConfigErrors protocol hostname", () => {
 	const ping = { timeout: 5 };
 
-	it("rejects fewer protocol hostnames than host.name entries", () => {
+	it("accepts a partial override array (blank slots use host.name entries)", () => {
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: ["host1", "", "host3"] },
+			{ hostId: "multi", hostName: ["host1-sys", "host2-sys", "host3-sys"] },
+		);
+		expect(errors.hostname).toBeUndefined();
+	});
+
+	it("accepts fewer protocol hostnames than host.name entries (legacy clamp)", () => {
 		const errors = collectProtocolConfigErrors(
 			"ping",
 			{ ...ping, hostname: ["host1", "host2"] },
 			{ hostId: "multi", hostName: ["host1-sys", "host2-sys", "host3-sys"] },
 		);
-		expect(errors.hostname).toBe(
-			"Define one hostname per host.name entry (3 expected, 2 configured)",
-		);
-	});
-
-	it("rejects more protocol hostnames than host.name entries", () => {
-		const errors = collectProtocolConfigErrors(
-			"ping",
-			{ ...ping, hostname: ["host1", "host2"] },
-			{ hostId: "server-1", hostName: "server-1" },
-		);
-		expect(errors.hostname).toBe(
-			"Define one hostname per host.name entry (1 expected, 2 configured)",
-		);
+		expect(errors.hostname).toBeUndefined();
 	});
 
 	it("accepts one protocol hostname per host.name entry", () => {

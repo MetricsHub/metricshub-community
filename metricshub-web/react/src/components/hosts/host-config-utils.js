@@ -324,11 +324,12 @@ export const buildHostPayloadFromForm = (formState) => {
 
 	/** @type {Record<string, unknown>} */
 	const protocols = {};
+	const hostNames = getHostNames(hostName);
 	for (const [protocolId, formValues] of Object.entries(protocolsForm || {})) {
 		if (!selectedSet.has(protocolId)) {
 			continue;
 		}
-		protocols[protocolId] = buildProtocolConfigFromForm(protocolId, formValues);
+		protocols[protocolId] = buildProtocolConfigFromForm(protocolId, formValues, { hostNames });
 	}
 
 	const payload = {
