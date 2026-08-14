@@ -12,7 +12,7 @@ import {
 	Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { alignHostnameOverrides, countConfiguredOverrides } from "../../utils/host-name-overrides";
+import { deriveOverrideSlots, splitPastedOverrides } from "../../utils/host-name-overrides";
 import { filledInputNoLabelSx, searchFieldSx } from "./guided-config-form-primitives";
 import {
 	ProtocolFieldLabelRow,
@@ -107,11 +107,11 @@ const ProtocolHostnameOverridesTable = ({
 	const [page, setPage] = React.useState(0);
 	const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
-	const slots = React.useMemo(
-		() => alignHostnameOverrides(value, hostNames.length),
-		[value, hostNames.length],
-	);
-	const configuredCount = countConfiguredOverrides(value, hostNames.length);
+	// Saved partial mappings persist blank slots as the host.name entry itself;
+	// deriveOverrideSlots turns those fallback values back into blank cells so
+	// the blank-as-fallback contract survives a save/reload.
+	const slots = React.useMemo(() => deriveOverrideSlots(value, hostNames), [value, hostNames]);
+	const configuredCount = slots.filter(Boolean).length;
 
 	// Latest slots in a ref so the per-row change handler stays referentially
 	// stable and memoized rows only re-render when their own cell changes.
@@ -139,19 +139,17 @@ const ProtocolHostnameOverridesTable = ({
 				return;
 			}
 			// A multi-value paste (spreadsheet column, comma list) fills consecutive
-			// rows from the target cell — but only over the real, unfiltered order:
-			// spreading across a filtered view would target rows the user can't see.
+			// rows from the target cell, keeping empty tokens as blank slots — but
+			// only over the real, unfiltered order: spreading across a filtered view
+			// would target rows the user can't see.
 			event.preventDefault();
-			const tokens = pasted
-				.split(/[;,\s]+/)
-				.map((token) => token.trim())
-				.filter(Boolean);
+			const tokens = splitPastedOverrides(pasted);
 			if (tokens.length === 0) {
 				return;
 			}
 			const next = [...slotsRef.current];
 			if (needle) {
-				next[index] = tokens[0];
+				next[index] = tokens.find(Boolean) || "";
 			} else {
 				tokens.slice(0, next.length - index).forEach((token, offset) => {
 					next[index + offset] = token;

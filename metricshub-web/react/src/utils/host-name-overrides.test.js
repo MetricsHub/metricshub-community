@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
 	alignHostnameOverrides,
 	buildProtocolHostnamePayload,
-	countConfiguredOverrides,
+	deriveOverrideSlots,
 	realignHostnameOverrides,
 	splitHostnameOverrides,
+	splitPastedOverrides,
 } from "./host-name-overrides";
 
 // Overrides are positional (PostConfigDeserializer.normalizeProtocolHostnames):
@@ -52,10 +53,56 @@ describe("alignHostnameOverrides", () => {
 	});
 });
 
-describe("countConfiguredOverrides", () => {
-	it("counts non-blank slots among the first N", () => {
-		expect(countConfiguredOverrides(["a", "", "b"], 3)).toBe(2);
-		expect(countConfiguredOverrides("", 5)).toBe(0);
+describe("deriveOverrideSlots", () => {
+	it("normalizes persisted fallback values back to blank cells", () => {
+		// A saved partial mapping persists blanks as the host.name entry itself;
+		// on reload those must render as blank cells again (blank-as-fallback).
+		expect(deriveOverrideSlots(["h1", "proxy", "h3"], ["h1", "h2", "h3"])).toEqual([
+			"",
+			"proxy",
+			"",
+		]);
+	});
+
+	it("compares against the host entry case-insensitively", () => {
+		expect(deriveOverrideSlots(["Host-A"], ["host-a"])).toEqual([""]);
+	});
+
+	it("keeps a value matching a different host's entry as an explicit override", () => {
+		expect(deriveOverrideSlots(["h2", "h1"], ["h1", "h2"])).toEqual(["h2", "h1"]);
+	});
+
+	it("keeps clamp-expanded legacy values except at their own index", () => {
+		expect(deriveOverrideSlots(["h1"], ["h1", "h2", "h3"])).toEqual(["", "h1", "h1"]);
+	});
+});
+
+describe("splitPastedOverrides", () => {
+	it("preserves blank lines of a pasted spreadsheet column as blank slots", () => {
+		expect(splitPastedOverrides("proxy-a\n\nproxy-c")).toEqual(["proxy-a", "", "proxy-c"]);
+	});
+
+	it("ignores the trailing copy terminator but keeps a trailing blank cell", () => {
+		expect(splitPastedOverrides("a\r\nb\r\n")).toEqual(["a", "b"]);
+		expect(splitPastedOverrides("a\r\n\r\n")).toEqual(["a", ""]);
+	});
+
+	it("preserves empty entries of a delimited list", () => {
+		expect(splitPastedOverrides("a,,c")).toEqual(["a", "", "c"]);
+		expect(splitPastedOverrides("a; ;c")).toEqual(["a", "", "c"]);
+	});
+
+	it("trims and sanitizes tokens", () => {
+		expect(splitPastedOverrides(" a , b ")).toEqual(["a", "b"]);
+	});
+
+	it("splits space-separated lists without phantom blanks", () => {
+		expect(splitPastedOverrides("a  b   c")).toEqual(["a", "b", "c"]);
+	});
+
+	it("returns an empty list for empty input", () => {
+		expect(splitPastedOverrides("")).toEqual([]);
+		expect(splitPastedOverrides(null)).toEqual([]);
 	});
 });
 

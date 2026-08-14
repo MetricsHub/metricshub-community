@@ -47,14 +47,50 @@ export const alignHostnameOverrides = (value, hostCount) => {
 };
 
 /**
- * Counts the slots (among the first `hostCount`) holding an explicit override.
+ * Display slots for the mapping table: aligned to the host.name entries, with
+ * slots equal to their own host entry normalized back to blank. A saved partial
+ * mapping persists blank slots as the host.name entry itself (see
+ * {@link buildProtocolHostnamePayload}), so on reload those fallback values must
+ * render as blank cells again — the two forms are semantically identical.
  *
  * @param {unknown} value
- * @param {number} hostCount
- * @returns {number}
+ * @param {string[]} hostNames resource host.name entries, in resource order
+ * @returns {string[]}
  */
-export const countConfiguredOverrides = (value, hostCount) =>
-	alignHostnameOverrides(value, hostCount).filter(Boolean).length;
+export const deriveOverrideSlots = (value, hostNames) => {
+	const names = Array.isArray(hostNames) ? hostNames : [];
+	return alignHostnameOverrides(value, names.length).map((slot, index) =>
+		slot &&
+		slot.toLowerCase() ===
+			String(names[index] ?? "")
+				.trim()
+				.toLowerCase()
+			? ""
+			: slot,
+	);
+};
+
+/**
+ * Splits pasted text into positional override tokens, preserving intentionally
+ * blank entries (blank = "use the host.name entry"). A newline-separated paste
+ * (spreadsheet column) keeps empty lines as blank slots; a `,`/`;` list keeps
+ * empty entries as blank slots; a space-separated list cannot express blanks.
+ * One trailing separator (the copy terminator) is ignored.
+ *
+ * @param {unknown} text
+ * @returns {string[]} sanitized tokens; empty string = blank slot
+ */
+export const splitPastedOverrides = (text) => {
+	const normalized = String(text ?? "").replace(/\r\n?/g, "\n");
+	const sanitizeToken = (token) => token.replace(/[;,\s]/g, "");
+	if (normalized.includes("\n")) {
+		return normalized.replace(/\n$/, "").split("\n").map(sanitizeToken);
+	}
+	if (/[;,]/.test(normalized)) {
+		return normalized.replace(/[;,]$/, "").split(/[;,]/).map(sanitizeToken);
+	}
+	return normalized.split(/\s+/).map(sanitizeToken).filter(Boolean);
+};
 
 /**
  * Canonical payload form of the override. Multi-host resources always get a
