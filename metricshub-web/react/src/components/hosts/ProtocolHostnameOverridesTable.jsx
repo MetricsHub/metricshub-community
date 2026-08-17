@@ -188,7 +188,18 @@ const ProtocolHostnameOverridesTable = ({
 		[onChange],
 	);
 
-	const needle = query.trim().toLowerCase();
+	// The search control only exists above the threshold; drop any stale query
+	// once it hides (e.g. host.name entries removed) so it cannot keep filtering
+	// rows — or spring back — invisibly.
+	const searchable = hostNames.length > SEARCH_THRESHOLD;
+	React.useEffect(() => {
+		if (!searchable) {
+			setQuery("");
+		}
+	}, [searchable]);
+
+	const needle = searchable ? query.trim().toLowerCase() : "";
+	const filteredView = Boolean(needle) || showDuplicatesOnly;
 
 	const handleSlotPaste = React.useCallback(
 		(index, event) => {
@@ -199,14 +210,14 @@ const ProtocolHostnameOverridesTable = ({
 			// A multi-value paste (spreadsheet column, comma list) fills consecutive
 			// rows from the target cell, keeping empty tokens as blank slots — but
 			// only over the real, unfiltered order: spreading across a filtered view
-			// would target rows the user can't see.
+			// (search or duplicates-only) would target rows the user can't see.
 			event.preventDefault();
 			const tokens = splitPastedOverrides(pasted);
 			if (tokens.length === 0) {
 				return;
 			}
 			const next = [...slotsRef.current];
-			if (needle) {
+			if (filteredView) {
 				next[index] = tokens.find(Boolean) || "";
 			} else {
 				tokens.slice(0, next.length - index).forEach((token, offset) => {
@@ -215,7 +226,7 @@ const ProtocolHostnameOverridesTable = ({
 			}
 			onChange(next);
 		},
-		[needle, onChange],
+		[filteredView, onChange],
 	);
 	const visibleRows = React.useMemo(() => {
 		let rows = hostNames.map((hostEntry, index) => ({ hostEntry, index }));
@@ -238,7 +249,7 @@ const ProtocolHostnameOverridesTable = ({
 	React.useEffect(() => {
 		setPage(0);
 	}, [needle, showDuplicatesOnly]);
-	const paginated = hostNames.length > SEARCH_THRESHOLD;
+	const paginated = searchable;
 	const lastPage = Math.max(0, Math.ceil(visibleRows.length / rowsPerPage) - 1);
 	const safePage = Math.min(page, lastPage);
 	const pagedRows = paginated
@@ -284,7 +295,7 @@ const ProtocolHostnameOverridesTable = ({
 					</Stack>
 				}
 			/>
-			{hostNames.length > SEARCH_THRESHOLD ? (
+			{searchable ? (
 				<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
 					<TextField
 						fullWidth
