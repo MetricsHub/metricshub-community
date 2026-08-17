@@ -2,6 +2,7 @@ import * as React from "react";
 import {
 	Box,
 	Chip,
+	Stack,
 	Table,
 	TableBody,
 	TableCell,
@@ -9,10 +10,16 @@ import {
 	TablePagination,
 	TableRow,
 	TextField,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { deriveOverrideSlots, splitPastedOverrides } from "../../utils/host-name-overrides";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import {
+	deriveOverrideSlots,
+	getDuplicateOverrideGroups,
+	splitPastedOverrides,
+} from "../../utils/host-name-overrides";
 import { filledInputNoLabelSx, searchFieldSx } from "./guided-config-form-primitives";
 import {
 	ProtocolFieldLabelRow,
@@ -46,34 +53,49 @@ const bodyCellSx = {
  * @param {number} props.index zero-based position in the host.name list
  * @param {string} props.hostEntry the host.name entry this row overrides
  * @param {string} props.slotValue current override ("" = use hostEntry)
+ * @param {string} props.duplicateTitle warning tooltip when the effective hostname is shared ("" = unique)
  * @param {(index: number, value: string) => void} props.onSlotChange
  * @param {(index: number, event: React.ClipboardEvent) => void} props.onSlotPaste
  */
-const OverrideRow = React.memo(({ index, hostEntry, slotValue, onSlotChange, onSlotPaste }) => (
-	<TableRow hover>
-		<TableCell align="right" sx={{ ...bodyCellSx, color: "text.secondary", width: 48 }}>
-			{index + 1}
-		</TableCell>
-		<TableCell sx={{ ...bodyCellSx, maxWidth: 0, width: "40%" }}>
-			<Typography variant="body2" noWrap title={hostEntry} sx={{ fontWeight: 500 }}>
-				{hostEntry}
-			</Typography>
-		</TableCell>
-		<TableCell sx={bodyCellSx}>
-			<TextField
-				{...protocolTextFieldProps}
-				fullWidth
-				placeholder={hostEntry}
-				value={slotValue}
-				onChange={(e) => onSlotChange(index, e.target.value)}
-				onPaste={(e) => onSlotPaste(index, e)}
-				slotProps={{
-					htmlInput: { "aria-label": `Hostname override for ${hostEntry}` },
-				}}
-			/>
-		</TableCell>
-	</TableRow>
-));
+const OverrideRow = React.memo(
+	({ index, hostEntry, slotValue, duplicateTitle, onSlotChange, onSlotPaste }) => (
+		<TableRow hover>
+			<TableCell align="right" sx={{ ...bodyCellSx, color: "text.secondary", width: 48 }}>
+				{index + 1}
+			</TableCell>
+			<TableCell sx={{ ...bodyCellSx, maxWidth: 0, width: "40%" }}>
+				<Typography variant="body2" noWrap title={hostEntry} sx={{ fontWeight: 500 }}>
+					{hostEntry}
+				</Typography>
+			</TableCell>
+			<TableCell sx={bodyCellSx}>
+				<TextField
+					{...protocolTextFieldProps}
+					fullWidth
+					placeholder={hostEntry}
+					value={slotValue}
+					onChange={(e) => onSlotChange(index, e.target.value)}
+					onPaste={(e) => onSlotPaste(index, e)}
+					slotProps={{
+						htmlInput: { "aria-label": `Hostname override for ${hostEntry}` },
+						input: duplicateTitle
+							? {
+									endAdornment: (
+										<Tooltip title={duplicateTitle} arrow>
+											<WarningAmberRoundedIcon
+												fontSize="small"
+												sx={{ color: "warning.main", ml: 0.5, flexShrink: 0 }}
+											/>
+										</Tooltip>
+									),
+								}
+							: undefined,
+					}}
+				/>
+			</TableCell>
+		</TableRow>
+	),
+);
 OverrideRow.displayName = "OverrideRow";
 
 /**
@@ -106,12 +128,48 @@ const ProtocolHostnameOverridesTable = ({
 	const [query, setQuery] = React.useState("");
 	const [page, setPage] = React.useState(0);
 	const [rowsPerPage, setRowsPerPage] = React.useState(10);
+	// Row indexes captured when the duplicates filter is toggled on (null = off).
+	// A snapshot instead of a live filter, so fixing a duplicate doesn't yank the
+	// row (and the focused input) out of the filtered view mid-keystroke.
+	const [duplicateSnapshot, setDuplicateSnapshot] = React.useState(
+		/** @type {Set<number> | null} */ (null),
+	);
+	const showDuplicatesOnly = duplicateSnapshot !== null;
 
 	// Saved partial mappings persist blank slots as the host.name entry itself;
 	// deriveOverrideSlots turns those fallback values back into blank cells so
 	// the blank-as-fallback contract survives a save/reload.
 	const slots = React.useMemo(() => deriveOverrideSlots(value, hostNames), [value, hostNames]);
 	const configuredCount = slots.filter(Boolean).length;
+
+	// Hosts sharing one effective collection hostname get a per-row warning and
+	// a clickable count chip that filters the table down to just those rows.
+	const duplicateGroups = React.useMemo(
+		() => getDuplicateOverrideGroups(slots, hostNames),
+		[slots, hostNames],
+	);
+	const duplicateTitles = React.useMemo(() => {
+		/** @type {Map<number, string>} */
+		const titles = new Map();
+		for (const indexes of Object.values(duplicateGroups)) {
+			for (const index of indexes) {
+				const others = indexes.filter((other) => other !== index);
+				const shown = others
+					.slice(0, 3)
+					.map((other) => `#${other + 1} (${hostNames[other]})`)
+					.join(", ");
+				titles.set(index, `Same collection hostname as ${shown}${others.length > 3 ? ", …" : ""}`);
+			}
+		}
+		return titles;
+	}, [duplicateGroups, hostNames]);
+	const duplicateCount = duplicateTitles.size;
+
+	React.useEffect(() => {
+		if (duplicateCount === 0) {
+			setDuplicateSnapshot(null);
+		}
+	}, [duplicateCount]);
 
 	// Latest slots in a ref so the per-row change handler stays referentially
 	// stable and memoized rows only re-render when their own cell changes.
@@ -160,23 +218,26 @@ const ProtocolHostnameOverridesTable = ({
 		[needle, onChange],
 	);
 	const visibleRows = React.useMemo(() => {
-		const rows = hostNames.map((hostEntry, index) => ({ hostEntry, index }));
-		if (!needle) {
-			return rows;
+		let rows = hostNames.map((hostEntry, index) => ({ hostEntry, index }));
+		if (duplicateSnapshot) {
+			rows = rows.filter(({ index }) => duplicateSnapshot.has(index));
 		}
-		return rows.filter(
-			({ hostEntry, index }) =>
-				hostEntry.toLowerCase().includes(needle) ||
-				(slots[index] || "").toLowerCase().includes(needle),
-		);
-	}, [hostNames, needle, slots]);
+		if (needle) {
+			rows = rows.filter(
+				({ hostEntry, index }) =>
+					hostEntry.toLowerCase().includes(needle) ||
+					(slots[index] || "").toLowerCase().includes(needle),
+			);
+		}
+		return rows;
+	}, [hostNames, needle, slots, duplicateSnapshot]);
 
 	// Pagination pages the (possibly filtered) rows; row numbers stay absolute.
-	// Never exceed the last page when the filter shrinks the set, and jump back
-	// to the first page whenever the search text changes.
+	// Never exceed the last page when a filter shrinks the set, and jump back
+	// to the first page whenever a filter changes.
 	React.useEffect(() => {
 		setPage(0);
-	}, [needle]);
+	}, [needle, showDuplicatesOnly]);
 	const paginated = hostNames.length > SEARCH_THRESHOLD;
 	const lastPage = Math.max(0, Math.ceil(visibleRows.length / rowsPerPage) - 1);
 	const safePage = Math.min(page, lastPage);
@@ -192,13 +253,35 @@ const ProtocolHostnameOverridesTable = ({
 				description="Leave a row blank to use the host.name entry."
 				helpTooltip={helpTooltip}
 				trailing={
-					<Chip
-						size="small"
-						color={configuredCount === hostNames.length ? "primary" : "default"}
-						variant="outlined"
-						label={`${configuredCount}/${hostNames.length} configured`}
-						sx={{ fontWeight: 600 }}
-					/>
+					<Stack direction="row" spacing={0.75} alignItems="center">
+						{duplicateCount > 0 ? (
+							<Tooltip
+								title="Several hosts share one collection hostname — click to show only those rows"
+								arrow
+							>
+								<Chip
+									size="small"
+									color="warning"
+									variant={showDuplicatesOnly ? "filled" : "outlined"}
+									icon={<WarningAmberRoundedIcon />}
+									label={`${duplicateCount} duplicate${duplicateCount > 1 ? "s" : ""}`}
+									onClick={() =>
+										setDuplicateSnapshot((current) =>
+											current ? null : new Set(duplicateTitles.keys()),
+										)
+									}
+									sx={{ fontWeight: 600 }}
+								/>
+							</Tooltip>
+						) : null}
+						<Chip
+							size="small"
+							color={configuredCount === hostNames.length ? "primary" : "default"}
+							variant="outlined"
+							label={`${configuredCount}/${hostNames.length} configured`}
+							sx={{ fontWeight: 600 }}
+						/>
+					</Stack>
 				}
 			/>
 			{hostNames.length > SEARCH_THRESHOLD ? (
@@ -259,6 +342,7 @@ const ProtocolHostnameOverridesTable = ({
 									index={index}
 									hostEntry={hostEntry}
 									slotValue={slots[index] || ""}
+									duplicateTitle={duplicateTitles.get(index) || ""}
 									onSlotChange={handleSlotChange}
 									onSlotPaste={handleSlotPaste}
 								/>
@@ -267,7 +351,7 @@ const ProtocolHostnameOverridesTable = ({
 							<TableRow>
 								<TableCell colSpan={3} sx={{ ...bodyCellSx, py: 1.5 }}>
 									<Typography variant="body2" color="text.secondary">
-										No hosts match your search.
+										{needle ? "No hosts match your search." : "No duplicate collection hostnames."}
 									</Typography>
 								</TableCell>
 							</TableRow>

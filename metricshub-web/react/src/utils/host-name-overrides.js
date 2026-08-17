@@ -71,6 +71,32 @@ export const deriveOverrideSlots = (value, hostNames) => {
 };
 
 /**
+ * Groups rows whose EFFECTIVE collection hostname (the override, or the
+ * host.name entry when the slot is blank) is used by more than one host.
+ * Duplicates are legitimate (several hosts may share one proxy) but usually
+ * accidental, so the table surfaces them as a warning, never an error.
+ *
+ * @param {string[]} slots display slots from {@link deriveOverrideSlots}
+ * @param {string[]} hostNames resource host.name entries, in resource order
+ * @returns {Record<string, number[]>} lowercased effective hostname -> row indexes (only groups of 2+)
+ */
+export const getDuplicateOverrideGroups = (slots, hostNames) => {
+	const names = Array.isArray(hostNames) ? hostNames : [];
+	/** @type {Record<string, number[]>} */
+	const groups = {};
+	names.forEach((name, index) => {
+		const effective = String(slots?.[index] || name || "")
+			.trim()
+			.toLowerCase();
+		if (!effective) {
+			return;
+		}
+		(groups[effective] ??= []).push(index);
+	});
+	return Object.fromEntries(Object.entries(groups).filter(([, indexes]) => indexes.length > 1));
+};
+
+/**
  * Splits pasted text into positional override tokens, preserving intentionally
  * blank entries (blank = "use the host.name entry"). A newline-separated paste
  * (spreadsheet column) keeps empty lines as blank slots; a `,`/`;` list keeps

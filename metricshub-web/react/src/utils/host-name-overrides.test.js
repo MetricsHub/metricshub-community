@@ -3,6 +3,7 @@ import {
 	alignHostnameOverrides,
 	buildProtocolHostnamePayload,
 	deriveOverrideSlots,
+	getDuplicateOverrideGroups,
 	realignHostnameOverrides,
 	splitHostnameOverrides,
 	splitPastedOverrides,
@@ -74,6 +75,31 @@ describe("deriveOverrideSlots", () => {
 
 	it("keeps clamp-expanded legacy values except at their own index", () => {
 		expect(deriveOverrideSlots(["h1"], ["h1", "h2", "h3"])).toEqual(["", "h1", "h1"]);
+	});
+});
+
+describe("getDuplicateOverrideGroups", () => {
+	it("groups hosts sharing the same override value", () => {
+		expect(getDuplicateOverrideGroups(["proxy", "proxy", ""], ["h1", "h2", "h3"])).toEqual({
+			proxy: [0, 1],
+		});
+	});
+
+	it("detects an override colliding with another host's fallback", () => {
+		expect(getDuplicateOverrideGroups(["h2", "", ""], ["h1", "h2", "h3"])).toEqual({
+			h2: [0, 1],
+		});
+	});
+
+	it("compares effective hostnames case-insensitively", () => {
+		expect(getDuplicateOverrideGroups(["PROXY", "proxy", ""], ["h1", "h2", "h3"])).toEqual({
+			proxy: [0, 1],
+		});
+	});
+
+	it("returns no groups when every effective hostname is unique", () => {
+		expect(getDuplicateOverrideGroups(["", "proxy", ""], ["h1", "h2", "h3"])).toEqual({});
+		expect(getDuplicateOverrideGroups(["", "", ""], ["h1", "h2", "h3"])).toEqual({});
 	});
 });
 
