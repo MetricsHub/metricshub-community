@@ -97,4 +97,16 @@ describe("collectProtocolConfigErrors protocol hostname", () => {
 		);
 		expect(errors.hostname).toBeUndefined();
 	});
+
+	it("rejects multiple override hostnames on a single-host resource", () => {
+		// The payload builder would silently keep only the first value.
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: "proxy-a,proxy-b" },
+			{ hostId: "server-1", hostName: "server-1" },
+		);
+		expect(errors.hostname).toBe(
+			"Define a single hostname (this resource has one host.name entry)",
+		);
+	});
 });

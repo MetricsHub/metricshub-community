@@ -1,5 +1,9 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { buildProtocolHostnamePayload } from "../../utils/host-name-overrides";
+import { getHostNames } from "../../utils/host-names";
+import {
+	buildProtocolHostnamePayload,
+	splitHostnameOverrides,
+} from "../../utils/host-name-overrides";
 
 /** @typedef {'text' | 'password' | 'number' | 'boolean' | 'select' | 'radio' | 'authChoice' | 'modeChoice'} FieldType */
 
@@ -1344,6 +1348,15 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 	// No count check on the multi-host hostname override: the mapping table emits
 	// full-length arrays, blank slots fall back to the host.name entry at payload
 	// build, and legacy shorter lists keep the agent's clamp-to-last semantics.
+	// A single-host resource, however, takes exactly one override value — the
+	// payload builder would otherwise silently keep only the first entry.
+	{
+		const resourceHostnameCount = getHostNames(options.hostName).length;
+		const overrideCount = splitHostnameOverrides(protocolConfig.hostname).filter(Boolean).length;
+		if (resourceHostnameCount <= 1 && overrideCount > 1) {
+			errors.hostname = "Define a single hostname (this resource has one host.name entry)";
+		}
+	}
 
 	return errors;
 };
