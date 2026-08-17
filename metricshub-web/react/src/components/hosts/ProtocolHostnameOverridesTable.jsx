@@ -56,9 +56,20 @@ const bodyCellSx = {
  * @param {string} props.duplicateTitle warning tooltip when the effective hostname is shared ("" = unique)
  * @param {(index: number, value: string) => void} props.onSlotChange
  * @param {(index: number, event: React.ClipboardEvent) => void} props.onSlotPaste
+ * @param {(index: number) => void} props.onSlotFocus
+ * @param {() => void} props.onSlotBlur
  */
 const OverrideRow = React.memo(
-	({ index, hostEntry, slotValue, duplicateTitle, onSlotChange, onSlotPaste }) => (
+	({
+		index,
+		hostEntry,
+		slotValue,
+		duplicateTitle,
+		onSlotChange,
+		onSlotPaste,
+		onSlotFocus,
+		onSlotBlur,
+	}) => (
 		<TableRow hover>
 			<TableCell align="right" sx={{ ...bodyCellSx, color: "text.secondary", width: 48 }}>
 				{index + 1}
@@ -76,6 +87,8 @@ const OverrideRow = React.memo(
 					value={slotValue}
 					onChange={(e) => onSlotChange(index, e.target.value)}
 					onPaste={(e) => onSlotPaste(index, e)}
+					onFocus={() => onSlotFocus(index)}
+					onBlur={onSlotBlur}
 					slotProps={{
 						htmlInput: { "aria-label": `Hostname override for ${hostEntry}` },
 						input: duplicateTitle
@@ -199,6 +212,12 @@ const ProtocolHostnameOverridesTable = ({
 	const needle = query.trim().toLowerCase();
 	const filteredView = Boolean(needle) || showDuplicatesOnly;
 
+	// The row being edited stays mounted even when its override stops matching
+	// the search (typing a replacement must not unmount the focused input).
+	const [editingIndex, setEditingIndex] = React.useState(/** @type {number | null} */ (null));
+	const handleSlotFocus = React.useCallback((index) => setEditingIndex(index), []);
+	const handleSlotBlur = React.useCallback(() => setEditingIndex(null), []);
+
 	const handleSlotPaste = React.useCallback(
 		(index, event) => {
 			const pasted = event.clipboardData.getData("text");
@@ -234,12 +253,13 @@ const ProtocolHostnameOverridesTable = ({
 		if (needle) {
 			rows = rows.filter(
 				({ hostEntry, index }) =>
+					index === editingIndex ||
 					hostEntry.toLowerCase().includes(needle) ||
 					(slots[index] || "").toLowerCase().includes(needle),
 			);
 		}
 		return rows;
-	}, [hostNames, needle, slots, duplicateSnapshot]);
+	}, [hostNames, needle, slots, duplicateSnapshot, editingIndex]);
 
 	// Pagination pages the (possibly filtered) rows; row numbers stay absolute.
 	// Never exceed the last page when a filter shrinks the set, and jump back
@@ -352,6 +372,8 @@ const ProtocolHostnameOverridesTable = ({
 									duplicateTitle={duplicateTitles.get(index) || ""}
 									onSlotChange={handleSlotChange}
 									onSlotPaste={handleSlotPaste}
+									onSlotFocus={handleSlotFocus}
+									onSlotBlur={handleSlotBlur}
 								/>
 							))
 						) : (
