@@ -75,6 +75,29 @@ class VelocityTemplateServiceTest {
 	}
 
 	@Test
+	void testEvaluateDraftTemplateFromContent() throws Exception {
+		final VelocityTemplateService service = newServiceWithDir(tempConfigDir);
+		final String templateContent = "#set($name = \"world\")\nhello: $name\n";
+
+		final String result = service.evaluate("test.vm.draft", templateContent);
+
+		assertNotNull(result, "Result should not be null");
+		assertTrue(result.contains("hello: world"), "Draft template should be evaluated like its base .vm file");
+	}
+
+	@Test
+	void testEvaluateDraftTemplateOnDisk() throws Exception {
+		final VelocityTemplateService service = newServiceWithDir(tempConfigDir);
+		final String templateContent = "#set($name = \"world\")\nhello: $name\n";
+		Files.writeString(tempConfigDir.resolve("test.vm.draft"), templateContent, StandardCharsets.UTF_8);
+
+		final String result = service.evaluate("test.vm.draft", null);
+
+		assertNotNull(result, "Result should not be null");
+		assertTrue(result.contains("hello: world"), "Draft template should be evaluated like its base .vm file");
+	}
+
+	@Test
 	void testEvaluateFileNotFound() {
 		final VelocityTemplateService service = newServiceWithDir(tempConfigDir);
 

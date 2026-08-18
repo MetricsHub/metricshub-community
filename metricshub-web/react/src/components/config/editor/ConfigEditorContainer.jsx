@@ -148,10 +148,9 @@ function ConfigEditorContainer(props) {
 				// Navigate to normal file
 				navigate(paths.configurationFile(targetName), { replace: true });
 				// Delete the draft after navigation starts to avoid re-fetching a deleted file
-				return new Promise((resolve) => setTimeout(resolve, 50));
-			})
-			.then(() => {
-				dispatch(deleteConfig(selected));
+				return new Promise((resolve) => setTimeout(resolve, 50)).then(() =>
+					dispatch(deleteConfig(selected)),
+				);
 			})
 			.catch((e) => {
 				setDialog({ open: true, message: e?.message || "Validation failed" });
