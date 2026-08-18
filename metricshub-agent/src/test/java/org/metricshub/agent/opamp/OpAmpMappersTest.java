@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentInfo;
+import org.metricshub.agent.upgrade.runner.DeploymentKind;
 import org.metricshub.opamp.proto.AgentDescription;
 import org.metricshub.opamp.proto.ComponentHealth;
 import org.metricshub.opamp.proto.KeyValue;
@@ -44,7 +45,7 @@ class OpAmpMappersTest {
 			)
 		);
 
-		final AgentDescription description = OpAmpAgentDescriptionMapper.map(agentInfo);
+		final AgentDescription description = OpAmpAgentDescriptionMapper.map(agentInfo, DeploymentKind.DEB);
 
 		assertEquals(
 			Optional.of("MetricsHub Agent"),
@@ -58,6 +59,15 @@ class OpAmpMappersTest {
 			attributeValue(description.getNonIdentifyingAttributesList(), "build_number")
 		);
 		assertTrue(attributeValue(description.getNonIdentifyingAttributesList(), "host.arch").isPresent());
+		assertEquals(
+			Optional.of("deb"),
+			attributeValue(description.getNonIdentifyingAttributesList(), "installer.type"),
+			"The installer type must be reported lowercase so the server can select the artifact type"
+		);
+		assertTrue(
+			attributeValue(description.getIdentifyingAttributesList(), "installer.type").isEmpty(),
+			"The installer type is non-identifying: it may change on reinstallation"
+		);
 	}
 
 	@Test
@@ -65,10 +75,28 @@ class OpAmpMappersTest {
 		final AgentInfo agentInfo = mock(AgentInfo.class);
 		when(agentInfo.getAttributes()).thenReturn(Map.of());
 
-		final AgentDescription description = OpAmpAgentDescriptionMapper.map(agentInfo);
+		final AgentDescription description = OpAmpAgentDescriptionMapper.map(agentInfo, null);
 
 		assertTrue(attributeValue(description.getIdentifyingAttributesList(), "service.name").isEmpty());
 		assertTrue(attributeValue(description.getIdentifyingAttributesList(), "service.version").isEmpty());
+		assertTrue(
+			attributeValue(description.getNonIdentifyingAttributesList(), "installer.type").isEmpty(),
+			"An unknown deployment kind must omit the attribute instead of reporting a wrong one"
+		);
+	}
+
+	@Test
+	void agentDescriptionShouldReportEveryDeploymentKindLowercase() {
+		final AgentInfo agentInfo = mock(AgentInfo.class);
+		when(agentInfo.getAttributes()).thenReturn(Map.of());
+
+		for (final DeploymentKind kind : DeploymentKind.values()) {
+			final AgentDescription description = OpAmpAgentDescriptionMapper.map(agentInfo, kind);
+			assertEquals(
+				Optional.of(kind.name().toLowerCase(java.util.Locale.ROOT)),
+				attributeValue(description.getNonIdentifyingAttributesList(), "installer.type")
+			);
+		}
 	}
 
 	@Test

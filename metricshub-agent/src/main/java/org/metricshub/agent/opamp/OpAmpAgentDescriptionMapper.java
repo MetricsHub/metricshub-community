@@ -27,8 +27,10 @@ import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_HOST_NAM
 import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_OS_TYPE_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
 
+import java.util.Locale;
 import java.util.Map;
 import org.metricshub.agent.context.AgentInfo;
+import org.metricshub.agent.upgrade.runner.DeploymentKind;
 import org.metricshub.opamp.proto.AgentDescription;
 import org.metricshub.opamp.proto.AnyValue;
 import org.metricshub.opamp.proto.KeyValue;
@@ -39,7 +41,7 @@ import org.metricshub.opamp.proto.KeyValue;
  * Identifying attributes follow the OpAMP recommendations ({@code service.name},
  * {@code service.version}, {@code host.name}); non-identifying attributes carry the material the
  * OpAMP server needs to select the right upgrade artifact ({@code os.type}, {@code host.arch},
- * {@code build_number}).
+ * {@code build_number}, {@code installer.type}).
  * </p>
  */
 public class OpAmpAgentDescriptionMapper {
@@ -54,15 +56,24 @@ public class OpAmpAgentDescriptionMapper {
 	 */
 	static final String HOST_ARCH_ATTRIBUTE_KEY = "host.arch";
 
+	/**
+	 * OpAMP non-identifying attribute key for the installer type. Without it an OpAMP server
+	 * cannot tell a Debian host from an RPM host and must not offer any artifact.
+	 */
+	static final String INSTALLER_TYPE_ATTRIBUTE_KEY = "installer.type";
+
 	private OpAmpAgentDescriptionMapper() {}
 
 	/**
 	 * Builds the OpAMP {@code AgentDescription} from the agent information.
 	 *
-	 * @param agentInfo the agent information
+	 * @param agentInfo      the agent information
+	 * @param deploymentKind how MetricsHub was deployed on this host, reported as the lowercase
+	 *                       {@code installer.type} attribute ({@code deb}, {@code rpm}, {@code msi},
+	 *                       {@code archive}, {@code docker}); skipped when {@code null}
 	 * @return the corresponding {@code AgentDescription}
 	 */
-	public static AgentDescription map(final AgentInfo agentInfo) {
+	public static AgentDescription map(final AgentInfo agentInfo, final DeploymentKind deploymentKind) {
 		final Map<String, String> attributes = agentInfo.getAttributes();
 		final AgentDescription.Builder builder = AgentDescription.newBuilder();
 
@@ -93,6 +104,9 @@ public class OpAmpAgentDescriptionMapper {
 			AGENT_INFO_BUILD_NUMBER_ATTRIBUTE_KEY,
 			attributes.get(AGENT_INFO_BUILD_NUMBER_ATTRIBUTE_KEY)
 		);
+		if (deploymentKind != null) {
+			addAttribute(builder, false, INSTALLER_TYPE_ATTRIBUTE_KEY, deploymentKind.name().toLowerCase(Locale.ROOT));
+		}
 
 		return builder.build();
 	}

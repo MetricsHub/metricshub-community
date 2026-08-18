@@ -2,6 +2,7 @@ package org.metricshub.agent.opamp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -20,6 +21,7 @@ import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
+import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientSettings;
 import org.metricshub.web.AgentContextHolder;
@@ -70,6 +72,34 @@ class OpAmpServiceTest {
 			factoryInvocations++;
 			return client;
 		});
+		stubDeploymentDetection(opAmpService);
+	}
+
+	/**
+	 * Replaces the real deployment probes with an always-failing fake, so unit tests never run
+	 * dpkg/rpm/registry commands.
+	 *
+	 * @param service the service under test
+	 */
+	private static void stubDeploymentDetection(final OpAmpService service) {
+		service.setDeploymentDetector(new DeploymentDetector(command -> false));
+	}
+
+	@Test
+	void indeterminateDeploymentDetectionShouldStillReportTheDescription() {
+		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		opAmpService.setDeploymentDetector(
+			new DeploymentDetector(command -> {
+				throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
+			})
+		);
+
+		opAmpService.supervise();
+
+		// The description is still reported (with installer.type omitted):
+		// an indeterminate detection must not break the supervision tick.
+		verify(client, times(1)).start();
+		verify(client, atLeastOnce()).setAgentDescription(any());
 	}
 
 	private static OpAmpConfig enabledConfig(final String endpoint) {
@@ -148,6 +178,7 @@ class OpAmpServiceTest {
 		final OpAmpService failingService = new OpAmpService(agentContextHolder, _ -> {
 			throw new IllegalStateException("Simulated client creation failure");
 		});
+		stubDeploymentDetection(failingService);
 
 		failingService.supervise();
 
@@ -175,6 +206,7 @@ class OpAmpServiceTest {
 			}
 			return client;
 		});
+		stubDeploymentDetection(retryingService);
 
 		retryingService.supervise();
 		// The transient failure is retried with the unchanged configuration
@@ -215,6 +247,7 @@ class OpAmpServiceTest {
 			factoryInvocations++;
 			return client;
 		});
+		stubDeploymentDetection(service);
 		agentConfig.setOpamp(enabledConfig(ENDPOINT));
 
 		service.supervise();
@@ -232,6 +265,7 @@ class OpAmpServiceTest {
 			factoryInvocations++;
 			return client;
 		});
+		stubDeploymentDetection(service);
 		agentConfig.setOpamp(enabledConfig(ENDPOINT));
 		agentConfig.setUpgrade(org.metricshub.agent.config.UpgradeConfig.builder().enabled(false).build());
 

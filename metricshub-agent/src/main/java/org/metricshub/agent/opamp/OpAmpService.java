@@ -37,6 +37,8 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
+import org.metricshub.agent.upgrade.runner.DeploymentDetector;
+import org.metricshub.agent.upgrade.runner.DeploymentKind;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientCallbacks;
 import org.metricshub.opamp.client.OpampClientSettings;
@@ -74,6 +76,12 @@ public class OpAmpService {
 	private final Function<OpampClientSettings, OpampClient> clientFactory;
 	private final ScheduledExecutorService supervisor;
 	private final OpampPackagesHandler packagesHandler;
+
+	/**
+	 * Detects the deployment kind reported as the {@code installer.type} attribute. The detector
+	 * caches its verdict, so the probes run at most once per process. Tests may replace it.
+	 */
+	private DeploymentDetector deploymentDetector = new DeploymentDetector();
 
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
@@ -185,9 +193,37 @@ public class OpAmpService {
 		}
 
 		if (client != null && client.isStarted()) {
-			client.setAgentDescription(OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo()));
+			client.setAgentDescription(
+				OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo(), detectDeploymentKindSafely())
+			);
 			client.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
 		}
+	}
+
+	/**
+	 * Detects the deployment kind, never letting a detection failure break the supervision: the
+	 * {@code installer.type} attribute is then simply omitted and the OpAMP server treats the
+	 * artifact type as unknown.
+	 *
+	 * @return the detected deployment kind, or {@code null} when detection failed
+	 */
+	private DeploymentKind detectDeploymentKindSafely() {
+		try {
+			return deploymentDetector.detect();
+		} catch (Exception e) {
+			log.warn("Cannot detect the MetricsHub deployment kind: {}", e.getMessage());
+			log.debug("Cannot detect the MetricsHub deployment kind:", e);
+			return null;
+		}
+	}
+
+	/**
+	 * Replaces the deployment detector (used by tests).
+	 *
+	 * @param deploymentDetector the detector to use
+	 */
+	void setDeploymentDetector(final DeploymentDetector deploymentDetector) {
+		this.deploymentDetector = deploymentDetector;
 	}
 
 	/**
@@ -228,7 +264,9 @@ public class OpAmpService {
 				}
 			}
 			// Report a complete first message
-			newClient.setAgentDescription(OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo()));
+			newClient.setAgentDescription(
+				OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo(), detectDeploymentKindSafely())
+			);
 			newClient.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
 			newClient.start();
 			if (packagesHandler instanceof OpampUpgradeAdapter adapter && upgradeEnabled) {

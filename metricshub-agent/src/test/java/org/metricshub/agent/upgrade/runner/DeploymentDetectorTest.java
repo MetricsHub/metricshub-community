@@ -2,10 +2,12 @@ package org.metricshub.agent.upgrade.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 
@@ -61,5 +63,26 @@ class DeploymentDetectorTest {
 		detector.detect();
 
 		assertEquals(probesAfterFirstDetection, probes.size());
+	}
+
+	@Test
+	void indeterminateProbeShouldNotBeCachedAsArchive() {
+		final AtomicBoolean healthy = new AtomicBoolean(false);
+		final DeploymentDetector detector = new DeploymentDetector(command -> {
+			if (!healthy.get()) {
+				throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
+			}
+			return true;
+		});
+
+		// A transient probe failure must surface as indeterminate, never as a
+		// cached ARCHIVE misclassification.
+		assertThrows(DeploymentDetector.DetectionIndeterminateException.class, detector::detect);
+
+		// Once the probe recovers, detection succeeds and caches normally.
+		healthy.set(true);
+		final DeploymentKind kind = detector.detect();
+		assertTrue(kind.isUpgradable());
+		assertEquals(kind, detector.detect());
 	}
 }

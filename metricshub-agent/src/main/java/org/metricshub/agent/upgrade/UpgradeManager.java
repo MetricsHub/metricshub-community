@@ -217,12 +217,19 @@ public class UpgradeManager {
 	}
 
 	/**
-	 * Indicates whether this deployment supports automatic in-place upgrades (deb/rpm/msi).
+	 * Indicates whether this deployment supports automatic in-place upgrades (deb/rpm/msi). An
+	 * indeterminate detection (a probe that timed out) conservatively reports unsupported: this is
+	 * a one-shot startup decision and must not crash the agent.
 	 *
 	 * @return {@code true} when package offers can be honored
 	 */
 	public boolean isPackageUpgradeSupported() {
-		return deploymentDetector.detect().isUpgradable();
+		try {
+			return deploymentDetector.detect().isUpgradable();
+		} catch (Exception e) {
+			log.warn("Cannot detect the MetricsHub deployment kind; package upgrades are disabled: {}", e.getMessage());
+			return false;
+		}
 	}
 
 	/**
