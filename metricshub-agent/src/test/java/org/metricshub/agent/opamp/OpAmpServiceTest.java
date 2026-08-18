@@ -2,6 +2,7 @@ package org.metricshub.agent.opamp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -82,6 +83,23 @@ class OpAmpServiceTest {
 	 */
 	private static void stubDeploymentDetection(final OpAmpService service) {
 		service.setDeploymentDetector(new DeploymentDetector(command -> false));
+	}
+
+	@Test
+	void indeterminateDeploymentDetectionShouldStillReportTheDescription() {
+		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		opAmpService.setDeploymentDetector(
+			new DeploymentDetector(command -> {
+				throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
+			})
+		);
+
+		opAmpService.supervise();
+
+		// The description is still reported (with installer.type omitted):
+		// an indeterminate detection must not break the supervision tick.
+		verify(client, times(1)).start();
+		verify(client, atLeastOnce()).setAgentDescription(any());
 	}
 
 	private static OpAmpConfig enabledConfig(final String endpoint) {

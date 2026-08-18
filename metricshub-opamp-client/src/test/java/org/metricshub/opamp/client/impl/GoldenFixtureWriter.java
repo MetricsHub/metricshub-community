@@ -139,6 +139,17 @@ public final class GoldenFixtureWriter {
 	 */
 	static void writeTo(final Path directory) throws IOException {
 		Files.createDirectories(directory);
+		// A renamed or removed fixture must not survive from a previous run:
+		// the directory is copied wholesale into the fleet repository, so
+		// stale binaries would poison the golden set.
+		try (var existing = Files.list(directory)) {
+			for (final Path file : existing.toList()) {
+				final String name = file.getFileName().toString();
+				if (name.endsWith(".bin") || name.equals("MANIFEST.json")) {
+					Files.delete(file);
+				}
+			}
+		}
 		final List<Fixture> fixtures = generate();
 		final StringBuilder manifest = new StringBuilder()
 			.append("{\n")

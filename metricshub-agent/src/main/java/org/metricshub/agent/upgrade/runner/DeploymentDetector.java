@@ -61,9 +61,33 @@ public class DeploymentDetector {
 		 * Runs the given command and waits for its completion.
 		 *
 		 * @param command the command and its arguments
-		 * @return {@code true} when the command completed with exit code 0
+		 * @return {@code true} when the command completed with exit code 0, {@code false} when it
+		 *         completed with a non-zero exit code or its binary does not exist on this host —
+		 *         both definitive answers
+		 * @throws DetectionIndeterminateException when the probe cannot deliver a verdict (timeout,
+		 *                                         interruption): the caller must not treat this as
+		 *                                         "not installed"
 		 */
 		boolean succeeds(String... command);
+	}
+
+	/**
+	 * Signals that a deployment probe could not deliver a verdict: the detection must be retried,
+	 * never cached, and never interpreted as an {@code ARCHIVE} deployment — a packaged host whose
+	 * package manager transiently hangs must not be misclassified until restart.
+	 */
+	public static class DetectionIndeterminateException extends IllegalStateException {
+
+		private static final long serialVersionUID = 1L;
+
+		/**
+		 * Creates the exception.
+		 *
+		 * @param message what prevented the verdict
+		 */
+		public DetectionIndeterminateException(final String message) {
+			super(message);
+		}
 	}
 
 	private final ProcessProbe probe;
@@ -86,9 +110,12 @@ public class DeploymentDetector {
 	}
 
 	/**
-	 * Detects the deployment kind, caching the result.
+	 * Detects the deployment kind, caching the result. Only a delivered verdict is cached: an
+	 * indeterminate probe (timeout, interruption) throws and the next call retries, so a transient
+	 * package-manager hiccup never freezes a wrong classification until restart.
 	 *
 	 * @return the detected deployment kind
+	 * @throws DetectionIndeterminateException when a probe could not deliver a verdict
 	 */
 	public DeploymentKind detect() {
 		DeploymentKind result = detected;
@@ -134,28 +161,37 @@ public class DeploymentDetector {
 	}
 
 	/**
-	 * Runs a probe command with a short timeout, discarding its output.
+	 * Runs a probe command with a short timeout, discarding its output. A process that starts and
+	 * exits delivers a definitive verdict (exit code), and a binary that does not exist on this
+	 * host is a definitive "no" (that package manager is not here). A timeout or interruption is
+	 * indeterminate and throws instead of masquerading as "not installed".
 	 *
 	 * @param command the command and its arguments
 	 * @return {@code true} when the command completed with exit code 0
 	 */
 	private static boolean runProbe(final String... command) {
+		final Process process;
 		try {
-			final Process process = new ProcessBuilder(command)
+			process = new ProcessBuilder(command)
 				.redirectOutput(ProcessBuilder.Redirect.DISCARD)
 				.redirectErrorStream(false)
 				.start();
+		} catch (Exception e) {
+			// The probe binary is absent (dpkg on an RPM host, rpm on a Debian
+			// host): a definitive negative, not a transient failure.
+			log.debug("Deployment probe {} cannot start: {}", String.join(" ", command), e.getMessage());
+			return false;
+		}
+		try {
 			if (!process.waitFor(10, TimeUnit.SECONDS)) {
 				process.destroyForcibly();
-				return false;
+				throw new DetectionIndeterminateException("The deployment probe timed out: " + String.join(" ", command));
 			}
 			return process.exitValue() == 0;
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			return false;
-		} catch (Exception e) {
-			log.debug("Deployment probe {} failed: {}", String.join(" ", command), e.getMessage());
-			return false;
+			process.destroyForcibly();
+			throw new DetectionIndeterminateException("The deployment probe was interrupted: " + String.join(" ", command));
 		}
 	}
 }

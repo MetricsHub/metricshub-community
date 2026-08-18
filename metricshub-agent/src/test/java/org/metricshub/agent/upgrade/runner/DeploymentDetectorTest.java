@@ -62,4 +62,28 @@ class DeploymentDetectorTest {
 
 		assertEquals(probesAfterFirstDetection, probes.size());
 	}
+
+	@Test
+	void indeterminateProbeShouldNotBeCachedAsArchive() {
+		final java.util.concurrent.atomic.AtomicBoolean healthy = new java.util.concurrent.atomic.AtomicBoolean(false);
+		final DeploymentDetector detector = new DeploymentDetector(command -> {
+			if (!healthy.get()) {
+				throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
+			}
+			return true;
+		});
+
+		// A transient probe failure must surface as indeterminate, never as a
+		// cached ARCHIVE misclassification.
+		org.junit.jupiter.api.Assertions.assertThrows(
+			DeploymentDetector.DetectionIndeterminateException.class,
+			detector::detect
+		);
+
+		// Once the probe recovers, detection succeeds and caches normally.
+		healthy.set(true);
+		final DeploymentKind kind = detector.detect();
+		assertTrue(kind.isUpgradable());
+		assertEquals(kind, detector.detect());
+	}
 }

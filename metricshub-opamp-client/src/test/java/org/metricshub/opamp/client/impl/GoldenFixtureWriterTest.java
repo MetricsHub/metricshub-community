@@ -94,4 +94,19 @@ class GoldenFixtureWriterTest {
 		assertTrue(manifest.contains("\"01-first-full-state.bin\""));
 		assertTrue(manifest.contains("\"sha256\""));
 	}
+
+	@Test
+	void writeToShouldRemoveStaleFixturesFromPreviousRuns() throws Exception {
+		final Path directory = Paths.get("target", "golden-fixtures-stale");
+		Files.createDirectories(directory);
+		Files.write(directory.resolve("99-removed-fixture.bin"), new byte[] { 1, 2, 3 });
+
+		GoldenFixtureWriter.writeTo(directory);
+
+		assertFalse(
+			Files.exists(directory.resolve("99-removed-fixture.bin")),
+			"a fixture from a previous run must not survive regeneration: the directory is copied wholesale"
+		);
+		assertTrue(Files.exists(directory.resolve("MANIFEST.json")));
+	}
 }
