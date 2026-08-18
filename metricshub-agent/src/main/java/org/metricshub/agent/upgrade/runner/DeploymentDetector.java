@@ -21,6 +21,7 @@ package org.metricshub.agent.upgrade.runner;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -170,6 +171,12 @@ public class DeploymentDetector {
 	 * @return {@code true} when the command completed with exit code 0
 	 */
 	private static boolean runProbe(final String... command) {
+		if (!isCommandAvailable(command[0])) {
+			// The probe binary is absent (dpkg on an RPM host, rpm on a Debian
+			// host): a definitive negative, not a transient failure.
+			log.debug("Deployment probe binary {} is not on the PATH.", command[0]);
+			return false;
+		}
 		final Process process;
 		try {
 			process = new ProcessBuilder(command)
@@ -177,10 +184,12 @@ public class DeploymentDetector {
 				.redirectErrorStream(false)
 				.start();
 		} catch (Exception e) {
-			// The probe binary is absent (dpkg on an RPM host, rpm on a Debian
-			// host): a definitive negative, not a transient failure.
-			log.debug("Deployment probe {} cannot start: {}", String.join(" ", command), e.getMessage());
-			return false;
+			// The binary exists but the process could not start (permissions,
+			// resource exhaustion): indeterminate, never proof of an archive
+			// deployment.
+			throw new DetectionIndeterminateException(
+				"The deployment probe cannot start: " + String.join(" ", command) + ": " + e.getMessage()
+			);
 		}
 		try {
 			if (!process.waitFor(10, TimeUnit.SECONDS)) {
@@ -193,5 +202,38 @@ public class DeploymentDetector {
 			process.destroyForcibly();
 			throw new DetectionIndeterminateException("The deployment probe was interrupted: " + String.join(" ", command));
 		}
+	}
+
+	/**
+	 * Reports whether an executable of the given name exists on the {@code PATH}: its absence is
+	 * the definitive "that package manager is not on this host", as opposed to a start failure of
+	 * an existing binary, which is indeterminate.
+	 *
+	 * @param command the plain command name
+	 * @return {@code true} when an executable of that name is on the PATH
+	 */
+	private static boolean isCommandAvailable(final String command) {
+		final String pathVariable = System.getenv("PATH");
+		if (pathVariable == null || pathVariable.isBlank()) {
+			return false;
+		}
+		final String[] extensions = LocalOsHandler.isWindows()
+			? new String[] { ".exe", ".com", ".cmd", ".bat" }
+			: new String[] { "" };
+		for (final String directory : pathVariable.split(File.pathSeparator)) {
+			if (directory.isBlank()) {
+				continue;
+			}
+			for (final String extension : extensions) {
+				try {
+					if (Files.isExecutable(Path.of(directory, command + extension))) {
+						return true;
+					}
+				} catch (Exception e) {
+					// An unparseable PATH entry: skip it.
+				}
+			}
+		}
+		return false;
 	}
 }

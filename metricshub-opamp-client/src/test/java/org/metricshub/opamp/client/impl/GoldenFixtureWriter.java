@@ -235,7 +235,7 @@ public final class GoldenFixtureWriter {
 				"metricshub",
 				PackageStatus.newBuilder()
 					.setName("metricshub")
-					.setAgentHasVersion("1.0.14")
+					.setAgentHasVersion("1.0.15")
 					.setStatus(PackageStatusEnum.PackageStatusEnum_Installed)
 					.build()
 			)
@@ -248,7 +248,7 @@ public final class GoldenFixtureWriter {
 				"metricshub",
 				PackageStatus.newBuilder()
 					.setName("metricshub")
-					.setAgentHasVersion("1.0.14")
+					.setAgentHasVersion("1.0.15")
 					.setServerOfferedVersion("99.0.0")
 					.setServerOfferedHash(ByteString.copyFrom(new byte[] { (byte) 0xAA, (byte) 0xBB, (byte) 0xCC }))
 					.setStatus(PackageStatusEnum.PackageStatusEnum_Downloading)
