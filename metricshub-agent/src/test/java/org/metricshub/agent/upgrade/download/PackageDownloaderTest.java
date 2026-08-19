@@ -98,6 +98,10 @@ class PackageDownloaderTest {
 		return "http://127.0.0.1:" + server.getAddress().getPort();
 	}
 
+	private String baseAuthority() {
+		return "127.0.0.1:" + server.getAddress().getPort();
+	}
+
 	private PackageOffer offer(final String url, final byte[] sha256) {
 		return offer(url, sha256, Map.of());
 	}
@@ -235,7 +239,7 @@ class PackageDownloaderTest {
 	@Test
 	void configuredDownloadHeadersShouldBeSent() throws Exception {
 		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+			.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
 			.downloadRetries(1)
 			.build();
 
@@ -283,15 +287,49 @@ class PackageDownloaderTest {
 			.build();
 		final PackageOffer offered = offer("https://nexus.example.com/metricshub.deb", packageSha256);
 
-		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config, "nexus.example.com");
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(
+			offered,
+			config,
+			URI.create(offered.downloadUrl())
+		);
 
 		assertEquals("local", merged.get("Authorization"));
 	}
 
 	@Test
+	void credentialsShouldBindToTheCompleteOrigin() {
+		// The offer URL is the server's to choose. A bare configured host binds to the
+		// scheme's default port only: credentials for repo.example.com must not follow an
+		// offer at https://repo.example.com:8443, a different service of the same machine.
+		assertTrue(
+			!PackageDownloader.matchesOfferedOrigin("repo.example.com", URI.create("https://repo.example.com:8443/capture")),
+			"a bare host must not match a non-default port"
+		);
+		assertTrue(
+			PackageDownloader.matchesOfferedOrigin("repo.example.com", URI.create("https://repo.example.com/pkg")),
+			"a bare host matches the scheme's default port"
+		);
+		assertTrue(
+			PackageDownloader.matchesOfferedOrigin("repo.example.com:443", URI.create("https://repo.example.com/pkg")),
+			"an explicit default port matches its implicit spelling"
+		);
+		assertTrue(
+			PackageDownloader.matchesOfferedOrigin(
+				"nexus.example.com:8443",
+				URI.create("https://nexus.example.com:8443/pkg")
+			),
+			"an explicit port matches that port"
+		);
+		assertTrue(
+			!PackageDownloader.matchesOfferedOrigin("nexus.example.com:8443", URI.create("https://nexus.example.com/pkg")),
+			"an explicit port must not match the default port"
+		);
+	}
+
+	@Test
 	void configuredHeadersShouldOverrideOfferHeaders() throws Exception {
 		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("127.0.0.1", Map.of("X-Repo-Token", "from-config")))
+			.downloadHeaders(Map.of(baseAuthority(), Map.of("X-Repo-Token", "from-config")))
 			.downloadRetries(1)
 			.build();
 
@@ -340,7 +378,7 @@ class PackageDownloaderTest {
 			wildcard.start();
 
 			final UpgradeConfig withHeaders = UpgradeConfig.builder()
-				.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+				.downloadHeaders(Map.of("127.0.0.1:" + port, Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
 				.downloadRetries(1)
 				.build();
 			final Path staged = downloader.download(
@@ -371,7 +409,11 @@ class PackageDownloaderTest {
 			Map.of("X-Repo-Token", "offered", "X-Offer-Only", "kept-too")
 		);
 
-		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config, "repo.example.com");
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(
+			offered,
+			config,
+			URI.create(offered.downloadUrl())
+		);
 
 		assertEquals(3, merged.size());
 		assertEquals("local", merged.get("X-Repo-Token"));
@@ -389,7 +431,7 @@ class PackageDownloaderTest {
 		withNullValue.put("Authorization", null);
 		withNullValue.put("X-Repo-Token", "kept");
 		final java.util.Map<String, Map<String, String>> byHost = new java.util.HashMap<>();
-		byHost.put("127.0.0.1", withNullValue);
+		byHost.put(baseAuthority(), withNullValue);
 		byHost.put("empty-block.example.com", null);
 		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(byHost).downloadRetries(1).build();
 
@@ -429,7 +471,7 @@ class PackageDownloaderTest {
 			});
 
 			final UpgradeConfig withHeaders = UpgradeConfig.builder()
-				.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+				.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
 				.downloadRetries(1)
 				.build();
 			final Path staged = downloader.download(
@@ -459,7 +501,7 @@ class PackageDownloaderTest {
 			exchange.close();
 		});
 		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+			.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
 			.downloadRetries(1)
 			.build();
 
@@ -513,7 +555,11 @@ class PackageDownloaderTest {
 			Map.of("authorization", "offered")
 		);
 
-		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config, "repo.example.com");
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(
+			offered,
+			config,
+			URI.create(offered.downloadUrl())
+		);
 
 		assertEquals(1, merged.size());
 		assertEquals("local", merged.get("AUTHORIZATION"));

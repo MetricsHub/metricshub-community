@@ -117,15 +117,16 @@ public class UpgradeConfig {
 	private List<String> hostAllowlist = new ArrayList<>();
 
 	/**
-	 * HTTP headers added to package download requests, keyed by repository host, for
-	 * repositories that require authentication (e.g. a private Nexus). A header set is sent
-	 * only when the offered download host equals its configured host (case-insensitively) —
-	 * never to any other host, whatever URL an OpAMP offer carries — and on redirects only
-	 * within the offered origin: a different scheme, host or port receives nothing. Values
-	 * may be encrypted with the MetricsHub keystore, exactly like
-	 * {@code opamp.headers}, and override same-named headers carried by the offer. Binding
-	 * each credential to an operator-named host is deliberate: credentials stay on the agent,
-	 * and a compromised OpAMP server cannot redirect them to a host of its choosing.
+	 * HTTP headers added to package download requests, keyed by repository authority —
+	 * {@code host} or {@code host:port}, a bare host binding to the scheme's default port —
+	 * for repositories that require authentication (e.g. a private Nexus). A header set is
+	 * sent only when the offered download origin matches its configured authority
+	 * (case-insensitively) — never to any other host or port, whatever URL an OpAMP offer
+	 * carries — and on redirects only within the offered origin: a different scheme, host or
+	 * port receives nothing. Values may be encrypted with the MetricsHub keystore, exactly
+	 * like {@code opamp.headers}, and override same-named headers carried by the offer.
+	 * Binding each credential to an operator-named origin is deliberate: credentials stay on
+	 * the agent, and a compromised OpAMP server cannot pick where they are sent.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)

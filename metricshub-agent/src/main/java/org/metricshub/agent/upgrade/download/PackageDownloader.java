@@ -97,7 +97,7 @@ public class PackageDownloader {
 	) throws UpgradeException, InterruptedException {
 		final URI uri = validateSource(offer, config);
 		final Path targetFile = targetDirectory.resolve(sanitizedFileName(uri, offer));
-		final Map<String, String> requestHeaders = resolveRequestHeaders(offer, config, uri.getHost());
+		final Map<String, String> requestHeaders = resolveRequestHeaders(offer, config, uri);
 
 		UpgradeException lastFailure = null;
 		final int attempts = Math.max(1, config.getDownloadRetries());
@@ -115,10 +115,12 @@ public class PackageDownloader {
 
 	/**
 	 * Resolves the single header map sent with download requests: the offer-carried headers
-	 * overlaid with the operator-configured {@code upgrade.downloadHeaders} entry of the offered
-	 * host, whose values may be encrypted with the MetricsHub keystore. Configured headers are
-	 * bound to their operator-named host: an offer pointing anywhere else gets none of them, so
-	 * a compromised OpAMP server cannot pick the host the credentials are sent to. The local
+	 * overlaid with the operator-configured {@code upgrade.downloadHeaders} entry matching the
+	 * offered origin, whose values may be encrypted with the MetricsHub keystore. Configured
+	 * headers are bound to their operator-named authority ({@code host} or {@code host:port},
+	 * a bare host meaning the scheme's default port): an offer pointing anywhere else — another
+	 * host, but also another port of the same host, which is another service — gets none of
+	 * them, so a compromised OpAMP server cannot pick where the credentials are sent. The local
 	 * configuration wins on name conflicts — the operator's machine-local intent overrides
 	 * server metadata — and merging into one map matters: applying two sources of the same name
 	 * would send duplicate header lines, since
@@ -126,31 +128,67 @@ public class PackageDownloader {
 	 * case-insensitively, as HTTP does: an offered {@code authorization} and a configured
 	 * {@code Authorization} are the same header, not two.
 	 *
-	 * @param offer       the package offer
-	 * @param config      the upgrade configuration
-	 * @param offeredHost the host of the validated download URI
+	 * @param offer      the package offer
+	 * @param config     the upgrade configuration
+	 * @param offeredUri the validated download URI
 	 * @return the merged headers to send, only ever to the offered origin
 	 */
 	static Map<String, String> resolveRequestHeaders(
 		final PackageOffer offer,
 		final UpgradeConfig config,
-		final String offeredHost
+		final URI offeredUri
 	) {
 		final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		offer.headers().forEach((key, value) -> putIfSendable(headers, key, value));
 		config
 			.getDownloadHeaders()
-			.forEach((host, hostHeaders) -> {
-				if (host == null || !host.equalsIgnoreCase(offeredHost)) {
+			.forEach((authority, authorityHeaders) -> {
+				if (!matchesOfferedOrigin(authority, offeredUri)) {
 					return;
 				}
-				if (hostHeaders == null) {
-					log.warn("Ignoring the download headers of host '{}': the entry is empty.", host);
+				if (authorityHeaders == null) {
+					log.warn("Ignoring the download headers of '{}': the entry is empty.", authority);
 					return;
 				}
-				hostHeaders.forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
+				authorityHeaders.forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
 			});
 		return headers;
+	}
+
+	/**
+	 * Indicates whether a configured {@code downloadHeaders} authority ({@code host} or
+	 * {@code host:port}) names the offered download origin. A bare host binds to the offered
+	 * scheme's default port only: without this, credentials configured for
+	 * {@code repo.example.com} would follow an offer pointing at
+	 * {@code https://repo.example.com:8443}, a different service of the same machine.
+	 *
+	 * @param authority  the configured authority
+	 * @param offeredUri the validated download URI
+	 * @return whether the authority names the offered origin
+	 */
+	static boolean matchesOfferedOrigin(final String authority, final URI offeredUri) {
+		if (authority == null || authority.isBlank() || offeredUri.getHost() == null) {
+			return false;
+		}
+		String configuredHost = authority.trim();
+		int configuredPort = -1;
+		final int colon = configuredHost.lastIndexOf(':');
+		// Only a trailing :<digits> is a port; IPv6 literals keep their brackets and colons.
+		if (colon > 0 && configuredHost.substring(colon + 1).chars().allMatch(Character::isDigit)) {
+			try {
+				configuredPort = Integer.parseInt(configuredHost.substring(colon + 1));
+				configuredHost = configuredHost.substring(0, colon);
+			} catch (NumberFormatException e) {
+				return false;
+			}
+		}
+		if (!configuredHost.equalsIgnoreCase(offeredUri.getHost())) {
+			return false;
+		}
+		if (configuredPort == -1) {
+			configuredPort = "https".equalsIgnoreCase(offeredUri.getScheme()) ? 443 : 80;
+		}
+		return configuredPort == effectivePort(offeredUri);
 	}
 
 	/**
