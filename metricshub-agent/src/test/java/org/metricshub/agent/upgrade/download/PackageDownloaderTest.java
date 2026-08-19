@@ -406,6 +406,99 @@ class PackageDownloaderTest {
 	}
 
 	@Test
+	void headersShouldNotFollowARedirectToAnotherPort() throws Exception {
+		// Same host name, different port: a different origin, likely a different service on
+		// the machine — it must not receive the credentials, though the download proceeds.
+		final HttpServer otherPort = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		final AtomicReference<Headers> otherPortHeaders = new AtomicReference<>();
+		try {
+			otherPort.createContext("/target/", exchange -> {
+				otherPortHeaders.set(exchange.getRequestHeaders());
+				exchange.sendResponseHeaders(200, packageContent.length);
+				try (OutputStream output = exchange.getResponseBody()) {
+					output.write(packageContent);
+				}
+			});
+			otherPort.start();
+
+			final String crossPortTarget = "http://127.0.0.1:" + otherPort.getAddress().getPort() + "/target/metricshub.deb";
+			server.createContext("/redirect-other-port/", exchange -> {
+				exchange.getResponseHeaders().set("Location", crossPortTarget);
+				exchange.sendResponseHeaders(302, -1);
+				exchange.close();
+			});
+
+			final UpgradeConfig withHeaders = UpgradeConfig.builder()
+				.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+				.downloadRetries(1)
+				.build();
+			final Path staged = downloader.download(
+				offer(baseUrl() + "/redirect-other-port/metricshub.deb", packageSha256),
+				withHeaders,
+				tempDir,
+				(_, _) -> {}
+			);
+
+			assertArrayEquals(packageContent, Files.readAllBytes(staged));
+			assertTrue(
+				otherPortHeaders.get().get("Authorization") == null,
+				"a different port is a different origin: the credentials must not follow"
+			);
+		} finally {
+			otherPort.stop(0);
+		}
+	}
+
+	@Test
+	void headersShouldFollowARedirectWithinTheSameOrigin() throws Exception {
+		// A same-origin redirect (same scheme, host and port) legitimately keeps the
+		// credentials: repositories redirect within themselves and still require auth.
+		server.createContext("/redirect-to-headers/", exchange -> {
+			exchange.getResponseHeaders().set("Location", baseUrl() + "/headers/metricshub.deb");
+			exchange.sendResponseHeaders(302, -1);
+			exchange.close();
+		});
+		final UpgradeConfig withHeaders = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+			.downloadRetries(1)
+			.build();
+
+		downloader.download(
+			offer(baseUrl() + "/redirect-to-headers/metricshub.deb", packageSha256),
+			withHeaders,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertEquals(List.of("Basic cmVhZGVyOnNlY3JldA=="), capturedHeaders.get().get("Authorization"));
+	}
+
+	@Test
+	void sameOriginShouldCompareSchemeHostAndEffectivePort() {
+		assertTrue(
+			PackageDownloader.sameOrigin(
+				URI.create("https://repo.example.com/pkg"),
+				URI.create("https://REPO.example.com:443/other")
+			),
+			"the scheme's default port counts as its explicit spelling"
+		);
+		assertTrue(
+			!PackageDownloader.sameOrigin(
+				URI.create("https://repo.example.com/pkg"),
+				URI.create("https://repo.example.com:8443/capture")
+			),
+			"a different port is a different origin"
+		);
+		assertTrue(
+			!PackageDownloader.sameOrigin(
+				URI.create("https://repo.example.com/pkg"),
+				URI.create("http://repo.example.com/pkg")
+			),
+			"a different scheme is a different origin"
+		);
+	}
+
+	@Test
 	void requestHeadersShouldMergeNamesCaseInsensitively() {
 		// HTTP header names are case-insensitive: an offered 'authorization' and a configured
 		// 'Authorization' are the same header. A case-sensitive merge would keep both entries

@@ -129,7 +129,7 @@ public class PackageDownloader {
 	 * @param offer       the package offer
 	 * @param config      the upgrade configuration
 	 * @param offeredHost the host of the validated download URI
-	 * @return the merged headers to send, only ever to the offered host
+	 * @return the merged headers to send, only ever to the offered origin
 	 */
 	static Map<String, String> resolveRequestHeaders(
 		final PackageOffer offer,
@@ -365,8 +365,9 @@ public class PackageDownloader {
 	 * against the HTTPS requirement and the configured host allowlist (automatic redirects would
 	 * allow an approved host to bounce the client to an arbitrary destination). The request
 	 * headers — the offer-carried ones merged with the configured {@code downloadHeaders},
-	 * typically repository credentials — are only sent to the originally offered host, never to
-	 * redirect targets on other hosts.
+	 * typically repository credentials — are only sent to the originally offered origin
+	 * (scheme, host and port), never to redirect targets anywhere else: a different port on
+	 * the same machine is a different service.
 	 *
 	 * @param httpClient     the HTTP client (configured with {@code Redirect.NEVER})
 	 * @param requestHeaders the merged request headers (see {@link #resolveRequestHeaders})
@@ -385,14 +386,16 @@ public class PackageDownloader {
 		final URI initialUri,
 		final long deadlineMs
 	) throws UpgradeException, IOException, InterruptedException {
-		final String offeredHost = initialUri.getHost();
 		URI currentUri = initialUri;
 		for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
 			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(currentUri)
 				.timeout(Duration.ofMillis(remainingMillis(deadlineMs)))
 				.GET();
-			if (currentUri.getHost() != null && currentUri.getHost().equalsIgnoreCase(offeredHost)) {
+			// The whole origin must match, not just the host name: a redirect from
+			// https://repo.example.com to https://repo.example.com:8443 lands on a different
+			// service of the same machine, which must not receive the credentials.
+			if (sameOrigin(initialUri, currentUri)) {
 				requestHeaders.forEach(requestBuilder::header);
 			}
 
@@ -417,6 +420,43 @@ public class PackageDownloader {
 			log.debug("Package download redirected to {}.", currentUri);
 		}
 		throw new UpgradeException("The package download exceeded " + MAX_REDIRECTS + " redirects");
+	}
+
+	/**
+	 * Indicates whether two URIs share one origin: same scheme, same host
+	 * (case-insensitively) and same effective port — the default port of the scheme counting
+	 * as its explicit spelling, so {@code https://repo.example.com} and
+	 * {@code https://repo.example.com:443} are one origin.
+	 *
+	 * @param left  one URI
+	 * @param right the other URI
+	 * @return whether both point at the same origin
+	 */
+	static boolean sameOrigin(final URI left, final URI right) {
+		final String leftScheme = left.getScheme();
+		final String rightScheme = right.getScheme();
+		final String leftHost = left.getHost();
+		final String rightHost = right.getHost();
+		if (leftScheme == null || rightScheme == null || leftHost == null || rightHost == null) {
+			return false;
+		}
+		if (!leftScheme.equalsIgnoreCase(rightScheme) || !leftHost.equalsIgnoreCase(rightHost)) {
+			return false;
+		}
+		return effectivePort(left) == effectivePort(right);
+	}
+
+	/**
+	 * Returns the URI's port, defaulting to the scheme's standard port when none is spelled.
+	 *
+	 * @param uri the URI
+	 * @return the effective port
+	 */
+	private static int effectivePort(final URI uri) {
+		if (uri.getPort() != -1) {
+			return uri.getPort();
+		}
+		return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
 	}
 
 	/**
