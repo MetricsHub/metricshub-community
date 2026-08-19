@@ -341,6 +341,28 @@ class PackageDownloaderTest {
 	}
 
 	@Test
+	void headersWithoutAValueShouldBeIgnoredNotFatal() throws Exception {
+		// downloadHeaders: { Authorization: } deserializes to a null value the whole-map
+		// @JsonSetter(nulls = SKIP) does not catch; HttpRequest.Builder.header rejects nulls,
+		// so an unguarded merge would fail every download before a request is made.
+		final java.util.Map<String, String> withNullValue = new java.util.HashMap<>();
+		withNullValue.put("Authorization", null);
+		withNullValue.put("X-Repo-Token", "kept");
+		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(withNullValue).downloadRetries(1).build();
+
+		final Path staged = downloader.download(
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			config,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertArrayEquals(packageContent, Files.readAllBytes(staged));
+		assertTrue(capturedHeaders.get().get("Authorization") == null, "the valueless header must be dropped");
+		assertEquals(List.of("kept"), capturedHeaders.get().get("X-Repo-Token"));
+	}
+
+	@Test
 	void requestHeadersShouldMergeNamesCaseInsensitively() {
 		// HTTP header names are case-insensitive: an offered 'authorization' and a configured
 		// 'Authorization' are the same header. A case-sensitive merge would keep both entries

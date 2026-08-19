@@ -129,9 +129,28 @@ public class PackageDownloader {
 	 */
 	static Map<String, String> resolveRequestHeaders(final PackageOffer offer, final UpgradeConfig config) {
 		final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-		headers.putAll(offer.headers());
-		config.getDownloadHeaders().forEach((key, value) -> headers.put(key, decrypt(value)));
+		offer.headers().forEach((key, value) -> putIfSendable(headers, key, value));
+		config.getDownloadHeaders().forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
 		return headers;
+	}
+
+	/**
+	 * Adds one header when it can actually be sent. A YAML entry without a value
+	 * ({@code Authorization:}) deserializes to a null the whole-map
+	 * {@code @JsonSetter(nulls = SKIP)} does not catch, and
+	 * {@link HttpRequest.Builder#header(String, String)} rejects null values and blank names —
+	 * one bad entry would otherwise fail every download before a request is made.
+	 *
+	 * @param headers the map under construction
+	 * @param key     the header name
+	 * @param value   the header value, possibly null
+	 */
+	private static void putIfSendable(final Map<String, String> headers, final String key, final String value) {
+		if (key == null || key.isBlank() || value == null) {
+			log.warn("Ignoring the download header '{}': it has no value.", key);
+			return;
+		}
+		headers.put(key, value);
 	}
 
 	/**
