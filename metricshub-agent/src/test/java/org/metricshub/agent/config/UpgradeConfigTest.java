@@ -43,6 +43,25 @@ class UpgradeConfigTest {
 	}
 
 	@Test
+	void downloadHeadersShouldAcceptAuthorityKeysWithAPort() throws Exception {
+		// The shipped examples show 'nexus.example.com:8443:' as a plain YAML key; this pins
+		// that the parser reads it as one key, not a nested mapping.
+		final AgentConfig agentConfig = deserialize(
+			"""
+			upgrade:
+			  downloadHeaders:
+			    nexus.example.com:8443:
+			      Authorization: Basic cmVhZGVyOnNlY3JldA==
+			"""
+		);
+
+		assertEquals(
+			Map.of("nexus.example.com:8443", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")),
+			agentConfig.getUpgrade().getDownloadHeaders()
+		);
+	}
+
+	@Test
 	void downloadHeadersShouldDefaultToEmpty() throws Exception {
 		final AgentConfig agentConfig = deserialize("loggerLevel: error\n");
 
