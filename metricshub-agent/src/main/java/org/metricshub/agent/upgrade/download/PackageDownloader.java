@@ -40,9 +40,9 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -119,14 +119,17 @@ public class PackageDownloader {
 	 * encrypted with the MetricsHub keystore. The local configuration wins on name conflicts —
 	 * the operator's machine-local intent overrides server metadata — and merging into one map
 	 * matters: applying two sources of the same name would send duplicate header lines, since
-	 * {@link HttpRequest.Builder#header(String, String)} appends.
+	 * {@link HttpRequest.Builder#header(String, String)} appends. The merge compares names
+	 * case-insensitively, as HTTP does: an offered {@code authorization} and a configured
+	 * {@code Authorization} are the same header, not two.
 	 *
 	 * @param offer  the package offer
 	 * @param config the upgrade configuration
 	 * @return the merged headers to send, only ever to the offered host
 	 */
 	static Map<String, String> resolveRequestHeaders(final PackageOffer offer, final UpgradeConfig config) {
-		final Map<String, String> headers = new HashMap<>(offer.headers());
+		final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		headers.putAll(offer.headers());
 		config.getDownloadHeaders().forEach((key, value) -> headers.put(key, decrypt(value)));
 		return headers;
 	}

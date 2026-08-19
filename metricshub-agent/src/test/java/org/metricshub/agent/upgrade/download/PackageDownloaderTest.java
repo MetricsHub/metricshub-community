@@ -256,8 +256,10 @@ class PackageDownloaderTest {
 			.downloadRetries(1)
 			.build();
 
+		// The offer spells the name in a different case: HTTP header names are
+		// case-insensitive, so this is the same header, not two.
 		downloader.download(
-			offer(baseUrl() + "/headers/metricshub.deb", packageSha256, Map.of("X-Repo-Token", "from-offer")),
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256, Map.of("x-repo-token", "from-offer")),
 			withHeaders,
 			tempDir,
 			(_, _) -> {}
@@ -332,7 +334,29 @@ class PackageDownloaderTest {
 
 		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config);
 
-		assertEquals(Map.of("X-Repo-Token", "local", "X-Extra", "kept", "X-Offer-Only", "kept-too"), merged);
+		assertEquals(3, merged.size());
+		assertEquals("local", merged.get("X-Repo-Token"));
+		assertEquals("kept", merged.get("X-Extra"));
+		assertEquals("kept-too", merged.get("X-Offer-Only"));
+	}
+
+	@Test
+	void requestHeadersShouldMergeNamesCaseInsensitively() {
+		// HTTP header names are case-insensitive: an offered 'authorization' and a configured
+		// 'Authorization' are the same header. A case-sensitive merge would keep both entries
+		// and send two Authorization lines, which repositories may reject — and the configured
+		// credential would no longer reliably override the offered one.
+		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(Map.of("Authorization", "local")).build();
+		final PackageOffer offered = offer(
+			"https://repo.example.com/metricshub.deb",
+			packageSha256,
+			Map.of("authorization", "offered")
+		);
+
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config);
+
+		assertEquals(1, merged.size());
+		assertEquals("local", merged.get("AUTHORIZATION"));
 	}
 
 	@Test
