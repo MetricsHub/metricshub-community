@@ -627,6 +627,7 @@ class PackageDownloaderTest {
 		mixed.put("Bad Name", "x");
 		mixed.put("Host", "evil.example.com");
 		mixed.put("X-Inject", "a\r\nEvil: b");
+		mixed.put("X-Wide", "東京");
 		mixed.put("X-Good", "ok");
 		final UpgradeConfig config = secureConfig(Map.of(httpsAuthority(), mixed));
 
@@ -641,6 +642,10 @@ class PackageDownloaderTest {
 		assertEquals(List.of("ok"), capturedHeaders.get().get("X-Good"));
 		assertTrue(capturedHeaders.get().get("X-Inject") == null, "an injectable value must be dropped");
 		assertTrue(capturedHeaders.get().get("Evil") == null, "no header may be smuggled through a newline");
+		assertTrue(
+			capturedHeaders.get().get("X-Wide") == null,
+			"a value beyond ISO-8859-1 must be dropped (the JDK client rejects it)"
+		);
 		assertEquals(
 			List.of(httpsAuthority()),
 			capturedHeaders.get().get("Host"),

@@ -255,7 +255,8 @@ public class PackageDownloader {
 	}
 
 	/**
-	 * Indicates whether the value can ride an HTTP header: no control characters (a CR or LF
+	 * Indicates whether the value can ride an HTTP header, mirroring what the JDK HTTP client
+	 * accepts: ISO-8859-1 only (nothing above U+00FF), no control characters (a CR or LF
 	 * would be a header injection), horizontal tab excepted.
 	 *
 	 * @param value the header value
@@ -264,7 +265,7 @@ public class PackageDownloader {
 	private static boolean isSendableValue(final String value) {
 		for (int i = 0; i < value.length(); i++) {
 			final char c = value.charAt(i);
-			if ((c < 0x20 && c != '\t') || c == 0x7f) {
+			if ((c < 0x20 && c != '\t') || c == 0x7f || c > 0xff) {
 				return false;
 			}
 		}
