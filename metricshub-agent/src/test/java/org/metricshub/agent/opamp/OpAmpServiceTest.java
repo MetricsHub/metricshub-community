@@ -300,4 +300,18 @@ class OpAmpServiceTest {
 			List.of(settings.getInstanceUidFile().getFileName().toString())
 		);
 	}
+
+	@Test
+	void buildSettingsShouldIgnoreHeadersWithoutAValue() {
+		// A YAML entry without a value (Authorization:) deserializes to a null value; the HTTP
+		// client rejects null header values, so one bad entry must not fail every poll.
+		final Map<String, String> headers = new java.util.HashMap<>();
+		headers.put("Authorization", null);
+		headers.put("X-Tenant", "kept");
+		final OpAmpConfig config = OpAmpConfig.builder().enabled(true).endpoint(ENDPOINT).headers(headers).build();
+
+		final OpampClientSettings settings = opAmpService.buildSettings(config);
+
+		assertEquals(Map.of("X-Tenant", "kept"), settings.getHeaders());
+	}
 }

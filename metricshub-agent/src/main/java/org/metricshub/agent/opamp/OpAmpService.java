@@ -323,7 +323,18 @@ public class OpAmpService {
 	 */
 	OpampClientSettings buildSettings(final OpAmpConfig config) {
 		final Map<String, String> headers = new HashMap<>();
-		config.getHeaders().forEach((key, value) -> headers.put(key, decrypt(value)));
+		config
+			.getHeaders()
+			.forEach((key, value) -> {
+				// A YAML entry without a value (Authorization:) deserializes to a null the
+				// whole-map @JsonSetter(nulls = SKIP) does not catch; the HTTP client rejects
+				// null header values, and one bad entry would fail every poll.
+				if (key == null || key.isBlank() || value == null) {
+					log.warn("Ignoring the OpAMP header '{}': it has no value.", key);
+					return;
+				}
+				headers.put(key, decrypt(value));
+			});
 
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create(config.getEndpoint().trim()))

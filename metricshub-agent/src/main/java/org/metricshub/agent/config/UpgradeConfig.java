@@ -26,7 +26,9 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -113,6 +115,22 @@ public class UpgradeConfig {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	private List<String> hostAllowlist = new ArrayList<>();
+
+	/**
+	 * HTTP headers added to package download requests, keyed by repository authority —
+	 * {@code host} or {@code host:port}, a bare host binding to the scheme's default port —
+	 * for repositories that require authentication (e.g. a private Nexus). A header set is
+	 * sent only when the offered download origin matches its configured authority
+	 * (case-insensitively) — never to any other host or port, whatever URL an OpAMP offer
+	 * carries — and on redirects only within the offered origin: a different scheme, host or
+	 * port receives nothing. Values may be encrypted with the MetricsHub keystore, exactly
+	 * like {@code opamp.headers}, and override same-named headers carried by the offer.
+	 * Binding each credential to an operator-named origin is deliberate: credentials stay on
+	 * the agent, and a compromised OpAMP server cannot pick where they are sent.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private Map<String, Map<String, String>> downloadHeaders = new HashMap<>();
 
 	/**
 	 * Path to a PEM file containing the trusted certificate used to verify the package

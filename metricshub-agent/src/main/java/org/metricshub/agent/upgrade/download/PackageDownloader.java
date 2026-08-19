@@ -41,6 +41,9 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -49,6 +52,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.UpgradeConfig;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.upgrade.UpgradeException;
 import org.metricshub.agent.upgrade.api.PackageOffer;
 
@@ -94,12 +98,13 @@ public class PackageDownloader {
 	) throws UpgradeException, InterruptedException {
 		final URI uri = validateSource(offer, config);
 		final Path targetFile = targetDirectory.resolve(sanitizedFileName(uri, offer));
+		final Map<String, String> requestHeaders = resolveRequestHeaders(offer, config, uri);
 
 		UpgradeException lastFailure = null;
 		final int attempts = Math.max(1, config.getDownloadRetries());
 		for (int attempt = 1; attempt <= attempts; attempt++) {
 			try {
-				downloadOnce(offer, config, uri, targetFile, progressListener);
+				downloadOnce(offer, config, uri, requestHeaders, targetFile, progressListener);
 				return targetFile;
 			} catch (UpgradeException e) {
 				lastFailure = e;
@@ -107,6 +112,178 @@ public class PackageDownloader {
 			}
 		}
 		throw lastFailure;
+	}
+
+	/**
+	 * Resolves the single header map sent with download requests: the offer-carried headers
+	 * overlaid with the operator-configured {@code upgrade.downloadHeaders} entry matching the
+	 * offered origin, whose values may be encrypted with the MetricsHub keystore. Configured
+	 * headers are bound to their operator-named authority ({@code host} or {@code host:port},
+	 * a bare host meaning the scheme's default port): an offer pointing anywhere else — another
+	 * host, but also another port of the same host, which is another service — gets none of
+	 * them, so a compromised OpAMP server cannot pick where the credentials are sent. The local
+	 * configuration wins on name conflicts — the operator's machine-local intent overrides
+	 * server metadata — and merging into one map matters: applying two sources of the same name
+	 * would send duplicate header lines, since
+	 * {@link HttpRequest.Builder#header(String, String)} appends. The merge compares names
+	 * case-insensitively, as HTTP does: an offered {@code authorization} and a configured
+	 * {@code Authorization} are the same header, not two.
+	 *
+	 * @param offer      the package offer
+	 * @param config     the upgrade configuration
+	 * @param offeredUri the validated download URI
+	 * @return the merged headers to send, only ever to the offered origin
+	 */
+	static Map<String, String> resolveRequestHeaders(
+		final PackageOffer offer,
+		final UpgradeConfig config,
+		final URI offeredUri
+	) {
+		final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		offer.headers().forEach((key, value) -> putIfSendable(headers, key, value));
+		config
+			.getDownloadHeaders()
+			.forEach((authority, authorityHeaders) -> {
+				if (!matchesOfferedOrigin(authority, offeredUri)) {
+					return;
+				}
+				if (authorityHeaders == null) {
+					log.warn("Ignoring the download headers of '{}': the entry is empty.", authority);
+					return;
+				}
+				authorityHeaders.forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
+			});
+		return headers;
+	}
+
+	/**
+	 * Indicates whether a configured {@code downloadHeaders} authority ({@code host} or
+	 * {@code host:port}) names the offered download origin. Configured credentials only ever
+	 * travel over HTTPS — the loopback plain-HTTP tolerance is for unauthenticated development
+	 * downloads, and headers such as {@code Authorization} must never cross the wire in
+	 * plaintext, so an {@code http} offer matches nothing whatever its host and port. A bare
+	 * host binds to port 443 only: without this, credentials configured for
+	 * {@code repo.example.com} would follow an offer pointing at
+	 * {@code https://repo.example.com:8443}, a different service of the same machine.
+	 *
+	 * @param authority  the configured authority
+	 * @param offeredUri the validated download URI
+	 * @return whether the authority names the offered origin
+	 */
+	static boolean matchesOfferedOrigin(final String authority, final URI offeredUri) {
+		if (!"https".equalsIgnoreCase(offeredUri.getScheme())) {
+			return false;
+		}
+		if (authority == null || authority.isBlank() || offeredUri.getHost() == null) {
+			return false;
+		}
+		String configuredHost = authority.trim();
+		int configuredPort = 443;
+		final int colon = configuredHost.lastIndexOf(':');
+		// Only a trailing :<digits> is a port; IPv6 literals keep their brackets and colons.
+		if (colon > 0 && configuredHost.substring(colon + 1).chars().allMatch(Character::isDigit)) {
+			try {
+				configuredPort = Integer.parseInt(configuredHost.substring(colon + 1));
+				configuredHost = configuredHost.substring(0, colon);
+			} catch (NumberFormatException e) {
+				return false;
+			}
+		}
+		if (!configuredHost.equalsIgnoreCase(offeredUri.getHost())) {
+			return false;
+		}
+		return configuredPort == effectivePort(offeredUri);
+	}
+
+	/**
+	/**
+	 * Header names the JDK HTTP client refuses to let a caller set (it manages them itself);
+	 * attempting to would fail the whole request.
+	 */
+	private static final Set<String> RESTRICTED_HEADER_NAMES = Set.of(
+		"connection",
+		"content-length",
+		"expect",
+		"host",
+		"upgrade"
+	);
+
+	/**
+	 * Adds one header when it can actually be sent. A YAML entry without a value
+	 * ({@code Authorization:}) deserializes to a null the whole-map
+	 * {@code @JsonSetter(nulls = SKIP)} does not catch, and
+	 * {@link HttpRequest.Builder#header(String, String)} throws on null values, on names that
+	 * are not RFC 7230 tokens ({@code Bad Name}), on values embedding control characters (a
+	 * newline is a header injection) and on the JDK's restricted names ({@code Host}) — one
+	 * bad entry would otherwise fail every download from that origin before a request is
+	 * made. Bad entries are skipped with a warning naming the header, never its value.
+	 *
+	 * @param headers the map under construction
+	 * @param key     the header name
+	 * @param value   the header value, possibly null
+	 */
+	private static void putIfSendable(final Map<String, String> headers, final String key, final String value) {
+		if (key == null || key.isBlank() || value == null) {
+			log.warn("Ignoring the download header '{}': it has no value.", key);
+			return;
+		}
+		if (!isTokenName(key) || RESTRICTED_HEADER_NAMES.contains(key.toLowerCase(Locale.ROOT))) {
+			log.warn("Ignoring the download header '{}': its name is invalid or restricted.", key);
+			return;
+		}
+		if (!isSendableValue(value)) {
+			log.warn("Ignoring the download header '{}': its value contains control characters.", key);
+			return;
+		}
+		headers.put(key, value);
+	}
+
+	/**
+	 * Indicates whether the name is an RFC 7230 token: visible ASCII without separators.
+	 *
+	 * @param name the header name
+	 * @return whether the name is a valid header token
+	 */
+	private static boolean isTokenName(final String name) {
+		for (int i = 0; i < name.length(); i++) {
+			final char c = name.charAt(i);
+			if (c < 33 || c > 126 || "()<>@,;:\\\"/[]?={}".indexOf(c) >= 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Indicates whether the value can ride an HTTP header, mirroring what the JDK HTTP client
+	 * accepts: ISO-8859-1 only (nothing above U+00FF), no control characters (a CR or LF
+	 * would be a header injection), horizontal tab excepted.
+	 *
+	 * @param value the header value
+	 * @return whether the value is sendable
+	 */
+	private static boolean isSendableValue(final String value) {
+		for (int i = 0; i < value.length(); i++) {
+			final char c = value.charAt(i);
+			if ((c < 0x20 && c != '\t') || c == 0x7f || c > 0xff) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Decrypts a configured value with the MetricsHub keystore; plain-text values pass through
+	 * unchanged (same behavior as {@code opamp.headers}).
+	 *
+	 * @param value the configured value, possibly encrypted
+	 * @return the decrypted value, or the input when it is not encrypted
+	 */
+	private static String decrypt(final String value) {
+		if (value == null) {
+			return null;
+		}
+		return new String(ConfigHelper.decrypt(value.toCharArray()));
 	}
 
 	/**
@@ -211,6 +388,7 @@ public class PackageDownloader {
 		final PackageOffer offer,
 		final UpgradeConfig config,
 		final URI uri,
+		final Map<String, String> requestHeaders,
 		final Path targetFile,
 		final DownloadProgressListener progressListener
 	) throws UpgradeException, InterruptedException {
@@ -221,7 +399,13 @@ public class PackageDownloader {
 			// One absolute deadline bounds the whole attempt: redirect hops, headers and body
 			final long deadlineMs = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(config.getDownloadTimeout());
 			final HttpClient httpClient = createHttpClient(config);
-			final HttpResponse<InputStream> response = sendFollowingRedirects(httpClient, offer, config, uri, deadlineMs);
+			final HttpResponse<InputStream> response = sendFollowingRedirects(
+				httpClient,
+				requestHeaders,
+				config,
+				uri,
+				deadlineMs
+			);
 			if (response.statusCode() != 200) {
 				throw new UpgradeException("The package repository answered with HTTP status " + response.statusCode());
 			}
@@ -279,14 +463,17 @@ public class PackageDownloader {
 	/**
 	 * Sends the download request, following redirects manually so every hop is re-validated
 	 * against the HTTPS requirement and the configured host allowlist (automatic redirects would
-	 * allow an approved host to bounce the client to an arbitrary destination). The offer headers
-	 * (e.g. repository credentials) are only sent to the originally offered host.
+	 * allow an approved host to bounce the client to an arbitrary destination). The request
+	 * headers — the offer-carried ones merged with the configured {@code downloadHeaders},
+	 * typically repository credentials — are only sent to the originally offered origin
+	 * (scheme, host and port), never to redirect targets anywhere else: a different port on
+	 * the same machine is a different service.
 	 *
-	 * @param httpClient the HTTP client (configured with {@code Redirect.NEVER})
-	 * @param offer      the package offer
-	 * @param config     the upgrade configuration
-	 * @param initialUri the validated initial download URI
-	 * @param deadlineMs the absolute deadline (epoch milliseconds) of the whole download attempt
+	 * @param httpClient     the HTTP client (configured with {@code Redirect.NEVER})
+	 * @param requestHeaders the merged request headers (see {@link #resolveRequestHeaders})
+	 * @param config         the upgrade configuration
+	 * @param initialUri     the validated initial download URI
+	 * @param deadlineMs     the absolute deadline (epoch milliseconds) of the whole download attempt
 	 * @return the final, non-redirect response
 	 * @throws UpgradeException     when a redirect hop is not acceptable or too many hops occur
 	 * @throws IOException          on I/O failure
@@ -294,20 +481,22 @@ public class PackageDownloader {
 	 */
 	private static HttpResponse<InputStream> sendFollowingRedirects(
 		final HttpClient httpClient,
-		final PackageOffer offer,
+		final Map<String, String> requestHeaders,
 		final UpgradeConfig config,
 		final URI initialUri,
 		final long deadlineMs
 	) throws UpgradeException, IOException, InterruptedException {
-		final String offeredHost = initialUri.getHost();
 		URI currentUri = initialUri;
 		for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
 			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(currentUri)
 				.timeout(Duration.ofMillis(remainingMillis(deadlineMs)))
 				.GET();
-			if (currentUri.getHost() != null && currentUri.getHost().equalsIgnoreCase(offeredHost)) {
-				offer.headers().forEach(requestBuilder::header);
+			// The whole origin must match, not just the host name: a redirect from
+			// https://repo.example.com to https://repo.example.com:8443 lands on a different
+			// service of the same machine, which must not receive the credentials.
+			if (sameOrigin(initialUri, currentUri)) {
+				requestHeaders.forEach(requestBuilder::header);
 			}
 
 			final HttpResponse<InputStream> response = httpClient.send(
@@ -331,6 +520,43 @@ public class PackageDownloader {
 			log.debug("Package download redirected to {}.", currentUri);
 		}
 		throw new UpgradeException("The package download exceeded " + MAX_REDIRECTS + " redirects");
+	}
+
+	/**
+	 * Indicates whether two URIs share one origin: same scheme, same host
+	 * (case-insensitively) and same effective port — the default port of the scheme counting
+	 * as its explicit spelling, so {@code https://repo.example.com} and
+	 * {@code https://repo.example.com:443} are one origin.
+	 *
+	 * @param left  one URI
+	 * @param right the other URI
+	 * @return whether both point at the same origin
+	 */
+	static boolean sameOrigin(final URI left, final URI right) {
+		final String leftScheme = left.getScheme();
+		final String rightScheme = right.getScheme();
+		final String leftHost = left.getHost();
+		final String rightHost = right.getHost();
+		if (leftScheme == null || rightScheme == null || leftHost == null || rightHost == null) {
+			return false;
+		}
+		if (!leftScheme.equalsIgnoreCase(rightScheme) || !leftHost.equalsIgnoreCase(rightHost)) {
+			return false;
+		}
+		return effectivePort(left) == effectivePort(right);
+	}
+
+	/**
+	 * Returns the URI's port, defaulting to the scheme's standard port when none is spelled.
+	 *
+	 * @param uri the URI
+	 * @return the effective port
+	 */
+	private static int effectivePort(final URI uri) {
+		if (uri.getPort() != -1) {
+			return uri.getPort();
+		}
+		return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
 	}
 
 	/**
