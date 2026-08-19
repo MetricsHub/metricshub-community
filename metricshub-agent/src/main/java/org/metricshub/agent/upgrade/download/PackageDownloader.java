@@ -40,7 +40,9 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -49,6 +51,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.UpgradeConfig;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.upgrade.UpgradeException;
 import org.metricshub.agent.upgrade.api.PackageOffer;
 
@@ -94,12 +97,13 @@ public class PackageDownloader {
 	) throws UpgradeException, InterruptedException {
 		final URI uri = validateSource(offer, config);
 		final Path targetFile = targetDirectory.resolve(sanitizedFileName(uri, offer));
+		final Map<String, String> requestHeaders = resolveRequestHeaders(offer, config);
 
 		UpgradeException lastFailure = null;
 		final int attempts = Math.max(1, config.getDownloadRetries());
 		for (int attempt = 1; attempt <= attempts; attempt++) {
 			try {
-				downloadOnce(offer, config, uri, targetFile, progressListener);
+				downloadOnce(offer, config, uri, requestHeaders, targetFile, progressListener);
 				return targetFile;
 			} catch (UpgradeException e) {
 				lastFailure = e;
@@ -107,6 +111,38 @@ public class PackageDownloader {
 			}
 		}
 		throw lastFailure;
+	}
+
+	/**
+	 * Resolves the single header map sent with download requests: the offer-carried headers
+	 * overlaid with the operator-configured {@code upgrade.downloadHeaders}, whose values may be
+	 * encrypted with the MetricsHub keystore. The local configuration wins on name conflicts —
+	 * the operator's machine-local intent overrides server metadata — and merging into one map
+	 * matters: applying two sources of the same name would send duplicate header lines, since
+	 * {@link HttpRequest.Builder#header(String, String)} appends.
+	 *
+	 * @param offer  the package offer
+	 * @param config the upgrade configuration
+	 * @return the merged headers to send, only ever to the offered host
+	 */
+	static Map<String, String> resolveRequestHeaders(final PackageOffer offer, final UpgradeConfig config) {
+		final Map<String, String> headers = new HashMap<>(offer.headers());
+		config.getDownloadHeaders().forEach((key, value) -> headers.put(key, decrypt(value)));
+		return headers;
+	}
+
+	/**
+	 * Decrypts a configured value with the MetricsHub keystore; plain-text values pass through
+	 * unchanged (same behavior as {@code opamp.headers}).
+	 *
+	 * @param value the configured value, possibly encrypted
+	 * @return the decrypted value, or the input when it is not encrypted
+	 */
+	private static String decrypt(final String value) {
+		if (value == null) {
+			return null;
+		}
+		return new String(ConfigHelper.decrypt(value.toCharArray()));
 	}
 
 	/**
@@ -211,6 +247,7 @@ public class PackageDownloader {
 		final PackageOffer offer,
 		final UpgradeConfig config,
 		final URI uri,
+		final Map<String, String> requestHeaders,
 		final Path targetFile,
 		final DownloadProgressListener progressListener
 	) throws UpgradeException, InterruptedException {
@@ -221,7 +258,13 @@ public class PackageDownloader {
 			// One absolute deadline bounds the whole attempt: redirect hops, headers and body
 			final long deadlineMs = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(config.getDownloadTimeout());
 			final HttpClient httpClient = createHttpClient(config);
-			final HttpResponse<InputStream> response = sendFollowingRedirects(httpClient, offer, config, uri, deadlineMs);
+			final HttpResponse<InputStream> response = sendFollowingRedirects(
+				httpClient,
+				requestHeaders,
+				config,
+				uri,
+				deadlineMs
+			);
 			if (response.statusCode() != 200) {
 				throw new UpgradeException("The package repository answered with HTTP status " + response.statusCode());
 			}
@@ -279,14 +322,16 @@ public class PackageDownloader {
 	/**
 	 * Sends the download request, following redirects manually so every hop is re-validated
 	 * against the HTTPS requirement and the configured host allowlist (automatic redirects would
-	 * allow an approved host to bounce the client to an arbitrary destination). The offer headers
-	 * (e.g. repository credentials) are only sent to the originally offered host.
+	 * allow an approved host to bounce the client to an arbitrary destination). The request
+	 * headers — the offer-carried ones merged with the configured {@code downloadHeaders},
+	 * typically repository credentials — are only sent to the originally offered host, never to
+	 * redirect targets on other hosts.
 	 *
-	 * @param httpClient the HTTP client (configured with {@code Redirect.NEVER})
-	 * @param offer      the package offer
-	 * @param config     the upgrade configuration
-	 * @param initialUri the validated initial download URI
-	 * @param deadlineMs the absolute deadline (epoch milliseconds) of the whole download attempt
+	 * @param httpClient     the HTTP client (configured with {@code Redirect.NEVER})
+	 * @param requestHeaders the merged request headers (see {@link #resolveRequestHeaders})
+	 * @param config         the upgrade configuration
+	 * @param initialUri     the validated initial download URI
+	 * @param deadlineMs     the absolute deadline (epoch milliseconds) of the whole download attempt
 	 * @return the final, non-redirect response
 	 * @throws UpgradeException     when a redirect hop is not acceptable or too many hops occur
 	 * @throws IOException          on I/O failure
@@ -294,7 +339,7 @@ public class PackageDownloader {
 	 */
 	private static HttpResponse<InputStream> sendFollowingRedirects(
 		final HttpClient httpClient,
-		final PackageOffer offer,
+		final Map<String, String> requestHeaders,
 		final UpgradeConfig config,
 		final URI initialUri,
 		final long deadlineMs
@@ -307,7 +352,7 @@ public class PackageDownloader {
 				.timeout(Duration.ofMillis(remainingMillis(deadlineMs)))
 				.GET();
 			if (currentUri.getHost() != null && currentUri.getHost().equalsIgnoreCase(offeredHost)) {
-				offer.headers().forEach(requestBuilder::header);
+				requestHeaders.forEach(requestBuilder::header);
 			}
 
 			final HttpResponse<InputStream> response = httpClient.send(

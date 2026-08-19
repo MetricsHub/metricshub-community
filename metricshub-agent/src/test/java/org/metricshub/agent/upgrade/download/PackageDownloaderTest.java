@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -12,8 +13,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,7 @@ class PackageDownloaderTest {
 	private byte[] packageSha256;
 	private final PackageDownloader downloader = new PackageDownloader();
 	private final AtomicInteger requestCount = new AtomicInteger();
+	private final AtomicReference<Headers> capturedHeaders = new AtomicReference<>();
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -44,6 +48,13 @@ class PackageDownloaderTest {
 		server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
 		server.createContext("/repo/", exchange -> {
 			requestCount.incrementAndGet();
+			exchange.sendResponseHeaders(200, packageContent.length);
+			try (OutputStream output = exchange.getResponseBody()) {
+				output.write(packageContent);
+			}
+		});
+		server.createContext("/headers/", exchange -> {
+			capturedHeaders.set(exchange.getRequestHeaders());
 			exchange.sendResponseHeaders(200, packageContent.length);
 			try (OutputStream output = exchange.getResponseBody()) {
 				output.write(packageContent);
@@ -88,7 +99,11 @@ class PackageDownloaderTest {
 	}
 
 	private PackageOffer offer(final String url, final byte[] sha256) {
-		return new PackageOffer("metricshub", "3.10.00", url, sha256, new byte[] { 7 }, Map.of());
+		return offer(url, sha256, Map.of());
+	}
+
+	private PackageOffer offer(final String url, final byte[] sha256, final Map<String, String> headers) {
+		return new PackageOffer("metricshub", "3.10.00", url, sha256, new byte[] { 7 }, headers);
 	}
 
 	private UpgradeConfig config() {
@@ -215,6 +230,109 @@ class PackageDownloaderTest {
 		org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
 			PackageDownloader.validateSource(offer("https://repo.metricshub.com/metricshub.deb", packageSha256), allowlisted)
 		);
+	}
+
+	@Test
+	void configuredDownloadHeadersShouldBeSent() throws Exception {
+		final UpgradeConfig withHeaders = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+			.downloadRetries(1)
+			.build();
+
+		downloader.download(
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			withHeaders,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertEquals(List.of("Basic cmVhZGVyOnNlY3JldA=="), capturedHeaders.get().get("Authorization"));
+	}
+
+	@Test
+	void configuredHeadersShouldOverrideOfferHeaders() throws Exception {
+		final UpgradeConfig withHeaders = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("X-Repo-Token", "from-config"))
+			.downloadRetries(1)
+			.build();
+
+		downloader.download(
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256, Map.of("X-Repo-Token", "from-offer")),
+			withHeaders,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		// Exactly one line: two sources of the same name must be merged before the request is
+		// built (HttpRequest.Builder::header appends), and the local configuration wins.
+		assertEquals(List.of("from-config"), capturedHeaders.get().get("X-Repo-Token"));
+	}
+
+	@Test
+	void noConfiguredHeadersMeansNoneAreSent() throws Exception {
+		downloader.download(offer(baseUrl() + "/headers/metricshub.deb", packageSha256), config(), tempDir, (_, _) -> {});
+
+		assertTrue(capturedHeaders.get().get("Authorization") == null, "no Authorization header may be invented");
+	}
+
+	@Test
+	void headersShouldNotFollowARedirectToAnotherHost() throws Exception {
+		// A second loopback identity: the server binds the wildcard address so both 127.0.0.1
+		// (the offered host) and localhost (the redirect target) reach it, while the downloader
+		// sees two different host names — the credentials must stay on the first.
+		final HttpServer wildcard = HttpServer.create(new InetSocketAddress(0), 0);
+		final AtomicReference<Headers> secondHopHeaders = new AtomicReference<>();
+		try {
+			final int port = wildcard.getAddress().getPort();
+			wildcard.createContext("/hop/", exchange -> {
+				exchange.getResponseHeaders().set("Location", "http://localhost:" + port + "/target/metricshub.deb");
+				exchange.sendResponseHeaders(302, -1);
+				exchange.close();
+			});
+			wildcard.createContext("/target/", exchange -> {
+				secondHopHeaders.set(exchange.getRequestHeaders());
+				exchange.sendResponseHeaders(200, packageContent.length);
+				try (OutputStream output = exchange.getResponseBody()) {
+					output.write(packageContent);
+				}
+			});
+			wildcard.start();
+
+			final UpgradeConfig withHeaders = UpgradeConfig.builder()
+				.downloadHeaders(Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+				.downloadRetries(1)
+				.build();
+			final Path staged = downloader.download(
+				offer("http://127.0.0.1:" + port + "/hop/metricshub.deb", packageSha256),
+				withHeaders,
+				tempDir,
+				(_, _) -> {}
+			);
+
+			assertArrayEquals(packageContent, Files.readAllBytes(staged));
+			assertTrue(
+				secondHopHeaders.get().get("Authorization") == null,
+				"the configured credentials must not follow a redirect to another host"
+			);
+		} finally {
+			wildcard.stop(0);
+		}
+	}
+
+	@Test
+	void requestHeadersShouldMergeWithLocalConfigurationWinning() {
+		final UpgradeConfig config = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("X-Repo-Token", "local", "X-Extra", "kept"))
+			.build();
+		final PackageOffer offered = offer(
+			"https://repo.example.com/metricshub.deb",
+			packageSha256,
+			Map.of("X-Repo-Token", "offered", "X-Offer-Only", "kept-too")
+		);
+
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config);
+
+		assertEquals(Map.of("X-Repo-Token", "local", "X-Extra", "kept", "X-Offer-Only", "kept-too"), merged);
 	}
 
 	@Test
