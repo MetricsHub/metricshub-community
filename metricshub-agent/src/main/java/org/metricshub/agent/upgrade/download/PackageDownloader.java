@@ -42,6 +42,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -195,11 +196,27 @@ public class PackageDownloader {
 	}
 
 	/**
+	/**
+	 * Header names the JDK HTTP client refuses to let a caller set (it manages them itself);
+	 * attempting to would fail the whole request.
+	 */
+	private static final Set<String> RESTRICTED_HEADER_NAMES = Set.of(
+		"connection",
+		"content-length",
+		"expect",
+		"host",
+		"upgrade"
+	);
+
+	/**
 	 * Adds one header when it can actually be sent. A YAML entry without a value
 	 * ({@code Authorization:}) deserializes to a null the whole-map
 	 * {@code @JsonSetter(nulls = SKIP)} does not catch, and
-	 * {@link HttpRequest.Builder#header(String, String)} rejects null values and blank names —
-	 * one bad entry would otherwise fail every download before a request is made.
+	 * {@link HttpRequest.Builder#header(String, String)} throws on null values, on names that
+	 * are not RFC 7230 tokens ({@code Bad Name}), on values embedding control characters (a
+	 * newline is a header injection) and on the JDK's restricted names ({@code Host}) — one
+	 * bad entry would otherwise fail every download from that origin before a request is
+	 * made. Bad entries are skipped with a warning naming the header, never its value.
 	 *
 	 * @param headers the map under construction
 	 * @param key     the header name
@@ -210,7 +227,48 @@ public class PackageDownloader {
 			log.warn("Ignoring the download header '{}': it has no value.", key);
 			return;
 		}
+		if (!isTokenName(key) || RESTRICTED_HEADER_NAMES.contains(key.toLowerCase(Locale.ROOT))) {
+			log.warn("Ignoring the download header '{}': its name is invalid or restricted.", key);
+			return;
+		}
+		if (!isSendableValue(value)) {
+			log.warn("Ignoring the download header '{}': its value contains control characters.", key);
+			return;
+		}
 		headers.put(key, value);
+	}
+
+	/**
+	 * Indicates whether the name is an RFC 7230 token: visible ASCII without separators.
+	 *
+	 * @param name the header name
+	 * @return whether the name is a valid header token
+	 */
+	private static boolean isTokenName(final String name) {
+		for (int i = 0; i < name.length(); i++) {
+			final char c = name.charAt(i);
+			if (c < 33 || c > 126 || "()<>@,;:\\\"/[]?={}".indexOf(c) >= 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Indicates whether the value can ride an HTTP header: no control characters (a CR or LF
+	 * would be a header injection), horizontal tab excepted.
+	 *
+	 * @param value the header value
+	 * @return whether the value is sendable
+	 */
+	private static boolean isSendableValue(final String value) {
+		for (int i = 0; i < value.length(); i++) {
+			final char c = value.charAt(i);
+			if ((c < 0x20 && c != '\t') || c == 0x7f) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**

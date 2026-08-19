@@ -619,6 +619,36 @@ class PackageDownloaderTest {
 	}
 
 	@Test
+	void invalidConfiguredHeadersAreSkippedNotFatal() throws Exception {
+		// HttpRequest.Builder.header throws on non-token names, on values embedding control
+		// characters (header injection) and on the JDK's restricted names: one bad entry must
+		// not fail every download from that origin. Only the good header may arrive.
+		final java.util.Map<String, String> mixed = new java.util.HashMap<>();
+		mixed.put("Bad Name", "x");
+		mixed.put("Host", "evil.example.com");
+		mixed.put("X-Inject", "a\r\nEvil: b");
+		mixed.put("X-Good", "ok");
+		final UpgradeConfig config = secureConfig(Map.of(httpsAuthority(), mixed));
+
+		final Path staged = downloader.download(
+			offer(httpsBaseUrl() + "/headers/metricshub.deb", packageSha256),
+			config,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertArrayEquals(packageContent, Files.readAllBytes(staged));
+		assertEquals(List.of("ok"), capturedHeaders.get().get("X-Good"));
+		assertTrue(capturedHeaders.get().get("X-Inject") == null, "an injectable value must be dropped");
+		assertTrue(capturedHeaders.get().get("Evil") == null, "no header may be smuggled through a newline");
+		assertEquals(
+			List.of(httpsAuthority()),
+			capturedHeaders.get().get("Host"),
+			"the JDK's own Host header must stand, not the configured override"
+		);
+	}
+
+	@Test
 	void requestHeadersShouldMergeNamesCaseInsensitively() {
 		// HTTP header names are case-insensitive: an offered 'authorization' and a configured
 		// 'Authorization' are the same header. A case-sensitive merge would keep both entries
