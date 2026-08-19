@@ -572,7 +572,11 @@ class ReloadServiceTest {
 					.build(),
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.upgrade(UpgradeConfig.builder().downloadHeaders(Map.of("Authorization", "Basic abc")).build())
+					.upgrade(
+						UpgradeConfig.builder()
+							.downloadHeaders(Map.of("nexus.example.com", Map.of("Authorization", "Basic abc")))
+							.build()
+					)
 					.build()
 			),
 			Arguments.of(

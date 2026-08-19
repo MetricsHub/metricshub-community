@@ -235,7 +235,7 @@ class PackageDownloaderTest {
 	@Test
 	void configuredDownloadHeadersShouldBeSent() throws Exception {
 		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+			.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
 			.downloadRetries(1)
 			.build();
 
@@ -250,9 +250,48 @@ class PackageDownloaderTest {
 	}
 
 	@Test
+	void configuredHeadersShouldNeverReachAHostTheOperatorDidNotName() throws Exception {
+		// The offer URL is chosen by the OpAMP server. If the configured credentials followed
+		// whatever host an offer names, a compromised server could offer
+		// https://attacker.example/... and harvest them on the very first request — the exact
+		// exfiltration this feature must not enable. Here the credentials are bound to
+		// 'localhost' and the offer points at '127.0.0.1': same loopback server, different host
+		// name, so the download must succeed WITHOUT the credentials.
+		final UpgradeConfig boundElsewhere = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("localhost", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+			.downloadRetries(1)
+			.build();
+
+		final Path staged = downloader.download(
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			boundElsewhere,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertArrayEquals(packageContent, Files.readAllBytes(staged));
+		assertTrue(
+			capturedHeaders.get().get("Authorization") == null,
+			"credentials bound to another host must not be attached to the offered one"
+		);
+	}
+
+	@Test
+	void configuredHostShouldMatchCaseInsensitively() {
+		final UpgradeConfig config = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("Nexus.Example.COM", Map.of("Authorization", "local")))
+			.build();
+		final PackageOffer offered = offer("https://nexus.example.com/metricshub.deb", packageSha256);
+
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config, "nexus.example.com");
+
+		assertEquals("local", merged.get("Authorization"));
+	}
+
+	@Test
 	void configuredHeadersShouldOverrideOfferHeaders() throws Exception {
 		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("X-Repo-Token", "from-config"))
+			.downloadHeaders(Map.of("127.0.0.1", Map.of("X-Repo-Token", "from-config")))
 			.downloadRetries(1)
 			.build();
 
@@ -301,7 +340,7 @@ class PackageDownloaderTest {
 			wildcard.start();
 
 			final UpgradeConfig withHeaders = UpgradeConfig.builder()
-				.downloadHeaders(Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+				.downloadHeaders(Map.of("127.0.0.1", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
 				.downloadRetries(1)
 				.build();
 			final Path staged = downloader.download(
@@ -324,7 +363,7 @@ class PackageDownloaderTest {
 	@Test
 	void requestHeadersShouldMergeWithLocalConfigurationWinning() {
 		final UpgradeConfig config = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("X-Repo-Token", "local", "X-Extra", "kept"))
+			.downloadHeaders(Map.of("repo.example.com", Map.of("X-Repo-Token", "local", "X-Extra", "kept")))
 			.build();
 		final PackageOffer offered = offer(
 			"https://repo.example.com/metricshub.deb",
@@ -332,7 +371,7 @@ class PackageDownloaderTest {
 			Map.of("X-Repo-Token", "offered", "X-Offer-Only", "kept-too")
 		);
 
-		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config);
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config, "repo.example.com");
 
 		assertEquals(3, merged.size());
 		assertEquals("local", merged.get("X-Repo-Token"));
@@ -342,13 +381,17 @@ class PackageDownloaderTest {
 
 	@Test
 	void headersWithoutAValueShouldBeIgnoredNotFatal() throws Exception {
-		// downloadHeaders: { Authorization: } deserializes to a null value the whole-map
-		// @JsonSetter(nulls = SKIP) does not catch; HttpRequest.Builder.header rejects nulls,
-		// so an unguarded merge would fail every download before a request is made.
+		// downloadHeaders entries without a value (Authorization:) deserialize to nulls the
+		// whole-map @JsonSetter(nulls = SKIP) does not catch; HttpRequest.Builder.header
+		// rejects nulls, so an unguarded merge would fail every download before a request is
+		// made — and a host entry without a block (a bare host name) is null too.
 		final java.util.Map<String, String> withNullValue = new java.util.HashMap<>();
 		withNullValue.put("Authorization", null);
 		withNullValue.put("X-Repo-Token", "kept");
-		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(withNullValue).downloadRetries(1).build();
+		final java.util.Map<String, Map<String, String>> byHost = new java.util.HashMap<>();
+		byHost.put("127.0.0.1", withNullValue);
+		byHost.put("empty-block.example.com", null);
+		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(byHost).downloadRetries(1).build();
 
 		final Path staged = downloader.download(
 			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
@@ -368,14 +411,16 @@ class PackageDownloaderTest {
 		// 'Authorization' are the same header. A case-sensitive merge would keep both entries
 		// and send two Authorization lines, which repositories may reject — and the configured
 		// credential would no longer reliably override the offered one.
-		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(Map.of("Authorization", "local")).build();
+		final UpgradeConfig config = UpgradeConfig.builder()
+			.downloadHeaders(Map.of("repo.example.com", Map.of("Authorization", "local")))
+			.build();
 		final PackageOffer offered = offer(
 			"https://repo.example.com/metricshub.deb",
 			packageSha256,
 			Map.of("authorization", "offered")
 		);
 
-		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config);
+		final Map<String, String> merged = PackageDownloader.resolveRequestHeaders(offered, config, "repo.example.com");
 
 		assertEquals(1, merged.size());
 		assertEquals("local", merged.get("AUTHORIZATION"));

@@ -30,10 +30,12 @@ otel:
 #   hostAllowlist: [ repo.metricshub.com ]
 #   # installTimeout: 30m # Deadline for the detached installation (default: 30m)
 #   # trustedCertificateFile: /opt/metricshub/security/repo-ca.pem # Trusted certificate (PEM) for the package repository
-#   # Headers added to package downloads when the repository requires authentication;
-#   # values may be encrypted with the MetricsHub keystore, like opamp.headers
+#   # Headers added to package downloads when the repository requires authentication,
+#   # keyed by repository host: each header set is only ever sent to its named host.
+#   # Values may be encrypted with the MetricsHub keystore, like opamp.headers.
 #   # downloadHeaders:
-#   #   Authorization: Basic ${env::REPO_CREDENTIALS}
+#   #   nexus.example.com:
+#   #     Authorization: Basic ${env::REPO_CREDENTIALS}
 
 # Simple resource configuration
 resources:

@@ -28,15 +28,16 @@ class UpgradeConfigTest {
 			  enabled: true
 			  hostAllowlist: [ nexus.example.com ]
 			  downloadHeaders:
-			    Authorization: Basic cmVhZGVyOnNlY3JldA==
-			    X-Repo-Token: my-token
+			    nexus.example.com:
+			      Authorization: Basic cmVhZGVyOnNlY3JldA==
+			      X-Repo-Token: my-token
 			"""
 		);
 
 		final UpgradeConfig upgrade = agentConfig.getUpgrade();
 		assertTrue(upgrade.isEnabled());
 		assertEquals(
-			Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==", "X-Repo-Token", "my-token"),
+			Map.of("nexus.example.com", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==", "X-Repo-Token", "my-token")),
 			upgrade.getDownloadHeaders()
 		);
 	}

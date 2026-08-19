@@ -97,7 +97,7 @@ public class PackageDownloader {
 	) throws UpgradeException, InterruptedException {
 		final URI uri = validateSource(offer, config);
 		final Path targetFile = targetDirectory.resolve(sanitizedFileName(uri, offer));
-		final Map<String, String> requestHeaders = resolveRequestHeaders(offer, config);
+		final Map<String, String> requestHeaders = resolveRequestHeaders(offer, config, uri.getHost());
 
 		UpgradeException lastFailure = null;
 		final int attempts = Math.max(1, config.getDownloadRetries());
@@ -115,22 +115,41 @@ public class PackageDownloader {
 
 	/**
 	 * Resolves the single header map sent with download requests: the offer-carried headers
-	 * overlaid with the operator-configured {@code upgrade.downloadHeaders}, whose values may be
-	 * encrypted with the MetricsHub keystore. The local configuration wins on name conflicts —
-	 * the operator's machine-local intent overrides server metadata — and merging into one map
-	 * matters: applying two sources of the same name would send duplicate header lines, since
+	 * overlaid with the operator-configured {@code upgrade.downloadHeaders} entry of the offered
+	 * host, whose values may be encrypted with the MetricsHub keystore. Configured headers are
+	 * bound to their operator-named host: an offer pointing anywhere else gets none of them, so
+	 * a compromised OpAMP server cannot pick the host the credentials are sent to. The local
+	 * configuration wins on name conflicts — the operator's machine-local intent overrides
+	 * server metadata — and merging into one map matters: applying two sources of the same name
+	 * would send duplicate header lines, since
 	 * {@link HttpRequest.Builder#header(String, String)} appends. The merge compares names
 	 * case-insensitively, as HTTP does: an offered {@code authorization} and a configured
 	 * {@code Authorization} are the same header, not two.
 	 *
-	 * @param offer  the package offer
-	 * @param config the upgrade configuration
+	 * @param offer       the package offer
+	 * @param config      the upgrade configuration
+	 * @param offeredHost the host of the validated download URI
 	 * @return the merged headers to send, only ever to the offered host
 	 */
-	static Map<String, String> resolveRequestHeaders(final PackageOffer offer, final UpgradeConfig config) {
+	static Map<String, String> resolveRequestHeaders(
+		final PackageOffer offer,
+		final UpgradeConfig config,
+		final String offeredHost
+	) {
 		final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		offer.headers().forEach((key, value) -> putIfSendable(headers, key, value));
-		config.getDownloadHeaders().forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
+		config
+			.getDownloadHeaders()
+			.forEach((host, hostHeaders) -> {
+				if (host == null || !host.equalsIgnoreCase(offeredHost)) {
+					return;
+				}
+				if (hostHeaders == null) {
+					log.warn("Ignoring the download headers of host '{}': the entry is empty.", host);
+					return;
+				}
+				hostHeaders.forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
+			});
 		return headers;
 	}
 

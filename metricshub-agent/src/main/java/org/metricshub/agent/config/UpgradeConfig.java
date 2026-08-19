@@ -117,16 +117,18 @@ public class UpgradeConfig {
 	private List<String> hostAllowlist = new ArrayList<>();
 
 	/**
-	 * HTTP headers added to package download requests, for repositories that require
-	 * authentication (e.g. a private Nexus). Values may be encrypted with the MetricsHub
-	 * keystore, exactly like {@code opamp.headers}. The headers are sent only to the host the
-	 * package was offered from — never to redirect targets on other hosts — and override
-	 * same-named headers carried by the OpAMP offer. Credentials are configured here, on the
-	 * agent, deliberately: the fleet never transmits credentials over OpAMP.
+	 * HTTP headers added to package download requests, keyed by repository host, for
+	 * repositories that require authentication (e.g. a private Nexus). A header set is sent
+	 * only when the offered download host equals its configured host (case-insensitively) —
+	 * never to any other host, whatever URL an OpAMP offer carries, and never to redirect
+	 * targets. Values may be encrypted with the MetricsHub keystore, exactly like
+	 * {@code opamp.headers}, and override same-named headers carried by the offer. Binding
+	 * each credential to an operator-named host is deliberate: credentials stay on the agent,
+	 * and a compromised OpAMP server cannot redirect them to a host of its choosing.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
-	private Map<String, String> downloadHeaders = new HashMap<>();
+	private Map<String, Map<String, String>> downloadHeaders = new HashMap<>();
 
 	/**
 	 * Path to a PEM file containing the trusted certificate used to verify the package
