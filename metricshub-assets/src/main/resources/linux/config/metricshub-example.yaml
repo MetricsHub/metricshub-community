@@ -32,7 +32,8 @@ otel:
 #   # trustedCertificateFile: /opt/metricshub/security/repo-ca.pem # Trusted certificate (PEM) for the package repository
 #   # Headers added to package downloads when the repository requires authentication,
 #   # keyed by repository authority — host or host:port, a bare host meaning the
-#   # scheme's default port. Each header set is only ever sent to its named origin.
+#   # scheme's default port. Each header set is only ever sent to its named origin,
+#   # over HTTPS only.
 #   # Values may be encrypted with the MetricsHub keystore, like opamp.headers.
 #   # downloadHeaders:
 #   #   nexus.example.com:

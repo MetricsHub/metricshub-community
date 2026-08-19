@@ -7,16 +7,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsServer;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +38,8 @@ class PackageDownloaderTest {
 	Path tempDir;
 
 	private HttpServer server;
+	private HttpsServer httpsServer;
+	private String trustedCertificateFile;
 	private byte[] packageContent;
 	private byte[] packageSha256;
 	private final PackageDownloader downloader = new PackageDownloader();
@@ -87,11 +96,45 @@ class PackageDownloaderTest {
 			}
 		});
 		server.start();
+
+		// The HTTPS twin: configured downloadHeaders only ever travel over HTTPS, so every
+		// test attaching them runs against this server. Its self-signed certificate
+		// (src/test/resources/upgrade, SAN 127.0.0.1 + localhost, 100-year validity) is
+		// trusted through the production trustedCertificateFile path.
+		httpsServer = startHttpsServer();
+		httpsServer.createContext("/headers/", exchange -> {
+			capturedHeaders.set(exchange.getRequestHeaders());
+			exchange.sendResponseHeaders(200, packageContent.length);
+			try (OutputStream output = exchange.getResponseBody()) {
+				output.write(packageContent);
+			}
+		});
+		httpsServer.start();
+		final Path pem = tempDir.resolve("test-repository.pem");
+		try (InputStream stream = getClass().getResourceAsStream("/upgrade/test-repository.pem")) {
+			Files.copy(stream, pem, StandardCopyOption.REPLACE_EXISTING);
+		}
+		trustedCertificateFile = pem.toString();
 	}
 
 	@AfterEach
 	void tearDown() {
 		server.stop(0);
+		httpsServer.stop(0);
+	}
+
+	private HttpsServer startHttpsServer() throws Exception {
+		final HttpsServer https = HttpsServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+		try (InputStream stream = getClass().getResourceAsStream("/upgrade/test-repository.p12")) {
+			keyStore.load(stream, "changeit".toCharArray());
+		}
+		final KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+		keyManagerFactory.init(keyStore, "changeit".toCharArray());
+		final SSLContext sslContext = SSLContext.getInstance("TLS");
+		sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+		https.setHttpsConfigurator(new HttpsConfigurator(sslContext));
+		return https;
 	}
 
 	private String baseUrl() {
@@ -100,6 +143,25 @@ class PackageDownloaderTest {
 
 	private String baseAuthority() {
 		return "127.0.0.1:" + server.getAddress().getPort();
+	}
+
+	private String httpsBaseUrl() {
+		return "https://127.0.0.1:" + httpsServer.getAddress().getPort();
+	}
+
+	private String httpsAuthority() {
+		return "127.0.0.1:" + httpsServer.getAddress().getPort();
+	}
+
+	/**
+	 * Configuration trusting the HTTPS test server, with the given download headers.
+	 */
+	private UpgradeConfig secureConfig(final Map<String, Map<String, String>> downloadHeaders) {
+		return UpgradeConfig.builder()
+			.downloadHeaders(downloadHeaders)
+			.trustedCertificateFile(trustedCertificateFile)
+			.downloadRetries(1)
+			.build();
 	}
 
 	private PackageOffer offer(final String url, final byte[] sha256) {
@@ -238,19 +300,39 @@ class PackageDownloaderTest {
 
 	@Test
 	void configuredDownloadHeadersShouldBeSent() throws Exception {
-		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
-			.downloadRetries(1)
-			.build();
+		final UpgradeConfig withHeaders = secureConfig(
+			Map.of(httpsAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+		);
 
 		downloader.download(
-			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			offer(httpsBaseUrl() + "/headers/metricshub.deb", packageSha256),
 			withHeaders,
 			tempDir,
 			(_, _) -> {}
 		);
 
 		assertEquals(List.of("Basic cmVhZGVyOnNlY3JldA=="), capturedHeaders.get().get("Authorization"));
+	}
+
+	@Test
+	void configuredHeadersShouldNeverTravelOverPlainHttp() throws Exception {
+		// The loopback plain-HTTP tolerance exists for unauthenticated development downloads;
+		// credentials must never cross the wire in plaintext. Even with the authority
+		// matching the offer exactly, an http offer gets nothing.
+		final UpgradeConfig withHeaders = UpgradeConfig.builder()
+			.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+			.downloadRetries(1)
+			.build();
+
+		final Path staged = downloader.download(
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			withHeaders,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertArrayEquals(packageContent, Files.readAllBytes(staged));
+		assertTrue(capturedHeaders.get().get("Authorization") == null, "credentials must never be sent over plain HTTP");
 	}
 
 	@Test
@@ -261,13 +343,12 @@ class PackageDownloaderTest {
 		// exfiltration this feature must not enable. Here the credentials are bound to
 		// 'localhost' and the offer points at '127.0.0.1': same loopback server, different host
 		// name, so the download must succeed WITHOUT the credentials.
-		final UpgradeConfig boundElsewhere = UpgradeConfig.builder()
-			.downloadHeaders(Map.of("localhost", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
-			.downloadRetries(1)
-			.build();
+		final UpgradeConfig boundElsewhere = secureConfig(
+			Map.of("localhost", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+		);
 
 		final Path staged = downloader.download(
-			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			offer(httpsBaseUrl() + "/headers/metricshub.deb", packageSha256),
 			boundElsewhere,
 			tempDir,
 			(_, _) -> {}
@@ -324,19 +405,24 @@ class PackageDownloaderTest {
 			!PackageDownloader.matchesOfferedOrigin("nexus.example.com:8443", URI.create("https://nexus.example.com/pkg")),
 			"an explicit port must not match the default port"
 		);
+		assertTrue(
+			!PackageDownloader.matchesOfferedOrigin("localhost:443", URI.create("http://localhost:443/capture")),
+			"credentials must never match a plain-HTTP offer, even with host and port equal"
+		);
+		assertTrue(
+			!PackageDownloader.matchesOfferedOrigin("127.0.0.1:80", URI.create("http://127.0.0.1/pkg")),
+			"plain HTTP matches nothing, whatever the authority says"
+		);
 	}
 
 	@Test
 	void configuredHeadersShouldOverrideOfferHeaders() throws Exception {
-		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of(baseAuthority(), Map.of("X-Repo-Token", "from-config")))
-			.downloadRetries(1)
-			.build();
+		final UpgradeConfig withHeaders = secureConfig(Map.of(httpsAuthority(), Map.of("X-Repo-Token", "from-config")));
 
 		// The offer spells the name in a different case: HTTP header names are
 		// case-insensitive, so this is the same header, not two.
 		downloader.download(
-			offer(baseUrl() + "/headers/metricshub.deb", packageSha256, Map.of("x-repo-token", "from-offer")),
+			offer(httpsBaseUrl() + "/headers/metricshub.deb", packageSha256, Map.of("x-repo-token", "from-offer")),
 			withHeaders,
 			tempDir,
 			(_, _) -> {}
@@ -356,46 +442,40 @@ class PackageDownloaderTest {
 
 	@Test
 	void headersShouldNotFollowARedirectToAnotherHost() throws Exception {
-		// A second loopback identity: the server binds the wildcard address so both 127.0.0.1
-		// (the offered host) and localhost (the redirect target) reach it, while the downloader
-		// sees two different host names — the credentials must stay on the first.
-		final HttpServer wildcard = HttpServer.create(new InetSocketAddress(0), 0);
+		// A second loopback identity: the HTTPS server answers as both 127.0.0.1 (the offered
+		// host) and localhost (the redirect target, covered by the certificate's SAN), so the
+		// downloader sees two different host names on one process — the credentials must stay
+		// on the first.
 		final AtomicReference<Headers> secondHopHeaders = new AtomicReference<>();
-		try {
-			final int port = wildcard.getAddress().getPort();
-			wildcard.createContext("/hop/", exchange -> {
-				exchange.getResponseHeaders().set("Location", "http://localhost:" + port + "/target/metricshub.deb");
-				exchange.sendResponseHeaders(302, -1);
-				exchange.close();
-			});
-			wildcard.createContext("/target/", exchange -> {
-				secondHopHeaders.set(exchange.getRequestHeaders());
-				exchange.sendResponseHeaders(200, packageContent.length);
-				try (OutputStream output = exchange.getResponseBody()) {
-					output.write(packageContent);
-				}
-			});
-			wildcard.start();
+		final int port = httpsServer.getAddress().getPort();
+		httpsServer.createContext("/hop/", exchange -> {
+			exchange.getResponseHeaders().set("Location", "https://localhost:" + port + "/target/metricshub.deb");
+			exchange.sendResponseHeaders(302, -1);
+			exchange.close();
+		});
+		httpsServer.createContext("/target/", exchange -> {
+			secondHopHeaders.set(exchange.getRequestHeaders());
+			exchange.sendResponseHeaders(200, packageContent.length);
+			try (OutputStream output = exchange.getResponseBody()) {
+				output.write(packageContent);
+			}
+		});
 
-			final UpgradeConfig withHeaders = UpgradeConfig.builder()
-				.downloadHeaders(Map.of("127.0.0.1:" + port, Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
-				.downloadRetries(1)
-				.build();
-			final Path staged = downloader.download(
-				offer("http://127.0.0.1:" + port + "/hop/metricshub.deb", packageSha256),
-				withHeaders,
-				tempDir,
-				(_, _) -> {}
-			);
+		final UpgradeConfig withHeaders = secureConfig(
+			Map.of(httpsAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+		);
+		final Path staged = downloader.download(
+			offer(httpsBaseUrl() + "/hop/metricshub.deb", packageSha256),
+			withHeaders,
+			tempDir,
+			(_, _) -> {}
+		);
 
-			assertArrayEquals(packageContent, Files.readAllBytes(staged));
-			assertTrue(
-				secondHopHeaders.get().get("Authorization") == null,
-				"the configured credentials must not follow a redirect to another host"
-			);
-		} finally {
-			wildcard.stop(0);
-		}
+		assertArrayEquals(packageContent, Files.readAllBytes(staged));
+		assertTrue(
+			secondHopHeaders.get().get("Authorization") == null,
+			"the configured credentials must not follow a redirect to another host"
+		);
 	}
 
 	@Test
@@ -431,12 +511,12 @@ class PackageDownloaderTest {
 		withNullValue.put("Authorization", null);
 		withNullValue.put("X-Repo-Token", "kept");
 		final java.util.Map<String, Map<String, String>> byHost = new java.util.HashMap<>();
-		byHost.put(baseAuthority(), withNullValue);
+		byHost.put(httpsAuthority(), withNullValue);
 		byHost.put("empty-block.example.com", null);
-		final UpgradeConfig config = UpgradeConfig.builder().downloadHeaders(byHost).downloadRetries(1).build();
+		final UpgradeConfig config = secureConfig(byHost);
 
 		final Path staged = downloader.download(
-			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			offer(httpsBaseUrl() + "/headers/metricshub.deb", packageSha256),
 			config,
 			tempDir,
 			(_, _) -> {}
@@ -451,7 +531,7 @@ class PackageDownloaderTest {
 	void headersShouldNotFollowARedirectToAnotherPort() throws Exception {
 		// Same host name, different port: a different origin, likely a different service on
 		// the machine — it must not receive the credentials, though the download proceeds.
-		final HttpServer otherPort = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		final HttpsServer otherPort = startHttpsServer();
 		final AtomicReference<Headers> otherPortHeaders = new AtomicReference<>();
 		try {
 			otherPort.createContext("/target/", exchange -> {
@@ -463,19 +543,18 @@ class PackageDownloaderTest {
 			});
 			otherPort.start();
 
-			final String crossPortTarget = "http://127.0.0.1:" + otherPort.getAddress().getPort() + "/target/metricshub.deb";
-			server.createContext("/redirect-other-port/", exchange -> {
+			final String crossPortTarget = "https://127.0.0.1:" + otherPort.getAddress().getPort() + "/target/metricshub.deb";
+			httpsServer.createContext("/redirect-other-port/", exchange -> {
 				exchange.getResponseHeaders().set("Location", crossPortTarget);
 				exchange.sendResponseHeaders(302, -1);
 				exchange.close();
 			});
 
-			final UpgradeConfig withHeaders = UpgradeConfig.builder()
-				.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
-				.downloadRetries(1)
-				.build();
+			final UpgradeConfig withHeaders = secureConfig(
+				Map.of(httpsAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+			);
 			final Path staged = downloader.download(
-				offer(baseUrl() + "/redirect-other-port/metricshub.deb", packageSha256),
+				offer(httpsBaseUrl() + "/redirect-other-port/metricshub.deb", packageSha256),
 				withHeaders,
 				tempDir,
 				(_, _) -> {}
@@ -495,18 +574,17 @@ class PackageDownloaderTest {
 	void headersShouldFollowARedirectWithinTheSameOrigin() throws Exception {
 		// A same-origin redirect (same scheme, host and port) legitimately keeps the
 		// credentials: repositories redirect within themselves and still require auth.
-		server.createContext("/redirect-to-headers/", exchange -> {
-			exchange.getResponseHeaders().set("Location", baseUrl() + "/headers/metricshub.deb");
+		httpsServer.createContext("/redirect-to-headers/", exchange -> {
+			exchange.getResponseHeaders().set("Location", httpsBaseUrl() + "/headers/metricshub.deb");
 			exchange.sendResponseHeaders(302, -1);
 			exchange.close();
 		});
-		final UpgradeConfig withHeaders = UpgradeConfig.builder()
-			.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
-			.downloadRetries(1)
-			.build();
+		final UpgradeConfig withHeaders = secureConfig(
+			Map.of(httpsAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA=="))
+		);
 
 		downloader.download(
-			offer(baseUrl() + "/redirect-to-headers/metricshub.deb", packageSha256),
+			offer(httpsBaseUrl() + "/redirect-to-headers/metricshub.deb", packageSha256),
 			withHeaders,
 			tempDir,
 			(_, _) -> {}

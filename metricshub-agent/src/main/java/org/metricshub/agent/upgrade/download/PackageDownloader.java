@@ -157,8 +157,11 @@ public class PackageDownloader {
 
 	/**
 	 * Indicates whether a configured {@code downloadHeaders} authority ({@code host} or
-	 * {@code host:port}) names the offered download origin. A bare host binds to the offered
-	 * scheme's default port only: without this, credentials configured for
+	 * {@code host:port}) names the offered download origin. Configured credentials only ever
+	 * travel over HTTPS — the loopback plain-HTTP tolerance is for unauthenticated development
+	 * downloads, and headers such as {@code Authorization} must never cross the wire in
+	 * plaintext, so an {@code http} offer matches nothing whatever its host and port. A bare
+	 * host binds to port 443 only: without this, credentials configured for
 	 * {@code repo.example.com} would follow an offer pointing at
 	 * {@code https://repo.example.com:8443}, a different service of the same machine.
 	 *
@@ -167,11 +170,14 @@ public class PackageDownloader {
 	 * @return whether the authority names the offered origin
 	 */
 	static boolean matchesOfferedOrigin(final String authority, final URI offeredUri) {
+		if (!"https".equalsIgnoreCase(offeredUri.getScheme())) {
+			return false;
+		}
 		if (authority == null || authority.isBlank() || offeredUri.getHost() == null) {
 			return false;
 		}
 		String configuredHost = authority.trim();
-		int configuredPort = -1;
+		int configuredPort = 443;
 		final int colon = configuredHost.lastIndexOf(':');
 		// Only a trailing :<digits> is a port; IPv6 literals keep their brackets and colons.
 		if (colon > 0 && configuredHost.substring(colon + 1).chars().allMatch(Character::isDigit)) {
@@ -184,9 +190,6 @@ public class PackageDownloader {
 		}
 		if (!configuredHost.equalsIgnoreCase(offeredUri.getHost())) {
 			return false;
-		}
-		if (configuredPort == -1) {
-			configuredPort = "https".equalsIgnoreCase(offeredUri.getScheme()) ? 443 : 80;
 		}
 		return configuredPort == effectivePort(offeredUri);
 	}
