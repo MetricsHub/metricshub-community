@@ -85,6 +85,7 @@ export const HOST_TYPE_LABELS = {
 	linux: "Linux",
 	network: "Network",
 	oob: "OOB",
+	other: "Other",
 	solaris: "Solaris",
 	storage: "Storage",
 	windows: "Windows",

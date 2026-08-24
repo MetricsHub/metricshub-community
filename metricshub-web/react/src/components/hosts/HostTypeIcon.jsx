@@ -21,6 +21,7 @@ const HOST_TYPE_THEMED_ICONS = {
 	linux: themedHostTypeIcon("linux"),
 	network: themedHostTypeIcon("network"),
 	oob: themedHostTypeIcon("oob"),
+	other: themedHostTypeIcon("other"),
 	solaris: themedHostTypeIcon("solaris"),
 	storage: themedHostTypeIcon("storage"),
 	windows: themedHostTypeIcon("windows"),
