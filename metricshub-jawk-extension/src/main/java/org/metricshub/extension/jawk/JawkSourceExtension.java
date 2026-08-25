@@ -40,7 +40,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ICompositeSourceScriptExtension;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -106,25 +105,16 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		log.debug("Hostname {} - Awk Operation. Awk Script:\n{}\n", hostname, awkScript);
 
-		// The source references of an Awk source are protected by SourceUpdaterProcessor, so that a variable can be
-		// exposed to the script as an array. The input still wants them as text, so resolve them here
-		final String input = jawkSource.getInput();
-		final String inputContent = (input != null && !input.isEmpty())
-			? SourceUpdaterProcessor.replaceSourceReferenceContent(
-					input,
-					telemetryManager,
-					connectorId,
-					"Awk",
-					source.getKey()
-				)
-			: input;
+		// The input has already been resolved by SourceUpdaterProcessor, like every other source field
+		final String inputContent = jawkSource.getInput();
 
-		// Resolve the variables declared on the source. Every other reference kind has already been substituted, only
-		// the source references are left: they are exposed to the script as an array holding the source's table
+		// Resolve the variables declared on the source, in one pass: every textual reference is substituted and a
+		// variable referencing a source is exposed to the script as an array holding that source's table
 		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
 			jawkSource.getVariables(),
 			telemetryManager,
 			connectorId,
+			sourceProcessor.getAttributes(),
 			source.getKey()
 		);
 

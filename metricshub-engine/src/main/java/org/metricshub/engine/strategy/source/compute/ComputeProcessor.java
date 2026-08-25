@@ -132,6 +132,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	private String hostname;
 	private SourceTable sourceTable;
 	private Integer index;
+	private Map<String, String> attributes;
 	private static final Map<Class<? extends Compute>, BiFunction<String, String, String>> MATH_FUNCTIONS_MAP;
 
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
@@ -396,12 +397,13 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		log.debug("Hostname {} - Compute Operation [{}]. AWK Script:\n{}\n", hostname, computeKey, awkScript);
 
-		// Resolve the variables declared on the compute. A variable referencing a source is exposed to the script as an
-		// array holding that source's table
+		// Resolve the variables declared on the compute, in one pass: every textual reference is substituted and a
+		// variable referencing a source is exposed to the script as an array holding that source's table
 		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
 			awk.getVariables(),
 			telemetryManager,
 			connectorId,
+			attributes,
 			computeKey
 		);
 

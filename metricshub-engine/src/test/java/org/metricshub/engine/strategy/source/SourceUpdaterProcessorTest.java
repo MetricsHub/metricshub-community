@@ -666,9 +666,9 @@ class SourceUpdaterProcessorTest {
 	}
 
 	/**
-	 * The variables of an Awk source go through every reference replacement except the source one: a resource attribute
-	 * or a monitor attribute is resolved here, while a source reference is left for the Awk layer, which exposes the
-	 * referenced source as an array rather than as CSV text.
+	 * The updater must pass an Awk source's variables through untouched. Every reference they hold, source references
+	 * included, is resolved in one pass by AwkVariableHelper just before the script runs, so that a variable holding a
+	 * source reference can become an array rather than the CSV text this chain would produce.
 	 */
 	@Test
 	void testProcessJawkSourceVariables() {
@@ -711,13 +711,11 @@ class SourceUpdaterProcessorTest {
 		final ArgumentCaptor<JawkSource> captor = ArgumentCaptor.forClass(JawkSource.class);
 		verify(sourceProcessor).process(captor.capture());
 
-		final Map<String, String> expected = new LinkedHashMap<>();
-		expected.put("hostname", "my-host");
-		expected.put("hostType", "linux");
-		expected.put("monitorId", MONITOR_ID_ATTRIBUTE_VALUE);
-		expected.put("aTable", otherSourceRef);
-
-		assertEquals(expected, captor.getValue().getVariables());
+		assertEquals(
+			variables,
+			captor.getValue().getVariables(),
+			"The updater must leave the variables to AwkVariableHelper"
+		);
 
 		// The original source must not have been mutated: the updater works on a copy
 		assertEquals("${resource.attribute::host.name}", jawkSource.getVariables().get("hostname"));

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -83,10 +84,12 @@ class JawkSourceExtensionTest {
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		// Http request & Json2CSV
+		// Http request & Json2CSV.
+		// The input arrives already resolved: SourceUpdaterProcessor replaces its source references before the source
+		// reaches this extension, so the test passes the content that ${source::...source_one} resolves to.
 		final Source source = JawkSource.builder()
 			.type("Awk")
-			.input("${source::monitors.system.discovery.sources.source_one}")
+			.input(SourceTable.tableToCsv(tableOne, ";", false))
 			.script(
 				"""
 					BEGIN {
@@ -457,6 +460,67 @@ class JawkSourceExtensionTest {
 		);
 
 		assertEquals(Collections.singletonList(Arrays.asList("1", "beta")), result.getTable());
+	}
+
+	/**
+	 * Every reference kind resolves inside a variable, in the one pass AwkVariableHelper performs: the resource
+	 * attribute, the mono-instance monitor attribute, and the source reference that becomes an array.
+	 */
+	@Test
+	void testProcessSourceResolvesEveryReferenceKindInVariables() {
+		final List<List<String>> table = Arrays.asList(Arrays.asList("FOO", "1"), Arrays.asList("BAR", "2"));
+
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname("test-host")
+					.hostId("test-host")
+					.attributes(Map.of("host.name", "my-host"))
+					.build()
+			)
+			.build();
+
+		final HostProperties hostProperties = HostProperties.builder().build();
+		hostProperties
+			.getConnectorNamespace(CONNECTOR_ID)
+			.addSourceTable(
+				"${source::monitors.system.discovery.sources.source_one}",
+				SourceTable.builder().table(table).build()
+			);
+		telemetryManager.setHostProperties(hostProperties);
+
+		// The mono-instance attributes travel on the SourceProcessor
+		doReturn(Map.of("id", "monitor-42")).when(sourceProcessorMock).getAttributes();
+
+		final Map<String, String> variables = new LinkedHashMap<>();
+		variables.put("resourceAttr", "${resource.attribute::host.name}");
+		variables.put("monoInstance", "${attribute::id}");
+		variables.put("aTable", "${source::monitors.system.discovery.sources.source_one}");
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.variables(variables)
+			.script(
+				"""
+					BEGIN {
+					    print resourceAttr ";" monoInstance ";" aTable[1][0] ";"
+					}
+				"""
+			)
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(
+			Collections.singletonList(Arrays.asList("my-host", "monitor-42", "BAR")),
+			result.getTable(),
+			"The resource attribute, the mono-instance attribute and the source table must all resolve"
+		);
 	}
 
 	/**

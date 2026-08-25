@@ -138,10 +138,8 @@ public class JawkSource extends Source {
 		// resolved at parse time, and running the reference substitutions over a script body would rewrite AWK syntax.
 		input = updater.apply(input);
 		separators = updater.apply(separators);
-
-		if (variables != null) {
-			variables.replaceAll((key, value) -> updater.apply(value));
-		}
+		// The variables are deliberately not updated here: every reference they hold, source references included,
+		// is resolved in one pass by AwkVariableHelper just before the script runs
 	}
 
 	@Override

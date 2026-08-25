@@ -33,11 +33,18 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Resolves the <code>variables</code> declared on an Awk source or compute into values the Jawk engine can expose to
  * the script.
+ * <p>
+ * This is the single place where an Awk variable is resolved. The model deliberately leaves the variables out of
+ * <code>update(...)</code>, because a variable holding a source reference must become an array rather than the CSV text
+ * a {@link java.util.function.UnaryOperator} of {@link String} could return. Resolving every reference kind here
+ * instead keeps the two concerns together: the textual references are substituted exactly as they would be in any
+ * other field, and the source reference is turned into a table, in one pass, immediately before the script runs.
  * <p>
  * A value that is a source reference, such as <code>${source::monitors.disk.discovery.sources.raw}</code>, is resolved
  * to the referenced source's table and handed over as a {@link List} of rows. Jawk turns it into an AWK array of
@@ -64,6 +71,7 @@ public class AwkVariableHelper {
 		final Map<String, String> variables,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
+		final Map<String, String> attributes,
 		final Object operationKey
 	) {
 		if (variables == null || variables.isEmpty()) {
@@ -73,7 +81,7 @@ public class AwkVariableHelper {
 		final Map<String, Object> resolved = new LinkedHashMap<>();
 
 		variables.forEach((name, value) ->
-			resolved.put(name, resolveValue(name, value, telemetryManager, connectorId, operationKey))
+			resolved.put(name, resolveValue(name, value, telemetryManager, connectorId, attributes, operationKey))
 		);
 
 		return Collections.unmodifiableMap(resolved);
@@ -91,15 +99,24 @@ public class AwkVariableHelper {
 	 */
 	private static Object resolveValue(
 		final String name,
-		final String value,
+		final String rawValue,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
+		final Map<String, String> attributes,
 		final Object operationKey
 	) {
 		// A variable declared without a value, such as "myVariable:" in YAML, is exposed as the AWK uninitialized value
-		if (value == null) {
+		if (rawValue == null) {
 			return EMPTY;
 		}
+
+		// Every textual reference is replaced first, exactly as it would be in any other field
+		String value = SourceUpdaterProcessor.replaceResourceAttributeReferences(
+			rawValue,
+			telemetryManager.getHostConfiguration().getAttributes()
+		);
+		value = SourceUpdaterProcessor.replaceAttributeReferences(value, attributes);
+		value = SourceUpdaterProcessor.replaceProtocolPropertyReferences(value, telemetryManager);
 
 		// Not a source reference? Expose the value as a scalar
 		if (!SOURCE_REF_PATTERN.matcher(value).find()) {

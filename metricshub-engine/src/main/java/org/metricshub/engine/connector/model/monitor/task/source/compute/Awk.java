@@ -150,10 +150,8 @@ public class Awk extends Compute {
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);
 		selectColumns = updater.apply(selectColumns);
-
-		if (variables != null) {
-			variables.replaceAll((key, value) -> updater.apply(value));
-		}
+		// The variables are deliberately not updated here: every reference they hold, source references included,
+		// is resolved in one pass by AwkVariableHelper just before the script runs
 	}
 
 	@Override

@@ -387,9 +387,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return String value
 	 */
 	String replaceSourceReference(final String value, final Source source) {
-		// Source shouldn't be replaced when it is an instance of TableJoinSource, TableUnionSource, ReferenceSource or
-		// JawkSource. All these sources need the reference to perform the job correctly: they resolve it themselves,
-		// into a table rather than into CSV text. See SourceVisitor implementation.
+		// Source shouldn't be replaced when it is an instance of TableJoinSource, TableUnionSource and ReferenceSource
+		// All these sources need the reference to perform the job correctly. See SourceVisitor implementation.
 		if (value == null || isSourceWithProtectedReferences(source)) {
 			return value;
 		}
@@ -415,8 +414,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
-			source instanceof TableJoinSource ||
-			source instanceof JawkSource
+			source instanceof TableJoinSource
 		);
 		// CHECKSTYLE:ON
 	}
@@ -784,6 +782,17 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return String value
 	 */
 	public String replaceProtocolPropertyReferences(final String key) {
+		return replaceProtocolPropertyReferences(key, telemetryManager);
+	}
+
+	/**
+	 * Replaces <code>${protocol::PROPERTY}</code> references using the given telemetry manager.
+	 *
+	 * @param key              the value to update
+	 * @param telemetryManager the telemetry manager holding the configurations
+	 * @return String value
+	 */
+	public static String replaceProtocolPropertyReferences(final String key, final TelemetryManager telemetryManager) {
 		if (key == null) {
 			return key;
 		}
