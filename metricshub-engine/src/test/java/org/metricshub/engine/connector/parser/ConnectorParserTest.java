@@ -663,6 +663,24 @@ class ConnectorParserTest {
 		return buildUseCase1Dependency();
 	}
 
+	/**
+	 * A source reference declared in the <code>variables</code> of an Awk source must create a dependency, exactly like
+	 * one declared in <code>input</code>, so that the referenced source is executed first.
+	 */
+	@Test
+	void testMonitorTaskSourceDepUpdateUseCase14() throws IOException {
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/monitorTaskSourceDep/useCase14"
+		).parse("sourceDep");
+
+		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
+
+		assertEquals(
+			List.of(Set.of("source(1)"), Set.of("source(2)"), Set.of("source(3)")),
+			monitorJob.getDiscovery().getSourceDep()
+		);
+	}
+
 	@Test
 	void withNodeProcessorExtendsAndConstantsProcessorTest() {
 		final AbstractNodeProcessor processor = ConnectorParser.withNodeProcessor(RESOURCES_TEST_FILES_PATH).getProcessor();

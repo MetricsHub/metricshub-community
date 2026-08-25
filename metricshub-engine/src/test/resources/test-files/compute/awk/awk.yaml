@@ -12,3 +12,7 @@ beforeAll:
         script: scriptTest
         exclude:  excludeTest
         keep: keepTest
+        variables:
+          FS: ";"
+          someConstant: "365.25"
+          aTable: ${source::beforeAll.otherSource}

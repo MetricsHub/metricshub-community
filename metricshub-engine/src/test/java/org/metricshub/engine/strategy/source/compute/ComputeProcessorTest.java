@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -2518,7 +2519,7 @@ class ComputeProcessorTest {
 
 			// 1) Return a multi-line CSV string
 			awkStatic
-				.when(() -> AwkExecutor.executeAwk(any(), any()))
+				.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
 				.thenReturn(
 					"FOO;ID1;NAME1;MANUFACTURER1;NUMBER_OF_DISKS1\n" +
 						"BAR;ID2;NAME2;MANUFACTURER2;NUMBER_OF_DISKS2\n" +
@@ -2544,7 +2545,7 @@ class ComputeProcessorTest {
 				.selectColumns(ONE_TWO_THREE)
 				.build();
 
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any())).thenReturn(null);
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any())).thenReturn(null);
 
 			computeProcessor.process(awkOK);
 			assertEquals(Collections.emptyList(), sourceTable.getTable());
@@ -2561,7 +2562,7 @@ class ComputeProcessorTest {
 				.selectColumns(ONE_TWO_THREE)
 				.build();
 
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any())).thenReturn(EMPTY);
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any())).thenReturn(EMPTY);
 
 			computeProcessor.process(awkOK);
 			assertEquals(Collections.emptyList(), sourceTable.getTable());
@@ -2571,7 +2572,7 @@ class ComputeProcessorTest {
 			sourceTable.setTable(table);
 
 			awkStatic
-				.when(() -> AwkExecutor.executeAwk(any(), any()))
+				.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			computeProcessor.process(
@@ -2582,7 +2583,7 @@ class ComputeProcessorTest {
 
 			// 5) Same but with space in selectColumns
 			awkStatic
-				.when(() -> AwkExecutor.executeAwk(any(), any()))
+				.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			computeProcessor.process(
@@ -2625,6 +2626,54 @@ class ComputeProcessorTest {
 		String expectedRawData = SourceTable.tableToCsv(expectedTable, ";", false);
 		assertEquals(expectedTable, sourceTable.getTable());
 		assertEquals(expectedRawData, sourceTable.getRawData());
+	}
+
+	/**
+	 * An Awk compute can declare variables. A variable whose value is a source reference is exposed to the script as an
+	 * array of rows, addressed as <code>myVariable[row][column]</code> with zero-based indexes; any other value is
+	 * exposed as a scalar.
+	 */
+	@Test
+	void testProcessInlineAwkWithVariables() {
+		sourceTable.setTable(Arrays.asList(new ArrayList<>(LINE_1)));
+		sourceTable.setRawData(null);
+
+		final String sourceRef = "${source::monitors.enclosure.discovery.sources.other}";
+		final String connectorId = "awkVariablesConnector";
+
+		telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(connectorId)
+			.addSourceTable(
+				sourceRef,
+				SourceTable.builder()
+					.table(Arrays.asList(Arrays.asList("alpha", "beta"), Arrays.asList("gamma", "delta")))
+					.build()
+			);
+
+		computeProcessor.setTelemetryManager(telemetryManager);
+		computeProcessor.setConnectorId(connectorId);
+
+		final Awk awk = Awk.builder()
+			.script(
+				"""
+					BEGIN {
+						for (row = 0; row < length(other); row++) {
+							print other[row][0] ";" other[row][1] ";" factor * 2 ";"
+						}
+					}
+				"""
+			)
+			.separators(TABLE_SEP)
+			.variables(new LinkedHashMap<>(Map.of("other", sourceRef, "factor", "21")))
+			.build();
+
+		computeProcessor.process(awk);
+
+		assertEquals(
+			Arrays.asList(Arrays.asList("alpha", "beta", "42"), Arrays.asList("gamma", "delta", "42")),
+			sourceTable.getTable()
+		);
 	}
 
 	@Test

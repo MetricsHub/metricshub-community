@@ -65,6 +65,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.NumberHelper;
@@ -395,8 +396,17 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		log.debug("Hostname {} - Compute Operation [{}]. AWK Script:\n{}\n", hostname, computeKey, awkScript);
 
+		// Resolve the variables declared on the compute. A variable referencing a source is exposed to the script as an
+		// array holding that source's table
+		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+			awk.getVariables(),
+			telemetryManager,
+			connectorId,
+			computeKey
+		);
+
 		try {
-			String awkResult = AwkExecutor.executeAwk(awkScript, input);
+			String awkResult = AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 
 			if (awkResult == null || awkResult.isEmpty()) {
 				log.warn(

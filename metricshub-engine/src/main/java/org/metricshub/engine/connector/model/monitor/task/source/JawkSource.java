@@ -30,7 +30,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
@@ -74,6 +76,15 @@ public class JawkSource extends Source {
 	private String separators;
 
 	/**
+	 * The variables to expose to the JAWK script, indexed by variable name.
+	 * <p>
+	 * A value referencing a source, such as <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed to
+	 * the script as an AWK array holding that source's table. Any other value is exposed as a scalar.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private Map<String, String> variables = new LinkedHashMap<>();
+
+	/**
 	 * Builder for creating instances of {@code JawkSource}.
 	 *
 	 * @param type                  The type of the source.
@@ -84,6 +95,7 @@ public class JawkSource extends Source {
 	 * @param script                The script to execute.
 	 * @param input                 The input on which to execute the JAWK task.
 	 * @param separators            The separators parameter for the JAWK task.
+	 * @param variables             The variables to expose to the JAWK script.
 	 */
 	@Builder
 	@JsonCreator
@@ -95,12 +107,14 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf,
 		@JsonProperty(value = "script") String script,
 		@JsonProperty(value = "input") final String input,
-		@JsonProperty(value = "separators") final String separators
+		@JsonProperty(value = "separators") final String separators,
+		@JsonProperty(value = "variables") final Map<String, String> variables
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
 		this.script = script;
 		this.input = input;
 		this.separators = separators;
+		this.variables = variables == null ? new LinkedHashMap<>() : variables;
 	}
 
 	@Override
@@ -114,12 +128,20 @@ public class JawkSource extends Source {
 			.script(script)
 			.input(input)
 			.separators(separators)
+			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
 			.build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		// For now, there is nothing to update
+		// The script is deliberately left out: it is code, not data. It is normally a ${file::...} reference already
+		// resolved at parse time, and running the reference substitutions over a script body would rewrite AWK syntax.
+		input = updater.apply(input);
+		separators = updater.apply(separators);
+
+		if (variables != null) {
+			variables.replaceAll((key, value) -> updater.apply(value));
+		}
 	}
 
 	@Override
@@ -136,6 +158,7 @@ public class JawkSource extends Source {
 		addNonNull(stringJoiner, "- script=", script);
 		addNonNull(stringJoiner, "- input=", input);
 		addNonNull(stringJoiner, "- separators=", separators);
+		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
 
 		return stringJoiner.toString();
 	}

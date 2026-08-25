@@ -23,6 +23,11 @@ package org.metricshub.engine.awk;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
+import io.jawk.ext.AbstractExtension;
+import io.jawk.ext.JawkExtension;
+import io.jawk.ext.annotations.JawkAssocArray;
+import io.jawk.ext.annotations.JawkFunction;
+import io.jawk.jrt.AssocArray;
 import java.util.Arrays;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -42,11 +47,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.jawk.ext.AbstractExtension;
-import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.ext.annotations.JawkAssocArray;
-import org.metricshub.jawk.ext.annotations.JawkFunction;
-import org.metricshub.jawk.jrt.AssocArray;
 
 /**
  * This class implements the {@link JawkExtension} contract, reports the supported features, processes sources and

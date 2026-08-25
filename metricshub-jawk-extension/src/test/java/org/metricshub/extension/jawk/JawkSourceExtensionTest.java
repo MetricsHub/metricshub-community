@@ -350,4 +350,134 @@ class JawkSourceExtensionTest {
 		assertFalse(jawkExtension.isValidSource(new IpmiSource()));
 		assertTrue(jawkExtension.isValidSource(new JawkSource()));
 	}
+
+	/**
+	 * A variable whose value is a source reference is exposed to the script as an array of rows, addressed as
+	 * <code>myVariable[row][column]</code> with zero-based indexes.
+	 */
+	@Test
+	void testProcessSourceWithSourceTableVariable() {
+		final List<List<String>> table = Arrays.asList(Arrays.asList("FOO", "1", "2"), Arrays.asList("BAR", "10", "20"));
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().table(table).build());
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			// No input: the script reads everything from the variable
+			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.source_one}"))
+			.script(
+				"""
+					BEGIN {
+					    for (row = 0; row < length(aTable); row++) {
+					        print aTable[row][0] ";" aTable[row][2] ";"
+					    }
+					}
+				"""
+			)
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Arrays.asList(Arrays.asList("FOO", "2"), Arrays.asList("BAR", "20")), result.getTable());
+	}
+
+	/**
+	 * A variable whose value is not a source reference is exposed as a scalar, which also covers the AWK special
+	 * variables such as FS.
+	 */
+	@Test
+	void testProcessSourceWithScalarVariables() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().rawData("unused").build());
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.input("a|b|c")
+			.variables(Map.of("FS", "|", "someConstant", "365.25"))
+			.script("{ print $2 \";\" someConstant * 2 \";\" }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Collections.singletonList(Arrays.asList("b", "730.5")), result.getTable());
+	}
+
+	/**
+	 * A variable referencing a source that was never computed must not fail the whole source: the variable is exposed
+	 * as an empty array.
+	 */
+	@Test
+	void testProcessSourceWithUnknownSourceVariable() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().rawData("unused").build());
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.unknown}"))
+			.script("BEGIN { print \"rows=\" length(aTable) \";\" }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Collections.singletonList(Collections.singletonList("rows=0")), result.getTable());
+	}
+
+	/**
+	 * A source holding only raw data is parsed as a semicolon-separated table before being exposed.
+	 */
+	@Test
+	void testProcessSourceWithRawDataVariable() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(
+			SourceTable.builder().rawData("alpha;beta;gamma").build()
+		);
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.source_one}"))
+			.script("BEGIN { print length(aTable) \";\" aTable[0][1] \";\" }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Collections.singletonList(Arrays.asList("1", "beta")), result.getTable());
+	}
+
+	/**
+	 * Build a {@link TelemetryManager} exposing the given source table under the <code>source_one</code> reference.
+	 *
+	 * @param sourceTable The source table to register in the connector namespace.
+	 * @return A new {@link TelemetryManager} instance.
+	 */
+	private static TelemetryManager buildTelemetryManager(final SourceTable sourceTable) {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
+			.build();
+
+		final HostProperties hostProperties = HostProperties.builder().build();
+
+		hostProperties
+			.getConnectorNamespace(CONNECTOR_ID)
+			.addSourceTable("${source::monitors.system.discovery.sources.source_one}", sourceTable);
+
+		telemetryManager.setHostProperties(hostProperties);
+
+		return telemetryManager;
+	}
 }

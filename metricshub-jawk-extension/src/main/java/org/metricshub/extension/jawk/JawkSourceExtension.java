@@ -24,9 +24,13 @@ package org.metricshub.extension.jawk;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
+import io.jawk.Awk;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.awk.UtilityExtensionForJawk;
 import org.metricshub.engine.common.helpers.LoggingHelper;
@@ -39,7 +43,6 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.jawk.Awk;
 
 /**
  * This class implements the {@link ICompositeSourceScriptExtension} contract, reports the supported features,
@@ -103,6 +106,8 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		log.debug("Hostname {} - Awk Operation. Awk Script:\n{}\n", hostname, awkScript);
 
+		// The source references of an Awk source are protected by SourceUpdaterProcessor, so that a variable can be
+		// exposed to the script as an array. The input still wants them as text, so resolve them here
 		final String input = jawkSource.getInput();
 		final String inputContent = (input != null && !input.isEmpty())
 			? SourceUpdaterProcessor.replaceSourceReferenceContent(
@@ -114,13 +119,22 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 				)
 			: input;
 
+		// Resolve the variables declared on the source. Every other reference kind has already been substituted, only
+		// the source references are left: they are exposed to the script as an array holding the source's table
+		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+			jawkSource.getVariables(),
+			telemetryManager,
+			connectorId,
+			source.getKey()
+		);
+
 		// Instantiate the MetricsHub extension for Jawk with the proper context
 		MetricsHubExtensionForJawk extension = new MetricsHubExtensionForJawk(sourceProcessor, hostname, connectorId);
 
 		// Execute
 		try {
-			Awk awkEngine = new Awk(extension, UtilityExtensionForJawk.INSTANCE);
-			String result = AwkExecutor.executeAwk(awkScript, inputContent, awkEngine);
+			Awk awkEngine = new Awk(List.of(extension, UtilityExtensionForJawk.INSTANCE), AwkExecutor.newAwkSettings(null));
+			String result = AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables);
 			final SourceTable sourceTable = new SourceTable();
 			sourceTable.setRawData(result);
 			sourceTable.setTable(SourceTable.csvToTable(result, TABLE_SEP));

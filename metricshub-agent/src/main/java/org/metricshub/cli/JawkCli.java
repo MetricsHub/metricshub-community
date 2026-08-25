@@ -21,10 +21,10 @@ package org.metricshub.cli;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.jawk.Cli;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import org.metricshub.jawk.Cli;
 
 /**
  * Command-line interface for executing AWK scripts with validation.

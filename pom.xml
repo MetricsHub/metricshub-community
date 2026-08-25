@@ -319,9 +319,9 @@
 				<version>2.0.00</version>
 			</dependency>
 			<dependency>
-				<groupId>org.metricshub</groupId>
+				<groupId>io.jawk</groupId>
 				<artifactId>jawk</artifactId>
-				<version>5.0.00</version>
+				<version>7.1.01</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>

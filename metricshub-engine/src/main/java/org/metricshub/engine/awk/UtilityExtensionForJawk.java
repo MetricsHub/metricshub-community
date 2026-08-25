@@ -21,6 +21,12 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.jawk.ext.AbstractExtension;
+import io.jawk.ext.JawkExtension;
+import io.jawk.ext.annotations.JawkAssocArray;
+import io.jawk.ext.annotations.JawkFunction;
+import io.jawk.jrt.AssocArray;
+import io.jawk.jrt.JRT;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -28,12 +34,6 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
-import org.metricshub.jawk.ext.AbstractExtension;
-import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.ext.annotations.JawkAssocArray;
-import org.metricshub.jawk.ext.annotations.JawkFunction;
-import org.metricshub.jawk.jrt.AssocArray;
-import org.metricshub.jawk.jrt.JRT;
 
 /**
  * This class implements the {@link JawkExtension} contract
@@ -144,20 +144,23 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 
 	/**
 	 * Joins strings with a separator.
+	 * <p>
+	 * Parameters are declared as {@link Object} because Jawk hands scalars over as its own runtime types, not
+	 * necessarily as {@link String}: a field such as <code>$1</code> arrives as a numeric string instance.
 	 *
 	 * @param sep separator to place between parts
-	 * @param parts String elements to be joined
+	 * @param parts elements to be joined
 	 * @return All parts joined with separator
 	 */
 	@JawkFunction("join")
-	public String join(String sep, String... parts) {
+	public String join(Object sep, Object... parts) {
 		if (parts == null || parts.length == 0) {
 			return "";
 		}
-		String actualSep = sep == null ? "" : sep;
-		StringBuilder result = new StringBuilder(parts[0]);
+		final String actualSep = sep == null ? "" : toAwkString(sep);
+		final StringBuilder result = new StringBuilder(parts[0] == null ? "" : toAwkString(parts[0]));
 		for (int i = 1; i < parts.length; i++) {
-			result.append(actualSep).append(parts[i] == null ? "" : parts[i]);
+			result.append(actualSep).append(parts[i] == null ? "" : toAwkString(parts[i]));
 		}
 		return result.toString();
 	}
@@ -165,16 +168,19 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 	/**
 	 * Encodes the given input string to its Base64 representation.
 	 * If the input is null, it returns an empty string.
+	 * <p>
+	 * The parameter is declared as {@link Object} because Jawk hands scalars over as its own runtime types, not
+	 * necessarily as {@link String}: a field such as <code>$1</code> arrives as a numeric string instance.
 	 *
-	 * @param input the input string to be encoded
+	 * @param input the input to be encoded
 	 * @return the Base64 encoded string, or an empty string if the input is null
 	 */
 	@JawkFunction("base64Encode")
-	public String base64Encode(final String input) {
+	public String base64Encode(final Object input) {
 		if (input == null) {
 			return "";
 		}
-		return Base64.getEncoder().encodeToString(input.getBytes(StandardCharsets.UTF_8));
+		return Base64.getEncoder().encodeToString(toAwkString(input).getBytes(StandardCharsets.UTF_8));
 	}
 
 	/**

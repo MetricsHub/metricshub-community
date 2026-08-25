@@ -229,8 +229,9 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 	 * @return String value
 	 */
 	private String replaceSourceReference(final String value, final Compute compute) {
-		// Null check
-		if (value == null) {
+		// The reference is protected for the Awk compute: it declares variables that it resolves itself, into a table
+		// rather than into CSV text
+		if (value == null || compute instanceof Awk) {
 			return value;
 		}
 

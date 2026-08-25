@@ -1,0 +1,38 @@
+---
+connector:
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: wbem
+      query: testQuery
+      namespace: testNamespace
+      expectedResult: testExpectedResult
+      errorMessage: testErrorMessage
+      forceSerialization: true
+
+monitors:
+  enclosure:
+    discovery:
+      sources:
+        source(1):
+          type: wbem
+          query: SELECT __PATH,Model FROM EMC_ArrayChassis
+          namespace: root/emc
+        source(2):
+          type: awk
+          variables:
+            chassis: ${source::monitors.enclosure.discovery.sources.source(1)}
+          script: |
+            BEGIN { print chassis[0][0] ";" }
+        source(3):
+          type: awk
+          input: ${source::monitors.enclosure.discovery.sources.source(2)}
+          script: |
+            { print $1 ";" }
+      mapping:
+        source: ${source::monitors.enclosure.discovery.sources.source(3)}
+        attributes:
+          id: $1
+          parent: ""
+          name: $1
+          type: Storage

@@ -27,10 +27,12 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL2;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSour
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
@@ -60,6 +63,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -659,5 +663,63 @@ class SourceUpdaterProcessorTest {
 			).process(source),
 			"Processing JMX source did not return expected result."
 		);
+	}
+
+	/**
+	 * The variables of an Awk source go through every reference replacement except the source one: a resource attribute
+	 * or a monitor attribute is resolved here, while a source reference is left for the Awk layer, which exposes the
+	 * referenced source as an array rather than as CSV text.
+	 */
+	@Test
+	void testProcessJawkSourceVariables() {
+		final String otherSourceRef = "${source::monitors.enclosure.discovery.sources.other}";
+
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(LOCALHOST)
+					.hostId(LOCALHOST)
+					.hostType(DeviceKind.LINUX)
+					.attributes(Map.of("host.name", "my-host", "host.type", "linux"))
+					.build()
+			)
+			.build();
+
+		final Map<String, String> variables = new LinkedHashMap<>();
+		variables.put("hostname", "${resource.attribute::host.name}");
+		variables.put("hostType", "${resource.attribute::host.type}");
+		variables.put("monitorId", "${attribute::id}");
+		variables.put("aTable", otherSourceRef);
+
+		final JawkSource jawkSource = JawkSource.builder()
+			.type("awk")
+			.key("${source::monitors.enclosure.discovery.sources.awk}")
+			.script("BEGIN { print hostname }")
+			.variables(variables)
+			.build();
+
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(JawkSource.class));
+
+		new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
+		).process(jawkSource);
+
+		final ArgumentCaptor<JawkSource> captor = ArgumentCaptor.forClass(JawkSource.class);
+		verify(sourceProcessor).process(captor.capture());
+
+		final Map<String, String> expected = new LinkedHashMap<>();
+		expected.put("hostname", "my-host");
+		expected.put("hostType", "linux");
+		expected.put("monitorId", MONITOR_ID_ATTRIBUTE_VALUE);
+		expected.put("aTable", otherSourceRef);
+
+		assertEquals(expected, captor.getValue().getVariables());
+
+		// The original source must not have been mutated: the updater works on a copy
+		assertEquals("${resource.attribute::host.name}", jawkSource.getVariables().get("hostname"));
 	}
 }
