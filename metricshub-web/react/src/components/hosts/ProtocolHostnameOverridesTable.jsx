@@ -155,6 +155,20 @@ const ProtocolHostnameOverridesTable = ({
 	const slots = React.useMemo(() => deriveOverrideSlots(value, hostNames), [value, hostNames]);
 	const configuredCount = slots.filter(Boolean).length;
 
+	// Latest slots in a ref so the per-row change handler stays referentially
+	// stable and memoized rows only re-render when their own cell changes.
+	const slotsRef = React.useRef(slots);
+	slotsRef.current = slots;
+
+	// The row being edited stays mounted even when its override stops matching
+	// the search (typing a replacement must not unmount the focused input), and
+	// it renders the raw typed text instead of the derived slot: deriveOverrideSlots
+	// collapses a slot equal to its own host.name entry back to blank, which would
+	// wipe the cell the moment the typed value passes through the host entry
+	// itself — making a longer name ("host12" over "host1") impossible to type.
+	const [editingIndex, setEditingIndex] = React.useState(/** @type {number | null} */ (null));
+	const [editingValue, setEditingValue] = React.useState("");
+
 	// Hosts sharing one effective collection hostname get a per-row warning and
 	// a clickable count chip that filters the table down to just those rows.
 	const duplicateGroups = React.useMemo(
@@ -190,18 +204,23 @@ const ProtocolHostnameOverridesTable = ({
 	const hostNamesKey = hostNames.join(" ");
 	React.useEffect(() => {
 		setDuplicateSnapshot(null);
+		// The in-progress raw text is bound to a row index too: drop it as well
+		// rather than let it bleed onto whatever host now sits at that index.
+		setEditingIndex(null);
 	}, [hostNamesKey]);
 
-	// Latest slots in a ref so the per-row change handler stays referentially
-	// stable and memoized rows only re-render when their own cell changes.
-	const slotsRef = React.useRef(slots);
-	slotsRef.current = slots;
+	const handleSlotFocus = React.useCallback((index) => {
+		setEditingIndex(index);
+		setEditingValue(slotsRef.current[index] || "");
+	}, []);
+	const handleSlotBlur = React.useCallback(() => setEditingIndex(null), []);
 
 	const handleSlotChange = React.useCallback(
 		(index, raw) => {
 			// Hostnames never contain whitespace, and `,`/`;` are the multi-value
 			// separators of the stored configuration: block all three at input.
 			const sanitized = raw.replace(/[;,\s]/g, "");
+			setEditingValue(sanitized);
 			const next = [...slotsRef.current];
 			next[index] = sanitized;
 			onChange(next);
@@ -211,12 +230,6 @@ const ProtocolHostnameOverridesTable = ({
 
 	const needle = query.trim().toLowerCase();
 	const filteredView = Boolean(needle) || showDuplicatesOnly;
-
-	// The row being edited stays mounted even when its override stops matching
-	// the search (typing a replacement must not unmount the focused input).
-	const [editingIndex, setEditingIndex] = React.useState(/** @type {number | null} */ (null));
-	const handleSlotFocus = React.useCallback((index) => setEditingIndex(index), []);
-	const handleSlotBlur = React.useCallback(() => setEditingIndex(null), []);
 
 	const handleSlotPaste = React.useCallback(
 		(index, event) => {
@@ -241,6 +254,8 @@ const ProtocolHostnameOverridesTable = ({
 					next[index + offset] = token;
 				});
 			}
+			// The pasted-into row holds the focus, so its raw text drives the cell.
+			setEditingValue(next[index] || "");
 			onChange(next);
 		},
 		[filteredView, onChange],
@@ -368,7 +383,7 @@ const ProtocolHostnameOverridesTable = ({
 									key={index}
 									index={index}
 									hostEntry={hostEntry}
-									slotValue={slots[index] || ""}
+									slotValue={index === editingIndex ? editingValue : slots[index] || ""}
 									duplicateTitle={duplicateTitles.get(index) || ""}
 									onSlotChange={handleSlotChange}
 									onSlotPaste={handleSlotPaste}
