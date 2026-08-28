@@ -15,7 +15,9 @@ import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.Map;
 import org.apache.velocity.runtime.RuntimeConstants.SpaceGobbling;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,7 +45,36 @@ class VelocityConfigurationLoaderTest {
 		#end
 		""";
 
-	@AfterEach
+	/**
+	 * Value the test JVM was launched with, if any.
+	 */
+	private static String originalSpaceGobbling;
+
+	@BeforeAll
+	static void captureSpaceGobblingProperty() {
+		originalSpaceGobbling = System.getProperty(SPACE_GOBBLING_PROPERTY);
+	}
+
+	/**
+	 * Restores the value the test JVM was launched with, so that this class does not
+	 * leak its own settings to the test classes running after it.
+	 */
+	@AfterAll
+	static void restoreSpaceGobblingProperty() {
+		if (originalSpaceGobbling == null) {
+			System.clearProperty(SPACE_GOBBLING_PROPERTY);
+		} else {
+			System.setProperty(SPACE_GOBBLING_PROPERTY, originalSpaceGobbling);
+		}
+	}
+
+	/**
+	 * Starts every test from the same state: the property is absent unless the test
+	 * sets it itself, whatever the test JVM was launched with. Without this, running
+	 * the build with {@code -Dparser.space_gobbling=none} would make the outcome of
+	 * this class depend on the execution order.
+	 */
+	@BeforeEach
 	void clearSpaceGobblingProperty() {
 		System.clearProperty(SPACE_GOBBLING_PROPERTY);
 	}
