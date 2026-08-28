@@ -210,6 +210,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				.hostname(hostname)
 				.clientsExecutor(clientsExecutor)
 				.telemetryManager(telemetryManager)
+				.attributes(attributes)
 				.build();
 
 			final ComputeUpdaterProcessor computeUpdaterProcessor = ComputeUpdaterProcessor.builder()
@@ -283,6 +284,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			.clientsExecutor(clientsExecutor)
 			.telemetryManager(telemetryManager)
 			.extensionManager(extensionManager)
+			.attributes(attributes)
 			.build();
 
 		final Supplier<SourceTable> executable = () ->

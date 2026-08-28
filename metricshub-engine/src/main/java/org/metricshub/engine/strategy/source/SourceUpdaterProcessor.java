@@ -782,6 +782,17 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return String value
 	 */
 	public String replaceProtocolPropertyReferences(final String key) {
+		return replaceProtocolPropertyReferences(key, telemetryManager);
+	}
+
+	/**
+	 * Replaces <code>${protocol::PROPERTY}</code> references using the given telemetry manager.
+	 *
+	 * @param key              the value to update
+	 * @param telemetryManager the telemetry manager holding the configurations
+	 * @return String value
+	 */
+	public static String replaceProtocolPropertyReferences(final String key, final TelemetryManager telemetryManager) {
 		if (key == null) {
 			return key;
 		}

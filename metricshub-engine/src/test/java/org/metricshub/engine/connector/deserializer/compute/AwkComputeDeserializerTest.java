@@ -27,7 +27,17 @@ class AwkComputeDeserializerTest extends DeserializerTest {
 		final Connector connector = getConnector("awk");
 
 		final List<Compute> computes = new ArrayList<>();
-		computes.add(Awk.builder().type("awk").script("scriptTest").keep("keepTest").exclude("excludeTest").build());
+		computes.add(
+			Awk.builder()
+				.type("awk")
+				.script("scriptTest")
+				.keep("keepTest")
+				.exclude("excludeTest")
+				.variables(
+					new LinkedHashMap<>(Map.of("FS", ";", "someConstant", "365.25", "aTable", "${source::beforeAll.otherSource}"))
+				)
+				.build()
+		);
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -83,10 +84,12 @@ class JawkSourceExtensionTest {
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		// Http request & Json2CSV
+		// Http request & Json2CSV.
+		// The input arrives already resolved: SourceUpdaterProcessor replaces its source references before the source
+		// reaches this extension, so the test passes the content that ${source::...source_one} resolves to.
 		final Source source = JawkSource.builder()
 			.type("Awk")
-			.input("${source::monitors.system.discovery.sources.source_one}")
+			.input(SourceTable.tableToCsv(tableOne, ";", false))
 			.script(
 				"""
 					BEGIN {
@@ -349,5 +352,196 @@ class JawkSourceExtensionTest {
 		final JawkSourceExtension jawkExtension = new JawkSourceExtension();
 		assertFalse(jawkExtension.isValidSource(new IpmiSource()));
 		assertTrue(jawkExtension.isValidSource(new JawkSource()));
+	}
+
+	/**
+	 * A variable whose value is a source reference is exposed to the script as an array of rows, addressed as
+	 * <code>myVariable[row][column]</code> with zero-based indexes.
+	 */
+	@Test
+	void testProcessSourceWithSourceTableVariable() {
+		final List<List<String>> table = Arrays.asList(Arrays.asList("FOO", "1", "2"), Arrays.asList("BAR", "10", "20"));
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().table(table).build());
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			// No input: the script reads everything from the variable
+			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.source_one}"))
+			.script(
+				"""
+					BEGIN {
+					    for (row = 0; row < length(aTable); row++) {
+					        print aTable[row][0] ";" aTable[row][2] ";"
+					    }
+					}
+				"""
+			)
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Arrays.asList(Arrays.asList("FOO", "2"), Arrays.asList("BAR", "20")), result.getTable());
+	}
+
+	/**
+	 * A variable whose value is not a source reference is exposed as a scalar, which also covers the AWK special
+	 * variables such as FS.
+	 */
+	@Test
+	void testProcessSourceWithScalarVariables() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().rawData("unused").build());
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.input("a|b|c")
+			.variables(Map.of("FS", "|", "someConstant", "365.25"))
+			.script("{ print $2 \";\" someConstant * 2 \";\" }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Collections.singletonList(Arrays.asList("b", "730.5")), result.getTable());
+	}
+
+	/**
+	 * A variable referencing a source that was never computed must not fail the whole source: the variable is exposed
+	 * as an empty array.
+	 */
+	@Test
+	void testProcessSourceWithUnknownSourceVariable() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().rawData("unused").build());
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.unknown}"))
+			.script("BEGIN { print \"rows=\" length(aTable) \";\" }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Collections.singletonList(Collections.singletonList("rows=0")), result.getTable());
+	}
+
+	/**
+	 * A source holding only raw data is parsed as a semicolon-separated table before being exposed.
+	 */
+	@Test
+	void testProcessSourceWithRawDataVariable() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(
+			SourceTable.builder().rawData("alpha;beta;gamma").build()
+		);
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.source_one}"))
+			.script("BEGIN { print length(aTable) \";\" aTable[0][1] \";\" }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(Collections.singletonList(Arrays.asList("1", "beta")), result.getTable());
+	}
+
+	/**
+	 * Every reference kind resolves inside a variable, in the one pass AwkVariableHelper performs: the resource
+	 * attribute, the mono-instance monitor attribute, and the source reference that becomes an array.
+	 */
+	@Test
+	void testProcessSourceResolvesEveryReferenceKindInVariables() {
+		final List<List<String>> table = Arrays.asList(Arrays.asList("FOO", "1"), Arrays.asList("BAR", "2"));
+
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname("test-host")
+					.hostId("test-host")
+					.attributes(Map.of("host.name", "my-host"))
+					.build()
+			)
+			.build();
+
+		final HostProperties hostProperties = HostProperties.builder().build();
+		hostProperties
+			.getConnectorNamespace(CONNECTOR_ID)
+			.addSourceTable(
+				"${source::monitors.system.discovery.sources.source_one}",
+				SourceTable.builder().table(table).build()
+			);
+		telemetryManager.setHostProperties(hostProperties);
+
+		// The mono-instance attributes travel on the SourceProcessor
+		doReturn(Map.of("id", "monitor-42")).when(sourceProcessorMock).getAttributes();
+
+		final Map<String, String> variables = new LinkedHashMap<>();
+		variables.put("resourceAttr", "${resource.attribute::host.name}");
+		variables.put("monoInstance", "${attribute::id}");
+		variables.put("aTable", "${source::monitors.system.discovery.sources.source_one}");
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.variables(variables)
+			.script(
+				"""
+					BEGIN {
+					    print resourceAttr ";" monoInstance ";" aTable[1][0] ";"
+					}
+				"""
+			)
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(
+			Collections.singletonList(Arrays.asList("my-host", "monitor-42", "BAR")),
+			result.getTable(),
+			"The resource attribute, the mono-instance attribute and the source table must all resolve"
+		);
+	}
+
+	/**
+	 * Build a {@link TelemetryManager} exposing the given source table under the <code>source_one</code> reference.
+	 *
+	 * @param sourceTable The source table to register in the connector namespace.
+	 * @return A new {@link TelemetryManager} instance.
+	 */
+	private static TelemetryManager buildTelemetryManager(final SourceTable sourceTable) {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
+			.build();
+
+		final HostProperties hostProperties = HostProperties.builder().build();
+
+		hostProperties
+			.getConnectorNamespace(CONNECTOR_ID)
+			.addSourceTable("${source::monitors.system.discovery.sources.source_one}", sourceTable);
+
+		telemetryManager.setHostProperties(hostProperties);
+
+		return telemetryManager;
 	}
 }
