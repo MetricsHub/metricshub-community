@@ -29,6 +29,7 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -79,6 +80,11 @@ public class SourceProcessor implements ISourceProcessor {
 	private String connectorId;
 	private ClientsExecutor clientsExecutor;
 	private ExtensionManager extensionManager;
+
+	/**
+	 * Monitor attributes of the current mono-instance collect, used to resolve ${attribute::...} references.
+	 */
+	private Map<String, String> attributes;
 
 	@WithSpan("Source Copy Exec")
 	@Override

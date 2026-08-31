@@ -2,10 +2,10 @@ package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.jawk.jrt.AssocArray;
+import io.jawk.util.AwkSettings;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.metricshub.jawk.jrt.AssocArray;
-import org.metricshub.jawk.util.AwkSettings;
 
 class UtilityExtensionForJawkTest {
 
@@ -96,39 +96,75 @@ class UtilityExtensionForJawkTest {
 		assertEquals("", UNDER_TEST.megaHertz2HumanFormat(null), "Should return empty string for null input");
 	}
 
+	/**
+	 * Driven through the AWK dispatch path rather than by calling the Java method directly: {@code join} converts its
+	 * arguments with {@code toAwkString}, which needs the runtime a real interpreter supplies.
+	 */
 	@Test
-	void testJoin() {
-		assertEquals("a/b/c/d", UNDER_TEST.join("/", "a", "b", "c", "d"), "Should join strings with '/' as separator");
-		assertEquals("", UNDER_TEST.join("/"), "Should return empty string when no elements provided");
-		assertEquals("a", UNDER_TEST.join("/", "a"), "Should return single element unchanged");
+	void testJoin() throws AwkException {
+		assertEquals(
+			"a/b/c/d",
+			AwkExecutor.evalAwk("join(\"/\", \"a\", \"b\", \"c\", \"d\")", ""),
+			"Should join strings with '/' as separator"
+		);
+		assertEquals("", AwkExecutor.evalAwk("join(\"/\")", ""), "Should return empty string when no elements provided");
+		assertEquals("a", AwkExecutor.evalAwk("join(\"/\", \"a\")", ""), "Should return single element unchanged");
 		assertEquals(
 			"abcd",
-			UNDER_TEST.join(null, "a", "b", "c", "d"),
-			"Should concatenate without separator when null separator provided"
+			AwkExecutor.evalAwk("join(unset, \"a\", \"b\", \"c\", \"d\")", ""),
+			"Should concatenate without separator when the separator is unset"
 		);
-		assertEquals("a-_-b", UNDER_TEST.join("-_-", "a", "b"), "Should use custom separator '-_-'");
-		assertEquals("", UNDER_TEST.join(null), "Should return empty string when both separator and inputs are null");
+		assertEquals("a-_-b", AwkExecutor.evalAwk("join(\"-_-\", \"a\", \"b\")", ""), "Should use custom separator '-_-'");
+		assertEquals(
+			"",
+			AwkExecutor.evalAwk("join(unset)", ""),
+			"Should return empty string when both separator and inputs are unset"
+		);
 	}
 
+	/**
+	 * Driven through the AWK dispatch path rather than by calling the Java method directly: {@code base64Encode}
+	 * converts its argument with {@code toAwkString}, which needs the runtime a real interpreter supplies.
+	 */
 	@Test
-	void testBase64Encode() {
-		assertEquals("SGVsbG8gV29ybGQh", UNDER_TEST.base64Encode("Hello World!"), "Standard Base64 encoding");
-		assertEquals("", UNDER_TEST.base64Encode(""), "Empty string should return empty string");
-		assertEquals("", UNDER_TEST.base64Encode(null), "Null input should return empty string");
+	void testBase64Encode() throws AwkException {
+		assertEquals(
+			"SGVsbG8gV29ybGQh",
+			AwkExecutor.evalAwk("base64Encode(\"Hello World!\")", ""),
+			"Standard Base64 encoding"
+		);
+		assertEquals("", AwkExecutor.evalAwk("base64Encode(\"\")", ""), "Empty string should return empty string");
+		assertEquals("", AwkExecutor.evalAwk("base64Encode(unset)", ""), "Unset input should return empty string");
 	}
 
 	@Test
 	void testAsorti() {
-		AssocArray src = new AssocArray(false);
+		AssocArray src = AssocArray.create(false);
 		src.put("z", 1);
 		src.put("b", 1);
 		src.put("a", 1);
 
-		AssocArray dest = new AssocArray(false);
+		AssocArray dest = AssocArray.create(false);
 		final int n = UNDER_TEST.asorti(src, dest);
 		assertEquals(3, n, "Should return the number of keys");
 		assertEquals("a", dest.get("1"), "First key should be 'a'");
 		assertEquals("b", dest.get("2"), "Second key should be 'b'");
 		assertEquals("z", dest.get("3"), "Third key should be 'z'");
+	}
+
+	/**
+	 * Every function must also be callable <em>from an AWK script</em> with field arguments, not only from Java with
+	 * String arguments. Jawk hands scalars over as its own runtime types, so a function declaring a
+	 * <code>String</code> parameter fails with "argument type mismatch" on <code>$1</code> even though a direct Java
+	 * call with a String succeeds.
+	 */
+	@Test
+	void testFunctionsAreCallableWithAwkFields() throws AwkException {
+		assertEquals("1.00 GiB", AwkExecutor.evalAwk("bytes2HumanFormatBase2($1)", "1073741824;x"));
+		assertEquals("1.00 GB", AwkExecutor.evalAwk("bytes2HumanFormatBase10($1)", "1000000000;x"));
+		assertEquals("1.00 TiB", AwkExecutor.evalAwk("mebiBytes2HumanFormat($1)", "1048576;x"));
+		assertEquals("4.00 GHz", AwkExecutor.evalAwk("megaHertz2HumanFormat($1)", "4000;x"));
+		assertEquals("a b c", AwkExecutor.evalAwk("join(\" \", $1, $2, $3)", "a;b;c"));
+		assertEquals("aGVsbG8=", AwkExecutor.evalAwk("base64Encode($1)", "hello;x"));
 	}
 }

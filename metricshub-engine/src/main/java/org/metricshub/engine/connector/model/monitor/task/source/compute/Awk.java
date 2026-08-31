@@ -22,12 +22,15 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  */
 
 import static com.fasterxml.jackson.annotation.Nulls.FAIL;
+import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
@@ -72,6 +75,15 @@ public class Awk extends Compute {
 	private String selectColumns;
 
 	/**
+	 * The variables to expose to the AWK script, indexed by variable name.
+	 * <p>
+	 * A value referencing a source, such as <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed to
+	 * the script as an AWK array holding that source's table. Any other value is exposed as a scalar.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private Map<String, String> variables = new LinkedHashMap<>();
+
+	/**
 	 * Construct a new instance of Awk.
 	 *
 	 * @param type          The type of the computation task.
@@ -80,6 +92,7 @@ public class Awk extends Compute {
 	 * @param keep          The keep parameter for the AWK task.
 	 * @param separators    The separators parameter for the AWK task.
 	 * @param selectColumns The selectColumns parameter for the AWK task.
+	 * @param variables     The variables to expose to the AWK script.
 	 */
 	@Builder
 	@JsonCreator
@@ -89,7 +102,8 @@ public class Awk extends Compute {
 		@JsonProperty("exclude") String exclude,
 		@JsonProperty("keep") String keep,
 		@JsonProperty("separators") String separators,
-		@JsonProperty("selectColumns") String selectColumns
+		@JsonProperty("selectColumns") String selectColumns,
+		@JsonProperty("variables") Map<String, String> variables
 	) {
 		super(type);
 		this.script = script;
@@ -97,6 +111,7 @@ public class Awk extends Compute {
 		this.keep = keep;
 		this.separators = separators;
 		this.selectColumns = selectColumns;
+		this.variables = variables == null ? new LinkedHashMap<>() : variables;
 	}
 
 	@Override
@@ -110,6 +125,7 @@ public class Awk extends Compute {
 		addNonNull(stringJoiner, "- keep=", keep);
 		addNonNull(stringJoiner, "- separators=", separators);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
+		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
 
 		return stringJoiner.toString();
 	}
@@ -123,6 +139,7 @@ public class Awk extends Compute {
 			.keep(keep)
 			.separators(separators)
 			.selectColumns(selectColumns)
+			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
 			.build();
 	}
 
@@ -133,6 +150,8 @@ public class Awk extends Compute {
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);
 		selectColumns = updater.apply(selectColumns);
+		// The variables are deliberately not updated here: every reference they hold, source references included,
+		// is resolved in one pass by AwkVariableHelper just before the script runs
 	}
 
 	@Override

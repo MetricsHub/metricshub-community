@@ -42,6 +42,7 @@ This is the page your example URL opens. It is a **single scrollable page** with
 | `HostConfigBasicsSection.jsx` (ex `HostWizardBasicsStep`) | First section: resource identity and placement — host id, hostname(s), host type, resource group. |
 | `HostProtocolConfigStep.jsx` | One section per selected protocol; looks up the protocol's field list in `PROTOCOL_FIELDS` and delegates to `ProtocolConfigForm`. |
 | `ProtocolConfigForm.jsx` (ex `GenericProtocolConfigForm`) | Renders a protocol's configuration fields from its declarative definition (username, password, port, timeout, transport, …) including the Advanced accordion (hostname override, namespace, retry intervals, …). |
+| `ProtocolHostnameOverridesTable.jsx` | Inline searchable mapping table for the hostname override of a multi-host resource: one row per `host.name` entry (positional, resource order), an always-editable override cell per row (blank = use the host.name entry), display-only search. Backed by `utils/host-name-overrides.js`. |
 | `ProtocolSelectionGrid.jsx` | Multi-select chip grid to choose which protocols to configure (SSH, SNMP, WMI, …), filtered by host type compatibility. |
 | `HostConfigConnectorsSection.jsx` (ex `HostWizardConnectorsStep`) | The connectors section: automatic detection vs. manual selection, searchable connector DataGrid with category tabs, directive chips (`+force`, `!exclude`, `#tag`), a Code view for editing directives as text, and "additional connector" instances for connectors with variables. |
 | `ConnectorConfigurationDialog.jsx` | Dialog to create/edit one *additional connector* instance: instance id, template (`uses`), force/select mode, and connector variable values. |
@@ -71,6 +72,7 @@ This is the page your example URL opens. It is a **single scrollable page** with
 | `hooks/use-hosts-protocol-health.js` + `utils/host-protocol-health.js` | Polls the backend for per-host protocol health (`host.up` style metrics) and exposes it to the browse views/edit panel as chip statuses. |
 | `utils/password-encrypt.js` | Client-side orchestration of password encryption: finds password-type fields per protocol via `PROTOCOL_FIELDS` and calls the backend encrypt endpoint on save. |
 | `utils/alphabetic-sort.js` | Locale-aware comparison (`compareLocale`) and connector-summary sorting used everywhere lists are sorted. |
+| `utils/host-name-overrides.js` | Positional (non-deduplicating) helpers for the multi-host protocol hostname override: split/align slots to the `host.name` entries, blank-fill the payload array (`buildProtocolHostnamePayload`), and realign overrides when host.name entries change. Unit-tested. |
 
 ## 4. Backend — `org.metricshub.web` (metricshub-agent)
 

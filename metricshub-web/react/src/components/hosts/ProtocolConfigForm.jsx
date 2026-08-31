@@ -2,7 +2,6 @@ import * as React from "react";
 import {
 	Box,
 	Button,
-	Chip,
 	Collapse,
 	FormControl,
 	FormControlLabel,
@@ -20,8 +19,7 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeferredPasswordEncryptAlert from "./DeferredPasswordEncryptAlert";
-import { getHostNames } from "./host-config-utils";
-import { HostnamesChipField } from "./HostNameChipInput";
+import ProtocolHostnameOverridesTable from "./ProtocolHostnameOverridesTable";
 import ProtocolPasswordField from "./ProtocolPasswordField";
 import {
 	filledInputNoLabelSx,
@@ -62,7 +60,7 @@ import {
  * @param {(field: import("./protocol-definitions").ProtocolField) => boolean} props.isRequired
  * @param {boolean} [props.allowPasswordReveal]
  * @param {boolean} [props.deferEncryptUntilSave]
- * @param {number} [props.hostNameCount] number of resource host.name entries; above 1 the protocol hostname accepts one value per host
+ * @param {string[]} [props.hostNames] resource host.name entries, in resource order; above 1 the protocol hostname maps one value per host
  */
 const ProtocolConfigForm = ({
 	protocol,
@@ -73,7 +71,7 @@ const ProtocolConfigForm = ({
 	isRequired,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
-	hostNameCount = 0,
+	hostNames = [],
 }) => {
 	const transportLinkedPort = hasTransportLinkedPort(protocol);
 
@@ -166,42 +164,28 @@ const ProtocolConfigForm = ({
 		if (field.type === "textarea") {
 			return renderTextareaField(field);
 		}
-		if (field.name === "hostname" && hostNameCount > 1) {
+		if (field.name === "hostname" && hostNames.length > 1) {
 			return renderMultiHostnameField(field);
 		}
 		return renderTextField(field);
 	};
 
-	/** Chip input mirroring host.name: one collection hostname per configured host. */
+	/** Mapping table mirroring host.name: one collection hostname per configured host. */
 	const renderMultiHostnameField = (field) => {
 		const error = errors[field.name];
-		const configuredCount = getHostNames(values[field.name]).length;
 
 		return (
-			<Box key={field.name}>
-				<ProtocolFieldLabelRow
-					label={field.label}
-					required={showRequiredMarker(field)}
-					description="One hostname per host.name entry."
-					helpTooltip={fieldHelpTooltip(field)}
-					trailing={
-						<Chip
-							size="small"
-							color={configuredCount === hostNameCount ? "primary" : "default"}
-							variant="outlined"
-							label={`${configuredCount}/${hostNameCount} configured`}
-							sx={{ fontWeight: 600 }}
-						/>
-					}
-				/>
-				<HostnamesChipField
-					value={values[field.name] ?? ""}
-					onChange={(next) => onChange(field.name, next)}
-					error={Boolean(error)}
-					helperText={fieldErrorText(field.name)}
-					textFieldProps={{ ...protocolTextFieldProps, fullWidth: true }}
-				/>
-			</Box>
+			<ProtocolHostnameOverridesTable
+				key={field.name}
+				hostNames={hostNames}
+				value={values[field.name] ?? ""}
+				onChange={(next) => onChange(field.name, next)}
+				label={field.label}
+				required={showRequiredMarker(field)}
+				helpTooltip={fieldHelpTooltip(field)}
+				error={Boolean(error)}
+				helperText={fieldErrorText(field.name)}
+			/>
 		);
 	};
 

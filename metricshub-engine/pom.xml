@@ -35,7 +35,7 @@
 			<artifactId>spring-context</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.metricshub</groupId>
+			<groupId>io.jawk</groupId>
 			<artifactId>jawk</artifactId>
 		</dependency>
 		<dependency>

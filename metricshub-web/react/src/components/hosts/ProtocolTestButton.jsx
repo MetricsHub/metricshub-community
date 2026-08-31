@@ -2,6 +2,7 @@ import * as React from "react";
 import { Alert, Button, CircularProgress, Stack } from "@mui/material";
 import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
 import { getHostNames } from "./host-config-utils";
+import { alignHostnameOverrides } from "../../utils/host-name-overrides";
 import { PROTOCOL_OPTIONS } from "./protocol-definitions";
 import { runProtocolCheck } from "./protocol-test";
 import ProtocolTestHostnameDialog from "./ProtocolTestHostnameDialog";
@@ -91,8 +92,15 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 
 	// Protocol-level hostnames override the resource ones: they are the hosts actually contacted.
 	const candidateHostnames = React.useMemo(() => {
-		const protocolHostnames = getHostNames(protocolValues?.hostname);
-		return protocolHostnames.length > 0 ? protocolHostnames : getHostNames(hostName);
+		const resourceHostnames = getHostNames(hostName);
+		if (resourceHostnames.length <= 1) {
+			const protocolHostnames = getHostNames(protocolValues?.hostname);
+			return protocolHostnames.length > 0 ? protocolHostnames : resourceHostnames;
+		}
+		// Effective per-host targets: a blank override falls back to its host.name
+		// entry; duplicates collapse (the dialog list is keyed by hostname).
+		const slots = alignHostnameOverrides(protocolValues?.hostname, resourceHostnames.length);
+		return getHostNames(slots.map((slot, index) => slot || resourceHostnames[index]));
 	}, [protocolValues?.hostname, hostName]);
 
 	const handleTestClick = () => {

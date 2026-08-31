@@ -1,5 +1,9 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { getHostNames, normalizeHostNameValue } from "../../utils/host-names";
+import { getHostNames } from "../../utils/host-names";
+import {
+	buildProtocolHostnamePayload,
+	splitHostnameOverrides,
+} from "../../utils/host-name-overrides";
 
 /** @typedef {'text' | 'password' | 'number' | 'boolean' | 'select' | 'radio' | 'authChoice' | 'modeChoice'} FieldType */
 
@@ -85,12 +89,24 @@ export const HOST_TYPE_LABELS = {
 	linux: "Linux",
 	network: "Network",
 	oob: "OOB",
+	other: "Other",
 	solaris: "Solaris",
 	storage: "Storage",
 	windows: "Windows",
 };
 
-export const HOST_TYPES = Object.keys(HOST_TYPE_LABELS).sort(compareLocale);
+/** Catch-all host.type key, always offered last in the form select. */
+export const HOST_TYPE_OTHER = "other";
+
+/**
+ * Selectable host.type keys: concrete platforms A–Z, then the "other" catch-all.
+ */
+export const HOST_TYPES = [
+	...Object.keys(HOST_TYPE_LABELS)
+		.filter((hostType) => hostType !== HOST_TYPE_OTHER)
+		.sort(compareLocale),
+	HOST_TYPE_OTHER,
+];
 
 /**
  * @param {string} [hostType]
@@ -927,9 +943,11 @@ const parseStringList = (value) => {
 /**
  * @param {string} protocol
  * @param {Record<string, unknown>} values
+ * @param {{ hostNames?: string[] }} [options] resource host.name entries, in resource
+ *   order, so a multi-host hostname override is emitted index-aligned and blank-filled
  * @returns {Record<string, unknown>}
  */
-export const buildProtocolConfigFromForm = (protocol, values) => {
+export const buildProtocolConfigFromForm = (protocol, values, options = {}) => {
 	const raw = { ...values };
 	/** @type {Record<string, unknown>} */
 	const config = {};
@@ -1090,8 +1108,9 @@ export const buildProtocolConfigFromForm = (protocol, values) => {
 			break;
 	}
 
-	// Multi-valued hostnames (one per host.name entry) are written as an array, like host.name.
-	setIfPresent("hostname", normalizeHostNameValue(raw.hostname));
+	// Multi-host resources get a full-length array (one entry per host.name entry, in
+	// order, blanks replaced by the host.name entry itself); duplicates are preserved.
+	setIfPresent("hostname", buildProtocolHostnamePayload(raw.hostname, options.hostNames || []));
 
 	return config;
 };
@@ -1338,17 +1357,16 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 		}
 	}
 
-	// When set, the protocol hostname must define exactly one value per host.name entry:
-	// values are matched by position (see PostConfigDeserializer.normalizeProtocolHostnames).
+	// No count check on the multi-host hostname override: the mapping table emits
+	// full-length arrays, blank slots fall back to the host.name entry at payload
+	// build, and legacy shorter lists keep the agent's clamp-to-last semantics.
+	// A single-host resource, however, takes exactly one override value — the
+	// payload builder would otherwise silently keep only the first entry.
 	{
-		const protocolHostnameCount = getHostNames(protocolConfig.hostname).length;
 		const resourceHostnameCount = getHostNames(options.hostName).length;
-		if (
-			protocolHostnameCount > 0 &&
-			resourceHostnameCount > 0 &&
-			protocolHostnameCount !== resourceHostnameCount
-		) {
-			errors.hostname = `Define one hostname per host.name entry (${resourceHostnameCount} expected, ${protocolHostnameCount} configured)`;
+		const overrideCount = splitHostnameOverrides(protocolConfig.hostname).filter(Boolean).length;
+		if (resourceHostnameCount <= 1 && overrideCount > 1) {
+			errors.hostname = "Define a single hostname (this resource has one host.name entry)";
 		}
 	}
 

@@ -71,7 +71,7 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.metricshub</groupId>
+			<groupId>io.jawk</groupId>
 			<artifactId>jawk</artifactId>
 		</dependency>
 	</dependencies>
@@ -164,7 +164,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.metricshub:jawk</include>
+									<include>io.jawk:jawk</include>
 									<include>org.metricshub:metricshub-jawk-extension</include>
 								</includes>
 								<excludes>

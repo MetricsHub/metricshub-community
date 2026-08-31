@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
 	annotateConnectorCatalog,
 	applyAdditionalConnectorsChange,
+	collectCatalogFilterOptions,
 	collectConnectorVariablesErrors,
 	connectorDocumentationUrl,
+	connectorMatchesCatalogFilters,
 	connectorMatchesCategoryTab,
 	connectorMatchesListFilters,
 	dedupeConnectorCatalogById,
@@ -25,6 +27,7 @@ import {
 	shouldDisableConnectorExcludes,
 	upsertConnectorDirective,
 } from "./connector-utils";
+import { HOST_TYPES, formatHostTypeLabel } from "./protocol-definitions";
 
 const linuxSshConnector = {
 	id: "Linux",
@@ -33,6 +36,29 @@ const linuxSshConnector = {
 	appliesToDisplayNames: ["Linux"],
 	connectionTypes: ["REMOTE"],
 	requiredProtocols: ["ssh"],
+};
+
+/** Tape library connectors moved from Storage to Other in Enterprise Connectors 117. */
+const tapeLibrarySnmpConnector = {
+	id: "DellTL2000",
+	displayName: "Dell PowerVault TL2000/4000 Tape Libraries",
+	appliesToHostTypes: ["other"],
+	appliesToDisplayNames: ["Other"],
+	connectionTypes: ["REMOTE", "LOCAL"],
+	requiredProtocols: ["snmp"],
+	tags: ["hardware", "dell", "storage"],
+	platforms: ["Dell PowerVault"],
+};
+
+const diskArraySnmpConnector = {
+	id: "SomeDiskArray",
+	displayName: "Some Disk Array",
+	appliesToHostTypes: ["storage"],
+	appliesToDisplayNames: ["Storage"],
+	connectionTypes: ["REMOTE"],
+	requiredProtocols: ["snmp"],
+	tags: ["hardware", "storage"],
+	platforms: ["Some Vendor"],
 };
 
 describe("evaluateConnectorCompatibility", () => {
@@ -60,6 +86,61 @@ describe("evaluateConnectorCompatibility", () => {
 			protocols: ["ssh", "ping"],
 		});
 		expect(annotated[0].compatible).toBe(true);
+	});
+});
+
+describe("other host.type", () => {
+	it("offers Other in the guided form host type options", () => {
+		expect(HOST_TYPES).toContain("other");
+	});
+
+	it("offers Other last, after the concrete host types sorted A–Z", () => {
+		expect(HOST_TYPES[HOST_TYPES.length - 1]).toBe("other");
+		const concrete = HOST_TYPES.slice(0, -1);
+		expect(concrete).not.toContain("other");
+		expect(concrete).toEqual([...concrete].sort((a, b) => a.localeCompare(b)));
+	});
+
+	it("labels the other key instead of falling back to the raw value", () => {
+		expect(formatHostTypeLabel("other")).toBe("Other");
+	});
+
+	it("marks an other connector compatible on an other host", () => {
+		const result = evaluateConnectorCompatibility(tapeLibrarySnmpConnector, {
+			hostType: "other",
+			protocols: ["snmp"],
+		});
+		expect(result.compatible).toBe(true);
+		expect(result.incompatibilityReasons).toEqual([]);
+	});
+
+	it("does not reject other as an invalid host.type", () => {
+		const result = evaluateConnectorCompatibility(diskArraySnmpConnector, {
+			hostType: "other",
+			protocols: ["snmp"],
+		});
+		expect(result.compatible).toBe(false);
+		expect(result.incompatibilityReasons[0]).not.toContain("Invalid or missing host.type");
+		expect(result.incompatibilityReasons[0]).toContain("Requires host.type Storage (storage)");
+	});
+
+	it("keeps non-other connectors out of the compatible list on an other host", () => {
+		const annotated = annotateConnectorCatalog(
+			[tapeLibrarySnmpConnector, diskArraySnmpConnector, linuxSshConnector],
+			{ hostType: "other", protocols: ["snmp", "ssh"] },
+		);
+		expect(annotated.filter((item) => item.compatible).map((item) => item.id)).toEqual([
+			"DellTL2000",
+		]);
+	});
+
+	it("exposes other as a catalog host type filter and narrows the popup to it", () => {
+		const catalog = [tapeLibrarySnmpConnector, diskArraySnmpConnector];
+		expect(collectCatalogFilterOptions(catalog).hostTypes).toContain("other");
+		const filters = { hostTypes: new Set(["other"]) };
+		expect(
+			catalog.filter((item) => connectorMatchesCatalogFilters(item, "", filters)).map((i) => i.id),
+		).toEqual(["DellTL2000"]);
 	});
 });
 

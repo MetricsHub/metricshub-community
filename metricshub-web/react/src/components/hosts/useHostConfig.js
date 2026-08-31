@@ -22,6 +22,8 @@ import {
 	saveHostFormSession,
 } from "./host-config-session";
 import { compareLocale } from "../../utils/alphabetic-sort";
+import { getHostNames } from "../../utils/host-names";
+import { realignHostnameOverrides } from "../../utils/host-name-overrides";
 import {
 	annotateConnectorCatalog,
 	applyAdditionalConnectorsChange,
@@ -592,6 +594,28 @@ export const useHostConfig = ({
 	const patchState = React.useCallback((patch) => {
 		setState((prev) => {
 			let next = { ...prev, ...patch };
+			if (patch.hostName !== undefined) {
+				// Multi-host protocol hostname overrides are positional: when host.name
+				// entries are added, removed, or reordered, keep each override with its
+				// host. (Note: hostNameFingerprint sorts names, so a pure reorder is not
+				// flagged dirty even though it rewrites the override arrays — latent.)
+				const prevNames = getHostNames(prev.hostName);
+				const nextNames = getHostNames(next.hostName);
+				const protocols = { ...(next.protocols || {}) };
+				let remapped = false;
+				for (const [protocolId, config] of Object.entries(protocols)) {
+					if (Array.isArray(config?.hostname)) {
+						protocols[protocolId] = {
+							...config,
+							hostname: realignHostnameOverrides(prevNames, nextNames, config.hostname),
+						};
+						remapped = true;
+					}
+				}
+				if (remapped) {
+					next = { ...next, protocols };
+				}
+			}
 			if (patch.hostType !== undefined || patch.selectedProtocols !== undefined) {
 				const filtered = filterSelectedProtocolsForHostType(next.selectedProtocols, next.hostType);
 				next = applySelectedProtocols(next, filtered);

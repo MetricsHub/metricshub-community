@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import DevicesOtherIcon from "@mui/icons-material/DevicesOther";
 import { HOST_TYPE_LABELS } from "./protocol-definitions";
 
 /** @param {string} name */
@@ -27,7 +28,16 @@ const HOST_TYPE_THEMED_ICONS = {
 };
 
 /**
- * Icon for a host.type value: palette-aware OS/brand logos, all in a uniform box.
+ * Host types with no vendor artwork, drawn from an MUI glyph instead. `other` is
+ * a catch-all device kind, so there is no logo to show.
+ */
+const HOST_TYPE_COMPONENT_ICONS = {
+	other: DevicesOtherIcon,
+};
+
+/**
+ * Icon for a host.type value: a palette-aware OS/brand logo when one exists,
+ * otherwise an MUI glyph, always in a uniform box.
  *
  * @param {object} props
  * @param {string} props.hostType
@@ -62,6 +72,19 @@ const HostTypeIcon = ({ hostType, size = 20 }) => {
 						objectFit: "contain",
 						display: "block",
 					}}
+				/>
+			</Box>
+		);
+	}
+
+	const IconComponent = HOST_TYPE_COMPONENT_ICONS[hostType];
+	if (IconComponent) {
+		return (
+			<Box sx={slotSx}>
+				<IconComponent
+					titleAccess={HOST_TYPE_LABELS[hostType] || hostType}
+					// Same treatment as the themed SVGs: brand blue in light mode, white in dark.
+					sx={{ fontSize: size, color: mode === "dark" ? "common.white" : "primary.main" }}
 				/>
 			</Box>
 		);
