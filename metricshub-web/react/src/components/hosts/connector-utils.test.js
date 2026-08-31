@@ -94,6 +94,13 @@ describe("other host.type", () => {
 		expect(HOST_TYPES).toContain("other");
 	});
 
+	it("offers Other last, after the concrete host types sorted A–Z", () => {
+		expect(HOST_TYPES[HOST_TYPES.length - 1]).toBe("other");
+		const concrete = HOST_TYPES.slice(0, -1);
+		expect(concrete).not.toContain("other");
+		expect(concrete).toEqual([...concrete].sort((a, b) => a.localeCompare(b)));
+	});
+
 	it("labels the other key instead of falling back to the raw value", () => {
 		expect(formatHostTypeLabel("other")).toBe("Other");
 	});
