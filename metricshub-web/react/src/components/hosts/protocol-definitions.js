@@ -95,7 +95,18 @@ export const HOST_TYPE_LABELS = {
 	windows: "Windows",
 };
 
-export const HOST_TYPES = Object.keys(HOST_TYPE_LABELS).sort(compareLocale);
+/** Catch-all host.type key, always offered last in the form select. */
+export const HOST_TYPE_OTHER = "other";
+
+/**
+ * Selectable host.type keys: concrete platforms A–Z, then the "other" catch-all.
+ */
+export const HOST_TYPES = [
+	...Object.keys(HOST_TYPE_LABELS)
+		.filter((hostType) => hostType !== HOST_TYPE_OTHER)
+		.sort(compareLocale),
+	HOST_TYPE_OTHER,
+];
 
 /**
  * @param {string} [hostType]
