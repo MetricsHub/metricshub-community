@@ -75,6 +75,16 @@ public class OpAmpConfig {
 	private Map<String, String> headers = new HashMap<>();
 
 	/**
+	 * Attributes reported to the OpAMP server in the {@code AgentDescription}. They are merged last
+	 * and therefore override both the pre-built agent attributes and the agent-level
+	 * {@code attributes:} section, so the identity exposed to the fleet manager can be tailored
+	 * without changing the attributes attached to the exported metrics.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private Map<String, String> attributes = new HashMap<>();
+
+	/**
 	 * Path to a PEM file containing the trusted certificate used to verify the OpAMP server's TLS
 	 * credentials; {@code null} to use the system trust store.
 	 */

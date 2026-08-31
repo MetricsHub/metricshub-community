@@ -24,7 +24,10 @@ import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientSettings;
+import org.metricshub.opamp.proto.AgentDescription;
+import org.metricshub.opamp.proto.KeyValue;
 import org.metricshub.web.AgentContextHolder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -100,6 +103,50 @@ class OpAmpServiceTest {
 		// an indeterminate detection must not break the supervision tick.
 		verify(client, times(1)).start();
 		verify(client, atLeastOnce()).setAgentDescription(any());
+	}
+
+	@Test
+	void reportedDescriptionShouldCarryTheConfiguredAgentAttributes() {
+		final OpAmpConfig opAmpConfig = enabledConfig(ENDPOINT);
+		opAmpConfig.setAttributes(Map.of("fleet", "emea", "site", "opamp-site"));
+		agentConfig.setOpamp(opAmpConfig);
+		agentConfig.setAttributes(Map.of("site", "data-center-1", "host.name", "configured-host"));
+
+		opAmpService.supervise();
+
+		final ArgumentCaptor<AgentDescription> captor = ArgumentCaptor.forClass(AgentDescription.class);
+		verify(client, atLeastOnce()).setAgentDescription(captor.capture());
+		final AgentDescription description = captor.getValue();
+
+		assertEquals(
+			"opamp-site",
+			attributeValue(description.getNonIdentifyingAttributesList(), "site"),
+			"The opamp: attributes must win over the agent-level ones"
+		);
+		assertEquals(
+			"emea",
+			attributeValue(description.getNonIdentifyingAttributesList(), "fleet"),
+			"An attribute defined only under opamp: must reach the OpAMP server"
+		);
+		assertEquals(
+			"configured-host",
+			attributeValue(description.getIdentifyingAttributesList(), "host.name"),
+			"A configured attribute must override the pre-built one"
+		);
+		assertEquals(
+			"MetricsHub Agent",
+			attributeValue(description.getIdentifyingAttributesList(), "service.name"),
+			"The pre-built attributes are still reported"
+		);
+	}
+
+	private static String attributeValue(final List<KeyValue> attributes, final String key) {
+		return attributes
+			.stream()
+			.filter(keyValue -> keyValue.getKey().equals(key))
+			.map(keyValue -> keyValue.getValue().getStringValue())
+			.findFirst()
+			.orElse(null);
 	}
 
 	private static OpAmpConfig enabledConfig(final String endpoint) {

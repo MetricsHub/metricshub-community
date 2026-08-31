@@ -183,17 +183,22 @@ All other capability bits are 0, which is how the server learns not to send remo
 
 #### `AgentDescription` attributes
 
+The reported attributes are merged in three layers, each overriding the previous:
+
+1. the pre-built `AgentInfo` attributes;
+2. the agent-level `attributes:` section of `metricshub.yaml` — the same precedence the agent applies to its self-observability resource;
+3. the `opamp: attributes:` section, which **always wins**: it tailors the identity exposed to the fleet manager without touching the attributes attached to the exported metrics.
+
 | Attribute | Identifying | Source |
 |---|---|---|
-| `service.name` | ✅ | `AgentInfo` attributes |
-| `service.version` | ✅ | `AgentInfo` version attribute |
-| `host.name` | ✅ | `AgentInfo` host name attribute |
-| `os.type` | ❌ | `AgentInfo` OS type attribute |
+| `service.name` | ✅ | Agent attributes |
+| `service.version` | ✅ | Agent `service.version` attribute, falling back to `version` |
+| `host.name` | ✅ | Agent host name attribute |
 | `host.arch` | ❌ | `System.getProperty("os.arch")` |
-| `build_number` | ❌ | `AgentInfo` build number attribute |
 | `installer.type` | ❌ | `DeploymentDetector.detect()` → `deb`, `rpm`, `msi`, `archive`, `docker` |
+| *every other agent attribute* | ❌ | `AgentInfo` (`os.type`, `host.type`, `agent.host.name`, `name`, `build_number`, `build_date`, `cc_version`), the agent-level `attributes:` and the `opamp: attributes:` (e.g. `site`, `env`, `fleet`) |
 
-`installer.type` is what lets an OpAMP server pick the right artifact. Without it the server cannot tell a Debian host from an RPM host and must not offer anything. Blank values are skipped; a failed detection simply omits the attribute.
+`installer.type` is what lets an OpAMP server pick the right artifact. Without it the server cannot tell a Debian host from an RPM host and must not offer anything. Blank values are skipped; a failed detection simply omits the attribute. A configured attribute overrides the derived one, so `host.arch` and `installer.type` can be forced from `metricshub.yaml`. Attributes are reported in a stable, sorted order so an unchanged configuration never looks like a change to the client.
 
 #### `ComponentHealth`
 
@@ -308,7 +313,7 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 |---|---|
 | [`MetricsHubAgentApplication`](metricshub-agent/src/main/java/org/metricshub/agent/MetricsHubAgentApplication.java) | Wiring order: reconcile pending upgrade → decide whether the deployment is upgradable → build handler → start `OpAmpService` → register shutdown hook |
 | [`OpAmpService`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpService.java) | **Lifecycle supervisor.** Lives *outside* the restartable `AgentContext`. Every 30 s: re-reads `opamp:`, rebuilds the client only on change, otherwise refreshes description and health |
-| [`OpAmpAgentDescriptionMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpAgentDescriptionMapper.java) | `AgentInfo` + `DeploymentKind` → `AgentDescription` |
+| [`OpAmpAgentDescriptionMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpAgentDescriptionMapper.java) | `AgentInfo` + `attributes:` + `opamp: attributes:` + `DeploymentKind` → `AgentDescription` |
 | [`OpAmpHealthMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpHealthMapper.java) | `ApplicationStatus` → `ComponentHealth` |
 | [`OpAmpConfig`](metricshub-agent/src/main/java/org/metricshub/agent/config/OpAmpConfig.java) | The `opamp:` YAML section |
 
@@ -624,6 +629,8 @@ opamp:
   endpoint: https://opamp.example.com/v1/opamp
   headers:
     Authorization: Bearer ${env::OPAMP_TOKEN}
+  attributes:
+    site: data-center-1
   # certificateFile: /opt/metricshub/security/opamp-ca.pem
   # pollInterval: 30s
   # requestTimeout: 10s
@@ -635,6 +642,7 @@ opamp:
 | `enabled` | `false` | Fleet management is opt-in |
 | `endpoint` | — | Blank with `enabled: true` logs a warning and starts nothing |
 | `headers` | `{}` | Values may be keystore-encrypted. Entries with a null value are skipped, not fatal |
+| `attributes` | `{}` | Reported in the `AgentDescription`. Merged **last**, so they override both the pre-built agent attributes and the agent-level `attributes:` — the fleet identity can be tailored without touching the attributes attached to the exported metrics |
 | `certificateFile` | system trust store | PEM |
 | `pollInterval` | `30s` | Values below 1 s fall back to the default — a tight loop must never hammer the server |
 | `requestTimeout` | `10s` | Same guard |

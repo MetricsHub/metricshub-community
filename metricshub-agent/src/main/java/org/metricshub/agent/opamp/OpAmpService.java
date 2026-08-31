@@ -44,6 +44,7 @@ import org.metricshub.opamp.client.OpampClientCallbacks;
 import org.metricshub.opamp.client.OpampClientSettings;
 import org.metricshub.opamp.client.impl.HttpPollingOpampClient;
 import org.metricshub.opamp.client.packages.OpampPackagesHandler;
+import org.metricshub.opamp.proto.AgentDescription;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.service.ApplicationStatusService;
 
@@ -193,11 +194,25 @@ public class OpAmpService {
 		}
 
 		if (client != null && client.isStarted()) {
-			client.setAgentDescription(
-				OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo(), detectDeploymentKindSafely())
-			);
+			client.setAgentDescription(buildAgentDescription(agentContext));
 			client.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
 		}
+	}
+
+	/**
+	 * Builds the agent description reported to the OpAMP server: the pre-built {@code AgentInfo}
+	 * attributes overridden by the agent-level {@code attributes:} and then by the
+	 * {@code opamp: attributes:}, plus the detected deployment kind.
+	 *
+	 * @param agentContext the current agent context
+	 * @return the agent description to report
+	 */
+	private AgentDescription buildAgentDescription(final AgentContext agentContext) {
+		return OpAmpAgentDescriptionMapper.map(
+			agentContext.getAgentInfo(),
+			agentContext.getAgentConfig(),
+			detectDeploymentKindSafely()
+		);
 	}
 
 	/**
@@ -264,9 +279,7 @@ public class OpAmpService {
 				}
 			}
 			// Report a complete first message
-			newClient.setAgentDescription(
-				OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo(), detectDeploymentKindSafely())
-			);
+			newClient.setAgentDescription(buildAgentDescription(agentContext));
 			newClient.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
 			newClient.start();
 			if (packagesHandler instanceof OpampUpgradeAdapter adapter && upgradeEnabled) {

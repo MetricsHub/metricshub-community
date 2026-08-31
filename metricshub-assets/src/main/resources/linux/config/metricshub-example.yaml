@@ -18,6 +18,10 @@ otel:
 #   endpoint: https://opamp.example.com/v1/opamp
 #   headers:
 #     Authorization: Bearer ${env::OPAMP_TOKEN}
+#   # Attributes reported to the OpAMP server. Merged last, so they override both the
+#   # pre-built agent attributes and the agent-level attributes above.
+#   # attributes:
+#   #   site: data-center-1
 #   # certificateFile: /opt/metricshub/security/opamp-ca.pem # Trusted certificate (PEM) for the OpAMP server
 #   # pollInterval: 30s
 #   # reportHealth: true
