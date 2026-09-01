@@ -168,6 +168,19 @@ class FileHelperTest {
 	}
 
 	@Test
+	void parsePathPattern_keepsSignificantSpaces() {
+		final PathPattern pattern = parsePathPattern("/var/log/report ", DeviceKind.LINUX);
+		assertNotNull(pattern);
+		assertEquals("/var/log", pattern.root());
+		assertEquals(List.of("report "), pattern.segments());
+
+		final PathPattern windows = parsePathPattern("C:\\my logs\\ app*.log", DeviceKind.WINDOWS);
+		assertNotNull(windows);
+		assertEquals("C:\\my logs", windows.root());
+		assertEquals(List.of(" app*.log"), windows.segments());
+	}
+
+	@Test
 	void parsePathPattern_invalid_returnsNull() {
 		assertNull(parsePathPattern(null, DeviceKind.LINUX));
 		assertNull(parsePathPattern("  ", DeviceKind.LINUX));

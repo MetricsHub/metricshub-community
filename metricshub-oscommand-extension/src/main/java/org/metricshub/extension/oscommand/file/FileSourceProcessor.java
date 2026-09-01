@@ -74,14 +74,14 @@ public class FileSourceProcessor {
 
 	// Linux command template for resolving file paths when a directory segment holds a wildcard. The shell expands the
 	// directory glob, so only matching directories are visited (no traversal of unrelated or unreadable subtrees) and
-	// a wildcard never crosses a separator; the filename is then resolved in each matched directory with find, exactly
-	// as in RESOLVE_LINUX_FILES_COMMAND. Arguments are the shell-quoted directory glob and the filename pattern.
+	// a wildcard never crosses a separator; as with any shell glob, a wildcard does not match dot-prefixed names. The
+	// filename is then resolved in each matched directory with find, exactly as in RESOLVE_LINUX_FILES_COMMAND.
+	// Arguments are the shell-quoted directory glob and the escaped filename pattern.
 	public static final String RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND =
 		"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
 
-	// Escaped form of a literal backslash in a find pattern embedded in a double-quoted shell argument: the shell turns
-	// the four backslashes into two, which find then reads as one escaped backslash.
-	private static final String FIND_ESCAPED_BACKSLASH = "\\\\\\\\";
+	// A single quote inside the single-quoted `sh -c` script: closes the quote, adds an escaped quote, reopens it.
+	private static final String SINGLE_QUOTE_IN_SCRIPT = "'\\''";
 
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
@@ -492,7 +492,8 @@ public class FileSourceProcessor {
 	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
 	 * {@code *}), so that existing configurations produce unchanged commands.</li>
 	 * </ul>
-	 * In every pattern, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally.
+	 * In every pattern, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally, and
+	 * shell metacharacters are escaped so that a path is never interpreted by the remote shell.
 	 *
 	 * @param pattern    the parsed path pattern
 	 * @param deviceKind the device kind of the remote host
@@ -503,26 +504,29 @@ public class FileSourceProcessor {
 			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellBrackets(pattern.fullPattern()));
 		}
 
+		// Both values end up inside double quotes of the remote shell; the filename is additionally a find pattern
+		final String root = escapeDoubleQuotedShell(pattern.root());
+		final String filename = escapeDoubleQuotedShell(escapeFindMetacharacters(pattern.filename()));
+
 		if (pattern.hasDirectoryWildcard()) {
 			return RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND.formatted(
 				quoteShellGlob(pattern.directoryPattern()),
-				escapeFindPattern(pattern.filename())
+				filename.replace("'", SINGLE_QUOTE_IN_SCRIPT)
 			);
 		}
 
-		final String filename = pattern.filename();
-		if ("*".equals(filename)) {
-			return RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(pattern.root());
+		if ("*".equals(pattern.filename())) {
+			return RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(root);
 		}
 
-		return RESOLVE_LINUX_FILES_COMMAND.formatted(pattern.root(), escapeFindPattern(filename));
+		return RESOLVE_LINUX_FILES_COMMAND.formatted(root, filename);
 	}
 
 	/**
-	 * Quotes a directory pattern as a shell glob: literal runs are enclosed in double quotes (with {@code \}, {@code "},
-	 * {@code $} and {@code `} escaped) so that spaces, brackets and other special characters are taken literally, while
-	 * {@code *} and {@code ?} are left unquoted so that the shell expands them. A single quote is written as
-	 * {@code '\''} because the glob is embedded in the single-quoted {@code sh -c} script.
+	 * Quotes a directory pattern as a shell glob: literal runs are enclosed in double quotes (with shell metacharacters
+	 * escaped, see {@link #escapeDoubleQuotedShell(String)}) so that spaces, brackets and other special characters are
+	 * taken literally, while {@code *} and {@code ?} are left unquoted so that the shell expands them. A single quote is
+	 * written as {@code '\''} because the glob is embedded in the single-quoted {@code sh -c} script.
 	 *
 	 * @param pattern the directory pattern
 	 * @return the shell glob expression
@@ -544,12 +548,9 @@ public class FileSourceProcessor {
 				inLiteral = true;
 			}
 			if (c == '\'') {
-				glob.append("'\\''");
+				glob.append(SINGLE_QUOTE_IN_SCRIPT);
 			} else {
-				if (c == '\\' || c == '"' || c == '$' || c == '`') {
-					glob.append('\\');
-				}
-				glob.append(c);
+				glob.append(escapeDoubleQuotedShell(String.valueOf(c)));
 			}
 		}
 		if (inLiteral) {
@@ -559,23 +560,39 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Escapes the glob metacharacters other than {@code *} and {@code ?} in a {@code find -name} pattern so that they
-	 * match literally, consistently with the local resolver. The pattern is embedded in a double-quoted shell argument,
-	 * where {@code \[} reaches find unchanged while a literal backslash needs two escaping levels.
+	 * Escapes the characters that the shell still interprets inside double quotes ({@code \}, {@code "}, {@code $} and
+	 * {@code `}), so that a value embedded in a double-quoted argument reaches the command verbatim and can never be
+	 * expanded or executed by the shell.
+	 *
+	 * @param value the value to embed in a double-quoted shell argument
+	 * @return the escaped value
+	 */
+	static String escapeDoubleQuotedShell(final String value) {
+		final StringBuilder escaped = new StringBuilder(value.length());
+		for (final char c : value.toCharArray()) {
+			if (c == '\\' || c == '"' || c == '$' || c == '`') {
+				escaped.append('\\');
+			}
+			escaped.append(c);
+		}
+		return escaped.toString();
+	}
+
+	/**
+	 * Escapes the glob metacharacters other than {@code *} and {@code ?} ({@code [}, {@code ]} and {@code \}) in a
+	 * {@code find -name} pattern so that they match literally, consistently with the local resolver. The result still
+	 * has to go through {@link #escapeDoubleQuotedShell(String)} before being embedded in the command.
 	 *
 	 * @param pattern the find pattern
 	 * @return the pattern where only {@code *} and {@code ?} act as wildcards
 	 */
-	static String escapeFindPattern(final String pattern) {
+	static String escapeFindMetacharacters(final String pattern) {
 		final StringBuilder escaped = new StringBuilder(pattern.length());
 		for (final char c : pattern.toCharArray()) {
-			if (c == '\\') {
-				escaped.append(FIND_ESCAPED_BACKSLASH);
-			} else if (c == '[' || c == ']') {
-				escaped.append('\\').append(c);
-			} else {
-				escaped.append(c);
+			if (c == '[' || c == ']' || c == '\\') {
+				escaped.append('\\');
 			}
+			escaped.append(c);
 		}
 		return escaped.toString();
 	}

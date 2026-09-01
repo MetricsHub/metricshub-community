@@ -317,7 +317,8 @@ public class FileHelper {
 		}
 
 		final String delimiter = DeviceKind.WINDOWS.equals(hostType) ? BACKSLASH : SLASH;
-		String normalized = path.trim();
+		// Not trimmed: leading and trailing spaces are significant in file names
+		String normalized = path;
 
 		// A trailing delimiter designates a directory: match all its files
 		if (normalized.endsWith(delimiter)) {

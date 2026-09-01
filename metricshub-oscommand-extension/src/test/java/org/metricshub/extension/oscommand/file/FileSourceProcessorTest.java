@@ -135,15 +135,34 @@ class FileSourceProcessorTest {
 
 	@Test
 	void buildResolveCommand_linuxEscapesGlobMetacharactersOtherThanWildcards() {
-		// Brackets are literal in the filename; only '*' and '?' are wildcards
+		// Brackets are literal in the filename; only '*' and '?' are wildcards. The find escape (\[) is itself escaped
+		// for the shell double quotes (\\[), which hands \[ to find.
 		assertEquals(
-			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"app\\[1\\].log\" -print",
+			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"app\\\\[1\\\\].log\" -print",
 			buildResolveCommand("/opt/logs/app[1].log", DeviceKind.LINUX)
 		);
-		// A literal backslash needs two escaping levels: shell double quotes, then find
+		// A literal backslash needs two escaping levels: find (\\), then shell double quotes (\\\\)
 		assertEquals(
 			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"a\\\\\\\\b*.log\" -print",
 			buildResolveCommand("/opt/logs/a\\b*.log", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void buildResolveCommand_linuxNeverLetsTheShellInterpretPaths() {
+		// $, backtick and double quote are escaped in the root and in the filename: no expansion, no command substitution
+		assertEquals(
+			"find -L \"/opt/\\$x/\\`q\\`\" -maxdepth 1 -type f -name \"\\$(touch pwned)*.log\" -print",
+			buildResolveCommand("/opt/$x/`q`/$(touch pwned)*.log", DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/opt/\\\"q\\\"\" -maxdepth 1 -type f -print",
+			buildResolveCommand("/opt/\"q\"/", DeviceKind.LINUX)
+		);
+		// Same inside the single-quoted sh -c script, where a single quote in the filename is also handled
+		assertEquals(
+			"sh -c 'for d in \"/opt/node\"*; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"it'\\''s\\$(id)*.log\" -print; done'",
+			buildResolveCommand("/opt/node*/it's$(id)*.log", DeviceKind.LINUX)
 		);
 	}
 
