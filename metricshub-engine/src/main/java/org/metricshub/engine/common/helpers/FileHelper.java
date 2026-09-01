@@ -263,13 +263,6 @@ public class FileHelper {
 		}
 
 		/**
-		 * @return the number of segments after the root
-		 */
-		public int depth() {
-			return segments.size();
-		}
-
-		/**
 		 * @return the last segment, i.e. the filename pattern
 		 */
 		public String filename() {
@@ -281,6 +274,16 @@ public class FileHelper {
 		 */
 		public String fullPattern() {
 			return joinPath(root, String.join(delimiter, segments), delimiter);
+		}
+
+		/**
+		 * @return the directory pattern: the root followed by every segment but the last, or the root alone when the
+		 * pattern has a single segment
+		 */
+		public String directoryPattern() {
+			return segments.size() == 1
+				? root
+				: joinPath(root, String.join(delimiter, segments.subList(0, segments.size() - 1)), delimiter);
 		}
 	}
 

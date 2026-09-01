@@ -59,7 +59,6 @@ class FileHelperTest {
 		assertEquals("/opt/metricshub/logs", pattern.root());
 		assertEquals(List.of("*.log"), pattern.segments());
 		assertEquals("*.log", pattern.filename());
-		assertEquals(1, pattern.depth());
 		assertFalse(pattern.hasDirectoryWildcard());
 		assertEquals(LINUX_ABSOLUTE_PATH, pattern.fullPattern());
 	}
@@ -70,9 +69,22 @@ class FileHelperTest {
 		assertNotNull(pattern);
 		assertEquals("/opt/autosys", pattern.root());
 		assertEquals(List.of("autouser*", "out", "event_demon*PE2"), pattern.segments());
-		assertEquals(3, pattern.depth());
 		assertTrue(pattern.hasDirectoryWildcard());
 		assertEquals("/opt/autosys/autouser*/out/event_demon*PE2", pattern.fullPattern());
+		assertEquals("/opt/autosys/autouser*/out", pattern.directoryPattern());
+	}
+
+	@Test
+	void parsePathPattern_directoryPattern() {
+		assertEquals("/opt/metricshub/logs", parsePathPattern(LINUX_ABSOLUTE_PATH, DeviceKind.LINUX).directoryPattern());
+		assertEquals("/opt*", parsePathPattern("/opt*/x.log", DeviceKind.LINUX).directoryPattern());
+		assertEquals("/", parsePathPattern("/*.log", DeviceKind.LINUX).directoryPattern());
+		assertEquals(
+			"D:\\Autosys_waae\\autouser*\\out",
+			parsePathPattern("D:\\Autosys_waae\\autouser*\\out\\e*", DeviceKind.WINDOWS).directoryPattern()
+		);
+		assertEquals("D:\\auto*", parsePathPattern("D:\\auto*\\x.log", DeviceKind.WINDOWS).directoryPattern());
+		assertEquals("D:\\", parsePathPattern("D:\\", DeviceKind.WINDOWS).directoryPattern());
 	}
 
 	@Test

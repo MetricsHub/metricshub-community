@@ -72,10 +72,12 @@ public class FileSourceProcessor {
 	// Linux find command template for resolving directory paths.
 	public static final String RESOLVE_LINUX_DIRECTORIES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -print";
 
-	// Linux find command template for resolving file paths when a directory segment holds a wildcard:
-	// arguments are the literal root, the number of segments below it and the full pattern.
-	public static final String RESOLVE_LINUX_FILES_BY_PATH_COMMAND =
-		"find -L \"%s\" -maxdepth %d -type f -path \"%s\" -print";
+	// Linux command template for resolving file paths when a directory segment holds a wildcard. The shell expands the
+	// directory glob, so only matching directories are visited (no traversal of unrelated or unreadable subtrees) and
+	// a wildcard never crosses a separator; the filename is then resolved in each matched directory with find, exactly
+	// as in RESOLVE_LINUX_FILES_COMMAND. Arguments are the shell-quoted directory glob and the filename pattern.
+	public static final String RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND =
+		"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
 
 	// Escaped form of a literal backslash in a find pattern embedded in a double-quoted shell argument: the shell turns
 	// the four backslashes into two, which find then reads as one escaped backslash.
@@ -485,8 +487,8 @@ public class FileSourceProcessor {
 	 * Builds the OS-specific command that lists the files matching a path pattern on the remote host.
 	 * <ul>
 	 * <li>Windows: the full pattern is passed to {@code Get-Item}, which expands wildcards in every segment.</li>
-	 * <li>Linux with a wildcard in a directory segment: {@code find -path} from the literal root, bounded to the
-	 * pattern depth.</li>
+	 * <li>Linux with a wildcard in a directory segment: the shell expands the directory glob and {@code find -name}
+	 * resolves the filename in each matched directory.</li>
 	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
 	 * {@code *}), so that existing configurations produce unchanged commands.</li>
 	 * </ul>
@@ -502,10 +504,9 @@ public class FileSourceProcessor {
 		}
 
 		if (pattern.hasDirectoryWildcard()) {
-			return RESOLVE_LINUX_FILES_BY_PATH_COMMAND.formatted(
-				pattern.root(),
-				pattern.depth(),
-				escapeFindPattern(pattern.fullPattern())
+			return RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND.formatted(
+				quoteShellGlob(pattern.directoryPattern()),
+				escapeFindPattern(pattern.filename())
 			);
 		}
 
@@ -518,9 +519,49 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Escapes the glob metacharacters other than {@code *} and {@code ?} in a {@code find -name}/{@code -path} pattern
-	 * so that they match literally, consistently with the local resolver. The pattern is embedded in a double-quoted
-	 * shell argument, where {@code \[} reaches find unchanged while a literal backslash needs two escaping levels.
+	 * Quotes a directory pattern as a shell glob: literal runs are enclosed in double quotes (with {@code \}, {@code "},
+	 * {@code $} and {@code `} escaped) so that spaces, brackets and other special characters are taken literally, while
+	 * {@code *} and {@code ?} are left unquoted so that the shell expands them. A single quote is written as
+	 * {@code '\''} because the glob is embedded in the single-quoted {@code sh -c} script.
+	 *
+	 * @param pattern the directory pattern
+	 * @return the shell glob expression
+	 */
+	static String quoteShellGlob(final String pattern) {
+		final StringBuilder glob = new StringBuilder(pattern.length() + 2);
+		boolean inLiteral = false;
+		for (final char c : pattern.toCharArray()) {
+			if (c == '*' || c == '?') {
+				if (inLiteral) {
+					glob.append('"');
+					inLiteral = false;
+				}
+				glob.append(c);
+				continue;
+			}
+			if (!inLiteral) {
+				glob.append('"');
+				inLiteral = true;
+			}
+			if (c == '\'') {
+				glob.append("'\\''");
+			} else {
+				if (c == '\\' || c == '"' || c == '$' || c == '`') {
+					glob.append('\\');
+				}
+				glob.append(c);
+			}
+		}
+		if (inLiteral) {
+			glob.append('"');
+		}
+		return glob.toString();
+	}
+
+	/**
+	 * Escapes the glob metacharacters other than {@code *} and {@code ?} in a {@code find -name} pattern so that they
+	 * match literally, consistently with the local resolver. The pattern is embedded in a double-quoted shell argument,
+	 * where {@code \[} reaches find unchanged while a literal backslash needs two escaping levels.
 	 *
 	 * @param pattern the find pattern
 	 * @return the pattern where only {@code *} and {@code ?} act as wildcards

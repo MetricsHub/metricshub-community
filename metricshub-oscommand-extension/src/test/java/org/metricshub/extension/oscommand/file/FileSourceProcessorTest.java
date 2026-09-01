@@ -112,32 +112,30 @@ class FileSourceProcessorTest {
 	}
 
 	@Test
-	void buildResolveCommand_linuxUsesPathCommandWithDirectoryWildcard() {
+	void buildResolveCommand_linuxExpandsDirectoryGlobWithDirectoryWildcard() {
+		final String template =
+			"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
+
 		assertEquals(
-			"find -L \"/opt/autosys\" -maxdepth 3 -type f -path \"/opt/autosys/autouser*/out/event_demon*PE2\" -print",
+			template.formatted("\"/opt/autosys/autouser\"*\"/out\"", "event_demon*PE2"),
 			buildResolveCommand("/opt/autosys/autouser*/out/event_demon*PE2", DeviceKind.LINUX)
 		);
+		assertEquals(template.formatted("\"/opt\"*", "x.log"), buildResolveCommand("/opt*/x.log", DeviceKind.LINUX));
+		assertEquals(template.formatted("\"/opt/node\"?", "*"), buildResolveCommand("/opt/node?/", DeviceKind.LINUX));
+		// Brackets, spaces, quotes and shell-special characters in literal runs are quoted or escaped
 		assertEquals(
-			"find -L \"/\" -maxdepth 2 -type f -path \"/opt*/x.log\" -print",
-			buildResolveCommand("/opt*/x.log", DeviceKind.LINUX)
+			template.formatted("\"/apps/node\"*\"/[prod]\"", "app.log"),
+			buildResolveCommand("/apps/node*/[prod]/app.log", DeviceKind.LINUX)
 		);
 		assertEquals(
-			"find -L \"/opt\" -maxdepth 2 -type f -path \"/opt/node?/*\" -print",
-			buildResolveCommand("/opt/node?/", DeviceKind.LINUX)
+			template.formatted("\"/opt/my app/it'\\''s/\\$x/\\\"q\\\"/node\"*", "app?.log"),
+			buildResolveCommand("/opt/my app/it's/$x/\"q\"/node*/app?.log", DeviceKind.LINUX)
 		);
 	}
 
 	@Test
 	void buildResolveCommand_linuxEscapesGlobMetacharactersOtherThanWildcards() {
-		// Brackets are literal in a literal segment, in the root and in the filename; only '*' and '?' are wildcards
-		assertEquals(
-			"find -L \"/apps\" -maxdepth 3 -type f -path \"/apps/node*/\\[prod\\]/app.log\" -print",
-			buildResolveCommand("/apps/node*/[prod]/app.log", DeviceKind.LINUX)
-		);
-		assertEquals(
-			"find -L \"/apps/[prod]\" -maxdepth 2 -type f -path \"/apps/\\[prod\\]/node*/app?.log\" -print",
-			buildResolveCommand("/apps/[prod]/node*/app?.log", DeviceKind.LINUX)
-		);
+		// Brackets are literal in the filename; only '*' and '?' are wildcards
 		assertEquals(
 			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"app\\[1\\].log\" -print",
 			buildResolveCommand("/opt/logs/app[1].log", DeviceKind.LINUX)
@@ -172,7 +170,7 @@ class FileSourceProcessorTest {
 			.build();
 
 		final String expectedCommand =
-			"find -L \"/opt/autosys\" -maxdepth 3 -type f -path \"/opt/autosys/autouser*/out/event_demon*PE2\" -print";
+			"sh -c 'for d in \"/opt/autosys/autouser\"*\"/out\"; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"event_demon*PE2\" -print; done'";
 		doReturn("/opt/autosys/autouser01/out/event_demon.PE2\n/opt/autosys/autouser02/out/event_demon_XPE2\n")
 			.when(osCommandService)
 			.runSshCommand(
