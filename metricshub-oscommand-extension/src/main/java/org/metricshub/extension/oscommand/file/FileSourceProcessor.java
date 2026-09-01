@@ -490,7 +490,7 @@ public class FileSourceProcessor {
 	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
 	 * {@code *}), so that existing configurations produce unchanged commands.</li>
 	 * </ul>
-	 * In both find patterns, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally.
+	 * In every pattern, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally.
 	 *
 	 * @param pattern    the parsed path pattern
 	 * @param deviceKind the device kind of the remote host
@@ -498,7 +498,7 @@ public class FileSourceProcessor {
 	 */
 	static String buildResolveCommand(final PathPattern pattern, final DeviceKind deviceKind) {
 		if (DeviceKind.WINDOWS.equals(deviceKind)) {
-			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(pattern.fullPattern());
+			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellBrackets(pattern.fullPattern()));
 		}
 
 		if (pattern.hasDirectoryWildcard()) {

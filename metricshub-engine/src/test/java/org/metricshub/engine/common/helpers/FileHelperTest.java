@@ -185,6 +185,13 @@ class FileHelperTest {
 		assertEquals("plain", FileHelper.escapeGlobSpecials("plain"));
 	}
 
+	@Test
+	void escapePowerShellBrackets_doublesBacktickForDoubleQuotedString() {
+		assertEquals("C:\\logs\\app``[1``].log", FileHelper.escapePowerShellBrackets("C:\\logs\\app[1].log"));
+		assertEquals("D:\\``[prod``]\\node*\\app?.log", FileHelper.escapePowerShellBrackets("D:\\[prod]\\node*\\app?.log"));
+		assertEquals("C:\\logs\\*.log", FileHelper.escapePowerShellBrackets("C:\\logs\\*.log"));
+	}
+
 	private DeviceKind localDeviceKind() {
 		return LocalOsHandler.isWindows() ? DeviceKind.WINDOWS : DeviceKind.LINUX;
 	}

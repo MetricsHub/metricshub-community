@@ -578,6 +578,19 @@ public class FileHelper {
 	}
 
 	/**
+	 * Escapes {@code [} and {@code ]}, which PowerShell wildcards treat as character classes, so that they match
+	 * literally in a {@code Get-Item -Path} pattern and only {@code *} and {@code ?} act as wildcards.
+	 * The backtick is doubled because the pattern is embedded in a double-quoted PowerShell string, where a single
+	 * backtick would be consumed as the string escape character before reaching the wildcard engine.
+	 *
+	 * @param pattern the PowerShell path pattern
+	 * @return the pattern with literal brackets
+	 */
+	public static String escapePowerShellBrackets(final String pattern) {
+		return pattern.replace("[", "``[").replace("]", "``]");
+	}
+
+	/**
 	 * Escapes newline characters in a string by replacing them with a placeholder.
 	 * Handles Windows line endings (\r\n) and Unix line endings (\n).
 	 *

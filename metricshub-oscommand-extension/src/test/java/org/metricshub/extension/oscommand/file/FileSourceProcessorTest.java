@@ -83,6 +83,11 @@ class FileSourceProcessorTest {
 			buildResolveCommand("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2", DeviceKind.WINDOWS)
 		);
 		assertEquals(template.formatted("C:\\logs\\*"), buildResolveCommand("C:\\logs\\", DeviceKind.WINDOWS));
+		// Brackets are PowerShell wildcard characters: escaped so that only '*' and '?' are wildcards
+		assertEquals(
+			template.formatted("C:\\logs\\app``[1``].log"),
+			buildResolveCommand("C:\\logs\\app[1].log", DeviceKind.WINDOWS)
+		);
 	}
 
 	@Test
