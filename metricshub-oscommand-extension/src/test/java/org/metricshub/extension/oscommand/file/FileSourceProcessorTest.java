@@ -123,6 +123,28 @@ class FileSourceProcessorTest {
 	}
 
 	@Test
+	void buildResolveCommand_linuxEscapesGlobMetacharactersOtherThanWildcards() {
+		// Brackets are literal in a literal segment, in the root and in the filename; only '*' and '?' are wildcards
+		assertEquals(
+			"find -L \"/apps\" -maxdepth 3 -type f -path \"/apps/node*/\\[prod\\]/app.log\" -print",
+			buildResolveCommand("/apps/node*/[prod]/app.log", DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/apps/[prod]\" -maxdepth 2 -type f -path \"/apps/\\[prod\\]/node*/app?.log\" -print",
+			buildResolveCommand("/apps/[prod]/node*/app?.log", DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"app\\[1\\].log\" -print",
+			buildResolveCommand("/opt/logs/app[1].log", DeviceKind.LINUX)
+		);
+		// A literal backslash needs two escaping levels: shell double quotes, then find
+		assertEquals(
+			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"a\\\\\\\\b*.log\" -print",
+			buildResolveCommand("/opt/logs/a\\b*.log", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
 	void resolveRemoteFiles_runsBuiltCommandAndSkipsInvalidPatterns() throws Exception {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()

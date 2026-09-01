@@ -77,6 +77,10 @@ public class FileSourceProcessor {
 	public static final String RESOLVE_LINUX_FILES_BY_PATH_COMMAND =
 		"find -L \"%s\" -maxdepth %d -type f -path \"%s\" -print";
 
+	// Escaped form of a literal backslash in a find pattern embedded in a double-quoted shell argument: the shell turns
+	// the four backslashes into two, which find then reads as one escaped backslash.
+	private static final String FIND_ESCAPED_BACKSLASH = "\\\\\\\\";
+
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
 
@@ -486,6 +490,7 @@ public class FileSourceProcessor {
 	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
 	 * {@code *}), so that existing configurations produce unchanged commands.</li>
 	 * </ul>
+	 * In both find patterns, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally.
 	 *
 	 * @param pattern    the parsed path pattern
 	 * @param deviceKind the device kind of the remote host
@@ -497,7 +502,11 @@ public class FileSourceProcessor {
 		}
 
 		if (pattern.hasDirectoryWildcard()) {
-			return RESOLVE_LINUX_FILES_BY_PATH_COMMAND.formatted(pattern.root(), pattern.depth(), pattern.fullPattern());
+			return RESOLVE_LINUX_FILES_BY_PATH_COMMAND.formatted(
+				pattern.root(),
+				pattern.depth(),
+				escapeFindPattern(pattern.fullPattern())
+			);
 		}
 
 		final String filename = pattern.filename();
@@ -505,7 +514,29 @@ public class FileSourceProcessor {
 			return RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(pattern.root());
 		}
 
-		return RESOLVE_LINUX_FILES_COMMAND.formatted(pattern.root(), filename);
+		return RESOLVE_LINUX_FILES_COMMAND.formatted(pattern.root(), escapeFindPattern(filename));
+	}
+
+	/**
+	 * Escapes the glob metacharacters other than {@code *} and {@code ?} in a {@code find -name}/{@code -path} pattern
+	 * so that they match literally, consistently with the local resolver. The pattern is embedded in a double-quoted
+	 * shell argument, where {@code \[} reaches find unchanged while a literal backslash needs two escaping levels.
+	 *
+	 * @param pattern the find pattern
+	 * @return the pattern where only {@code *} and {@code ?} act as wildcards
+	 */
+	static String escapeFindPattern(final String pattern) {
+		final StringBuilder escaped = new StringBuilder(pattern.length());
+		for (final char c : pattern.toCharArray()) {
+			if (c == '\\') {
+				escaped.append(FIND_ESCAPED_BACKSLASH);
+			} else if (c == '[' || c == ']') {
+				escaped.append('\\').append(c);
+			} else {
+				escaped.append(c);
+			}
+		}
+		return escaped.toString();
 	}
 
 	/**
