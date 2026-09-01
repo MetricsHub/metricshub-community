@@ -41,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.FileHelper;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -62,7 +63,7 @@ public class FileSourceProcessor {
 	 * PowerShell command template for resolving file paths on Windows.
 	 */
 	public static final String RESOLVE_WINDOWS_FILES_COMMAND =
-		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-ChildItem -Path \\\"%s\\\" -File -Filter \\\"%s\\\" | ForEach-Object FullName\"";
+		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object FullName\"";
 
 	/**
 	 *
@@ -503,12 +504,14 @@ public class FileSourceProcessor {
 		}
 
 		for (final String path : rawPaths) {
-			// Extract filename pattern and base path from the path pattern
-			final String filename = FileHelper.extractFilename(path, DeviceKind.WINDOWS);
-			final String basePath = FileHelper.extractBasePath(path, DeviceKind.WINDOWS);
+			final PathPattern pattern = FileHelper.parsePathPattern(path, DeviceKind.WINDOWS);
+			if (pattern == null) {
+				log.info("Hostname {} - Skipping invalid file path pattern: {}", hostname, path);
+				continue;
+			}
 
-			// Build OS-specific command to find matching files
-			final String command = RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename);
+			// Build the PowerShell command to find matching files
+			final String command = buildResolveCommand(pattern);
 
 			try {
 				// Execute SSH command to find matching files on remote host
@@ -529,6 +532,18 @@ public class FileSourceProcessor {
 			}
 		}
 		return absolutePaths;
+	}
+
+	/**
+	 * Builds the PowerShell command that lists the files matching a path pattern on the remote Windows host.
+	 * The full pattern is passed to {@code Get-Item}, which expands wildcards in every segment and, unlike
+	 * {@code Get-ChildItem}, never enumerates the children of a literal directory.
+	 *
+	 * @param pattern the parsed path pattern
+	 * @return the command to execute
+	 */
+	static String buildResolveCommand(final PathPattern pattern) {
+		return RESOLVE_WINDOWS_FILES_COMMAND.formatted(pattern.fullPattern());
 	}
 
 	/**

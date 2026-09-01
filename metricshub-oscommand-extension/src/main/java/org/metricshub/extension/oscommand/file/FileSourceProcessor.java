@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.exception.ControlledSshException;
 import org.metricshub.engine.common.helpers.FileHelper;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
@@ -60,15 +61,21 @@ public class FileSourceProcessor {
 	@NonNull
 	private OsCommandService osCommandService;
 
-	// PowerShell command template for resolving file paths on Windows.
+	// PowerShell command template for resolving file paths on Windows. The full pattern is passed to Get-Item, which
+	// expands wildcards in every segment and, unlike Get-ChildItem, never enumerates the children of a literal directory.
 	public static final String RESOLVE_WINDOWS_FILES_COMMAND =
-		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-ChildItem -Path \\\"%s\\\" -File -Filter \\\"%s\\\" | ForEach-Object { $_.FullName }\"";
+		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }\"";
 
-	// Linux find command template for resolving file paths.
+	// Linux find command template for resolving file paths when no directory segment holds a wildcard.
 	public static final String RESOLVE_LINUX_FILES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -name \"%s\" -print";
 
 	// Linux find command template for resolving directory paths.
 	public static final String RESOLVE_LINUX_DIRECTORIES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -print";
+
+	// Linux find command template for resolving file paths when a directory segment holds a wildcard:
+	// arguments are the literal root, the number of segments below it and the full pattern.
+	public static final String RESOLVE_LINUX_FILES_BY_PATH_COMMAND =
+		"find -L \"%s\" -maxdepth %d -type f -path \"%s\" -print";
 
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
@@ -420,7 +427,7 @@ public class FileSourceProcessor {
 		final TelemetryManager telemetryManager,
 		final DeviceKind deviceKind
 	) {
-		final Set<String> resolvedFiles = new HashSet<>();
+		final Set<String> absolutePaths = new HashSet<>();
 
 		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager
 			.getHostConfiguration()
@@ -429,32 +436,24 @@ public class FileSourceProcessor {
 
 		if (sshConfiguration == null) {
 			log.info("Hostname {} - No SSH configuration found. Cannot resolve remote file paths.", hostname);
-			return resolvedFiles;
+			return absolutePaths;
 		}
 
 		final Set<String> rawPaths = fileSource.getPaths();
 
 		if (rawPaths == null || rawPaths.isEmpty()) {
-			return new HashSet<>();
+			return absolutePaths;
 		}
 
-		final Set<String> absolutePaths = new HashSet<>();
-
 		for (final String path : rawPaths) {
-			// Extract filename pattern and base path from the path pattern
-			String filename = FileHelper.extractFilename(path, deviceKind);
-			final String basePath = FileHelper.extractBasePath(path, deviceKind);
+			final PathPattern pattern = FileHelper.parsePathPattern(path, deviceKind);
+			if (pattern == null) {
+				log.info("Hostname {} - Skipping invalid file path pattern: {}", hostname, path);
+				continue;
+			}
 
 			// Build OS-specific command to find matching files
-			String command;
-
-			if (deviceKind.equals(DeviceKind.WINDOWS)) {
-				command = RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename);
-			} else if (filename.equals("*") || filename.isBlank()) {
-				command = RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(basePath);
-			} else {
-				command = RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
-			}
+			final String command = buildResolveCommand(pattern, deviceKind);
 
 			try {
 				// Execute SSH command to find matching files on remote host
@@ -476,6 +475,37 @@ public class FileSourceProcessor {
 			}
 		}
 		return absolutePaths;
+	}
+
+	/**
+	 * Builds the OS-specific command that lists the files matching a path pattern on the remote host.
+	 * <ul>
+	 * <li>Windows: the full pattern is passed to {@code Get-Item}, which expands wildcards in every segment.</li>
+	 * <li>Linux with a wildcard in a directory segment: {@code find -path} from the literal root, bounded to the
+	 * pattern depth.</li>
+	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
+	 * {@code *}), so that existing configurations produce unchanged commands.</li>
+	 * </ul>
+	 *
+	 * @param pattern    the parsed path pattern
+	 * @param deviceKind the device kind of the remote host
+	 * @return the command to execute
+	 */
+	static String buildResolveCommand(final PathPattern pattern, final DeviceKind deviceKind) {
+		if (DeviceKind.WINDOWS.equals(deviceKind)) {
+			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(pattern.fullPattern());
+		}
+
+		if (pattern.hasDirectoryWildcard()) {
+			return RESOLVE_LINUX_FILES_BY_PATH_COMMAND.formatted(pattern.root(), pattern.depth(), pattern.fullPattern());
+		}
+
+		final String filename = pattern.filename();
+		if ("*".equals(filename)) {
+			return RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(pattern.root());
+		}
+
+		return RESOLVE_LINUX_FILES_COMMAND.formatted(pattern.root(), filename);
 	}
 
 	/**

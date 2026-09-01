@@ -13,6 +13,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -61,6 +63,118 @@ class FileSourceProcessorTest {
 		final StringBuilder logBlock = new StringBuilder();
 		FileHelper.appendLogBlock(logBlock, path, FileHelper.escapeSemiColon(rawContent));
 		return logBlock.toString();
+	}
+
+	private static String buildResolveCommand(final String path, final DeviceKind deviceKind) {
+		return FileSourceProcessor.buildResolveCommand(FileHelper.parsePathPattern(path, deviceKind), deviceKind);
+	}
+
+	@Test
+	void buildResolveCommand_windowsPassesFullPatternToGetItem() {
+		final String template =
+			"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }\"";
+
+		assertEquals(
+			template.formatted(WINDOWS_ABSOLUTE_PATH),
+			buildResolveCommand(WINDOWS_ABSOLUTE_PATH, DeviceKind.WINDOWS)
+		);
+		assertEquals(
+			template.formatted("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2"),
+			buildResolveCommand("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2", DeviceKind.WINDOWS)
+		);
+		assertEquals(template.formatted("C:\\logs\\*"), buildResolveCommand("C:\\logs\\", DeviceKind.WINDOWS));
+	}
+
+	@Test
+	void buildResolveCommand_linuxKeepsNameCommandWithoutDirectoryWildcard() {
+		assertEquals(
+			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"*.log\" -print",
+			buildResolveCommand(LINUX_ABSOLUTE_PATH, DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"*.log\" -print",
+			buildResolveCommand(LINUX_ABSOLUTE_PATH, DeviceKind.AIX)
+		);
+		assertEquals(
+			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"app.log\" -print",
+			buildResolveCommand("/opt/metricshub/logs/app.log", DeviceKind.LINUX)
+		);
+		assertEquals("find -L \"/var/log\" -maxdepth 1 -type f -print", buildResolveCommand("/var/log/", DeviceKind.LINUX));
+		assertEquals(
+			"find -L \"/var/log\" -maxdepth 1 -type f -print",
+			buildResolveCommand("/var/log/*", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void buildResolveCommand_linuxUsesPathCommandWithDirectoryWildcard() {
+		assertEquals(
+			"find -L \"/opt/autosys\" -maxdepth 3 -type f -path \"/opt/autosys/autouser*/out/event_demon*PE2\" -print",
+			buildResolveCommand("/opt/autosys/autouser*/out/event_demon*PE2", DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/\" -maxdepth 2 -type f -path \"/opt*/x.log\" -print",
+			buildResolveCommand("/opt*/x.log", DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/opt\" -maxdepth 2 -type f -path \"/opt/node?/*\" -print",
+			buildResolveCommand("/opt/node?/", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void resolveRemoteFiles_runsBuiltCommandAndSkipsInvalidPatterns() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+			.hostname(HOSTNAME)
+			.username(USERNAME)
+			.password(PASSWORD.toCharArray())
+			.build();
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
+			.hostType(DeviceKind.LINUX)
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostProperties(HostProperties.builder().isLocalhost(false).build())
+			.hostConfiguration(hostConfiguration)
+			.build();
+		final FileSource fileSource = FileSource.builder()
+			.key(SOURCE_KEY)
+			.paths(Set.of("/opt/autosys/autouser*/out/event_demon*PE2", "relative/path.log"))
+			.build();
+
+		final String expectedCommand =
+			"find -L \"/opt/autosys\" -maxdepth 3 -type f -path \"/opt/autosys/autouser*/out/event_demon*PE2\" -print";
+		doReturn("/opt/autosys/autouser01/out/event_demon.PE2\n/opt/autosys/autouser02/out/event_demon_XPE2\n")
+			.when(osCommandService)
+			.runSshCommand(
+				eq(expectedCommand),
+				eq(HOSTNAME),
+				eq(sshConfiguration),
+				anyLong(),
+				any(),
+				eq(expectedCommand),
+				eq(DeviceKind.LINUX)
+			);
+
+		final FileSourceProcessor processor = new FileSourceProcessor(osCommandService);
+		final Set<String> resolved = processor.resolveRemoteFiles(HOSTNAME, fileSource, telemetryManager, DeviceKind.LINUX);
+
+		assertEquals(
+			Set.of("/opt/autosys/autouser01/out/event_demon.PE2", "/opt/autosys/autouser02/out/event_demon_XPE2"),
+			resolved
+		);
+		// The relative path is skipped before any command is run
+		verify(osCommandService, times(1)).runSshCommand(
+			anyString(),
+			anyString(),
+			any(),
+			anyLong(),
+			any(),
+			anyString(),
+			any()
+		);
 	}
 
 	/**
