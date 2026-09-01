@@ -380,7 +380,8 @@ public class FileHelper {
 
 	/**
 	 * Parses remote command output into a set of validated absolute file paths.
-	 * Splits on {@code \n} or {@code \r\n}, trims and skips empty lines, and keeps only lines
+	 * Splits on {@code \n} or {@code \r\n}, skips blank lines, keeps each path verbatim (spaces are significant in
+	 * file names), and keeps only lines
 	 * matching the expected format for the given device kind. Non-matching lines are logged and skipped.
 	 *
 	 * @param result      raw command output
@@ -403,9 +404,8 @@ public class FileHelper {
 			? ABSOLUTE_WINDOWS_PATH
 			: ABSOLUTE_LINUX_PATH;
 
-		for (final String raw : result.split(LINE_SPLIT_REGEX, -1)) {
-			final String line = raw.trim();
-			if (line.isEmpty()) {
+		for (final String line : result.split(LINE_SPLIT_REGEX, -1)) {
+			if (line.isBlank()) {
 				continue;
 			}
 			if (pathPatternMatcher.matcher(line).matches()) {

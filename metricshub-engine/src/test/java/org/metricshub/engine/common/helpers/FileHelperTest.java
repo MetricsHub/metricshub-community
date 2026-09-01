@@ -442,6 +442,13 @@ class FileHelperTest {
 	}
 
 	@Test
+	void parseResolvedPathsFromCommandResult_keepsSignificantSpaces() {
+		final String input = "/tmp/node1/report \r\n/tmp/node2/ report\n   \n";
+		final var result = parseResolvedPathsFromCommandResult(input, DeviceKind.LINUX, HOSTNAME, "/tmp/node*/*report*");
+		assertEquals(Set.of("/tmp/node1/report ", "/tmp/node2/ report"), result);
+	}
+
+	@Test
 	void parseResolvedPathsFromCommandResult_linuxAbsolutePath_returnsPath() {
 		final String path = "/opt/metricshub/logs/test.log";
 		final var result = parseResolvedPathsFromCommandResult(
