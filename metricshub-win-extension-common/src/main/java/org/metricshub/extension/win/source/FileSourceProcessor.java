@@ -537,14 +537,14 @@ public class FileSourceProcessor {
 	/**
 	 * Builds the PowerShell command that lists the files matching a path pattern on the remote Windows host.
 	 * The full pattern is passed to {@code Get-Item}, which expands wildcards in every segment and, unlike
-	 * {@code Get-ChildItem}, never enumerates the children of a literal directory. Brackets are escaped so that only
-	 * {@code *} and {@code ?} act as wildcards.
+	 * {@code Get-ChildItem}, never enumerates the children of a literal directory. Brackets, {@code $} and backticks
+	 * are escaped so that only {@code *} and {@code ?} act as wildcards and nothing is expanded.
 	 *
 	 * @param pattern the parsed path pattern
 	 * @return the command to execute
 	 */
 	static String buildResolveCommand(final PathPattern pattern) {
-		return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellBrackets(pattern.fullPattern()));
+		return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellPattern(pattern.fullPattern()));
 	}
 
 	/**

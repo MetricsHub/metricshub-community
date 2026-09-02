@@ -582,16 +582,30 @@ public class FileHelper {
 	}
 
 	/**
-	 * Escapes {@code [} and {@code ]}, which PowerShell wildcards treat as character classes, so that they match
-	 * literally in a {@code Get-Item -Path} pattern and only {@code *} and {@code ?} act as wildcards.
-	 * The backtick is doubled because the pattern is embedded in a double-quoted PowerShell string, where a single
-	 * backtick would be consumed as the string escape character before reaching the wildcard engine.
+	 * Escapes a path pattern embedded in a double-quoted PowerShell string and passed to {@code Get-Item -Path}, so
+	 * that only {@code *} and {@code ?} act as wildcards and nothing is expanded or executed:
+	 * <ul>
+	 * <li>{@code $} is escaped for the string ({@code `$}), otherwise PowerShell expands variables and {@code $()}
+	 * subexpressions;</li>
+	 * <li>{@code [} and {@code ]} are wildcard character classes: they need a backtick for the wildcard engine, doubled
+	 * so that the string parsing does not consume it ({@code ``[});</li>
+	 * <li>a literal backtick is the escape character of both layers, so it is written four times.</li>
+	 * </ul>
 	 *
 	 * @param pattern the PowerShell path pattern
-	 * @return the pattern with literal brackets
+	 * @return the escaped pattern
 	 */
-	public static String escapePowerShellBrackets(final String pattern) {
-		return pattern.replace("[", "``[").replace("]", "``]");
+	public static String escapePowerShellPattern(final String pattern) {
+		final StringBuilder escaped = new StringBuilder(pattern.length());
+		for (final char c : pattern.toCharArray()) {
+			switch (c) {
+				case '`' -> escaped.append("````");
+				case '$' -> escaped.append("`$");
+				case '[', ']' -> escaped.append("``").append(c);
+				default -> escaped.append(c);
+			}
+		}
+		return escaped.toString();
 	}
 
 	/**

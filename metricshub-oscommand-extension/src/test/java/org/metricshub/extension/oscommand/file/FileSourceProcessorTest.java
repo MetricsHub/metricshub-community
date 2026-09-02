@@ -88,6 +88,11 @@ class FileSourceProcessorTest {
 			template.formatted("C:\\logs\\app``[1``].log"),
 			buildResolveCommand("C:\\logs\\app[1].log", DeviceKind.WINDOWS)
 		);
+		// $ is never expanded by the double-quoted PowerShell string
+		assertEquals(
+			template.formatted("C:\\data\\`$logs\\node*\\`$(id).log"),
+			buildResolveCommand("C:\\data\\$logs\\node*\\$(id).log", DeviceKind.WINDOWS)
+		);
 	}
 
 	@Test

@@ -75,6 +75,11 @@ class FileSourceProcessorTest {
 		assertEquals(template.formatted("C:\\logs\\*"), buildResolveCommand("C:\\logs\\"));
 		// Brackets are PowerShell wildcard characters: escaped so that only '*' and '?' are wildcards
 		assertEquals(template.formatted("C:\\logs\\app``[1``].log"), buildResolveCommand("C:\\logs\\app[1].log"));
+		// $ is never expanded by the double-quoted PowerShell string
+		assertEquals(
+			template.formatted("C:\\data\\`$logs\\node*\\`$(id).log"),
+			buildResolveCommand("C:\\data\\$logs\\node*\\$(id).log")
+		);
 	}
 
 	@Test

@@ -211,10 +211,16 @@ class FileHelperTest {
 	}
 
 	@Test
-	void escapePowerShellBrackets_doublesBacktickForDoubleQuotedString() {
-		assertEquals("C:\\logs\\app``[1``].log", FileHelper.escapePowerShellBrackets("C:\\logs\\app[1].log"));
-		assertEquals("D:\\``[prod``]\\node*\\app?.log", FileHelper.escapePowerShellBrackets("D:\\[prod]\\node*\\app?.log"));
-		assertEquals("C:\\logs\\*.log", FileHelper.escapePowerShellBrackets("C:\\logs\\*.log"));
+	void escapePowerShellPattern_keepsOnlyStarAndQuestionMarkAsWildcards() {
+		assertEquals("C:\\logs\\app``[1``].log", FileHelper.escapePowerShellPattern("C:\\logs\\app[1].log"));
+		assertEquals("D:\\``[prod``]\\node*\\app?.log", FileHelper.escapePowerShellPattern("D:\\[prod]\\node*\\app?.log"));
+		assertEquals("C:\\logs\\*.log", FileHelper.escapePowerShellPattern("C:\\logs\\*.log"));
+		// $ and $() are never expanded, a literal backtick survives both the string and the wildcard layers
+		assertEquals(
+			"C:\\data\\`$logs\\node*\\`$(id).log",
+			FileHelper.escapePowerShellPattern("C:\\data\\$logs\\node*\\$(id).log")
+		);
+		assertEquals("C:\\a````b\\*.log", FileHelper.escapePowerShellPattern("C:\\a`b\\*.log"));
 	}
 
 	private DeviceKind localDeviceKind() {

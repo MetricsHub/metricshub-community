@@ -501,7 +501,7 @@ public class FileSourceProcessor {
 	 */
 	static String buildResolveCommand(final PathPattern pattern, final DeviceKind deviceKind) {
 		if (DeviceKind.WINDOWS.equals(deviceKind)) {
-			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellBrackets(pattern.fullPattern()));
+			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellPattern(pattern.fullPattern()));
 		}
 
 		// Both values end up inside double quotes of the remote shell; the filename is additionally a find pattern
