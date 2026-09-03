@@ -23,6 +23,7 @@ package org.metricshub.web.service;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -44,8 +45,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AgentStartupRunner {
 
-	/** All startup hooks discovered by Spring, in {@link org.springframework.core.annotation.Order} order. */
-	private final List<StartupHook> startupHooks;
+	/**
+	 * Provider over every {@link StartupHook} bean. An {@link ObjectProvider} is used instead of a
+	 * {@code List<StartupHook>} so the runner is instantiable even when no hook is declared (as in the
+	 * community edition): a {@code List} dependency would be treated as required and would fail the
+	 * Spring context startup when no matching bean exists.
+	 */
+	private final ObjectProvider<StartupHook> startupHooks;
 
 	/** Guards against running the hooks more than once. */
 	private boolean started;
@@ -53,9 +59,10 @@ public class AgentStartupRunner {
 	/**
 	 * Creates the runner.
 	 *
-	 * @param startupHooks all {@link StartupHook} beans (an empty list when none are declared)
+	 * @param startupHooks provider over all {@link StartupHook} beans (resolves to nothing when none
+	 *                     are declared)
 	 */
-	public AgentStartupRunner(final List<StartupHook> startupHooks) {
+	public AgentStartupRunner(final ObjectProvider<StartupHook> startupHooks) {
 		this.startupHooks = startupHooks;
 	}
 
@@ -70,13 +77,15 @@ public class AgentStartupRunner {
 		}
 		started = true;
 
-		if (startupHooks.isEmpty()) {
+		// Resolve the hooks lazily, ordered by @Order when present.
+		final List<StartupHook> hooks = startupHooks.orderedStream().toList();
+		if (hooks.isEmpty()) {
 			log.debug("No startup hooks to run.");
 			return;
 		}
 
-		log.info("Running {} startup hook(s).", startupHooks.size());
-		for (final StartupHook hook : startupHooks) {
+		log.info("Running {} startup hook(s).", hooks.size());
+		for (final StartupHook hook : hooks) {
 			try {
 				hook.onStartup();
 			} catch (Exception e) {
