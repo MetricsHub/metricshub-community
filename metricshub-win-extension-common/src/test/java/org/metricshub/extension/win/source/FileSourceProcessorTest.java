@@ -11,6 +11,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -54,6 +56,74 @@ class FileSourceProcessorTest {
 		final StringBuilder logBlock = new StringBuilder();
 		FileHelper.appendLogBlock(logBlock, path, FileHelper.escapeSemiColon(rawContent));
 		return logBlock.toString();
+	}
+
+	private static String buildResolveCommand(final String path) {
+		return FileSourceProcessor.buildResolveCommand(FileHelper.parsePathPattern(path, DeviceKind.WINDOWS));
+	}
+
+	@Test
+	void buildResolveCommand_passesFullPatternToGetItem() {
+		final String template =
+			"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object FullName\"";
+
+		assertEquals(template.formatted(WINDOWS_ABSOLUTE_PATH), buildResolveCommand(WINDOWS_ABSOLUTE_PATH));
+		assertEquals(
+			template.formatted("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2"),
+			buildResolveCommand("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2")
+		);
+		assertEquals(template.formatted("C:\\logs\\*"), buildResolveCommand("C:\\logs\\"));
+		// Brackets are PowerShell wildcard characters: escaped so that only '*' and '?' are wildcards
+		assertEquals(template.formatted("C:\\logs\\app``[1``].log"), buildResolveCommand("C:\\logs\\app[1].log"));
+		// $ is never expanded by the double-quoted PowerShell string
+		assertEquals(
+			template.formatted("C:\\data\\`$logs\\node*\\`$(id).log"),
+			buildResolveCommand("C:\\data\\$logs\\node*\\$(id).log")
+		);
+	}
+
+	@Test
+	void resolveRemoteFiles_runsBuiltCommandAndSkipsInvalidPatterns() throws Exception {
+		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
+			.hostType(DeviceKind.WINDOWS)
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostProperties(HostProperties.builder().isLocalhost(false).build())
+			.hostConfiguration(hostConfiguration)
+			.build();
+		final String pattern = "D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2";
+		final FileSource fileSource = FileSource.builder()
+			.key("sourceKey")
+			.paths(Set.of(pattern, "logs\\relative.log"))
+			.build();
+
+		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
+		final String expectedCommand = buildResolveCommand(pattern);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), eq(expectedCommand), anyList())
+		).thenReturn(
+			"D:\\Autosys_waae\\autouser01\\out\\event_demon.PE2\r\nD:\\Autosys_waae\\autouser02\\out\\event_demon_XPE2\r\n"
+		);
+
+		final FileSourceProcessor processor = new FileSourceProcessor(
+			mockWinRequestExecutor,
+			mockConfigurationRetriever,
+			CONNECTOR_ID
+		);
+		final Set<String> resolved = processor.resolveRemoteFiles(HOSTNAME, fileSource, telemetryManager);
+
+		assertEquals(
+			Set.of(
+				"D:\\Autosys_waae\\autouser01\\out\\event_demon.PE2",
+				"D:\\Autosys_waae\\autouser02\\out\\event_demon_XPE2"
+			),
+			resolved
+		);
+		// The relative path is skipped before any command is run
+		verify(mockWinRequestExecutor, times(1)).executeWinRemoteCommand(anyString(), any(), anyString(), anyList());
 	}
 
 	private final String WINDOWS_ABSOLUTE_PATH = "C:\\Program Files\\MetricsHub\\logs\\*.log";

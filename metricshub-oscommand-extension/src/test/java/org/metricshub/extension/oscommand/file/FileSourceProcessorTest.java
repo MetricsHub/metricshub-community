@@ -13,6 +13,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -61,6 +63,167 @@ class FileSourceProcessorTest {
 		final StringBuilder logBlock = new StringBuilder();
 		FileHelper.appendLogBlock(logBlock, path, FileHelper.escapeSemiColon(rawContent));
 		return logBlock.toString();
+	}
+
+	private static String buildResolveCommand(final String path, final DeviceKind deviceKind) {
+		return FileSourceProcessor.buildResolveCommand(FileHelper.parsePathPattern(path, deviceKind), deviceKind);
+	}
+
+	@Test
+	void buildResolveCommand_windowsPassesFullPatternToGetItem() {
+		final String template =
+			"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }\"";
+
+		assertEquals(
+			template.formatted(WINDOWS_ABSOLUTE_PATH),
+			buildResolveCommand(WINDOWS_ABSOLUTE_PATH, DeviceKind.WINDOWS)
+		);
+		assertEquals(
+			template.formatted("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2"),
+			buildResolveCommand("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2", DeviceKind.WINDOWS)
+		);
+		assertEquals(template.formatted("C:\\logs\\*"), buildResolveCommand("C:\\logs\\", DeviceKind.WINDOWS));
+		// Brackets are PowerShell wildcard characters: escaped so that only '*' and '?' are wildcards
+		assertEquals(
+			template.formatted("C:\\logs\\app``[1``].log"),
+			buildResolveCommand("C:\\logs\\app[1].log", DeviceKind.WINDOWS)
+		);
+		// $ is never expanded by the double-quoted PowerShell string
+		assertEquals(
+			template.formatted("C:\\data\\`$logs\\node*\\`$(id).log"),
+			buildResolveCommand("C:\\data\\$logs\\node*\\$(id).log", DeviceKind.WINDOWS)
+		);
+	}
+
+	@Test
+	void buildResolveCommand_linuxKeepsNameCommandWithoutDirectoryWildcard() {
+		assertEquals(
+			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"*.log\" -print",
+			buildResolveCommand(LINUX_ABSOLUTE_PATH, DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"*.log\" -print",
+			buildResolveCommand(LINUX_ABSOLUTE_PATH, DeviceKind.AIX)
+		);
+		assertEquals(
+			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"app.log\" -print",
+			buildResolveCommand("/opt/metricshub/logs/app.log", DeviceKind.LINUX)
+		);
+		assertEquals("find -L \"/var/log\" -maxdepth 1 -type f -print", buildResolveCommand("/var/log/", DeviceKind.LINUX));
+		assertEquals(
+			"find -L \"/var/log\" -maxdepth 1 -type f -print",
+			buildResolveCommand("/var/log/*", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void buildResolveCommand_linuxExpandsDirectoryGlobWithDirectoryWildcard() {
+		final String template =
+			"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
+
+		assertEquals(
+			template.formatted("\"/opt/autosys/autouser\"*\"/out\"", "event_demon*PE2"),
+			buildResolveCommand("/opt/autosys/autouser*/out/event_demon*PE2", DeviceKind.LINUX)
+		);
+		assertEquals(template.formatted("\"/opt\"*", "x.log"), buildResolveCommand("/opt*/x.log", DeviceKind.LINUX));
+		assertEquals(template.formatted("\"/opt/node\"?", "*"), buildResolveCommand("/opt/node?/", DeviceKind.LINUX));
+		// Brackets, spaces, quotes and shell-special characters in literal runs are quoted or escaped
+		assertEquals(
+			template.formatted("\"/apps/node\"*\"/[prod]\"", "app.log"),
+			buildResolveCommand("/apps/node*/[prod]/app.log", DeviceKind.LINUX)
+		);
+		assertEquals(
+			template.formatted("\"/opt/my app/it'\\''s/\\$x/\\\"q\\\"/node\"*", "app?.log"),
+			buildResolveCommand("/opt/my app/it's/$x/\"q\"/node*/app?.log", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void buildResolveCommand_linuxEscapesGlobMetacharactersOtherThanWildcards() {
+		// Brackets are literal in the filename; only '*' and '?' are wildcards. The find escape (\[) is itself escaped
+		// for the shell double quotes (\\[), which hands \[ to find.
+		assertEquals(
+			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"app\\\\[1\\\\].log\" -print",
+			buildResolveCommand("/opt/logs/app[1].log", DeviceKind.LINUX)
+		);
+		// A literal backslash needs two escaping levels: find (\\), then shell double quotes (\\\\)
+		assertEquals(
+			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"a\\\\\\\\b*.log\" -print",
+			buildResolveCommand("/opt/logs/a\\b*.log", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void buildResolveCommand_linuxNeverLetsTheShellInterpretPaths() {
+		// $, backtick and double quote are escaped in the root and in the filename: no expansion, no command substitution
+		assertEquals(
+			"find -L \"/opt/\\$x/\\`q\\`\" -maxdepth 1 -type f -name \"\\$(touch pwned)*.log\" -print",
+			buildResolveCommand("/opt/$x/`q`/$(touch pwned)*.log", DeviceKind.LINUX)
+		);
+		assertEquals(
+			"find -L \"/opt/\\\"q\\\"\" -maxdepth 1 -type f -print",
+			buildResolveCommand("/opt/\"q\"/", DeviceKind.LINUX)
+		);
+		// Same inside the single-quoted sh -c script, where a single quote in the filename is also handled
+		assertEquals(
+			"sh -c 'for d in \"/opt/node\"*; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"it'\\''s\\$(id)*.log\" -print; done'",
+			buildResolveCommand("/opt/node*/it's$(id)*.log", DeviceKind.LINUX)
+		);
+	}
+
+	@Test
+	void resolveRemoteFiles_runsBuiltCommandAndSkipsInvalidPatterns() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+			.hostname(HOSTNAME)
+			.username(USERNAME)
+			.password(PASSWORD.toCharArray())
+			.build();
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
+			.hostType(DeviceKind.LINUX)
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostProperties(HostProperties.builder().isLocalhost(false).build())
+			.hostConfiguration(hostConfiguration)
+			.build();
+		final FileSource fileSource = FileSource.builder()
+			.key(SOURCE_KEY)
+			.paths(Set.of("/opt/autosys/autouser*/out/event_demon*PE2", "relative/path.log"))
+			.build();
+
+		final String expectedCommand =
+			"sh -c 'for d in \"/opt/autosys/autouser\"*\"/out\"; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"event_demon*PE2\" -print; done'";
+		doReturn("/opt/autosys/autouser01/out/event_demon.PE2\n/opt/autosys/autouser02/out/event_demon_XPE2\n")
+			.when(osCommandService)
+			.runSshCommand(
+				eq(expectedCommand),
+				eq(HOSTNAME),
+				eq(sshConfiguration),
+				anyLong(),
+				any(),
+				eq(expectedCommand),
+				eq(DeviceKind.LINUX)
+			);
+
+		final FileSourceProcessor processor = new FileSourceProcessor(osCommandService);
+		final Set<String> resolved = processor.resolveRemoteFiles(HOSTNAME, fileSource, telemetryManager, DeviceKind.LINUX);
+
+		assertEquals(
+			Set.of("/opt/autosys/autouser01/out/event_demon.PE2", "/opt/autosys/autouser02/out/event_demon_XPE2"),
+			resolved
+		);
+		// The relative path is skipped before any command is run
+		verify(osCommandService, times(1)).runSshCommand(
+			anyString(),
+			anyString(),
+			any(),
+			anyLong(),
+			any(),
+			anyString(),
+			any()
+		);
 	}
 
 	/**

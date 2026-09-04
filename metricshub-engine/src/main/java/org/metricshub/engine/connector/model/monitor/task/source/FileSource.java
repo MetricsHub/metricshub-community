@@ -77,6 +77,9 @@ public class FileSource extends Source {
 
 	/**
 	 * File path patterns to read (e.g. {@code C:\logs\*.log}, {@code /var/log/app/*.log}).
+	 * The {@code *} and {@code ?} wildcards are accepted in any path segment, directory or filename
+	 * (e.g. {@code D:\apps\node*\out\event_*.log}); each wildcard matches within a single segment. On remote Linux
+	 * hosts, a wildcard in a directory segment does not match hidden (dot-prefixed) directories.
 	 * Supports comma-separated strings or YAML arrays.
 	 */
 	@JsonSetter(nulls = SKIP)

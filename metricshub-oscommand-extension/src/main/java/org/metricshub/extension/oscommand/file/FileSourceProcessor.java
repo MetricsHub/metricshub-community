@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.exception.ControlledSshException;
 import org.metricshub.engine.common.helpers.FileHelper;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
@@ -60,15 +61,27 @@ public class FileSourceProcessor {
 	@NonNull
 	private OsCommandService osCommandService;
 
-	// PowerShell command template for resolving file paths on Windows.
+	// PowerShell command template for resolving file paths on Windows. The full pattern is passed to Get-Item, which
+	// expands wildcards in every segment and, unlike Get-ChildItem, never enumerates the children of a literal directory.
 	public static final String RESOLVE_WINDOWS_FILES_COMMAND =
-		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-ChildItem -Path \\\"%s\\\" -File -Filter \\\"%s\\\" | ForEach-Object { $_.FullName }\"";
+		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }\"";
 
-	// Linux find command template for resolving file paths.
+	// Linux find command template for resolving file paths when no directory segment holds a wildcard.
 	public static final String RESOLVE_LINUX_FILES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -name \"%s\" -print";
 
 	// Linux find command template for resolving directory paths.
 	public static final String RESOLVE_LINUX_DIRECTORIES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -print";
+
+	// Linux command template for resolving file paths when a directory segment holds a wildcard. The shell expands the
+	// directory glob, so only matching directories are visited (no traversal of unrelated or unreadable subtrees) and
+	// a wildcard never crosses a separator; as with any shell glob, a wildcard does not match dot-prefixed names. The
+	// filename is then resolved in each matched directory with find, exactly as in RESOLVE_LINUX_FILES_COMMAND.
+	// Arguments are the shell-quoted directory glob and the escaped filename pattern.
+	public static final String RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND =
+		"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
+
+	// A single quote inside the single-quoted `sh -c` script: closes the quote, adds an escaped quote, reopens it.
+	private static final String SINGLE_QUOTE_IN_SCRIPT = "'\\''";
 
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
@@ -420,7 +433,7 @@ public class FileSourceProcessor {
 		final TelemetryManager telemetryManager,
 		final DeviceKind deviceKind
 	) {
-		final Set<String> resolvedFiles = new HashSet<>();
+		final Set<String> absolutePaths = new HashSet<>();
 
 		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager
 			.getHostConfiguration()
@@ -429,32 +442,24 @@ public class FileSourceProcessor {
 
 		if (sshConfiguration == null) {
 			log.info("Hostname {} - No SSH configuration found. Cannot resolve remote file paths.", hostname);
-			return resolvedFiles;
+			return absolutePaths;
 		}
 
 		final Set<String> rawPaths = fileSource.getPaths();
 
 		if (rawPaths == null || rawPaths.isEmpty()) {
-			return new HashSet<>();
+			return absolutePaths;
 		}
 
-		final Set<String> absolutePaths = new HashSet<>();
-
 		for (final String path : rawPaths) {
-			// Extract filename pattern and base path from the path pattern
-			String filename = FileHelper.extractFilename(path, deviceKind);
-			final String basePath = FileHelper.extractBasePath(path, deviceKind);
+			final PathPattern pattern = FileHelper.parsePathPattern(path, deviceKind);
+			if (pattern == null) {
+				log.info("Hostname {} - Skipping invalid file path pattern: {}", hostname, path);
+				continue;
+			}
 
 			// Build OS-specific command to find matching files
-			String command;
-
-			if (deviceKind.equals(DeviceKind.WINDOWS)) {
-				command = RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename);
-			} else if (filename.equals("*") || filename.isBlank()) {
-				command = RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(basePath);
-			} else {
-				command = RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
-			}
+			final String command = buildResolveCommand(pattern, deviceKind);
 
 			try {
 				// Execute SSH command to find matching files on remote host
@@ -476,6 +481,120 @@ public class FileSourceProcessor {
 			}
 		}
 		return absolutePaths;
+	}
+
+	/**
+	 * Builds the OS-specific command that lists the files matching a path pattern on the remote host.
+	 * <ul>
+	 * <li>Windows: the full pattern is passed to {@code Get-Item}, which expands wildcards in every segment.</li>
+	 * <li>Linux with a wildcard in a directory segment: the shell expands the directory glob and {@code find -name}
+	 * resolves the filename in each matched directory.</li>
+	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
+	 * {@code *}), so that existing configurations produce unchanged commands.</li>
+	 * </ul>
+	 * In every pattern, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally, and
+	 * shell metacharacters are escaped so that a path is never interpreted by the remote shell.
+	 *
+	 * @param pattern    the parsed path pattern
+	 * @param deviceKind the device kind of the remote host
+	 * @return the command to execute
+	 */
+	static String buildResolveCommand(final PathPattern pattern, final DeviceKind deviceKind) {
+		if (DeviceKind.WINDOWS.equals(deviceKind)) {
+			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellPattern(pattern.fullPattern()));
+		}
+
+		// Both values end up inside double quotes of the remote shell; the filename is additionally a find pattern
+		final String root = escapeDoubleQuotedShell(pattern.root());
+		final String filename = escapeDoubleQuotedShell(escapeFindMetacharacters(pattern.filename()));
+
+		if (pattern.hasDirectoryWildcard()) {
+			return RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND.formatted(
+				quoteShellGlob(pattern.directoryPattern()),
+				filename.replace("'", SINGLE_QUOTE_IN_SCRIPT)
+			);
+		}
+
+		if ("*".equals(pattern.filename())) {
+			return RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(root);
+		}
+
+		return RESOLVE_LINUX_FILES_COMMAND.formatted(root, filename);
+	}
+
+	/**
+	 * Quotes a directory pattern as a shell glob: literal runs are enclosed in double quotes (with shell metacharacters
+	 * escaped, see {@link #escapeDoubleQuotedShell(String)}) so that spaces, brackets and other special characters are
+	 * taken literally, while {@code *} and {@code ?} are left unquoted so that the shell expands them. A single quote is
+	 * written as {@code '\''} because the glob is embedded in the single-quoted {@code sh -c} script.
+	 *
+	 * @param pattern the directory pattern
+	 * @return the shell glob expression
+	 */
+	static String quoteShellGlob(final String pattern) {
+		final StringBuilder glob = new StringBuilder(pattern.length() + 2);
+		boolean inLiteral = false;
+		for (final char c : pattern.toCharArray()) {
+			if (c == '*' || c == '?') {
+				if (inLiteral) {
+					glob.append('"');
+					inLiteral = false;
+				}
+				glob.append(c);
+				continue;
+			}
+			if (!inLiteral) {
+				glob.append('"');
+				inLiteral = true;
+			}
+			if (c == '\'') {
+				glob.append(SINGLE_QUOTE_IN_SCRIPT);
+			} else {
+				glob.append(escapeDoubleQuotedShell(String.valueOf(c)));
+			}
+		}
+		if (inLiteral) {
+			glob.append('"');
+		}
+		return glob.toString();
+	}
+
+	/**
+	 * Escapes the characters that the shell still interprets inside double quotes ({@code \}, {@code "}, {@code $} and
+	 * {@code `}), so that a value embedded in a double-quoted argument reaches the command verbatim and can never be
+	 * expanded or executed by the shell.
+	 *
+	 * @param value the value to embed in a double-quoted shell argument
+	 * @return the escaped value
+	 */
+	static String escapeDoubleQuotedShell(final String value) {
+		final StringBuilder escaped = new StringBuilder(value.length());
+		for (final char c : value.toCharArray()) {
+			if (c == '\\' || c == '"' || c == '$' || c == '`') {
+				escaped.append('\\');
+			}
+			escaped.append(c);
+		}
+		return escaped.toString();
+	}
+
+	/**
+	 * Escapes the glob metacharacters other than {@code *} and {@code ?} ({@code [}, {@code ]} and {@code \}) in a
+	 * {@code find -name} pattern so that they match literally, consistently with the local resolver. The result still
+	 * has to go through {@link #escapeDoubleQuotedShell(String)} before being embedded in the command.
+	 *
+	 * @param pattern the find pattern
+	 * @return the pattern where only {@code *} and {@code ?} act as wildcards
+	 */
+	static String escapeFindMetacharacters(final String pattern) {
+		final StringBuilder escaped = new StringBuilder(pattern.length());
+		for (final char c : pattern.toCharArray()) {
+			if (c == '[' || c == ']' || c == '\\') {
+				escaped.append('\\');
+			}
+			escaped.append(c);
+		}
+		return escaped.toString();
 	}
 
 	/**
