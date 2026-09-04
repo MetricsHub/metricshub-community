@@ -50,6 +50,7 @@ This is a multi-module project:
 * **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
 * **metricshub-emulation-extension**: Replays recorded protocol exchanges (HTTP, SNMP, WMI, WBEM, SSH, IPMI, JDBC, JMX) from local files, enabling offline testing and development without live infrastructure.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
+* **metricshub-opamp-client**: In-house minimal [OpAMP](https://opentelemetry.io/docs/specs/opamp/) (Open Agent Management Protocol) client embedded in the MetricsHub Agent for remote management: status, identity and health reporting over HTTP polling, plus package-offer handling for automatic upgrades.
 * **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory. The UI-managed `metricshub-ui.yaml` file is handled separately: it is always merged last, after the fragments of every configuration provider, so settings configured through the web UI override every other configuration source.
 * **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts. Whitespace around Velocity directives in the generated YAML defaults to the `lines` mode, which prevents lines made only of `#set`, `#if`, `#foreach` or `#end` directives from producing blank lines, while preserving the indentation of the surrounding content. This default can be overridden with the `parser.space_gobbling` JVM system property, set through the JVM options of the MetricsHub launcher, for example `-Dparser.space_gobbling=structured`. The accepted values are `none`, `bc`, `lines` and `structured`; any other value is rejected with a warning and falls back to `lines`.
 * **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
@@ -58,6 +59,30 @@ This is a multi-module project:
 
 > [!TIP]
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
+
+## Remote Management (OpAMP)
+
+The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling and reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch`, `build_number` and `installer.type` — `deb`, `rpm`, `msi`, `archive` or `docker`, so the server can select the right upgrade artifact), status and health.
+
+On package-manager based installations (Debian, RPM, Windows MSI), the agent also advertises the OpAMP `AcceptsPackages` capability and performs automatic upgrades: the offered package is downloaded from the repository over HTTPS, verified against the offered SHA-256, staged in an upgrade directory that survives the installation, and tracked through a persistent upgrade transaction. The installation itself runs in a detached runner that outlives the agent process — a systemd transient unit on Linux (`systemd-run --unit=metricshub-upgrade-<id> --collect`, installing through `apt-get`/`dnf` with a `dpkg`/`rpm` fallback) and a one-shot SYSTEM scheduled task on Windows (Authenticode-verified `msiexec` installation). The runner stops the service, installs the package, restarts the service and records its result; the agent reconciles that result when it starts again and reports success or failure to the OpAMP server.
+
+The service the runner stops and restarts is resolved per edition and never hardcoded: the agent discovers the installed MetricsHub service (`metricshub-*-service.service` units on Linux, `MetricsHub *` services on Windows), so Community and Enterprise both work out of the box; `upgrade.serviceName` pins it explicitly when needed. The upgrade policy is configured through the top-level `upgrade:` section (`enabled`, `allowDowngrade`, `serviceName`, `hostAllowlist`, `maxPackageSizeBytes`, `downloadTimeout`, `downloadRetries`, `installTimeout`, `trustedCertificateFile`, `msiSignatureSubjectContains`, `downloadHeaders`). Repositories that require authentication are handled with `downloadHeaders`, HTTP headers added to the package download requests, keyed by repository authority — `host` or `host:port`, a bare host binding to the scheme's default port (values may be encrypted with the MetricsHub keystore, exactly like `opamp.headers`). Each header set is bound to its operator-named origin, travels over HTTPS only (a plain-HTTP offer gets nothing, even on loopback), and is never sent anywhere else, whatever download URL an offer carries; on redirects it is withheld from any target outside that origin — a different scheme, host or port receives nothing, while same-origin hops keep it. Credentials stay on the agent, and a compromised OpAMP server cannot pick where they are sent. Archive (tar.gz/zip) and Docker deployments never accept package offers — container images are upgraded by redeploying the image.
+
+The feature is **disabled by default**. Enable it with a top-level `opamp:` section in `metricshub.yaml`:
+
+```yaml
+opamp:
+  enabled: true
+  endpoint: https://opamp.example.com/v1/opamp  # OpAMP server endpoint (plain HTTP transport)
+  headers:                                      # Optional headers sent with every request;
+    Authorization: Bearer ${env::OPAMP_TOKEN}   # values may be encrypted with the MetricsHub keystore
+  certificateFile: /opt/metricshub/security/opamp-ca.pem # Optional trusted certificate (PEM)
+  pollInterval: 30s                             # Interval between two polls (default: 30s)
+  requestTimeout: 10s                           # Timeout of one HTTP exchange (default: 10s)
+  reportHealth: true                            # Report agent health (default: true)
+```
+
+Changing the `opamp:` section triggers a configuration reload; the OpAMP connection itself survives reloads that do not touch this section. The agent identity (`instance_uid`, a UUIDv7) is persisted in the `security` directory next to the MetricsHub keystore, so it survives restarts and upgrades.
 
 ## How to build the Project
 

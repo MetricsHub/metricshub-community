@@ -23,8 +23,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.AlertingSystemConfig;
+import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.config.otel.OtelCollectorConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
@@ -550,6 +552,32 @@ class ReloadServiceTest {
 				"sequential",
 				AgentConfig.builder().otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop")).sequential(true).build(),
 				AgentConfig.builder().otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop")).sequential(false).build()
+			),
+			Arguments.of(
+				"opamp",
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.opamp(OpAmpConfig.builder().enabled(false).build())
+					.build(),
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.opamp(OpAmpConfig.builder().enabled(true).endpoint("https://opamp.example.com/v1/opamp").build())
+					.build()
+			),
+			Arguments.of(
+				"upgrade",
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.upgrade(UpgradeConfig.builder().build())
+					.build(),
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.upgrade(
+						UpgradeConfig.builder()
+							.downloadHeaders(Map.of("nexus.example.com", Map.of("Authorization", "Basic abc")))
+							.build()
+					)
+					.build()
 			),
 			Arguments.of(
 				"enableSelfMonitoring",

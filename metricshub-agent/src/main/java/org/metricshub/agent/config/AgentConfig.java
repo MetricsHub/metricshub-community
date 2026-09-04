@@ -159,6 +159,14 @@ public class AgentConfig {
 	@JsonProperty("web")
 	private Map<String, String> webConfig = loadWebConfig();
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private OpAmpConfig opamp = OpAmpConfig.builder().build();
+
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private UpgradeConfig upgrade = UpgradeConfig.builder().build();
+
 	/**
 	 * Build a new empty instance
 	 *
