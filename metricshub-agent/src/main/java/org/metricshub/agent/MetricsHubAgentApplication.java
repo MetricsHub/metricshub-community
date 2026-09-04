@@ -31,15 +31,10 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.opamp.OpAmpService;
-import org.metricshub.agent.process.runtime.ProcessControl;
 import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
-import org.metricshub.agent.upgrade.UpgradeManager;
-import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
 import org.metricshub.engine.extension.ExtensionManager;
-import org.metricshub.opamp.client.packages.OpampPackagesHandler;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.MetricsHubAgentServer;
@@ -105,21 +100,10 @@ public class MetricsHubAgentApplication implements Runnable {
 			// AgentContextHolder singleton bean is our own instance (used by every service).
 			new Thread(() -> MetricsHubAgentServer.startServer(agentContextHolder)).start();
 
-			// Reconcile a pending upgrade transaction before anything reports to OpAMP, so the
-			// upgrade verdict (SUCCEEDED/FAILED) is part of the first OpAMP status report.
-			final var upgradeManager = new UpgradeManager(agentContextHolder);
-			upgradeManager.reconcileOnStartup();
-
-			// Start the OpAMP service at application level, outside the restartable AgentContext:
-			// its supervisor re-reads the opamp: configuration from the holder and keeps the
-			// OpAMP connection alive across configuration reloads. Package offers are accepted
-			// only on deployments supporting in-place upgrades (deb/rpm/msi).
-			final OpampPackagesHandler packagesHandler = upgradeManager.isPackageUpgradeSupported()
-				? new OpampUpgradeAdapter(upgradeManager)
-				: null;
-			final var opAmpService = new OpAmpService(agentContextHolder, packagesHandler);
-			opAmpService.start();
-			ProcessControl.addShutdownHook(opAmpService::shutdown);
+			// Upgrade reconciliation and the OpAMP supervisor are started by OpAmpStartupHook, a
+			// StartupHook the Spring context above runs once it is ready. Keeping them there rather
+			// than here means the enterprise agent, which boots the same context, needs no wiring
+			// of its own.
 
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = bootAgentContext.getConfigDirectory();

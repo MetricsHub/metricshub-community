@@ -76,7 +76,7 @@ Three properties drive the whole design:
 flowchart TB
     subgraph agent["metricshub-agent"]
         direction TB
-        App["MetricsHubAgentApplication<br/><i>wiring and shutdown hook</i>"]
+        App["OpAmpStartupHook<br/><i>StartupHook: wiring and shutdown hook</i>"]
         subgraph opamp_pkg["org.metricshub.agent.opamp"]
             Svc["OpAmpService<br/><i>lifecycle supervisor</i>"]
             MapD["OpAmpAgentDescriptionMapper"]
@@ -311,7 +311,8 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 
 | Class | Responsibility |
 |---|---|
-| [`MetricsHubAgentApplication`](metricshub-agent/src/main/java/org/metricshub/agent/MetricsHubAgentApplication.java) | Wiring order: reconcile pending upgrade → decide whether the deployment is upgradable → build handler → start `OpAmpService` → register shutdown hook |
+| [`OpAmpStartupHook`](metricshub-agent/src/main/java/org/metricshub/web/service/OpAmpStartupHook.java) | **The wiring**, as a `StartupHook`: reconcile pending upgrade → decide whether the deployment is upgradable → build handler → start `OpAmpService` → register shutdown hook. Runs on `ApplicationReadyEvent`, so the enterprise agent — which boots the same Spring context — needs no wiring of its own |
+| [`MetricsHubAgentApplication`](metricshub-agent/src/main/java/org/metricshub/agent/MetricsHubAgentApplication.java) | Boots the agent context and the Spring server; no longer wires OpAMP itself |
 | [`OpAmpService`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpService.java) | **Lifecycle supervisor.** Lives *outside* the restartable `AgentContext`. Every 30 s: re-reads `opamp:`, rebuilds the client only on change, otherwise refreshes description and health |
 | [`OpAmpAgentDescriptionMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpAgentDescriptionMapper.java) | `AgentInfo` + `attributes:` + `opamp: attributes:` + `DeploymentKind` → `AgentDescription` |
 | [`OpAmpHealthMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpHealthMapper.java) | `ApplicationStatus` → `ComponentHealth` |
@@ -342,10 +343,12 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 
 ### 5.1 Startup and first report
 
+The sequence below is driven by [`OpAmpStartupHook`](metricshub-agent/src/main/java/org/metricshub/web/service/OpAmpStartupHook.java), a [`StartupHook`](metricshub-agent/src/main/java/org/metricshub/web/service/StartupHook.java) that [`AgentStartupRunner`](metricshub-agent/src/main/java/org/metricshub/web/service/AgentStartupRunner.java) runs once on `ApplicationReadyEvent`. Both editions boot the same Spring context, so fleet management starts identically in each with no edition-specific bootstrap. One consequence worth knowing: OpAMP now starts only if the Spring context comes up.
+
 ```mermaid
 sequenceDiagram
     autonumber
-    participant App as MetricsHubAgentApplication
+    participant App as OpAmpStartupHook
     participant UM as UpgradeManager
     participant Svc as OpAmpService
     participant AD as OpampUpgradeAdapter
