@@ -40,6 +40,12 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * <p>
  * The class uses the TelemetryManager to manage monitors and metrics associated with the monitor tasks.
  * </p>
+ *
+ * <p>
+ * The strategy is executed in the discovery cycle and in every collect cycle, so the metrics of the simple jobs are
+ * re-collected each cycle and, unlike discovery metrics, do not need their collect time refreshed by the
+ * {@code PrepareCollectStrategy}.
+ * </p>
  */
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)

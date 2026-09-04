@@ -42,7 +42,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  *
  * <p>
  * It iterates through all monitors and metrics managed by the telemetry manager, saving metric values,
- * and updating collect times for discovered metrics.
+ * and updating collect times for discovery metrics.
  * </p>
  */
 @NoArgsConstructor
@@ -86,8 +86,8 @@ public class PrepareCollectStrategy extends AbstractStrategy {
 						// in order to compute delta and rates
 						metric.save();
 
-						// Discovered metrics should be refreshed in the collect
-						// so that they are considered collected
+						// Discovery metrics are never re-collected by the collect jobs: refresh their collect time
+						// so that they are considered updated and keep being exported on each collect cycle
 						if (metric.isResetMetricTime()) {
 							metric.setCollectTime(strategyTime);
 						}
