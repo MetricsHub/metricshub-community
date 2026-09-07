@@ -292,6 +292,34 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldRefuseASecondInitializeWhileTheOwningResponseIsStillPending() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// An early initialized notification moves the state on while the response to the owning initialize is still
+		// pending: a second initialize must not slip through that window
+		session.onHandle = () -> {
+			session.onHandle = null;
+			try {
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+				assertEquals(
+					Optional.of(LegacySseServerTransportProvider.SessionState.INITIALIZED),
+					provider.sessionState(sessionId)
+				);
+				postMessage(mockMvc, sessionId, INITIALIZE.replace("\"id\":1", "\"id\":9")).andExpect(status().isConflict());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+
+		// Only the owning initialize and the notification reached the session
+		assertEquals(2, session.handled.size());
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+	}
+
+	@Test
 	void shouldLetTheClientRetryAfterARefusedConcurrentInitializeAndARejectedHandshake() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());

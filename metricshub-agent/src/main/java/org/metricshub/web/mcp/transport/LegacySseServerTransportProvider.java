@@ -139,6 +139,24 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	private static final TypeRef<Object> OBJECT_TYPE_REF = new TypeRef<>() {};
 
 	/**
+	 * What an {@code initialize} request may do with the handshake of its session.
+	 */
+	enum HandshakeClaim {
+		/**
+		 * The request started the handshake and owns its outcome.
+		 */
+		CLAIMED,
+		/**
+		 * Another initialize owns a handshake whose outcome is not settled yet; the request is refused.
+		 */
+		PENDING,
+		/**
+		 * No handshake is pending; the request is left to the SDK session and cannot alter the lifecycle state.
+		 */
+		SETTLED
+	}
+
+	/**
 	 * MCP lifecycle state of a session, as observed from the messages posted by the client.
 	 */
 	public enum SessionState {
@@ -421,10 +439,10 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		if (
 			message instanceof JSONRPCRequest initializeRequest &&
 			McpSchema.METHOD_INITIALIZE.equals(initializeRequest.method()) &&
-			sseSession.claimHandshake(initializeRequest.id()) == SessionState.INITIALIZING
+			sseSession.claimHandshake(initializeRequest.id()) == HandshakeClaim.PENDING
 		) {
-			// A single handshake at a time: the initialize that lost the atomic claim would race the owning one for the
-			// SDK session and make the outcome of the owning request meaningless
+			// A single handshake at a time: the initialize that lost the claim would race the owning one for the SDK
+			// session and make the outcome of the owning request meaningless
 			log.warn(
 				"Rejected a second MCP initialize request posted on SSE session {} from {} while its handshake is pending",
 				sseSession.id(),
@@ -826,19 +844,19 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		 * settled by {@link #onResponseSent}.
 		 *
 		 * @param initializeRequestId the JSON-RPC id of the initialize request
-		 * @return {@code CREATED} when the request claimed the handshake, {@code INITIALIZING} when another initialize
-		 *         is pending, {@code INITIALIZED} when the session is already initialized
+		 * @return what the request may do, see {@link HandshakeClaim}
 		 */
-		SessionState claimHandshake(final Object initializeRequestId) {
-			// Only the attempt that wins the CREATED -> INITIALIZING transition owns the handshake. A concurrent
-			// initialize observes INITIALIZING and is refused; a duplicate initialize on an initialized session is left
-			// to the SDK and cannot alter the state, whatever its outcome. The witness value of the atomic operation is
-			// returned rather than a fresh read, which could report a state the losing attempt never observed.
-			final SessionState witnessed = state.compareAndExchange(SessionState.CREATED, SessionState.INITIALIZING);
-			if (witnessed == SessionState.CREATED) {
+		HandshakeClaim claimHandshake(final Object initializeRequestId) {
+			// Only the attempt that wins the CREATED -> INITIALIZING transition owns the handshake; the outcome of the
+			// atomic operation is used rather than a fresh read, which could report a state the loser never observed.
+			if (state.compareAndExchange(SessionState.CREATED, SessionState.INITIALIZING) == SessionState.CREATED) {
 				pendingInitializeId.set(initializeRequestId);
+				return HandshakeClaim.CLAIMED;
 			}
-			return witnessed;
+			// Another initialize owns the handshake until its response has been observed, even if an early initialized
+			// notification already moved the state on: a concurrent attempt is refused rather than racing it in the
+			// SDK. Once the handshake is settled, a duplicate initialize is left to the SDK and cannot alter the state.
+			return pendingInitializeId.get() != null ? HandshakeClaim.PENDING : HandshakeClaim.SETTLED;
 		}
 
 		/**
