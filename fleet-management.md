@@ -737,6 +737,122 @@ Golden protobuf fixtures are produced by `GoldenFixtureWriter`, so wire-format r
 
 ---
 
+## 13. M8B AI Governor tunnel
+
+The second fleet channel. Where OpAMP carries *status and upgrades* by polling, the M8B tunnel is a persistent **outbound WebSocket** through which the M8B AI Governor discovers what an agent can do (its tool registry and monitored hosts) and asks it to run troubleshooting tools. Both channels report the **same identity** (§13.5). The wire protocol is specified in [`m8b-tunnel-protocol.md`](m8b-tunnel-protocol.md); this section covers the agent-side implementation.
+
+### 13.1 Component map
+
+```mermaid
+flowchart TB
+    Hook["M8bStartupHook<br/><i>StartupHook, both editions</i>"] --> Svc["M8bService<br/><i>supervisor: config → client lifecycle</i>"]
+    Svc --> Client["m8b.tunnel.M8bTunnelClient<br/><i>JDK WebSocket, one owner thread</i>"]
+    Svc --> Snap["ToolRegistrySnapshot<br/><i>from the Spring AI ToolCallbackProvider</i>"]
+    Svc --> Inv["HostInventory<br/><i>active telemetry managers</i>"]
+    Svc --> Desc["AgentDescriptorMapper<br/><i>identity + edition</i>"]
+    Svc --> Bridge["M8bToolBridge<br/><i>tool.invoke → ToolCallback.call</i>"]
+    Client -->|"agent.register · heartbeat.ping · hosts.updated · tool.result/error"| Gov["M8B Governor"]
+    Gov -->|"agent.registered · heartbeat.pong · tool.invoke"| Client
+    Client -->|onInvoke| Bridge
+    Bridge --> Tools["IMCPToolService beans<br/>ListHosts, GetMetricsFromCacheForHost, …"]
+    Uid["fleet.AgentInstanceUid"] -.shared with OpAMP.-> Client
+```
+
+| Class | Responsibility |
+|---|---|
+| `agent.config.M8bConfig` | The `m8b:` section (§13.4); a change triggers a configuration reload like `opamp:` |
+| `web.service.M8bStartupHook` | Starts `M8bService` on `ApplicationReadyEvent`, registers its shutdown; runs in both editions |
+| `agent.m8b.M8bService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `m8b:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
+| `agent.m8b.tunnel.M8bTunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
+| `agent.m8b.tunnel.M8bTunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback |
+| `agent.m8b.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
+| `agent.m8b.HostInventory` | Hosts with an active `TelemetryManager`, identified by (resource group, resource key) |
+| `agent.m8b.AgentDescriptorMapper` | Reuses `OpAmpAgentDescriptionMapper.resolveAttributes`, adds the edition |
+| `agent.m8b.M8bToolBridge` | Executes `tool.invoke`: exact-name lookup, in-flight cap, deadline, payload cap; exactly one answer per request |
+| `agent.m8b.protocol.*` | `M8bMessage` (sealed envelope), `ToolErrorCode`, `M8bJson` (lenient mapper, canonical fingerprint) |
+| `agent.fleet.AgentInstanceUid`, `agent.fleet.FleetHeaders` | Identity file and header decryption shared by both channels |
+
+Adding a tool needs **no protocol change**: implement an `IMCPToolService`, and the next (re)connection advertises it.
+
+### 13.2 Connection lifecycle
+
+```
+CONNECTING ──open──► REGISTERING ──agent.registered──► CONNECTED
+     ▲                    │ no ack in connectTimeout        │ close / idle 2.5×heartbeat / binary frame / send failure
+     └──── backoff ◄──────┴─────────────────────────────────┘
+```
+
+* Every asynchronous continuation carries the **connection generation** it belongs to; a callback from a superseded socket is dropped.
+* Any inbound frame counts as liveness. A silent peer is dropped after 2.5 heartbeat intervals with close `4003`; the server's `4001` (another instance owns this uid) is logged loudly and retried with backoff like any loss.
+* Each reconnection rebuilds the registration from the current context, so an upgraded agent replaces its previous tool registry on the server.
+
+### 13.3 Threading model
+
+| Thread | Owner | Work |
+|---|---|---|
+| `metricshub-m8b-supervisor` | `M8bService` | Config reconciliation, `hosts.updated` |
+| `metricshub-m8b-tunnel` | `M8bTunnelClient` | **All** tunnel state: connect, frames, heartbeats, sends (chained: the JDK client refuses concurrent sends), reconnection |
+| `metricshub-m8b-tool-N` | `M8bToolBridge` | One tool execution each (cached pool) |
+| `metricshub-m8b-tool-timer` | `M8bToolBridge` | Request deadlines |
+
+Listener callbacks run on the tunnel thread and only enqueue work; the bridge frees its in-flight slot before the answer leaves.
+
+### 13.4 Configuration reference — `m8b:`
+
+```yaml
+m8b:
+  enabled: true
+  endpoint: wss://m8b.example.com/ws/agent
+  headers:
+    Authorization: Bearer ${env::M8B_TOKEN}
+  # certificateFile: /opt/metricshub/security/m8b-ca.pem
+  # heartbeatInterval: 30s
+  # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+```
+
+| Key | Default | Notes |
+|---|---|---|
+| `enabled` | `false` | Opt-in |
+| `endpoint` | — | `wss://`; `ws://` accepted for loopback only. Blank with `enabled: true` logs a warning and starts nothing |
+| `headers` | `{}` | Handshake headers; values may be keystore-encrypted; entries without a value are skipped |
+| `certificateFile` | system trust store | PEM, same builder as OpAMP |
+| `heartbeatInterval` | `30s` | Until the server imposes its own in `agent.registered`; values below 1 s fall back to the default |
+| `excludedTools` | `[]` | Never advertised, hence never invokable |
+
+Invocation timeout, payload cap and concurrency cap are **not** configurable on the agent: the server dictates them at registration.
+
+### 13.5 On-disk state
+
+None of its own. The uid comes from `security/opamp-instance-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
+
+### 13.6 Security decisions
+
+| Decision | Rationale |
+|---|---|
+| Outbound only, `wss://` required outside loopback | Credentials travel in the handshake headers; no inbound rule on monitored sites |
+| Only advertised tools are invokable; `excludedTools` removes a tool from the advertisement itself | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
+| The existing kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
+| Limits enforced on both sides | A misbehaving peer cannot exhaust the other |
+| Only actively monitored hosts are advertised | The Governor never routes to a resource the agent could not validate |
+| Approvals for sensitive tools live in M8B | The agent cannot tell an approved call from any other; the policy lives where the users are |
+
+### 13.7 Test map
+
+| Concern | Test |
+|---|---|
+| `m8b:` deserialization and defaults | `M8bConfigTest` |
+| Registry snapshot: sorting, exclusion, defaults, revision stability | `ToolRegistrySnapshotTest` |
+| Host inventory: group scoping, inactive resources skipped | `HostInventoryTest` |
+| Identity and edition | `AgentDescriptorMapperTest` |
+| Wire shape (golden `agent.register`), round trips, unknown types, fingerprint | `M8bJsonTest` |
+| **Tunnel over a real WebSocket** — headers, limits, invocation round trip, unknown types, reconnection, `4001`, heartbeat timeout, binary frame, unacknowledged registration, stop, TLS | `M8bTunnelClientTest` against `FakeM8bServer` |
+| Bridge: every error code, deadline answered once, caps | `M8bToolBridgeTest` |
+| Supervisor: config lifecycle, retries, `hosts.updated` | `M8bServiceTest` |
+| StartupHook wiring and Spring instantiation | `M8bStartupHookTest` |
+| **End to end** — real `ToolCallbackProvider`, `ListHosts` executed over the tunnel | `M8bServiceEndToEndTest` |
+
+---
+
 ## Appendix — glossary
 
 | Term | Meaning |
