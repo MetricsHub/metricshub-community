@@ -23,8 +23,6 @@ package org.metricshub.agent.opamp;
 
 import java.net.URI;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -34,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
-import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.agent.fleet.FleetHeaders;
 import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.agent.upgrade.runner.DeploymentKind;
@@ -328,23 +326,9 @@ public class OpAmpService {
 	 * @return the client settings
 	 */
 	OpampClientSettings buildSettings(final OpAmpConfig config) {
-		final Map<String, String> headers = new HashMap<>();
-		config
-			.getHeaders()
-			.forEach((key, value) -> {
-				// A YAML entry without a value (Authorization:) deserializes to a null the
-				// whole-map @JsonSetter(nulls = SKIP) does not catch; the HTTP client rejects
-				// null header values, and one bad entry would fail every poll.
-				if (key == null || key.isBlank() || value == null) {
-					log.warn("Ignoring the OpAMP header '{}': it has no value.", key);
-					return;
-				}
-				headers.put(key, decrypt(value));
-			});
-
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create(config.getEndpoint().trim()))
-			.withHeaders(headers)
+			.withHeaders(FleetHeaders.decrypt(config.getHeaders(), "OpAMP"))
 			.withCertificateFile(config.getCertificateFile())
 			.withPollInterval(
 				Duration.ofSeconds(
@@ -382,20 +366,6 @@ public class OpAmpService {
 			return defaultValue;
 		}
 		return seconds;
-	}
-
-	/**
-	 * Decrypts a configuration value with the MetricsHub keystore; plain values are returned
-	 * unchanged.
-	 *
-	 * @param value the raw configuration value
-	 * @return the decrypted value
-	 */
-	private static String decrypt(final String value) {
-		if (value == null) {
-			return null;
-		}
-		return new String(ConfigHelper.decrypt(value.toCharArray()));
 	}
 
 	/**
