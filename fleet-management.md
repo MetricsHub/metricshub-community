@@ -794,7 +794,7 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 |---|---|---|
 | `metricshub-m8b-supervisor` | `M8bService` | Config reconciliation, `hosts.updated` |
 | `metricshub-m8b-tunnel` | `M8bTunnelClient` | **All** tunnel state: connect, frames, heartbeats, sends (chained: the JDK client refuses concurrent sends), reconnection |
-| `metricshub-m8b-tool-N` | `M8bToolBridge` | One tool execution each (cached pool) |
+| `metricshub-m8b-tool-N` | `M8bToolBridge` | One tool execution each. Bounded pool: `maxInFlight` limits live invocations, but a timed-out one gives back its slot and not its thread — a callback blocked in a socket read never observes its interruption — so a hard thread ceiling is what actually bounds the pile-up |
 | `metricshub-m8b-tool-timer` | `M8bToolBridge` | Request deadlines |
 
 Two listeners, and they are not the same thing:
