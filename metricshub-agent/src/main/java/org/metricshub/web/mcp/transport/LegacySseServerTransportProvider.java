@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -275,7 +274,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 		return Flux.fromIterable(sessions.values())
 			// The server must not send anything but pings and logging to a client that has not completed the handshake
-			.filter(sseSession -> sseSession.state().get() == SessionState.INITIALIZED)
+			.filter(sseSession -> sseSession.state() == SessionState.INITIALIZED)
 			.flatMap(sseSession ->
 				sseSession
 					.session()
@@ -340,7 +339,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 */
 	public Optional<SessionState> sessionState(final String sessionId) {
 		final SseSession sseSession = sessions.get(sessionId);
-		return sseSession == null ? Optional.empty() : Optional.of(sseSession.state().get());
+		return sseSession == null ? Optional.empty() : Optional.of(sseSession.state());
 	}
 
 	/**
@@ -474,7 +473,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 					"Dropped MCP notification '{}' posted on uninitialized SSE session {} (state {})",
 					notification.method(),
 					sseSession.id(),
-					sseSession.state().get()
+					sseSession.state()
 				);
 				return ServerResponse.accepted().build();
 			}
@@ -494,8 +493,6 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 *         initialized and the message is neither part of the handshake nor a response
 	 */
 	private static boolean trackLifecycle(final SseSession sseSession, final JSONRPCMessage message) {
-		final AtomicReference<SessionState> state = sseSession.state();
-
 		// Responses to server-initiated requests (pings, sampling...) never wait on the initialization.
 		if (message instanceof JSONRPCResponse) {
 			return true;
@@ -519,7 +516,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			return sseSession.onInitializedNotification();
 		}
 
-		return state.get() == SessionState.INITIALIZED;
+		return sseSession.state() == SessionState.INITIALIZED;
 	}
 
 	/**
@@ -561,7 +558,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				"'notifications/initialized' first).",
 			method,
 			sseSession.id(),
-			sseSession.state().get(),
+			sseSession.state(),
 			describeRemote(request)
 		);
 
@@ -747,15 +744,14 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 */
 	private void maintain(final SseSession sseSession, final Instant now) {
 		if (
-			sseSession.state().get() != SessionState.INITIALIZED &&
-			sseSession.createdAt().plus(initializationTimeout).isBefore(now)
+			sseSession.state() != SessionState.INITIALIZED && sseSession.createdAt().plus(initializationTimeout).isBefore(now)
 		) {
 			closeSession(
 				sseSession,
 				String.format(
 					"the client did not complete the MCP initialization handshake within %s (state %s)",
 					initializationTimeout,
-					sseSession.state().get()
+					sseSession.state()
 				)
 			);
 		} else if (keepAliveEnabled) {
@@ -819,54 +815,113 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	}
 
 	/**
-	 * A tracked SSE session: the SDK session, its transport, its lifecycle state and its creation time.
-	 *
-	 * @param id        the session identifier
-	 * @param session   the SDK session
-	 * @param transport the SSE transport of the session
-	 * @param state     the lifecycle state
-	 * @param createdAt when the SSE stream was opened
+	 * A tracked SSE session: the SDK session, its transport, its creation time and the MCP lifecycle state observed
+	 * from the messages exchanged with the client. The lifecycle transitions are serialized, so that the state and the
+	 * ownership of the pending handshake are always published together.
 	 */
-	record SseSession(
-		String id,
-		McpServerSession session,
-		WebMvcMcpSessionTransport transport,
-		AtomicReference<SessionState> state,
-		AtomicReference<Object> pendingInitializeId,
-		Instant createdAt
-	) {
+	static final class SseSession {
+
+		private final String id;
+		private final McpServerSession session;
+		private final WebMvcMcpSessionTransport transport;
+		private final Instant createdAt;
+
+		/**
+		 * The lifecycle transitions read and write several fields together, so they are serialized rather than
+		 * composed of separate atomic operations: they are short and never perform I/O.
+		 */
+		private final ReentrantLock lifecycleLock = new ReentrantLock();
+
+		private SessionState state = SessionState.CREATED;
+
+		/**
+		 * The id of the initialize request that owns the handshake, until its response is written to the client.
+		 */
+		private Object pendingInitializeId;
+
+		/**
+		 * Whether the client has been told that its initialize succeeded; only then can the handshake be completed.
+		 */
+		private boolean initializeAnswered;
+
 		SseSession(final String id, final McpServerSession session, final WebMvcMcpSessionTransport transport) {
-			this(id, session, transport, new AtomicReference<>(SessionState.CREATED), new AtomicReference<>(), Instant.now());
+			this.id = id;
+			this.session = session;
+			this.transport = transport;
+			this.createdAt = Instant.now();
+		}
+
+		String id() {
+			return id;
+		}
+
+		McpServerSession session() {
+			return session;
+		}
+
+		WebMvcMcpSessionTransport transport() {
+			return transport;
+		}
+
+		Instant createdAt() {
+			return createdAt;
 		}
 
 		/**
-		 * Atomically claims the handshake for the given initialize request; the outcome of a claimed handshake is
-		 * settled by {@link #onResponseSent}.
+		 * @return the lifecycle state of the session
+		 */
+		SessionState state() {
+			lifecycleLock.lock();
+			try {
+				return state;
+			} finally {
+				lifecycleLock.unlock();
+			}
+		}
+
+		/**
+		 * Claims the handshake for the given initialize request; the outcome of a claimed handshake is settled by
+		 * {@link #onResponseSent}.
 		 *
 		 * @param initializeRequestId the JSON-RPC id of the initialize request
 		 * @return what the request may do, see {@link HandshakeClaim}
 		 */
 		HandshakeClaim claimHandshake(final Object initializeRequestId) {
-			// Only the attempt that wins the CREATED -> INITIALIZING transition owns the handshake; the outcome of the
-			// atomic operation is used rather than a fresh read, which could report a state the loser never observed.
-			if (state.compareAndExchange(SessionState.CREATED, SessionState.INITIALIZING) == SessionState.CREATED) {
-				pendingInitializeId.set(initializeRequestId);
-				return HandshakeClaim.CLAIMED;
+			lifecycleLock.lock();
+			try {
+				if (state == SessionState.CREATED) {
+					state = SessionState.INITIALIZING;
+					pendingInitializeId = initializeRequestId;
+					initializeAnswered = false;
+					return HandshakeClaim.CLAIMED;
+				}
+				// Another initialize owns the handshake until its response has been written: a concurrent attempt is
+				// refused rather than racing it in the SDK. Once the handshake is settled, a duplicate initialize is
+				// left to the SDK and cannot alter the state.
+				return pendingInitializeId != null ? HandshakeClaim.PENDING : HandshakeClaim.SETTLED;
+			} finally {
+				lifecycleLock.unlock();
 			}
-			// Another initialize owns the handshake until its response has been observed, even if an early initialized
-			// notification already moved the state on: a concurrent attempt is refused rather than racing it in the
-			// SDK. Once the handshake is settled, a duplicate initialize is left to the SDK and cannot alter the state.
-			return pendingInitializeId.get() != null ? HandshakeClaim.PENDING : HandshakeClaim.SETTLED;
 		}
 
 		/**
-		 * Completes the handshake if one is in progress. The pending initialize stays tracked until its response is
-		 * observed: a notification posted before an error response must not leave the session initialized.
+		 * Completes the handshake when the client has been told that its initialize succeeded. A notification posted
+		 * before that (no handshake, or one whose response is still being computed) is dropped, so that the SDK session
+		 * is never exposed as initialized while its initialization exchange may not exist.
 		 *
-		 * @return whether the notification completed a pending handshake (a notification that did not is dropped)
+		 * @return whether the notification completed a pending handshake
 		 */
 		boolean onInitializedNotification() {
-			return state.compareAndSet(SessionState.INITIALIZING, SessionState.INITIALIZED);
+			lifecycleLock.lock();
+			try {
+				if (state == SessionState.INITIALIZING && initializeAnswered) {
+					state = SessionState.INITIALIZED;
+					return true;
+				}
+				return false;
+			} finally {
+				lifecycleLock.unlock();
+			}
 		}
 
 		/**
@@ -874,25 +929,35 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		 * @return whether that request is the one that started the pending handshake
 		 */
 		boolean ownsPendingHandshake(final Object initializeRequestId) {
-			final Object pending = pendingInitializeId.get();
-			return pending != null && pending.equals(initializeRequestId);
+			lifecycleLock.lock();
+			try {
+				return pendingInitializeId != null && pendingInitializeId.equals(initializeRequestId);
+			} finally {
+				lifecycleLock.unlock();
+			}
 		}
 
 		/**
-		 * Records the outcome of the handshake from the response the SDK session writes to the client: an initialize
-		 * request rejected at the JSON-RPC level (error response) has not started a handshake.
+		 * Records the outcome of the handshake from the response the SDK session writes to the client: a successful
+		 * response lets the client complete the handshake, an error response means no handshake ever started.
 		 *
 		 * @param response the JSON-RPC response about to be written to the SSE stream
 		 */
 		void onResponseSent(final JSONRPCResponse response) {
-			final Object initializeRequestId = pendingInitializeId.get();
-			if (initializeRequestId != null && initializeRequestId.equals(response.id())) {
-				pendingInitializeId.compareAndSet(initializeRequestId, null);
-				if (response.error() != null) {
-					// Unconditional on purpose: only the request that started the handshake gets here, and an early
-					// initialized notification may already have moved the state on; the rejected handshake wins
-					state.set(SessionState.CREATED);
+			lifecycleLock.lock();
+			try {
+				if (pendingInitializeId == null || !pendingInitializeId.equals(response.id())) {
+					return;
 				}
+				pendingInitializeId = null;
+				if (response.error() != null) {
+					state = SessionState.CREATED;
+					initializeAnswered = false;
+				} else {
+					initializeAnswered = true;
+				}
+			} finally {
+				lifecycleLock.unlock();
 			}
 		}
 	}

@@ -160,8 +160,9 @@ class LegacySseServerTransportProviderTest {
 		final String sessionId = openSse(mockMvc).sessionId();
 
 		// The client receives the initialize response over SSE and posts the notification before the initialize POST
-		// returns: simulated by posting it from within the session's handling of initialize
+		// returns: simulated by answering and posting it from within the session's handling of initialize
 		session.onHandle = () -> {
+			session.sendResponse(1, null);
 			try {
 				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
 			} catch (Exception e) {
@@ -221,7 +222,8 @@ class LegacySseServerTransportProviderTest {
 		session.onHandle = () -> {
 			session.onHandle = null;
 			try {
-				postMessage(mockMvc, sse.sessionId(), INITIALIZED).andExpect(status().isOk());
+				// Not answered yet: the notification is dropped and cannot complete the handshake
+				postMessage(mockMvc, sse.sessionId(), INITIALIZED).andExpect(status().isAccepted());
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
@@ -246,21 +248,15 @@ class LegacySseServerTransportProviderTest {
 		session.onHandle = () -> {
 			session.onHandle = null;
 			try {
-				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+				// Not answered yet: the notification is dropped
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isAccepted());
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
-			session.transport
-				.get()
-				.sendMessage(
-					new JSONRPCResponse(
-						McpSchema.JSONRPC_VERSION,
-						1,
-						null,
-						new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unsupported protocol version", null)
-					)
-				)
-				.block();
+			session.sendResponse(
+				1,
+				new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unsupported protocol version", null)
+			);
 		};
 		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
 
@@ -282,6 +278,7 @@ class LegacySseServerTransportProviderTest {
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
+			session.sendResponse(1, null);
 		};
 		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
 
@@ -297,25 +294,27 @@ class LegacySseServerTransportProviderTest {
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
 		final String sessionId = openSse(mockMvc).sessionId();
 
-		// An early initialized notification moves the state on while the response to the owning initialize is still
-		// pending: a second initialize must not slip through that window
+		// An initialized notification arriving before the owning initialize was answered is dropped, and a second
+		// initialize must not slip through that window either
 		session.onHandle = () -> {
 			session.onHandle = null;
 			try {
-				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isAccepted());
 				assertEquals(
-					Optional.of(LegacySseServerTransportProvider.SessionState.INITIALIZED),
+					Optional.of(LegacySseServerTransportProvider.SessionState.INITIALIZING),
 					provider.sessionState(sessionId)
 				);
 				postMessage(mockMvc, sessionId, INITIALIZE.replace("\"id\":1", "\"id\":9")).andExpect(status().isConflict());
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
+			session.sendResponse(1, null);
 		};
 		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
 
-		// Only the owning initialize and the notification reached the session
-		assertEquals(2, session.handled.size());
+		// Only the owning initialize reached the session; the client completes the handshake once it is answered
+		assertEquals(1, session.handled.size());
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
 		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
 	}
 
@@ -405,7 +404,9 @@ class LegacySseServerTransportProviderTest {
 	@Test
 	void shouldCloseTheSessionWhenInitializeFails() throws Exception {
 		final RecordingSession session = new RecordingSession();
+		// The handling fails without ever answering the client
 		session.handleResult = Mono.error(new IllegalStateException("initialize rejected"));
+		session.answerInitialize = false;
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
 		final SseConnection sse = openSse(mockMvc);
 
@@ -422,6 +423,7 @@ class LegacySseServerTransportProviderTest {
 	void shouldReleaseTheRequestThreadWhenTheSessionNeverCompletes() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		session.handleResult = Mono.never();
+		session.answerInitialize = false;
 		final MockMvc mockMvc = setUp(
 			session,
 			LegacySseServerTransportProvider.builder().messageTimeout(Duration.ofMillis(200))
@@ -644,6 +646,7 @@ class LegacySseServerTransportProviderTest {
 		final List<String> notified = new CopyOnWriteArrayList<>();
 		volatile Mono<Void> handleResult = Mono.empty();
 		volatile Runnable onHandle;
+		volatile boolean answerInitialize = true;
 		volatile Mono<Object> pingResult = Mono.just(Map.of());
 
 		RecordingSession() {
@@ -656,8 +659,28 @@ class LegacySseServerTransportProviderTest {
 			final Runnable hook = onHandle;
 			if (hook != null && message instanceof JSONRPCRequest) {
 				hook.run();
+			} else if (
+				answerInitialize &&
+				message instanceof JSONRPCRequest request &&
+				McpSchema.METHOD_INITIALIZE.equals(request.method())
+			) {
+				// The SDK session answers the initialize over the SSE stream before its Mono completes
+				sendResponse(request.id(), null);
 			}
 			return handleResult;
+		}
+
+		/**
+		 * Writes a JSON-RPC response to the client, as the SDK session does.
+		 *
+		 * @param id    the id of the request being answered
+		 * @param error the error to answer with, or {@code null} for a success response
+		 */
+		void sendResponse(final Object id, final JSONRPCResponse.JSONRPCError error) {
+			transport
+				.get()
+				.sendMessage(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, id, error == null ? Map.of() : null, error))
+				.block();
 		}
 
 		@Override
