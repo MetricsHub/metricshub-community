@@ -832,12 +832,13 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		SessionState claimHandshake(final Object initializeRequestId) {
 			// Only the attempt that wins the CREATED -> INITIALIZING transition owns the handshake. A concurrent
 			// initialize observes INITIALIZING and is refused; a duplicate initialize on an initialized session is left
-			// to the SDK and cannot alter the state, whatever its outcome.
-			if (state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING)) {
+			// to the SDK and cannot alter the state, whatever its outcome. The witness value of the atomic operation is
+			// returned rather than a fresh read, which could report a state the losing attempt never observed.
+			final SessionState witnessed = state.compareAndExchange(SessionState.CREATED, SessionState.INITIALIZING);
+			if (witnessed == SessionState.CREATED) {
 				pendingInitializeId.set(initializeRequestId);
-				return SessionState.CREATED;
 			}
-			return state.get();
+			return witnessed;
 		}
 
 		/**

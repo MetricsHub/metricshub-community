@@ -292,6 +292,45 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldLetTheClientRetryAfterARefusedConcurrentInitializeAndARejectedHandshake() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// A second initialize is refused while the first one is pending, and the first one is then rejected by the SDK
+		session.onHandle = () -> {
+			session.onHandle = null;
+			try {
+				postMessage(mockMvc, sessionId, INITIALIZE.replace("\"id\":1", "\"id\":9")).andExpect(status().isConflict());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+			session.transport
+				.get()
+				.sendMessage(
+					new JSONRPCResponse(
+						McpSchema.JSONRPC_VERSION,
+						1,
+						null,
+						new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unsupported protocol version", null)
+					)
+				)
+				.block();
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+
+		// The rejected handshake released the claim: a fresh initialize can take it and complete normally
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+		assertEquals(
+			Optional.of(LegacySseServerTransportProvider.SessionState.INITIALIZING),
+			provider.sessionState(sessionId)
+		);
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+	}
+
+	@Test
 	void shouldKeepAnInitializedSessionWhenADuplicateInitializeIsRejected() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
