@@ -62,12 +62,13 @@ import org.springframework.web.servlet.function.ServerResponse;
  * Spring AI SSE auto-configuration back off, and Spring AI binds its auto-configured MCP server to it.</li>
  * </ul>
  * <p>
- * Set {@code mcp.sse.enabled=false} to stop serving the legacy transport.
+ * Set {@code mcp.sse.enabled=false} to stop serving the legacy transport alongside Streamable HTTP. The switch is
+ * ignored (with a warning) when the protocol is {@code SSE}: backing off would hand the endpoints back to the SDK
+ * transport this class replaces.
  * </p>
  */
 @Configuration
 @EnableConfigurationProperties({ McpSseProperties.class, McpServerSseProperties.class })
-@ConditionalOnProperty(prefix = McpSseProperties.PREFIX, name = "enabled", havingValue = "true", matchIfMissing = true)
 // Same guard as the Spring AI HTTP transports: the MCP server must be enabled and not in stdio mode, otherwise the
 // Spring AI beans this configuration depends on do not exist
 @Conditional(McpServerStdioDisabledCondition.class)
@@ -107,6 +108,13 @@ public class LegacySseMcpServerConfiguration {
 	 */
 	@Configuration
 	@ConditionalOnProperty(prefix = SPRING_AI_MCP_SERVER_PREFIX, name = "protocol", havingValue = "STREAMABLE")
+	// mcp.sse.enabled=false only makes sense here: Streamable HTTP keeps serving the tools without the legacy endpoints
+	@ConditionalOnProperty(
+		prefix = McpSseProperties.PREFIX,
+		name = "enabled",
+		havingValue = "true",
+		matchIfMissing = true
+	)
 	static class AlongsideStreamableHttpConfiguration {
 
 		/**
@@ -260,6 +268,13 @@ public class LegacySseMcpServerConfiguration {
 			final McpServerSseProperties sseProperties,
 			final McpSseProperties legacySseProperties
 		) {
+			if (!legacySseProperties.isEnabled()) {
+				// Backing off here would hand /sse back to the SDK transport that hangs request threads
+				log.warn(
+					"mcp.sse.enabled=false is ignored: the legacy SSE transport is the only MCP transport when " +
+						"spring.ai.mcp.server.protocol=SSE. Set spring.ai.mcp.server.protocol=STREAMABLE to stop serving it."
+				);
+			}
 			log.info(
 				"Hardened legacy MCP SSE transport served on GET {} and POST {}",
 				sseProperties.getSseEndpoint(),

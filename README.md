@@ -40,7 +40,7 @@ The legacy transport can be tuned or disabled under the `web:` section of `metri
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `mcp.sse.enabled` | `true` | Serve the legacy SSE endpoints next to `/mcp` |
+| `mcp.sse.enabled` | `true` | Serve the legacy SSE endpoints next to `/mcp` (ignored when `spring.ai.mcp.server.protocol` is `SSE`, where they are the only endpoints) |
 | `mcp.sse.message-timeout` | `5m` | Maximum wait for the handling of one message posted on `/mcp/message` (answered with HTTP 504 afterwards; the handling itself is not interrupted) |
 | `mcp.sse.ping-timeout` | `5m` | A session whose keep-alive ping is not answered within this delay is closed |
 | `mcp.sse.initialization-timeout` | `2m` | A session that never completes the `initialize` handshake is closed after this delay |

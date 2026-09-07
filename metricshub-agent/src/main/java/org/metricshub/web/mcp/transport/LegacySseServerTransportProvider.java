@@ -451,9 +451,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		}
 
 		if (message instanceof JSONRPCRequest request && McpSchema.METHOD_INITIALIZE.equals(request.method())) {
-			// The transition to INITIALIZING is recorded by dispatch() once the initialize request has been handled
-			// successfully, so that an initialized notification racing a pending or failed initialize cannot complete
-			// the handshake
+			// Recorded before the dispatch: the client receives the initialize response over the SSE stream and may
+			// post notifications/initialized before the request thread returns. A failed initialize resets the state.
+			state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING);
 			return true;
 		}
 
@@ -561,14 +561,13 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				.subscribe(ignored -> {}, completion::tryEmitError, completion::tryEmitEmpty);
 			completion.asMono().timeout(messageTimeout).block();
 
-			// Only a successfully handled initialize starts the handshake; a failed or timed-out one leaves the
-			// session as it was, so the client has to initialize again
-			if (message instanceof JSONRPCRequest handled && McpSchema.METHOD_INITIALIZE.equals(handled.method())) {
-				sseSession.state().compareAndSet(SessionState.CREATED, SessionState.INITIALIZING);
-			}
-
 			return ServerResponse.ok().build();
 		} catch (Exception e) {
+			// A failed or timed-out initialize must not leave the session half-initialized, even if an initialized
+			// notification slipped in meanwhile: the client has to start the handshake again.
+			if (message instanceof JSONRPCRequest failed && McpSchema.METHOD_INITIALIZE.equals(failed.method())) {
+				sseSession.state().set(SessionState.CREATED);
+			}
 			if (Exceptions.unwrap(e) instanceof TimeoutException) {
 				log.error(
 					"MCP message '{}' posted on SSE session {} did not complete within {}; releasing the request thread " +

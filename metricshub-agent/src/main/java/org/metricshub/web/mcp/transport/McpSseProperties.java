@@ -47,9 +47,9 @@ public class McpSseProperties {
 	public static final String PREFIX = "mcp.sse";
 
 	/**
-	 * Whether the legacy SSE transport is served. When the MCP protocol is {@code STREAMABLE}, the legacy transport is
-	 * served alongside the Streamable HTTP transport; when the protocol is {@code SSE}, the hardened transport replaces
-	 * the SDK one.
+	 * Whether the legacy SSE transport is served alongside the Streamable HTTP transport when the MCP protocol is
+	 * {@code STREAMABLE}. Ignored when the protocol is {@code SSE}: the hardened transport then always replaces the
+	 * SDK one, since it is the only MCP transport.
 	 */
 	private boolean enabled = true;
 

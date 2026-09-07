@@ -153,19 +153,51 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
-	void shouldIgnoreAnInitializedNotificationRacingAPendingInitialize() throws Exception {
+	void shouldAcceptAnInitializedNotificationPostedWhileTheInitializeResponseIsStillInFlight() throws Exception {
 		final RecordingSession session = new RecordingSession();
-		session.handleResult = Mono.never();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// The client receives the initialize response over SSE and posts the notification before the initialize POST
+		// returns: simulated by posting it from within the session's handling of initialize
+		session.onHandle = () -> {
+			try {
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+		session.onHandle = null;
+
+		assertEquals(
+			Optional.of(LegacySseServerTransportProvider.SessionState.INITIALIZED),
+			provider.sessionState(sessionId)
+		);
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+	}
+
+	@Test
+	void shouldResetTheHandshakeWhenInitializeFailsAfterAnEarlyInitializedNotification() throws Exception {
+		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(
 			session,
 			LegacySseServerTransportProvider.builder().messageTimeout(Duration.ofMillis(200))
 		);
 		final String sessionId = openSse(mockMvc).sessionId();
 
-		// The initialize never completes (504) while the notification is posted: neither must advance the state
+		// A buggy client posts the notification while its initialize is still pending, and the initialize then times out
+		session.onHandle = () -> {
+			session.onHandle = null;
+			try {
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+			// The initialize itself never completes
+			session.handleResult = Mono.never();
+		};
 		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isGatewayTimeout());
-		session.handleResult = Mono.empty();
-		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
 
 		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
 		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
@@ -418,6 +450,7 @@ class LegacySseServerTransportProviderTest {
 		final AtomicReference<String> lastRequestMethod = new AtomicReference<>();
 		final List<String> notified = new CopyOnWriteArrayList<>();
 		volatile Mono<Void> handleResult = Mono.empty();
+		volatile Runnable onHandle;
 		volatile Mono<Object> pingResult = Mono.just(Map.of());
 
 		RecordingSession() {
@@ -427,6 +460,10 @@ class LegacySseServerTransportProviderTest {
 		@Override
 		public Mono<Void> handle(final JSONRPCMessage message) {
 			handled.add(message);
+			final Runnable hook = onHandle;
+			if (hook != null && message instanceof JSONRPCRequest) {
+				hook.run();
+			}
 			return handleResult;
 		}
 
