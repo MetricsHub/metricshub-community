@@ -236,10 +236,47 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldResetTheHandshakeWhenInitializeIsRejectedDespiteAnEarlyInitializedNotification() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// A buggy client posts the notification before the (error) response to its initialize is written
+		session.onHandle = () -> {
+			session.onHandle = null;
+			try {
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+			session.transport
+				.get()
+				.sendMessage(
+					new JSONRPCResponse(
+						McpSchema.JSONRPC_VERSION,
+						1,
+						null,
+						new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unsupported protocol version", null)
+					)
+				)
+				.block();
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void shouldKeepAnInitializedSessionWhenADuplicateInitializeIsRejected() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
 		final String sessionId = openSse(mockMvc).sessionId();
+		// The SDK session answers the initialize (success) over SSE, like the real one always does
+		session.onHandle = () -> {
+			session.onHandle = null;
+			session.transport.get().sendMessage(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, 1, Map.of(), null)).block();
+		};
 		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
 		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
 

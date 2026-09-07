@@ -349,6 +349,11 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				sseBuilder.onTimeout(() -> forgetSession(sseSession, "timed out"));
 				sseBuilder.onError(e -> forgetSession(sseSession, "failed: " + e.getMessage()));
 				this.sessions.put(sessionId, sseSession);
+				if (this.isClosing) {
+					// The shutdown started between the check above and the registration: do not leave a stream open
+					closeSession(sseSession, "the server is shutting down");
+					return;
+				}
 				log.debug(
 					"Opened MCP SSE session {} from {}. Active sessions: {}",
 					sessionId,
@@ -465,7 +470,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		) {
 			// Only a handshake that actually started can complete: an initialized notification on a fresh session (or
 			// after a rejected initialize) leaves the session uninitialized so that later requests keep being refused
-			state.compareAndSet(SessionState.INITIALIZING, SessionState.INITIALIZED);
+			sseSession.onInitializedNotification();
 			return true;
 		}
 
@@ -803,6 +808,14 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		}
 
 		/**
+		 * Completes the handshake if one is in progress. The pending initialize stays tracked until its response is
+		 * observed: a notification posted before an error response must not leave the session initialized.
+		 */
+		void onInitializedNotification() {
+			state.compareAndSet(SessionState.INITIALIZING, SessionState.INITIALIZED);
+		}
+
+		/**
 		 * @param initializeRequestId the JSON-RPC id of an initialize request
 		 * @return whether that request is the one that started the pending handshake
 		 */
@@ -822,7 +835,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			if (initializeRequestId != null && initializeRequestId.equals(response.id())) {
 				pendingInitializeId.compareAndSet(initializeRequestId, null);
 				if (response.error() != null) {
-					state.compareAndSet(SessionState.INITIALIZING, SessionState.CREATED);
+					// Unconditional on purpose: only the request that started the handshake gets here, and an early
+					// initialized notification may already have moved the state on; the rejected handshake wins
+					state.set(SessionState.CREATED);
 				}
 			}
 		}
