@@ -1,7 +1,7 @@
-># Fleet Management — OpAMP Architecture
+># Fleet Management — OpAMP and the M8B Tunnel
 
 **Audience:** maintainers of the MetricsHub Community Edition.
-**Scope:** the embedded OpAMP client (`metricshub-opamp-client`) and the fleet-driven features it powers in `metricshub-agent` — status/health reporting and automatic package upgrades.
+**Scope:** the two channels an agent opens toward its fleet — the embedded OpAMP client (`metricshub-opamp-client`), which reports status and health and performs automatic package upgrades ([§1](#1-what-fleet-management-means-here)-[§12](#12-test-map)), and the M8B AI Governor tunnel, over which the agent advertises its tools and hosts and runs the tools the Governor invokes ([§13](#13-m8b-ai-governor-tunnel)).
 
 This document starts generic and drills down progressively:
 
@@ -19,6 +19,7 @@ This document starts generic and drills down progressively:
 | [10. Security decisions](#10-security-decisions) | Hardening |
 | [11. Extending the client](#11-extending-the-client) | Contributor |
 | [12. Test map](#12-test-map) | Verification |
+| [13. M8B AI Governor tunnel](#13-m8b-ai-governor-tunnel) | Second channel |
 
 ---
 
@@ -819,11 +820,13 @@ m8b:
 | `heartbeatInterval` | `30s` | Until the server imposes its own in `agent.registered`; values below 1 s fall back to the default |
 | `excludedTools` | `[]` | Never advertised, hence never invokable |
 
-Invocation timeout, payload cap and concurrency cap are **not** configurable on the agent: the server dictates them at registration.
+The payload cap and the concurrency cap are **not** configurable on the agent: the server sets them in `agent.registered`. The invocation timeout is not configurable either, but it does not come from the registration — every `tool.invoke` carries its own `timeoutMs`, and the agent falls back to five minutes if a request omits it.
 
 ### 13.5 On-disk state
 
 None of its own. The uid comes from `security/opamp-instance-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
+
+One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `m8b:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
 
 ### 13.6 Security decisions
 
