@@ -432,7 +432,8 @@ public class MetricFactory {
 	 * @param connectorId connector id
 	 * @param metrics metrics
 	 * @param strategyTime time of the strategy in milliseconds
-	 * @param isDiscovery boolean whether it's a discovery operation
+	 * @param isDiscovery whether the metrics are collected by a discovery job, in which case they are flagged so that
+	 *                    their collect time is refreshed on each collect cycle
 	 */
 	public void collectMonitorMetrics(
 		final String monitorType,
@@ -468,8 +469,8 @@ public class MetricFactory {
 			// Set the metrics in the monitor using the connector metrics
 			final AbstractMetric metric = collectMetricUsingConnector(connector, monitor, strategyTime, name, value);
 
-			// Tell the collect that the refresh time of the discovered
-			// metric must be refreshed
+			// Discovery metrics are never re-collected by the collect jobs, so flag them
+			// for the PrepareCollectStrategy to refresh their collect time on each collect cycle
 			if (isDiscovery && metric != null) {
 				metric.setResetMetricTime(true);
 			}
