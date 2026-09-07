@@ -418,6 +418,33 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			return ServerResponse.badRequest().body(new McpError("Invalid message format"));
 		}
 
+		if (
+			message instanceof JSONRPCRequest initializeRequest &&
+			McpSchema.METHOD_INITIALIZE.equals(initializeRequest.method()) &&
+			sseSession.state().get() == SessionState.INITIALIZING
+		) {
+			// A single handshake at a time: a second initialize while one is pending would race the first one for the
+			// SDK session and make the outcome of the owning request meaningless
+			log.warn(
+				"Rejected a second MCP initialize request posted on SSE session {} from {} while its handshake is pending",
+				sseSession.id(),
+				describeRemote(request)
+			);
+			return jsonResponse(
+				HttpStatus.CONFLICT,
+				new JSONRPCResponse(
+					McpSchema.JSONRPC_VERSION,
+					initializeRequest.id(),
+					null,
+					new JSONRPCResponse.JSONRPCError(
+						McpSchema.ErrorCodes.INVALID_REQUEST,
+						String.format("MCP session %s already has an initialize request in progress", sseSession.id()),
+						null
+					)
+				)
+			);
+		}
+
 		if (!trackLifecycle(sseSession, message)) {
 			if (message instanceof JSONRPCRequest pingRequest && McpSchema.METHOD_PING.equals(pingRequest.method())) {
 				return answerPing(sseSession, pingRequest);

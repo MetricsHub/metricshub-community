@@ -268,6 +268,29 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldRefuseASecondInitializeWhileTheHandshakeIsPending() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// The second initialize is posted while the first one is still being handled
+		session.onHandle = () -> {
+			session.onHandle = null;
+			try {
+				postMessage(mockMvc, sessionId, INITIALIZE.replace("\"id\":1", "\"id\":9")).andExpect(status().isConflict());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+
+		// Only the first initialize reached the session, and the handshake completes normally
+		assertEquals(1, session.handled.size());
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+	}
+
+	@Test
 	void shouldKeepAnInitializedSessionWhenADuplicateInitializeIsRejected() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
