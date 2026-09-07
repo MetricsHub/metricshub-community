@@ -1,6 +1,8 @@
 package org.metricshub.engine.strategy.collect;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
@@ -27,9 +29,37 @@ import org.metricshub.engine.telemetry.metric.NumberMetric;
 class PrepareCollectStrategyTest {
 
 	private static final String HW_METRIC = "hw.metric";
+	private static final long COLLECT_TIME = System.currentTimeMillis();
+	private static final long PREVIOUS_COLLECT_TIME = COLLECT_TIME - 60 * 1000;
 
 	@Test
 	void testRunRefreshDiscoveredMetrics() {
+		final NumberMetric metric = prepareCollect(true);
+
+		// The discovered metric is not collected by the collect job: its collect time is reset so that it is still exported
+		assertEquals(COLLECT_TIME, metric.getCollectTime());
+		assertEquals(PREVIOUS_COLLECT_TIME, metric.getPreviousCollectTime());
+		assertTrue(metric.isUpdated());
+	}
+
+	@Test
+	void testRunKeepsCollectTimeOfCollectedMetrics() {
+		final NumberMetric metric = prepareCollect(false);
+
+		// The metric is collected by the collect job: its collect time is left untouched until it is actually collected
+		assertEquals(PREVIOUS_COLLECT_TIME, metric.getCollectTime());
+		assertEquals(PREVIOUS_COLLECT_TIME, metric.getPreviousCollectTime());
+		assertFalse(metric.isUpdated());
+	}
+
+	/**
+	 * Collect a metric at {@link #PREVIOUS_COLLECT_TIME} with the given discovery flag, then run the
+	 * {@link PrepareCollectStrategy} at {@link #COLLECT_TIME}.
+	 *
+	 * @param isDiscovery Whether the metric is collected by a discovery job
+	 * @return The prepared metric
+	 */
+	private static NumberMetric prepareCollect(final boolean isDiscovery) {
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(Map.of());
@@ -50,10 +80,9 @@ class PrepareCollectStrategyTest {
 		final ExtensionManager extensionManager = ExtensionManager.empty();
 
 		final ClientsExecutor clientExecutor = new ClientsExecutor(telemetryManager);
-		final long collectTime = System.currentTimeMillis();
 		final MonitorFactory monitorFactory = MonitorFactory.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "id", MONITOR_ATTRIBUTE_NAME, "name")))
-			.discoveryTime(collectTime - 30 * 60 * 1000)
+			.discoveryTime(COLLECT_TIME - 30 * 60 * 1000)
 			.connectorId(CONNECTOR)
 			.telemetryManager(telemetryManager)
 			.monitorType(ENCLOSURE)
@@ -73,14 +102,12 @@ class PrepareCollectStrategyTest {
 			monitor,
 			MetricsHubConstants.HOST_NAME,
 			Map.of(HW_METRIC, "1"),
-			collectTime,
-			true
+			PREVIOUS_COLLECT_TIME,
+			isDiscovery
 		);
 
-		new PrepareCollectStrategy(telemetryManager, collectTime, clientExecutor, extensionManager).run();
+		new PrepareCollectStrategy(telemetryManager, COLLECT_TIME, clientExecutor, extensionManager).run();
 
-		final NumberMetric metric = monitor.getMetric(HW_METRIC, NumberMetric.class);
-
-		assertEquals(metric.getCollectTime(), collectTime);
+		return monitor.getMetric(HW_METRIC, NumberMetric.class);
 	}
 }
