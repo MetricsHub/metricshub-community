@@ -153,6 +153,25 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldIgnoreAnInitializedNotificationRacingAPendingInitialize() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		session.handleResult = Mono.never();
+		final MockMvc mockMvc = setUp(
+			session,
+			LegacySseServerTransportProvider.builder().messageTimeout(Duration.ofMillis(200))
+		);
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// The initialize never completes (504) while the notification is posted: neither must advance the state
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isGatewayTimeout());
+		session.handleResult = Mono.empty();
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void shouldResetTheHandshakeWhenInitializeFails() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		session.handleResult = Mono.error(new IllegalStateException("initialize rejected"));
