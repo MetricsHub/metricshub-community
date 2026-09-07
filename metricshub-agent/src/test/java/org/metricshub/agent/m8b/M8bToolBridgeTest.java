@@ -203,14 +203,27 @@ class M8bToolBridgeTest {
 		assertEquals(null, answers.poll(1_000, TimeUnit.MILLISECONDS));
 	}
 
+	/**
+	 * A callback that does not observe its interruption, the way a blocking socket read does not.
+	 * Its thread cannot be taken back; what the bridge does about that is what these tests are for.
+	 */
+	private static void blockIgnoringInterruption(final CountDownLatch until) {
+		boolean released = false;
+		while (!released) {
+			try {
+				released = until.await(1, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				// Deliberately swallowed: that is the case being reproduced
+			}
+		}
+	}
+
 	@Test
 	void shouldFreeTheSlotOfWorkThatOutlivesItsSession() throws Exception {
 		bridge.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 1));
 		final CountDownLatch stuck = new CountDownLatch(1);
 		when(slow.call(anyString())).thenAnswer(invocation -> {
-			// A callback that ignores its interruption — a socket read that does not observe one,
-			// as most of them do not. Its thread cannot be taken back; its slot must be.
-			stuck.await();
+			blockIgnoringInterruption(stuck);
 			return "{}";
 		});
 
@@ -227,6 +240,39 @@ class M8bToolBridgeTest {
 		bridge.invoke(invoke("ListHosts", 10_000));
 		assertInstanceOf(ToolResult.class, answer());
 		stuck.countDown();
+	}
+
+	@Test
+	void shouldRefuseWorkOnceEveryThreadIsHeldByAnAbandonedInvocation() throws Exception {
+		// A concurrency cap high enough that it never fires: what must stop the pile-up here is the
+		// thread ceiling, because a timed-out invocation gives back its slot and not its thread.
+		bridge.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 10_000));
+		final CountDownLatch stuck = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			blockIgnoringInterruption(stuck);
+			return "{}";
+		});
+
+		final int attempts = M8bToolBridge.MAX_WORKER_THREADS + 8;
+		try {
+			for (int i = 0; i < attempts; i++) {
+				bridge.invoke(new ToolInvoke("req-" + i, "Slow", M8bJson.MAPPER.createObjectNode(), 50));
+			}
+
+			// Every attempt is answered: the ones that got a thread time out, the rest are refused
+			await()
+				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+				.until(() -> answers.size() >= attempts);
+			final long refused = answers
+				.stream()
+				.filter(ToolError.class::isInstance)
+				.map(ToolError.class::cast)
+				.filter(error -> error.message().startsWith("No worker available"))
+				.count();
+			assertTrue(refused > 0, "Past the thread ceiling an invocation must be refused, not queued forever");
+		} finally {
+			stuck.countDown();
+		}
 	}
 
 	@Test

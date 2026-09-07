@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.M8bConfig;
@@ -212,8 +213,21 @@ public class M8bService {
 				uidSupplier.load(),
 				Duration.ofSeconds(atLeastOneSecond(newConfig.getHeartbeatInterval()))
 			);
-			final M8bToolBridge newBridge = new M8bToolBridge(snapshot, this::sendSafely);
+			// The bridge answers on the client it was built for, and on no other. The alternative --
+			// resolving the current client at send time -- has a window: a worker can pass its epoch
+			// check and then be paused while the configuration changes, and its answer would leave
+			// over the new session, possibly toward a different endpoint, under a request id that
+			// session never issued. A stopped client drops what it is handed, which is the right
+			// end for a late answer.
+			final AtomicReference<M8bTunnelClient> owner = new AtomicReference<>();
+			final M8bToolBridge newBridge = new M8bToolBridge(snapshot, message -> {
+				final M8bTunnelClient target = owner.get();
+				if (target != null) {
+					target.send(message);
+				}
+			});
 			newClient = clientFactory.apply(settings, new TunnelListener(newBridge));
+			owner.set(newClient);
 			bridge = newBridge;
 			client = newClient;
 			newClient.start();
@@ -256,13 +270,6 @@ public class M8bService {
 			bridge.cancelSessionWork();
 			bridge.shutdown();
 			bridge = null;
-		}
-	}
-
-	private void sendSafely(final M8bMessage message) {
-		final M8bTunnelClient current = client;
-		if (current != null) {
-			current.send(message);
 		}
 	}
 

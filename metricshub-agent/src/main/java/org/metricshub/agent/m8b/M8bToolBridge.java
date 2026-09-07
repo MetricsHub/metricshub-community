@@ -25,11 +25,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,6 +70,19 @@ public class M8bToolBridge {
 	 */
 	static final int MAX_ERROR_DETAIL_CHARS = 1000;
 
+	/**
+	 * The hard ceiling on threads this bridge may ever hold at once.
+	 *
+	 * <p>The server's {@code maxInFlight} bounds LIVE invocations, and a timed-out one stops being
+	 * live the moment the Governor is told so — but its thread does not stop: a callback blocked in
+	 * a socket read does not observe an interruption, and nothing in Java can take a thread back.
+	 * Without a second bound, a run of timeouts would admit invocation after invocation while every
+	 * abandoned one kept its thread, its connection and its work on the monitored host. So the pool
+	 * is bounded, and an invocation that cannot get a thread is refused as
+	 * {@link ToolErrorCode#TOO_MANY_INFLIGHT} rather than queued behind work that may never end.
+	 */
+	static final int MAX_WORKER_THREADS = 32;
+
 	private final ToolRegistrySnapshot snapshot;
 	private final Consumer<M8bMessage> sender;
 	private final ExecutorService workers;
@@ -88,7 +103,17 @@ public class M8bToolBridge {
 	public M8bToolBridge(final ToolRegistrySnapshot snapshot, final Consumer<M8bMessage> sender) {
 		this.snapshot = snapshot;
 		this.sender = sender;
-		this.workers = Executors.newCachedThreadPool(daemonThreads("metricshub-m8b-tool"));
+		// SynchronousQueue, not an unbounded one: a request that finds every thread taken must be
+		// refused now, while the Governor can still act on it, rather than queued behind an
+		// invocation that has already outlived its deadline.
+		this.workers = new ThreadPoolExecutor(
+			0,
+			MAX_WORKER_THREADS,
+			60,
+			TimeUnit.SECONDS,
+			new SynchronousQueue<>(),
+			daemonThreads("metricshub-m8b-tool")
+		);
 		this.timer = new ScheduledThreadPoolExecutor(1, daemonThreads("metricshub-m8b-tool-timer"));
 		// Cancelling a deadline must drop it from the queue at once: otherwise an answered request
 		// keeps its arguments alive until the timeout would have fired
@@ -156,17 +181,30 @@ public class M8bToolBridge {
 		// task keeps the request and its arguments in the timer queue for the whole timeout.
 		final AtomicReference<ScheduledFuture<?>> deadline = new AtomicReference<>();
 		final long startedAt = System.nanoTime();
-		final Future<?> execution = workers.submit(() -> {
-			final M8bMessage answer;
-			try {
-				answer = execute(invoke, callback, currentLimits, startedAt);
-			} finally {
-				// Free the slot before the answer leaves: the server may invoke again right away
-				release(released);
-			}
-			answerOnce(answered, invokeEpoch, answer);
-			cancel(deadline.getAndSet(null));
-		});
+		final Future<?> execution;
+		try {
+			execution = workers.submit(() -> {
+				final M8bMessage answer;
+				try {
+					answer = execute(invoke, callback, currentLimits, startedAt);
+				} finally {
+					// Free the slot before the answer leaves: the server may invoke again right away
+					release(released);
+				}
+				answerOnce(answered, invokeEpoch, answer);
+				cancel(deadline.getAndSet(null));
+			});
+		} catch (RejectedExecutionException e) {
+			release(released);
+			sender.accept(
+				new ToolError(
+					invoke.requestId(),
+					ToolErrorCode.TOO_MANY_INFLIGHT,
+					"No worker available: " + MAX_WORKER_THREADS + " invocation(s) are still running, some past their deadline"
+				)
+			);
+			return;
+		}
 		final long timeoutMs = invoke.timeoutMs() > 0 ? invoke.timeoutMs() : TimeUnit.SECONDS.toMillis(300);
 		final ScheduledFuture<?> scheduled = timer.schedule(
 			() -> {

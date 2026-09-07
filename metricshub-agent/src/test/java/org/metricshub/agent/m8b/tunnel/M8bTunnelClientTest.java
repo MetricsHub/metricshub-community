@@ -4,6 +4,7 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -343,6 +344,23 @@ class M8bTunnelClientTest {
 			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS)
 		);
 		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client reconnects afterwards");
+	}
+
+	@Test
+	void stopShouldEndTheSessionAsThoroughlyAsALostConnection() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		client.stop("shutdown");
+
+		// Whoever holds in-flight work learns it was discarded, whichever way the session ended
+		assertNotNull(listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "A stop is a disconnect too");
+		assertFalse(client.isConnected());
+		assertNull(client.limits(), "Limits must not outlive the session that imposed them");
 	}
 
 	@Test
