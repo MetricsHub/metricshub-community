@@ -343,6 +343,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				final McpServerSession session = sessionFactory.create(sessionTransport);
 				final String sessionId = session.getId();
 				final SseSession sseSession = new SseSession(sessionId, session, sessionTransport);
+				sessionTransport.attach(sseSession);
 
 				sseBuilder.onComplete(() -> forgetSession(sseSession, "completed"));
 				sseBuilder.onTimeout(() -> forgetSession(sseSession, "timed out"));
@@ -452,8 +453,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 		if (message instanceof JSONRPCRequest request && McpSchema.METHOD_INITIALIZE.equals(request.method())) {
 			// Recorded before the dispatch: the client receives the initialize response over the SSE stream and may
-			// post notifications/initialized before the request thread returns. A failed initialize resets the state.
-			state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING);
+			// post notifications/initialized before the request thread returns. A rejected, failed or timed-out
+			// initialize resets the state (see SseSession.onResponseSent / onInitializeFailed).
+			sseSession.onInitializeRequest(request.id());
 			return true;
 		}
 
@@ -566,7 +568,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			// A failed or timed-out initialize must not leave the session half-initialized, even if an initialized
 			// notification slipped in meanwhile: the client has to start the handshake again.
 			if (message instanceof JSONRPCRequest failed && McpSchema.METHOD_INITIALIZE.equals(failed.method())) {
-				sseSession.state().set(SessionState.CREATED);
+				sseSession.onInitializeFailed();
 			}
 			if (Exceptions.unwrap(e) instanceof TimeoutException) {
 				log.error(
@@ -775,10 +777,45 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		McpServerSession session,
 		WebMvcMcpSessionTransport transport,
 		AtomicReference<SessionState> state,
+		AtomicReference<Object> pendingInitializeId,
 		Instant createdAt
 	) {
 		SseSession(final String id, final McpServerSession session, final WebMvcMcpSessionTransport transport) {
-			this(id, session, transport, new AtomicReference<>(SessionState.CREATED), Instant.now());
+			this(id, session, transport, new AtomicReference<>(SessionState.CREATED), new AtomicReference<>(), Instant.now());
+		}
+
+		/**
+		 * Starts the handshake for the given initialize request: the outcome is settled by {@link #onResponseSent}.
+		 *
+		 * @param initializeRequestId the JSON-RPC id of the initialize request
+		 */
+		void onInitializeRequest(final Object initializeRequestId) {
+			pendingInitializeId.set(initializeRequestId);
+			state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING);
+		}
+
+		/**
+		 * Records the outcome of the handshake from the response the SDK session writes to the client: an initialize
+		 * request rejected at the JSON-RPC level (error response) has not started a handshake.
+		 *
+		 * @param response the JSON-RPC response about to be written to the SSE stream
+		 */
+		void onResponseSent(final JSONRPCResponse response) {
+			final Object initializeRequestId = pendingInitializeId.get();
+			if (initializeRequestId != null && initializeRequestId.equals(response.id())) {
+				pendingInitializeId.compareAndSet(initializeRequestId, null);
+				if (response.error() != null) {
+					state.set(SessionState.CREATED);
+				}
+			}
+		}
+
+		/**
+		 * Resets the handshake after an initialize request that failed or timed out.
+		 */
+		void onInitializeFailed() {
+			pendingInitializeId.set(null);
+			state.set(SessionState.CREATED);
 		}
 	}
 
@@ -800,6 +837,20 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		 * Set once the SSE stream has been completed by this transport; nothing must be written afterwards.
 		 */
 		private volatile boolean closed;
+
+		/**
+		 * The tracked session this transport belongs to, informed of the responses written to the client.
+		 */
+		private volatile SseSession sseSession;
+
+		/**
+		 * Attaches the tracked session once it exists (the SDK session is created with the transport).
+		 *
+		 * @param owner the tracked session
+		 */
+		void attach(final SseSession owner) {
+			this.sseSession = owner;
+		}
 
 		/**
 		 * Creates a new session transport with the specified SSE builder.
@@ -847,6 +898,10 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 					} catch (IOException e) {
 						log.error("Failed to serialize an MCP message for the SSE stream: {}", e.getMessage());
 						return;
+					}
+					final SseSession owner = sseSession;
+					if (owner != null && message instanceof JSONRPCResponse response) {
+						owner.onResponseSent(response);
 					}
 					try {
 						sseBuilder.event(MESSAGE_EVENT_TYPE).data(jsonText);

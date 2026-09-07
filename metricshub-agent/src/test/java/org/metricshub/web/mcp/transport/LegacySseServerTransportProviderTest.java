@@ -178,6 +178,36 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldResetTheHandshakeWhenInitializeIsRejectedWithAJsonRpcError() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// The SDK session answers initialize with a JSON-RPC error over SSE and completes normally
+		session.onHandle = () -> {
+			session.onHandle = null;
+			session.transport
+				.get()
+				.sendMessage(
+					new JSONRPCResponse(
+						McpSchema.JSONRPC_VERSION,
+						1,
+						null,
+						new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unsupported protocol version", null)
+					)
+				)
+				.block();
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+
+		// The rejected handshake cannot be completed by the notification
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void shouldResetTheHandshakeWhenInitializeFailsAfterAnEarlyInitializedNotification() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(
