@@ -24,6 +24,8 @@ package org.metricshub.agent.m8b.tunnel;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
@@ -80,8 +82,8 @@ public class M8bTunnelClient {
 	static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(2);
 	/** Multiple of the heartbeat interval after which a silent peer is considered gone. */
 	static final double IDLE_FACTOR = 2.5;
-	/** A close reason must hold in 123 UTF-8 bytes; ASCII characters are the safe budget. */
-	static final int MAX_CLOSE_REASON_CHARS = 100;
+	/** The JDK's hard limit on a close reason, measured in encoded bytes rather than characters. */
+	static final int MAX_CLOSE_REASON_BYTES = 123;
 
 	private final M8bTunnelSettings settings;
 	private final M8bTunnelListener listener;
@@ -228,13 +230,13 @@ public class M8bTunnelClient {
 		builder
 			.buildAsync(settings.endpoint(), new FrameListener(connectGeneration))
 			.whenComplete((socket, error) -> {
-				if (socket != null && executor.isShutdown()) {
+				if (!dispatch(() -> onConnected(connectGeneration, socket, error)) && socket != null) {
 					// stop() ran while the handshake was in flight: the tunnel thread is gone and
-					// nothing would ever close this authenticated socket.
+					// nothing would ever close this authenticated socket. Asking the executor is the
+					// only check without a window after it -- isShutdown() can still turn true
+					// between the answer and the submission.
 					socket.abort();
-					return;
 				}
-				dispatch(() -> onConnected(connectGeneration, socket, error));
 			});
 	}
 
@@ -388,7 +390,7 @@ public class M8bTunnelClient {
 				TimeUnit.MILLISECONDS
 			);
 			socket
-				.sendClose(code, reason)
+				.sendClose(wireCloseCode(code), closeReason(reason))
 				.whenComplete((ws, error) ->
 					dispatch(() -> {
 						abortFallback.cancel(false);
@@ -473,24 +475,45 @@ public class M8bTunnelClient {
 	/**
 	 * Hands a transport callback to the tunnel thread. After {@link #stop(String)} the executor is
 	 * gone and late callbacks from the closing socket are simply dropped.
+	 *
+	 * @param task the callback
+	 * @return whether the tunnel thread accepted it
 	 */
-	private void dispatch(final Runnable task) {
+	private boolean dispatch(final Runnable task) {
 		try {
 			executor.execute(task);
+			return true;
 		} catch (RejectedExecutionException e) {
 			log.trace("M8B tunnel stopped: dropping a late transport callback.");
+			return false;
 		}
 	}
 
 	/**
-	 * A close reason must fit in 123 UTF-8 bytes or the JDK refuses to send the frame. Truncating on
-	 * characters is enough here: the reasons are ours, and short.
+	 * The code actually put on the wire. A JDK client may only send {@code 1000} or a code in
+	 * {@code [3000, 4999]}: {@code 1003} and its neighbours are reserved for the endpoint itself.
+	 * Sending one anyway fails the close frame, and the server would then record an abnormal
+	 * disconnect rather than the reason we mean -- which is precisely what the reason text carries.
 	 */
-	private static String closeReason(final String reason) {
+	static int wireCloseCode(final int code) {
+		return code == WebSocket.NORMAL_CLOSURE || (code >= 3000 && code <= 4999) ? code : WebSocket.NORMAL_CLOSURE;
+	}
+
+	/**
+	 * A close reason must fit in 123 UTF-8 bytes or the JDK refuses to send the frame, and one
+	 * character can encode as four of them. The encoder is what makes the cut safe: it stops on a
+	 * character boundary, so the result never ends in half a code point.
+	 */
+	static String closeReason(final String reason) {
 		if (reason == null) {
 			return "";
 		}
-		return reason.length() <= MAX_CLOSE_REASON_CHARS ? reason : reason.substring(0, MAX_CLOSE_REASON_CHARS);
+		if (reason.length() <= MAX_CLOSE_REASON_BYTES / 4) {
+			return reason;
+		}
+		final ByteBuffer encoded = ByteBuffer.allocate(MAX_CLOSE_REASON_BYTES);
+		StandardCharsets.UTF_8.newEncoder().encode(CharBuffer.wrap(reason), encoded, true);
+		return new String(encoded.array(), 0, encoded.position(), StandardCharsets.UTF_8);
 	}
 
 	private static void cancel(final ScheduledFuture<?> future) {
