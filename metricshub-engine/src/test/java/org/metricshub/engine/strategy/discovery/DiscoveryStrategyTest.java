@@ -48,6 +48,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.AbstractMetric;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -193,6 +194,11 @@ class DiscoveryStrategyTest {
 		assertEquals(1, discoveredMonitors.get(DISK_CONTROLLER.getKey()).size());
 		assertEquals(1, discoveredMonitors.get(PHYSICAL_DISK.getKey()).size());
 		assertEquals(1, discoveredMonitors.get(LOGICAL_DISK.getKey()).size());
+		// Discovered metrics are not collected by the collect job, so they are flagged for a collect time reset on each collect
+		final Monitor physicalDisk = discoveredMonitors.get(PHYSICAL_DISK.getKey()).values().iterator().next();
+		final AbstractMetric physicalDiskSize = physicalDisk.getMetric("hw.physical_disk.size");
+		assertNotNull(physicalDiskSize);
+		assertTrue(physicalDiskSize.isResetMetricTime());
 		// Check discovered monitors order
 		Set<String> expectedOrder = Set.of(
 			HOST.getKey(),

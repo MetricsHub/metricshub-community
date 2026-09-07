@@ -217,9 +217,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	/**
 	 * This method processes a monitor job
 	 *
-	 * @param currentConnector
-	 * @param hostname
-	 * @param monitorJobEntry
+	 * @param currentConnector The connector defining the monitor job
+	 * @param hostname         The host name of the monitored resource
+	 * @param monitorJobEntry  The monitor type and its monitor job
 	 */
 	private void processMonitorJob(
 		final Connector currentConnector,
@@ -266,7 +266,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// Create the monitors
 		final Mapping mapping = monitorTask.getMapping();
 
-		processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob);
+		// Only discovery metrics are flagged so that PrepareCollectStrategy refreshes their collect time on each
+		// collect cycle, as they are never re-collected. Simple tasks run on every collect cycle, so their metrics
+		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
+		final boolean isDiscovery = monitorTask instanceof Discovery;
+
+		processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
@@ -279,13 +284,16 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param mapping     The mapping instance defining the attributes, metrics, conditional collection, legacy text parameters and resource
 	 * @param monitorType The type of the monitor we currently process
 	 * @param hostname    The host name of the monitored resource
+	 * @param monitorJob  The monitor job defining the discovery or simple task
+	 * @param isDiscovery Whether the task is a discovery, in which case the collected metrics are flagged for a collect time reset
 	 */
 	private void processSameTypeMonitors(
 		final Connector connector,
 		final Mapping mapping,
 		final String monitorType,
 		final String hostname,
-		final MonitorJob monitorJob
+		final MonitorJob monitorJob,
+		final boolean isDiscovery
 	) {
 		final String connectorId = connector.getCompiledFilename();
 
@@ -417,7 +425,15 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 			final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
-			metricFactory.collectMonitorMetrics(monitorType, connector, monitor, connectorId, metrics, strategyTime, true);
+			metricFactory.collectMonitorMetrics(
+				monitorType,
+				connector,
+				monitor,
+				connectorId,
+				metrics,
+				strategyTime,
+				isDiscovery
+			);
 
 			// Collect legacy parameters
 			monitor.addLegacyParameters(mappingProcessor.interpretNonContextMappingLegacyTextParameters());
