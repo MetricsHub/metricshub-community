@@ -226,6 +226,7 @@ public class M8bService {
 			// transient failure (e.g. missing CA file) must not disable the tunnel until a restart.
 			activeConfig = null;
 			client = null;
+			closeBridge();
 			log.error("Failed to start the M8B tunnel toward {}: {}", endpoint, e.getMessage());
 			log.debug("Failed to start the M8B tunnel:", e);
 		}
@@ -236,12 +237,26 @@ public class M8bService {
 			client.stop(reason);
 			client = null;
 		}
+		closeBridge();
+		advertisedHosts = List.of();
+		advertisedGeneration = 0;
+	}
+
+	/**
+	 * Ends a bridge's outstanding work before releasing it.
+	 *
+	 * <p>Invalidating comes first, and shutting down second. Interruption alone proves nothing — a
+	 * callback may ignore it, catch it, or finish just as it arrives — and the sender these
+	 * invocations were given resolves to whichever client is current when they answer. Without the
+	 * invalidation, a result from the old configuration could leave over the new session, toward a
+	 * possibly different endpoint, under a request id that session never issued.
+	 */
+	private void closeBridge() {
 		if (bridge != null) {
+			bridge.cancelSessionWork();
 			bridge.shutdown();
 			bridge = null;
 		}
-		advertisedHosts = List.of();
-		advertisedGeneration = 0;
 	}
 
 	private void sendSafely(final M8bMessage message) {

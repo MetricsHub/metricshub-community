@@ -52,7 +52,7 @@ Rules:
 * Properties whose value is `null` are omitted.
 * Unknown properties are ignored by both sides.
 * A frame whose `type` is unknown is answered with `{"type":"error","code":"UNKNOWN_MESSAGE_TYPE"}` and otherwise ignored; the connection stays open.
-* Binary frames are not used. A binary frame is a protocol error (close `1003`).
+* Binary frames are not used. A binary frame is a protocol error: the server closes `1003`, the agent closes `1000` carrying the reason `Binary frames are not supported` — a WebSocket client may only send `1000` or a code in `[3000, 4999]`, so it states the cause in the reason instead.
 
 ## 3. Messages
 
@@ -203,7 +203,7 @@ Informational; never closes the connection by itself.
 |---|---|---|
 | `1000` | agent | Normal shutdown |
 | `1001` | server | Server going away |
-| `1003` | either | Unsupported data (binary frame) |
+| `1003` | server | Unsupported data (binary frame); the agent closes `1000` with the reason instead |
 | `1009` | server | Frame larger than `maxPayloadBytes` |
 | `4001` | server | Superseded by a newer session for the same uid |
 | `4002` | server | No `agent.register` within 10 s |
