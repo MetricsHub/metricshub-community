@@ -45,6 +45,18 @@ otel:
 #   #   nexus.example.com:8443:
 #   #     Authorization: Basic ${env::OTHER_REPO_CREDENTIALS}
 
+# M8B AI Governor tunnel: persistent outbound WebSocket through which M8B discovers this agent's
+# tools and hosts and runs troubleshooting tools on demand. Disabled by default.
+# m8b:
+#   enabled: true
+#   endpoint: wss://m8b.example.com/ws/agent
+#   headers:
+#     Authorization: Bearer ${env::M8B_TOKEN}
+#   # certificateFile: C:\ProgramData\MetricsHub\security\m8b-ca.pem # Trusted certificate (PEM) for the M8B server
+#   # heartbeatInterval: 30s
+#   # Tools never advertised to (nor invokable by) M8B
+#   # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+
 # Simple resource configuration
 resources:
 

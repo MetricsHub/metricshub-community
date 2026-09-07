@@ -84,6 +84,25 @@ opamp:
 
 Changing the `opamp:` section triggers a configuration reload; the OpAMP connection itself survives reloads that do not touch this section. The agent identity (`instance_uid`, a UUIDv7) is persisted in the `security` directory next to the MetricsHub keystore, so it survives restarts and upgrades.
 
+## M8B AI Governor (WebSocket tunnel)
+
+The agent can also open a persistent **outbound** WebSocket tunnel to the M8B AI Governor, the AI-driven evolution of MetricsHub Fleet. At registration it reports its identity (name, version, edition, host), the troubleshooting tools it exposes — generated from its own AI/MCP tool registry, so a new tool needs no protocol change — and the hosts it actually monitors. The Governor then resolves a host to the agent monitoring it and runs those tools on demand (`GetMetricsFromCacheForHost`, `CheckProtocol`, `PingHost`, …) to troubleshoot any monitored host from a single assistant, whatever the MetricsHub version or edition of each agent. Only the advertised tools can be invoked, the server dictates the invocation timeout, payload cap and concurrency limit at registration, and the existing SSH/WinRM kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply. The wire protocol is specified in [m8b-tunnel-protocol.md](m8b-tunnel-protocol.md).
+
+The tunnel is **disabled by default**. Enable it with a top-level `m8b:` section in `metricshub.yaml`:
+
+```yaml
+m8b:
+  enabled: true
+  endpoint: wss://m8b.example.com/ws/agent      # M8B Governor WebSocket endpoint
+  headers:                                      # Handshake headers carrying the agent credentials;
+    Authorization: Bearer ${env::M8B_TOKEN}     # values may be encrypted with the MetricsHub keystore
+  certificateFile: /opt/metricshub/security/m8b-ca.pem # Optional trusted certificate (PEM)
+  heartbeatInterval: 30s                        # Heartbeat interval until the server imposes its own (default: 30s)
+  excludedTools: [ ExecuteSshCommandline ]      # Tools never advertised to, nor invokable by, M8B (default: none)
+```
+
+The agent connects with the same persistent identity as OpAMP (the `instance_uid` file in the `security` directory), so the fleet sees one agent whichever channel reports. A lost connection is retried with exponential backoff; each reconnection re-registers the current tools and hosts. Changing the `m8b:` section triggers a configuration reload.
+
 ## How to build the Project
 
 ### Requirements

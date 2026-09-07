@@ -87,7 +87,7 @@ public class ApplicationStatusService {
 	 * @param agentContext The agent context containing configuration details.
 	 * @return the license type.
 	 */
-	private static String determineLicenseType(final AgentContext agentContext) {
+	public static String determineLicenseType(final AgentContext agentContext) {
 		final var agentInfo = agentContext.getAgentInfo();
 		if (agentInfo != null) {
 			final var attributes = agentInfo.getAttributes();
