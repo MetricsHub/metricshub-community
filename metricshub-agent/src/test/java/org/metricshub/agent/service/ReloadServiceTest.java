@@ -23,6 +23,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.AlertingSystemConfig;
+import org.metricshub.agent.config.M8bConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
@@ -562,6 +563,17 @@ class ReloadServiceTest {
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.opamp(OpAmpConfig.builder().enabled(true).endpoint("https://opamp.example.com/v1/opamp").build())
+					.build()
+			),
+			Arguments.of(
+				"m8b",
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.m8b(M8bConfig.builder().enabled(false).build())
+					.build(),
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.m8b(M8bConfig.builder().enabled(true).endpoint("wss://m8b.example.com/ws/agent").build())
 					.build()
 			),
 			Arguments.of(

@@ -147,7 +147,7 @@ public class OpAmpAgentDescriptionMapper {
 	 * @param agentConfig the agent configuration; may be {@code null}
 	 * @return the effective attributes, sorted by key
 	 */
-	private static Map<String, String> resolveAttributes(final AgentInfo agentInfo, final AgentConfig agentConfig) {
+	public static Map<String, String> resolveAttributes(final AgentInfo agentInfo, final AgentConfig agentConfig) {
 		// Sorted so that two consecutive reports of the same attributes produce the same message and
 		// the client does not detect a spurious change
 		final Map<String, String> attributes = new TreeMap<>();
@@ -190,7 +190,7 @@ public class OpAmpAgentDescriptionMapper {
 	 * @param attributes the effective agent attributes
 	 * @return the service version, possibly {@code null}
 	 */
-	private static String resolveServiceVersion(final Map<String, String> attributes) {
+	public static String resolveServiceVersion(final Map<String, String> attributes) {
 		final String serviceVersion = attributes.get(SERVICE_VERSION_ATTRIBUTE_KEY);
 		return serviceVersion != null && !serviceVersion.isBlank()
 			? serviceVersion

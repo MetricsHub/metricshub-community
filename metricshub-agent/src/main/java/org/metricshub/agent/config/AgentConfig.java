@@ -167,6 +167,10 @@ public class AgentConfig {
 	@JsonSetter(nulls = SKIP)
 	private UpgradeConfig upgrade = UpgradeConfig.builder().build();
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private M8bConfig m8b = M8bConfig.builder().build();
+
 	/**
 	 * Build a new empty instance
 	 *

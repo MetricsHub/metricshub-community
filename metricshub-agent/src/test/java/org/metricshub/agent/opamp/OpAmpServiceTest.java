@@ -21,6 +21,7 @@ import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
+import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientSettings;
@@ -342,10 +343,7 @@ class OpAmpServiceTest {
 		assertEquals(Duration.ofSeconds(60), settings.getPollInterval());
 		assertEquals(Duration.ofSeconds(15), settings.getRequestTimeout());
 		assertEquals(false, settings.isReportHealth());
-		assertEquals(
-			List.of(OpAmpService.OPAMP_INSTANCE_UID_FILENAME),
-			List.of(settings.getInstanceUidFile().getFileName().toString())
-		);
+		assertEquals(List.of(AgentInstanceUid.FILENAME), List.of(settings.getInstanceUidFile().getFileName().toString()));
 	}
 
 	@Test

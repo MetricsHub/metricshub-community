@@ -22,7 +22,6 @@ package org.metricshub.agent.opamp;
  */
 
 import java.net.URI;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,8 +33,8 @@ import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.agent.upgrade.runner.DeploymentKind;
@@ -60,12 +59,6 @@ import org.metricshub.web.service.ApplicationStatusService;
  */
 @Slf4j
 public class OpAmpService {
-
-	/**
-	 * Name of the file persisting the OpAMP agent instance UID, stored in the MetricsHub
-	 * security directory.
-	 */
-	public static final String OPAMP_INSTANCE_UID_FILENAME = "opamp-instance-uid";
 
 	/**
 	 * Period in seconds of the supervisor tick.
@@ -363,7 +356,7 @@ public class OpAmpService {
 					atLeastOneSecond("requestTimeout", config.getRequestTimeout(), OpAmpConfig.DEFAULT_REQUEST_TIMEOUT)
 				)
 			)
-			.withInstanceUidFile(resolveInstanceUidFile())
+			.withInstanceUidFile(AgentInstanceUid.file())
 			.withReportHealth(config.isReportHealth())
 			.build();
 	}
@@ -389,20 +382,6 @@ public class OpAmpService {
 			return defaultValue;
 		}
 		return seconds;
-	}
-
-	/**
-	 * Resolves the file persisting the OpAMP instance UID: it lives next to the MetricsHub
-	 * keystore in the security directory, which survives upgrades on all platforms.
-	 *
-	 * @return the instance UID file path
-	 */
-	static Path resolveInstanceUidFile() {
-		return PasswordEncrypt.getKeyStoreFile(true)
-			.toPath()
-			.toAbsolutePath()
-			.getParent()
-			.resolve(OPAMP_INSTANCE_UID_FILENAME);
 	}
 
 	/**
