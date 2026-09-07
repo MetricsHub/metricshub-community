@@ -30,16 +30,21 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceConfig;
+import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.m8b.protocol.HostDescriptor;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Builds the host inventory reported to the M8B Governor from the agent configuration.
+ * Builds the host inventory reported to the M8B Governor: the hosts the agent is <em>actually</em>
+ * monitoring, i.e. the resources that have an active {@link TelemetryManager}. A configured resource
+ * that failed validation has no telemetry manager and is therefore not advertised, so the Governor
+ * never routes a tool call to a host the agent cannot reach.
  * <p>
  * A resource key is unique only within its resource group, so a host is identified by the pair
- * (resource group, resource key) and every group is walked separately: two groups reusing a key both
- * keep their host. The result is sorted by group then key so two identical configurations always
- * produce the same payload.
+ * (resource group, resource key). The result is sorted by group then key so two identical
+ * configurations always produce the same payload.
  * </p>
  */
 public final class HostInventory {
@@ -47,30 +52,40 @@ public final class HostInventory {
 	private HostInventory() {}
 
 	/**
-	 * @param agentConfig the agent configuration
+	 * @param agentContext the running agent context
 	 * @return the monitored hosts, sorted by resource group then resource key
 	 */
-	public static List<HostDescriptor> from(final AgentConfig agentConfig) {
-		final List<HostDescriptor> hosts = new ArrayList<>();
-		if (agentConfig.getResourceGroups() != null) {
-			agentConfig
-				.getResourceGroups()
-				.forEach((groupKey, group) -> addAll(hosts, groupKey, group == null ? null : group.getResources()));
+	public static List<HostDescriptor> from(final AgentContext agentContext) {
+		final AgentConfig agentConfig = agentContext.getAgentConfig();
+		final Map<String, Map<String, TelemetryManager>> active = agentContext.getTelemetryManagers();
+		if (agentConfig == null || active == null) {
+			return List.of();
 		}
-		addAll(hosts, TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, agentConfig.getResources());
+		final List<HostDescriptor> hosts = new ArrayList<>();
+		active.forEach((groupKey, resources) -> {
+			if (resources != null) {
+				resources
+					.keySet()
+					.forEach(resourceKey ->
+						hosts.add(describe(groupKey, resourceKey, resourceConfig(agentConfig, groupKey, resourceKey)))
+					);
+			}
+		});
 		hosts.sort(Comparator.comparing(HostDescriptor::resourceGroup).thenComparing(HostDescriptor::resourceKey));
 		return List.copyOf(hosts);
 	}
 
-	private static void addAll(
-		final List<HostDescriptor> hosts,
+	private static ResourceConfig resourceConfig(
+		final AgentConfig agentConfig,
 		final String groupKey,
-		final Map<String, ResourceConfig> resources
+		final String resourceKey
 	) {
-		if (resources == null) {
-			return;
+		if (TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(groupKey)) {
+			return agentConfig.getResources() == null ? null : agentConfig.getResources().get(resourceKey);
 		}
-		resources.forEach((resourceKey, resourceConfig) -> hosts.add(describe(groupKey, resourceKey, resourceConfig)));
+		final ResourceGroupConfig group =
+			agentConfig.getResourceGroups() == null ? null : agentConfig.getResourceGroups().get(groupKey);
+		return group == null || group.getResources() == null ? null : group.getResources().get(resourceKey);
 	}
 
 	private static HostDescriptor describe(
