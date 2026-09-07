@@ -74,6 +74,10 @@ public class M8bTunnelClient {
 
 	static final Duration BASE_BACKOFF = Duration.ofSeconds(1);
 	static final Duration STOP_TIMEOUT = Duration.ofSeconds(5);
+	/** How long a registered connection must last before the reconnection backoff is reset. */
+	static final Duration STABLE_CONNECTION = Duration.ofSeconds(60);
+	/** How long a close frame may take to leave before the socket is aborted anyway. */
+	static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(2);
 	/** Multiple of the heartbeat interval after which a silent peer is considered gone. */
 	static final double IDLE_FACTOR = 2.5;
 
@@ -97,6 +101,7 @@ public class M8bTunnelClient {
 	private ScheduledFuture<?> registrationDeadline;
 	private ScheduledFuture<?> heartbeat;
 	private ScheduledFuture<?> reconnect;
+	private ScheduledFuture<?> stability;
 
 	/**
 	 * @param settings connection settings
@@ -286,7 +291,20 @@ public class M8bTunnelClient {
 		cancel(registrationDeadline);
 		registrationDeadline = null;
 		limits = registered;
-		retrySchedule.reset();
+		// The backoff is reset only once the connection has proven durable. Registering is not
+		// enough: two agents sharing a uid each register before the other supersedes them, and
+		// resetting here would put them in a tight loop stealing the session from each other.
+		cancel(stability);
+		final long registeredGeneration = generation;
+		stability = executor.schedule(
+			() -> {
+				if (registeredGeneration == generation && !stopped) {
+					retrySchedule.reset();
+				}
+			},
+			STABLE_CONNECTION.toMillis(),
+			TimeUnit.MILLISECONDS
+		);
 		final Duration interval =
 			registered.heartbeatIntervalSeconds() > 0
 				? Duration.ofSeconds(registered.heartbeatIntervalSeconds())
@@ -343,9 +361,24 @@ public class M8bTunnelClient {
 		if (dropGeneration != generation) {
 			return;
 		}
-		if (webSocket != null) {
-			webSocket.sendClose(code, reason).whenComplete((ws, e) -> {});
-			webSocket.abort();
+		final WebSocket socket = webSocket;
+		if (socket != null) {
+			// Aborting fails a close frame still in flight, and the server would record an abnormal
+			// disconnect instead of the code we mean. Let the close leave first, with a bounded
+			// fallback in case the peer never completes it.
+			final ScheduledFuture<?> abortFallback = executor.schedule(
+				socket::abort,
+				CLOSE_TIMEOUT.toMillis(),
+				TimeUnit.MILLISECONDS
+			);
+			socket
+				.sendClose(code, reason)
+				.whenComplete((ws, error) ->
+					dispatch(() -> {
+						abortFallback.cancel(false);
+						socket.abort();
+					})
+				);
 		}
 		disconnected(dropGeneration, code, reason);
 	}
@@ -406,9 +439,19 @@ public class M8bTunnelClient {
 		cancel(registrationDeadline);
 		cancel(heartbeat);
 		cancel(reconnect);
+		cancel(stability);
 		registrationDeadline = null;
 		heartbeat = null;
 		reconnect = null;
+		stability = null;
+	}
+
+	/**
+	 * @return the number of consecutive failed or short-lived connections currently driving the
+	 *         reconnection backoff
+	 */
+	int retryFailureCount() {
+		return retrySchedule.getFailureCount();
 	}
 
 	/**

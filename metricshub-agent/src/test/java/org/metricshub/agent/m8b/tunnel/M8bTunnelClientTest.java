@@ -196,6 +196,28 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void shouldKeepGrowingTheBackoffAcrossSupersededSessions() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+
+		// Two agents sharing a uid supersede each other: registering must not reset the backoff,
+		// otherwise both reconnect at the base delay forever and steal the session in a tight loop.
+		for (int attempt = 1; attempt <= 2; attempt++) {
+			assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "registration " + attempt);
+			server.closeAll(M8bTunnelClient.CLOSE_SUPERSEDED, "superseded");
+			assertEquals(
+				M8bTunnelClient.CLOSE_SUPERSEDED,
+				listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+				"disconnection " + attempt
+			);
+			assertEquals(attempt, client.retryFailureCount(), "the backoff must grow with each supersession");
+		}
+	}
+
+	@Test
 	void shouldRetryWithBackoffWhenSuperseded() throws Exception {
 		server = new FakeM8bServer();
 		server.startAndAwait();
@@ -227,6 +249,13 @@ class M8bTunnelClientTest {
 
 		final Integer code = listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS);
 		assertEquals(M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT, code);
+		// The close frame must reach the server before the socket is aborted, otherwise the server
+		// records an abnormal disconnect instead of the code the client meant to send
+		assertEquals(
+			M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT,
+			server.awaitClose(TIMEOUT_MS),
+			"The server must observe the heartbeat-timeout close code"
+		);
 		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client must reconnect");
 	}
 
