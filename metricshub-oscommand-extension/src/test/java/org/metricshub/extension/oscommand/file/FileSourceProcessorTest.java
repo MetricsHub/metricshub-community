@@ -388,14 +388,14 @@ class FileSourceProcessorTest {
 		// Create testable processor with injected mock
 		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
 
-		// Iteration 1: First read - should set cursor but return empty table
+		// Iteration 1: First read - should set cursor and return an empty log block
 		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
 
 		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
 		// Assertions for iteration 1
 		assertNotNull(result1);
-		assertTrue(result1.isEmpty());
+		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
 		// Verify cursor was set correctly
 		Map<String, Long> cursors = telemetryManager
@@ -544,14 +544,14 @@ class FileSourceProcessorTest {
 		// Create testable processor with injected mock
 		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
 
-		// Iteration 1: First read - should set cursor but return empty table
+		// Iteration 1: First read - should set cursor and return an empty log block
 		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
 
 		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
 		// Assertions for iteration 1
 		assertNotNull(result1);
-		assertTrue(result1.isEmpty());
+		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
 		// Verify cursor was set correctly
 		Map<String, Long> cursors = telemetryManager
@@ -666,7 +666,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			assertTrue(result1.isEmpty());
+			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -725,7 +725,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			assertTrue(result1.isEmpty());
+			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -782,5 +782,35 @@ class FileSourceProcessorTest {
 			assertNotNull(result);
 			assertEquals(expectedMarkedLogCell(path1, content1), result.getRawData());
 		}
+	}
+
+	@Test
+	void testLogModeEmitsEmptyBlocksForInitialAndUnchangedFiles() throws Exception {
+		final FileOperations fileOps = mock(FileOperations.class);
+		final String path1 = "/logs/a.log";
+		final String path2 = "/logs/b.log";
+		final Set<String> paths = new java.util.LinkedHashSet<>(java.util.List.of(path1, path2));
+		final Map<String, Long> cursors = new HashMap<>();
+		final FileSource source = FileSource.builder().maxSizePerPoll(100L).build();
+		final FileSourceProcessor processor = new FileSourceProcessor(mock(OsCommandService.class));
+		when(fileOps.getFileSize(path1)).thenReturn(10L, 10L, 14L);
+		when(fileOps.getFileSize(path2)).thenReturn(10L);
+		when(fileOps.readFromOffset(path1, 10L, 4)).thenReturn("line");
+		final String emptyBlocks =
+			"<<<LOG:file=\"/logs/a.log\">>>\n<<<END_LOG>>>\n\n" + "<<<LOG:file=\"/logs/b.log\">>>\n<<<END_LOG>>>\n\n";
+
+		for (int poll = 0; poll < 2; poll++) {
+			final var rows = processor.processFilesInLogMode(fileOps, paths, cursors, source, HOSTNAME);
+			assertEquals(emptyBlocks, FileHelper.buildLogBlock(rows, paths, paths));
+			assertEquals(Map.of(path1, 10L, path2, 10L), cursors);
+		}
+
+		final var rows = processor.processFilesInLogMode(fileOps, paths, cursors, source, HOSTNAME);
+		assertEquals(
+			"<<<LOG:file=\"/logs/a.log\">>>\nline\n<<<END_LOG>>>\n\n" + "<<<LOG:file=\"/logs/b.log\">>>\n<<<END_LOG>>>\n\n",
+			FileHelper.buildLogBlock(rows, paths, paths)
+		);
+		assertEquals(Map.of(path1, 14L, path2, 10L), cursors);
+		verify(fileOps, times(1)).readFromOffset(path1, 10L, 4);
 	}
 }

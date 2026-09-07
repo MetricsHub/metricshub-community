@@ -579,12 +579,12 @@ public class FileSourceProcessor {
 
 			// First read: cursor is null, initialize cursor to current file size without reading content
 			if (cursor == null) {
-				return FileSourceProcessingResult.builder().cursor(fileSize).remainingSize(remainingSize).build();
+				return FileSourceProcessingResult.builder().content("").cursor(fileSize).remainingSize(remainingSize).build();
 			}
 
 			// File has not grown since the last read, no new content to read
 			if (fileSize.equals(cursor)) {
-				return FileSourceProcessingResult.builder().cursor(cursor).remainingSize(remainingSize).build();
+				return FileSourceProcessingResult.builder().content("").cursor(cursor).remainingSize(remainingSize).build();
 			}
 
 			// Due to log rotation, the file keeps the same name, but its content is transfered and archived elsewhere
