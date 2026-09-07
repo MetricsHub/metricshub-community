@@ -144,15 +144,45 @@ public class M8bService {
 		}
 		if (client != null && client.isConnected() && agentContextHolder.getGeneration() != advertisedGeneration) {
 			// A configuration reload swapped the agent context: re-advertise the hosts if they changed
-			final List<HostDescriptor> hosts = HostInventory.from(agentContext);
-			final long generation = agentContextHolder.getGeneration();
+			final ContextSnapshot current = readContextSnapshot();
+			final List<HostDescriptor> hosts = HostInventory.from(current.context());
 			if (!hosts.equals(advertisedHosts)) {
 				client.send(new HostsUpdated(hosts));
 				log.info("M8B tunnel: host inventory updated ({} host(s)).", hosts.size());
 			}
 			advertisedHosts = hosts;
-			advertisedGeneration = generation;
+			advertisedGeneration = current.generation();
 		}
+	}
+
+	/**
+	 * A context and the generation it belongs to.
+	 *
+	 * @param context    the agent context
+	 * @param generation the generation of that context
+	 */
+	private record ContextSnapshot(AgentContext context, long generation) {}
+
+	/**
+	 * Reads the current context together with its generation.
+	 * <p>
+	 * The generation is read <em>first</em> and re-checked afterwards: recording a generation newer
+	 * than the context it was taken from would make the next tick believe the new inventory had
+	 * already been advertised, and the Governor would keep routing to stale hosts until the next
+	 * reload or reconnection. The reverse mistake is harmless — the hosts are compared before
+	 * anything is sent.
+	 * </p>
+	 *
+	 * @return a consistent context and generation pair
+	 */
+	private ContextSnapshot readContextSnapshot() {
+		long generation = agentContextHolder.getGeneration();
+		AgentContext context = agentContextHolder.getAgentContext();
+		if (generation != agentContextHolder.getGeneration()) {
+			generation = agentContextHolder.getGeneration();
+			context = agentContextHolder.getAgentContext();
+		}
+		return new ContextSnapshot(context, generation);
 	}
 
 	private void reconfigure(final M8bConfig newConfig) {
@@ -244,15 +274,15 @@ public class M8bService {
 
 		@Override
 		public AgentRegister buildRegistration() {
-			final AgentContext agentContext = agentContextHolder.getAgentContext();
-			final List<HostDescriptor> hosts = HostInventory.from(agentContext);
+			final ContextSnapshot current = readContextSnapshot();
+			final List<HostDescriptor> hosts = HostInventory.from(current.context());
 			synchronized (M8bService.this) {
 				advertisedHosts = hosts;
-				advertisedGeneration = agentContextHolder.getGeneration();
+				advertisedGeneration = current.generation();
 			}
 			return new AgentRegister(
 				M8bMessage.PROTOCOL_VERSION,
-				AgentDescriptorMapper.map(agentContext),
+				AgentDescriptorMapper.map(current.context()),
 				snapshot.revision(),
 				snapshot.tools(),
 				hosts

@@ -1,5 +1,6 @@
 package org.metricshub.agent.m8b;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -171,6 +172,19 @@ class M8bToolBridgeTest {
 		final ToolResult done = assertInstanceOf(ToolResult.class, answer());
 		assertEquals("req-Slow", done.requestId());
 		assertEquals(0, bridge.inFlight());
+	}
+
+	@Test
+	void shouldDropTheDeadlineOnceTheToolAnswered() throws Exception {
+		when(listHosts.call(anyString())).thenReturn("{}");
+
+		// A long server timeout must not keep the request queued in the timer once it is answered
+		bridge.invoke(invoke("ListHosts", 600_000));
+
+		assertInstanceOf(ToolResult.class, answer());
+		await()
+			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.until(() -> bridge.pendingDeadlines() == 0);
 	}
 
 	@Test

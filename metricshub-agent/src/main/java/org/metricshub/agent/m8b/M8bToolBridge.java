@@ -27,11 +27,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.m8b.protocol.M8bJson;
@@ -61,7 +63,7 @@ public class M8bToolBridge {
 	private final ToolRegistrySnapshot snapshot;
 	private final Consumer<M8bMessage> sender;
 	private final ExecutorService workers;
-	private final ScheduledExecutorService timer;
+	private final ScheduledThreadPoolExecutor timer;
 	private final AtomicInteger inFlight = new AtomicInteger();
 	private volatile AgentRegistered limits = DEFAULT_LIMITS;
 
@@ -73,7 +75,10 @@ public class M8bToolBridge {
 		this.snapshot = snapshot;
 		this.sender = sender;
 		this.workers = Executors.newCachedThreadPool(daemonThreads("metricshub-m8b-tool"));
-		this.timer = Executors.newSingleThreadScheduledExecutor(daemonThreads("metricshub-m8b-tool-timer"));
+		this.timer = new ScheduledThreadPoolExecutor(1, daemonThreads("metricshub-m8b-tool-timer"));
+		// Cancelling a deadline must drop it from the queue at once: otherwise an answered request
+		// keeps its arguments alive until the timeout would have fired
+		this.timer.setRemoveOnCancelPolicy(true);
 	}
 
 	/**
@@ -88,6 +93,14 @@ public class M8bToolBridge {
 	 */
 	public int inFlight() {
 		return inFlight.get();
+	}
+
+	/**
+	 * @return the number of deadline tasks still queued; zero once every answered invocation has
+	 *         released its timer slot
+	 */
+	int pendingDeadlines() {
+		return timer.getQueue().size();
 	}
 
 	/**
@@ -117,6 +130,9 @@ public class M8bToolBridge {
 		}
 
 		final AtomicBoolean answered = new AtomicBoolean();
+		// Holds the deadline task so the worker can drop it as soon as it answered: an uncancelled
+		// task keeps the request and its arguments in the timer queue for the whole timeout.
+		final AtomicReference<ScheduledFuture<?>> deadline = new AtomicReference<>();
 		final long startedAt = System.nanoTime();
 		final Future<?> execution = workers.submit(() -> {
 			final M8bMessage answer;
@@ -127,9 +143,10 @@ public class M8bToolBridge {
 				inFlight.decrementAndGet();
 			}
 			answerOnce(answered, answer);
+			cancel(deadline.getAndSet(null));
 		});
 		final long timeoutMs = invoke.timeoutMs() > 0 ? invoke.timeoutMs() : TimeUnit.SECONDS.toMillis(300);
-		timer.schedule(
+		final ScheduledFuture<?> scheduled = timer.schedule(
 			() -> {
 				if (
 					answerOnce(
@@ -144,6 +161,17 @@ public class M8bToolBridge {
 			timeoutMs,
 			TimeUnit.MILLISECONDS
 		);
+		deadline.set(scheduled);
+		if (answered.get()) {
+			// The tool finished before the handle was stored
+			cancel(deadline.getAndSet(null));
+		}
+	}
+
+	private static void cancel(final ScheduledFuture<?> future) {
+		if (future != null) {
+			future.cancel(false);
+		}
 	}
 
 	/**
