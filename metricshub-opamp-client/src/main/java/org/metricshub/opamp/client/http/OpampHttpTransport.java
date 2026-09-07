@@ -137,13 +137,14 @@ public class OpampHttpTransport implements OpampTransport {
 
 	/**
 	 * Loads a custom trusted certificate (PEM) into an {@link SSLContext}, following the same
-	 * pattern as the MetricsHub OTLP HTTP client.
+	 * pattern as the MetricsHub OTLP HTTP client. Shared with the other fleet channels (M8B tunnel)
+	 * so every outbound connection trusts a configured server certificate the same way.
 	 *
 	 * @param certificateFile the path to the PEM file containing the trusted certificate
 	 * @return the SSL context trusting the given certificate
 	 * @throws Exception when the certificate cannot be loaded
 	 */
-	private static SSLContext createSslContext(final String certificateFile) throws Exception {
+	public static SSLContext createSslContext(final String certificateFile) throws Exception {
 		final CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
 
 		try (FileInputStream certificateInputStream = new FileInputStream(certificateFile)) {
