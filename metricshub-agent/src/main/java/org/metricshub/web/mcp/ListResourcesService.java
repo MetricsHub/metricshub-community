@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -76,20 +75,12 @@ public class ListResourcesService implements IMCPToolService {
 		"""
 	)
 	public Map<String, ResourceDetails> listConfiguredHosts() {
-		return listConfiguredHosts(agentContextHolder.getAgentContext().getAgentConfig());
-	}
-
-	/**
-	 * Lists the hosts (resources) configured in the given agent configuration, keyed by resource key.
-	 *
-	 * @param agentConfig the agent configuration
-	 * @return the resource details keyed by MetricsHub resource key
-	 */
-	public static Map<String, ResourceDetails> listConfiguredHosts(final AgentConfig agentConfig) {
 		Map<String, ResourceDetails> result = new HashMap<>();
 
 		// List all the resources from the resource groups
-		agentConfig
+		agentContextHolder
+			.getAgentContext()
+			.getAgentConfig()
 			.getResourceGroups()
 			.forEach((String resourceGroupKey, ResourceGroupConfig resourceGroupConfig) ->
 				result.putAll(listResourceGroupConfiguredResources(resourceGroupKey, resourceGroupConfig.getResources()))
@@ -97,7 +88,10 @@ public class ListResourcesService implements IMCPToolService {
 
 		// Add all the top level resources
 		result.putAll(
-			listResourceGroupConfiguredResources(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, agentConfig.getResources())
+			listResourceGroupConfiguredResources(
+				TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
+				agentContextHolder.getAgentContext().getAgentConfig().getResources()
+			)
 		);
 
 		return result;

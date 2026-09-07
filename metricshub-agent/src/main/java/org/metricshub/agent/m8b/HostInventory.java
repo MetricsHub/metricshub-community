@@ -21,17 +21,26 @@ package org.metricshub.agent.m8b;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
+
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.m8b.protocol.HostDescriptor;
-import org.metricshub.web.mcp.ListResourcesService;
-import org.metricshub.web.mcp.ResourceDetails;
+import org.metricshub.engine.configuration.IConfiguration;
 
 /**
- * Builds the host inventory reported to the M8B Governor from the agent configuration. The result is
- * sorted by resource key so two identical configurations always produce the same payload.
+ * Builds the host inventory reported to the M8B Governor from the agent configuration.
+ * <p>
+ * A resource key is unique only within its resource group, so a host is identified by the pair
+ * (resource group, resource key) and every group is walked separately: two groups reusing a key both
+ * keep their host. The result is sorted by group then key so two identical configurations always
+ * produce the same payload.
+ * </p>
  */
 public final class HostInventory {
 
@@ -39,32 +48,57 @@ public final class HostInventory {
 
 	/**
 	 * @param agentConfig the agent configuration
-	 * @return the monitored hosts, sorted by resource key
+	 * @return the monitored hosts, sorted by resource group then resource key
 	 */
 	public static List<HostDescriptor> from(final AgentConfig agentConfig) {
-		return ListResourcesService.listConfiguredHosts(agentConfig)
-			.entrySet()
-			.stream()
-			.sorted(Map.Entry.comparingByKey())
-			.map(entry -> describe(entry.getKey(), entry.getValue()))
-			.toList();
+		final List<HostDescriptor> hosts = new ArrayList<>();
+		if (agentConfig.getResourceGroups() != null) {
+			agentConfig
+				.getResourceGroups()
+				.forEach((groupKey, group) -> addAll(hosts, groupKey, group == null ? null : group.getResources()));
+		}
+		addAll(hosts, TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, agentConfig.getResources());
+		hosts.sort(Comparator.comparing(HostDescriptor::resourceGroup).thenComparing(HostDescriptor::resourceKey));
+		return List.copyOf(hosts);
 	}
 
-	private static HostDescriptor describe(final String resourceKey, final ResourceDetails details) {
-		final Map<String, String> hostnames = new TreeMap<>();
-		if (details.protocols() != null) {
-			details.protocols().forEach(protocol -> hostnames.put(protocol.protocol(), protocol.hostname()));
+	private static void addAll(
+		final List<HostDescriptor> hosts,
+		final String groupKey,
+		final Map<String, ResourceConfig> resources
+	) {
+		if (resources == null) {
+			return;
 		}
+		resources.forEach((resourceKey, resourceConfig) -> hosts.add(describe(groupKey, resourceKey, resourceConfig)));
+	}
+
+	private static HostDescriptor describe(
+		final String groupKey,
+		final String resourceKey,
+		final ResourceConfig resourceConfig
+	) {
+		final Map<String, String> hostnames = new TreeMap<>();
 		final Map<String, String> attributes = new TreeMap<>();
-		if (details.attributes() != null) {
-			details
-				.attributes()
-				.forEach((key, value) -> {
-					if (key != null && value != null) {
-						attributes.put(key, value);
+		if (resourceConfig != null) {
+			final Map<String, IConfiguration> protocols = resourceConfig.getProtocols();
+			if (protocols != null) {
+				protocols.forEach((protocol, configuration) -> {
+					if (protocol != null && configuration != null && configuration.getHostname() != null) {
+						hostnames.put(protocol, configuration.getHostname());
 					}
 				});
+			}
+			if (resourceConfig.getAttributes() != null) {
+				resourceConfig
+					.getAttributes()
+					.forEach((key, value) -> {
+						if (key != null && value != null) {
+							attributes.put(key, value);
+						}
+					});
+			}
 		}
-		return new HostDescriptor(resourceKey, details.resourceGroupKey(), hostnames, attributes);
+		return new HostDescriptor(resourceKey, groupKey, hostnames, attributes);
 	}
 }

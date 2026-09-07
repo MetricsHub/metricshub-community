@@ -15,6 +15,13 @@ import org.metricshub.extension.wmi.WmiConfiguration;
 
 class HostInventoryTest {
 
+	private static ResourceConfig ssh(final String hostname, final String hostType) {
+		return ResourceConfig.builder()
+			.attributes(Map.of("host.name", hostname, "host.type", hostType))
+			.protocols(Map.of("ssh", SshConfiguration.sshConfigurationBuilder().hostname(hostname).build()))
+			.build();
+	}
+
 	@Test
 	void shouldListSortedHostsWithProtocolsAndAttributes() {
 		final AgentConfig agentConfig = AgentConfig.builder()
@@ -22,20 +29,7 @@ class HostInventoryTest {
 				Map.of(
 					"paris",
 					ResourceGroupConfig.builder()
-						.resources(
-							Map.of(
-								"paris-host1",
-								ResourceConfig.builder()
-									.attributes(Map.of("host.name", "paris-host1.example.com", "host.type", "linux"))
-									.protocols(
-										Map.of(
-											"ssh",
-											SshConfiguration.sshConfigurationBuilder().hostname("paris-host1.example.com").build()
-										)
-									)
-									.build()
-							)
-						)
+						.resources(Map.of("paris-host1", ssh("paris-host1.example.com", "linux")))
 						.build()
 				)
 			)
@@ -52,16 +46,48 @@ class HostInventoryTest {
 
 		final List<HostDescriptor> hosts = HostInventory.from(agentConfig);
 
-		assertEquals(List.of("paris-host1", "win-01"), hosts.stream().map(HostDescriptor::resourceKey).toList());
+		assertEquals(
+			List.of("metricshub-top-level-rg/win-01", "paris/paris-host1"),
+			hosts
+				.stream()
+				.map(host -> host.resourceGroup() + "/" + host.resourceKey())
+				.toList(),
+			"Sorted by resource group then resource key"
+		);
 
-		final HostDescriptor paris = hosts.get(0);
-		assertEquals("paris", paris.resourceGroup());
+		final HostDescriptor win = hosts.get(0);
+		assertEquals(Map.of("wmi", "win-01.example.com"), win.hostnames());
+		assertEquals("windows", win.attributes().get("host.type"));
+
+		final HostDescriptor paris = hosts.get(1);
 		assertEquals(Map.of("ssh", "paris-host1.example.com"), paris.hostnames());
 		assertEquals("linux", paris.attributes().get("host.type"));
+	}
 
-		final HostDescriptor win = hosts.get(1);
-		assertEquals("metricshub-top-level-rg", win.resourceGroup());
-		assertEquals(Map.of("wmi", "win-01.example.com"), win.hostnames());
+	@Test
+	void shouldKeepHostsReusingAKeyAcrossGroups() {
+		final AgentConfig agentConfig = AgentConfig.builder()
+			.resourceGroups(
+				Map.of(
+					"paris",
+					ResourceGroupConfig.builder().resources(Map.of("db-01", ssh("db-01.paris.example.com", "linux"))).build(),
+					"london",
+					ResourceGroupConfig.builder().resources(Map.of("db-01", ssh("db-01.london.example.com", "linux"))).build()
+				)
+			)
+			.resources(Map.of("db-01", ssh("db-01.example.com", "linux")))
+			.build();
+
+		final List<HostDescriptor> hosts = HostInventory.from(agentConfig);
+
+		assertEquals(3, hosts.size(), "A resource key is scoped by its group: no host may be lost");
+		assertEquals(
+			List.of("london", "metricshub-top-level-rg", "paris"),
+			hosts.stream().map(HostDescriptor::resourceGroup).toList()
+		);
+		assertEquals("db-01.london.example.com", hosts.get(0).hostnames().get("ssh"));
+		assertEquals("db-01.example.com", hosts.get(1).hostnames().get("ssh"));
+		assertEquals("db-01.paris.example.com", hosts.get(2).hostnames().get("ssh"));
 	}
 
 	@Test
