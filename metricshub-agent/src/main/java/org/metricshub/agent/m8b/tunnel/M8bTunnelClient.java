@@ -69,6 +69,8 @@ public class M8bTunnelClient {
 	public static final int CLOSE_SUPERSEDED = 4001;
 	/** Close code used by either side when heartbeats stopped. */
 	public static final int CLOSE_HEARTBEAT_TIMEOUT = 4003;
+	/** Standard close code for a frame type the protocol does not use (binary). */
+	public static final int CLOSE_UNSUPPORTED_DATA = 1003;
 
 	static final Duration BASE_BACKOFF = Duration.ofSeconds(1);
 	static final Duration STOP_TIMEOUT = Duration.ofSeconds(5);
@@ -83,13 +85,14 @@ public class M8bTunnelClient {
 	// Set by the thread factory when the executor creates its single thread
 	private volatile Thread tunnelThread;
 
-	// Everything below is confined to the tunnel thread
+	// Everything below is written on the tunnel thread only; the two volatile fields are also read by
+	// other threads through isConnected() and limits()
 	private long generation;
 	private boolean started;
 	private boolean stopped;
-	private WebSocket webSocket;
+	private volatile WebSocket webSocket;
 	private CompletableFuture<WebSocket> sendChain;
-	private AgentRegistered limits;
+	private volatile AgentRegistered limits;
 	private Instant lastInbound;
 	private ScheduledFuture<?> registrationDeadline;
 	private ScheduledFuture<?> heartbeat;
@@ -188,13 +191,13 @@ public class M8bTunnelClient {
 	}
 
 	/**
-	 * Sends a message on the current connection. Silently dropped when not connected: the caller's
-	 * request is already lost on the server side in that case.
+	 * Sends a message on the current connection. Silently dropped when not connected or already
+	 * stopped: the caller's request is already lost on the server side in that case.
 	 *
 	 * @param message the message
 	 */
 	public void send(final M8bMessage message) {
-		executor.execute(() -> sendNow(message));
+		dispatch(() -> sendNow(message));
 	}
 
 	// ---- tunnel thread ----
@@ -469,8 +472,8 @@ public class M8bTunnelClient {
 
 		@Override
 		public CompletionStage<?> onBinary(final WebSocket socket, final ByteBuffer data, final boolean last) {
-			// Binary frames are not part of the protocol; keep reading, the server will not send any
-			socket.request(1);
+			// Binary frames are not part of the protocol: the peer is incompatible, close as the spec says
+			dispatch(() -> dropConnection(frameGeneration, CLOSE_UNSUPPORTED_DATA, "Binary frames are not supported"));
 			return null;
 		}
 

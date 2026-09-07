@@ -4,10 +4,12 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -253,6 +255,53 @@ class M8bTunnelClientTest {
 		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "A second attempt must follow");
 		assertFalse(client.isConnected());
 		assertTrue(listener.registered.isEmpty(), "onRegistered must not fire without an acknowledgement");
+	}
+
+	@Test
+	void shouldRejectCleartextEndpointsOutsideLoopback() {
+		final Map<String, String> headers = Map.of("Authorization", "Bearer secret-token");
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new M8bTunnelSettings(URI.create("ws://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null),
+			"Credentials must never travel in cleartext to a remote host"
+		);
+		// Loopback development and TLS endpoints are fine
+		new M8bTunnelSettings(URI.create("ws://localhost:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("ws://127.0.0.1:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("wss://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null);
+	}
+
+	@Test
+	void shouldDropTheConnectionOnABinaryFrame() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		server.sendBinaryToAll(new byte[] { 1, 2, 3 });
+
+		assertEquals(
+			M8bTunnelClient.CLOSE_UNSUPPORTED_DATA,
+			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+		);
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client reconnects afterwards");
+	}
+
+	@Test
+	void sendAfterStopShouldBeDroppedSilently() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		client.stop("shutdown");
+		// A tool finishing after the shutdown must not blow up the worker thread
+		client.send(new ToolResult("late", M8bJson.MAPPER.createObjectNode(), 1));
 	}
 
 	@Test

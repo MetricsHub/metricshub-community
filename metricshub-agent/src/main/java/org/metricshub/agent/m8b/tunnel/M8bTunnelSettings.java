@@ -21,8 +21,11 @@ package org.metricshub.agent.m8b.tunnel;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -80,11 +83,18 @@ public record M8bTunnelSettings(
 	}
 
 	/**
-	 * Defensive copies and null checks.
+	 * Defensive copies and validation. Credentials travel in the handshake headers, so a cleartext
+	 * {@code ws://} endpoint is accepted for loopback development only.
 	 */
 	public M8bTunnelSettings {
 		if (endpoint == null) {
 			throw new IllegalArgumentException("endpoint is required");
+		}
+		final String scheme = endpoint.getScheme() == null ? "" : endpoint.getScheme().toLowerCase(Locale.ROOT);
+		if (!"wss".equals(scheme) && !("ws".equals(scheme) && isLoopback(endpoint.getHost()))) {
+			throw new IllegalArgumentException(
+				"The M8B endpoint must use wss:// (ws:// is accepted for loopback only): " + endpoint
+			);
 		}
 		if (agentUid == null || agentUid.isBlank()) {
 			throw new IllegalArgumentException("agentUid is required");
@@ -93,5 +103,16 @@ public record M8bTunnelSettings(
 		heartbeatInterval = heartbeatInterval == null ? Duration.ofSeconds(30) : heartbeatInterval;
 		connectTimeout = connectTimeout == null ? DEFAULT_CONNECT_TIMEOUT : connectTimeout;
 		maxBackoff = maxBackoff == null ? DEFAULT_MAX_BACKOFF : maxBackoff;
+	}
+
+	private static boolean isLoopback(final String host) {
+		if (host == null) {
+			return false;
+		}
+		try {
+			return InetAddress.getByName(host).isLoopbackAddress();
+		} catch (UnknownHostException e) {
+			return false;
+		}
 	}
 }

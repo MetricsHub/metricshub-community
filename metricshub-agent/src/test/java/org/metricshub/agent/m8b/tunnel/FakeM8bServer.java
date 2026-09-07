@@ -25,7 +25,7 @@ import org.metricshub.agent.m8b.protocol.M8bMessage.HeartbeatPong;
  * Minimal M8B Governor for the tunnel tests: records handshakes and frames, and answers
  * {@code agent.register} and {@code heartbeat.ping} like the real server unless told otherwise.
  */
-class FakeM8bServer extends WebSocketServer {
+public class FakeM8bServer extends WebSocketServer {
 
 	private final CountDownLatch started = new CountDownLatch(1);
 	private final BlockingQueue<Map<String, String>> handshakes = new LinkedBlockingQueue<>();
@@ -34,15 +34,15 @@ class FakeM8bServer extends WebSocketServer {
 	private final List<WebSocket> connections = new CopyOnWriteArrayList<>();
 	private final boolean secure;
 
-	volatile boolean autoRegister = true;
-	volatile boolean autoPong = true;
-	volatile AgentRegistered limits = new AgentRegistered(1, 1_048_576L, 2);
+	public volatile boolean autoRegister = true;
+	public volatile boolean autoPong = true;
+	public volatile AgentRegistered limits = new AgentRegistered(1, 1_048_576L, 2);
 
-	FakeM8bServer() {
+	public FakeM8bServer() {
 		this(null);
 	}
 
-	FakeM8bServer(final SSLContext sslContext) {
+	public FakeM8bServer(final SSLContext sslContext) {
 		super(new InetSocketAddress("127.0.0.1", 0));
 		setReuseAddr(true);
 		this.secure = sslContext != null;
@@ -51,25 +51,25 @@ class FakeM8bServer extends WebSocketServer {
 		}
 	}
 
-	void startAndAwait() throws InterruptedException {
+	public void startAndAwait() throws InterruptedException {
 		start();
 		if (!started.await(10, TimeUnit.SECONDS)) {
 			throw new IllegalStateException("The fake M8B server did not start");
 		}
 	}
 
-	URI uri() {
+	public URI uri() {
 		return URI.create((secure ? "wss" : "ws") + "://127.0.0.1:" + getPort() + "/ws/agent");
 	}
 
-	Map<String, String> awaitHandshake(final long timeoutMillis) throws InterruptedException {
+	public Map<String, String> awaitHandshake(final long timeoutMillis) throws InterruptedException {
 		return handshakes.poll(timeoutMillis, TimeUnit.MILLISECONDS);
 	}
 
 	/**
 	 * Waits for the next frame of the given type, discarding frames of other types.
 	 */
-	JsonNode awaitFrame(final String type, final long timeoutMillis) throws InterruptedException, IOException {
+	public JsonNode awaitFrame(final String type, final long timeoutMillis) throws InterruptedException, IOException {
 		final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
 		while (true) {
 			final long remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
@@ -87,23 +87,27 @@ class FakeM8bServer extends WebSocketServer {
 		}
 	}
 
-	Integer awaitClose(final long timeoutMillis) throws InterruptedException {
+	public Integer awaitClose(final long timeoutMillis) throws InterruptedException {
 		return closeCodes.poll(timeoutMillis, TimeUnit.MILLISECONDS);
 	}
 
-	int connectionCount() {
+	public int connectionCount() {
 		return connections.size();
 	}
 
-	void sendToAll(final M8bMessage message) {
+	public void sendToAll(final M8bMessage message) {
 		sendToAll(M8bJson.write(message));
 	}
 
-	void sendToAll(final String text) {
+	public void sendToAll(final String text) {
 		connections.forEach(connection -> connection.send(text));
 	}
 
-	void closeAll(final int code, final String reason) {
+	public void sendBinaryToAll(final byte[] payload) {
+		connections.forEach(connection -> connection.send(payload));
+	}
+
+	public void closeAll(final int code, final String reason) {
 		connections.forEach(connection -> connection.close(code, reason));
 	}
 
