@@ -3,8 +3,10 @@ package org.metricshub.web.controller;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.dto.ErrorResponse;
 import org.metricshub.web.exception.TextPlainException;
@@ -12,6 +14,7 @@ import org.metricshub.web.exception.UnauthorizedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 
 class RestExceptionHandlerTest {
@@ -65,6 +68,32 @@ class RestExceptionHandlerTest {
 					((ErrorResponse) response.getBody()).getMessage(),
 					"Message should match the exception message"
 				)
+		);
+	}
+
+	@Test
+	void testShouldSwallowIoExceptionOnceTheResponseIsCommitted() {
+		final RestExceptionHandler handler = new RestExceptionHandler();
+		final MockHttpServletResponse response = new MockHttpServletResponse();
+		response.setCommitted(true);
+
+		// A client that aborted its SSE stream: nothing can be sent back, and nothing must reach Tomcat's SEVERE log
+		assertNull(handler.handleIoException(new IOException("Connection reset by peer"), response));
+	}
+
+	@Test
+	void testShouldAnswerIoExceptionBeforeTheResponseIsCommitted() {
+		final RestExceptionHandler handler = new RestExceptionHandler();
+
+		final ResponseEntity<Object> response = handler.handleIoException(
+			new IOException("Disk full"),
+			new MockHttpServletResponse()
+		);
+
+		assertAll(
+			() -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode()),
+			() -> assertNotNull(response.getBody()),
+			() -> assertEquals("Disk full", ((ErrorResponse) response.getBody()).getMessage())
 		);
 	}
 

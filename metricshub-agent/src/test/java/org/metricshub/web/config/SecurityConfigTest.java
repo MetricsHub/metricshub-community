@@ -1,5 +1,6 @@
 package org.metricshub.web.config;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -13,6 +14,7 @@ import org.metricshub.web.security.ReadOnlyAccessFilter;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.service.UserService;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.mock.env.MockEnvironment;
 
 class SecurityConfigTest {
 
@@ -109,6 +111,27 @@ class SecurityConfigTest {
 			IllegalStateException.class,
 			() -> tlsWebServerCustomizer.customize(factory),
 			"Missing keystore password should throw"
+		);
+	}
+
+	@Test
+	void testSecuredPathsShouldCoverTheApiAndTheDefaultMcpEndpoints() {
+		assertArrayEquals(
+			new String[] { "/api/**", "/sse", "/mcp/message", "/mcp" },
+			SecurityConfig.securedPaths(new MockEnvironment())
+		);
+	}
+
+	@Test
+	void testSecuredPathsShouldFollowRelocatedMcpEndpoints() {
+		final var environment = new MockEnvironment()
+			.withProperty("spring.ai.mcp.server.sse-endpoint", "/events")
+			.withProperty("spring.ai.mcp.server.sse-message-endpoint", "/messages")
+			.withProperty("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp-v2");
+
+		assertArrayEquals(
+			new String[] { "/api/**", "/events", "/messages", "/mcp-v2" },
+			SecurityConfig.securedPaths(environment)
 		);
 	}
 }
