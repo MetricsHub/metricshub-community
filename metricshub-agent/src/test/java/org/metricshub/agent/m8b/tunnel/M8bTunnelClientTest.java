@@ -205,15 +205,20 @@ class M8bTunnelClientTest {
 
 		// Two agents sharing a uid supersede each other: registering must not reset the backoff,
 		// otherwise both reconnect at the base delay forever and steal the session in a tight loop.
-		for (int attempt = 1; attempt <= 2; attempt++) {
-			assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "registration " + attempt);
+		for (int round = 1; round <= 2; round++) {
+			final int expected = round;
+			assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "registration " + expected);
 			server.closeAll(M8bTunnelClient.CLOSE_SUPERSEDED, "superseded");
 			assertEquals(
 				M8bTunnelClient.CLOSE_SUPERSEDED,
 				listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
-				"disconnection " + attempt
+				"disconnection " + expected
 			);
-			assertEquals(attempt, client.retryFailureCount(), "the backoff must grow with each supersession");
+			// The counter is incremented when the next attempt is scheduled, just after the listener
+			// is notified, so wait for it rather than racing it. A reset would stall this at 1.
+			await()
+				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+				.until(() -> client.retryFailureCount() == expected);
 		}
 	}
 
