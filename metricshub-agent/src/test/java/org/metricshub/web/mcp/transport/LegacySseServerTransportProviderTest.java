@@ -153,6 +153,28 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldResetTheHandshakeWhenInitializeFails() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		session.handleResult = Mono.error(new IllegalStateException("initialize rejected"));
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isInternalServerError());
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+
+		// The failed initialize cannot be completed by the notification alone
+		session.handleResult = Mono.empty();
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+
+		// A new initialize restarts the handshake normally
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+	}
+
+	@Test
 	void shouldReleaseTheRequestThreadWhenTheSessionNeverCompletes() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		session.handleResult = Mono.never();

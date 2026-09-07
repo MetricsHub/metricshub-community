@@ -561,6 +561,13 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 			return ServerResponse.ok().build();
 		} catch (Exception e) {
+			// A failed or timed-out initialize must not leave the session half-initialized: the client has to start
+			// the handshake again, and an initialized notification alone cannot complete it.
+			if (
+				message instanceof JSONRPCRequest failedRequest && McpSchema.METHOD_INITIALIZE.equals(failedRequest.method())
+			) {
+				sseSession.state().compareAndSet(SessionState.INITIALIZING, SessionState.CREATED);
+			}
 			if (Exceptions.unwrap(e) instanceof TimeoutException) {
 				log.error(
 					"MCP message '{}' posted on SSE session {} did not complete within {}; releasing the request thread " +
