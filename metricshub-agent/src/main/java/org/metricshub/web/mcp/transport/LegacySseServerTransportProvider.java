@@ -459,7 +459,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			message instanceof JSONRPCNotification notification &&
 			McpSchema.METHOD_NOTIFICATION_INITIALIZED.equals(notification.method())
 		) {
-			state.set(SessionState.INITIALIZED);
+			// Only a handshake that actually started can complete: an initialized notification on a fresh session (or
+			// after a rejected initialize) leaves the session uninitialized so that later requests keep being refused
+			state.compareAndSet(SessionState.INITIALIZING, SessionState.INITIALIZED);
 			return true;
 		}
 

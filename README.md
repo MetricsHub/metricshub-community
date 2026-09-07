@@ -27,6 +27,25 @@
 curl -fsSL https://get.metricshub.com | bash
 ```
 
+## MCP Server
+
+The agent exposes its tools to AI assistants through an MCP server on the web port (`31888` by default, HTTPS, authenticated with an API key created by `metricshub-api-key create <alias>` and passed as `Authorization: Bearer <key>`):
+
+| Transport | Endpoint | Status |
+| --- | --- | --- |
+| Streamable HTTP (recommended) | `https://<host>:31888/mcp` | Default since 3.9.07 (`spring.ai.mcp.server.protocol: STREAMABLE`) |
+| HTTP with SSE (legacy) | `https://<host>:31888/sse` then `POST /mcp/message` | Served alongside for existing clients; hardened against clients that reconnect their event stream without re-initializing |
+
+The legacy transport can be tuned or disabled under the `web:` section of `metricshub.yaml`:
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `mcp.sse.enabled` | `true` | Serve the legacy SSE endpoints next to `/mcp` |
+| `mcp.sse.message-timeout` | `5m` | Maximum wait for the handling of one message posted on `/mcp/message` (answered with HTTP 504 afterwards; the handling itself is not interrupted) |
+| `mcp.sse.ping-timeout` | `5m` | A session whose keep-alive ping is not answered within this delay is closed |
+| `mcp.sse.initialization-timeout` | `2m` | A session that never completes the `initialize` handshake is closed after this delay |
+| `spring.ai.mcp.server.keep-alive-interval` | `30s` | Keep-alive ping interval of the legacy SSE transport (`spring.ai.mcp.server.streamable-http.keep-alive-interval` for Streamable HTTP) |
+
 ## Project Structure
 
 This is a multi-module project:

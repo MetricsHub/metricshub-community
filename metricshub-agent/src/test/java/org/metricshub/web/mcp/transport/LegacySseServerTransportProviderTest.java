@@ -140,6 +140,19 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldNotConsiderTheHandshakeCompleteWithoutAnInitializeRequest() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// notifications/initialized on a fresh session: forwarded, but the session stays uninitialized
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+		assertEquals(1, session.handled.size());
+	}
+
+	@Test
 	void shouldReleaseTheRequestThreadWhenTheSessionNeverCompletes() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		session.handleResult = Mono.never();
