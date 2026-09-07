@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -303,6 +304,26 @@ class M8bTunnelClientTest {
 		new M8bTunnelSettings(URI.create("ws://localhost:8080/ws/agent"), headers, null, AGENT_UID, null);
 		new M8bTunnelSettings(URI.create("ws://127.0.0.1:8080/ws/agent"), headers, null, AGENT_UID, null);
 		new M8bTunnelSettings(URI.create("wss://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null);
+	}
+
+	@Test
+	void shouldKeepACloseFrameWithinWhatTheJdkAccepts() {
+		// The reason travels as UTF-8, and one character can encode as four bytes: a cut counted in
+		// characters would overflow the JDK's 123-byte limit and fail the close frame outright.
+		final String tooLong = "é".repeat(200);
+		final String truncated = M8bTunnelClient.closeReason(tooLong);
+		assertTrue(
+			truncated.getBytes(StandardCharsets.UTF_8).length <= M8bTunnelClient.MAX_CLOSE_REASON_BYTES,
+			"The encoded reason must fit"
+		);
+		assertEquals("é".repeat(61), truncated, "The cut must fall between characters, never inside one");
+		assertEquals("bye", M8bTunnelClient.closeReason("bye"), "A short reason travels untouched");
+		assertEquals("", M8bTunnelClient.closeReason(null));
+
+		// A client may only send 1000 or 3000-4999; 1003 is reserved for the endpoint itself.
+		assertEquals(1000, M8bTunnelClient.wireCloseCode(M8bTunnelClient.CLOSE_UNSUPPORTED_DATA));
+		assertEquals(1000, M8bTunnelClient.wireCloseCode(1000));
+		assertEquals(4003, M8bTunnelClient.wireCloseCode(M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT));
 	}
 
 	@Test
