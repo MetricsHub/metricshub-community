@@ -785,6 +785,7 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 
 * Every asynchronous continuation carries the **connection generation** it belongs to; a callback from a superseded socket is dropped.
 * Any inbound frame counts as liveness. A silent peer is dropped after 2.5 heartbeat intervals with close `4003`; the server's `4001` (another instance owns this uid) is logged loudly and retried with backoff like any loss.
+* Every close is the same event to the agent — reconnect with backoff — and the code only decides how loudly it is logged. `4004` (the secret was rotated out of the fleet) and `1002` (protocol version) are the two the backoff will not fix on its own: the reconnection is then refused at the handshake, which is the intended outcome and what the log has to make legible.
 * Each reconnection rebuilds the registration from the current context, so an upgraded agent replaces its previous tool registry on the server.
 
 ### 13.3 Threading model
