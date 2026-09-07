@@ -80,6 +80,8 @@ public class M8bTunnelClient {
 	static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(2);
 	/** Multiple of the heartbeat interval after which a silent peer is considered gone. */
 	static final double IDLE_FACTOR = 2.5;
+	/** A close reason must hold in 123 UTF-8 bytes; ASCII characters are the safe budget. */
+	static final int MAX_CLOSE_REASON_CHARS = 100;
 
 	private final M8bTunnelSettings settings;
 	private final M8bTunnelListener listener;
@@ -161,9 +163,15 @@ public class M8bTunnelClient {
 			}
 			stopped = true;
 			cancelTimers();
-			if (webSocket != null && !webSocket.isOutputClosed()) {
+			final WebSocket socket = webSocket;
+			if (socket != null && !socket.isOutputClosed()) {
 				log.info("M8B tunnel stopping. Reason: {}.", reason);
-				webSocket.sendClose(WebSocket.NORMAL_CLOSURE, reason);
+				// Abort whatever the close does: a rejected or slow close frame would otherwise
+				// leave the server with a live session nobody reads any more.
+				socket
+					.sendClose(WebSocket.NORMAL_CLOSURE, closeReason(reason))
+					.orTimeout(STOP_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+					.whenComplete((ws, error) -> socket.abort());
 			}
 			webSocket = null;
 		};
@@ -219,7 +227,15 @@ public class M8bTunnelClient {
 		settings.headers().forEach(builder::header);
 		builder
 			.buildAsync(settings.endpoint(), new FrameListener(connectGeneration))
-			.whenComplete((socket, error) -> dispatch(() -> onConnected(connectGeneration, socket, error)));
+			.whenComplete((socket, error) -> {
+				if (socket != null && executor.isShutdown()) {
+					// stop() ran while the handshake was in flight: the tunnel thread is gone and
+					// nothing would ever close this authenticated socket.
+					socket.abort();
+					return;
+				}
+				dispatch(() -> onConnected(connectGeneration, socket, error));
+			});
 	}
 
 	private void onConnected(final long connectGeneration, final WebSocket socket, final Throwable error) {
@@ -464,6 +480,17 @@ public class M8bTunnelClient {
 		} catch (RejectedExecutionException e) {
 			log.trace("M8B tunnel stopped: dropping a late transport callback.");
 		}
+	}
+
+	/**
+	 * A close reason must fit in 123 UTF-8 bytes or the JDK refuses to send the frame. Truncating on
+	 * characters is enough here: the reasons are ours, and short.
+	 */
+	private static String closeReason(final String reason) {
+		if (reason == null) {
+			return "";
+		}
+		return reason.length() <= MAX_CLOSE_REASON_CHARS ? reason : reason.substring(0, MAX_CLOSE_REASON_CHARS);
 	}
 
 	private static void cancel(final ScheduledFuture<?> future) {
