@@ -208,51 +208,47 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
-	void shouldResetTheHandshakeWhenInitializeFailsAfterAnEarlyInitializedNotification() throws Exception {
+	void shouldCloseTheSessionWhenInitializeTimesOutAfterAnEarlyInitializedNotification() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(
 			session,
 			LegacySseServerTransportProvider.builder().messageTimeout(Duration.ofMillis(200))
 		);
-		final String sessionId = openSse(mockMvc).sessionId();
+		final SseConnection sse = openSse(mockMvc);
 
 		// A buggy client posts the notification while its initialize is still pending, and the initialize then times out
 		session.onHandle = () -> {
 			session.onHandle = null;
 			try {
-				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+				postMessage(mockMvc, sse.sessionId(), INITIALIZED).andExpect(status().isOk());
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
 			// The initialize itself never completes
 			session.handleResult = Mono.never();
 		};
-		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isGatewayTimeout());
+		postMessage(mockMvc, sse.sessionId(), INITIALIZE).andExpect(status().isGatewayTimeout());
 
-		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
-		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+		// The pending SDK handling may still complete later: the session is closed rather than reused
+		assertEquals(0, provider.activeSessionCount());
+		assertStreamCompleted(sse);
+		postMessage(mockMvc, sse.sessionId(), TOOLS_LIST).andExpect(status().isNotFound());
 	}
 
 	@Test
-	void shouldResetTheHandshakeWhenInitializeFails() throws Exception {
+	void shouldCloseTheSessionWhenInitializeFails() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		session.handleResult = Mono.error(new IllegalStateException("initialize rejected"));
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
-		final String sessionId = openSse(mockMvc).sessionId();
+		final SseConnection sse = openSse(mockMvc);
 
-		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isInternalServerError());
-		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sse.sessionId(), INITIALIZE).andExpect(status().isInternalServerError());
 
-		// The failed initialize cannot be completed by the notification alone
-		session.handleResult = Mono.empty();
-		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
-		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
-		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
-
-		// A new initialize restarts the handshake normally
-		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
-		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
-		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+		// The SDK session is in an unknown state: the stream is closed and the client has to reconnect
+		assertEquals(0, provider.activeSessionCount());
+		assertTrue(provider.sessionState(sse.sessionId()).isEmpty());
+		assertStreamCompleted(sse);
+		postMessage(mockMvc, sse.sessionId(), INITIALIZED).andExpect(status().isNotFound());
 	}
 
 	@Test

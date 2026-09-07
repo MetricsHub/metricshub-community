@@ -453,8 +453,8 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 		if (message instanceof JSONRPCRequest request && McpSchema.METHOD_INITIALIZE.equals(request.method())) {
 			// Recorded before the dispatch: the client receives the initialize response over the SSE stream and may
-			// post notifications/initialized before the request thread returns. A rejected, failed or timed-out
-			// initialize resets the state (see SseSession.onResponseSent / onInitializeFailed).
+			// post notifications/initialized before the request thread returns. A rejected initialize resets the
+			// state (see SseSession.onResponseSent); a failed or timed-out one closes the session (see dispatch).
 			sseSession.onInitializeRequest(request.id());
 			return true;
 		}
@@ -565,10 +565,11 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 			return ServerResponse.ok().build();
 		} catch (Exception e) {
-			// A failed or timed-out initialize must not leave the session half-initialized, even if an initialized
-			// notification slipped in meanwhile: the client has to start the handshake again.
+			// A failed or timed-out initialize leaves the SDK session in an unknown state (its handling is not cancelled
+			// and may still complete later), so the session cannot be reused: close the stream, the client reconnects
+			// and starts the handshake again on a fresh session.
 			if (message instanceof JSONRPCRequest failed && McpSchema.METHOD_INITIALIZE.equals(failed.method())) {
-				sseSession.onInitializeFailed();
+				closeSession(sseSession, "its initialize request failed or timed out (" + e.getMessage() + ")");
 			}
 			if (Exceptions.unwrap(e) instanceof TimeoutException) {
 				log.error(
@@ -808,14 +809,6 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 					state.set(SessionState.CREATED);
 				}
 			}
-		}
-
-		/**
-		 * Resets the handshake after an initialize request that failed or timed out.
-		 */
-		void onInitializeFailed() {
-			pendingInitializeId.set(null);
-			state.set(SessionState.CREATED);
 		}
 	}
 
