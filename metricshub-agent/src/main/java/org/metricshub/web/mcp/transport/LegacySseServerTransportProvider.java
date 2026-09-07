@@ -421,9 +421,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		if (
 			message instanceof JSONRPCRequest initializeRequest &&
 			McpSchema.METHOD_INITIALIZE.equals(initializeRequest.method()) &&
-			sseSession.state().get() == SessionState.INITIALIZING
+			sseSession.claimHandshake(initializeRequest.id()) == SessionState.INITIALIZING
 		) {
-			// A single handshake at a time: a second initialize while one is pending would race the first one for the
+			// A single handshake at a time: the initialize that lost the atomic claim would race the owning one for the
 			// SDK session and make the outcome of the owning request meaningless
 			log.warn(
 				"Rejected a second MCP initialize request posted on SSE session {} from {} while its handshake is pending",
@@ -484,10 +484,10 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		}
 
 		if (message instanceof JSONRPCRequest request && McpSchema.METHOD_INITIALIZE.equals(request.method())) {
-			// Recorded before the dispatch: the client receives the initialize response over the SSE stream and may
-			// post notifications/initialized before the request thread returns. A rejected initialize resets the
-			// state (see SseSession.onResponseSent); a failed or timed-out one closes the session (see dispatch).
-			sseSession.onInitializeRequest(request.id());
+			// The handshake was claimed atomically in handleMessage (see SseSession.claimHandshake) before the
+			// dispatch: the client receives the initialize response over the SSE stream and may post
+			// notifications/initialized before the request thread returns. A rejected initialize resets the state
+			// (see SseSession.onResponseSent); a failed or timed-out one closes the session (see dispatch).
 			return true;
 		}
 
@@ -496,9 +496,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			McpSchema.METHOD_NOTIFICATION_INITIALIZED.equals(notification.method())
 		) {
 			// Only a handshake that actually started can complete: an initialized notification on a fresh session (or
-			// after a rejected initialize) leaves the session uninitialized so that later requests keep being refused
-			sseSession.onInitializedNotification();
-			return true;
+			// after a rejected initialize) is dropped, so that the SDK session is never marked initialized without a
+			// successful initialize and later requests keep being refused
+			return sseSession.onInitializedNotification();
 		}
 
 		return state.get() == SessionState.INITIALIZED;
@@ -822,24 +822,32 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		}
 
 		/**
-		 * Starts the handshake for the given initialize request: the outcome is settled by {@link #onResponseSent}.
+		 * Atomically claims the handshake for the given initialize request; the outcome of a claimed handshake is
+		 * settled by {@link #onResponseSent}.
 		 *
 		 * @param initializeRequestId the JSON-RPC id of the initialize request
+		 * @return {@code CREATED} when the request claimed the handshake, {@code INITIALIZING} when another initialize
+		 *         is pending, {@code INITIALIZED} when the session is already initialized
 		 */
-		void onInitializeRequest(final Object initializeRequestId) {
-			// Only the attempt that starts the handshake owns it: a duplicate initialize on an initialized session is
-			// left to the SDK and cannot alter the state, whatever its outcome
+		SessionState claimHandshake(final Object initializeRequestId) {
+			// Only the attempt that wins the CREATED -> INITIALIZING transition owns the handshake. A concurrent
+			// initialize observes INITIALIZING and is refused; a duplicate initialize on an initialized session is left
+			// to the SDK and cannot alter the state, whatever its outcome.
 			if (state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING)) {
 				pendingInitializeId.set(initializeRequestId);
+				return SessionState.CREATED;
 			}
+			return state.get();
 		}
 
 		/**
 		 * Completes the handshake if one is in progress. The pending initialize stays tracked until its response is
 		 * observed: a notification posted before an error response must not leave the session initialized.
+		 *
+		 * @return whether the notification completed a pending handshake (a notification that did not is dropped)
 		 */
-		void onInitializedNotification() {
-			state.compareAndSet(SessionState.INITIALIZING, SessionState.INITIALIZED);
+		boolean onInitializedNotification() {
+			return state.compareAndSet(SessionState.INITIALIZING, SessionState.INITIALIZED);
 		}
 
 		/**

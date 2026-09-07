@@ -145,11 +145,12 @@ class LegacySseServerTransportProviderTest {
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
 		final String sessionId = openSse(mockMvc).sessionId();
 
-		// notifications/initialized on a fresh session: forwarded, but the session stays uninitialized
-		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		// notifications/initialized on a fresh session: dropped, the session stays uninitialized and the SDK session
+		// is never told it is initialized
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isAccepted());
 		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
 		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
-		assertEquals(1, session.handled.size());
+		assertTrue(session.handled.isEmpty());
 	}
 
 	@Test
@@ -201,8 +202,8 @@ class LegacySseServerTransportProviderTest {
 		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
 		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
 
-		// The rejected handshake cannot be completed by the notification
-		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+		// The rejected handshake cannot be completed by the notification, which is dropped
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isAccepted());
 		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
 		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
 	}
