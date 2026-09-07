@@ -568,7 +568,11 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			// A failed or timed-out initialize leaves the SDK session in an unknown state (its handling is not cancelled
 			// and may still complete later), so the session cannot be reused: close the stream, the client reconnects
 			// and starts the handshake again on a fresh session.
-			if (message instanceof JSONRPCRequest failed && McpSchema.METHOD_INITIALIZE.equals(failed.method())) {
+			if (
+				message instanceof JSONRPCRequest failed &&
+				McpSchema.METHOD_INITIALIZE.equals(failed.method()) &&
+				sseSession.ownsPendingHandshake(failed.id())
+			) {
 				closeSession(sseSession, "its initialize request failed or timed out (" + e.getMessage() + ")");
 			}
 			if (Exceptions.unwrap(e) instanceof TimeoutException) {
@@ -791,8 +795,20 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		 * @param initializeRequestId the JSON-RPC id of the initialize request
 		 */
 		void onInitializeRequest(final Object initializeRequestId) {
-			pendingInitializeId.set(initializeRequestId);
-			state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING);
+			// Only the attempt that starts the handshake owns it: a duplicate initialize on an initialized session is
+			// left to the SDK and cannot alter the state, whatever its outcome
+			if (state.compareAndSet(SessionState.CREATED, SessionState.INITIALIZING)) {
+				pendingInitializeId.set(initializeRequestId);
+			}
+		}
+
+		/**
+		 * @param initializeRequestId the JSON-RPC id of an initialize request
+		 * @return whether that request is the one that started the pending handshake
+		 */
+		boolean ownsPendingHandshake(final Object initializeRequestId) {
+			final Object pending = pendingInitializeId.get();
+			return pending != null && pending.equals(initializeRequestId);
 		}
 
 		/**
@@ -806,7 +822,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			if (initializeRequestId != null && initializeRequestId.equals(response.id())) {
 				pendingInitializeId.compareAndSet(initializeRequestId, null);
 				if (response.error() != null) {
-					state.set(SessionState.CREATED);
+					state.compareAndSet(SessionState.INITIALIZING, SessionState.CREATED);
 				}
 			}
 		}

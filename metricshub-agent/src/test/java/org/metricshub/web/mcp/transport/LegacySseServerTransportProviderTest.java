@@ -236,6 +236,45 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldKeepAnInitializedSessionWhenADuplicateInitializeIsRejected() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+		postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isOk());
+
+		// A second initialize is rejected by the SDK with a JSON-RPC error and must not disturb the valid session
+		session.onHandle = () -> {
+			session.onHandle = null;
+			session.transport
+				.get()
+				.sendMessage(
+					new JSONRPCResponse(
+						McpSchema.JSONRPC_VERSION,
+						1,
+						null,
+						new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Already initialized", null)
+					)
+				)
+				.block();
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+
+		assertEquals(
+			Optional.of(LegacySseServerTransportProvider.SessionState.INITIALIZED),
+			provider.sessionState(sessionId)
+		);
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+
+		// Even a failing duplicate initialize leaves the valid session open
+		session.handleResult = Mono.error(new IllegalStateException("duplicate initialize"));
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isInternalServerError());
+		assertEquals(1, provider.activeSessionCount());
+		session.handleResult = Mono.empty();
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isOk());
+	}
+
+	@Test
 	void shouldCloseTheSessionWhenInitializeFails() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		session.handleResult = Mono.error(new IllegalStateException("initialize rejected"));
