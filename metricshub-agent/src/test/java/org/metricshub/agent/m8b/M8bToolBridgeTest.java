@@ -204,6 +204,47 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
+	void shouldFreeTheSlotOfWorkThatOutlivesItsSession() throws Exception {
+		bridge.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 1));
+		final CountDownLatch stuck = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			// A callback that ignores its interruption — a socket read that does not observe one,
+			// as most of them do not. Its thread cannot be taken back; its slot must be.
+			stuck.await();
+			return "{}";
+		});
+
+		bridge.invoke(invoke("Slow", 100));
+		bridge.cancelSessionWork();
+
+		await()
+			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.untilAsserted(() -> assertEquals(0, bridge.inFlight(), "The deadline must release the slot"));
+		assertEquals(null, answers.poll(200, TimeUnit.MILLISECONDS), "The session that asked is gone");
+
+		// And the cap is genuinely free again: the next invocation runs rather than being refused
+		when(listHosts.call(anyString())).thenReturn("{}");
+		bridge.invoke(invoke("ListHosts", 10_000));
+		assertInstanceOf(ToolResult.class, answer());
+		stuck.countDown();
+	}
+
+	@Test
+	void shouldTrimAFailureDetailThatWouldNotFitAnErrorFrame() throws Exception {
+		doThrow(new IllegalStateException("x".repeat(50_000))).when(slow).call(anyString());
+
+		bridge.invoke(invoke("Slow", 10_000));
+
+		final ToolError error = assertInstanceOf(ToolError.class, answer());
+		assertEquals(ToolErrorCode.EXECUTION_ERROR, error.code());
+		assertTrue(
+			error.message().length() < M8bToolBridge.MAX_ERROR_DETAIL_CHARS + 100,
+			"A failure must be reportable, so its detail is cut rather than the report refused"
+		);
+		assertTrue(error.message().endsWith("(truncated)"), "And the cut must be visible");
+	}
+
+	@Test
 	void shouldRefuseAResultAboveThePayloadCap() throws Exception {
 		bridge.setLimits(new AgentRegistered(30, 64, 4));
 		when(listHosts.call(anyString())).thenReturn("{\"data\":\"" + "x".repeat(200) + "\"}");

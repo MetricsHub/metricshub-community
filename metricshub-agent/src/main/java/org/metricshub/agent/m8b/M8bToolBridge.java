@@ -60,6 +60,14 @@ public class M8bToolBridge {
 	/** Limits applied until the server sends its own. */
 	static final AgentRegistered DEFAULT_LIMITS = new AgentRegistered(30, 8L * 1024 * 1024, 1);
 
+	/**
+	 * How much of a failure's detail travels back. A result is measured against the server's payload
+	 * cap and refused when it exceeds it; an error has no such fallback — refusing to report a
+	 * failure because the report is too long leaves the Governor waiting on nothing. So the detail is
+	 * cut instead, small enough that an error frame cannot approach any cap worth configuring.
+	 */
+	static final int MAX_ERROR_DETAIL_CHARS = 1000;
+
 	private final ToolRegistrySnapshot snapshot;
 	private final Consumer<M8bMessage> sender;
 	private final ExecutorService workers;
@@ -118,7 +126,11 @@ public class M8bToolBridge {
 		final ToolCallback callback = snapshot.callbacks().get(invoke.tool());
 		if (callback == null) {
 			sender.accept(
-				new ToolError(invoke.requestId(), ToolErrorCode.TOOL_NOT_AVAILABLE, "Tool not advertised: " + invoke.tool())
+				new ToolError(
+					invoke.requestId(),
+					ToolErrorCode.TOOL_NOT_AVAILABLE,
+					"Tool not advertised: " + brief(invoke.tool())
+				)
 			);
 			return;
 		}
@@ -136,6 +148,9 @@ public class M8bToolBridge {
 		}
 
 		final AtomicBoolean answered = new AtomicBoolean();
+		// The slot is given back exactly once, by whichever of the worker and the deadline gets
+		// there first: a worker cancelled before it ran never reaches its own finally.
+		final AtomicBoolean released = new AtomicBoolean();
 		final int invokeEpoch = epoch.get();
 		// Holds the deadline task so the worker can drop it as soon as it answered: an uncancelled
 		// task keeps the request and its arguments in the timer queue for the whole timeout.
@@ -147,7 +162,7 @@ public class M8bToolBridge {
 				answer = execute(invoke, callback, currentLimits, startedAt);
 			} finally {
 				// Free the slot before the answer leaves: the server may invoke again right away
-				inFlight.decrementAndGet();
+				release(released);
 			}
 			answerOnce(answered, invokeEpoch, answer);
 			cancel(deadline.getAndSet(null));
@@ -163,8 +178,13 @@ public class M8bToolBridge {
 					)
 				) {
 					log.warn("M8B tool '{}' (request {}) timed out after {} ms.", invoke.tool(), invoke.requestId(), timeoutMs);
-					execution.cancel(true);
 				}
+				// Both of these run whether or not the answer was sent. A session that ended
+				// suppresses the reply, never the deadline: otherwise work outliving its session
+				// would hold its slot through every session that follows, until nothing new could
+				// be invoked at all.
+				execution.cancel(true);
+				release(released);
 			},
 			timeoutMs,
 			TimeUnit.MILLISECONDS
@@ -173,6 +193,17 @@ public class M8bToolBridge {
 		if (answered.get()) {
 			// The tool finished before the handle was stored
 			cancel(deadline.getAndSet(null));
+		}
+	}
+
+	/**
+	 * Gives an invocation's concurrency slot back, once. A callback that ignores its interruption
+	 * keeps its thread, which nothing can take away — but not the slot, which the server is
+	 * entitled to reuse the moment it has been told the invocation is over.
+	 */
+	private void release(final AtomicBoolean released) {
+		if (released.compareAndSet(false, true)) {
+			inFlight.decrementAndGet();
 		}
 	}
 
@@ -257,7 +288,18 @@ public class M8bToolBridge {
 	}
 
 	private static String messageOf(final Exception e) {
-		return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+		return e.getMessage() == null ? e.getClass().getSimpleName() : brief(e.getMessage());
+	}
+
+	/**
+	 * @param detail whatever a tool, or the server, put in front of us
+	 * @return it, trimmed to what an error frame may carry
+	 */
+	private static String brief(final String detail) {
+		if (detail == null || detail.length() <= MAX_ERROR_DETAIL_CHARS) {
+			return detail;
+		}
+		return detail.substring(0, MAX_ERROR_DETAIL_CHARS) + "... (truncated)";
 	}
 
 	private static ThreadFactory daemonThreads(final String prefix) {
