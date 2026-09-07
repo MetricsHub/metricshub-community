@@ -796,7 +796,12 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 | `metricshub-m8b-tool-N` | `M8bToolBridge` | One tool execution each (cached pool) |
 | `metricshub-m8b-tool-timer` | `M8bToolBridge` | Request deadlines |
 
-Listener callbacks run on the tunnel thread and only enqueue work; the bridge frees its in-flight slot before the answer leaves.
+Two listeners, and they are not the same thing:
+
+* **`WebSocket.Listener`** (the JDK's) is called on the HTTP client's own threads. It does nothing but reassemble a text frame and hand it to the tunnel thread, which is why nothing there needs to be fast.
+* **`M8bTunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` and `onDisconnected` change bridge state. Only `onInvoke` hands off — to the tool pool. Anything blocking added to the other three stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
+
+The bridge frees an invocation's in-flight slot before the answer leaves, and exactly once: the worker gives it back when it finishes, the deadline when the worker is gone or never started.
 
 ### 13.4 Configuration reference — `m8b:`
 
@@ -835,7 +840,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Outbound only, `wss://` required outside loopback | Credentials travel in the handshake headers; no inbound rule on monitored sites |
 | Only advertised tools are invokable; `excludedTools` removes a tool from the advertisement itself | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
 | The existing kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
-| Limits enforced on both sides | A misbehaving peer cannot exhaust the other |
+| Every outbound frame is bounded | A tool result above `maxPayloadBytes` becomes `RESULT_TOO_LARGE`, and a failure's detail is truncated rather than the failure going unreported — so no answer this agent sends can cost it the tunnel |
 | Only actively monitored hosts are advertised | The Governor never routes to a resource the agent could not validate |
 | Approvals for sensitive tools live in M8B | The agent cannot tell an approved call from any other; the policy lives where the users are |
 
@@ -849,7 +854,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Identity and edition | `AgentDescriptorMapperTest` |
 | Wire shape (golden `agent.register`), round trips, unknown types, fingerprint | `M8bJsonTest` |
 | **Tunnel over a real WebSocket** — headers, limits, invocation round trip, unknown types, reconnection, `4001`, heartbeat timeout, binary frame, unacknowledged registration, stop, TLS | `M8bTunnelClientTest` against `FakeM8bServer` |
-| Bridge: every error code, deadline answered once, caps | `M8bToolBridgeTest` |
+| Bridge: every error code, deadline answered once, caps, slots released when work outlives its session | `M8bToolBridgeTest` |
 | Supervisor: config lifecycle, retries, `hosts.updated` | `M8bServiceTest` |
 | StartupHook wiring and Spring instantiation | `M8bStartupHookTest` |
 | **End to end** — real `ToolCallbackProvider`, `ListHosts` executed over the tunnel | `M8bServiceEndToEndTest` |
