@@ -164,18 +164,15 @@ public class M8bTunnelClient {
 				return;
 			}
 			stopped = true;
-			cancelTimers();
 			final WebSocket socket = webSocket;
 			if (socket != null && !socket.isOutputClosed()) {
 				log.info("M8B tunnel stopping. Reason: {}.", reason);
-				// Abort whatever the close does: a rejected or slow close frame would otherwise
-				// leave the server with a live session nobody reads any more.
-				socket
-					.sendClose(WebSocket.NORMAL_CLOSURE, closeReason(reason))
-					.orTimeout(STOP_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
-					.whenComplete((ws, error) -> socket.abort());
+				closeThenAbort(socket, WebSocket.NORMAL_CLOSURE, reason, STOP_TIMEOUT);
 			}
-			webSocket = null;
+			// The same cleanup every other loss gets. A stop ends a session as thoroughly as a
+			// dropped connection does: the listener has to hear that its in-flight work was
+			// discarded, and limits() must stop describing a session that no longer exists.
+			disconnected(generation, WebSocket.NORMAL_CLOSURE, reason);
 		};
 		if (Thread.currentThread() == tunnelThread) {
 			closing.run();
@@ -381,22 +378,7 @@ public class M8bTunnelClient {
 		}
 		final WebSocket socket = webSocket;
 		if (socket != null) {
-			// Aborting fails a close frame still in flight, and the server would record an abnormal
-			// disconnect instead of the code we mean. Let the close leave first, with a bounded
-			// fallback in case the peer never completes it.
-			final ScheduledFuture<?> abortFallback = executor.schedule(
-				socket::abort,
-				CLOSE_TIMEOUT.toMillis(),
-				TimeUnit.MILLISECONDS
-			);
-			socket
-				.sendClose(wireCloseCode(code), closeReason(reason))
-				.whenComplete((ws, error) ->
-					dispatch(() -> {
-						abortFallback.cancel(false);
-						socket.abort();
-					})
-				);
+			closeThenAbort(socket, wireCloseCode(code), reason, CLOSE_TIMEOUT);
 		}
 		disconnected(dropGeneration, code, reason);
 	}
@@ -487,6 +469,34 @@ public class M8bTunnelClient {
 			log.trace("M8B tunnel stopped: dropping a late transport callback.");
 			return false;
 		}
+	}
+
+	/**
+	 * Sends a close frame and aborts the socket once it has left, or once it is clear it never
+	 * will.
+	 *
+	 * <p>Aborting outright would fail a close frame still in flight and leave the server recording
+	 * an abnormal disconnect instead of the code we mean, so the close goes first. The fallback is
+	 * {@code orTimeout}'s own timer rather than a task on the tunnel executor, because
+	 * {@link #stop(String)} shuts that executor down: a scheduled fallback would be cancelled with
+	 * it, and this very callback would find its dispatch refused, leaving an authenticated socket
+	 * alive with nothing left to close it.
+	 *
+	 * @param socket        the socket to close
+	 * @param code          a close code the JDK client accepts
+	 * @param reason        the close reason, truncated to what a frame may carry
+	 * @param abortDeadline how long the close frame is given
+	 */
+	private static void closeThenAbort(
+		final WebSocket socket,
+		final int code,
+		final String reason,
+		final Duration abortDeadline
+	) {
+		socket
+			.sendClose(code, closeReason(reason))
+			.orTimeout(abortDeadline.toMillis(), TimeUnit.MILLISECONDS)
+			.whenComplete((ws, error) -> socket.abort());
 	}
 
 	/**
