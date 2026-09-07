@@ -265,6 +265,34 @@ class LegacySseServerTransportProviderTest {
 	}
 
 	@Test
+	void shouldNotLetAPingAnswerSettleTheHandshakeWhenItReusesTheInitializeId() throws Exception {
+		final RecordingSession session = new RecordingSession();
+		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
+		final String sessionId = openSse(mockMvc).sessionId();
+
+		// The client posts a pre-initialization ping reusing the id of its pending initialize, then claims the
+		// handshake is complete; only the response to the initialize itself may settle it
+		session.onHandle = () -> {
+			session.onHandle = null;
+			try {
+				postMessage(mockMvc, sessionId, PING.replace("\"id\":3", "\"id\":1")).andExpect(status().isOk());
+				postMessage(mockMvc, sessionId, INITIALIZED).andExpect(status().isAccepted());
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+			session.sendResponse(
+				1,
+				new JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unsupported protocol version", null)
+			);
+		};
+		postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isOk());
+
+		// The rejected initialize still settles the handshake, so the session stays unusable
+		assertEquals(Optional.of(LegacySseServerTransportProvider.SessionState.CREATED), provider.sessionState(sessionId));
+		postMessage(mockMvc, sessionId, TOOLS_LIST).andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void shouldRefuseASecondInitializeWhileTheHandshakeIsPending() throws Exception {
 		final RecordingSession session = new RecordingSession();
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());

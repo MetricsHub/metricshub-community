@@ -531,7 +531,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		log.debug("Answering a pre-initialization ping on MCP SSE session {}", sseSession.id());
 		sseSession
 			.transport()
-			.sendMessage(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, pingRequest.id(), Map.of(), null))
+			.sendTransportMessage(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, pingRequest.id(), Map.of(), null))
 			.block();
 		return ServerResponse.ok().build();
 	}
@@ -1028,6 +1028,29 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		 */
 		@Override
 		public Mono<Void> sendMessage(final JSONRPCMessage message) {
+			return send(message, true);
+		}
+
+		/**
+		 * Sends a message the transport itself produced, such as the answer to a pre-initialization ping. It is not
+		 * part of the exchange handled by the SDK session, so it never settles the handshake, even when the client
+		 * reused the id of its pending initialize request.
+		 *
+		 * @param message The JSON-RPC message to send
+		 * @return A Mono that completes when the message has been sent
+		 */
+		Mono<Void> sendTransportMessage(final JSONRPCMessage message) {
+			return send(message, false);
+		}
+
+		/**
+		 * Writes a JSON-RPC message to the SSE stream.
+		 *
+		 * @param message     The JSON-RPC message to send
+		 * @param fromSession Whether the message comes from the SDK session, and may therefore settle the handshake
+		 * @return A Mono that completes when the message has been sent
+		 */
+		private Mono<Void> send(final JSONRPCMessage message, final boolean fromSession) {
 			return Mono.fromRunnable(() -> {
 				sseBuilderLock.lock();
 				try {
@@ -1043,7 +1066,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 						return;
 					}
 					final SseSession owner = sseSession;
-					if (owner != null && message instanceof JSONRPCResponse response) {
+					if (fromSession && owner != null && message instanceof JSONRPCResponse response) {
 						owner.onResponseSent(response);
 					}
 					try {
