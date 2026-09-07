@@ -80,8 +80,11 @@ public class M8bService {
 	private M8bToolBridge bridge;
 	private ToolRegistrySnapshot snapshot;
 	private M8bConfig activeConfig;
-	private long advertisedGeneration;
-	private List<HostDescriptor> advertisedHosts = List.of();
+	// Written by the supervisor and by the tunnel thread building a registration. Volatile rather
+	// than guarded: the tunnel thread must never wait on this service's monitor, which the
+	// supervisor holds while stop() waits for the tunnel thread to run its closing task.
+	private volatile long advertisedGeneration;
+	private volatile List<HostDescriptor> advertisedHosts = List.of();
 
 	/**
 	 * @param agentContextHolder   the running agent context
@@ -276,10 +279,8 @@ public class M8bService {
 		public AgentRegister buildRegistration() {
 			final ContextSnapshot current = readContextSnapshot();
 			final List<HostDescriptor> hosts = HostInventory.from(current.context());
-			synchronized (M8bService.this) {
-				advertisedHosts = hosts;
-				advertisedGeneration = current.generation();
-			}
+			advertisedHosts = hosts;
+			advertisedGeneration = current.generation();
 			return new AgentRegister(
 				M8bMessage.PROTOCOL_VERSION,
 				AgentDescriptorMapper.map(current.context()),
@@ -292,6 +293,13 @@ public class M8bService {
 		@Override
 		public void onRegistered(final AgentRegistered registered) {
 			tunnelBridge.setLimits(registered);
+		}
+
+		@Override
+		public void onDisconnected(final int code, final String reason) {
+			// The server discarded whatever it had asked for: answering it on the next session
+			// would correlate an old result with a request that session never made.
+			tunnelBridge.cancelSessionWork();
 		}
 
 		@Override

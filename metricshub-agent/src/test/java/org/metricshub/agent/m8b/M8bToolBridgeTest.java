@@ -188,6 +188,22 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
+	void shouldNotAnswerAfterItsSessionDisconnected() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			release.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+			return "{}";
+		});
+
+		bridge.invoke(invoke("Slow", 10_000));
+		bridge.cancelSessionWork();
+		release.countDown();
+
+		// The tunnel session that asked is gone: the answer must not land on the next one
+		assertEquals(null, answers.poll(1_000, TimeUnit.MILLISECONDS));
+	}
+
+	@Test
 	void shouldRefuseAResultAboveThePayloadCap() throws Exception {
 		bridge.setLimits(new AgentRegistered(30, 64, 4));
 		when(listHosts.call(anyString())).thenReturn("{\"data\":\"" + "x".repeat(200) + "\"}");

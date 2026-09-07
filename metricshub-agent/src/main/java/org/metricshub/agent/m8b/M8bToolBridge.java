@@ -65,6 +65,12 @@ public class M8bToolBridge {
 	private final ExecutorService workers;
 	private final ScheduledThreadPoolExecutor timer;
 	private final AtomicInteger inFlight = new AtomicInteger();
+	/**
+	 * Bumped whenever the tunnel session ends. An invocation answers only while its own epoch is
+	 * current: the server discarded the request when the connection dropped, so a late answer would
+	 * land on the next session under a request id that means nothing there.
+	 */
+	private final AtomicInteger epoch = new AtomicInteger();
 	private volatile AgentRegistered limits = DEFAULT_LIMITS;
 
 	/**
@@ -130,6 +136,7 @@ public class M8bToolBridge {
 		}
 
 		final AtomicBoolean answered = new AtomicBoolean();
+		final int invokeEpoch = epoch.get();
 		// Holds the deadline task so the worker can drop it as soon as it answered: an uncancelled
 		// task keeps the request and its arguments in the timer queue for the whole timeout.
 		final AtomicReference<ScheduledFuture<?>> deadline = new AtomicReference<>();
@@ -142,7 +149,7 @@ public class M8bToolBridge {
 				// Free the slot before the answer leaves: the server may invoke again right away
 				inFlight.decrementAndGet();
 			}
-			answerOnce(answered, answer);
+			answerOnce(answered, invokeEpoch, answer);
 			cancel(deadline.getAndSet(null));
 		});
 		final long timeoutMs = invoke.timeoutMs() > 0 ? invoke.timeoutMs() : TimeUnit.SECONDS.toMillis(300);
@@ -151,6 +158,7 @@ public class M8bToolBridge {
 				if (
 					answerOnce(
 						answered,
+						invokeEpoch,
 						new ToolError(invoke.requestId(), ToolErrorCode.TIMEOUT, "Timed out after " + timeoutMs + " ms")
 					)
 				) {
@@ -227,12 +235,25 @@ public class M8bToolBridge {
 		}
 	}
 
-	private boolean answerOnce(final AtomicBoolean answered, final M8bMessage answer) {
+	private boolean answerOnce(final AtomicBoolean answered, final int invokeEpoch, final M8bMessage answer) {
+		if (invokeEpoch != epoch.get()) {
+			return false;
+		}
 		if (answered.compareAndSet(false, true)) {
 			sender.accept(answer);
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Drops the answers of everything still running: their tunnel session is gone.
+	 *
+	 * <p>The work itself is left to finish on its own — a tool call is a network round trip to a
+	 * monitored host, and interrupting it buys nothing the deadline will not take care of.
+	 */
+	public void cancelSessionWork() {
+		epoch.incrementAndGet();
 	}
 
 	private static String messageOf(final Exception e) {
