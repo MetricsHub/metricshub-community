@@ -23,7 +23,9 @@ package org.metricshub.web.mcp;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +51,8 @@ public final class MultiHostToolExecutor {
 	 *                              concurrent execution
 	 * @param <T>                   type of the per-host response
 	 * @return the aggregated response wrapper containing entries for each requested hostname
+	 * @throws CancellationException if the calling thread is interrupted while waiting, in which case
+	 *                               the per-host tasks are cancelled and their threads interrupted
 	 */
 	public static <T> MultiHostToolResponse<T> executeForHosts(
 		final List<String> hostnames,
@@ -92,7 +96,18 @@ public final class MultiHostToolExecutor {
 				)
 				.toList();
 
-			CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+			try {
+				// get() instead of join() so that cancelling the calling task interrupts this wait
+				CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get();
+			} catch (ExecutionException executionException) {
+				// Per-host failures are surfaced by the join() calls below, as CompletionException
+			} catch (InterruptedException interruptedException) {
+				futures.forEach(future -> future.cancel(true));
+				// Interrupts the in-flight host operations, the finally block only shuts down
+				executor.shutdownNow();
+				Thread.currentThread().interrupt();
+				throw new CancellationException("Multi-host execution was cancelled");
+			}
 
 			aggregatedResponse.getHosts().addAll(futures.stream().map(CompletableFuture::join).collect(Collectors.toList()));
 			return aggregatedResponse;
