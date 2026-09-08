@@ -23,9 +23,9 @@ package org.metricshub.agent.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,9 +60,9 @@ import org.springframework.scheduling.support.CronTrigger;
  * clobbers another.
  * </p>
  * <p>
- * {@link #rediscoverNewRegistrations()} lets a {@code LOCAL_ONLY} reload (one that applies a new
- * template's content without rebuilding the {@link AgentContext}) pick up that template's schedule
- * without a full restart; see its javadoc for why this is needed.
+ * Discovery also runs periodically, so a template added while the agent runs starts firing without a
+ * restart whichever reload path loaded it, and a template that was deleted has its schedule
+ * cancelled instead of firing forever against a provider that no longer knows it.
  * </p>
  */
 @Slf4j
@@ -96,13 +96,20 @@ public class ProgrammableReEvaluationScheduler {
 	/** Serializes the merge step so simultaneous firings do not race on the reload. */
 	private final Object lock = new Object();
 
-	/** The scheduled cron tasks, so they can be cancelled on {@link #stop()}. */
-	private final List<ScheduledFuture<?>> scheduledFutures = new ArrayList<>();
+	/** The scheduled cron tasks per re-evaluation id, so a single one can be cancelled. */
+	private final Map<String, ScheduledFuture<?>> scheduledTasks = new HashMap<>();
+
+	/** The periodic discovery sweep, cancelled on {@link #stop()}. */
+	private ScheduledFuture<?> sweepFuture;
 
 	/** Last published fragment per re-evaluation id, so an unchanged re-evaluation skips the reload. */
 	private final Map<String, JsonNode> lastFragments = new HashMap<>();
 
-	/** Ids already scheduled, so {@link #rediscoverNewRegistrations()} does not re-register them. */
+	/**
+	 * Ids already handled, so a rediscovery neither re-registers them nor retries one whose cron was
+	 * rejected. Wider than {@link #scheduledTasks}: a registration with an invalid cron is known here
+	 * but holds no task.
+	 */
 	private final Set<String> scheduledIds = new HashSet<>();
 
 	/**
@@ -137,13 +144,7 @@ public class ProgrammableReEvaluationScheduler {
 	 */
 	private void scheduleDiscoverySweep() {
 		try {
-			final ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(
-				this::rediscoverNewRegistrations,
-				DISCOVERY_INTERVAL
-			);
-			if (future != null) {
-				scheduledFutures.add(future);
-			}
+			sweepFuture = taskScheduler.scheduleAtFixedRate(this::rediscoverNewRegistrations, DISCOVERY_INTERVAL);
 		} catch (Exception e) {
 			log.error("Failed to schedule the re-evaluation discovery sweep: {}", e.getMessage());
 			log.debug("Discovery sweep scheduling error:", e);
@@ -151,14 +152,14 @@ public class ProgrammableReEvaluationScheduler {
 	}
 
 	/**
-	 * Re-runs discovery against the current context and schedules any re-evaluation not already
-	 * known, leaving every already-scheduled cron task untouched.
+	 * Re-runs discovery against the current context: schedules any re-evaluation not already known,
+	 * cancels the schedules that are no longer declared, and leaves the others untouched.
 	 * <p>
-	 * A {@code LOCAL_ONLY} reload (for example a new template that only adds a resource or a resource
-	 * group) applies its content to the running configuration but does not rebuild the
-	 * {@link AgentContext}, so it never goes through {@link #stop()}/{@link #start()} again. Without
-	 * this method, a schedule declared by such a template would only ever be picked up by a full
-	 * restart. Safe to call repeatedly; a no-op once every current registration is already scheduled.
+	 * A reload that only applies resource-level changes does not rebuild the {@link AgentContext}, so
+	 * it never goes through {@link #stop()}/{@link #start()} again, and the reload path that notices a
+	 * new or deleted template is not always this scheduler's own. Without this method, a template
+	 * added while the agent runs would never fire, and a deleted one would keep firing, until a full
+	 * restart. Safe to call repeatedly; a no-op when nothing was added or removed.
 	 * </p>
 	 */
 	public void rediscoverNewRegistrations() {
@@ -181,10 +182,12 @@ public class ProgrammableReEvaluationScheduler {
 			return;
 		}
 		synchronized (lock) {
+			final Set<String> currentIds = new HashSet<>();
 			for (final IConfigurationProvider provider : providers) {
 				for (final ScheduledReEvaluation reEvaluation : provider.getScheduledReEvaluations()) {
+					currentIds.add(reEvaluation.id());
 					if (!scheduledIds.add(reEvaluation.id())) {
-						// Already scheduled from a previous discovery pass.
+						// Already handled by a previous discovery pass.
 						continue;
 					}
 					// Seed the last-known fragment so a first firing with unchanged data does not reload.
@@ -194,6 +197,31 @@ public class ProgrammableReEvaluationScheduler {
 					scheduleRegistration(provider, reEvaluation);
 				}
 			}
+			cancelUndeclared(currentIds);
+		}
+	}
+
+	/**
+	 * Cancels every schedule whose re-evaluation is no longer declared, typically because its template
+	 * was deleted. Without this, the cron task of a removed template would keep firing against a
+	 * provider that no longer knows it, warning on every tick until the agent is restarted.
+	 *
+	 * @param currentIds the ids the providers declare right now
+	 */
+	private void cancelUndeclared(final Set<String> currentIds) {
+		final Iterator<String> knownIds = scheduledIds.iterator();
+		while (knownIds.hasNext()) {
+			final String id = knownIds.next();
+			if (currentIds.contains(id)) {
+				continue;
+			}
+			knownIds.remove();
+			lastFragments.remove(id);
+			final ScheduledFuture<?> future = scheduledTasks.remove(id);
+			if (future != null) {
+				future.cancel(false);
+			}
+			log.info("Re-evaluation of '{}' is no longer declared; its schedule is cancelled.", id);
 		}
 	}
 
@@ -211,7 +239,7 @@ public class ProgrammableReEvaluationScheduler {
 				trigger
 			);
 			if (future != null) {
-				scheduledFutures.add(future);
+				scheduledTasks.put(reEvaluation.id(), future);
 			}
 			log.info("Scheduled re-evaluation of '{}' with cron '{}'.", reEvaluation.id(), reEvaluation.cron());
 		} catch (Exception e) {
@@ -259,9 +287,14 @@ public class ProgrammableReEvaluationScheduler {
 	 */
 	public void stop() {
 		synchronized (lock) {
-			scheduledFutures.forEach(future -> future.cancel(false));
-			scheduledFutures.clear();
+			if (sweepFuture != null) {
+				sweepFuture.cancel(false);
+				sweepFuture = null;
+			}
+			scheduledTasks.values().forEach(future -> future.cancel(false));
+			scheduledTasks.clear();
 			scheduledIds.clear();
+			lastFragments.clear();
 		}
 	}
 }

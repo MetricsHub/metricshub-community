@@ -6,7 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -315,6 +318,58 @@ class ProgrammableReEvaluationSchedulerTest {
 
 		// A further sweep with nothing new must stay quiet.
 		sweep.run();
+		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
+
+		scheduler.stop();
+	}
+
+	@Test
+	void testDeletedTemplateHasItsScheduleCancelled() {
+		// A deleted template stops being declared by its provider; its cron must not keep firing.
+		final List<ScheduledReEvaluation> registrations = new ArrayList<>(
+			List.of(
+				new ScheduledReEvaluation("script.vm", "0/20 * * * * ?"),
+				new ScheduledReEvaluation("new-config2.vm", "0/15 * * * * ?")
+			)
+		);
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+				return List.copyOf(registrations);
+			}
+		};
+
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		final ScheduledFuture<?> scriptTask = mock(ScheduledFuture.class);
+		final ScheduledFuture<?> deletedTask = mock(ScheduledFuture.class);
+		// doReturn avoids the wildcard-capture mismatch of when(...).thenReturn(...) here.
+		doReturn(scriptTask, deletedTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+
+		scheduler.start();
+		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
+
+		// The template file is deleted, so the provider stops declaring it.
+		registrations.removeIf(reEvaluation -> "new-config2.vm".equals(reEvaluation.id()));
+		scheduler.rediscoverNewRegistrations();
+
+		// Its task must be cancelled, and the surviving template's must be left alone.
+		verify(deletedTask, times(1)).cancel(false);
+		verify(scriptTask, never()).cancel(anyBoolean());
+
+		// It must not be re-scheduled by a later sweep either.
+		scheduler.rediscoverNewRegistrations();
 		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
 
 		scheduler.stop();
