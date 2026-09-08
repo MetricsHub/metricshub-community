@@ -350,6 +350,27 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void aToolInvokeBeforeRegistrationIsRefusedRatherThanRun() throws Exception {
+		server = new FakeM8bServer();
+		// The ack is withheld, so the session never registers
+		server.autoRegister = false;
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		server.sendToAll(new ToolInvoke("req-1", "ListHosts", M8bJson.MAPPER.createObjectNode(), 10_000));
+
+		// Running it would execute something on a monitored host and then drop the answer, because
+		// there is no registered session to send it on. Refusing says so instead.
+		final JsonNode error = server.awaitFrame(M8bMessage.ProtocolError.TYPE, TIMEOUT_MS);
+		assertNotNull(error, "The peer must be told, not silently obeyed");
+		assertEquals("MALFORMED_MESSAGE", error.path("code").asText());
+		assertTrue(listener.invocations.isEmpty(), "The tool must not have run");
+	}
+
+	@Test
 	void shouldRejectCleartextEndpointsOutsideLoopback() {
 		final Map<String, String> headers = Map.of("Authorization", "Bearer secret-token");
 		assertThrows(

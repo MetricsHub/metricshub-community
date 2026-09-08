@@ -442,6 +442,28 @@ public class M8bTunnelClient {
 	}
 
 	/**
+	 * Runs an invocation, but not before the server has acknowledged the session.
+	 *
+	 * <p>Running it earlier would be worse than refusing it: the tool executes -- on a monitored
+	 * host, with real side effects -- and its answer is then dropped, because there is no registered
+	 * session to send it on. A peer that asks out of order gets told so instead, which is the only
+	 * outcome in which nothing happens that nobody hears about.
+	 *
+	 * @param frameGeneration the connection it arrived on
+	 * @param invoke          the invocation
+	 */
+	private void onInvoke(final long frameGeneration, final ToolInvoke invoke) {
+		if (limits == null) {
+			log.warn("M8B tunnel: refusing a tool.invoke that arrived before agent.registered.");
+			// sendNow, not send: the whole point is that this session is not registered yet, and the
+			// gate on the public path would drop the very message that says so.
+			sendNow(new ProtocolError("MALFORMED_MESSAGE", "tool.invoke arrived before agent.registered"));
+			return;
+		}
+		safely("onInvoke", () -> listener.onInvoke(invoke, frameGeneration));
+	}
+
+	/**
 	 * Records that something arrived on this connection.
 	 *
 	 * <p>Anything: a ping, a pong, one fragment of a long text frame. The protocol says any inbound
@@ -472,7 +494,7 @@ public class M8bTunnelClient {
 		switch (message) {
 			case AgentRegistered registered -> onRegistered(registered);
 			case HeartbeatPong pong -> log.trace("M8B tunnel heartbeat acknowledged.");
-			case ToolInvoke invoke -> safely("onInvoke", () -> listener.onInvoke(invoke, frameGeneration));
+			case ToolInvoke invoke -> onInvoke(frameGeneration, invoke);
 			case ProtocolError protocolError -> log.warn(
 				"M8B server reported an error: {} - {}",
 				protocolError.code(),
