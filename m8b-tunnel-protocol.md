@@ -203,11 +203,13 @@ Informational; never closes the connection by itself.
 |---|---|---|
 | `1000` | agent | Normal shutdown |
 | `1001` | server | Server going away |
+| `1002` | server | Protocol version the server does not implement, after `error` `UNSUPPORTED_PROTOCOL_VERSION` |
 | `1003` | server | Unsupported data (binary frame); the agent closes `1000` with the reason instead |
 | `1009` | server | Frame larger than `maxPayloadBytes` |
 | `4001` | server | Superseded by a newer session for the same uid |
 | `4002` | server | No `agent.register` within 10 s |
 | `4003` | either | Heartbeat timeout |
+| `4004` | server | The agent secret this tunnel presented is no longer configured |
 
 ## 5. Tool invocation
 
