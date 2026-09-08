@@ -371,6 +371,27 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void anAbsurdHeartbeatFromTheServerDoesNotWedgeTheTunnel() throws Exception {
+		server = new FakeM8bServer();
+		// Long.MAX_VALUE seconds overflows Duration.toMillis(), and the throw would land inside the
+		// callback that has already cancelled the registration deadline and published the limits --
+		// leaving a client that says it is connected with no heartbeat and no idle detection.
+		server.limits = new AgentRegistered(Long.MAX_VALUE, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertTrue(client.isConnected());
+		// The configured interval is used instead, so heartbeats really do go out
+		assertNotNull(
+			server.awaitFrame(M8bMessage.HeartbeatPing.TYPE, TIMEOUT_MS),
+			"A clamped interval must still produce heartbeats"
+		);
+	}
+
+	@Test
 	void shouldRejectCleartextEndpointsOutsideLoopback() {
 		final Map<String, String> headers = Map.of("Authorization", "Bearer secret-token");
 		assertThrows(

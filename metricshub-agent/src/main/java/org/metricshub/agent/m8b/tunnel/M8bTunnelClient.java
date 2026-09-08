@@ -103,6 +103,10 @@ public class M8bTunnelClient {
 	 * a peer that is not really sending a message.
 	 */
 	static final int MAX_INBOUND_FRAGMENTS = 4_096;
+	/** The shortest heartbeat this agent will honor, whatever a server asks for. */
+	static final Duration MIN_HEARTBEAT = Duration.ofSeconds(1);
+	/** And the longest: past an hour, liveness detection has stopped being liveness detection. */
+	static final Duration MAX_HEARTBEAT = Duration.ofHours(1);
 
 	private final M8bTunnelSettings settings;
 	private final M8bTunnelListener listener;
@@ -529,6 +533,42 @@ public class M8bTunnelClient {
 		}
 	}
 
+	/**
+	 * The heartbeat interval to honor, which is not simply the one the server named.
+	 *
+	 * <p>Clamped, because a value out of range does more than misconfigure the heartbeat: zero or
+	 * negative is an illegal period, and a large enough one overflows {@code Duration.toMillis()}.
+	 * Either throws from inside the callback that publishes the registration — after the deadline
+	 * has been cancelled and the limits published — and the executor swallows it, leaving a client
+	 * that reports itself connected with no heartbeat and no idle detection. Silently wedged is the
+	 * one outcome worse than a wrong interval.
+	 *
+	 * <p>Clamped rather than refused: a server that miscounts its own heartbeat is still a server
+	 * this agent can talk to, and a reconnect loop against it would help nobody. The log names the
+	 * value, which is what an operator needs.
+	 *
+	 * @param registered what the server sent
+	 * @return an interval that can actually be scheduled
+	 */
+	private Duration heartbeatIntervalOf(final AgentRegistered registered) {
+		final long seconds = registered.heartbeatIntervalSeconds();
+		if (seconds <= 0) {
+			return settings.heartbeatInterval();
+		}
+		// Seconds, compared as seconds: converting first is what would overflow.
+		if (seconds < MIN_HEARTBEAT.toSeconds() || seconds > MAX_HEARTBEAT.toSeconds()) {
+			log.warn(
+				"M8B server asked for a {} second heartbeat, outside {}..{}; using {} instead.",
+				seconds,
+				MIN_HEARTBEAT.toSeconds(),
+				MAX_HEARTBEAT.toSeconds(),
+				settings.heartbeatInterval()
+			);
+			return settings.heartbeatInterval();
+		}
+		return Duration.ofSeconds(seconds);
+	}
+
 	private void onRegistered(final AgentRegistered registered) {
 		cancel(registrationDeadline);
 		registrationDeadline = null;
@@ -547,10 +587,7 @@ public class M8bTunnelClient {
 			STABLE_CONNECTION.toMillis(),
 			TimeUnit.MILLISECONDS
 		);
-		final Duration interval =
-			registered.heartbeatIntervalSeconds() > 0
-				? Duration.ofSeconds(registered.heartbeatIntervalSeconds())
-				: settings.heartbeatInterval();
+		final Duration interval = heartbeatIntervalOf(registered);
 		cancel(heartbeat);
 		final long currentGeneration = generation;
 		heartbeat = executor.scheduleAtFixedRate(
