@@ -295,6 +295,32 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
+	void shutdownShouldInterruptWhatItCanRatherThanLeaveItOnASharedPool() throws Exception {
+		final CountDownLatch started = new CountDownLatch(1);
+		final CountDownLatch interrupted = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			started.countDown();
+			try {
+				// A callback that DOES observe its interruption. Its deadline was the only thing that
+				// would ever deliver one, and shutting the timer down used to discard it -- leaving
+				// this thread held on a pool the whole process shares.
+				new CountDownLatch(1).await();
+			} catch (InterruptedException e) {
+				interrupted.countDown();
+				Thread.currentThread().interrupt();
+			}
+			return "{}";
+		});
+
+		bridge.invoke(invoke("Slow", 600_000), GENERATION);
+		assertTrue(started.await(TIMEOUT_MS, TimeUnit.MILLISECONDS), "The invocation must be running");
+
+		bridge.shutdown();
+
+		assertTrue(interrupted.await(TIMEOUT_MS, TimeUnit.MILLISECONDS), "Releasing the bridge releases its work");
+	}
+
+	@Test
 	void shouldTrimAFailureDetailThatWouldNotFitAnErrorFrame() throws Exception {
 		doThrow(new IllegalStateException("x".repeat(50_000))).when(slow).call(anyString());
 
