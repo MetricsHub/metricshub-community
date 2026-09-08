@@ -296,6 +296,30 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void aMessageThatNeverEndsIsDroppedRatherThanBuffered() throws Exception {
+		server = new FakeM8bServer();
+		// A cap small enough to reach quickly; the agent is told it at registration
+		server.limits = new AgentRegistered(30, 4_096, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// Fragments that never say "last": the completed-message backpressure can never engage, so
+		// what has to stop this is the accumulation bound
+		server.sendFragmentsToAll("x".repeat(1_024), 8);
+
+		assertEquals(
+			M8bTunnelClient.CLOSE_MESSAGE_TOO_BIG,
+			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+			"A peer that keeps fragmenting must lose the connection, not the agent its heap"
+		);
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "and the agent reconnects");
+	}
+
+	@Test
 	void shouldRejectCleartextEndpointsOutsideLoopback() {
 		final Map<String, String> headers = Map.of("Authorization", "Bearer secret-token");
 		assertThrows(
@@ -303,9 +327,19 @@ class M8bTunnelClientTest {
 			() -> new M8bTunnelSettings(URI.create("ws://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null),
 			"Credentials must never travel in cleartext to a remote host"
 		);
-		// Loopback development and TLS endpoints are fine
+		// A name that merely RESOLVES to loopback is refused too: the resolution that matters is the
+		// one the HTTP client does when it connects, and a record can change between the two
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new M8bTunnelSettings(URI.create("ws://localhost.localdomain/ws/agent"), headers, null, AGENT_UID, null),
+			"Only a loopback LITERAL may carry credentials in cleartext"
+		);
+
+		// Loopback literals and TLS endpoints are fine
 		new M8bTunnelSettings(URI.create("ws://localhost:8080/ws/agent"), headers, null, AGENT_UID, null);
 		new M8bTunnelSettings(URI.create("ws://127.0.0.1:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("ws://127.4.5.6:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("ws://[::1]:8080/ws/agent"), headers, null, AGENT_UID, null);
 		new M8bTunnelSettings(URI.create("wss://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null);
 	}
 

@@ -85,6 +85,16 @@ public class M8bTunnelClient {
 	static final double IDLE_FACTOR = 2.5;
 	/** The JDK's hard limit on a close reason, measured in encoded bytes rather than characters. */
 	static final int MAX_CLOSE_REASON_BYTES = 123;
+	/** Standard close code for a message above what the peer said it would accept. */
+	static final int CLOSE_MESSAGE_TOO_BIG = 1009;
+	/**
+	 * The largest message accepted before the server has said otherwise.
+	 *
+	 * <p>A frame can arrive as an unbounded series of fragments, and the peer decides how many. Until
+	 * {@code agent.registered} names a real cap this is the one in force, because "no limit yet" and
+	 * "no limit" must not be the same thing.
+	 */
+	static final long DEFAULT_MAX_INBOUND_CHARS = 8L * 1024 * 1024;
 
 	private final M8bTunnelSettings settings;
 	private final M8bTunnelListener listener;
@@ -350,6 +360,20 @@ public class M8bTunnelClient {
 			settings.connectTimeout().toMillis(),
 			TimeUnit.MILLISECONDS
 		);
+	}
+
+	/**
+	 * The largest message this connection will accept, in characters.
+	 *
+	 * <p>Characters rather than bytes because that is what has actually been buffered at the point
+	 * the question is asked; it is the conservative reading of a byte cap, since a character never
+	 * encodes to less than one byte.
+	 *
+	 * @return the cap the server imposed, or the default until it has imposed one
+	 */
+	private long maxInboundChars() {
+		final AgentRegistered current = limits;
+		return current == null ? DEFAULT_MAX_INBOUND_CHARS : current.maxPayloadBytes();
 	}
 
 	/**
@@ -662,6 +686,16 @@ public class M8bTunnelClient {
 
 		@Override
 		public CompletionStage<?> onText(final WebSocket socket, final CharSequence data, final boolean last) {
+			final long cap = maxInboundChars();
+			if (partial.length() + (long) data.length() > cap) {
+				// Deliberately WITHOUT requesting more. The backpressure below only applies once a
+				// message is complete, so a peer that never sets `last` could otherwise buffer the
+				// agent into an OutOfMemoryError one fragment at a time -- and asking for the next
+				// fragment is what would let it.
+				partial.setLength(0);
+				dispatch(() -> dropConnection(frameGeneration, CLOSE_MESSAGE_TOO_BIG, "Message above " + cap + " characters"));
+				return null;
+			}
 			partial.append(data);
 			socket.request(1);
 			if (!last) {
