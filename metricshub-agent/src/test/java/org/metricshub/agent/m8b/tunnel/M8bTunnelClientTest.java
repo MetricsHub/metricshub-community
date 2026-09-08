@@ -385,6 +385,35 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void stoppingTwiceAtOnceShouldNotThrowAtEitherCaller() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		// A shutdown hook and an explicit stop can land together; neither is the failing one
+		final BlockingQueue<Throwable> thrown = new LinkedBlockingQueue<>();
+		final Runnable stopper = () -> {
+			try {
+				client.stop("shutdown");
+			} catch (RuntimeException e) {
+				thrown.add(e);
+			}
+		};
+		final Thread first = new Thread(stopper);
+		final Thread second = new Thread(stopper);
+		first.start();
+		second.start();
+		first.join(TIMEOUT_MS);
+		second.join(TIMEOUT_MS);
+
+		assertTrue(thrown.isEmpty(), "A second stop is meant to be harmless: " + thrown);
+		assertFalse(client.isConnected());
+	}
+
+	@Test
 	void sendAfterStopShouldBeDroppedSilently() throws Exception {
 		server = new FakeM8bServer();
 		server.startAndAwait();
