@@ -342,10 +342,38 @@ public class M8bToolBridge {
 
 	private boolean answerOnce(final AtomicBoolean answered, final long generation, final M8bMessage answer) {
 		if (answered.compareAndSet(false, true)) {
-			sender.accept(answer, generation);
+			sender.accept(withinCap(answer), generation);
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * The last measurement before an answer leaves, and the one that has to be in bytes.
+	 *
+	 * <p>A result over the cap is already turned into an error further up. What that check cannot
+	 * cover is the error itself: its detail is cut by characters, and a character can encode as four
+	 * bytes, so a small negotiated cap and a multibyte exception message can still produce a frame
+	 * the server closes the tunnel over (1009) -- losing not just this answer but the session. So
+	 * every answer is weighed here, and one that will not fit is replaced by a report that does. A
+	 * failure the Governor can read beats a failure it never hears about.
+	 *
+	 * @param answer what the invocation produced
+	 * @return it, or a smaller answer saying the same thing
+	 */
+	private M8bMessage withinCap(final M8bMessage answer) {
+		final long cap = limits.maxPayloadBytes();
+		if (M8bJson.write(answer).getBytes(StandardCharsets.UTF_8).length <= cap) {
+			return answer;
+		}
+		if (answer instanceof ToolError error) {
+			log.warn("M8B tool error for request {} does not fit {} bytes; sending it bare.", error.requestId(), cap);
+			return new ToolError(error.requestId(), error.code(), "");
+		}
+		// A ToolResult this large should have been caught by the payload check in execute(); this is
+		// the belt to that pair of braces.
+		final ToolResult result = (ToolResult) answer;
+		return new ToolError(result.requestId(), ToolErrorCode.RESULT_TOO_LARGE, "");
 	}
 
 	private static String messageOf(final Exception e) {
