@@ -24,6 +24,7 @@ package org.metricshub.agent.m8b;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
@@ -88,6 +89,15 @@ public class M8bToolBridge {
 	private final ExecutorService workers;
 	private final ScheduledThreadPoolExecutor timer;
 	private final AtomicInteger inFlight = new AtomicInteger();
+	/**
+	 * The executions this bridge started and has not accounted for yet, keyed by the flag that says
+	 * whether their slot has gone back -- the one object both the worker and the deadline hold.
+	 *
+	 * <p>They are tracked because the worker pool is shared and outlives this bridge: shutting the
+	 * deadline timer down discards the cancellations it was holding, and a callback that WOULD have
+	 * stopped on interruption would instead keep a process-wide thread for as long as it liked.
+	 */
+	private final ConcurrentHashMap<AtomicBoolean, Future<?>> running = new ConcurrentHashMap<>();
 	private volatile AgentRegistered limits = DEFAULT_LIMITS;
 
 	/**
@@ -221,6 +231,11 @@ public class M8bToolBridge {
 			);
 			return;
 		}
+		running.put(released, execution);
+		if (released.get()) {
+			// It finished before the handle was stored, and its own release found nothing to remove
+			running.remove(released);
+		}
 		final long timeoutMs = invoke.timeoutMs() > 0 ? invoke.timeoutMs() : TimeUnit.SECONDS.toMillis(300);
 		final ScheduledFuture<?> scheduled = timer.schedule(
 			() -> {
@@ -259,6 +274,8 @@ public class M8bToolBridge {
 		if (released.compareAndSet(false, true)) {
 			inFlight.decrementAndGet();
 		}
+		// Either it finished, or the deadline has just cancelled it: nothing left for shutdown to do
+		running.remove(released);
 	}
 
 	private static void cancel(final ScheduledFuture<?> future) {
@@ -272,6 +289,9 @@ public class M8bToolBridge {
 	 * outlives every bridge, because the threads a stuck callback holds outlive one too.
 	 */
 	public void shutdown() {
+		// Before the timer goes, because the timer is what was holding these cancellations.
+		running.values().forEach(execution -> execution.cancel(true));
+		running.clear();
 		timer.shutdownNow();
 	}
 
