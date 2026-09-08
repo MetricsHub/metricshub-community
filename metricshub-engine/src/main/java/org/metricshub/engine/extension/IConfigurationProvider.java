@@ -79,4 +79,40 @@ public interface IConfigurationProvider {
 	default Optional<String> renderTemplate(Path templateFile) throws Exception {
 		return Optional.empty();
 	}
+
+	/**
+	 * Returns the re-evaluations this provider declares. A configuration source whose output can
+	 * change over time (for example a template that queries a CMDB) exposes one entry per re-evaluable
+	 * unit, so the agent can drive its periodic re-evaluation. Providers with nothing to re-evaluate
+	 * return an empty collection.
+	 *
+	 * @return the scheduled re-evaluations, empty by default.
+	 */
+	default Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+		return Collections.emptyList();
+	}
+
+	/**
+	 * Re-evaluates the unit with the given id and returns the freshly produced fragment. Returns an
+	 * empty {@link Optional} when the id is unknown or the re-evaluation failed, in which case the
+	 * previously published fragment is kept.
+	 *
+	 * @param reEvaluationId an id from {@link #getScheduledReEvaluations()}.
+	 * @return the newly produced fragment, or empty.
+	 */
+	default Optional<JsonNode> reevaluate(String reEvaluationId) {
+		return Optional.empty();
+	}
+
+	/**
+	 * Returns the fragment currently published for the given re-evaluation, as produced by the last
+	 * load or re-evaluation. Used to seed change detection so a first firing with unchanged data does
+	 * not trigger a reload. Reads from what the provider already holds: it re-runs nothing.
+	 *
+	 * @param reEvaluationId an id from {@link #getScheduledReEvaluations()}.
+	 * @return the current fragment, or empty when the id is unknown or nothing was produced yet.
+	 */
+	default Optional<JsonNode> currentFragment(String reEvaluationId) {
+		return Optional.empty();
+	}
 }

@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.velocity.runtime.RuntimeConstants.SpaceGobbling;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -278,5 +279,48 @@ class VelocityConfigurationLoaderTest {
 			yaml.lines().noneMatch(String::isBlank),
 			() -> "An unsupported mode should fall back to 'lines', but got:\n" + yaml
 		);
+	}
+
+	@Test
+	void testScheduleDeclarationIsDiscoveredAndPrintsNothing(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		final String yaml = loader.generateYaml();
+
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+		assertTrue(yaml.contains("resources:"), () -> "The body must still render, but got:\n" + yaml);
+		assertTrue(!yaml.contains("schedule"), () -> "The directive must print nothing, but got:\n" + yaml);
+	}
+
+	@Test
+	void testNoScheduleDeclarationYieldsNoCron(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("plain.vm");
+		Files.writeString(templatePath, "resources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		loader.generateYaml();
+
+		assertTrue(loader.getCron().isEmpty(), "A template without $schedule.cron declares no schedule");
+	}
+
+	/**
+	 * The schedule must reflect the template as it is now: re-rendering after the directive was
+	 * removed must leave no schedule behind.
+	 */
+	@Test
+	void testRemovingTheDeclarationClearsTheCronOnNextRender(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		loader.generateYaml();
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+
+		Files.writeString(templatePath, "resources: {}\n", StandardCharsets.UTF_8);
+		loader.generateYaml();
+
+		assertTrue(loader.getCron().isEmpty(), "The removed declaration must not survive the next render");
 	}
 }

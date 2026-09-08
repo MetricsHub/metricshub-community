@@ -30,11 +30,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.velocity.tools.generic.Alternator;
@@ -56,6 +58,7 @@ import org.apache.velocity.tools.generic.XmlTool;
 import org.codehaus.plexus.util.StringUtils;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.extension.IConfigurationProvider;
+import org.metricshub.engine.extension.ScheduledReEvaluation;
 
 /**
  * This class lists the .vm files under the configuration directory and loads
@@ -93,6 +96,18 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	}
 
 	/**
+	 * Loaders retained from the last {@link #load(Path)}, keyed by absolute template path, so a
+	 * template that declares a schedule can be re-rendered later without a full configuration reload.
+	 */
+	private final Map<Path, VelocityConfigurationLoader> loaders = new ConcurrentHashMap<>();
+
+	/**
+	 * The fragment last produced per template, keyed by absolute path. Lets
+	 * {@link #currentFragment(String)} seed change detection without re-running the template.
+	 */
+	private final Map<Path, JsonNode> lastFragments = new ConcurrentHashMap<>();
+
+	/**
 	 * Returns an unmodifiable view of the Velocity tools map available for
 	 * template evaluation.
 	 *
@@ -105,6 +120,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	@Override
 	public Collection<JsonNode> load(final Path configDirectory) {
 		final List<JsonNode> configurations = new ArrayList<>();
+		final Set<Path> seenPaths = new HashSet<>();
 
 		try (Stream<Path> stream = Files.list(configDirectory)) {
 			stream
@@ -113,16 +129,21 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 					String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
 					return getFileExtensions().stream().anyMatch(fileName::endsWith);
 				})
-				.forEach((Path path) ->
+				.forEach((Path path) -> {
+					seenPaths.add(path.toAbsolutePath());
 					readVmFragment(path).ifPresent((JsonNode jsonNode) -> {
 						configurations.add(jsonNode);
 						log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
-					})
-				);
+					});
+				});
 		} catch (IOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
 		}
+
+		// Forget templates whose files are no longer present, so their schedules stop being exposed.
+		loaders.keySet().retainAll(seenPaths);
+		lastFragments.keySet().retainAll(seenPaths);
 
 		final int size = configurations.size();
 		log.info("Loaded {} Velocity configuration fragment{} from '{}'.", size, size > 1 ? "s" : "", configDirectory);
@@ -138,19 +159,58 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	 *         an empty Optional if an error occurred.
 	 */
 	private Optional<JsonNode> readVmFragment(final Path path) {
+		final Path absolutePath = path.toAbsolutePath();
 		try {
-			var loader = new VelocityConfigurationLoader(path, TOOLS);
+			// Retain the loader so this template can be re-rendered later on its own schedule.
+			final var loader = loaders.computeIfAbsent(absolutePath, key -> new VelocityConfigurationLoader(path, TOOLS));
 			final String yaml = loader.generateYaml();
 
 			if (yaml != null) {
-				log.debug("Generated YAML from template '{}':\n{}", path, yaml);
-				return Optional.of(YAML_MAPPER.readTree(yaml));
+				// Do not log the rendered YAML: it may contain credentials and other sensitive data.
+				log.debug("Generated a YAML configuration fragment from template '{}'.", path);
+				final JsonNode fragment = YAML_MAPPER.readTree(yaml);
+				lastFragments.put(absolutePath, fragment);
+				return Optional.of(fragment);
 			}
 		} catch (Exception e) {
 			log.error("Failed to load Velocity configuration fragment: '{}'. Error: {}", path, e.getMessage());
 			log.debug("Failed to load Velocity configuration fragment: '{}'. Exception:", path, e);
 		}
 		return Optional.empty();
+	}
+
+	@Override
+	public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+		final List<ScheduledReEvaluation> result = new ArrayList<>();
+		loaders.forEach((path, loader) ->
+			loader.getCron().ifPresent(cron -> result.add(new ScheduledReEvaluation(path.toString(), cron)))
+		);
+		return result;
+	}
+
+	@Override
+	public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+		final Path path = Path.of(reEvaluationId);
+		final VelocityConfigurationLoader loader = loaders.get(path);
+		if (loader == null) {
+			log.warn("Unknown scheduled re-evaluation id '{}'.", reEvaluationId);
+			return Optional.empty();
+		}
+		try {
+			// A re-evaluation renders the whole template again, so every data source it reads is re-run.
+			final JsonNode fragment = YAML_MAPPER.readTree(loader.generateYamlDangerous());
+			lastFragments.put(path, fragment);
+			return Optional.of(fragment);
+		} catch (Exception e) {
+			log.error("Failed to re-evaluate template '{}'. Error: {}", reEvaluationId, e.getMessage());
+			log.debug("Re-evaluation exception:", e);
+			return Optional.empty();
+		}
+	}
+
+	@Override
+	public Optional<JsonNode> currentFragment(final String reEvaluationId) {
+		return Optional.ofNullable(lastFragments.get(Path.of(reEvaluationId)));
 	}
 
 	/**
