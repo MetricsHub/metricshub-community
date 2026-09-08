@@ -181,6 +181,9 @@ public class M8bTunnelClient {
 				executor.submit(closing).get(STOP_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
+				// Same reason as below: the queued close never ran, and shutdownNow() is about to
+				// discard it.
+				abandonSession();
 			} catch (ExecutionException | TimeoutException e) {
 				log.debug("The M8B tunnel close frame could not be delivered.", e);
 				// The tunnel thread never reached the close -- it is busy in a listener callback --
@@ -200,14 +203,23 @@ public class M8bTunnelClient {
 	 * an abandoned socket the server still believes in is worse than an abrupt disconnect it can
 	 * see. The published state is cleared with it, so {@link #limits()} stops describing a session
 	 * that is gone.
+	 *
+	 * <p>The listener is told, and told from THIS thread rather than the tunnel's, which is the one
+	 * place the contract is bent. It is bent knowingly: the tunnel thread is the reason we are here,
+	 * and a listener whose whole job is to discard work that can no longer be answered is better
+	 * called on the wrong thread than not called at all.
 	 */
 	private void abandonSession() {
 		final WebSocket socket = webSocket;
 		if (socket != null) {
 			socket.abort();
 		}
+		final boolean wasRegistered = limits != null;
 		webSocket = null;
 		limits = null;
+		if (wasRegistered) {
+			safely("onDisconnected", () -> listener.onDisconnected(WebSocket.NORMAL_CLOSURE, "Forced shutdown"));
+		}
 	}
 
 	/**

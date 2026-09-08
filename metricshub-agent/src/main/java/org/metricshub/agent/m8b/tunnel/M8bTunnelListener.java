@@ -57,6 +57,11 @@ public interface M8bTunnelListener {
 	 * The connection was lost or closed. In-flight invocations are pointless from here on: the server
 	 * has discarded them.
 	 *
+	 * <p>Called on the tunnel thread like every other callback, with one exception: a
+	 * {@link M8bTunnelClient#stop(String)} that could not reach the tunnel thread at all calls it
+	 * from the stopping thread instead. That case is precisely the one where the tunnel thread is
+	 * unavailable, and hearing this late from the wrong thread beats never hearing it.
+	 *
 	 * @param code   WebSocket close code, {@code -1} on a transport error
 	 * @param reason close reason or error message
 	 */
