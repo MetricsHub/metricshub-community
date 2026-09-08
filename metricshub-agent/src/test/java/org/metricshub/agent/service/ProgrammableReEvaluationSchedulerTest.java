@@ -1,5 +1,6 @@
 package org.metricshub.agent.service;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -40,6 +41,7 @@ import org.metricshub.web.AgentContextHolder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.Trigger;
+import org.springframework.scheduling.support.CronTrigger;
 
 class ProgrammableReEvaluationSchedulerTest {
 
@@ -373,6 +375,106 @@ class ProgrammableReEvaluationSchedulerTest {
 		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
 
 		scheduler.stop();
+	}
+
+	@Test
+	void testChangedCronIsRescheduled() {
+		// The template edits its $schedule.cron(...); the id is unchanged, but the old trigger must go.
+		final List<ScheduledReEvaluation> registrations = new ArrayList<>(
+			List.of(new ScheduledReEvaluation("hosts.vm", "0/15 * * * * ?"))
+		);
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+				return List.copyOf(registrations);
+			}
+		};
+
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		final ScheduledFuture<?> firstTask = mock(ScheduledFuture.class);
+		final ScheduledFuture<?> secondTask = mock(ScheduledFuture.class);
+		doReturn(firstTask, secondTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+		final ArgumentCaptor<Trigger> triggerCaptor = ArgumentCaptor.forClass(Trigger.class);
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+
+		scheduler.start();
+		verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Trigger.class));
+
+		// Rediscovering with the very same cron must change nothing.
+		scheduler.rediscoverNewRegistrations();
+		verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Trigger.class));
+		verify(firstTask, never()).cancel(anyBoolean());
+
+		// The cron is edited: the task firing on the old expression must be cancelled and replaced.
+		registrations.set(0, new ScheduledReEvaluation("hosts.vm", "0 0/30 * * * ?"));
+		scheduler.rediscoverNewRegistrations();
+
+		verify(firstTask, times(1)).cancel(false);
+		verify(taskScheduler, times(2)).schedule(any(Runnable.class), triggerCaptor.capture());
+		assertEquals(
+			new CronTrigger("0 0/30 * * * ?").getExpression(),
+			((CronTrigger) triggerCaptor.getValue()).getExpression(),
+			"The new task must fire on the new expression"
+		);
+
+		// A further sweep with the cron now stable must not reschedule again.
+		scheduler.rediscoverNewRegistrations();
+		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
+
+		scheduler.stop();
+	}
+
+	@Test
+	void testFailedReloadIsRetriedOnTheNextFiring() {
+		// The reload fails on the first attempt: the baseline must not advance, so the same change is
+		// retried instead of being silently swallowed.
+		final AtomicInteger reloadAttempts = new AtomicInteger();
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				// Stable value: only the failed reload can make the next firing act again.
+				return Optional.of(TextNode.valueOf("changed"));
+			}
+		};
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () -> {
+			if (reloadAttempts.incrementAndGet() == 1) {
+				throw new IllegalStateException("reload failed");
+			}
+		});
+
+		// First firing: a change is detected, the reload throws and must not be fatal.
+		assertDoesNotThrow(() -> scheduler.onReEvaluation(provider, "hosts.vm"));
+		assertEquals(1, reloadAttempts.get(), "The first firing must have attempted a reload");
+
+		// Second firing with the very same fragment must retry, since the change was never applied.
+		scheduler.onReEvaluation(provider, "hosts.vm");
+		assertEquals(2, reloadAttempts.get(), "A failed reload must be retried on the next firing");
+
+		// Now that it succeeded, the baseline has moved and a third firing must stay quiet.
+		scheduler.onReEvaluation(provider, "hosts.vm");
+		assertEquals(2, reloadAttempts.get(), "Once applied, an unchanged fragment must not reload again");
 	}
 
 	@Test

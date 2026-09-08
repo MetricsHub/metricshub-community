@@ -84,7 +84,7 @@ public class ProgrammableReEvaluationScheduler {
 	 * A newly added template is loaded by whichever reload path noticed the file (the configuration
 	 * file watcher, a UI save, a re-evaluation-driven reload), and those paths do not all go through
 	 * this scheduler. Sweeping periodically makes the pickup independent of which one ran. The sweep
-	 * only compares already-computed ids against {@link #scheduledIds} and performs no I/O.
+	 * only compares already-computed ids and crons against {@link #scheduledCrons} and performs no I/O.
 	 * </p>
 	 */
 	private static final Duration DISCOVERY_INTERVAL = Duration.ofSeconds(30);
@@ -106,11 +106,12 @@ public class ProgrammableReEvaluationScheduler {
 	private final Map<String, JsonNode> lastFragments = new HashMap<>();
 
 	/**
-	 * Ids already handled, so a rediscovery neither re-registers them nor retries one whose cron was
-	 * rejected. Wider than {@link #scheduledTasks}: a registration with an invalid cron is known here
-	 * but holds no task.
+	 * Cron currently applied per re-evaluation id, so a rediscovery can tell an unchanged registration
+	 * from one whose expression was edited. Wider than {@link #scheduledTasks}: a registration whose
+	 * cron was rejected is remembered here but holds no task, so it is not retried until its
+	 * expression changes.
 	 */
-	private final Set<String> scheduledIds = new HashSet<>();
+	private final Map<String, String> scheduledCrons = new HashMap<>();
 
 	/**
 	 * Creates the scheduler.
@@ -168,7 +169,8 @@ public class ProgrammableReEvaluationScheduler {
 
 	/**
 	 * Discovers every {@link ScheduledReEvaluation} currently exposed by the context's providers and
-	 * schedules a cron task for each one not already tracked in {@link #scheduledIds}. Guarded by
+	 * schedules a cron task for each one not already tracked in {@link #scheduledCrons}, reschedules
+	 * one whose cron changed, and cancels those no longer declared. Guarded by
 	 * {@link #lock} so it never races a concurrent re-evaluation's compare-and-merge step.
 	 */
 	private void discoverAndSchedule() {
@@ -185,15 +187,28 @@ public class ProgrammableReEvaluationScheduler {
 			final Set<String> currentIds = new HashSet<>();
 			for (final IConfigurationProvider provider : providers) {
 				for (final ScheduledReEvaluation reEvaluation : provider.getScheduledReEvaluations()) {
-					currentIds.add(reEvaluation.id());
-					if (!scheduledIds.add(reEvaluation.id())) {
-						// Already handled by a previous discovery pass.
+					final String id = reEvaluation.id();
+					currentIds.add(id);
+					final String appliedCron = scheduledCrons.get(id);
+					if (reEvaluation.cron().equals(appliedCron)) {
+						// Already handled by a previous discovery pass, on the very same cron.
 						continue;
 					}
-					// Seed the last-known fragment so a first firing with unchanged data does not reload.
-					provider
-						.currentFragment(reEvaluation.id())
-						.ifPresent(fragment -> lastFragments.put(reEvaluation.id(), fragment));
+					if (appliedCron == null) {
+						// Seed the last-known fragment so a first firing with unchanged data does not reload.
+						provider.currentFragment(id).ifPresent(fragment -> lastFragments.put(id, fragment));
+					} else {
+						// The template edited its expression: drop the task still firing on the old one. The
+						// last-known fragment is kept, since only the cadence changed, not the data.
+						cancelTask(id);
+						log.info(
+							"Re-evaluation of '{}' changed its cron from '{}' to '{}'; it is rescheduled.",
+							id,
+							appliedCron,
+							reEvaluation.cron()
+						);
+					}
+					scheduledCrons.put(id, reEvaluation.cron());
 					scheduleRegistration(provider, reEvaluation);
 				}
 			}
@@ -209,7 +224,7 @@ public class ProgrammableReEvaluationScheduler {
 	 * @param currentIds the ids the providers declare right now
 	 */
 	private void cancelUndeclared(final Set<String> currentIds) {
-		final Iterator<String> knownIds = scheduledIds.iterator();
+		final Iterator<String> knownIds = scheduledCrons.keySet().iterator();
 		while (knownIds.hasNext()) {
 			final String id = knownIds.next();
 			if (currentIds.contains(id)) {
@@ -217,11 +232,20 @@ public class ProgrammableReEvaluationScheduler {
 			}
 			knownIds.remove();
 			lastFragments.remove(id);
-			final ScheduledFuture<?> future = scheduledTasks.remove(id);
-			if (future != null) {
-				future.cancel(false);
-			}
+			cancelTask(id);
 			log.info("Re-evaluation of '{}' is no longer declared; its schedule is cancelled.", id);
+		}
+	}
+
+	/**
+	 * Cancels and forgets the cron task of a single re-evaluation, if it holds one.
+	 *
+	 * @param reEvaluationId the re-evaluation whose task must be cancelled
+	 */
+	private void cancelTask(final String reEvaluationId) {
+		final ScheduledFuture<?> future = scheduledTasks.remove(reEvaluationId);
+		if (future != null) {
+			future.cancel(false);
 		}
 	}
 
@@ -270,12 +294,19 @@ public class ProgrammableReEvaluationScheduler {
 				log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
 				return;
 			}
-			lastFragments.put(reEvaluationId, fragment.get());
 			log.info("Re-evaluation of '{}' changed the configuration; reloading.", reEvaluationId);
 			try {
 				reloadTrigger.triggerReload();
+				// The baseline only moves once the change was applied. A failed reload leaves it behind,
+				// so the next firing sees the same difference again and retries instead of going quiet
+				// on a configuration that was never updated.
+				lastFragments.put(reEvaluationId, fragment.get());
 			} catch (Exception e) {
-				log.error("Reload after re-evaluation of '{}' failed: {}", reEvaluationId, e.getMessage());
+				log.error(
+					"Reload after re-evaluation of '{}' failed: {}. The change is kept pending and retried on the next firing.",
+					reEvaluationId,
+					e.getMessage()
+				);
 				log.debug("Reload error:", e);
 			}
 		}
@@ -293,7 +324,7 @@ public class ProgrammableReEvaluationScheduler {
 			}
 			scheduledTasks.values().forEach(future -> future.cancel(false));
 			scheduledTasks.clear();
-			scheduledIds.clear();
+			scheduledCrons.clear();
 			lastFragments.clear();
 		}
 	}

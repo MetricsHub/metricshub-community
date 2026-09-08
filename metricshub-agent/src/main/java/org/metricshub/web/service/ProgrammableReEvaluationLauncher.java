@@ -22,13 +22,13 @@ package org.metricshub.web.service;
  */
 
 import jakarta.annotation.PreDestroy;
-import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.service.ProgrammableReEvaluationScheduler;
 import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.TaskSchedulingService;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -48,6 +48,12 @@ import org.springframework.stereotype.Service;
  * resource-level ({@code LOCAL_ONLY}) outcome also re-syncs the scheduler's own discovery
  * ({@link ProgrammableReEvaluationScheduler#rediscoverNewRegistrations()}), so a schedule declared
  * by a newly added template is picked up without waiting for a full restart.
+ * </p>
+ * <p>
+ * Around a global restart the schedules are cancelled before the outgoing context is stopped and
+ * re-created against the rebuilt one, so no firing runs against a context being torn down. The
+ * restart itself is handed a lazy supplier rather than a pre-built context, so a request that gets
+ * coalesced away leaks nothing.
  * </p>
  */
 @Service
@@ -93,12 +99,33 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 			scheduler = new ProgrammableReEvaluationScheduler(agentContextHolder, taskScheduler, this::reload);
 			scheduler.start();
 
+			// A restart stops the services of the outgoing context. Cancel the schedules first, so no
+			// firing can re-evaluate against a context that is being torn down or trigger a reload
+			// while the swap is in progress.
+			agentLifecycleService.addPreRestartHook(this::quiesce);
+
 			// After a full restart the extension manager (and its providers) is rebuilt, so re-discover
 			// the declared re-evaluations against the new context.
 			agentLifecycleService.addPostRestartHook(context -> resync());
 		} catch (Exception e) {
 			log.error("Failed to start the programmable re-evaluation scheduler: {}", e.getMessage());
 			log.debug("Programmable re-evaluation scheduler startup error", e);
+		}
+	}
+
+	/**
+	 * Cancels every schedule before a global restart tears the current context down. The scheduler
+	 * itself is kept, and {@link #resync()} re-creates the schedules once the new context is in place.
+	 * Any failure is caught so it never aborts the restart.
+	 */
+	private synchronized void quiesce() {
+		try {
+			if (scheduler != null) {
+				scheduler.stop();
+			}
+		} catch (Exception e) {
+			log.error("Failed to quiesce the programmable re-evaluation scheduler: {}", e.getMessage());
+			log.debug("Programmable re-evaluation scheduler quiesce error", e);
 		}
 	}
 
@@ -141,7 +168,16 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 				.reload();
 
 			switch (result) {
-				case GLOBAL_RESTART_REQUIRED -> agentLifecycleService.restartAsync(reloadedContextSupplier(reloadedContext));
+				case GLOBAL_RESTART_REQUIRED -> {
+					// The comparison context is closed here rather than handed over: restartAsync coalesces
+					// requests and drops a superseded one WITHOUT invoking its supplier, so a pre-built
+					// context would be left started with nothing to close it. The supplier below builds the
+					// context lazily, on the restart thread, and only if the request actually runs.
+					final String configDirectory = currentContext.getConfigDirectory().toString();
+					final ExtensionManager extensionManager = currentContext.getExtensionManager();
+					reloadedContext.close();
+					agentLifecycleService.restartAsync(() -> new AgentContext(configDirectory, extensionManager));
+				}
 				case LOCAL_ONLY -> {
 					// The rebuilt context reused the running ExtensionManager, so its providers (e.g. a
 					// newly added .vm file) are already up to date; pick up any schedule they declare
@@ -167,16 +203,6 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Wraps an already-built context in a supplier for {@link AgentLifecycleService#restartAsync}.
-	 *
-	 * @param reloadedContext the pre-built reloaded context
-	 * @return a supplier returning it
-	 */
-	private static Supplier<AgentContext> reloadedContextSupplier(final AgentContext reloadedContext) {
-		return () -> reloadedContext;
 	}
 
 	/**
