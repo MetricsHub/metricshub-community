@@ -59,6 +59,14 @@ This is a multi-module project:
 > [!TIP]
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
 
+## File log capture
+
+When a file source uses wildcards or multiple paths, LOG mode includes an empty
+`<<<LOG:file="...">>>` / `<<<END_LOG>>>` block for each accessible file on its first
+poll and on subsequent polls with no new content. The first poll initializes the
+cursor without reading existing content. A single literal path retains its
+content-only output format.
+
 ## How to build the Project
 
 ### Requirements
