@@ -51,8 +51,11 @@ public final class MultiHostToolExecutor {
 	 *                              concurrent execution
 	 * @param <T>                   type of the per-host response
 	 * @return the aggregated response wrapper containing entries for each requested hostname
-	 * @throws CancellationException if the calling thread is interrupted while waiting, in which case
-	 *                               the per-host tasks are cancelled and their threads interrupted
+	 * @throws CancellationException if the calling thread is interrupted, in which case the per-host
+	 *                               tasks are cancelled and their threads interrupted. The call
+	 *                               returns only once the pool it created has terminated, so a host
+	 *                               operation that ignores its interruption holds its caller rather
+	 *                               than outliving it
 	 */
 	public static <T> MultiHostToolResponse<T> executeForHosts(
 		final List<String> hostnames,
@@ -72,14 +75,15 @@ public final class MultiHostToolExecutor {
 		final var resolvedPoolSize = NumberHelper.getPositiveOrDefault(poolSize, 1).intValue();
 
 		if (resolvedPoolSize <= 1) {
-			aggregatedResponse
-				.getHosts()
-				.addAll(
-					hostnames
-						.stream()
-						.map(hostname -> hostname == null ? nullHostnameSupplier.get() : perHostTask.apply(hostname))
-						.toList()
-				);
+			for (final String hostname : hostnames) {
+				// Nothing waits interruptibly on this path, so a pending interruption is what there
+				// is to go on. An operation that consumed one and did not restore it leaves nothing
+				// for anyone to observe, here or anywhere else
+				if (Thread.currentThread().isInterrupted()) {
+					throw new CancellationException("Multi-host execution was cancelled");
+				}
+				aggregatedResponse.getHosts().add(hostname == null ? nullHostnameSupplier.get() : perHostTask.apply(hostname));
+			}
 			return aggregatedResponse;
 		}
 
@@ -103,8 +107,9 @@ public final class MultiHostToolExecutor {
 				// Per-host failures are surfaced by the join() calls below, as CompletionException
 			} catch (InterruptedException interruptedException) {
 				futures.forEach(future -> future.cancel(true));
-				// Interrupts the in-flight host operations, the finally block only shuts down
+				// What actually interrupts the running host operations
 				executor.shutdownNow();
+				awaitTermination(executor);
 				Thread.currentThread().interrupt();
 				throw new CancellationException("Multi-host execution was cancelled");
 			}
@@ -120,6 +125,26 @@ public final class MultiHostToolExecutor {
 			} catch (InterruptedException interruptedException) {
 				executor.shutdownNow();
 				Thread.currentThread().interrupt();
+			}
+		}
+	}
+
+	/**
+	 * Waits for an already shut down pool to terminate, ignoring further interruptions.
+	 *
+	 * <p>Host operations that observe their interruption are gone in milliseconds. One that does not
+	 * — a blocking socket read — keeps its thread whatever the caller does, and holding the caller
+	 * here is what keeps such threads under the caller's own ceiling, instead of freeing the caller
+	 * to start another fan-out and leaving a live pool behind for every cancelled invocation.
+	 *
+	 * @param executor the pool to wait for
+	 */
+	private static void awaitTermination(final ExecutorService executor) {
+		while (!executor.isTerminated()) {
+			try {
+				executor.awaitTermination(1, TimeUnit.HOURS);
+			} catch (InterruptedException interruptedException) {
+				// Already cancelling: another interruption cannot bring these threads back sooner
 			}
 		}
 	}
