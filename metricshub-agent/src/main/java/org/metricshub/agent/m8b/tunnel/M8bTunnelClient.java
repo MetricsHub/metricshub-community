@@ -287,6 +287,28 @@ public class M8bTunnelClient {
 		});
 	}
 
+	/**
+	 * Drops the current connection so the next one re-registers.
+	 *
+	 * <p>The only way to publish a changed identity: {@code agent.register} is the one frame that
+	 * carries a descriptor, and the protocol already says a reconnection rebuilds the registration
+	 * from the current context. Cheap, because it happens on a configuration reload and not
+	 * otherwise.
+	 *
+	 * @param reason logged, and sent as the close reason
+	 */
+	public void reconnect(final String reason) {
+		dispatch(() -> {
+			if (!stopped && webSocket != null) {
+				log.info("M8B tunnel reconnecting. Reason: {}.", reason);
+				dropConnection(generation, WebSocket.NORMAL_CLOSURE, reason);
+				// Straight back, not through the retry schedule: nothing failed, and letting a
+				// deliberate reconnection grow the backoff would slow the next genuine retry.
+				connect(++generation);
+			}
+		});
+	}
+
 	// ---- tunnel thread ----
 
 	/**
@@ -542,6 +564,9 @@ public class M8bTunnelClient {
 			return;
 		}
 		final String text = M8bJson.write(message);
+		if (!withinPayloadCap(message, text)) {
+			return;
+		}
 		final long sendGeneration = generation;
 		// The JDK WebSocket refuses concurrent sends: chain them on the tunnel thread
 		sendChain = sendChain
@@ -555,6 +580,43 @@ public class M8bTunnelClient {
 				});
 				return webSocket;
 			});
+	}
+
+	/**
+	 * Refuses a frame the server has said it will not accept.
+	 *
+	 * <p>The last gate before the socket, and the only one every frame passes: a tool answer is
+	 * already measured by the bridge, but a registration and a {@code hosts.updated} are not, and a
+	 * fleet monitoring thousands of hosts or advertising large schemas can produce either above the
+	 * cap. Sending it anyway costs the whole tunnel (close {@code 1009}), so what is lost by
+	 * refusing is one frame rather than the session.
+	 *
+	 * <p>Refusing a registration is the awkward case, and still the right one: the alternative is a
+	 * connect-and-1009 loop. Dropped, the socket simply fails its registration deadline, which is
+	 * slower, quieter, and leaves the error log the only thing that explains either.
+	 *
+	 * @param message what is being sent, for the log line
+	 * @param text    its serialized form
+	 * @return whether it may go
+	 */
+	private boolean withinPayloadCap(final M8bMessage message, final String text) {
+		final AgentRegistered current = limits;
+		if (current == null) {
+			// The server has not said yet, and the frame that asks it cannot wait for the answer.
+			return true;
+		}
+		final int size = text.getBytes(StandardCharsets.UTF_8).length;
+		if (size <= current.maxPayloadBytes()) {
+			return true;
+		}
+		log.error(
+			"M8B tunnel: refusing to send a '{}' of {} bytes, above the {} bytes this server accepts. " +
+				"Sending it would close the tunnel; it is dropped instead.",
+			message.type(),
+			size,
+			current.maxPayloadBytes()
+		);
+		return false;
 	}
 
 	private void cancelTimers() {

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.m8b.protocol.AgentDescriptor;
+import org.metricshub.agent.m8b.protocol.HostDescriptor;
 import org.metricshub.agent.m8b.protocol.M8bJson;
 import org.metricshub.agent.m8b.protocol.M8bMessage;
 import org.metricshub.agent.m8b.protocol.M8bMessage.AgentRegister;
@@ -317,6 +318,34 @@ class M8bTunnelClientTest {
 			"A peer that keeps fragmenting must lose the connection, not the agent its heap"
 		);
 		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "and the agent reconnects");
+	}
+
+	@Test
+	void aFrameAboveTheServersCapIsDroppedRatherThanSent() throws Exception {
+		server = new FakeM8bServer();
+		// The agent is told a cap of 512 bytes at registration
+		server.limits = new AgentRegistered(30, 512, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// A hosts.updated far above it. Sending it would close the tunnel (1009), which costs the
+		// session rather than the frame.
+		final List<HostDescriptor> huge = new java.util.ArrayList<>();
+		for (int host = 0; host < 200; host++) {
+			huge.add(new HostDescriptor("server-" + host, "rg", Map.of("ssh", "server-" + host + ".example.com"), Map.of()));
+		}
+		client.send(new M8bMessage.HostsUpdated(huge));
+
+		assertNull(server.awaitFrame(M8bMessage.HostsUpdated.TYPE, 1_000), "It must not reach the server");
+		assertTrue(client.isConnected(), "and the tunnel must survive");
+
+		// A small one still goes
+		client.send(new M8bMessage.HostsUpdated(List.of(huge.get(0))));
+		assertNotNull(server.awaitFrame(M8bMessage.HostsUpdated.TYPE, TIMEOUT_MS));
 	}
 
 	@Test

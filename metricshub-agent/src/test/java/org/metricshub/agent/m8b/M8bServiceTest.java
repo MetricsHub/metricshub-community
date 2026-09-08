@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -304,6 +305,28 @@ class M8bServiceTest {
 		// Same generation again: nothing more is sent
 		service.supervise();
 		verify(client).send(any());
+	}
+
+	@Test
+	void shouldReRegisterWhenTheAgentsIdentityChanges() {
+		configure(M8bConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		service.supervise();
+		final M8bTunnelClient client = createdClients.get(0);
+		capturedListeners.get(0).buildRegistration();
+
+		// A reload that renames the host. There is no frame that amends an identity -- agent.register
+		// is the only one carrying a descriptor -- so the only way to tell the Governor is to register
+		// again.
+		when(agentInfo.getAttributes()).thenReturn(Map.of("host.name", "renamed-01", "service.name", "MetricsHub Agent"));
+		generation = 2;
+		service.supervise();
+
+		verify(client).reconnect(anyString());
+		verify(client, never()).send(any(HostsUpdated.class));
+
+		// And not again for the same identity
+		service.supervise();
+		verify(client).reconnect(anyString());
 	}
 
 	@Test

@@ -37,6 +37,7 @@ import org.metricshub.agent.config.M8bConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.fleet.FleetHeaders;
+import org.metricshub.agent.m8b.protocol.AgentDescriptor;
 import org.metricshub.agent.m8b.protocol.HostDescriptor;
 import org.metricshub.agent.m8b.protocol.M8bMessage;
 import org.metricshub.agent.m8b.protocol.M8bMessage.AgentRegister;
@@ -88,6 +89,14 @@ public class M8bService {
 	// supervisor holds while stop() waits for the tunnel thread to run its closing task.
 	private volatile long advertisedGeneration;
 	private volatile List<HostDescriptor> advertisedHosts = List.of();
+	/**
+	 * The identity the current session was registered with.
+	 *
+	 * <p>Kept because the protocol has no way to amend it: {@code agent.register} is the only frame
+	 * that carries a descriptor, so a reload that renames the host or adds an attribute can only
+	 * reach the Governor through a new registration.
+	 */
+	private volatile AgentDescriptor advertisedDescriptor;
 
 	/**
 	 * @param agentContextHolder   the running agent context
@@ -155,8 +164,20 @@ public class M8bService {
 			return;
 		}
 		if (client != null && client.isConnected() && agentContextHolder.getGeneration() != advertisedGeneration) {
-			// A configuration reload swapped the agent context: re-advertise the hosts if they changed
+			// A configuration reload swapped the agent context: re-advertise what actually changed
 			final ContextSnapshot current = readContextSnapshot();
+			final AgentDescriptor descriptor = AgentDescriptorMapper.map(current.context());
+			if (!descriptor.equals(advertisedDescriptor)) {
+				// There is no frame that amends an identity: agent.register is the only one that
+				// carries a descriptor, so a renamed host or a new attribute reaches the Governor by
+				// registering again. Reconnecting rebuilds the registration from the current context,
+				// which is what the protocol already promises a reconnection does -- and it carries
+				// the hosts with it, so nothing below needs to run.
+				log.info("M8B tunnel: the agent's identity changed; reconnecting to re-register.");
+				client.reconnect("Agent description changed");
+				advertisedDescriptor = descriptor;
+				return;
+			}
 			final List<HostDescriptor> hosts = HostInventory.from(current.context());
 			if (!hosts.equals(advertisedHosts)) {
 				client.send(new HostsUpdated(hosts));
@@ -265,6 +286,7 @@ public class M8bService {
 		}
 		closeBridge();
 		advertisedHosts = List.of();
+		advertisedDescriptor = null;
 		advertisedGeneration = 0;
 	}
 
@@ -309,15 +331,11 @@ public class M8bService {
 		public AgentRegister buildRegistration() {
 			final ContextSnapshot current = readContextSnapshot();
 			final List<HostDescriptor> hosts = HostInventory.from(current.context());
+			final AgentDescriptor descriptor = AgentDescriptorMapper.map(current.context());
 			advertisedHosts = hosts;
+			advertisedDescriptor = descriptor;
 			advertisedGeneration = current.generation();
-			return new AgentRegister(
-				M8bMessage.PROTOCOL_VERSION,
-				AgentDescriptorMapper.map(current.context()),
-				snapshot.revision(),
-				snapshot.tools(),
-				hosts
-			);
+			return new AgentRegister(M8bMessage.PROTOCOL_VERSION, descriptor, snapshot.revision(), snapshot.tools(), hosts);
 		}
 
 		@Override
