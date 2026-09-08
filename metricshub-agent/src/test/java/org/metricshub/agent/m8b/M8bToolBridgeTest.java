@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -33,11 +34,14 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 class M8bToolBridgeTest {
 
 	private static final long TIMEOUT_MS = 5_000;
+	private static final long GENERATION = 1;
 
 	private final BlockingQueue<M8bMessage> answers = new LinkedBlockingQueue<>();
+	private final BlockingQueue<Long> answeredGenerations = new LinkedBlockingQueue<>();
 	private ToolCallback listHosts;
 	private ToolCallback slow;
 	private M8bToolBridge bridge;
+	private ExecutorService workers;
 
 	private static ToolCallback callback(final String name) {
 		final ToolDefinition definition = mock(ToolDefinition.class);
@@ -55,12 +59,21 @@ class M8bToolBridgeTest {
 		slow = callback("Slow");
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
 		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { listHosts, slow });
-		bridge = new M8bToolBridge(ToolRegistrySnapshot.from(provider, Set.of()), answers::add);
+		workers = M8bToolBridge.newWorkerPool();
+		bridge = new M8bToolBridge(
+			ToolRegistrySnapshot.from(provider, Set.of()),
+			(answer, generation) -> {
+				answers.add(answer);
+				answeredGenerations.add(generation);
+			},
+			workers
+		);
 	}
 
 	@AfterEach
 	void tearDown() {
 		bridge.shutdown();
+		workers.shutdownNow();
 	}
 
 	private static ToolInvoke invoke(final String tool, final long timeoutMs) {
@@ -77,7 +90,7 @@ class M8bToolBridgeTest {
 	void shouldReturnTheToolOutputAsJson() throws Exception {
 		when(listHosts.call(anyString())).thenReturn("{\"server-01\":{\"resourceGroupKey\":\"paris\"}}");
 
-		bridge.invoke(new ToolInvoke("req-1", "ListHosts", M8bJson.MAPPER.readTree("{}"), 10_000));
+		bridge.invoke(new ToolInvoke("req-1", "ListHosts", M8bJson.MAPPER.readTree("{}"), 10_000), GENERATION);
 
 		final ToolResult result = assertInstanceOf(ToolResult.class, answer());
 		assertEquals("req-1", result.requestId());
@@ -90,7 +103,7 @@ class M8bToolBridgeTest {
 	void shouldWrapANonJsonOutputAsText() throws Exception {
 		when(listHosts.call(anyString())).thenReturn("No host configured");
 
-		bridge.invoke(invoke("ListHosts", 10_000));
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 
 		final ToolResult result = assertInstanceOf(ToolResult.class, answer());
 		final JsonNode node = result.result();
@@ -103,16 +116,19 @@ class M8bToolBridgeTest {
 		when(listHosts.call("{\"hostname\":[\"a\"]}")).thenReturn("1");
 		when(listHosts.call("{}")).thenReturn("2");
 
-		bridge.invoke(new ToolInvoke("req-args", "ListHosts", M8bJson.MAPPER.readTree("{\"hostname\":[\"a\"]}"), 10_000));
+		bridge.invoke(
+			new ToolInvoke("req-args", "ListHosts", M8bJson.MAPPER.readTree("{\"hostname\":[\"a\"]}"), 10_000),
+			GENERATION
+		);
 		assertEquals(1, assertInstanceOf(ToolResult.class, answer()).result().asInt());
 
-		bridge.invoke(new ToolInvoke("req-null", "ListHosts", null, 10_000));
+		bridge.invoke(new ToolInvoke("req-null", "ListHosts", null, 10_000), GENERATION);
 		assertEquals(2, assertInstanceOf(ToolResult.class, answer()).result().asInt());
 	}
 
 	@Test
 	void shouldRefuseAToolThatIsNotAdvertised() throws Exception {
-		bridge.invoke(invoke("ExecuteSshCommandline", 10_000));
+		bridge.invoke(invoke("ExecuteSshCommandline", 10_000), GENERATION);
 
 		final ToolError error = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.TOOL_NOT_AVAILABLE, error.code());
@@ -122,13 +138,13 @@ class M8bToolBridgeTest {
 	@Test
 	void shouldMapBadArgumentsAndFailures() throws Exception {
 		when(listHosts.call(anyString())).thenThrow(new IllegalArgumentException("hostname is required"));
-		bridge.invoke(invoke("ListHosts", 10_000));
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 		final ToolError invalid = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.INVALID_ARGUMENTS, invalid.code());
 		assertEquals("hostname is required", invalid.message());
 
 		doThrow(new IllegalStateException("boom")).when(listHosts).call(anyString());
-		bridge.invoke(invoke("ListHosts", 10_000));
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 		final ToolError failed = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.EXECUTION_ERROR, failed.code());
 		assertEquals("boom", failed.message());
@@ -142,7 +158,7 @@ class M8bToolBridgeTest {
 			return "late";
 		});
 
-		bridge.invoke(invoke("Slow", 200));
+		bridge.invoke(invoke("Slow", 200), GENERATION);
 
 		final ToolError error = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.TIMEOUT, error.code());
@@ -161,8 +177,8 @@ class M8bToolBridgeTest {
 		});
 		when(listHosts.call(anyString())).thenReturn("{}");
 
-		bridge.invoke(invoke("Slow", 10_000));
-		bridge.invoke(invoke("ListHosts", 10_000));
+		bridge.invoke(invoke("Slow", 10_000), GENERATION);
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 
 		final ToolError refused = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.TOO_MANY_INFLIGHT, refused.code());
@@ -179,7 +195,7 @@ class M8bToolBridgeTest {
 		when(listHosts.call(anyString())).thenReturn("{}");
 
 		// A long server timeout must not keep the request queued in the timer once it is answered
-		bridge.invoke(invoke("ListHosts", 600_000));
+		bridge.invoke(invoke("ListHosts", 600_000), GENERATION);
 
 		assertInstanceOf(ToolResult.class, answer());
 		await()
@@ -188,19 +204,21 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
-	void shouldNotAnswerAfterItsSessionDisconnected() throws Exception {
+	void shouldAnswerOnTheConnectionThatAsked() throws Exception {
 		final CountDownLatch release = new CountDownLatch(1);
 		when(slow.call(anyString())).thenAnswer(invocation -> {
 			release.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
 			return "{}";
 		});
 
-		bridge.invoke(invoke("Slow", 10_000));
-		bridge.cancelSessionWork();
+		bridge.invoke(invoke("Slow", 10_000), 7);
 		release.countDown();
+		assertInstanceOf(ToolResult.class, answer());
 
-		// The tunnel session that asked is gone: the answer must not land on the next one
-		assertEquals(null, answers.poll(1_000, TimeUnit.MILLISECONDS));
+		// The answer carries the connection that asked for it, whatever happened in between. That
+		// number is what the client compares before putting anything on a socket, on the very
+		// thread that changes it -- so an answer outliving its session cannot reach the next one.
+		assertEquals(7L, answeredGenerations.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
 	}
 
 	/**
@@ -219,7 +237,7 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
-	void shouldFreeTheSlotOfWorkThatOutlivesItsSession() throws Exception {
+	void shouldFreeTheSlotOfAnInvocationThatIgnoredItsDeadline() throws Exception {
 		bridge.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 1));
 		final CountDownLatch stuck = new CountDownLatch(1);
 		when(slow.call(anyString())).thenAnswer(invocation -> {
@@ -227,17 +245,18 @@ class M8bToolBridgeTest {
 			return "{}";
 		});
 
-		bridge.invoke(invoke("Slow", 100));
-		bridge.cancelSessionWork();
+		bridge.invoke(invoke("Slow", 100), GENERATION);
 
+		// The Governor is told the invocation is over, and the slot goes back with the answer even
+		// though the thread running it never will
+		assertEquals(ToolErrorCode.TIMEOUT, assertInstanceOf(ToolError.class, answer()).code());
 		await()
 			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
 			.untilAsserted(() -> assertEquals(0, bridge.inFlight(), "The deadline must release the slot"));
-		assertEquals(null, answers.poll(200, TimeUnit.MILLISECONDS), "The session that asked is gone");
 
 		// And the cap is genuinely free again: the next invocation runs rather than being refused
 		when(listHosts.call(anyString())).thenReturn("{}");
-		bridge.invoke(invoke("ListHosts", 10_000));
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 		assertInstanceOf(ToolResult.class, answer());
 		stuck.countDown();
 	}
@@ -256,7 +275,7 @@ class M8bToolBridgeTest {
 		final int attempts = M8bToolBridge.MAX_WORKER_THREADS + 8;
 		try {
 			for (int i = 0; i < attempts; i++) {
-				bridge.invoke(new ToolInvoke("req-" + i, "Slow", M8bJson.MAPPER.createObjectNode(), 50));
+				bridge.invoke(new ToolInvoke("req-" + i, "Slow", M8bJson.MAPPER.createObjectNode(), 50), GENERATION);
 			}
 
 			// Every attempt is answered: the ones that got a thread time out, the rest are refused
@@ -279,7 +298,7 @@ class M8bToolBridgeTest {
 	void shouldTrimAFailureDetailThatWouldNotFitAnErrorFrame() throws Exception {
 		doThrow(new IllegalStateException("x".repeat(50_000))).when(slow).call(anyString());
 
-		bridge.invoke(invoke("Slow", 10_000));
+		bridge.invoke(invoke("Slow", 10_000), GENERATION);
 
 		final ToolError error = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.EXECUTION_ERROR, error.code());
@@ -295,7 +314,7 @@ class M8bToolBridgeTest {
 		bridge.setLimits(new AgentRegistered(30, 64, 4));
 		when(listHosts.call(anyString())).thenReturn("{\"data\":\"" + "x".repeat(200) + "\"}");
 
-		bridge.invoke(invoke("ListHosts", 10_000));
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 
 		final ToolError error = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.RESULT_TOO_LARGE, error.code());

@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
+import java.util.function.ObjLongConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.m8b.protocol.M8bJson;
 import org.metricshub.agent.m8b.protocol.M8bMessage;
@@ -84,29 +84,44 @@ public class M8bToolBridge {
 	static final int MAX_WORKER_THREADS = 32;
 
 	private final ToolRegistrySnapshot snapshot;
-	private final Consumer<M8bMessage> sender;
+	private final ObjLongConsumer<M8bMessage> sender;
 	private final ExecutorService workers;
 	private final ScheduledThreadPoolExecutor timer;
 	private final AtomicInteger inFlight = new AtomicInteger();
-	/**
-	 * Bumped whenever the tunnel session ends. An invocation answers only while its own epoch is
-	 * current: the server discarded the request when the connection dropped, so a late answer would
-	 * land on the next session under a request id that means nothing there.
-	 */
-	private final AtomicInteger epoch = new AtomicInteger();
 	private volatile AgentRegistered limits = DEFAULT_LIMITS;
 
 	/**
 	 * @param snapshot the advertised tools and their callbacks
-	 * @param sender   where answers go, typically {@code client::send}
+	 * @param sender   where answers go, carrying the connection each one answers
+	 * @param workers  the pool tool executions run on, owned by the caller so that its ceiling
+	 *                 survives this bridge being replaced
 	 */
-	public M8bToolBridge(final ToolRegistrySnapshot snapshot, final Consumer<M8bMessage> sender) {
+	public M8bToolBridge(
+		final ToolRegistrySnapshot snapshot,
+		final ObjLongConsumer<M8bMessage> sender,
+		final ExecutorService workers
+	) {
 		this.snapshot = snapshot;
 		this.sender = sender;
+		this.workers = workers;
+		this.timer = new ScheduledThreadPoolExecutor(1, daemonThreads("metricshub-m8b-tool-timer"));
+		// Cancelling a deadline must drop it from the queue at once: otherwise an answered request
+		// keeps its arguments alive until the timeout would have fired
+		this.timer.setRemoveOnCancelPolicy(true);
+	}
+
+	/**
+	 * Builds the pool tool executions run on. One per agent process, not one per bridge: a callback
+	 * that ignores its interruption keeps its thread through a reconfiguration too, so a ceiling
+	 * that reset on every configuration change would bound nothing at all.
+	 *
+	 * @return a bounded pool of daemon threads
+	 */
+	public static ExecutorService newWorkerPool() {
 		// SynchronousQueue, not an unbounded one: a request that finds every thread taken must be
 		// refused now, while the Governor can still act on it, rather than queued behind an
 		// invocation that has already outlived its deadline.
-		this.workers = new ThreadPoolExecutor(
+		return new ThreadPoolExecutor(
 			0,
 			MAX_WORKER_THREADS,
 			60,
@@ -114,10 +129,6 @@ public class M8bToolBridge {
 			new SynchronousQueue<>(),
 			daemonThreads("metricshub-m8b-tool")
 		);
-		this.timer = new ScheduledThreadPoolExecutor(1, daemonThreads("metricshub-m8b-tool-timer"));
-		// Cancelling a deadline must drop it from the queue at once: otherwise an answered request
-		// keeps its arguments alive until the timeout would have fired
-		this.timer.setRemoveOnCancelPolicy(true);
 	}
 
 	/**
@@ -145,9 +156,12 @@ public class M8bToolBridge {
 	/**
 	 * Runs a tool invocation asynchronously and answers through the sender.
 	 *
-	 * @param invoke the request
+	 * @param invoke     the request
+	 * @param generation the tunnel connection it arrived on. Every answer is bound to it, so work
+	 *                   that outlives its session cannot reply to the next one under a request id
+	 *                   that session never issued
 	 */
-	public void invoke(final ToolInvoke invoke) {
+	public void invoke(final ToolInvoke invoke, final long generation) {
 		final ToolCallback callback = snapshot.callbacks().get(invoke.tool());
 		if (callback == null) {
 			sender.accept(
@@ -155,7 +169,8 @@ public class M8bToolBridge {
 					invoke.requestId(),
 					ToolErrorCode.TOOL_NOT_AVAILABLE,
 					"Tool not advertised: " + brief(invoke.tool())
-				)
+				),
+				generation
 			);
 			return;
 		}
@@ -167,7 +182,8 @@ public class M8bToolBridge {
 					invoke.requestId(),
 					ToolErrorCode.TOO_MANY_INFLIGHT,
 					"Already running " + currentLimits.maxInFlight() + " invocation(s)"
-				)
+				),
+				generation
 			);
 			return;
 		}
@@ -176,7 +192,6 @@ public class M8bToolBridge {
 		// The slot is given back exactly once, by whichever of the worker and the deadline gets
 		// there first: a worker cancelled before it ran never reaches its own finally.
 		final AtomicBoolean released = new AtomicBoolean();
-		final int invokeEpoch = epoch.get();
 		// Holds the deadline task so the worker can drop it as soon as it answered: an uncancelled
 		// task keeps the request and its arguments in the timer queue for the whole timeout.
 		final AtomicReference<ScheduledFuture<?>> deadline = new AtomicReference<>();
@@ -191,7 +206,7 @@ public class M8bToolBridge {
 					// Free the slot before the answer leaves: the server may invoke again right away
 					release(released);
 				}
-				answerOnce(answered, invokeEpoch, answer);
+				answerOnce(answered, generation, answer);
 				cancel(deadline.getAndSet(null));
 			});
 		} catch (RejectedExecutionException e) {
@@ -201,7 +216,8 @@ public class M8bToolBridge {
 					invoke.requestId(),
 					ToolErrorCode.TOO_MANY_INFLIGHT,
 					"No worker available: " + MAX_WORKER_THREADS + " invocation(s) are still running, some past their deadline"
-				)
+				),
+				generation
 			);
 			return;
 		}
@@ -211,7 +227,7 @@ public class M8bToolBridge {
 				if (
 					answerOnce(
 						answered,
-						invokeEpoch,
+						generation,
 						new ToolError(invoke.requestId(), ToolErrorCode.TIMEOUT, "Timed out after " + timeoutMs + " ms")
 					)
 				) {
@@ -252,11 +268,11 @@ public class M8bToolBridge {
 	}
 
 	/**
-	 * Releases the worker threads. Running invocations are interrupted.
+	 * Releases what this bridge owns: its deadlines. The worker pool belongs to the caller and
+	 * outlives every bridge, because the threads a stuck callback holds outlive one too.
 	 */
 	public void shutdown() {
 		timer.shutdownNow();
-		workers.shutdownNow();
 	}
 
 	private M8bMessage execute(
@@ -304,25 +320,12 @@ public class M8bToolBridge {
 		}
 	}
 
-	private boolean answerOnce(final AtomicBoolean answered, final int invokeEpoch, final M8bMessage answer) {
-		if (invokeEpoch != epoch.get()) {
-			return false;
-		}
+	private boolean answerOnce(final AtomicBoolean answered, final long generation, final M8bMessage answer) {
 		if (answered.compareAndSet(false, true)) {
-			sender.accept(answer);
+			sender.accept(answer, generation);
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * Drops the answers of everything still running: their tunnel session is gone.
-	 *
-	 * <p>The work itself is left to finish on its own — a tool call is a network round trip to a
-	 * monitored host, and interrupting it buys nothing the deadline will not take care of.
-	 */
-	public void cancelSessionWork() {
-		epoch.incrementAndGet();
 	}
 
 	private static String messageOf(final Exception e) {

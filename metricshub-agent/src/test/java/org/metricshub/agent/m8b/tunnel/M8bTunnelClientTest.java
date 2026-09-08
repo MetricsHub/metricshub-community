@@ -51,6 +51,7 @@ class M8bTunnelClientTest {
 		final AtomicInteger registrations = new AtomicInteger();
 		final BlockingQueue<AgentRegistered> registered = new LinkedBlockingQueue<>();
 		final BlockingQueue<ToolInvoke> invocations = new LinkedBlockingQueue<>();
+		final BlockingQueue<Long> invokedGenerations = new LinkedBlockingQueue<>();
 		final BlockingQueue<Integer> disconnections = new LinkedBlockingQueue<>();
 
 		@Override
@@ -71,8 +72,9 @@ class M8bTunnelClientTest {
 		}
 
 		@Override
-		public void onInvoke(final ToolInvoke invoke) {
+		public void onInvoke(final ToolInvoke invoke, final long generation) {
 			invocations.add(invoke);
+			invokedGenerations.add(generation);
 		}
 
 		@Override
@@ -325,6 +327,27 @@ class M8bTunnelClientTest {
 		assertEquals(1000, M8bTunnelClient.wireCloseCode(M8bTunnelClient.CLOSE_UNSUPPORTED_DATA));
 		assertEquals(1000, M8bTunnelClient.wireCloseCode(1000));
 		assertEquals(4003, M8bTunnelClient.wireCloseCode(M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT));
+	}
+
+	@Test
+	void aPeerThatOnlyEverPingsIsNotASilentPeer() throws Exception {
+		server = new FakeM8bServer();
+		// No protocol answers at all: the only thing arriving will be WebSocket control Pings
+		server.autoPong = false;
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		// The server imposes a 1 s heartbeat, so silence past 2.5 s drops the connection
+		for (int tick = 0; tick < 10; tick++) {
+			server.pingAll();
+			Thread.sleep(400);
+		}
+
+		assertEquals(1, listener.registrations.get(), "A peer that keeps pinging has not gone quiet");
+		assertTrue(client.isConnected());
 	}
 
 	@Test

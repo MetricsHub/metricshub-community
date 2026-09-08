@@ -183,9 +183,31 @@ public class M8bTunnelClient {
 				Thread.currentThread().interrupt();
 			} catch (ExecutionException | TimeoutException e) {
 				log.debug("The M8B tunnel close frame could not be delivered.", e);
+				// The tunnel thread never reached the close -- it is busy in a listener callback --
+				// and the shutdownNow() below discards the queued task. Whatever is left of the
+				// session has to be taken down from here, or the stop returns having left an
+				// authenticated socket open with nothing able to close it.
+				abandonSession();
 			}
 		}
 		executor.shutdownNow();
+	}
+
+	/**
+	 * Takes a session down without the tunnel thread, which is the only situation this is for.
+	 *
+	 * <p>An abort rather than a close: there is nobody left to wait for a close frame to leave, and
+	 * an abandoned socket the server still believes in is worse than an abrupt disconnect it can
+	 * see. The published state is cleared with it, so {@link #limits()} stops describing a session
+	 * that is gone.
+	 */
+	private void abandonSession() {
+		final WebSocket socket = webSocket;
+		if (socket != null) {
+			socket.abort();
+		}
+		webSocket = null;
+		limits = null;
 	}
 
 	/**
@@ -210,6 +232,27 @@ public class M8bTunnelClient {
 	 */
 	public void send(final M8bMessage message) {
 		dispatch(() -> sendNow(message));
+	}
+
+	/**
+	 * Sends an answer, but only if the connection that asked for it is still the current one.
+	 *
+	 * <p>An answer is only meaningful to the session that issued its request id. Checking that
+	 * anywhere but here would be a check followed by a send, with a reconnection free to happen in
+	 * between; the comparison runs on the tunnel thread, which is also the thread that changes the
+	 * generation, so the two cannot interleave.
+	 *
+	 * @param message          the answer
+	 * @param answerGeneration the connection the request arrived on
+	 */
+	public void send(final M8bMessage message, final long answerGeneration) {
+		dispatch(() -> {
+			if (answerGeneration == generation && !stopped) {
+				sendNow(message);
+			} else {
+				log.debug("M8B tunnel: dropping an answer from a connection that is gone (generation {}).", answerGeneration);
+			}
+		});
 	}
 
 	// ---- tunnel thread ----
@@ -269,11 +312,26 @@ public class M8bTunnelClient {
 		);
 	}
 
+	/**
+	 * Records that something arrived on this connection.
+	 *
+	 * <p>Anything: a ping, a pong, one fragment of a long text frame. The protocol says any inbound
+	 * frame is proof the peer is alive, and it has to, because a peer that only ever pings would
+	 * otherwise be closed as silent while it is demonstrably talking.
+	 *
+	 * @param inboundGeneration the connection the frame arrived on
+	 */
+	private void touched(final long inboundGeneration) {
+		if (inboundGeneration == generation && !stopped) {
+			lastInbound = Instant.now();
+		}
+	}
+
 	private void handleFrame(final long frameGeneration, final String text) {
+		touched(frameGeneration);
 		if (frameGeneration != generation || stopped) {
 			return;
 		}
-		lastInbound = Instant.now();
 		final M8bMessage message;
 		try {
 			message = M8bJson.read(text);
@@ -285,7 +343,7 @@ public class M8bTunnelClient {
 		switch (message) {
 			case AgentRegistered registered -> onRegistered(registered);
 			case HeartbeatPong pong -> log.trace("M8B tunnel heartbeat acknowledged.");
-			case ToolInvoke invoke -> safely("onInvoke", () -> listener.onInvoke(invoke));
+			case ToolInvoke invoke -> safely("onInvoke", () -> listener.onInvoke(invoke, frameGeneration));
 			case ProtocolError protocolError -> log.warn(
 				"M8B server reported an error: {} - {}",
 				protocolError.code(),
@@ -568,7 +626,26 @@ public class M8bTunnelClient {
 				final String text = partial.toString();
 				partial.setLength(0);
 				dispatch(() -> handleFrame(frameGeneration, text));
+			} else {
+				// A frame long enough to arrive in pieces must not be mistaken for silence while it
+				// is still arriving.
+				dispatch(() -> touched(frameGeneration));
 			}
+			socket.request(1);
+			return null;
+		}
+
+		@Override
+		public CompletionStage<?> onPing(final WebSocket socket, final ByteBuffer message) {
+			// The JDK answers the Pong itself; what it cannot know is that this counts as liveness.
+			dispatch(() -> touched(frameGeneration));
+			socket.request(1);
+			return null;
+		}
+
+		@Override
+		public CompletionStage<?> onPong(final WebSocket socket, final ByteBuffer message) {
+			dispatch(() -> touched(frameGeneration));
 			socket.request(1);
 			return null;
 		}
