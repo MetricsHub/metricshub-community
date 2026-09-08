@@ -848,7 +848,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | The existing kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
 | Every outbound frame is bounded, and weighed in bytes | Measured at the socket, so it covers a registration and a `hosts.updated` as well as an answer: a fleet monitoring thousands of hosts can produce either above the cap, and sending it would close the tunnel (`1009`) rather than lose one frame. Above the cap, a result becomes `RESULT_TOO_LARGE`, a failure's detail is truncated rather than the failure going unreported, and anything still too large is dropped with an error in the log — the server's own deadline then ends that one invocation |
 | Only actively monitored hosts are advertised | The Governor never routes to a resource the agent could not validate |
-| `maxInFlight` bounds concurrent **invocations**, not the work inside one | A multi-host tool fans out internally, exactly as it does for the agent's own AI features — the tunnel exposes that concurrency, it does not introduce it. Bound it where it is configured (the tool's own pool size), not at the bridge, which cannot tell one tool's fan-out from another's |
+| `maxInFlight` bounds concurrent **invocations**; the work inside one is bounded by the tool, but it is cancelled with the invocation | A multi-host tool fans out internally, exactly as it does for the agent's own AI features — the tunnel exposes that concurrency, it does not introduce it. Bound it where it is configured (the tool's own pool size), not at the bridge, which cannot tell one tool's fan-out from another's. The deadline's interruption does reach that fan-out: `MultiHostToolExecutor` waits interruptibly and shuts its per-call pool down, so a timed-out invocation stops its per-host work instead of leaving it to run to completion unattended. Per-host work that ignores its interruption keeps its thread, as ever — and keeps the worker too, until its pool has terminated, so it stays under the same thread ceiling rather than accumulating a pool per cancelled invocation |
 | Approvals for sensitive tools live in M8B | The agent cannot tell an approved call from any other; the policy lives where the users are |
 
 ### 13.7 Test map
@@ -865,6 +865,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Supervisor: config lifecycle, retries, `hosts.updated` | `M8bServiceTest` |
 | StartupHook wiring and Spring instantiation | `M8bStartupHookTest` |
 | **End to end** — real `ToolCallbackProvider`, `ListHosts` executed over the tunnel | `M8bServiceEndToEndTest` |
+| A cancelled invocation stops the multi-host fan-out inside it | `MultiHostToolExecutorTest` |
 
 ---
 
