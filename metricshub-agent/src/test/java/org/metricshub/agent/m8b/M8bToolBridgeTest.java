@@ -352,6 +352,20 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
+	void aMalformedInvocationIsAnsweredRatherThanSwallowed() throws Exception {
+		// The advertised map is immutable, so asking it for a null key throws -- and the tunnel
+		// callback would swallow that, leaving the Governor to wait out its whole deadline.
+		bridge.invoke(new ToolInvoke("req-1", null, M8bJson.MAPPER.createObjectNode(), 10_000), GENERATION);
+		final ToolError missingTool = assertInstanceOf(ToolError.class, answer());
+		assertEquals(ToolErrorCode.INVALID_ARGUMENTS, missingTool.code());
+		assertEquals("req-1", missingTool.requestId(), "and it is correlated, or it helps nobody");
+
+		// With no request id there is nothing to correlate: the server hears it as a protocol error
+		bridge.invoke(new ToolInvoke(null, "ListHosts", M8bJson.MAPPER.createObjectNode(), 10_000), GENERATION);
+		assertInstanceOf(M8bMessage.ProtocolError.class, answer());
+	}
+
+	@Test
 	void shouldTrimAFailureDetailThatWouldNotFitAnErrorFrame() throws Exception {
 		doThrow(new IllegalStateException("x".repeat(50_000))).when(slow).call(anyString());
 

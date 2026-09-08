@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.m8b.protocol.M8bJson;
 import org.metricshub.agent.m8b.protocol.M8bMessage;
 import org.metricshub.agent.m8b.protocol.M8bMessage.AgentRegistered;
+import org.metricshub.agent.m8b.protocol.M8bMessage.ProtocolError;
 import org.metricshub.agent.m8b.protocol.M8bMessage.ToolError;
 import org.metricshub.agent.m8b.protocol.M8bMessage.ToolInvoke;
 import org.metricshub.agent.m8b.protocol.M8bMessage.ToolResult;
@@ -70,6 +71,9 @@ public class M8bToolBridge {
 	 * cut instead, small enough that an error frame cannot approach any cap worth configuring.
 	 */
 	static final int MAX_ERROR_DETAIL_CHARS = 1000;
+
+	/** The protocol's code for a frame that could not be acted on as written. */
+	static final String MALFORMED_MESSAGE = "MALFORMED_MESSAGE";
 
 	/**
 	 * The hard ceiling on threads this bridge may ever hold at once.
@@ -180,6 +184,23 @@ public class M8bToolBridge {
 	 *                   that session never issued
 	 */
 	public void invoke(final ToolInvoke invoke, final long generation) {
+		if (invoke.requestId() == null || invoke.requestId().isBlank()) {
+			// Nothing to correlate an answer with. Reported as a protocol error rather than dropped,
+			// so the server learns its frame was malformed instead of waiting out a deadline.
+			log.warn("M8B tool invocation without a requestId; reporting a protocol error.");
+			answer(new ProtocolError(MALFORMED_MESSAGE, "tool.invoke requires a requestId"), generation);
+			return;
+		}
+		if (invoke.tool() == null || invoke.tool().isBlank()) {
+			// Checked BEFORE the lookup: the advertised map is immutable, so asking it for a null key
+			// throws, and that exception would be swallowed by the tunnel callback -- leaving the
+			// Governor waiting out its full deadline for an answer that was never coming.
+			answer(
+				new ToolError(invoke.requestId(), ToolErrorCode.INVALID_ARGUMENTS, "tool.invoke requires a tool name"),
+				generation
+			);
+			return;
+		}
 		final ToolCallback callback = snapshot.callbacks().get(invoke.tool());
 		if (callback == null) {
 			answer(
@@ -411,10 +432,12 @@ public class M8bToolBridge {
 		if (fits(message, cap)) {
 			return message;
 		}
-		final M8bMessage bare =
-			message instanceof ToolError error
-				? new ToolError(error.requestId(), error.code(), "")
-				: new ToolError(((ToolResult) message).requestId(), ToolErrorCode.RESULT_TOO_LARGE, "");
+		final M8bMessage bare = switch (message) {
+			case ToolError error -> new ToolError(error.requestId(), error.code(), "");
+			case ToolResult result -> new ToolError(result.requestId(), ToolErrorCode.RESULT_TOO_LARGE, "");
+			// Anything else carries no request id to preserve, so there is nothing smaller to send.
+			default -> message;
+		};
 		if (fits(bare, cap)) {
 			log.warn("M8B answer for request {} does not fit {} bytes; sending it bare.", requestIdOf(message), cap);
 			return bare;

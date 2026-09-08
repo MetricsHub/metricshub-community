@@ -311,9 +311,10 @@ public class M8bTunnelClient {
 		dispatch(() -> {
 			if (!stopped && webSocket != null) {
 				log.info("M8B tunnel reconnecting. Reason: {}.", reason);
-				dropConnection(generation, WebSocket.NORMAL_CLOSURE, reason);
-				// Straight back, not through the retry schedule: nothing failed, and letting a
-				// deliberate reconnection grow the backoff would slow the next genuine retry.
+				// Neither scheduled nor counted: nothing failed. A scheduled attempt would be left
+				// stale by the connect below, and a counted failure would meet the next genuine
+				// outage with a backoff it did not earn.
+				dropConnection(generation, WebSocket.NORMAL_CLOSURE, reason, false);
 				connect(++generation);
 			}
 		});
@@ -559,6 +560,10 @@ public class M8bTunnelClient {
 	}
 
 	private void dropConnection(final long dropGeneration, final int code, final String reason) {
+		dropConnection(dropGeneration, code, reason, true);
+	}
+
+	private void dropConnection(final long dropGeneration, final int code, final String reason, final boolean retry) {
 		if (dropGeneration != generation) {
 			return;
 		}
@@ -566,10 +571,25 @@ public class M8bTunnelClient {
 		if (socket != null) {
 			closeThenAbort(socket, wireCloseCode(code), reason, CLOSE_TIMEOUT);
 		}
-		disconnected(dropGeneration, code, reason);
+		disconnected(dropGeneration, code, reason, retry);
 	}
 
 	private void disconnected(final long lostGeneration, final int code, final String reason) {
+		disconnected(lostGeneration, code, reason, true);
+	}
+
+	/**
+	 * Cleans up after a lost connection, and optionally arranges the next one.
+	 *
+	 * @param lostGeneration the connection that ended
+	 * @param code           its close code
+	 * @param reason         its close reason
+	 * @param retry          whether to schedule a reconnection through the retry schedule. False for
+	 *                       a reconnection we asked for: scheduling one would leave a stale attempt
+	 *                       behind, and counting it as a failure would inflate the backoff a genuine
+	 *                       outage is then met with
+	 */
+	private void disconnected(final long lostGeneration, final int code, final String reason, final boolean retry) {
 		cancelTimers();
 		webSocket = null;
 		sendChain = null;
@@ -587,7 +607,9 @@ public class M8bTunnelClient {
 				settings.agentUid()
 			);
 		}
-		scheduleReconnect(lostGeneration);
+		if (retry) {
+			scheduleReconnect(lostGeneration);
+		}
 	}
 
 	private void scheduleReconnect(final long fromGeneration) {
@@ -813,19 +835,21 @@ public class M8bTunnelClient {
 				return null;
 			}
 			partial.append(data);
-			socket.request(1);
 			if (!last) {
-				// A frame long enough to arrive in pieces must not be mistaken for silence while it
-				// is still arriving. Fragments are always taken: the message has to finish.
+				// Fragments are always asked for immediately: the message has to be allowed to
+				// finish. And a frame long enough to arrive in pieces must not be mistaken for
+				// silence while it is still arriving.
+				socket.request(1);
 				dispatch(() -> touched(frameGeneration));
 				return null;
 			}
 			final String text = partial.toString();
 			reset();
-			// Returning a stage is what makes the peer wait for this frame to be handled. Without it
-			// the tunnel thread's queue is unbounded, and a server sending faster than the agent can
-			// read -- faulty, or deliberate -- fills the agent's heap with frames nobody has looked
-			// at yet.
+			// DEMAND is what holds the peer back, and it is asked for only once this message has been
+			// handled. The returned stage is not enough on its own: the JDK is explicit that it has
+			// nothing to do with the invocation counter, so a server sending faster than the agent
+			// reads -- faulty, or deliberate -- would fill the tunnel thread's unbounded queue with
+			// frames nobody has looked at yet. Not requesting is the thing that actually stops it.
 			final CompletableFuture<Void> handled = new CompletableFuture<>();
 			final boolean taken = dispatch(() -> {
 				try {
@@ -837,6 +861,7 @@ public class M8bTunnelClient {
 			if (!taken) {
 				handled.complete(null);
 			}
+			handled.thenRun(() -> socket.request(1));
 			return handled;
 		}
 
