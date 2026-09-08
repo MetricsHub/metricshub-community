@@ -52,7 +52,7 @@ Rules:
 * Properties whose value is `null` are omitted.
 * Unknown properties are ignored by both sides.
 * A frame whose `type` is unknown is answered with `{"type":"error","code":"UNKNOWN_MESSAGE_TYPE"}` and otherwise ignored; the connection stays open.
-* Binary frames are not used. A binary frame is a protocol error (close `1003`).
+* Binary frames are not used. A binary frame is a protocol error: the server closes `1003`, the agent closes `1000` carrying the reason `Binary frames are not supported` — a WebSocket client may only send `1000` or a code in `[3000, 4999]`, so it states the cause in the reason instead.
 
 ## 3. Messages
 
@@ -121,8 +121,8 @@ The tool list is the **only** source of truth for what M8B may invoke on this ag
 
 | Field | Notes |
 |---|---|
-| `heartbeatIntervalSeconds` | Interval the agent must use for `heartbeat.ping`; overrides the agent configuration |
-| `maxPayloadBytes` | Largest text frame the server accepts. A `tool.result` that would exceed it is replaced by `tool.error` `RESULT_TOO_LARGE` |
+| `heartbeatIntervalSeconds` | Interval the agent must use for `heartbeat.ping`; overrides the agent configuration. Accepted range **1..3600**; a value outside it is **clamped to the nearest bound**, not replaced by the agent's configuration — a governor cannot see what an agent configured, so falling back to it would make two agents answer the same registration at different rates. `0` or absent means "not specified", and only then does the agent's own `heartbeatInterval` apply (clamped to the same range) |
+| `maxPayloadBytes` | Largest text frame the server accepts. A `tool.result` that would exceed it is replaced by `tool.error` `RESULT_TOO_LARGE`. It bounds what the agent *sends*; the agent also keeps a fixed 8 MiB bound on what it *buffers*, and this value can only lower that one — a server saying a larger number is describing its own buffers, not raising the agent's |
 | `maxInFlight` | Maximum number of concurrent `tool.invoke` the agent executes; additional ones are refused with `TOO_MANY_INFLIGHT` |
 
 ### 3.3 `heartbeat.ping` / `heartbeat.pong`
@@ -203,11 +203,13 @@ Informational; never closes the connection by itself.
 |---|---|---|
 | `1000` | agent | Normal shutdown |
 | `1001` | server | Server going away |
-| `1003` | either | Unsupported data (binary frame) |
+| `1002` | server | Protocol version the server does not implement, after `error` `UNSUPPORTED_PROTOCOL_VERSION` |
+| `1003` | server | Unsupported data (binary frame); the agent closes `1000` with the reason instead |
 | `1009` | server | Frame larger than `maxPayloadBytes` |
 | `4001` | server | Superseded by a newer session for the same uid |
 | `4002` | server | No `agent.register` within 10 s |
 | `4003` | either | Heartbeat timeout |
+| `4004` | server | The agent secret this tunnel presented is no longer configured |
 
 ## 5. Tool invocation
 

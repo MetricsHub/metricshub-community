@@ -203,6 +203,13 @@
 			<version>4.3.0</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- Fake M8B Governor (WebSocket server) for the tunnel tests -->
+		<dependency>
+			<groupId>org.java-websocket</groupId>
+			<artifactId>Java-WebSocket</artifactId>
+			<version>1.6.0</version>
+			<scope>test</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
