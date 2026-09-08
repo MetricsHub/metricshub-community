@@ -37,6 +37,24 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class InstanceUidStore {
 
+	/**
+	 * Makes "read it, or create it" one step for everything in this process.
+	 *
+	 * <p>Without it the sequence is check-then-generate-then-replace, and an agent with more than one
+	 * fleet channel has more than one caller: the OpAMP client and the M8B tunnel are supervised by
+	 * separate threads, and on a fresh installation both can find no file, both generate, and both
+	 * write — the second replacing the first. Each then returns its OWN uid, so the two channels
+	 * register as different agents, and after a restart whichever lost the write changes identity.
+	 *
+	 * <p>One lock for every store rather than one per path: this runs a couple of times in the life
+	 * of a process, so there is nothing to be gained by making the contention finer.
+	 *
+	 * <p>What this does not do is make two PROCESSES sharing the file safe. That is a duplicated
+	 * identity rather than a race, it is not a supported installation, and the fleet already names it
+	 * — a second agent registering with the same uid supersedes the first, which reports close 4001.
+	 */
+	private static final Object CREATION_LOCK = new Object();
+
 	private final Path file;
 
 	/**
@@ -56,16 +74,18 @@ public class InstanceUidStore {
 	 * @throws IOException if the instance UID cannot be read or persisted
 	 */
 	public byte[] loadOrCreate() throws IOException {
-		if (Files.isRegularFile(file)) {
-			try {
-				return UuidV7.fromCanonicalString(Files.readString(file, StandardCharsets.UTF_8));
-			} catch (IllegalArgumentException _) {
-				log.warn("Invalid OpAMP instance UID in {}; a new instance UID is generated.", file);
+		synchronized (CREATION_LOCK) {
+			if (Files.isRegularFile(file)) {
+				try {
+					return UuidV7.fromCanonicalString(Files.readString(file, StandardCharsets.UTF_8));
+				} catch (IllegalArgumentException _) {
+					log.warn("Invalid OpAMP instance UID in {}; a new instance UID is generated.", file);
+				}
 			}
+			final byte[] instanceUid = UuidV7.generate();
+			store(instanceUid);
+			return instanceUid;
 		}
-		final byte[] instanceUid = UuidV7.generate();
-		store(instanceUid);
-		return instanceUid;
 	}
 
 	/**
