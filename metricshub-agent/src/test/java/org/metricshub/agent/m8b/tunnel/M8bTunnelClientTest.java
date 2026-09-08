@@ -328,6 +328,27 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void aPeerThatOnlyEverPingsIsNotASilentPeer() throws Exception {
+		server = new FakeM8bServer();
+		// No protocol answers at all: the only thing arriving will be WebSocket control Pings
+		server.autoPong = false;
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		// The server imposes a 1 s heartbeat, so silence past 2.5 s drops the connection
+		for (int tick = 0; tick < 10; tick++) {
+			server.pingAll();
+			Thread.sleep(400);
+		}
+
+		assertEquals(1, listener.registrations.get(), "A peer that keeps pinging has not gone quiet");
+		assertTrue(client.isConnected());
+	}
+
+	@Test
 	void shouldDropTheConnectionOnABinaryFrame() throws Exception {
 		server = new FakeM8bServer();
 		server.startAndAwait();

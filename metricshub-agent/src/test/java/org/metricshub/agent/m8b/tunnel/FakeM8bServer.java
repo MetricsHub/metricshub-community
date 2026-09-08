@@ -103,6 +103,11 @@ public class FakeM8bServer extends WebSocketServer {
 		connections.forEach(connection -> connection.send(text));
 	}
 
+	/** Sends a WebSocket control Ping -- not a protocol frame -- to every connection. */
+	public void pingAll() {
+		connections.forEach(WebSocket::sendPing);
+	}
+
 	public void sendBinaryToAll(final byte[] payload) {
 		connections.forEach(connection -> connection.send(payload));
 	}
