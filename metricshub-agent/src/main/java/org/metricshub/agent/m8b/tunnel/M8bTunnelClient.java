@@ -121,7 +121,15 @@ public class M8bTunnelClient {
 	private volatile WebSocket webSocket;
 	private CompletableFuture<WebSocket> sendChain;
 	private volatile AgentRegistered limits;
-	private Instant lastInbound;
+	/**
+	 * When anything last arrived on the current connection.
+	 *
+	 * <p>Volatile, and written straight from the receive callbacks rather than through a task on the
+	 * tunnel thread. One task per frame would be one unbounded-queue entry per frame, which is
+	 * exactly what a peer flooding pings would use to exhaust the agent's heap — and a timestamp
+	 * that only ever moves forward needs no ordering beyond the write itself.
+	 */
+	private volatile Instant lastInbound;
 	private ScheduledFuture<?> registrationDeadline;
 	private ScheduledFuture<?> heartbeat;
 	private ScheduledFuture<?> reconnect;
@@ -470,16 +478,16 @@ public class M8bTunnelClient {
 	 * frame is proof the peer is alive, and it has to, because a peer that only ever pings would
 	 * otherwise be closed as silent while it is demonstrably talking.
 	 *
-	 * @param inboundGeneration the connection the frame arrived on
+	 * <p>No generation check, deliberately. A superseded socket is aborted and stops delivering, so
+	 * the worst a stray late frame can do is move liveness forward by a few milliseconds — which
+	 * costs nothing, where a queued task per frame costs the heap.
 	 */
-	private void touched(final long inboundGeneration) {
-		if (inboundGeneration == generation && !stopped) {
-			lastInbound = Instant.now();
-		}
+	private void touched() {
+		lastInbound = Instant.now();
 	}
 
 	private void handleFrame(final long frameGeneration, final String text) {
-		touched(frameGeneration);
+		touched();
 		if (frameGeneration != generation || stopped) {
 			return;
 		}
@@ -862,7 +870,7 @@ public class M8bTunnelClient {
 				// finish. And a frame long enough to arrive in pieces must not be mistaken for
 				// silence while it is still arriving.
 				socket.request(1);
-				dispatch(() -> touched(frameGeneration));
+				touched();
 				return null;
 			}
 			final String text = partial.toString();
@@ -897,14 +905,14 @@ public class M8bTunnelClient {
 		@Override
 		public CompletionStage<?> onPing(final WebSocket socket, final ByteBuffer message) {
 			// The JDK answers the Pong itself; what it cannot know is that this counts as liveness.
-			dispatch(() -> touched(frameGeneration));
+			touched();
 			socket.request(1);
 			return null;
 		}
 
 		@Override
 		public CompletionStage<?> onPong(final WebSocket socket, final ByteBuffer message) {
-			dispatch(() -> touched(frameGeneration));
+			touched();
 			socket.request(1);
 			return null;
 		}
