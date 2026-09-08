@@ -555,23 +555,30 @@ public class M8bTunnelClient {
 	 * @param registered what the server sent
 	 * @return an interval that can actually be scheduled
 	 */
-	private Duration heartbeatIntervalOf(final AgentRegistered registered) {
+	Duration heartbeatIntervalOf(final AgentRegistered registered) {
 		final long seconds = registered.heartbeatIntervalSeconds();
 		if (seconds <= 0) {
-			// The server did not ask for one, so the configured interval stands.
+			// Not asked for at all, so the configured interval stands -- clamped, because a
+			// configuration can name a duration this agent cannot schedule just as a server can.
 			return schedulable(settings.heartbeatInterval());
 		}
 		// Seconds, compared as seconds: converting first is what would overflow.
 		if (seconds < MIN_HEARTBEAT.toSeconds() || seconds > MAX_HEARTBEAT.toSeconds()) {
-			final Duration fallback = schedulable(settings.heartbeatInterval());
+			// CLAMPED to the nearest bound rather than replaced by the configured interval. The
+			// protocol says the server's value overrides the agent's configuration, and a governor
+			// cannot see what this agent configured -- so falling back to it would make two agents
+			// answer the same registration at different rates, for reasons neither could report.
+			// The nearest bound is at least the closest honouring of what was asked for, and it is
+			// the same answer in every agent that implements version 1.
+			final Duration clamped = schedulable(Duration.ofSeconds(seconds));
 			log.warn(
 				"M8B server asked for a {} second heartbeat, outside {}..{}; using {} instead.",
 				seconds,
 				MIN_HEARTBEAT.toSeconds(),
 				MAX_HEARTBEAT.toSeconds(),
-				fallback
+				clamped
 			);
-			return fallback;
+			return clamped;
 		}
 		return Duration.ofSeconds(seconds);
 	}
@@ -579,14 +586,13 @@ public class M8bTunnelClient {
 	/**
 	 * An interval this agent can actually schedule.
 	 *
-	 * <p>Applied to the configured interval as well as the server's, because the configured one is
-	 * the fallback for every way the server's can be rejected: a {@code heartbeatInterval} of
+	 * <p>Applied to the configured interval as well as the server's: a {@code heartbeatInterval} of
 	 * {@code 300000d} in {@code m8b:} would otherwise pass through unexamined and overflow
 	 * {@link Duration#toMillis()} at the point of scheduling — after the tunnel has been published as
 	 * registered, so it would sit there reporting connected with neither a heartbeat nor an idle
 	 * check running.
 	 *
-	 * @param configured what the configuration asked for
+	 * @param configured what was asked for
 	 * @return it, brought within {@link #MIN_HEARTBEAT}..{@link #MAX_HEARTBEAT}
 	 */
 	private static Duration schedulable(final Duration configured) {

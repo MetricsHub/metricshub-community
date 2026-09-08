@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -349,6 +350,56 @@ class M8bToolBridgeTest {
 		bridge.invoke(invoke("ListHosts", 10_000), GENERATION + 1);
 		assertInstanceOf(ToolResult.class, answer());
 		stuck.countDown();
+	}
+
+	@Test
+	void aLostConnectionTakesItsDeadlinesWithIt() throws Exception {
+		// One worker, already occupied, so the second invocation is QUEUED rather than running.
+		// Cancelling a queued worker means its body never runs -- and the body is the only thing
+		// that drops its own deadline, so the timer went on holding the request and its arguments
+		// for the whole timeout. Reconnect often enough and they pile up.
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { listHosts, slow });
+		final ExecutorService single = Executors.newSingleThreadExecutor();
+		final M8bToolBridge queueing = new M8bToolBridge(
+			ToolRegistrySnapshot.from(provider, Set.of()),
+			(answer, generation) -> answers.add(answer),
+			single
+		);
+		queueing.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 2));
+		final CountDownLatch occupied = new CountDownLatch(1);
+		final CountDownLatch release = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			occupied.countDown();
+			blockIgnoringInterruption(release);
+			return "{}";
+		});
+		when(listHosts.call(anyString())).thenReturn("{}");
+
+		try {
+			queueing.invoke(invoke("Slow", 300_000), GENERATION);
+			assertTrue(occupied.await(TIMEOUT_MS, TimeUnit.MILLISECONDS), "The only worker must be busy");
+			queueing.invoke(invoke("ListHosts", 300_000), GENERATION);
+			await()
+				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+				.until(() -> queueing.pendingDeadlines() == 2);
+
+			queueing.cancelGeneration(GENERATION);
+
+			await()
+				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+				.untilAsserted(() ->
+					assertEquals(
+						0,
+						queueing.pendingDeadlines(),
+						"Work the Governor discarded must not keep its arguments in the timer queue"
+					)
+				);
+		} finally {
+			release.countDown();
+			queueing.shutdown();
+			single.shutdownNow();
+		}
 	}
 
 	@Test

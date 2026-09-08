@@ -397,20 +397,15 @@ class M8bTunnelClientTest {
 
 		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
 		assertTrue(client.isConnected());
-		// The configured interval is used instead, so heartbeats really do go out
-		assertNotNull(
-			server.awaitFrame(M8bMessage.HeartbeatPing.TYPE, TIMEOUT_MS),
-			"A clamped interval must still produce heartbeats"
-		);
 	}
 
 	@Test
 	void anAbsurdHeartbeatInTheConfigurationDoesNotWedgeItEither() throws Exception {
 		server = new FakeM8bServer();
-		// The server's value is out of range, so the CONFIGURED interval becomes the fallback -- and
-		// this one cannot be scheduled either. Unexamined, it throws from the same place, after the
-		// limits have been published and the registration deadline cancelled.
-		server.limits = new AgentRegistered(Long.MAX_VALUE, 1_048_576L, 2);
+		// Nothing asked for by the server, so the CONFIGURED interval is what gets scheduled -- and
+		// this one cannot be. Unexamined, it throws from the same place, after the limits have been
+		// published and the registration deadline cancelled.
+		server.limits = new AgentRegistered(0, 1_048_576L, 2);
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new M8bTunnelClient(settings(server, null, Duration.ofSeconds(Long.MAX_VALUE)), listener);
@@ -418,9 +413,41 @@ class M8bTunnelClientTest {
 
 		assertNotNull(
 			listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
-			"Registration must complete: the fallback needs clamping as much as the server's value"
+			"Registration must complete: the configured interval needs clamping as much as the server's"
 		);
 		assertTrue(client.isConnected());
+	}
+
+	@Test
+	void theNegotiatedHeartbeatIsClampedRatherThanDiscarded() throws Exception {
+		// The protocol says the server's value overrides the agent's configuration, so a value the
+		// agent cannot honour becomes the nearest value it can -- never the local configuration,
+		// which a governor has no way to see and no way to predict.
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		client = new M8bTunnelClient(settings(server, null, Duration.ofSeconds(30)), new RecordingListener());
+
+		assertEquals(
+			Duration.ofHours(1),
+			client.heartbeatIntervalOf(new AgentRegistered(7_200, 1_048_576L, 2)),
+			"Two hours is schedulable but out of range: the nearest bound, not the configured 30 s"
+		);
+		assertEquals(
+			Duration.ofHours(1),
+			client.heartbeatIntervalOf(new AgentRegistered(Long.MAX_VALUE, 1_048_576L, 2)),
+			"and so is a value that no clock could schedule"
+		);
+		assertEquals(Duration.ofSeconds(1), client.heartbeatIntervalOf(new AgentRegistered(1, 1_048_576L, 2)));
+		assertEquals(
+			Duration.ofSeconds(45),
+			client.heartbeatIntervalOf(new AgentRegistered(45, 1_048_576L, 2)),
+			"A value inside the range is used exactly as sent"
+		);
+		assertEquals(
+			Duration.ofSeconds(30),
+			client.heartbeatIntervalOf(new AgentRegistered(0, 1_048_576L, 2)),
+			"Only an unspecified interval falls back to the configuration"
+		);
 	}
 
 	@Test

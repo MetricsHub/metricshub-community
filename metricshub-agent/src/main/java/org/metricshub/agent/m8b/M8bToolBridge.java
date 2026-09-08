@@ -127,10 +127,20 @@ public class M8bToolBridge {
 	/**
 	 * One execution, and the tunnel connection that asked for it.
 	 *
+	 * <p>The deadline comes along because cancelling the worker is not enough to cancel it. A worker
+	 * stopped before its body ran never reaches the line that drops its own deadline, and the timer
+	 * task holds the {@code ToolInvoke} — arguments included — until it fires. Reconnect often
+	 * enough and those payloads pile up in the queue for work nobody is waiting for.
+	 *
+	 * <p>A reference rather than the task itself, because the handle does not exist yet when this is
+	 * recorded: the worker is submitted before the deadline is scheduled, so that a tool finishing
+	 * immediately is answered rather than waiting on its own timer being set up.
+	 *
 	 * @param execution  the worker running it
+	 * @param deadline   the timer that will give up on it, once there is one
 	 * @param generation the connection it belongs to
 	 */
-	private record Running(Future<?> execution, long generation) {}
+	private record Running(Future<?> execution, AtomicReference<ScheduledFuture<?>> deadline, long generation) {}
 
 	/**
 	 * Builds the pool tool executions run on. One per agent process, not one per bridge: a callback
@@ -260,7 +270,7 @@ public class M8bToolBridge {
 			);
 			return;
 		}
-		running.put(released, new Running(execution, generation));
+		running.put(released, new Running(execution, deadline, generation));
 		if (released.get()) {
 			// It finished before the handle was stored, and its own release found nothing to remove
 			running.remove(released);
@@ -288,8 +298,10 @@ public class M8bToolBridge {
 			TimeUnit.MILLISECONDS
 		);
 		deadline.set(scheduled);
-		if (answered.get()) {
-			// The tool finished before the handle was stored
+		if (answered.get() || released.get()) {
+			// The tool finished, or a lost connection gave up on it, before the handle was stored.
+			// Both need the check: cancelGeneration cancels through the reference recorded above, and
+			// between that record and this line the reference was still empty.
 			cancel(deadline.getAndSet(null));
 		}
 	}
@@ -339,6 +351,8 @@ public class M8bToolBridge {
 		running.forEach((released, entry) -> {
 			if (entry.generation() == generation) {
 				entry.execution().cancel(true);
+				// And its deadline, which the cancelled worker will never reach the line to drop
+				cancel(entry.deadline().getAndSet(null));
 				release(released);
 			}
 		});
