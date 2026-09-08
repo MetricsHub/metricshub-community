@@ -5,14 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.FileHelper.extractBasePath;
-import static org.metricshub.engine.common.helpers.FileHelper.extractFilename;
+import static org.metricshub.engine.common.helpers.FileHelper.findFilesByPattern;
+import static org.metricshub.engine.common.helpers.FileHelper.parsePathPattern;
 import static org.metricshub.engine.common.helpers.FileHelper.parseResolvedPathsFromCommandResult;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 
 class FileHelperTest {
@@ -22,6 +30,9 @@ class FileHelperTest {
 	private final String LINUX_ABSOLUTE_PATH = "/opt/metricshub/logs/*.log";
 
 	private final String WINDOWS_ABSOLUTE_PATH = "C:\\Program Files\\MetricsHub\\logs\\*.log";
+
+	@TempDir
+	Path tempDir;
 
 	@Test
 	void testGetExtension() {
@@ -42,29 +53,327 @@ class FileHelperTest {
 	}
 
 	@Test
-	void testExtractBasePath() {
-		// Null and empty path
-		assertEquals("", extractBasePath(null, DeviceKind.AIX));
-		assertEquals("", extractBasePath("", DeviceKind.AIX));
-
-		// Linux Paths
-		assertEquals("/opt/metricshub/logs", extractBasePath(LINUX_ABSOLUTE_PATH, DeviceKind.AIX));
-
-		// Windows Paths
-		assertEquals("C:\\Program Files\\MetricsHub\\logs", extractBasePath(WINDOWS_ABSOLUTE_PATH, DeviceKind.WINDOWS));
+	void parsePathPattern_linuxFilenameWildcard() {
+		final PathPattern pattern = parsePathPattern(LINUX_ABSOLUTE_PATH, DeviceKind.AIX);
+		assertNotNull(pattern);
+		assertEquals("/opt/metricshub/logs", pattern.root());
+		assertEquals(List.of("*.log"), pattern.segments());
+		assertEquals("*.log", pattern.filename());
+		assertFalse(pattern.hasDirectoryWildcard());
+		assertEquals(LINUX_ABSOLUTE_PATH, pattern.fullPattern());
 	}
 
 	@Test
-	void testExtractFilename() {
-		// Null and empty path
-		assertEquals("", extractFilename(null, DeviceKind.AIX));
-		assertEquals("", extractFilename("", DeviceKind.AIX));
+	void parsePathPattern_linuxDirectoryWildcard() {
+		final PathPattern pattern = parsePathPattern("/opt/autosys/autouser*/out/event_demon*PE2", DeviceKind.LINUX);
+		assertNotNull(pattern);
+		assertEquals("/opt/autosys", pattern.root());
+		assertEquals(List.of("autouser*", "out", "event_demon*PE2"), pattern.segments());
+		assertTrue(pattern.hasDirectoryWildcard());
+		assertEquals("/opt/autosys/autouser*/out/event_demon*PE2", pattern.fullPattern());
+		assertEquals("/opt/autosys/autouser*/out", pattern.directoryPattern());
+	}
 
-		// Linux paths
-		assertEquals("*.log", extractFilename(LINUX_ABSOLUTE_PATH, DeviceKind.AIX));
+	@Test
+	void parsePathPattern_directoryPattern() {
+		assertEquals("/opt/metricshub/logs", parsePathPattern(LINUX_ABSOLUTE_PATH, DeviceKind.LINUX).directoryPattern());
+		assertEquals("/opt*", parsePathPattern("/opt*/x.log", DeviceKind.LINUX).directoryPattern());
+		assertEquals("/", parsePathPattern("/*.log", DeviceKind.LINUX).directoryPattern());
+		assertEquals(
+			"D:\\Autosys_waae\\autouser*\\out",
+			parsePathPattern("D:\\Autosys_waae\\autouser*\\out\\e*", DeviceKind.WINDOWS).directoryPattern()
+		);
+		assertEquals("D:\\auto*", parsePathPattern("D:\\auto*\\x.log", DeviceKind.WINDOWS).directoryPattern());
+		assertEquals("D:\\", parsePathPattern("D:\\", DeviceKind.WINDOWS).directoryPattern());
+	}
 
-		// Windows paths
-		assertEquals("*.log", extractFilename(WINDOWS_ABSOLUTE_PATH, DeviceKind.WINDOWS));
+	@Test
+	void parsePathPattern_linuxFirstSegmentWildcard_rootIsSlash() {
+		final PathPattern pattern = parsePathPattern("/opt*/x.log", DeviceKind.LINUX);
+		assertNotNull(pattern);
+		assertEquals("/", pattern.root());
+		assertEquals(List.of("opt*", "x.log"), pattern.segments());
+		assertEquals("/opt*/x.log", pattern.fullPattern());
+	}
+
+	@Test
+	void parsePathPattern_trailingDelimiter_matchesAllFiles() {
+		final PathPattern linux = parsePathPattern("/var/log/", DeviceKind.LINUX);
+		assertNotNull(linux);
+		assertEquals("/var/log", linux.root());
+		assertEquals(List.of("*"), linux.segments());
+		assertEquals("/var/log/*", linux.fullPattern());
+
+		final PathPattern windows = parsePathPattern("C:\\logs\\", DeviceKind.WINDOWS);
+		assertNotNull(windows);
+		assertEquals("C:\\logs", windows.root());
+		assertEquals(List.of("*"), windows.segments());
+		assertEquals("C:\\logs\\*", windows.fullPattern());
+	}
+
+	@Test
+	void parsePathPattern_windowsFilenameWildcard() {
+		final PathPattern pattern = parsePathPattern(WINDOWS_ABSOLUTE_PATH, DeviceKind.WINDOWS);
+		assertNotNull(pattern);
+		assertEquals("C:\\Program Files\\MetricsHub\\logs", pattern.root());
+		assertEquals(List.of("*.log"), pattern.segments());
+		assertFalse(pattern.hasDirectoryWildcard());
+		assertEquals(WINDOWS_ABSOLUTE_PATH, pattern.fullPattern());
+	}
+
+	@Test
+	void parsePathPattern_windowsDirectoryWildcard() {
+		final PathPattern pattern = parsePathPattern(
+			"D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2",
+			DeviceKind.WINDOWS
+		);
+		assertNotNull(pattern);
+		assertEquals("D:\\Autosys_waae", pattern.root());
+		assertEquals(List.of("autouser*", "out", "event_demon*PE2"), pattern.segments());
+		assertTrue(pattern.hasDirectoryWildcard());
+		assertEquals("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2", pattern.fullPattern());
+	}
+
+	@Test
+	void parsePathPattern_windowsDriveRoot() {
+		final PathPattern pattern = parsePathPattern("D:\\auto*\\x.log", DeviceKind.WINDOWS);
+		assertNotNull(pattern);
+		assertEquals("D:\\", pattern.root());
+		assertEquals(List.of("auto*", "x.log"), pattern.segments());
+		assertEquals("D:\\auto*\\x.log", pattern.fullPattern());
+
+		final PathPattern drive = parsePathPattern("D:\\", DeviceKind.WINDOWS);
+		assertNotNull(drive);
+		assertEquals("D:\\", drive.root());
+		assertEquals(List.of("*"), drive.segments());
+		assertEquals("D:\\*", drive.fullPattern());
+	}
+
+	@Test
+	void parsePathPattern_windowsUnc() {
+		final PathPattern pattern = parsePathPattern("\\\\server\\share\\a*\\b.log", DeviceKind.WINDOWS);
+		assertNotNull(pattern);
+		assertEquals("\\\\server\\share", pattern.root());
+		assertEquals(List.of("a*", "b.log"), pattern.segments());
+		assertEquals("\\\\server\\share\\a*\\b.log", pattern.fullPattern());
+
+		final PathPattern literalDirectories = parsePathPattern("\\\\server\\share\\logs\\*.log", DeviceKind.WINDOWS);
+		assertNotNull(literalDirectories);
+		assertEquals("\\\\server\\share\\logs", literalDirectories.root());
+		assertEquals(List.of("*.log"), literalDirectories.segments());
+
+		// Server and share names are always literal
+		assertNull(parsePathPattern("\\\\server\\sha*\\b.log", DeviceKind.WINDOWS));
+		assertNull(parsePathPattern("\\\\server", DeviceKind.WINDOWS));
+	}
+
+	@Test
+	void parsePathPattern_keepsSignificantSpaces() {
+		final PathPattern pattern = parsePathPattern("/var/log/report ", DeviceKind.LINUX);
+		assertNotNull(pattern);
+		assertEquals("/var/log", pattern.root());
+		assertEquals(List.of("report "), pattern.segments());
+
+		final PathPattern windows = parsePathPattern("C:\\my logs\\ app*.log", DeviceKind.WINDOWS);
+		assertNotNull(windows);
+		assertEquals("C:\\my logs", windows.root());
+		assertEquals(List.of(" app*.log"), windows.segments());
+	}
+
+	@Test
+	void parsePathPattern_invalid_returnsNull() {
+		assertNull(parsePathPattern(null, DeviceKind.LINUX));
+		assertNull(parsePathPattern("  ", DeviceKind.LINUX));
+		assertNull(parsePathPattern("relative/path.log", DeviceKind.LINUX));
+		assertNull(parsePathPattern("file.log", DeviceKind.LINUX));
+		assertNull(parsePathPattern("logs\\file.log", DeviceKind.WINDOWS));
+		assertNull(parsePathPattern("/opt/x.log", DeviceKind.WINDOWS));
+	}
+
+	@Test
+	void parsePathPattern_questionMarkIsWildcard() {
+		final PathPattern pattern = parsePathPattern("/opt/node?/app.log", DeviceKind.LINUX);
+		assertNotNull(pattern);
+		assertEquals("/opt", pattern.root());
+		assertEquals(List.of("node?", "app.log"), pattern.segments());
+		assertTrue(pattern.hasDirectoryWildcard());
+		assertTrue(FileHelper.containsWildcard("node?"));
+		assertTrue(FileHelper.containsWildcard("*"));
+		assertFalse(FileHelper.containsWildcard("node"));
+		assertFalse(FileHelper.containsWildcard(null));
+	}
+
+	@Test
+	void escapeGlobSpecials_keepsOnlyStarAndQuestionMarkAsWildcards() {
+		assertEquals("app\\[1\\]*.log?", FileHelper.escapeGlobSpecials("app[1]*.log?"));
+		assertEquals("a\\{b\\}", FileHelper.escapeGlobSpecials("a{b}"));
+		assertEquals("plain", FileHelper.escapeGlobSpecials("plain"));
+	}
+
+	@Test
+	void escapePowerShellPattern_keepsOnlyStarAndQuestionMarkAsWildcards() {
+		assertEquals("C:\\logs\\app``[1``].log", FileHelper.escapePowerShellPattern("C:\\logs\\app[1].log"));
+		assertEquals("D:\\``[prod``]\\node*\\app?.log", FileHelper.escapePowerShellPattern("D:\\[prod]\\node*\\app?.log"));
+		assertEquals("C:\\logs\\*.log", FileHelper.escapePowerShellPattern("C:\\logs\\*.log"));
+		// $ and $() are never expanded, a literal backtick survives both the string and the wildcard layers
+		assertEquals(
+			"C:\\data\\`$logs\\node*\\`$(id).log",
+			FileHelper.escapePowerShellPattern("C:\\data\\$logs\\node*\\$(id).log")
+		);
+		assertEquals("C:\\a````b\\*.log", FileHelper.escapePowerShellPattern("C:\\a`b\\*.log"));
+	}
+
+	private DeviceKind localDeviceKind() {
+		return LocalOsHandler.isWindows() ? DeviceKind.WINDOWS : DeviceKind.LINUX;
+	}
+
+	private String localPattern(final String... segments) {
+		return tempDir.toString() + File.separator + String.join(File.separator, segments);
+	}
+
+	private String createTreeFile(final String... segments) throws IOException {
+		Path file = tempDir;
+		for (final String segment : segments) {
+			file = file.resolve(segment);
+		}
+		Files.createDirectories(file.getParent());
+		Files.createFile(file);
+		return file.toString();
+	}
+
+	/**
+	 * Builds the following tree under {@link #tempDir} and returns the two files matching a pattern with a
+	 * wildcard in both the first directory segment and the filename (autouser prefix, out, event_demon prefix, PE2 suffix):
+	 * <pre>
+	 * autouser01/out/event_demon.PE2
+	 * autouser02/out/event_demon_XPE2
+	 * autouser02/out/event_demonPE2.log
+	 * autouser02/out/event_demon_DIRPE2/   (directory)
+	 * other/out/event_demon.PE2
+	 * </pre>
+	 */
+	private Set<String> createTree() throws IOException {
+		final String first = createTreeFile("autouser01", "out", "event_demon.PE2");
+		final String second = createTreeFile("autouser02", "out", "event_demon_XPE2");
+		createTreeFile("autouser02", "out", "event_demonPE2.log");
+		Files.createDirectories(tempDir.resolve("autouser02").resolve("out").resolve("event_demon_DIRPE2"));
+		createTreeFile("other", "out", "event_demon.PE2");
+		return Set.of(first, second);
+	}
+
+	@Test
+	void findFilesByPattern_directoryWildcard() throws IOException {
+		final Set<String> expected = createTree();
+
+		final Set<String> resolved = findFilesByPattern(
+			HOSTNAME,
+			Set.of(localPattern("autouser*", "out", "event_demon*PE2")),
+			localDeviceKind()
+		);
+
+		assertEquals(expected, resolved);
+	}
+
+	@Test
+	void findFilesByPattern_filenameWildcardOnly() throws IOException {
+		createTree();
+
+		final Set<String> resolved = findFilesByPattern(
+			HOSTNAME,
+			Set.of(localPattern("autouser02", "out", "event_demon*")),
+			localDeviceKind()
+		);
+
+		// The matching directory event_demon_DIRPE2 is excluded
+		assertEquals(
+			Set.of(
+				tempDir.resolve("autouser02").resolve("out").resolve("event_demon_XPE2").toString(),
+				tempDir.resolve("autouser02").resolve("out").resolve("event_demonPE2.log").toString()
+			),
+			resolved
+		);
+	}
+
+	@Test
+	void findFilesByPattern_questionMarkWildcard() throws IOException {
+		createTree();
+
+		final Set<String> resolved = findFilesByPattern(
+			HOSTNAME,
+			Set.of(localPattern("autouser0?", "out", "event_demon.PE2")),
+			localDeviceKind()
+		);
+
+		assertEquals(Set.of(tempDir.resolve("autouser01").resolve("out").resolve("event_demon.PE2").toString()), resolved);
+	}
+
+	@Test
+	void findFilesByPattern_literalFileAndLiteralDirectory() throws IOException {
+		createTree();
+
+		final String literalFile = localPattern("autouser01", "out", "event_demon.PE2");
+		assertEquals(Set.of(literalFile), findFilesByPattern(HOSTNAME, Set.of(literalFile), localDeviceKind()));
+
+		// A literal directory without a trailing delimiter is not a regular file
+		assertTrue(findFilesByPattern(HOSTNAME, Set.of(localPattern("autouser01", "out")), localDeviceKind()).isEmpty());
+	}
+
+	@Test
+	void findFilesByPattern_trailingDelimiterListsAllFiles() throws IOException {
+		createTree();
+
+		final Set<String> resolved = findFilesByPattern(
+			HOSTNAME,
+			Set.of(localPattern("autouser02", "out") + File.separator),
+			localDeviceKind()
+		);
+
+		assertEquals(
+			Set.of(
+				tempDir.resolve("autouser02").resolve("out").resolve("event_demon_XPE2").toString(),
+				tempDir.resolve("autouser02").resolve("out").resolve("event_demonPE2.log").toString()
+			),
+			resolved
+		);
+	}
+
+	@Test
+	void findFilesByPattern_nonExistingRootAndNullPaths() throws IOException {
+		createTree();
+
+		assertTrue(findFilesByPattern(HOSTNAME, Set.of(localPattern("nope", "*.log")), localDeviceKind()).isEmpty());
+		assertTrue(
+			findFilesByPattern(HOSTNAME, Set.of(localPattern("nope*", "out", "*.log")), localDeviceKind()).isEmpty()
+		);
+		assertTrue(findFilesByPattern(HOSTNAME, null, localDeviceKind()).isEmpty());
+	}
+
+	@Test
+	void findFilesByPattern_invalidPatternDoesNotHideValidOnes() throws IOException {
+		final Set<String> expected = createTree();
+
+		final Set<String> resolved = findFilesByPattern(
+			HOSTNAME,
+			Set.of(localPattern("autouser*", "out", "event_demon*PE2"), "relative/path.log"),
+			localDeviceKind()
+		);
+
+		assertEquals(expected, resolved);
+	}
+
+	@Test
+	@EnabledOnOs(OS.WINDOWS)
+	void findFilesByPattern_illegalCharacterDoesNotHideValidOnes() throws IOException {
+		final Set<String> expected = createTree();
+
+		// ':' is illegal in a Windows path segment and makes Path.of throw InvalidPathException
+		final Set<String> resolved = findFilesByPattern(
+			HOSTNAME,
+			Set.of(localPattern("autouser*", "out", "event_demon*PE2"), localPattern("bad:name", "*.log")),
+			DeviceKind.WINDOWS
+		);
+
+		assertEquals(expected, resolved);
 	}
 
 	@Test
@@ -136,6 +445,13 @@ class FileHelperTest {
 		final String input = "\n\n" + path + "\n\n";
 		final var result = parseResolvedPathsFromCommandResult(input, DeviceKind.WINDOWS, HOSTNAME, "C:\\temp\\*.log");
 		assertEquals(Set.of(path), result);
+	}
+
+	@Test
+	void parseResolvedPathsFromCommandResult_keepsSignificantSpaces() {
+		final String input = "/tmp/node1/report \r\n/tmp/node2/ report\n   \n";
+		final var result = parseResolvedPathsFromCommandResult(input, DeviceKind.LINUX, HOSTNAME, "/tmp/node*/*report*");
+		assertEquals(Set.of("/tmp/node1/report ", "/tmp/node2/ report"), result);
 	}
 
 	@Test

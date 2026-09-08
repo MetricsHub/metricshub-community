@@ -103,6 +103,14 @@ m8b:
 
 The agent connects with the same persistent identity as OpAMP (the `instance_uid` file in the `security` directory), so the fleet sees one agent whichever channel reports. A lost connection is retried with exponential backoff; each reconnection re-registers the current tools and hosts. Changing the `m8b:` section triggers a configuration reload.
 
+## File log capture
+
+When a file source uses wildcards or multiple paths, LOG mode includes an empty
+`<<<LOG:file="...">>>` / `<<<END_LOG>>>` block for each accessible file on its first
+poll and on subsequent polls with no new content. The first poll initializes the
+cursor without reading existing content. A single literal path retains its
+content-only output format.
+
 ## How to build the Project
 
 ### Requirements
