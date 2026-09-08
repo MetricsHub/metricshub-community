@@ -785,7 +785,9 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 
 * Every asynchronous continuation carries the **connection generation** it belongs to; a callback from a superseded socket is dropped.
 * Any inbound frame counts as liveness. A silent peer is dropped after 2.5 heartbeat intervals with close `4003`; the server's `4001` (another instance owns this uid) is logged loudly and retried with backoff like any loss.
-* Every close is the same event to the agent — reconnect with backoff — and the code only decides how loudly it is logged. `4004` (the secret was rotated out of the fleet) and `1002` (protocol version) are the two the backoff will not fix on its own: the reconnection is then refused at the handshake, which is the intended outcome and what the log has to make legible.
+* Every close is the same event to the agent — reconnect with backoff — and the code only decides how loudly it is logged. Two of them the backoff cannot fix, and they fail at different points, which is what makes them distinguishable in a log:
+  * `4004`, the agent secret was rotated out of the fleet. The reconnection is refused **at the handshake**, 401, before a frame is sent. The agent then retries forever against a door that stays shut, which is the intended outcome — fix the credential.
+  * `1002`, the fleet does not implement the protocol version. The handshake **succeeds**: `protocolVersion` is not in it, it is in `agent.register`, so the version is only rejected after the socket is up, with `error` `UNSUPPORTED_PROTOCOL_VERSION` and then the close. A repeated `1002` therefore looks like a connect-register-close loop, not a refused handshake — fix the version of one side.
 * Each reconnection rebuilds the registration from the current context, so an upgraded agent replaces its previous tool registry on the server.
 
 ### 13.3 Threading model
@@ -800,9 +802,9 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 Two listeners, and they are not the same thing:
 
 * **`WebSocket.Listener`** (the JDK's) is called on the HTTP client's own threads. It does nothing but reassemble a text frame and hand it to the tunnel thread, which is why nothing there needs to be fast.
-* **`M8bTunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` and `onDisconnected` change bridge state. Only `onInvoke` hands off — to the tool pool. Anything blocking added to the other three stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
+* **`M8bTunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` changes bridge state. Only `onInvoke` hands off — to the tool pool, carrying the connection generation the answer will be bound to. Anything blocking added to the others stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
 
-The bridge frees an invocation's in-flight slot before the answer leaves, and exactly once: the worker gives it back when it finishes, the deadline when the worker is gone or never started.
+The bridge frees an invocation's in-flight slot exactly once, by whichever of three paths reaches it first: the worker's `finally` when it finishes, the deadline when the invocation timed out with its worker still running (or cancelled before it ever ran), and the rejection path when no thread was free to take it. So the deadline does not release the slot when the worker is *gone* — it releases it precisely when the worker has **not** finished, which is the whole point: the Governor has been told the invocation is over, so the slot is its to reuse even though the thread is not.
 
 ### 13.4 Configuration reference — `m8b:`
 
