@@ -122,7 +122,7 @@ The tool list is the **only** source of truth for what M8B may invoke on this ag
 | Field | Notes |
 |---|---|
 | `heartbeatIntervalSeconds` | Interval the agent must use for `heartbeat.ping`; overrides the agent configuration |
-| `maxPayloadBytes` | Largest text frame the server accepts. A `tool.result` that would exceed it is replaced by `tool.error` `RESULT_TOO_LARGE` |
+| `maxPayloadBytes` | Largest text frame the server accepts. A `tool.result` that would exceed it is replaced by `tool.error` `RESULT_TOO_LARGE`. It bounds what the agent *sends*; the agent also keeps a fixed 8 MiB bound on what it *buffers*, and this value can only lower that one — a server saying a larger number is describing its own buffers, not raising the agent's |
 | `maxInFlight` | Maximum number of concurrent `tool.invoke` the agent executes; additional ones are refused with `TOO_MANY_INFLIGHT` |
 
 ### 3.3 `heartbeat.ping` / `heartbeat.pong`

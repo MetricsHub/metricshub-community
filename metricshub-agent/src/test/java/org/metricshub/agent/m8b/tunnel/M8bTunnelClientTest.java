@@ -95,12 +95,20 @@ class M8bTunnelClientTest {
 	}
 
 	private M8bTunnelSettings settings(final FakeM8bServer fakeServer, final String certificateFile) {
+		return settings(fakeServer, certificateFile, Duration.ofSeconds(1));
+	}
+
+	private M8bTunnelSettings settings(
+		final FakeM8bServer fakeServer,
+		final String certificateFile,
+		final Duration heartbeatInterval
+	) {
 		return new M8bTunnelSettings(
 			fakeServer.uri(),
 			Map.of("Authorization", "Bearer secret-token"),
 			certificateFile,
 			AGENT_UID,
-			Duration.ofSeconds(1),
+			heartbeatInterval,
 			Duration.ofSeconds(5),
 			Duration.ofSeconds(2)
 		);
@@ -109,6 +117,9 @@ class M8bTunnelClientTest {
 	@Test
 	void shouldRegisterWithIdentityHeadersAndHonorServerLimits() throws Exception {
 		server = new FakeM8bServer();
+		// A 1 s heartbeat, because the last assertion is that the interval the server named is the
+		// one being used
+		server.limits = new AgentRegistered(1, 1_048_576L, 2);
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new M8bTunnelClient(settings(server, null), listener);
@@ -246,6 +257,8 @@ class M8bTunnelClientTest {
 	@Test
 	void shouldReconnectWhenTheServerStopsAnsweringHeartbeats() throws Exception {
 		server = new FakeM8bServer();
+		// A 1 s heartbeat, so the idle check this test is about fires 2.5 s into the silence below
+		server.limits = new AgentRegistered(1, 1_048_576L, 2);
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new M8bTunnelClient(settings(server, null), listener);
@@ -392,6 +405,49 @@ class M8bTunnelClientTest {
 	}
 
 	@Test
+	void anAbsurdHeartbeatInTheConfigurationDoesNotWedgeItEither() throws Exception {
+		server = new FakeM8bServer();
+		// The server's value is out of range, so the CONFIGURED interval becomes the fallback -- and
+		// this one cannot be scheduled either. Unexamined, it throws from the same place, after the
+		// limits have been published and the registration deadline cancelled.
+		server.limits = new AgentRegistered(Long.MAX_VALUE, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null, Duration.ofSeconds(Long.MAX_VALUE)), listener);
+		client.start();
+
+		assertNotNull(
+			listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+			"Registration must complete: the fallback needs clamping as much as the server's value"
+		);
+		assertTrue(client.isConnected());
+	}
+
+	@Test
+	void aGovernorCannotRaiseTheAgentsOwnInboundBound() throws Exception {
+		server = new FakeM8bServer();
+		// An authenticated but faulty or compromised governor advertising no practical limit. The
+		// field is what the SERVER accepts, not permission to fill this agent's heap.
+		server.limits = new AgentRegistered(30, Long.MAX_VALUE, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// Nine fragments of a mebibyte each: far too few for the fragment bound to notice, so the
+		// only thing that can stop this is the agent's own 8 MiB ceiling.
+		server.sendFragmentsToAll("x".repeat(1024 * 1024), 9);
+
+		assertEquals(
+			M8bTunnelClient.CLOSE_MESSAGE_TOO_BIG,
+			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+			"Past " + M8bTunnelClient.MAX_INBOUND_BYTES + " bytes the connection goes, whatever the server said"
+		);
+	}
+
+	@Test
 	void shouldRejectCleartextEndpointsOutsideLoopback() {
 		final Map<String, String> headers = Map.of("Authorization", "Bearer secret-token");
 		assertThrows(
@@ -440,6 +496,8 @@ class M8bTunnelClientTest {
 		server = new FakeM8bServer();
 		// No protocol answers at all: the only thing arriving will be WebSocket control Pings
 		server.autoPong = false;
+		// And a 1 s heartbeat, so 4 s of control Pings is well past the idle deadline they answer
+		server.limits = new AgentRegistered(1, 1_048_576L, 2);
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new M8bTunnelClient(settings(server, null), listener);

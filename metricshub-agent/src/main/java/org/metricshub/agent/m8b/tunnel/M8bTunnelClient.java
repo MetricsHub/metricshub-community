@@ -87,13 +87,18 @@ public class M8bTunnelClient {
 	/** Standard close code for a message above what the peer said it would accept. */
 	static final int CLOSE_MESSAGE_TOO_BIG = 1009;
 	/**
-	 * The largest message accepted before the server has said otherwise.
+	 * The largest message this agent will ever buffer, whatever the server says.
 	 *
 	 * <p>A frame can arrive as an unbounded series of fragments, and the peer decides how many. Until
-	 * {@code agent.registered} names a real cap this is the one in force, because "no limit yet" and
-	 * "no limit" must not be the same thing.
+	 * {@code agent.registered} names a cap this is the one in force, because "no limit yet" and "no
+	 * limit" must not be the same thing — and once it does, that cap can only LOWER this one.
+	 *
+	 * <p>The negotiated {@code maxPayloadBytes} is the largest frame the SERVER accepts, which is a
+	 * statement about the server's own buffers and not permission to fill the agent's heap. Letting
+	 * it raise this bound would hand an authenticated but faulty or compromised governor the ability
+	 * to have the agent buffer as much as it cared to name.
 	 */
-	static final long DEFAULT_MAX_INBOUND_BYTES = 8L * 1024 * 1024;
+	static final long MAX_INBOUND_BYTES = 8L * 1024 * 1024;
 	/**
 	 * How many pieces one message may arrive in.
 	 *
@@ -424,11 +429,11 @@ public class M8bTunnelClient {
 	 * the question is asked; it is the conservative reading of a byte cap, since a character never
 	 * encodes to less than one byte.
 	 *
-	 * @return the cap the server imposed, or the default until it has imposed one
+	 * @return the smaller of this agent's own bound and the one the server imposed
 	 */
 	private long maxInboundBytes() {
 		final AgentRegistered current = limits;
-		return current == null ? DEFAULT_MAX_INBOUND_BYTES : current.maxPayloadBytes();
+		return current == null ? MAX_INBOUND_BYTES : Math.min(MAX_INBOUND_BYTES, current.maxPayloadBytes());
 	}
 
 	/**
@@ -553,20 +558,42 @@ public class M8bTunnelClient {
 	private Duration heartbeatIntervalOf(final AgentRegistered registered) {
 		final long seconds = registered.heartbeatIntervalSeconds();
 		if (seconds <= 0) {
-			return settings.heartbeatInterval();
+			// The server did not ask for one, so the configured interval stands.
+			return schedulable(settings.heartbeatInterval());
 		}
 		// Seconds, compared as seconds: converting first is what would overflow.
 		if (seconds < MIN_HEARTBEAT.toSeconds() || seconds > MAX_HEARTBEAT.toSeconds()) {
+			final Duration fallback = schedulable(settings.heartbeatInterval());
 			log.warn(
 				"M8B server asked for a {} second heartbeat, outside {}..{}; using {} instead.",
 				seconds,
 				MIN_HEARTBEAT.toSeconds(),
 				MAX_HEARTBEAT.toSeconds(),
-				settings.heartbeatInterval()
+				fallback
 			);
-			return settings.heartbeatInterval();
+			return fallback;
 		}
 		return Duration.ofSeconds(seconds);
+	}
+
+	/**
+	 * An interval this agent can actually schedule.
+	 *
+	 * <p>Applied to the configured interval as well as the server's, because the configured one is
+	 * the fallback for every way the server's can be rejected: a {@code heartbeatInterval} of
+	 * {@code 300000d} in {@code m8b:} would otherwise pass through unexamined and overflow
+	 * {@link Duration#toMillis()} at the point of scheduling — after the tunnel has been published as
+	 * registered, so it would sit there reporting connected with neither a heartbeat nor an idle
+	 * check running.
+	 *
+	 * @param configured what the configuration asked for
+	 * @return it, brought within {@link #MIN_HEARTBEAT}..{@link #MAX_HEARTBEAT}
+	 */
+	private static Duration schedulable(final Duration configured) {
+		if (configured.compareTo(MIN_HEARTBEAT) < 0) {
+			return MIN_HEARTBEAT;
+		}
+		return configured.compareTo(MAX_HEARTBEAT) > 0 ? MAX_HEARTBEAT : configured;
 	}
 
 	private void onRegistered(final AgentRegistered registered) {

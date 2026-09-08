@@ -39,7 +39,16 @@ public class FakeM8bServer extends WebSocketServer {
 
 	public volatile boolean autoRegister = true;
 	public volatile boolean autoPong = true;
-	public volatile AgentRegistered limits = new AgentRegistered(1, 1_048_576L, 2);
+	/**
+	 * What this server answers a registration with.
+	 *
+	 * <p>A 30 second heartbeat by default, which means a test has 75 seconds of quiet before the
+	 * client decides the connection is dead. The 1 second interval a liveness test wants makes every
+	 * OTHER test race the idle check: a cold JVM taking longer than 2.5 seconds over an assertion
+	 * gets its connection dropped underneath it, and an answer bound to the dropped generation is
+	 * cancelled rather than delivered. Tests about liveness ask for the short interval themselves.
+	 */
+	public volatile AgentRegistered limits = new AgentRegistered(30, 1_048_576L, 2);
 
 	public FakeM8bServer() {
 		this(null);
