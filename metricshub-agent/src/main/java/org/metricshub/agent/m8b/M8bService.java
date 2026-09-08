@@ -26,6 +26,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +76,7 @@ public class M8bService {
 	private final ToolCallbackProvider toolCallbackProvider;
 	private final BiFunction<M8bTunnelSettings, M8bTunnelListener, M8bTunnelClient> clientFactory;
 	private final UidSupplier uidSupplier;
+	private final ExecutorService toolWorkers;
 	private final ScheduledExecutorService supervisor;
 
 	private M8bTunnelClient client;
@@ -110,6 +112,11 @@ public class M8bService {
 			thread.setDaemon(true);
 			return thread;
 		});
+		// One pool for the process, not one per bridge. A callback that ignores its interruption
+		// keeps its thread through a reconfiguration too, so a ceiling that reset on every
+		// configuration change would bound nothing: reload often enough with calls stuck and the
+		// agent accumulates a fresh poolful of threads each time.
+		this.toolWorkers = M8bToolBridge.newWorkerPool();
 	}
 
 	/**
@@ -125,6 +132,7 @@ public class M8bService {
 	public synchronized void shutdown() {
 		supervisor.shutdownNow();
 		closeClient("Agent shutting down");
+		toolWorkers.shutdownNow();
 	}
 
 	private void superviseSafely() {
@@ -213,19 +221,23 @@ public class M8bService {
 				uidSupplier.load(),
 				Duration.ofSeconds(atLeastOneSecond(newConfig.getHeartbeatInterval()))
 			);
-			// The bridge answers on the client it was built for, and on no other. The alternative --
-			// resolving the current client at send time -- has a window: a worker can pass its epoch
-			// check and then be paused while the configuration changes, and its answer would leave
-			// over the new session, possibly toward a different endpoint, under a request id that
-			// session never issued. A stopped client drops what it is handed, which is the right
-			// end for a late answer.
+			// The bridge answers on the client it was built for AND on the connection that asked.
+			// Neither half is enough alone: resolving the current client at send time would let a
+			// paused worker answer over a configuration that replaced its own, and pinning the
+			// client would still let it answer over that client's next reconnection. Both are
+			// dropped -- a stopped client discards what it is handed, and a live one compares the
+			// generation on its own thread.
 			final AtomicReference<M8bTunnelClient> owner = new AtomicReference<>();
-			final M8bToolBridge newBridge = new M8bToolBridge(snapshot, message -> {
-				final M8bTunnelClient target = owner.get();
-				if (target != null) {
-					target.send(message);
-				}
-			});
+			final M8bToolBridge newBridge = new M8bToolBridge(
+				snapshot,
+				(message, generation) -> {
+					final M8bTunnelClient target = owner.get();
+					if (target != null) {
+						target.send(message, generation);
+					}
+				},
+				toolWorkers
+			);
 			newClient = clientFactory.apply(settings, new TunnelListener(newBridge));
 			owner.set(newClient);
 			bridge = newBridge;
@@ -257,17 +269,13 @@ public class M8bService {
 	}
 
 	/**
-	 * Ends a bridge's outstanding work before releasing it.
-	 *
-	 * <p>Invalidating comes first, and shutting down second. Interruption alone proves nothing — a
-	 * callback may ignore it, catch it, or finish just as it arrives — and the sender these
-	 * invocations were given resolves to whichever client is current when they answer. Without the
-	 * invalidation, a result from the old configuration could leave over the new session, toward a
-	 * possibly different endpoint, under a request id that session never issued.
+	 * Releases a bridge. What its outstanding work might still answer is not this method's problem:
+	 * every answer is bound to the connection that asked, and the client it was bound to is either
+	 * stopped by now or on a newer generation, so a late result is dropped rather than delivered.
+	 * The worker pool is deliberately untouched -- it belongs to the process.
 	 */
 	private void closeBridge() {
 		if (bridge != null) {
-			bridge.cancelSessionWork();
 			bridge.shutdown();
 			bridge = null;
 		}
@@ -318,15 +326,11 @@ public class M8bService {
 		}
 
 		@Override
-		public void onDisconnected(final int code, final String reason) {
-			// The server discarded whatever it had asked for: answering it on the next session
-			// would correlate an old result with a request that session never made.
-			tunnelBridge.cancelSessionWork();
-		}
-
-		@Override
-		public void onInvoke(final ToolInvoke invoke) {
-			tunnelBridge.invoke(invoke);
+		public void onInvoke(final ToolInvoke invoke, final long generation) {
+			// The generation travels with the request and comes back with the answer: the server
+			// discarded what it had asked for when the connection dropped, and a result correlated
+			// with a request the next session never made must never reach it.
+			tunnelBridge.invoke(invoke, generation);
 		}
 	}
 }
