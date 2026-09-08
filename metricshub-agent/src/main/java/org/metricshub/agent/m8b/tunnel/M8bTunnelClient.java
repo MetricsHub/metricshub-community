@@ -28,6 +28,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -167,7 +168,11 @@ public class M8bTunnelClient {
 			final WebSocket socket = webSocket;
 			if (socket != null && !socket.isOutputClosed()) {
 				log.info("M8B tunnel stopping. Reason: {}.", reason);
-				closeThenAbort(socket, WebSocket.NORMAL_CLOSURE, reason, STOP_TIMEOUT);
+				// Waited for, not merely started: stop() is what a shutdown hook calls, and a JVM that
+				// exits before the frame is flushed leaves the server recording an abnormal
+				// disconnect instead of the clean 1000 this is here to send. The wait is bounded by
+				// the orTimeout inside, which aborts rather than hanging.
+				safely("close", () -> closeThenAbort(socket, WebSocket.NORMAL_CLOSURE, reason, CLOSE_TIMEOUT).join());
 			}
 			// The same cleanup every other loss gets. A stop ends a session as thoroughly as a
 			// dropped connection does: the listener has to hear that its in-flight work was
@@ -178,7 +183,12 @@ public class M8bTunnelClient {
 			closing.run();
 		} else {
 			try {
+				// Another thread may have shut the executor down between the check above and here, or
+				// while this task waits: a second stop is meant to be harmless, not to throw.
 				executor.submit(closing).get(STOP_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+			} catch (RejectedExecutionException | CancellationException e) {
+				log.debug("The M8B tunnel was already stopping.");
+				abandonSession();
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				// Same reason as below: the queued close never ran, and shutdownNow() is about to
@@ -556,14 +566,15 @@ public class M8bTunnelClient {
 	 * @param code          a close code the JDK client accepts
 	 * @param reason        the close reason, truncated to what a frame may carry
 	 * @param abortDeadline how long the close frame is given
+	 * @return when the frame has left, or been given up on
 	 */
-	private static void closeThenAbort(
+	private static CompletableFuture<WebSocket> closeThenAbort(
 		final WebSocket socket,
 		final int code,
 		final String reason,
 		final Duration abortDeadline
 	) {
-		socket
+		return socket
 			.sendClose(code, closeReason(reason))
 			.orTimeout(abortDeadline.toMillis(), TimeUnit.MILLISECONDS)
 			.whenComplete((ws, error) -> socket.abort());

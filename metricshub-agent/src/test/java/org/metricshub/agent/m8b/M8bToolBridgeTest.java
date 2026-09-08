@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -333,6 +334,24 @@ class M8bToolBridgeTest {
 			"A failure must be reportable, so its detail is cut rather than the report refused"
 		);
 		assertTrue(error.message().endsWith("(truncated)"), "And the cut must be visible");
+	}
+
+	@Test
+	void shouldNotSendAnErrorFrameThatWouldCostTheTunnel() throws Exception {
+		// A small negotiated cap and a multibyte failure message: cut by characters, the detail still
+		// encodes to four times its length, and a frame over the cap closes the tunnel (1009) --
+		// losing the session, not just the answer.
+		bridge.setLimits(new AgentRegistered(30, 512, 4));
+		doThrow(new IllegalStateException("é".repeat(M8bToolBridge.MAX_ERROR_DETAIL_CHARS))).when(slow).call(anyString());
+
+		bridge.invoke(invoke("Slow", 10_000), GENERATION);
+
+		final ToolError error = assertInstanceOf(ToolError.class, answer());
+		assertEquals(ToolErrorCode.EXECUTION_ERROR, error.code(), "The Governor still learns what happened");
+		assertTrue(
+			M8bJson.write(error).getBytes(StandardCharsets.UTF_8).length <= 512,
+			"and it learns it in a frame the server will accept"
+		);
 	}
 
 	@Test
