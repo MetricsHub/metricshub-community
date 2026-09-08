@@ -270,7 +270,7 @@ public class M8bTunnelClient {
 	public void send(final M8bMessage message, final long answerGeneration) {
 		dispatch(() -> {
 			if (answerGeneration == generation && !stopped) {
-				sendNow(message);
+				sendOnRegistered(message);
 			} else {
 				log.debug("M8B tunnel: dropping an answer from a connection that is gone (generation {}).", answerGeneration);
 			}
