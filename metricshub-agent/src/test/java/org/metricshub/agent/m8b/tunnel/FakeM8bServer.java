@@ -34,6 +34,7 @@ public class FakeM8bServer extends WebSocketServer {
 	private final BlockingQueue<Map<String, String>> handshakes = new LinkedBlockingQueue<>();
 	private final BlockingQueue<String> frames = new LinkedBlockingQueue<>();
 	private final BlockingQueue<Integer> closeCodes = new LinkedBlockingQueue<>();
+	private final BlockingQueue<String> acknowledgements = new LinkedBlockingQueue<>();
 	private final List<WebSocket> connections = new CopyOnWriteArrayList<>();
 	private final boolean secure;
 
@@ -103,6 +104,27 @@ public class FakeM8bServer extends WebSocketServer {
 		return closeCodes.poll(timeoutMillis, TimeUnit.MILLISECONDS);
 	}
 
+	/**
+	 * Waits until this server has finished WRITING an {@code agent.registered}.
+	 *
+	 * <p>Not the same thing as {@code awaitFrame(AgentRegister.TYPE, ...)}, and the difference is a
+	 * race. That records the registration on arrival and returns before the answer to it has been
+	 * written, on a different thread; a test that then sends a {@code tool.invoke} from its own
+	 * thread can get it onto the socket FIRST, and an invoke arriving before the session is
+	 * registered is refused by the client — correctly, and with a protocol error rather than the
+	 * result the test is waiting for.
+	 *
+	 * <p>Waiting here puts the two writes in order on one connection, which is all it takes: the
+	 * client then cannot see the invoke before the acknowledgement.
+	 *
+	 * @param timeoutMillis how long to wait
+	 * @return {@code true} if an acknowledgement was written within the timeout
+	 * @throws InterruptedException if the wait is interrupted
+	 */
+	public boolean awaitRegistrationAck(final long timeoutMillis) throws InterruptedException {
+		return acknowledgements.poll(timeoutMillis, TimeUnit.MILLISECONDS) != null;
+	}
+
 	public int connectionCount() {
 		return connections.size();
 	}
@@ -170,6 +192,9 @@ public class FakeM8bServer extends WebSocketServer {
 			final String type = M8bJson.MAPPER.readTree(message).path("type").asText();
 			if (autoRegister && M8bMessage.AgentRegister.TYPE.equals(type)) {
 				connection.send(M8bJson.write(limits));
+				// Recorded AFTER the write, which is the whole point of recording it: see
+				// awaitRegistrationAck
+				acknowledgements.add(AgentRegistered.TYPE);
 			} else if (autoPong && M8bMessage.HeartbeatPing.TYPE.equals(type)) {
 				connection.send(M8bJson.write(new HeartbeatPong()));
 			}

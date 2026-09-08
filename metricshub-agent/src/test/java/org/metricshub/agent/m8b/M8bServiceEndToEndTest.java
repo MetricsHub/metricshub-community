@@ -131,6 +131,12 @@ class M8bServiceEndToEndTest {
 		assertEquals("server-01", register.at("/hosts/0/resourceKey").asText());
 		assertEquals("server-01.example.com", register.at("/hosts/0/hostnames/ssh").asText());
 
+		// The registration must be ACKNOWLEDGED before an invocation is sent, not merely received:
+		// awaitFrame above returns as the frame arrives, while the answer to it is written on the
+		// server's own thread. Sending from here first would put a tool.invoke on the wire ahead of
+		// the agent.registered, and the client refuses an invocation on an unregistered session.
+		assertTrue(server.awaitRegistrationAck(TIMEOUT_MS), "The server must acknowledge the registration");
+
 		server.sendToAll(new ToolInvoke("req-1", "ListHosts", M8bJson.MAPPER.createObjectNode(), 30_000));
 
 		final JsonNode result = server.awaitFrame(M8bMessage.ToolResult.TYPE, TIMEOUT_MS);
