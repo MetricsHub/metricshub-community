@@ -47,11 +47,15 @@ public interface M8bTunnelListener {
 	default void onRegistered(final AgentRegistered registered) {}
 
 	/**
-	 * The server asks to run a tool. The answer is sent back through {@link M8bTunnelClient#send}.
+	 * The server asks to run a tool. The answer goes back through
+	 * {@link M8bTunnelClient#send(org.metricshub.agent.m8b.protocol.M8bMessage, long)} carrying the
+	 * generation given here, so an answer that outlives its connection is dropped rather than
+	 * delivered to a session that never issued its request id.
 	 *
-	 * @param invoke the invocation request
+	 * @param invoke     the invocation request
+	 * @param generation the connection it arrived on
 	 */
-	default void onInvoke(final ToolInvoke invoke) {}
+	default void onInvoke(final ToolInvoke invoke, final long generation) {}
 
 	/**
 	 * The connection was lost or closed. In-flight invocations are pointless from here on: the server

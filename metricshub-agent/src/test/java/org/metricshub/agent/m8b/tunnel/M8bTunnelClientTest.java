@@ -51,6 +51,7 @@ class M8bTunnelClientTest {
 		final AtomicInteger registrations = new AtomicInteger();
 		final BlockingQueue<AgentRegistered> registered = new LinkedBlockingQueue<>();
 		final BlockingQueue<ToolInvoke> invocations = new LinkedBlockingQueue<>();
+		final BlockingQueue<Long> invokedGenerations = new LinkedBlockingQueue<>();
 		final BlockingQueue<Integer> disconnections = new LinkedBlockingQueue<>();
 
 		@Override
@@ -71,8 +72,9 @@ class M8bTunnelClientTest {
 		}
 
 		@Override
-		public void onInvoke(final ToolInvoke invoke) {
+		public void onInvoke(final ToolInvoke invoke, final long generation) {
 			invocations.add(invoke);
+			invokedGenerations.add(generation);
 		}
 
 		@Override

@@ -256,6 +256,27 @@ public class M8bTunnelClient {
 		dispatch(() -> sendOnRegistered(message));
 	}
 
+	/**
+	 * Sends an answer, but only if the connection that asked for it is still the current one.
+	 *
+	 * <p>An answer is only meaningful to the session that issued its request id. Checking that
+	 * anywhere but here would be a check followed by a send, with a reconnection free to happen in
+	 * between; the comparison runs on the tunnel thread, which is also the thread that changes the
+	 * generation, so the two cannot interleave.
+	 *
+	 * @param message          the answer
+	 * @param answerGeneration the connection the request arrived on
+	 */
+	public void send(final M8bMessage message, final long answerGeneration) {
+		dispatch(() -> {
+			if (answerGeneration == generation && !stopped) {
+				sendOnRegistered(message);
+			} else {
+				log.debug("M8B tunnel: dropping an answer from a connection that is gone (generation {}).", answerGeneration);
+			}
+		});
+	}
+
 	// ---- tunnel thread ----
 
 	/**
@@ -362,7 +383,7 @@ public class M8bTunnelClient {
 		switch (message) {
 			case AgentRegistered registered -> onRegistered(registered);
 			case HeartbeatPong pong -> log.trace("M8B tunnel heartbeat acknowledged.");
-			case ToolInvoke invoke -> safely("onInvoke", () -> listener.onInvoke(invoke));
+			case ToolInvoke invoke -> safely("onInvoke", () -> listener.onInvoke(invoke, frameGeneration));
 			case ProtocolError protocolError -> log.warn(
 				"M8B server reported an error: {} - {}",
 				protocolError.code(),
