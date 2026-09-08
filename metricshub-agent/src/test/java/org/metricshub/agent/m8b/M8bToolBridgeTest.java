@@ -322,6 +322,36 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
+	void aLostConnectionGivesBackTheSlotsItsWorkWasHolding() throws Exception {
+		bridge.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 1));
+		final CountDownLatch stuck = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			blockIgnoringInterruption(stuck);
+			return "{}";
+		});
+
+		// A five-minute deadline: without the disconnect handling, the slot would be held for all of
+		// it and the NEXT session's first invocation would be refused for work nobody awaits.
+		bridge.invoke(invoke("Slow", 300_000), GENERATION);
+		await()
+			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.until(() -> bridge.inFlight() == 1);
+
+		bridge.cancelGeneration(GENERATION);
+
+		await()
+			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.untilAsserted(() -> assertEquals(0, bridge.inFlight(), "The lost connection's slot must come back"));
+		assertEquals(null, answers.poll(200, TimeUnit.MILLISECONDS), "and nothing is answered to a session that is gone");
+
+		// The next session can invoke immediately
+		when(listHosts.call(anyString())).thenReturn("{}");
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION + 1);
+		assertInstanceOf(ToolResult.class, answer());
+		stuck.countDown();
+	}
+
+	@Test
 	void shouldTrimAFailureDetailThatWouldNotFitAnErrorFrame() throws Exception {
 		doThrow(new IllegalStateException("x".repeat(50_000))).when(slow).call(anyString());
 

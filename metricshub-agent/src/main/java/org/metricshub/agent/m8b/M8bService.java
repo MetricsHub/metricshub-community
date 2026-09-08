@@ -344,6 +344,14 @@ public class M8bService {
 		}
 
 		@Override
+		public void onDisconnected(final int code, final String reason, final long generation) {
+			// The Governor discarded whatever it had asked for. The generation binding already stops
+			// an answer from reaching the next session; this is about the slot, which the bridge
+			// outliving the connection would otherwise hold until the invocation's own deadline.
+			tunnelBridge.cancelGeneration(generation);
+		}
+
+		@Override
 		public void onInvoke(final ToolInvoke invoke, final long generation) {
 			// The generation travels with the request and comes back with the answer: the server
 			// discarded what it had asked for when the connection dropped, and a result correlated

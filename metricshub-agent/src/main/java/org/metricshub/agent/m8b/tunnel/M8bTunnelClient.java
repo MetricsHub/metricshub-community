@@ -94,7 +94,16 @@ public class M8bTunnelClient {
 	 * {@code agent.registered} names a real cap this is the one in force, because "no limit yet" and
 	 * "no limit" must not be the same thing.
 	 */
-	static final long DEFAULT_MAX_INBOUND_CHARS = 8L * 1024 * 1024;
+	static final long DEFAULT_MAX_INBOUND_BYTES = 8L * 1024 * 1024;
+	/**
+	 * How many pieces one message may arrive in.
+	 *
+	 * <p>A size bound alone is not enough: an empty non-final fragment is legal and adds nothing to
+	 * it, so a peer could send them forever — each one costing a callback and a task on the tunnel
+	 * thread's queue — without the message ever growing. A message needing more pieces than this is
+	 * a peer that is not really sending a message.
+	 */
+	static final int MAX_INBOUND_FRAGMENTS = 4_096;
 
 	private final M8bTunnelSettings settings;
 	private final M8bTunnelListener listener;
@@ -238,7 +247,8 @@ public class M8bTunnelClient {
 		webSocket = null;
 		limits = null;
 		if (wasRegistered) {
-			safely("onDisconnected", () -> listener.onDisconnected(WebSocket.NORMAL_CLOSURE, "Forced shutdown"));
+			final long abandoned = generation;
+			safely("onDisconnected", () -> listener.onDisconnected(WebSocket.NORMAL_CLOSURE, "Forced shutdown", abandoned));
 		}
 	}
 
@@ -393,9 +403,41 @@ public class M8bTunnelClient {
 	 *
 	 * @return the cap the server imposed, or the default until it has imposed one
 	 */
-	private long maxInboundChars() {
+	private long maxInboundBytes() {
 		final AgentRegistered current = limits;
-		return current == null ? DEFAULT_MAX_INBOUND_CHARS : current.maxPayloadBytes();
+		return current == null ? DEFAULT_MAX_INBOUND_BYTES : current.maxPayloadBytes();
+	}
+
+	/**
+	 * The UTF-8 length of a fragment, counted rather than encoded.
+	 *
+	 * <p>Counted because the alternative is allocating a byte array per fragment purely to measure
+	 * it, and the point of measuring is to refuse the frames that would be expensive.
+	 *
+	 * <p>Characters would be the wrong unit outright: a character is a LOWER bound on its encoded
+	 * size, so 4 096 CJK characters slip past a 4 096-byte cap while occupying some 12 KiB on the
+	 * wire.
+	 *
+	 * @param text the fragment as delivered
+	 * @return how many bytes it occupies once encoded
+	 */
+	private static int utf8Length(final CharSequence text) {
+		int bytes = 0;
+		for (int index = 0; index < text.length(); index++) {
+			final char character = text.charAt(index);
+			if (character < 0x80) {
+				bytes += 1;
+			} else if (character < 0x800) {
+				bytes += 2;
+			} else if (Character.isHighSurrogate(character) && index + 1 < text.length()) {
+				// A surrogate pair is one code point, and four bytes for the pair rather than each
+				bytes += 4;
+				index++;
+			} else {
+				bytes += 3;
+			}
+		}
+		return bytes;
 	}
 
 	/**
@@ -534,7 +576,7 @@ public class M8bTunnelClient {
 		final boolean wasRegistered = limits != null;
 		limits = null;
 		if (wasRegistered) {
-			safely("onDisconnected", () -> listener.onDisconnected(code, reason));
+			safely("onDisconnected", () -> listener.onDisconnected(code, reason, lostGeneration));
 		}
 		if (stopped) {
 			return;
@@ -736,6 +778,8 @@ public class M8bTunnelClient {
 
 		private final long frameGeneration;
 		private final StringBuilder partial = new StringBuilder();
+		private long partialBytes;
+		private int fragments;
 
 		private FrameListener(final long frameGeneration) {
 			this.frameGeneration = frameGeneration;
@@ -748,14 +792,24 @@ public class M8bTunnelClient {
 
 		@Override
 		public CompletionStage<?> onText(final WebSocket socket, final CharSequence data, final boolean last) {
-			final long cap = maxInboundChars();
-			if (partial.length() + (long) data.length() > cap) {
-				// Deliberately WITHOUT requesting more. The backpressure below only applies once a
-				// message is complete, so a peer that never sets `last` could otherwise buffer the
-				// agent into an OutOfMemoryError one fragment at a time -- and asking for the next
-				// fragment is what would let it.
-				partial.setLength(0);
-				dispatch(() -> dropConnection(frameGeneration, CLOSE_MESSAGE_TOO_BIG, "Message above " + cap + " characters"));
+			final long cap = maxInboundBytes();
+			partialBytes += utf8Length(data);
+			fragments++;
+			if (partialBytes > cap || fragments > MAX_INBOUND_FRAGMENTS) {
+				// Deliberately WITHOUT requesting more, which is the part that matters: the
+				// backpressure below only engages once a message is COMPLETE, so a peer that never
+				// sets `last` would otherwise buffer the agent into an OutOfMemoryError one fragment
+				// at a time, and asking for the next fragment is what lets it.
+				//
+				// Both bounds, because a peer chooses both how big a message is and how many pieces
+				// it arrives in: an empty non-final fragment is legal and adds nothing to the size,
+				// so the size bound alone would never trip on a stream of them.
+				final String why =
+					partialBytes > cap
+						? "Message above " + cap + " bytes"
+						: "Message split into more than " + MAX_INBOUND_FRAGMENTS + " fragments";
+				reset();
+				dispatch(() -> dropConnection(frameGeneration, CLOSE_MESSAGE_TOO_BIG, why));
 				return null;
 			}
 			partial.append(data);
@@ -767,7 +821,7 @@ public class M8bTunnelClient {
 				return null;
 			}
 			final String text = partial.toString();
-			partial.setLength(0);
+			reset();
 			// Returning a stage is what makes the peer wait for this frame to be handled. Without it
 			// the tunnel thread's queue is unbounded, and a server sending faster than the agent can
 			// read -- faulty, or deliberate -- fills the agent's heap with frames nobody has looked
@@ -784,6 +838,13 @@ public class M8bTunnelClient {
 				handled.complete(null);
 			}
 			return handled;
+		}
+
+		/** Forgets a message, whether it completed or was refused. */
+		private void reset() {
+			partial.setLength(0);
+			partialBytes = 0;
+			fragments = 0;
 		}
 
 		@Override

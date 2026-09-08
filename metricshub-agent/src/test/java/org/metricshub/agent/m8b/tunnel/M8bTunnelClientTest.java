@@ -79,7 +79,7 @@ class M8bTunnelClientTest {
 		}
 
 		@Override
-		public void onDisconnected(final int code, final String reason) {
+		public void onDisconnected(final int code, final String reason, final long generation) {
 			disconnections.add(code);
 		}
 	}
@@ -309,8 +309,9 @@ class M8bTunnelClientTest {
 		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
 
 		// Fragments that never say "last": the completed-message backpressure can never engage, so
-		// what has to stop this is the accumulation bound
-		server.sendFragmentsToAll("x".repeat(1_024), 8);
+		// what has to stop this is the accumulation bound. EMPTY ones, because they are legal and add
+		// nothing to the size -- a byte bound alone would never trip on a stream of them.
+		server.sendFragmentsToAll("", M8bTunnelClient.MAX_INBOUND_FRAGMENTS + 8);
 
 		assertEquals(
 			M8bTunnelClient.CLOSE_MESSAGE_TOO_BIG,

@@ -97,7 +97,7 @@ public class M8bToolBridge {
 	 * deadline timer down discards the cancellations it was holding, and a callback that WOULD have
 	 * stopped on interruption would instead keep a process-wide thread for as long as it liked.
 	 */
-	private final ConcurrentHashMap<AtomicBoolean, Future<?>> running = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<AtomicBoolean, Running> running = new ConcurrentHashMap<>();
 	private volatile AgentRegistered limits = DEFAULT_LIMITS;
 
 	/**
@@ -119,6 +119,14 @@ public class M8bToolBridge {
 		// keeps its arguments alive until the timeout would have fired
 		this.timer.setRemoveOnCancelPolicy(true);
 	}
+
+	/**
+	 * One execution, and the tunnel connection that asked for it.
+	 *
+	 * @param execution  the worker running it
+	 * @param generation the connection it belongs to
+	 */
+	private record Running(Future<?> execution, long generation) {}
 
 	/**
 	 * Builds the pool tool executions run on. One per agent process, not one per bridge: a callback
@@ -231,7 +239,7 @@ public class M8bToolBridge {
 			);
 			return;
 		}
-		running.put(released, execution);
+		running.put(released, new Running(execution, generation));
 		if (released.get()) {
 			// It finished before the handle was stored, and its own release found nothing to remove
 			running.remove(released);
@@ -290,9 +298,29 @@ public class M8bToolBridge {
 	 */
 	public void shutdown() {
 		// Before the timer goes, because the timer is what was holding these cancellations.
-		running.values().forEach(execution -> execution.cancel(true));
+		running.values().forEach(entry -> entry.execution().cancel(true));
 		running.clear();
 		timer.shutdownNow();
+	}
+
+	/**
+	 * Gives up on everything a lost connection had asked for.
+	 *
+	 * <p>The generation binding already stops a late answer from reaching the next session. What it
+	 * does not do is give the slot back: this bridge outlives the connection, so work the Governor
+	 * discarded when the socket closed would go on holding its {@code maxInFlight} slot until its
+	 * own deadline — up to five minutes by default — and the NEXT session's invocations would be
+	 * refused {@code TOO_MANY_INFLIGHT} for work nobody is waiting for.
+	 *
+	 * @param generation the connection that has gone
+	 */
+	public void cancelGeneration(final long generation) {
+		running.forEach((released, entry) -> {
+			if (entry.generation() == generation) {
+				entry.execution().cancel(true);
+				release(released);
+			}
+		});
 	}
 
 	private M8bMessage execute(

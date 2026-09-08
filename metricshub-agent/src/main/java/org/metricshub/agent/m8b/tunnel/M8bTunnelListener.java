@@ -66,8 +66,9 @@ public interface M8bTunnelListener {
 	 * from the stopping thread instead. That case is precisely the one where the tunnel thread is
 	 * unavailable, and hearing this late from the wrong thread beats never hearing it.
 	 *
+	 * @param generation the connection that ended, so work bound to it can be given up on
 	 * @param code   WebSocket close code, {@code -1} on a transport error
 	 * @param reason close reason or error message
 	 */
-	default void onDisconnected(final int code, final String reason) {}
+	default void onDisconnected(final int code, final String reason, final long generation) {}
 }
