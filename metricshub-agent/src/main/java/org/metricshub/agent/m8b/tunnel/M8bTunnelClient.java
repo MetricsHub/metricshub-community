@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -122,14 +121,19 @@ public class M8bTunnelClient {
 	private CompletableFuture<WebSocket> sendChain;
 	private volatile AgentRegistered limits;
 	/**
-	 * When anything last arrived on the current connection.
+	 * When anything last arrived on the current connection, on the monotonic clock.
+	 *
+	 * <p>{@code System.nanoTime()} rather than {@code Instant.now()}, because what this measures is
+	 * ELAPSED time and the wall clock is not a measure of that: an NTP correction or a VM resuming
+	 * from a snapshot moves it, and a backward step would leave a silent tunnel alive until the
+	 * clock caught up while a forward one would drop a tunnel that is talking.
 	 *
 	 * <p>Volatile, and written straight from the receive callbacks rather than through a task on the
 	 * tunnel thread. One task per frame would be one unbounded-queue entry per frame, which is
-	 * exactly what a peer flooding pings would use to exhaust the agent's heap — and a timestamp
-	 * that only ever moves forward needs no ordering beyond the write itself.
+	 * exactly what a peer flooding pings would use to exhaust the agent's heap — and a stamp that
+	 * only ever moves forward needs no ordering beyond the write itself.
 	 */
-	private volatile Instant lastInbound;
+	private volatile long lastInboundNanos = System.nanoTime();
 	private ScheduledFuture<?> registrationDeadline;
 	private ScheduledFuture<?> heartbeat;
 	private ScheduledFuture<?> reconnect;
@@ -231,6 +235,12 @@ public class M8bTunnelClient {
 			}
 		}
 		executor.shutdownNow();
+		// This client is ours -- built in the constructor from these settings, not handed in -- and on
+		// a modern JDK it owns a selector manager and its connections. A configuration change builds
+		// a replacement, so leaving each retired one to garbage collection would leak a thread and a
+		// pool per reload. shutdownNow rather than close: everything worth waiting for was waited
+		// for above, and the socket is already aborted.
+		httpClient.shutdownNow();
 	}
 
 	/**
@@ -388,7 +398,7 @@ public class M8bTunnelClient {
 		}
 		webSocket = socket;
 		sendChain = CompletableFuture.completedFuture(socket);
-		lastInbound = Instant.now();
+		lastInboundNanos = System.nanoTime();
 		limits = null;
 		sendNow(listener.buildRegistration());
 		registrationDeadline = executor.schedule(
@@ -483,7 +493,7 @@ public class M8bTunnelClient {
 	 * costs nothing, where a queued task per frame costs the heap.
 	 */
 	private void touched() {
-		lastInbound = Instant.now();
+		lastInboundNanos = System.nanoTime();
 	}
 
 	private void handleFrame(final long frameGeneration, final String text) {
@@ -563,7 +573,7 @@ public class M8bTunnelClient {
 		if (tickGeneration != generation || stopped) {
 			return;
 		}
-		final Duration silence = Duration.between(lastInbound, Instant.now());
+		final Duration silence = Duration.ofNanos(System.nanoTime() - lastInboundNanos);
 		if (silence.toMillis() > interval.toMillis() * IDLE_FACTOR) {
 			log.warn("M8B tunnel: no frame received for {}; reconnecting.", silence);
 			dropConnection(tickGeneration, CLOSE_HEARTBEAT_TIMEOUT, "Heartbeat timeout");
