@@ -47,6 +47,13 @@ public abstract class AbstractMetric {
 	private Long collectTime;
 	private Long previousCollectTime;
 	private Map<String, String> attributes = new HashMap<>();
+
+	/**
+	 * Whether the collect time of this metric must be refreshed by the {@code PrepareCollectStrategy} at the start of
+	 * each collect cycle. Set for discovery metrics only, which are never re-collected by the collect jobs but must keep
+	 * being exported. Metrics collected by the collect and simple jobs must not carry this flag, otherwise a metric that
+	 * is no longer collected would be exported with a stale value.
+	 */
 	private boolean resetMetricTime;
 
 	/**
