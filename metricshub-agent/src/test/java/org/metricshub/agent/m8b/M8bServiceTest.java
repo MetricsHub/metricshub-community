@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -107,6 +108,9 @@ class M8bServiceTest {
 				capturedListeners.add(listener);
 				final M8bTunnelClient client = mock(M8bTunnelClient.class);
 				when(client.isConnected()).thenReturn(true);
+				// A frame that fits, which is the ordinary case; the test about one that does not
+				// says so for itself
+				when(client.send(any())).thenReturn(true);
 				createdClients.add(client);
 				return client;
 			},
@@ -305,6 +309,45 @@ class M8bServiceTest {
 		// Same generation again: nothing more is sent
 		service.supervise();
 		verify(client).send(any());
+	}
+
+	@Test
+	void anInventoryTooLargeToSendStaysPending() {
+		configure(M8bConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		service.supervise();
+		final M8bTunnelClient client = createdClients.get(0);
+		capturedListeners.get(0).buildRegistration();
+
+		// This server will not accept a frame this size, so nothing is sent
+		when(client.send(any(HostsUpdated.class))).thenReturn(false);
+		final Map<String, Map<String, TelemetryManager>> active = new HashMap<>();
+		active.put("metricshub-top-level-rg", Map.of("server-02", mock(TelemetryManager.class)));
+		when(agentContext.getTelemetryManagers()).thenReturn(active);
+		agentConfig = AgentConfig.builder()
+			.m8b(agentConfig.getM8b())
+			.resources(
+				Map.of(
+					"server-02",
+					ResourceConfig.builder()
+						.protocols(Map.of("ssh", SshConfiguration.sshConfigurationBuilder().hostname("server-02").build()))
+						.build()
+				)
+			)
+			.build();
+		generation = 3;
+		service.supervise();
+
+		// Recording it as advertised would leave the Governor routing on the old inventory for as
+		// long as this process ran: every later tick would see nothing to do
+		service.supervise();
+		verify(client, times(2)).send(any(HostsUpdated.class));
+
+		// And it recovers by itself once the frame fits -- a host removed, or the cap raised
+		when(client.send(any(HostsUpdated.class))).thenReturn(true);
+		service.supervise();
+		verify(client, times(3)).send(any(HostsUpdated.class));
+		service.supervise();
+		verify(client, times(3)).send(any(HostsUpdated.class));
 	}
 
 	@Test

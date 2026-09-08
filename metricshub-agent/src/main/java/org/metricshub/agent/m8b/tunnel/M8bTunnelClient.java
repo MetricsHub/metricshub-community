@@ -100,6 +100,16 @@ public class M8bTunnelClient {
 	 */
 	static final long MAX_INBOUND_BYTES = 8L * 1024 * 1024;
 	/**
+	 * The largest frame sent before a server has said what it accepts.
+	 *
+	 * <p>The protocol's documented default, which is the only sane guess available: {@code
+	 * agent.register} has to go out before {@code agent.registered} can come back, so the frame
+	 * carrying every tool schema and every host is measured against this instead. A registration
+	 * above it is dropped and the connection simply fails its registration deadline — slower and
+	 * quieter than a connect-and-1009 loop, with the error log the only thing explaining either.
+	 */
+	static final long DEFAULT_MAX_PAYLOAD_BYTES = 8L * 1024 * 1024;
+	/**
 	 * How many pieces one message may arrive in.
 	 *
 	 * <p>A size bound alone is not enough: an empty non-final fragment is legal and adds nothing to
@@ -297,10 +307,21 @@ public class M8bTunnelClient {
 	 * Sends a message on the current connection. Silently dropped when not connected or already
 	 * stopped: the caller's request is already lost on the server side in that case.
 	 *
+	 * <p>The size is measured HERE, on the caller's thread, so that a frame too large to send is
+	 * refused where the caller can see it. Measured on the tunnel thread instead it would be dropped
+	 * invisibly, and a caller that records what it sent as published would go on believing a frame
+	 * that never left.
+	 *
 	 * @param message the message
+	 * @return {@code false} when the message is too large for this server to accept, in which case
+	 *         nothing was sent and nothing will be
 	 */
-	public void send(final M8bMessage message) {
+	public boolean send(final M8bMessage message) {
+		if (!withinPayloadCap(message, M8bJson.write(message))) {
+			return false;
+		}
 		dispatch(() -> sendOnRegistered(message));
+		return true;
 	}
 
 	/**
@@ -506,7 +527,6 @@ public class M8bTunnelClient {
 	}
 
 	private void handleFrame(final long frameGeneration, final String text) {
-		touched();
 		if (frameGeneration != generation || stopped) {
 			return;
 		}
@@ -557,9 +577,12 @@ public class M8bTunnelClient {
 	 */
 	Duration heartbeatIntervalOf(final AgentRegistered registered) {
 		final long seconds = registered.heartbeatIntervalSeconds();
-		if (seconds <= 0) {
-			// Not asked for at all, so the configured interval stands -- clamped, because a
-			// configuration can name a duration this agent cannot schedule just as a server can.
+		if (seconds == 0) {
+			// ZERO exactly, which is also what an absent field deserializes to: the protocol reserves
+			// it, and it alone, for "not specified". A negative is a value, and a value out of range
+			// is clamped below like any other -- treating it as unspecified would put it back on the
+			// local configuration a governor cannot see. Clamped, because a configuration can name a
+			// duration this agent cannot schedule just as a server can.
 			return schedulable(settings.heartbeatInterval());
 		}
 		// Seconds, compared as seconds: converting first is what would overflow.
@@ -775,12 +798,14 @@ public class M8bTunnelClient {
 	 */
 	private boolean withinPayloadCap(final M8bMessage message, final String text) {
 		final AgentRegistered current = limits;
-		if (current == null) {
-			// The server has not said yet, and the frame that asks it cannot wait for the answer.
-			return true;
-		}
+		// A cap of its own before the server has named one, because the frame that ASKS for the cap
+		// is sent before the answer can arrive -- and on every reconnection, since the negotiated
+		// value goes with the connection that carried it. Exempting it left the one frame nobody
+		// measures carrying every tool schema and every host: a fleet large enough to exceed the
+		// governor's limit would be closed 1009, reconnect, and be closed again, forever.
+		final long cap = current == null ? DEFAULT_MAX_PAYLOAD_BYTES : current.maxPayloadBytes();
 		final int size = text.getBytes(StandardCharsets.UTF_8).length;
-		if (size <= current.maxPayloadBytes()) {
+		if (size <= cap) {
 			return true;
 		}
 		log.error(
@@ -788,7 +813,7 @@ public class M8bTunnelClient {
 				"Sending it would close the tunnel; it is dropped instead.",
 			message.type(),
 			size,
-			current.maxPayloadBytes()
+			cap
 		);
 		return false;
 	}
@@ -955,6 +980,13 @@ public class M8bTunnelClient {
 			}
 			final String text = partial.toString();
 			reset();
+			// Stamped HERE, on the callback thread, and not left to handleFrame below. The heartbeat
+			// task reads this stamp on the tunnel thread, and it can already be queued ahead of the
+			// dispatch: it would then read a stamp from before this frame arrived and close a
+			// perfectly live connection with 4003. Liveness is a property of the frame ARRIVING, so
+			// it is recorded where the arrival is observed -- which is what the fragment and
+			// Ping/Pong paths already do.
+			touched();
 			// DEMAND is what holds the peer back, and it is asked for only once this message has been
 			// handled. The returned stage is not enough on its own: the JDK is explicit that it has
 			// nothing to do with the invocation counter, so a server sending faster than the agent

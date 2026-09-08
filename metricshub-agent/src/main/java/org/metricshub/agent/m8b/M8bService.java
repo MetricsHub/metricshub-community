@@ -180,7 +180,14 @@ public class M8bService {
 			}
 			final List<HostDescriptor> hosts = HostInventory.from(current.context());
 			if (!hosts.equals(advertisedHosts)) {
-				client.send(new HostsUpdated(hosts));
+				if (!client.send(new HostsUpdated(hosts))) {
+					// Too large for this server to accept, so it was not sent. Recording it as
+					// advertised anyway would leave every later tick seeing nothing to do, and the
+					// Governor routing on the old inventory for as long as the process ran. Left
+					// unrecorded, the next tick tries again -- which costs a log line every thirty
+					// seconds and recovers by itself if hosts are removed or the server's cap raised.
+					return;
+				}
 				log.info("M8B tunnel: host inventory updated ({} host(s)).", hosts.size());
 			}
 			advertisedHosts = hosts;

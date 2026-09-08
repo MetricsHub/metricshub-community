@@ -22,6 +22,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.AfterEach;
@@ -447,6 +448,46 @@ class M8bTunnelClientTest {
 			Duration.ofSeconds(30),
 			client.heartbeatIntervalOf(new AgentRegistered(0, 1_048_576L, 2)),
 			"Only an unspecified interval falls back to the configuration"
+		);
+		assertEquals(
+			Duration.ofSeconds(1),
+			client.heartbeatIntervalOf(new AgentRegistered(-5, 1_048_576L, 2)),
+			"A negative is a value out of range, not an absent one: it clamps like any other"
+		);
+	}
+
+	@Test
+	void aFrameTooLargeToSendIsRefusedBeforeAnyCapIsNegotiated() throws Exception {
+		// agent.register goes out before agent.registered can come back, and the negotiated cap goes
+		// with the connection that carried it -- so on every connection there is a window where the
+		// frame carrying every tool schema and every host is the one frame nobody measures. Exempted,
+		// a large enough fleet would be closed 1009, reconnect, and be closed again forever.
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		client = new M8bTunnelClient(settings(server, null), new RecordingListener());
+
+		assertNull(client.limits(), "Nothing has been negotiated yet");
+		// Roughly 12 MB serialized against the 8 MiB default: a large fleet with a description on
+		// every host, not a pathological string
+		final String description = "x".repeat(500);
+		final List<HostDescriptor> enormous = IntStream.range(0, 20_000)
+			.mapToObj(index ->
+				new HostDescriptor(
+					"host-" + index,
+					"group",
+					Map.of("ssh", "host-" + index + ".a-fairly-long-domain-name.example.com"),
+					Map.of("host.name", "host-" + index, "host.type", "linux", "description", description)
+				)
+			)
+			.toList();
+
+		assertFalse(
+			client.send(new M8bMessage.HostsUpdated(enormous)),
+			"Above " + M8bTunnelClient.DEFAULT_MAX_PAYLOAD_BYTES + " bytes it is refused, not sent and closed"
+		);
+		assertTrue(
+			client.send(new M8bMessage.HostsUpdated(enormous.subList(0, 10))),
+			"and an ordinary inventory still goes"
 		);
 	}
 
