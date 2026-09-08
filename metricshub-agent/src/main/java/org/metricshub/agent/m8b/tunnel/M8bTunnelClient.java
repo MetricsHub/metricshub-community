@@ -253,7 +253,7 @@ public class M8bTunnelClient {
 	 * @param message the message
 	 */
 	public void send(final M8bMessage message) {
-		dispatch(() -> sendNow(message));
+		dispatch(() -> sendOnRegistered(message));
 	}
 
 	/**
@@ -278,6 +278,24 @@ public class M8bTunnelClient {
 	}
 
 	// ---- tunnel thread ----
+
+	/**
+	 * Sends what a caller handed us, but not before the session is registered.
+	 *
+	 * <p>A socket exists from the moment the handshake completes; the server has agreed to nothing
+	 * until it answers {@code agent.registered}. Anything sent in between belongs to no session the
+	 * server recognises — which is exactly what a late answer from a previous connection would be.
+	 * The registration frame itself does not come through here.
+	 *
+	 * @param message what to send
+	 */
+	private void sendOnRegistered(final M8bMessage message) {
+		if (limits == null) {
+			log.debug("M8B tunnel: dropping a '{}' sent before the session was registered.", message.type());
+			return;
+		}
+		sendNow(message);
+	}
 
 	private void connect(final long connectGeneration) {
 		if (stopped || connectGeneration != generation) {
@@ -645,17 +663,31 @@ public class M8bTunnelClient {
 		@Override
 		public CompletionStage<?> onText(final WebSocket socket, final CharSequence data, final boolean last) {
 			partial.append(data);
-			if (last) {
-				final String text = partial.toString();
-				partial.setLength(0);
-				dispatch(() -> handleFrame(frameGeneration, text));
-			} else {
-				// A frame long enough to arrive in pieces must not be mistaken for silence while it
-				// is still arriving.
-				dispatch(() -> touched(frameGeneration));
-			}
 			socket.request(1);
-			return null;
+			if (!last) {
+				// A frame long enough to arrive in pieces must not be mistaken for silence while it
+				// is still arriving. Fragments are always taken: the message has to finish.
+				dispatch(() -> touched(frameGeneration));
+				return null;
+			}
+			final String text = partial.toString();
+			partial.setLength(0);
+			// Returning a stage is what makes the peer wait for this frame to be handled. Without it
+			// the tunnel thread's queue is unbounded, and a server sending faster than the agent can
+			// read -- faulty, or deliberate -- fills the agent's heap with frames nobody has looked
+			// at yet.
+			final CompletableFuture<Void> handled = new CompletableFuture<>();
+			final boolean taken = dispatch(() -> {
+				try {
+					handleFrame(frameGeneration, text);
+				} finally {
+					handled.complete(null);
+				}
+			});
+			if (!taken) {
+				handled.complete(null);
+			}
+			return handled;
 		}
 
 		@Override
