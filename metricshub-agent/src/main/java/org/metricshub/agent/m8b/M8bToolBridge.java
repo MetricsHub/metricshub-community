@@ -174,7 +174,7 @@ public class M8bToolBridge {
 	public void invoke(final ToolInvoke invoke, final long generation) {
 		final ToolCallback callback = snapshot.callbacks().get(invoke.tool());
 		if (callback == null) {
-			sender.accept(
+			answer(
 				new ToolError(
 					invoke.requestId(),
 					ToolErrorCode.TOOL_NOT_AVAILABLE,
@@ -187,7 +187,7 @@ public class M8bToolBridge {
 		final AgentRegistered currentLimits = limits;
 		if (inFlight.incrementAndGet() > currentLimits.maxInFlight()) {
 			inFlight.decrementAndGet();
-			sender.accept(
+			answer(
 				new ToolError(
 					invoke.requestId(),
 					ToolErrorCode.TOO_MANY_INFLIGHT,
@@ -221,7 +221,7 @@ public class M8bToolBridge {
 			});
 		} catch (RejectedExecutionException e) {
 			release(released);
-			sender.accept(
+			answer(
 				new ToolError(
 					invoke.requestId(),
 					ToolErrorCode.TOO_MANY_INFLIGHT,
@@ -340,12 +340,29 @@ public class M8bToolBridge {
 		}
 	}
 
-	private boolean answerOnce(final AtomicBoolean answered, final long generation, final M8bMessage answer) {
+	private boolean answerOnce(final AtomicBoolean answered, final long generation, final M8bMessage message) {
 		if (answered.compareAndSet(false, true)) {
-			sender.accept(withinCap(answer), generation);
+			answer(message, generation);
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * The single way anything leaves this bridge, so the cap applies to everything.
+	 *
+	 * <p>Including the refusals sent before a worker is ever submitted: an unknown tool, a full
+	 * concurrency slot, a saturated pool. Those carry a tool name and a request id chosen by the
+	 * server, and with a small negotiated cap they can be as oversized as any result.
+	 *
+	 * @param message    the answer
+	 * @param generation the connection that asked for it
+	 */
+	private void answer(final M8bMessage message, final long generation) {
+		final M8bMessage bounded = withinCap(message);
+		if (bounded != null) {
+			sender.accept(bounded, generation);
+		}
 	}
 
 	/**
@@ -361,19 +378,40 @@ public class M8bToolBridge {
 	 * @param answer what the invocation produced
 	 * @return it, or a smaller answer saying the same thing
 	 */
-	private M8bMessage withinCap(final M8bMessage answer) {
+	private M8bMessage withinCap(final M8bMessage message) {
 		final long cap = limits.maxPayloadBytes();
-		if (M8bJson.write(answer).getBytes(StandardCharsets.UTF_8).length <= cap) {
-			return answer;
+		if (fits(message, cap)) {
+			return message;
 		}
-		if (answer instanceof ToolError error) {
-			log.warn("M8B tool error for request {} does not fit {} bytes; sending it bare.", error.requestId(), cap);
-			return new ToolError(error.requestId(), error.code(), "");
+		final M8bMessage bare =
+			message instanceof ToolError error
+				? new ToolError(error.requestId(), error.code(), "")
+				: new ToolError(((ToolResult) message).requestId(), ToolErrorCode.RESULT_TOO_LARGE, "");
+		if (fits(bare, cap)) {
+			log.warn("M8B answer for request {} does not fit {} bytes; sending it bare.", requestIdOf(message), cap);
+			return bare;
 		}
-		// A ToolResult this large should have been caught by the payload check in execute(); this is
-		// the belt to that pair of braces.
-		final ToolResult result = (ToolResult) answer;
-		return new ToolError(result.requestId(), ToolErrorCode.RESULT_TOO_LARGE, "");
+		// Not even the correlation id fits. Truncating THAT would produce an answer to a request
+		// nobody made, and sending it oversized costs the tunnel (1009) rather than one invocation.
+		// The server's own deadline is what ends this one.
+		log.error(
+			"M8B cannot answer request {} within {} bytes; leaving it to the server's deadline.",
+			requestIdOf(message),
+			cap
+		);
+		return null;
+	}
+
+	private static boolean fits(final M8bMessage message, final long cap) {
+		return M8bJson.write(message).getBytes(StandardCharsets.UTF_8).length <= cap;
+	}
+
+	private static String requestIdOf(final M8bMessage message) {
+		return switch (message) {
+			case ToolError error -> error.requestId();
+			case ToolResult result -> result.requestId();
+			default -> "";
+		};
 	}
 
 	private static String messageOf(final Exception e) {

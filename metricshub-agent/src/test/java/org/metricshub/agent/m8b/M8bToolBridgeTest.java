@@ -355,8 +355,22 @@ class M8bToolBridgeTest {
 	}
 
 	@Test
+	void shouldCapTheRefusalsSentBeforeAWorkerEverRuns() throws Exception {
+		// A tool this fleet does not advertise, and a cap too small for the complaint about it: the
+		// refusal must still not be the frame that costs the tunnel.
+		bridge.setLimits(new AgentRegistered(30, 200, 4));
+
+		bridge.invoke(new ToolInvoke("req-1", "x".repeat(4_000), M8bJson.MAPPER.createObjectNode(), 10_000), GENERATION);
+
+		final ToolError error = assertInstanceOf(ToolError.class, answer());
+		assertEquals(ToolErrorCode.TOOL_NOT_AVAILABLE, error.code());
+		assertTrue(M8bJson.write(error).getBytes(StandardCharsets.UTF_8).length <= 200, "and it fits");
+	}
+
+	@Test
 	void shouldRefuseAResultAboveThePayloadCap() throws Exception {
-		bridge.setLimits(new AgentRegistered(30, 64, 4));
+		// Big enough for the refusal, far too small for the result it refuses
+		bridge.setLimits(new AgentRegistered(30, 200, 4));
 		when(listHosts.call(anyString())).thenReturn("{\"data\":\"" + "x".repeat(200) + "\"}");
 
 		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
