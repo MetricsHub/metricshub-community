@@ -801,7 +801,7 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 
 Two listeners, and they are not the same thing:
 
-* **`WebSocket.Listener`** (the JDK's) is called on the HTTP client's own threads. It does nothing but reassemble a text frame and hand it to the tunnel thread, which is why nothing there needs to be fast.
+* **`WebSocket.Listener`** (the JDK's) is called on the HTTP client's own threads, and does deliberately as little as possible: reassemble a text frame, hand it to the tunnel thread, ask for the next one. Keep it that way — the next frame is only requested at the END of each callback, so blocking there stops frames arriving at all, and the heartbeat check then reports a peer that is talking as silent.
 * **`M8bTunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` changes bridge state. Only `onInvoke` hands off — to the tool pool, carrying the connection generation the answer will be bound to. Anything blocking added to the others stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
 
 The bridge frees an invocation's in-flight slot exactly once, by whichever of three paths reaches it first: the worker's `finally` when it finishes, the deadline when the invocation timed out with its worker still running (or cancelled before it ever ran), and the rejection path when no thread was free to take it. So the deadline does not release the slot when the worker is *gone* — it releases it precisely when the worker has **not** finished, which is the whole point: the Governor has been told the invocation is over, so the slot is its to reuse even though the thread is not.
