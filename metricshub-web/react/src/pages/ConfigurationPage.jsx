@@ -562,7 +562,9 @@ function ConfigurationPage() {
 							onClick={handleReevaluateConfiguration}
 							disabled={reevaluation?.scope === "configuration" && !!reevaluation?.loading}
 						>
-							{reevaluation?.scope === "configuration" && reevaluation?.loading ? "Reloading..." : "Reload"}
+							{reevaluation?.scope === "configuration" && reevaluation?.loading
+								? "Reloading..."
+								: "Reload"}
 						</Button>
 					</span>
 				</Tooltip>
