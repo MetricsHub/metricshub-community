@@ -52,7 +52,7 @@
 		"@testing-library/user-event": "^14.6.1",
 		"@types/react": "^19.1.10",
 		"@types/react-dom": "^19.1.7",
-		"@vitejs/plugin-react": "^5.0.0",
+		"@vitejs/plugin-react": "^5.2.0",
 		"@vitest/ui": "^4.1.0",
 		"eslint": "^9.36.0",
 		"eslint-plugin-react": "^7.37.5",
@@ -61,7 +61,7 @@
 		"globals": "^16.4.0",
 		"happy-dom": "^20.8.9",
 		"prettier": "^3.6.2",
-		"vite": "^7.3.2",
+		"vite": "^8.0.16",
 		"vitest": "^4.1.0"
 	}
 }
