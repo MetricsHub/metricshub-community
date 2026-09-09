@@ -22,13 +22,16 @@ package org.metricshub.web.service;
  */
 
 import jakarta.annotation.PreDestroy;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.service.ConfigurationReloadService;
 import org.metricshub.agent.service.ProgrammableReEvaluationScheduler;
+import org.metricshub.agent.service.ProgrammableReEvaluationScheduler.ReEvaluationOutcome;
 import org.metricshub.agent.service.ReloadService;
-import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.extension.IConfigurationProvider;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -146,62 +149,122 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 	}
 
 	/**
+	 * Re-evaluates a single template on demand and applies the resulting configuration changes.
+	 * <p>
+	 * This is the manual counterpart of a cron firing, and runs through the very same path: it works
+	 * whether or not the template declares a {@code $schedule.cron(...)}, so a user can refresh a
+	 * template's data whenever they want. Only the targeted template is re-run; the configuration of
+	 * every other one is reused as it stands, and the reload is skipped altogether when the template
+	 * produced the same result as before.
+	 * </p>
+	 *
+	 * @param fileName name of the template file, relative to the configuration directory
+	 * @return what the re-evaluation ended up doing
+	 * @throws IllegalStateException when the agent context or the scheduler is unavailable
+	 * @throws IllegalArgumentException when no provider handles the given file
+	 */
+	public ReEvaluationOutcome reevaluateTemplate(final String fileName) {
+		final AgentContext currentContext = agentContextHolder.getAgentContext();
+		if (currentContext == null || currentContext.getExtensionManager() == null) {
+			throw new IllegalStateException("The agent context is not available yet.");
+		}
+
+		final String reEvaluationId = currentContext.getConfigDirectory().resolve(fileName).toAbsolutePath().toString();
+
+		final IConfigurationProvider provider = currentContext
+			.getExtensionManager()
+			.getConfigurationProviderExtensions()
+			.stream()
+			.filter(candidate -> candidate.getFileExtensions().stream().anyMatch(fileName.toLowerCase(Locale.ROOT)::endsWith))
+			.findFirst()
+			.orElseThrow(() -> new IllegalArgumentException("No configuration provider handles '" + fileName + "'."));
+
+		final ProgrammableReEvaluationScheduler currentScheduler = scheduler;
+		if (currentScheduler == null) {
+			throw new IllegalStateException("The re-evaluation scheduler is not available yet.");
+		}
+
+		log.info("Manual re-evaluation of '{}' requested.", fileName);
+
+		// Delegate to the scheduler rather than reloading here: a cron firing and a manual request then
+		// share the same change detection, the same baseline and the same lock, so the two can never
+		// interleave and neither leaves the other's change detection stale.
+		return currentScheduler.reevaluateNow(provider, reEvaluationId);
+	}
+
+	/**
+	 * Reloads the whole configuration on demand, re-running <b>every</b> configuration source rather
+	 * than a single template, and applies the differences.
+	 *
+	 * @throws IllegalStateException when the agent context is unavailable
+	 */
+	public void reloadConfiguration() {
+		if (agentContextHolder.getAgentContext() == null) {
+			throw new IllegalStateException("The agent context is not available yet.");
+		}
+		log.info("Manual configuration reload requested.");
+		reload();
+	}
+
+	/**
 	 * Rebuilds the configuration and applies the differences. Invoked by the scheduler after a
-	 * re-evaluation changed a template's output.
+	 * re-evaluation changed a template's output, and by the manual entry points above.
 	 */
 	void reload() {
 		final AgentContext currentContext = agentContextHolder.getAgentContext();
 		if (currentContext == null) {
 			return;
 		}
-		AgentContext reloadedContext = null;
-		try {
-			reloadedContext = new AgentContext(
-				currentContext.getConfigDirectory().toString(),
-				currentContext.getExtensionManager()
-			);
+		// Captured before the reload so the lazily built restart context does not read a context that
+		// is being replaced. The extension manager is loaded once at boot and carried across reloads,
+		// so the reference stays the one a restart would find anyway.
+		final String configDirectory = currentContext.getConfigDirectory().toString();
+		final ExtensionManager extensionManager = currentContext.getExtensionManager();
 
-			final ReloadResult result = ReloadService.builder()
+		try {
+			ConfigurationReloadService.builder()
 				.withRunningAgentContext(currentContext)
-				.withReloadedAgentContext(reloadedContext)
+				.withComparisonContextSupplier(() -> buildContext(configDirectory, extensionManager))
+				.withRestartContextSupplier(() -> buildContext(configDirectory, extensionManager))
+				.withRestartRequester(reloadedContextSupplier -> {
+					agentLifecycleService.restartAsync(reloadedContextSupplier);
+					return true;
+				})
+				// A resource-level reload does not rebuild the AgentContext, so nothing else will pick up
+				// the schedule a newly added template declares.
+				.withAfterLocalChanges(this::rediscoverSchedules)
 				.build()
 				.reload();
-
-			switch (result) {
-				case GLOBAL_RESTART_REQUIRED -> {
-					// The comparison context is closed here rather than handed over: restartAsync coalesces
-					// requests and drops a superseded one WITHOUT invoking its supplier, so a pre-built
-					// context would be left started with nothing to close it. The supplier below builds the
-					// context lazily, on the restart thread, and only if the request actually runs.
-					final String configDirectory = currentContext.getConfigDirectory().toString();
-					final ExtensionManager extensionManager = currentContext.getExtensionManager();
-					reloadedContext.close();
-					agentLifecycleService.restartAsync(() -> new AgentContext(configDirectory, extensionManager));
-				}
-				case LOCAL_ONLY -> {
-					// The rebuilt context reused the running ExtensionManager, so its providers (e.g. a
-					// newly added .vm file) are already up to date; pick up any schedule they declare
-					// before discarding the throwaway context, since no full restart will follow this
-					// outcome to do it for us.
-					scheduler.rediscoverNewRegistrations();
-					reloadedContext.close();
-				}
-				case NO_CHANGE -> reloadedContext.close();
-				default -> {
-					log.warn("Unknown reload result: {}", result);
-					reloadedContext.close();
-				}
-			}
 		} catch (Exception e) {
 			log.error("Programmable re-evaluation reload failed: {}", e.getMessage());
 			log.debug("Reload error:", e);
-			if (reloadedContext != null) {
-				try {
-					reloadedContext.close();
-				} catch (Exception closeException) {
-					log.debug("Failed to close the partially-built reloaded context.", closeException);
-				}
-			}
+		}
+	}
+
+	/**
+	 * Re-runs the scheduler's discovery, if it is up, after resource-level changes were applied.
+	 */
+	private void rediscoverSchedules() {
+		final ProgrammableReEvaluationScheduler currentScheduler = scheduler;
+		if (currentScheduler != null) {
+			currentScheduler.rediscoverNewRegistrations();
+		}
+	}
+
+	/**
+	 * Builds the {@link AgentContext} served to a full restart. Invoked lazily, on the restart thread,
+	 * and only when the queued restart actually runs. The checked exception the constructor declares
+	 * is wrapped, since the lifecycle service consumes a plain supplier and records the failure.
+	 *
+	 * @param configDirectory  the configuration directory the context is built from
+	 * @param extensionManager the extension manager carried into the new context
+	 * @return the newly built context
+	 */
+	private static AgentContext buildContext(final String configDirectory, final ExtensionManager extensionManager) {
+		try {
+			return new AgentContext(configDirectory, extensionManager);
+		} catch (Exception e) {
+			throw new IllegalStateException("Failed to build the reloaded AgentContext: " + e.getMessage(), e);
 		}
 	}
 

@@ -115,4 +115,26 @@ public interface IConfigurationProvider {
 	default Optional<JsonNode> currentFragment(String reEvaluationId) {
 		return Optional.empty();
 	}
+
+	/**
+	 * Runs the given action while this provider serves the fragments it produced last instead of
+	 * re-running its sources.
+	 * <p>
+	 * This scopes a re-evaluation: the caller refreshes the one unit it targets through
+	 * {@link #reevaluate(String)}, then rebuilds the configuration inside this action. The rebuild
+	 * picks up the refreshed unit and reuses the cached output of every other one, so re-evaluating a
+	 * single template does not re-run the data sources of all the others.
+	 * </p>
+	 * <p>
+	 * The reuse applies to the calling thread only and is lifted when the action returns, whether it
+	 * completed or threw. A unit with nothing cached yet (for example a template added since the last
+	 * load) is still produced normally, since there is nothing to reuse. Providers that do not cache
+	 * fragments simply run the action.
+	 * </p>
+	 *
+	 * @param action the action to run, typically a configuration rebuild.
+	 */
+	default void runReusingCachedFragments(Runnable action) {
+		action.run();
+	}
 }

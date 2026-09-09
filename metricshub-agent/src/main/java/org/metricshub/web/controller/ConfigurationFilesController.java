@@ -27,14 +27,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.metricshub.agent.deserialization.DeserializationFailure;
+import org.metricshub.agent.service.ProgrammableReEvaluationScheduler.ReEvaluationOutcome;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.TextPlainException;
 import org.metricshub.web.service.ConfigurationFilesService;
+import org.metricshub.web.service.ProgrammableReEvaluationLauncher;
 import org.metricshub.web.service.VelocityTemplateService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -68,6 +71,9 @@ public class ConfigurationFilesController {
 	/** Service for evaluating Velocity templates. */
 	private VelocityTemplateService velocityTemplateService;
 
+	/** Launcher driving template re-evaluation and configuration reloads. */
+	private ProgrammableReEvaluationLauncher programmableReEvaluationLauncher;
+
 	/**
 	 * Constructor for ConfigurationFilesController.
 	 *
@@ -75,14 +81,18 @@ public class ConfigurationFilesController {
 	 *                                  configuration file requests.
 	 * @param velocityTemplateService   the VelocityTemplateService to evaluate
 	 *                                  Velocity templates.
+	 * @param programmableReEvaluationLauncher the launcher used to re-evaluate templates and reload
+	 *                                  the configuration on demand.
 	 */
 
 	public ConfigurationFilesController(
 		final ConfigurationFilesService configurationFilesService,
-		final VelocityTemplateService velocityTemplateService
+		final VelocityTemplateService velocityTemplateService,
+		final ProgrammableReEvaluationLauncher programmableReEvaluationLauncher
 	) {
 		this.configurationFilesService = configurationFilesService;
 		this.velocityTemplateService = velocityTemplateService;
+		this.programmableReEvaluationLauncher = programmableReEvaluationLauncher;
 	}
 
 	/**
@@ -444,6 +454,97 @@ public class ConfigurationFilesController {
 			return ResponseEntity.ok(result);
 		} catch (ConfigFilesException e) {
 			throw new TextPlainException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Endpoint to re-evaluate a single Velocity template and apply the resulting configuration.
+	 * <p>
+	 * Unlike {@code /test/{fileName}}, which only renders the template for inspection, this
+	 * endpoint publishes the result: the template is re-rendered from its current data sources and
+	 * the running configuration is reloaded. It works whether or not the template declares a
+	 * {@code $schedule.cron(...)}.
+	 *
+	 * @param fileName the .vm file name
+	 * @return {@code 200} when the template was re-evaluated, whether or not a reload was needed;
+	 *         {@code 409} when the template produced nothing
+	 * @throws ConfigFilesException when the file is not a template, or no provider handles it
+	 */
+	@Operation(
+		summary = "Re-evaluate a Velocity template",
+		description = "Re-evaluates a Velocity template (.vm) and reloads the running configuration when its result changed.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Template re-evaluated; reloaded only if it changed"),
+			@ApiResponse(responseCode = "400", description = "Not a .vm file, or no provider handles it"),
+			@ApiResponse(responseCode = "409", description = "The template produced no configuration"),
+			@ApiResponse(responseCode = "500", description = "The configuration reload failed")
+		}
+	)
+	@PostMapping(value = "/reevaluate/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, Object>> reevaluateConfigurationFile(
+		@Parameter(description = "Velocity template file name (.vm)") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
+		if (!ConfigurationFilesService.isVmFile(fileName)) {
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
+				"Only .vm files can be re-evaluated."
+			);
+		}
+		try {
+			final ReEvaluationOutcome outcome = programmableReEvaluationLauncher.reevaluateTemplate(fileName);
+			return switch (outcome) {
+				case RELOADED -> ResponseEntity.ok(body(fileName, true, "Template re-evaluated and configuration reloaded."));
+				// Re-running the template produced exactly what the configuration already holds, so there
+				// is nothing to apply. That is a success, not a failure.
+				case UNCHANGED -> ResponseEntity.ok(
+					body(fileName, false, "Template re-evaluated; the configuration is already up to date.")
+				);
+				case NOTHING_PRODUCED -> ResponseEntity.status(HttpStatus.CONFLICT).body(
+					body(fileName, false, "The template produced no configuration; the last good value is kept.")
+				);
+				case RELOAD_FAILED -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+					body(fileName, false, "The configuration reload failed; the change is retried on the next firing.")
+				);
+			};
+		} catch (IllegalArgumentException | IllegalStateException e) {
+			throw new ConfigFilesException(ConfigFilesException.Code.VALIDATION_FAILED, e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Builds the response body of a template re-evaluation.
+	 *
+	 * @param fileName the template that was re-evaluated
+	 * @param reloaded whether the running configuration was reloaded
+	 * @param message  a human readable outcome
+	 * @return the response body
+	 */
+	private static Map<String, Object> body(final String fileName, final boolean reloaded, final String message) {
+		return Map.of("name", fileName, "reloaded", reloaded, "message", message);
+	}
+
+	/**
+	 * Endpoint to reload the whole configuration, re-running every configuration source instead of a
+	 * single template.
+	 *
+	 * @return {@code 200} once the reload has been applied
+	 * @throws ConfigFilesException when the agent context is not available yet
+	 */
+	@Operation(
+		summary = "Re-evaluate the whole configuration",
+		description = "Re-runs every configuration source and reloads the running configuration.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Configuration reloaded"),
+			@ApiResponse(responseCode = "400", description = "The agent context is not available yet")
+		}
+	)
+	@PostMapping(value = "/reevaluate", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, Object>> reevaluateConfiguration() throws ConfigFilesException {
+		try {
+			programmableReEvaluationLauncher.reloadConfiguration();
+			return ResponseEntity.ok(Map.of("reloaded", true, "message", "Configuration reloaded."));
+		} catch (IllegalStateException e) {
+			throw new ConfigFilesException(ConfigFilesException.Code.VALIDATION_FAILED, e.getMessage(), e);
 		}
 	}
 

@@ -49,9 +49,11 @@ import org.springframework.scheduling.support.CronTrigger;
  * {@link TaskScheduler}.
  * </p>
  * <p>
- * When a task fires, the whole template is rendered again. If the fragment it produces actually
- * changed, a reload is triggered through the injected {@link ReloadTrigger}, which rebuilds the
- * running configuration and applies the differences.
+ * When a task fires, that template &mdash; and only that one &mdash; is rendered again. If the
+ * fragment it produces actually changed, a reload is triggered through the injected
+ * {@link ReloadTrigger}, which rebuilds the running configuration and applies the differences. The
+ * rebuild runs inside {@link IConfigurationProvider#runReusingCachedFragments(Runnable)}, so every
+ * other template is served from its cached fragment instead of having its data sources re-run.
  * </p>
  * <p>
  * Several templates can be due at the same time. Their renders run concurrently &mdash; a slow data
@@ -76,6 +78,20 @@ public class ProgrammableReEvaluationScheduler {
 	public interface ReloadTrigger {
 		/** Rebuilds the running configuration from the current templates and applies changes. */
 		void triggerReload();
+	}
+
+	/**
+	 * What a re-evaluation ended up doing, so an on-demand caller can report it back to the user.
+	 */
+	public enum ReEvaluationOutcome {
+		/** The unit produced no fragment; the last good configuration was kept. */
+		NOTHING_PRODUCED,
+		/** The unit produced the same fragment as before; no reload was needed. */
+		UNCHANGED,
+		/** The fragment changed and the configuration was reloaded. */
+		RELOADED,
+		/** The fragment changed but the reload failed; the change is retried on the next firing. */
+		RELOAD_FAILED
 	}
 
 	/**
@@ -284,23 +300,51 @@ public class ProgrammableReEvaluationScheduler {
 	 * @param reEvaluationId the re-evaluation to refresh
 	 */
 	void onReEvaluation(final IConfigurationProvider provider, final String reEvaluationId) {
+		// A cron firing is just a re-evaluation nobody asked for explicitly: it goes through the very
+		// same path as the manual one, which already logs every outcome.
+		reevaluateNow(provider, reEvaluationId);
+	}
+
+	/**
+	 * Re-evaluates one unit and, if its fragment changed, reloads the configuration.
+	 * <p>
+	 * This is the single entry point for both a cron firing and an on-demand re-evaluation, so the two
+	 * share the same change detection, the same baseline and the same lock: a manual re-evaluation can
+	 * never interleave with a scheduled one, and neither leaves the other's change detection stale.
+	 * </p>
+	 * <p>
+	 * The re-evaluation itself runs <b>outside</b> {@link #lock}: it re-runs the data sources behind
+	 * that unit, which can be slow, and holding the lock across it would stall every other firing.
+	 * Only the compare-and-reload step, which must be atomic so simultaneous firings do not clobber one
+	 * another, is guarded. The reload reuses every other unit's cached fragment, so re-evaluating one
+	 * template does not re-run the sources of all the others.
+	 * </p>
+	 *
+	 * @param provider       the owning configuration provider
+	 * @param reEvaluationId the re-evaluation to refresh
+	 * @return what the re-evaluation ended up doing
+	 */
+	public ReEvaluationOutcome reevaluateNow(final IConfigurationProvider provider, final String reEvaluationId) {
 		final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
 		if (fragment.isEmpty()) {
 			log.warn("Re-evaluation of '{}' produced nothing; keeping the last good value.", reEvaluationId);
-			return;
+			return ReEvaluationOutcome.NOTHING_PRODUCED;
 		}
 		synchronized (lock) {
 			if (fragment.get().equals(lastFragments.get(reEvaluationId))) {
 				log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
-				return;
+				return ReEvaluationOutcome.UNCHANGED;
 			}
 			log.info("Re-evaluation of '{}' changed the configuration; reloading.", reEvaluationId);
 			try {
-				reloadTrigger.triggerReload();
+				// Only this re-evaluation was re-run; the provider serves every other unit from cache, so
+				// one template's cron does not re-run the data sources of all the others.
+				provider.runReusingCachedFragments(reloadTrigger::triggerReload);
 				// The baseline only moves once the change was applied. A failed reload leaves it behind,
 				// so the next firing sees the same difference again and retries instead of going quiet
 				// on a configuration that was never updated.
 				lastFragments.put(reEvaluationId, fragment.get());
+				return ReEvaluationOutcome.RELOADED;
 			} catch (Exception e) {
 				log.error(
 					"Reload after re-evaluation of '{}' failed: {}. The change is kept pending and retried on the next firing.",
@@ -308,6 +352,7 @@ public class ProgrammableReEvaluationScheduler {
 					e.getMessage()
 				);
 				log.debug("Reload error:", e);
+				return ReEvaluationOutcome.RELOAD_FAILED;
 			}
 		}
 	}

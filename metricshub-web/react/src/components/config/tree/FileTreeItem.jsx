@@ -23,11 +23,16 @@ import {
 import QuestionDialog from "../../common/QuestionDialog";
 import { downloadConfigFile } from "../../../services/download-service";
 import { parseBackupFileName } from "../../../utils/backup-names";
-import { isVmFile, getFileType } from "../../../utils/file-type-utils";
+import {
+	isVmFile,
+	getFileType,
+	isSameConfigFile,
+	stripDraftSuffix,
+} from "../../../utils/file-type-utils";
 
 /**
  * File tree item component.
- * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void,onMakeDraft?:(name:string)=>void,isReadOnly?:boolean}} props The component props.
+ * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void,onMakeDraft?:(name:string)=>void,siblingNames?:string[],isReadOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The file tree item component.
  */
 export default function FileTreeItem({
@@ -35,6 +40,7 @@ export default function FileTreeItem({
 	onRename,
 	onDelete,
 	onMakeDraft,
+	siblingNames = [],
 	isDirty = false,
 	validation = null,
 	itemId, // optional selection id
@@ -135,9 +141,21 @@ export default function FileTreeItem({
 			setEditing(false);
 			return;
 		}
+		// Refuse to rename onto an existing file: the rename would overwrite it silently and its
+		// content would be lost. The editor stays open so the name can be corrected.
+		const collides = siblingNames.some(
+			(sibling) => !isSameConfigFile(sibling, file.name) && isSameConfigFile(sibling, next),
+		);
+		if (collides) {
+			showSnackbar(`"${stripDraftSuffix(next)}" already exists. Choose a different name.`, {
+				severity: "error",
+			});
+			return;
+		}
+
 		onRename?.(file.name, next);
 		setEditing(false);
-	}, [draft, file.name, onRename, showSnackbar]);
+	}, [draft, file.name, onRename, showSnackbar, siblingNames]);
 
 	const backupThisFile = React.useCallback(async () => {
 		if (effectiveReadOnly) return;

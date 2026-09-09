@@ -1,6 +1,7 @@
 package org.metricshub.programmable.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -120,6 +122,56 @@ class ProgrammableConfigurationScheduleTest {
 
 		// Change detection upstream relies on this equality when nothing moved.
 		assertEquals(provider.currentFragment(id).orElseThrow(), provider.reevaluate(id).orElseThrow());
+	}
+
+	@Test
+	void testScopedReEvaluationDoesNotReRunOtherTemplates(@TempDir final Path tempDir) throws Exception {
+		final Path csvA = tempDir.resolve("a.csv");
+		final Path csvB = tempDir.resolve("b.csv");
+		Files.writeString(csvA, "host-a\n");
+		Files.writeString(csvB, "host-b\n");
+		writeTemplate(tempDir.resolve("a.vm"), csvA, "0/5 * * * * ?");
+		writeTemplate(tempDir.resolve("b.vm"), csvB, "0/5 * * * * ?");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+
+		final String idA = tempDir.resolve("a.vm").toAbsolutePath().toString();
+
+		// Both data sources change, but only template A is re-evaluated.
+		Files.writeString(csvA, "host-a2\n");
+		Files.writeString(csvB, "host-b2\n");
+		provider.reevaluate(idA);
+
+		final List<JsonNode> fragments = new ArrayList<>();
+		provider.runReusingCachedFragments(() -> fragments.addAll(provider.load(tempDir)));
+
+		final String rendered = fragments.toString();
+		assertTrue(rendered.contains("host-a2"), "The re-evaluated template must carry its new data");
+		assertTrue(rendered.contains("host-b"), "The other template must still be present");
+		assertFalse(
+			rendered.contains("host-b2"),
+			"The other template's source must not be re-run: it should be served from cache"
+		);
+	}
+
+	@Test
+	void testScopeIsLiftedAfterTheAction(@TempDir final Path tempDir) throws Exception {
+		final Path csv = tempDir.resolve("hosts.csv");
+		Files.writeString(csv, "host-a\n");
+		writeTemplate(tempDir.resolve("hosts.vm"), csv, "0/5 * * * * ?");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+
+		provider.runReusingCachedFragments(() -> provider.load(tempDir));
+
+		// Outside the scope a load must render again, so a later change is picked up.
+		Files.writeString(csv, "host-a\nhost-c\n");
+		assertTrue(
+			provider.load(tempDir).toString().contains("host-c"),
+			"Once the scope is lifted, a load must render the templates again"
+		);
 	}
 
 	@Test

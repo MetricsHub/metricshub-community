@@ -103,9 +103,19 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 
 	/**
 	 * The fragment last produced per template, keyed by absolute path. Lets
-	 * {@link #currentFragment(String)} seed change detection without re-running the template.
+	 * {@link #currentFragment(String)} seed change detection without re-running the template, and
+	 * serves {@link #runReusingCachedFragments(Runnable)}.
 	 */
 	private final Map<Path, JsonNode> lastFragments = new ConcurrentHashMap<>();
+
+	/**
+	 * Set while the calling thread runs inside {@link #runReusingCachedFragments(Runnable)}. A load
+	 * happening then serves {@link #lastFragments} instead of rendering, so a re-evaluation targeting
+	 * one template does not re-run the data sources of all the others. Thread-scoped because the
+	 * rebuild runs synchronously on the thread that opened the scope, while other threads (cron
+	 * firings, the configuration file watcher) must keep loading normally.
+	 */
+	private final ThreadLocal<Boolean> reuseCachedFragments = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
 	/**
 	 * Returns an unmodifiable view of the Velocity tools map available for
@@ -160,6 +170,17 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	 */
 	private Optional<JsonNode> readVmFragment(final Path path) {
 		final Path absolutePath = path.toAbsolutePath();
+
+		// Inside a scoped re-evaluation, serve what this template produced last rather than running it
+		// again. A template with nothing cached yet is still rendered: there is nothing to reuse.
+		if (Boolean.TRUE.equals(reuseCachedFragments.get())) {
+			final JsonNode cached = lastFragments.get(absolutePath);
+			if (cached != null) {
+				log.debug("Reusing the last fragment of template '{}': the reload targets another template.", path);
+				return Optional.of(cached);
+			}
+		}
+
 		try {
 			// Retain the loader so this template can be re-rendered later on its own schedule.
 			final var loader = loaders.computeIfAbsent(absolutePath, key -> new VelocityConfigurationLoader(path, TOOLS));
@@ -211,6 +232,16 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	@Override
 	public Optional<JsonNode> currentFragment(final String reEvaluationId) {
 		return Optional.ofNullable(lastFragments.get(Path.of(reEvaluationId)));
+	}
+
+	@Override
+	public void runReusingCachedFragments(final Runnable action) {
+		reuseCachedFragments.set(Boolean.TRUE);
+		try {
+			action.run();
+		} finally {
+			reuseCachedFragments.remove();
+		}
 	}
 
 	/**
