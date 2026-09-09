@@ -84,6 +84,14 @@ opamp:
 
 Changing the `opamp:` section triggers a configuration reload; the OpAMP connection itself survives reloads that do not touch this section. The agent identity (`instance_uid`, a UUIDv7) is persisted in the `security` directory next to the MetricsHub keystore, so it survives restarts and upgrades.
 
+## File log capture
+
+When a file source uses wildcards or multiple paths, LOG mode includes an empty
+`<<<LOG:file="...">>>` / `<<<END_LOG>>>` block for each accessible file on its first
+poll and on subsequent polls with no new content. The first poll initializes the
+cursor without reading existing content. A single literal path retains its
+content-only output format.
+
 ## How to build the Project
 
 ### Requirements

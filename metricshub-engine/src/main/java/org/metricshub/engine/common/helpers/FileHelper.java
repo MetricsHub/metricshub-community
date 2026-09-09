@@ -36,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,14 +59,26 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FileHelper {
 
-	// Empty string constant used for default return values.
-	public static final String EMPTY = "";
-
 	// Path delimiter used in Linux/Unix file systems.
 	public static final String SLASH = "/";
 
 	// Path delimiter used in Windows file systems.
 	public static final String BACKSLASH = "\\";
+
+	/**
+	 * Prefix of UNC paths ({@code \\server\share\...}).
+	 */
+	private static final String UNC_PREFIX = "\\\\";
+
+	/**
+	 * Windows drive designator ({@code C:}) as the first segment of an absolute path.
+	 */
+	private static final Pattern WINDOWS_DRIVE = Pattern.compile("^[A-Za-z]:$");
+
+	/**
+	 * Glob characters, other than the supported {@code *} and {@code ?} wildcards, that must be escaped to match literally.
+	 */
+	private static final String GLOB_SPECIALS = "[]{}\\";
 
 	/**
 	 * Regex to split command output by line; accepts both {@code \n} and {@code \r\n}.
@@ -230,54 +243,145 @@ public class FileHelper {
 	}
 
 	/**
-	 * Extracts the base directory path from an absolute file path.
-	 * Removes the filename portion, leaving only the directory path.
+	 * A file path pattern split into a literal root directory and the remaining path segments.
+	 * <p>
+	 * The root never contains a wildcard and never ends with the delimiter, except for bare roots
+	 * ({@code /}, {@code D:\}, {@code \\server\share}). The segments hold everything after the root; any
+	 * segment, directory or filename, may contain the {@code *} and {@code ?} wildcards.
+	 * </p>
 	 *
-	 * @param absolutePath The absolute file path
-	 * @param hostType The device kind to determine the path delimiter
-	 * @return The base directory path, or empty string if path is invalid
+	 * @param root      literal root directory
+	 * @param segments  path segments after the root (at least one)
+	 * @param delimiter path delimiter of the target host
 	 */
-	public static String extractBasePath(final String absolutePath, final DeviceKind hostType) {
-		if (absolutePath == null || absolutePath.isBlank()) {
-			return EMPTY;
+	public record PathPattern(String root, List<String> segments, String delimiter) {
+		/**
+		 * @return true when a directory segment (any segment but the last) contains a wildcard
+		 */
+		public boolean hasDirectoryWildcard() {
+			return segments.subList(0, segments.size() - 1).stream().anyMatch(FileHelper::containsWildcard);
 		}
 
-		// Set the path delimiter depending on the host type
-		final String pathDelimiter = hostType.equals(DeviceKind.WINDOWS) ? BACKSLASH : SLASH;
-
-		// If path doesn't contain the delimiter, it's not a valid absolute path
-		if (!absolutePath.contains(pathDelimiter)) {
-			return EMPTY;
+		/**
+		 * @return the last segment, i.e. the filename pattern
+		 */
+		public String filename() {
+			return segments.get(segments.size() - 1);
 		}
 
-		return absolutePath.substring(0, absolutePath.lastIndexOf(pathDelimiter));
+		/**
+		 * @return the full pattern: the root followed by every segment, joined with the delimiter
+		 */
+		public String fullPattern() {
+			return joinPath(root, String.join(delimiter, segments), delimiter);
+		}
+
+		/**
+		 * @return the directory pattern: the root followed by every segment but the last, or the root alone when the
+		 * pattern has a single segment
+		 */
+		public String directoryPattern() {
+			return segments.size() == 1
+				? root
+				: joinPath(root, String.join(delimiter, segments.subList(0, segments.size() - 1)), delimiter);
+		}
 	}
 
 	/**
-	 * Extracts the filename from an absolute file path.
-	 * Returns the last component of the path after the path delimiter.
+	 * Checks whether a path segment contains a wildcard ({@code *} or {@code ?}).
 	 *
-	 * @param absolutePath The absolute file path
-	 * @param hostType The device kind to determine the path delimiter
-	 * @return The filename, or empty string if path is invalid
+	 * @param segment the path segment to check
+	 * @return true when the segment contains at least one wildcard
 	 */
-	public static String extractFilename(final String absolutePath, final DeviceKind hostType) {
-		if (absolutePath == null || absolutePath.isBlank()) {
-			return EMPTY;
+	public static boolean containsWildcard(final String segment) {
+		return segment != null && (segment.indexOf('*') >= 0 || segment.indexOf('?') >= 0);
+	}
+
+	/**
+	 * Parses an absolute file path pattern into a literal root and path segments.
+	 * <ul>
+	 * <li>A trailing delimiter designates a directory and is normalized to {@code *} (all files of the directory).</li>
+	 * <li>Windows paths must start with a drive ({@code C:\}) or a UNC prefix ({@code \\server\share}); the server
+	 * and share names are always literal.</li>
+	 * <li>Other paths must start with {@code /}.</li>
+	 * <li>The root is extended with every leading literal directory segment, but never with the last segment.</li>
+	 * </ul>
+	 *
+	 * @param path     the path pattern, possibly containing {@code *} and {@code ?} in any segment
+	 * @param hostType the device kind, which determines the path delimiter
+	 * @return the parsed pattern, or null when the path is blank, relative or has a wildcard in a UNC server or share
+	 */
+	public static PathPattern parsePathPattern(final String path, final DeviceKind hostType) {
+		if (path == null || path.isBlank()) {
+			return null;
 		}
 
-		final String pathDelimiter = hostType.equals(DeviceKind.WINDOWS) ? BACKSLASH : SLASH;
+		final String delimiter = DeviceKind.WINDOWS.equals(hostType) ? BACKSLASH : SLASH;
+		// Not trimmed: leading and trailing spaces are significant in file names
+		String normalized = path;
 
-		if (!absolutePath.contains(pathDelimiter)) {
-			return EMPTY;
+		// A trailing delimiter designates a directory: match all its files
+		if (normalized.endsWith(delimiter)) {
+			normalized += "*";
 		}
 
-		return absolutePath.substring(absolutePath.lastIndexOf(pathDelimiter) + 1, absolutePath.length());
+		final List<String> parts = Arrays.stream(normalized.split(Pattern.quote(delimiter)))
+			.filter(part -> !part.isEmpty())
+			.toList();
+
+		// Determine the fixed root, which can never hold a wildcard
+		final String fixedRoot;
+		final int fixedCount;
+		if (DeviceKind.WINDOWS.equals(hostType)) {
+			if (normalized.startsWith(UNC_PREFIX)) {
+				if (parts.size() < 2 || containsWildcard(parts.get(0)) || containsWildcard(parts.get(1))) {
+					return null;
+				}
+				fixedRoot = UNC_PREFIX + parts.get(0) + BACKSLASH + parts.get(1);
+				fixedCount = 2;
+			} else if (!parts.isEmpty() && WINDOWS_DRIVE.matcher(parts.get(0)).matches()) {
+				fixedRoot = parts.get(0) + BACKSLASH;
+				fixedCount = 1;
+			} else {
+				return null;
+			}
+		} else if (normalized.startsWith(SLASH)) {
+			fixedRoot = SLASH;
+			fixedCount = 0;
+		} else {
+			return null;
+		}
+
+		final List<String> remaining = parts.subList(fixedCount, parts.size());
+		if (remaining.isEmpty()) {
+			return null;
+		}
+
+		// Extend the root with the leading literal directory segments, never consuming the last segment
+		int literalCount = 0;
+		while (literalCount < remaining.size() - 1 && !containsWildcard(remaining.get(literalCount))) {
+			literalCount++;
+		}
+
+		final String root =
+			literalCount == 0
+				? fixedRoot
+				: joinPath(fixedRoot, String.join(delimiter, remaining.subList(0, literalCount)), delimiter);
+
+		return new PathPattern(root, List.copyOf(remaining.subList(literalCount, remaining.size())), delimiter);
+	}
+
+	/**
+	 * Appends a relative path to a root, inserting the delimiter unless the root already ends with it.
+	 */
+	private static String joinPath(final String root, final String relative, final String delimiter) {
+		return root.endsWith(delimiter) ? root + relative : root + delimiter + relative;
 	}
 
 	/**
 	 * Parses remote command output into a set of validated absolute file paths.
-	 * Splits on {@code \n} or {@code \r\n}, trims and skips empty lines, and keeps only lines
+	 * Splits on {@code \n} or {@code \r\n}, skips blank lines, keeps each path verbatim (spaces are significant in
+	 * file names), and keeps only lines
 	 * matching the expected format for the given device kind. Non-matching lines are logged and skipped.
 	 *
 	 * @param result      raw command output
@@ -300,9 +404,8 @@ public class FileHelper {
 			? ABSOLUTE_WINDOWS_PATH
 			: ABSOLUTE_LINUX_PATH;
 
-		for (final String raw : result.split(LINE_SPLIT_REGEX, -1)) {
-			final String line = raw.trim();
-			if (line.isEmpty()) {
+		for (final String line : result.split(LINE_SPLIT_REGEX, -1)) {
+			if (line.isBlank()) {
 				continue;
 			}
 			if (pathPatternMatcher.matcher(line).matches()) {
@@ -368,8 +471,10 @@ public class FileHelper {
 	}
 
 	/**
-	 * Resolves file paths locally by matching filename patterns in the specified directories.
-	 * Uses native Java file system APIs to find matching files.
+	 * Resolves file path patterns locally using the native Java file system APIs.
+	 * Each pattern is walked segment by segment from its literal root, so {@code *} and {@code ?} are honored in
+	 * directory segments as well as in the filename. Only regular files are returned. A pattern that cannot be
+	 * parsed or resolved is logged and skipped without affecting the other patterns.
 	 *
 	 * @param hostname   The hostname for logging purposes
 	 * @param paths      The set containing path patterns to resolve
@@ -388,21 +493,119 @@ public class FileHelper {
 		}
 
 		for (final String stringPath : paths) {
-			// Extract the base directory path from the pattern
-			final String basePath = FileHelper.extractBasePath(stringPath, deviceKind);
-			// Extract the filename pattern (may contain wildcards)
-			final String filename = FileHelper.extractFilename(stringPath, deviceKind);
+			final PathPattern pattern = parsePathPattern(stringPath, deviceKind);
+			if (pattern == null) {
+				log.info("Hostname {} - Skipping invalid file path pattern: {}", hostname, stringPath);
+				continue;
+			}
 
-			// Use directory stream to find all files matching the filename pattern
-			try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(basePath), filename)) {
-				stream.forEach(resolvedPath -> resolvedPaths.add(resolvedPath.toString()));
-			} catch (IOException e) {
+			try {
+				collectMatchingFiles(Path.of(pattern.root()), pattern.segments(), 0, resolvedPaths, hostname);
+			} catch (IOException | RuntimeException e) {
+				// I/O failure or invalid path (e.g. InvalidPathException): log and continue with the other patterns
 				log.info("Hostname {} - Unable to resolve path: {}. Message: {}", hostname, stringPath, e.getMessage());
 				log.debug("Hostname {} - Exception occurred when resolving path {}: {}", hostname, stringPath, e);
 			}
 		}
 
 		return resolvedPaths;
+	}
+
+	/**
+	 * Walks one segment of a path pattern under {@code directory}, recursing into matching directories and
+	 * collecting matching regular files on the last segment.
+	 *
+	 * @param directory     the directory to scan
+	 * @param segments      all pattern segments
+	 * @param index         index of the segment to match in {@code directory}
+	 * @param resolvedPaths accumulator of resolved absolute file paths
+	 * @param hostname      the hostname for logging purposes
+	 * @throws IOException if {@code directory} cannot be listed
+	 */
+	private static void collectMatchingFiles(
+		final Path directory,
+		final List<String> segments,
+		final int index,
+		final Set<String> resolvedPaths,
+		final String hostname
+	) throws IOException {
+		final String segment = segments.get(index);
+		final boolean isLast = index == segments.size() - 1;
+
+		// Literal segment: resolve it directly, no directory listing needed
+		if (!containsWildcard(segment)) {
+			final Path candidate = directory.resolve(segment);
+			if (isLast) {
+				if (Files.isRegularFile(candidate)) {
+					resolvedPaths.add(candidate.toString());
+				}
+			} else if (Files.isDirectory(candidate)) {
+				collectMatchingFiles(candidate, segments, index + 1, resolvedPaths, hostname);
+			}
+			return;
+		}
+
+		// Wildcard segment: list the directory with a glob restricted to '*' and '?'
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, escapeGlobSpecials(segment))) {
+			for (final Path match : stream) {
+				if (isLast) {
+					if (Files.isRegularFile(match)) {
+						resolvedPaths.add(match.toString());
+					}
+				} else if (Files.isDirectory(match)) {
+					try {
+						collectMatchingFiles(match, segments, index + 1, resolvedPaths, hostname);
+					} catch (IOException e) {
+						// One matched directory cannot be listed: skip it and keep scanning its siblings
+						log.debug("Hostname {} - Unable to scan directory {}: {}", hostname, match, e.getMessage());
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Escapes the glob characters other than {@code *} and {@code ?} so that they match literally.
+	 *
+	 * @param segment the path segment to escape
+	 * @return a glob expression where only {@code *} and {@code ?} act as wildcards
+	 */
+	static String escapeGlobSpecials(final String segment) {
+		final StringBuilder escaped = new StringBuilder(segment.length());
+		for (final char c : segment.toCharArray()) {
+			if (GLOB_SPECIALS.indexOf(c) >= 0) {
+				escaped.append('\\');
+			}
+			escaped.append(c);
+		}
+		return escaped.toString();
+	}
+
+	/**
+	 * Escapes a path pattern embedded in a double-quoted PowerShell string and passed to {@code Get-Item -Path}, so
+	 * that only {@code *} and {@code ?} act as wildcards and nothing is expanded or executed:
+	 * <ul>
+	 * <li>{@code $} is escaped for the string ({@code `$}), otherwise PowerShell expands variables and {@code $()}
+	 * subexpressions;</li>
+	 * <li>{@code [} and {@code ]} are wildcard character classes: they need a backtick for the wildcard engine, doubled
+	 * so that the string parsing does not consume it ({@code ``[});</li>
+	 * <li>a literal backtick is the escape character of both layers, so it is written four times.</li>
+	 * </ul>
+	 *
+	 * @param pattern the PowerShell path pattern
+	 * @return the escaped pattern
+	 */
+	public static String escapePowerShellPattern(final String pattern) {
+		final StringBuilder escaped = new StringBuilder(pattern.length());
+		for (final char c : pattern.toCharArray()) {
+			switch (c) {
+				case '`' -> escaped.append("````");
+				case '$' -> escaped.append("`$");
+				case '[', ']' -> escaped.append("``").append(c);
+				default -> escaped.append(c);
+			}
+		}
+		return escaped.toString();
 	}
 
 	/**
