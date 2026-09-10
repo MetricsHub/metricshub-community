@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -13,6 +14,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
+import org.metricshub.engine.connector.parser.SourceKeyProcessor;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
 import org.mockito.MockedStatic;
@@ -33,6 +39,27 @@ class ProgrammableConfigurationProviderTest {
 		assertResourceConfiguration(resources, "host-01-system");
 		assertResourceConfiguration(resources, "host-02-system");
 		assertResourceConfiguration(resources, "host-03-system");
+	}
+
+	@Test
+	void testHealthChecksLoad() throws IOException {
+		var pcp = new ProgrammableConfigurationProvider();
+		var nodes = pcp.load(Paths.get("src/test/resources/connector-health-check"));
+
+		assertEquals(1, nodes.size(), "Should load one connector configuration fragment");
+		final JsonNode connectorNode = nodes.iterator().next().get("connector");
+		assertNotNull(connectorNode, "Connector node should not be null");
+		final JsonNode healthChecks = connectorNode.get("healthChecks");
+		assertNotNull(healthChecks, "Connector should contain healthChecks");
+		assertTrue(healthChecks.isArray(), "healthChecks should be a direct criteria array");
+		assertEquals("snmpGet", healthChecks.get(0).get("type").asText());
+		assertEquals("1.3.6.1.4.1.795.10.1.1.3.1.2", healthChecks.get(0).get("oid").asText());
+
+		final Connector connector = new ConnectorDeserializer(JsonHelper.buildYamlMapper()).deserialize(
+			new SourceKeyProcessor().process(nodes.iterator().next())
+		);
+		assertEquals(1, connector.getConnectorIdentity().getHealthChecks().size());
+		assertTrue(connector.getConnectorIdentity().getHealthChecks().get(0) instanceof SnmpGetCriterion);
 	}
 
 	/**

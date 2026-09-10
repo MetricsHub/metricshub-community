@@ -46,6 +46,8 @@ import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
@@ -450,7 +452,8 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	/**
 	 * Validates the connector's detection criteria.
-	 * <p>
+	 * Uses health checks when they are defined, otherwise falls back to detection criteria.
+	 *
 	 * Uses a consecutive failure threshold to avoid stopping a connector's job
 	 * due to a single transient failure (e.g. SNMP timeout). The connector is only
 	 * considered to no longer match the host after {@code MAX_CONSECUTIVE_DETECTION_FAILURES}
@@ -466,21 +469,30 @@ public abstract class AbstractStrategy implements IStrategy {
 		final String hostname,
 		final String jobName
 	) {
-		if (currentConnector.getConnectorIdentity().getDetection() == null) {
+		final ConnectorIdentity connectorIdentity = currentConnector.getConnectorIdentity();
+		final String connectorId = currentConnector.getCompiledFilename();
+		final List<Criterion> healthChecks = connectorIdentity.getHealthChecks();
+		final boolean hasHealthChecks = healthChecks != null && !healthChecks.isEmpty();
+		final boolean useHealthChecks = hasHealthChecks;
+
+		if (!useHealthChecks && connectorIdentity.getDetection() == null) {
 			return true;
 		}
-		// Track the connector detection criteria execution start time
+		// Track the connector validation criteria execution start time
 		final long jobStartTime = System.currentTimeMillis();
 
-		final ConnectorTestResult connectorTestResult = new ConnectorSelection(
+		final ConnectorSelection connectorSelection = new ConnectorSelection(
 			telemetryManager,
 			clientsExecutor,
 			Collections.emptySet(),
 			extensionManager,
 			true
-		).runConnectorDetectionCriteria(currentConnector, hostname);
+		);
+		final ConnectorTestResult connectorTestResult = useHealthChecks
+			? connectorSelection.runConnectorHealthCheckCriteria(currentConnector, hostname)
+			: connectorSelection.runConnectorDetectionCriteria(currentConnector, hostname);
 
-		// Track the connector detection criteria execution end time
+		// Track the connector validation criteria execution end time
 		final long jobEndTime = System.currentTimeMillis();
 
 		// Set the job duration metric of the connector monitor in the host monitor
@@ -492,7 +504,6 @@ public abstract class AbstractStrategy implements IStrategy {
 			jobEndTime
 		);
 
-		final String connectorId = currentConnector.getCompiledFilename();
 		final Monitor monitor = telemetryManager.findMonitorByTypeAndId(
 			KnownMonitorType.CONNECTOR.getKey(),
 			String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), connectorId)
@@ -503,21 +514,21 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Map<String, String> legacyTextParameters = monitor.getLegacyTextParameters();
 		legacyTextParameters.put("StatusInformation", statusInformation);
 
-		final boolean detectionSuccess = connectorTestResult.isSuccess();
+		final boolean validationSuccess = connectorTestResult.isSuccess();
 
-		// Get the connector's namespace to track consecutive detection failures
+		// Get the connector's namespace to track consecutive validation failures
 		final ConnectorNamespace connectorNamespace = telemetryManager
 			.getHostProperties()
 			.getConnectorNamespace(connectorId);
 
-		if (detectionSuccess) {
-			// Detection passed: reset the consecutive failure counter
+		if (validationSuccess) {
+			// Validation passed: reset the consecutive failure counter
 			connectorNamespace.resetDetectionFailures();
 			collectConnectorStatus(true, connectorId, monitor);
 			return true;
 		}
 
-		// Detection failed: increment the counter and check against the threshold
+		// Validation failed: increment the counter and check against the threshold
 		final int failureCount = connectorNamespace.incrementDetectionFailures();
 
 		if (failureCount < MAX_CONSECUTIVE_DETECTION_FAILURES) {
