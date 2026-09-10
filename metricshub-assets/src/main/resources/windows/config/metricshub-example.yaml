@@ -12,6 +12,51 @@ otel:
   # otel.exporter.otlp.metrics.endpoint: http://localhost:4317
   # otel.exporter.otlp.metrics.protocol: grpc # Options include grpc and http/protobuf
 
+# Remote management through OpAMP (Open Agent Management Protocol)
+# opamp:
+#   enabled: true
+#   endpoint: https://opamp.example.com/v1/opamp
+#   headers:
+#     Authorization: Bearer ${env::OPAMP_TOKEN}
+#   # Attributes reported to the OpAMP server. Merged last, so they override both the
+#   # pre-built agent attributes and the agent-level attributes above.
+#   # attributes:
+#   #   site: data-center-1
+#   # certificateFile: C:\ProgramData\MetricsHub\security\opamp-ca.pem # Trusted certificate (PEM) for the OpAMP server
+#   # pollInterval: 30s
+#   # reportHealth: true
+
+# Automatic upgrade policy (honored when OpAMP is enabled)
+# upgrade:
+#   enabled: true
+#   allowDowngrade: false
+#   # serviceName: MetricsHub Community # Discovered automatically; pin it if needed
+#   hostAllowlist: [ repo.metricshub.com ]
+#   # installTimeout: 30m # Deadline for the detached installation (default: 30m)
+#   # trustedCertificateFile: C:\ProgramData\MetricsHub\security\repo-ca.pem # Trusted certificate (PEM) for the package repository
+#   # Headers added to package downloads when the repository requires authentication,
+#   # keyed by repository authority — host or host:port, a bare host meaning the
+#   # scheme's default port. Each header set is only ever sent to its named origin,
+#   # over HTTPS only.
+#   # Values may be encrypted with the MetricsHub keystore, like opamp.headers.
+#   # downloadHeaders:
+#   #   nexus.example.com:
+#   #     Authorization: Basic ${env::REPO_CREDENTIALS}
+#   #   nexus.example.com:8443:
+#   #     Authorization: Basic ${env::OTHER_REPO_CREDENTIALS}
+
+# M8B AI Governor tunnel: persistent outbound WebSocket through which M8B discovers this agent's
+# tools and hosts and runs troubleshooting tools on demand. Disabled by default.
+# m8b:
+#   enabled: true
+#   endpoint: wss://m8b.example.com/ws/agent
+#   headers:
+#     Authorization: Bearer ${env::M8B_TOKEN}
+#   # certificateFile: C:\ProgramData\MetricsHub\security\m8b-ca.pem # Trusted certificate (PEM) for the M8B server
+#   # heartbeatInterval: 30s
+#   # Tools never advertised to (nor invokable by) M8B
+#   # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+
 # Simple resource configuration
 resources:
 

@@ -205,7 +205,10 @@ public class ReloadService {
 			!Objects.equals(runningConf.getAttributes(), newConf.getAttributes()) ||
 			!Objects.equals(runningConf.getMetrics(), newConf.getMetrics()) ||
 			!Objects.equals(runningConf.getStateSetCompression(), newConf.getStateSetCompression()) ||
-			!Objects.equals(runningConf.getPatchDirectory(), newConf.getPatchDirectory())
+			!Objects.equals(runningConf.getPatchDirectory(), newConf.getPatchDirectory()) ||
+			!Objects.equals(runningConf.getOpamp(), newConf.getOpamp()) ||
+			!Objects.equals(runningConf.getUpgrade(), newConf.getUpgrade()) ||
+			!Objects.equals(runningConf.getM8b(), newConf.getM8b())
 		);
 		// CHECKSTYLE:ON
 	}
