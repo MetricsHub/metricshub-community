@@ -14,14 +14,22 @@ web:
   spring.ai.mcp.server.resource-change-notification: true
   spring.ai.mcp.server.tool-change-notification: true
   spring.ai.mcp.server.prompt-change-notification: true
+  spring.ai.mcp.server.protocol: STREAMABLE
+  spring.ai.mcp.server.streamable-http.mcp-endpoint: /mcp
+  spring.ai.mcp.server.streamable-http.keep-alive-interval: 30s
   spring.ai.mcp.server.sse-endpoint: /sse
   spring.ai.mcp.server.sse-message-endpoint: /mcp/message
+  spring.ai.mcp.server.keep-alive-interval: 30s
   spring.ai.mcp.server.type: sync
   spring.ai.mcp.server.capabilities.completion: true
   spring.ai.mcp.server.capabilities.prompt: true
   spring.ai.mcp.server.capabilities.resource: true
   spring.ai.mcp.server.capabilities.tool: true
   spring.ai.mcp.server.request-timeout: 5m
+  mcp.sse.enabled: true
+  mcp.sse.message-timeout: 5m
+  mcp.sse.ping-timeout: 5m
+  mcp.sse.initialization-timeout: 2m
   jwt.short_expire: 3600
   jwt.long_expire: 86400
   jwt.secret: eyJhbGciOiJIUzI1NiJ9.ew0KICAic3ViIjogInNlbnRyeSIsDQogICJuYW1lIjogIlNlbnRyeSBTb2Z3YXJlIiwNCiAgImlhdCI6IDE1MTYyMzkwMjINCn0.UUUxmysmx49zKKRt8_pQln-WqXjaTVQlwgjg3SbidF4

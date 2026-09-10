@@ -21,8 +21,11 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.web.dto.ErrorResponse;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.LogFilesException;
@@ -45,6 +48,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ControllerAdvice
+@Slf4j
 public class RestExceptionHandler {
 
 	/**
@@ -209,6 +213,29 @@ public class RestExceptionHandler {
 	@ExceptionHandler(TextPlainException.class)
 	public ResponseEntity<String> handleTextPlainException(final TextPlainException ex) {
 		return ResponseEntity.status(ex.getStatus()).contentType(MediaType.TEXT_PLAIN).body(ex.getMessage());
+	}
+
+	/**
+	 * Handle I/O errors raised while writing the response. Once the response is committed (typically an SSE stream
+	 * whose client aborted the connection), nothing can be sent back and Tomcat would otherwise log the exception as a
+	 * SEVERE error with a full stack trace for every abrupt client disconnect: log it at debug level instead. An I/O
+	 * error before the response is committed is a genuine server error.
+	 *
+	 * @param ex       the I/O exception
+	 * @param response the HTTP response
+	 * @return {@code null} when the response is already committed, an error response otherwise
+	 */
+	@ExceptionHandler(IOException.class)
+	public ResponseEntity<Object> handleIoException(final IOException ex, final HttpServletResponse response) {
+		if (response.isCommitted()) {
+			log.debug("Client connection aborted after the response was committed: {}", ex.getMessage());
+			return null;
+		}
+		log.error("I/O error while handling the request", ex);
+		return new ResponseEntity<>(
+			ErrorResponse.builder().httpStatus(HttpStatus.INTERNAL_SERVER_ERROR).message(ex.getMessage()).build(),
+			HttpStatus.INTERNAL_SERVER_ERROR
+		);
 	}
 
 	private static Map<String, String> fieldErrorsToMap(

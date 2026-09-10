@@ -37,6 +37,7 @@ import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerF
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -91,9 +92,9 @@ public class SecurityConfig {
 	 */
 	@Bean
 	@Order(1)
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain filterChain(HttpSecurity http, Environment environment) throws Exception {
 		return http
-			.securityMatcher("/api/**", "/sse", "/mcp/message")
+			.securityMatcher(securedPaths(environment))
 			.csrf(csrf -> csrf.disable())
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -104,6 +105,23 @@ public class SecurityConfig {
 				ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
 			)
 			.build();
+	}
+
+	/**
+	 * Builds the list of paths that require authentication: the REST API and the MCP endpoints. The MCP endpoints are
+	 * user-configurable through the {@code web} configuration, so they are read from the environment rather than
+	 * hardcoded; a relocated endpoint must never fall through to the permit-all chain.
+	 *
+	 * @param environment the Spring environment
+	 * @return the secured path patterns
+	 */
+	static String[] securedPaths(final Environment environment) {
+		return new String[] {
+			"/api/**",
+			environment.getProperty("spring.ai.mcp.server.sse-endpoint", "/sse"),
+			environment.getProperty("spring.ai.mcp.server.sse-message-endpoint", "/mcp/message"),
+			environment.getProperty("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp")
+		};
 	}
 
 	/**
