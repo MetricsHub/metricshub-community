@@ -56,6 +56,14 @@
 		</fileSet>
 
 		<fileSet>
+			<directory>src/main/resources/linux/upgrade-runner</directory>
+			<outputDirectory>/jpackage/assets/upgrade-runner</outputDirectory>
+			<fileMode>0755</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</fileSet>
+
+		<fileSet>
 			<directory>src/main/resources/linux/rhel</directory>
 			<outputDirectory>/</outputDirectory>
 			<fileMode>0644</fileMode>

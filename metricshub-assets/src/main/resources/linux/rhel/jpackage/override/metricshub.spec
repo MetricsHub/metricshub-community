@@ -130,6 +130,12 @@ if [ -d APPLICATION_DIRECTORY ]; then
   fi
 fi
 
+# Remove the upgrade staging directory on package removal ($1 == 0), not on upgrade ($1 == 1),
+# where a pending upgrade transaction must survive
+if [ "$1" = "0" ]; then
+  rm -rf APPLICATION_DIRECTORY/lib/upgrade
+fi
+
 %clean
 
 %posttrans

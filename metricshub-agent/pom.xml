@@ -46,6 +46,12 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<!-- MetricsHub OpAMP Client -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-opamp-client</artifactId>
+		</dependency>
+
 		<!-- MetricsHub Community Connectors -->
 		<dependency>
 			<groupId>org.metricshub</groupId>
