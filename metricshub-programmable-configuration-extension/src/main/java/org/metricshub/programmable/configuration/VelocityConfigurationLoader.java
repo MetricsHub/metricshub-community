@@ -110,7 +110,7 @@ public class VelocityConfigurationLoader {
 	 *
 	 * @return the declared cron expression, or empty when the template declares no schedule
 	 */
-	public Optional<String> getCron() {
+	public synchronized Optional<String> getCron() {
 		return scheduleTool.getCron();
 	}
 
