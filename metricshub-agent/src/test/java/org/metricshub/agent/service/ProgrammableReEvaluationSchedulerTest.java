@@ -512,4 +512,64 @@ class ProgrammableReEvaluationSchedulerTest {
 
 		scheduler.stop();
 	}
+
+	/**
+	 * A cron firing and an on-demand request can target the same template at the same moment. They
+	 * must be processed one after the other: two renders of the same template running side by side
+	 * would each publish their result to the provider's cache, and the baseline could end up recording
+	 * a fragment that was never the one applied.
+	 */
+	@Test
+	void testTheSameTemplateIsNeverReEvaluatedTwiceAtOnce() throws Exception {
+		final AtomicInteger inFlight = new AtomicInteger();
+		final AtomicInteger overlaps = new AtomicInteger();
+
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				if (inFlight.incrementAndGet() > 1) {
+					overlaps.incrementAndGet();
+				}
+				try {
+					// Long enough for another thread to walk in, if nothing keeps it out.
+					Thread.sleep(50);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+				inFlight.decrementAndGet();
+				// A distinct value per call, so every call is seen as a change and goes all the way.
+				return Optional.of(TextNode.valueOf(reEvaluationId + "-" + System.nanoTime()));
+			}
+		};
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			mock(TaskScheduler.class),
+			() -> {}
+		);
+
+		final List<Thread> firings = new ArrayList<>();
+		for (int i = 0; i < 4; i++) {
+			firings.add(new Thread(() -> scheduler.onReEvaluation(provider, "same.vm")));
+		}
+		firings.forEach(Thread::start);
+		for (final Thread firing : firings) {
+			firing.join(10_000);
+			assertFalse(firing.isAlive(), "Every re-evaluation must have completed");
+		}
+
+		assertEquals(0, overlaps.get(), "Two re-evaluations of the same template must never run at once");
+
+		scheduler.stop();
+	}
 }

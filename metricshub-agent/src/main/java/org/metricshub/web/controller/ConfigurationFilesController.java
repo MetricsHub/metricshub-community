@@ -27,6 +27,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -468,14 +469,15 @@ public class ConfigurationFilesController {
 	 * @param fileName the .vm file name
 	 * @return {@code 200} when the template was re-evaluated, whether or not a reload was needed;
 	 *         {@code 409} when the template produced nothing
-	 * @throws ConfigFilesException when the file is not a template, or no provider handles it
+	 * @throws ConfigFilesException when the file is not a template, is a draft, or no provider handles
+	 *                              it
 	 */
 	@Operation(
 		summary = "Re-evaluate a Velocity template",
 		description = "Re-evaluates a Velocity template (.vm) and reloads the running configuration when its result changed.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Template re-evaluated; reloaded only if it changed"),
-			@ApiResponse(responseCode = "400", description = "Not a .vm file, or no provider handles it"),
+			@ApiResponse(responseCode = "400", description = "Not a .vm file, a draft, or no provider handles it"),
 			@ApiResponse(responseCode = "409", description = "The template produced no configuration"),
 			@ApiResponse(responseCode = "500", description = "The configuration reload failed")
 		}
@@ -488,6 +490,14 @@ public class ConfigurationFilesController {
 			throw new ConfigFilesException(
 				ConfigFilesException.Code.VALIDATION_FAILED,
 				"Only .vm files can be re-evaluated."
+			);
+		}
+		// A draft is an unsaved copy the agent never loads, so no provider knows it and there is no
+		// configuration behind it to refresh. Say so, instead of reporting that no provider handles it.
+		if (fileName.toLowerCase(Locale.ROOT).endsWith(ConfigurationFilesService.DRAFT_EXTENSION)) {
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
+				"A draft cannot be re-evaluated. Save the template first."
 			);
 		}
 		try {

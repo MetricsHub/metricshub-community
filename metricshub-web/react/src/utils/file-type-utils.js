@@ -26,6 +26,17 @@ export function getFileType(fileName) {
 }
 
 /**
+ * Returns true when the file name designates a draft, i.e. an unsaved copy of a
+ * configuration file. The agent never loads a draft, so actions that act on the
+ * running configuration do not apply to one.
+ * @param {string} fileName The file name.
+ * @returns {boolean} true when the name ends with ".draft".
+ */
+export function isDraftFile(fileName) {
+	return /\.draft$/i.test(String(fileName ?? ""));
+}
+
+/**
  * Removes a trailing ".draft" suffix from a configuration file name.
  * A draft and its saved counterpart designate the same configuration file, so
  * name comparisons must ignore the suffix.

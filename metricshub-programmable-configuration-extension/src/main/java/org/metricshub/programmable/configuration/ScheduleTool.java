@@ -95,6 +95,11 @@ public class ScheduleTool {
 	 * Clears the declared cron. Called before every render pass so the schedule always reflects the
 	 * template as it is now: re-running the declarations is what re-establishes it, and a directive
 	 * removed from the template correctly leaves no schedule behind.
+	 * <p>
+	 * What this tool collects during a render is only published once that render completes (see
+	 * {@link VelocityConfigurationLoader#getCron()}), so clearing it here does not expose a template
+	 * whose render failed as one declaring no schedule.
+	 * </p>
 	 */
 	void reset() {
 		cron = null;

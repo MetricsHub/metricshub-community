@@ -481,6 +481,18 @@ class ConfigurationFilesControllerTest {
 		verify(programmableReEvaluationLauncher, times(0)).reevaluateTemplate(Mockito.anyString());
 	}
 
+	/**
+	 * A draft is an unsaved copy the agent never loads, so no provider knows it. The request must be
+	 * rejected here, with a message saying why, rather than reaching the launcher and coming back as
+	 * "no provider handles this file".
+	 */
+	@Test
+	void testShouldRejectReevaluationOfADraft() throws Exception {
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm.draft")).andExpect(status().isBadRequest());
+
+		verify(programmableReEvaluationLauncher, times(0)).reevaluateTemplate(Mockito.anyString());
+	}
+
 	@Test
 	void testShouldReevaluateWholeConfiguration() throws Exception {
 		doNothing().when(programmableReEvaluationLauncher).reloadConfiguration();

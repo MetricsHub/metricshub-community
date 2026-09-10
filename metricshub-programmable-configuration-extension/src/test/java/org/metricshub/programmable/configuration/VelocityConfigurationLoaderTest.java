@@ -323,4 +323,74 @@ class VelocityConfigurationLoaderTest {
 
 		assertTrue(loader.getCron().isEmpty(), "The removed declaration must not survive the next render");
 	}
+
+	/**
+	 * Velocity tool whose only method fails, standing for a data source ({@code $http}, {@code $sql})
+	 * that is temporarily unreachable. Public so Velocity can introspect it.
+	 */
+	public static class ExplodingTool {
+
+		/**
+		 * Always fails.
+		 *
+		 * @return never returns
+		 */
+		public String explode() {
+			throw new IllegalStateException("The data source is unavailable.");
+		}
+	}
+
+	/**
+	 * A template whose render fails part-way must keep the schedule it last declared. Reporting no
+	 * schedule would have the discovery sweep treat it as undeclared and cancel its cron task, so a
+	 * data source failing once would stop the template from ever being re-evaluated again.
+	 */
+	@Test
+	void testAFailedRenderKeepsTheLastDeclaredCron(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(
+			templatePath,
+			Map.of("boom", new ExplodingTool())
+		);
+		loader.generateYaml();
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+
+		// Same declaration, but a data source read after it now fails.
+		Files.writeString(
+			templatePath,
+			"$schedule.cron('0/5 * * * * ?')\nresources: $boom.explode()\n",
+			StandardCharsets.UTF_8
+		);
+		assertNull(loader.generateYaml(), "A render that throws produces no YAML");
+
+		assertEquals(
+			Optional.of("0/5 * * * * ?"),
+			loader.getCron(),
+			"The schedule declared by the last successful render must survive a failed one"
+		);
+	}
+
+	/**
+	 * A template that never rendered successfully declares nothing: there is no earlier schedule to
+	 * fall back on.
+	 */
+	@Test
+	void testAFailedFirstRenderLeavesNoCron(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(
+			templatePath,
+			"$schedule.cron('0/5 * * * * ?')\nresources: $boom.explode()\n",
+			StandardCharsets.UTF_8
+		);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(
+			templatePath,
+			Map.of("boom", new ExplodingTool())
+		);
+		assertNull(loader.generateYaml(), "A render that throws produces no YAML");
+
+		assertTrue(loader.getCron().isEmpty(), "A template that never rendered declares no schedule");
+	}
 }

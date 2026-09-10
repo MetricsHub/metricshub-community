@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { isVmFile, getFileType, stripDraftSuffix, isSameConfigFile } from "./file-type-utils";
+import {
+	isVmFile,
+	isDraftFile,
+	getFileType,
+	stripDraftSuffix,
+	isSameConfigFile,
+} from "./file-type-utils";
 
 describe("isVmFile", () => {
 	it("returns true for .vm files", () => {
@@ -80,5 +86,26 @@ describe("isSameConfigFile", () => {
 	it("does not match different files", () => {
 		expect(isSameConfigFile("new-config.vm", "new-config-1.vm")).toBe(false);
 		expect(isSameConfigFile("hosts.vm", "hosts.yaml")).toBe(false);
+	});
+});
+
+describe("isDraftFile", () => {
+	it("returns true for a draft", () => {
+		expect(isDraftFile("new-config.vm.draft")).toBe(true);
+		expect(isDraftFile("metricshub.yaml.draft")).toBe(true);
+	});
+
+	it("is case-insensitive", () => {
+		expect(isDraftFile("new-config.vm.DRAFT")).toBe(true);
+	});
+
+	it("returns false for a saved file", () => {
+		expect(isDraftFile("new-config.vm")).toBe(false);
+		expect(isDraftFile("draft.vm")).toBe(false);
+	});
+
+	it("tolerates null and undefined", () => {
+		expect(isDraftFile(null)).toBe(false);
+		expect(isDraftFile(undefined)).toBe(false);
 	});
 });

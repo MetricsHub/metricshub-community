@@ -183,7 +183,8 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 
 		try {
 			// Retain the loader so this template can be re-rendered later on its own schedule.
-			final var loader = loaders.computeIfAbsent(absolutePath, key -> new VelocityConfigurationLoader(key, TOOLS));
+			final var loader = loaders.computeIfAbsent(absolutePath, key -> new VelocityConfigurationLoader(key, TOOLS));
+
 			final String yaml = loader.generateYaml();
 
 			if (yaml != null) {

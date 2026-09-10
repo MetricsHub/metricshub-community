@@ -61,6 +61,7 @@ import {
 	deleteLocalFile,
 	clearError as clearConfigError,
 	clearVelocityTestResult,
+	clearReevaluation,
 } from "../store/slices/config-slice";
 import {
 	select as selectOtelFile,
@@ -82,7 +83,7 @@ import QuestionDialog from "../components/common/QuestionDialog";
 import { paths } from "../paths";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { isBackupFileName } from "../utils/backup-names";
-import { isVmFile, isSameConfigFile } from "../utils/file-type-utils";
+import { isVmFile, isDraftFile, isSameConfigFile } from "../utils/file-type-utils";
 import { useAuth } from "../hooks/use-auth";
 
 /** Last file the user had open in the Configuration editor (restored when returning). */
@@ -151,6 +152,7 @@ function ConfigurationPage() {
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null); // { repo, name }
+	const [reloadConfirmOpen, setReloadConfirmOpen] = React.useState(false);
 
 	React.useEffect(() => {
 		if (configError) {
@@ -164,6 +166,18 @@ function ConfigurationPage() {
 			dispatch(clearOtelError());
 		}
 	}, [otelError, snackbar, dispatch]);
+
+	// A re-evaluation (one template, or the whole configuration) reports what it did. Without this,
+	// a failure would only stop the spinner and the user would be left guessing.
+	React.useEffect(() => {
+		if (!reevaluation || reevaluation.loading) return;
+		if (reevaluation.error) {
+			snackbar.show(reevaluation.error, { severity: "error" });
+		} else if (reevaluation.message) {
+			snackbar.show(reevaluation.message, { severity: "success" });
+		}
+		dispatch(clearReevaluation());
+	}, [reevaluation, snackbar, dispatch]);
 
 	React.useEffect(() => {
 		dispatch(fetchConfigList());
@@ -409,10 +423,13 @@ function ConfigurationPage() {
 
 	const handleReevaluateTemplate = React.useCallback(() => {
 		if (routeRepo !== "config" || !routeName || !isVmFile(routeName)) return;
+		// A draft is not loaded by the agent, so it has no configuration to refresh.
+		if (isDraftFile(routeName)) return;
 		dispatch(reevaluateTemplate({ name: routeName }));
 	}, [dispatch, routeRepo, routeName]);
 
 	const handleReevaluateConfiguration = React.useCallback(() => {
+		setReloadConfirmOpen(false);
 		dispatch(reevaluateConfiguration());
 	}, [dispatch]);
 
@@ -559,7 +576,7 @@ function ConfigurationPage() {
 							variant="outlined"
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
-							onClick={handleReevaluateConfiguration}
+							onClick={() => setReloadConfirmOpen(true)}
 							disabled={reevaluation?.scope === "configuration" && !!reevaluation?.loading}
 						>
 							{reevaluation?.scope === "configuration" && reevaluation?.loading
@@ -779,6 +796,23 @@ function ConfigurationPage() {
 					</Stack>
 				</Right>
 			</SplitScreen>
+			{/* Rendered here and not in treeContent, which the drawer and the split view both render. */}
+			<QuestionDialog
+				open={reloadConfirmOpen}
+				title="Reload the configuration"
+				question="This re-runs every configuration source, including all Velocity templates, and applies the result to the running agent. Resources whose settings changed are restarted. Do you want to continue?"
+				onClose={() => setReloadConfirmOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setReloadConfirmOpen(false), autoFocus: true },
+					{
+						btnTitle: "Reload",
+						btnColor: "primary",
+						btnVariant: "contained",
+						btnIcon: <ReevaluateIcon />,
+						callback: handleReevaluateConfiguration,
+					},
+				]}
+			/>
 		</>
 	);
 }

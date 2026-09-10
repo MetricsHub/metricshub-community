@@ -6,7 +6,7 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import ReevaluateIcon from "@mui/icons-material/PublishedWithChanges";
 import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backup-names";
-import { isVmFile, getFileType } from "../../utils/file-type-utils";
+import { isVmFile, isDraftFile, getFileType } from "../../utils/file-type-utils";
 import FileTypeIcon from "./tree/icons/FileTypeIcons";
 import EncryptPasswordDialog from "../common/EncryptPasswordDialog";
 
@@ -35,7 +35,7 @@ export default function EditorHeader({
 	const isVm = !!(selected && isVmFile(selected));
 	const fileType = selected ? getFileType(selected) : "file";
 
-	const isDraft = selected && selected.endsWith(".draft");
+	const isDraft = !!(selected && isDraftFile(selected));
 	const displayName = isDraft
 		? selected.replace(/\.draft$/, "")
 		: (selected ?? "Select a file to edit");
@@ -132,7 +132,8 @@ export default function EditorHeader({
 							{saving ? "Applying..." : "Apply"}
 						</Button>
 					)}
-					{isVm && onReevaluate && (
+					{/* A draft is not loaded by the agent, so there is nothing to re-evaluate for it. */}
+					{isVm && !isDraft && onReevaluate && (
 						<Button
 							size="small"
 							variant="outlined"

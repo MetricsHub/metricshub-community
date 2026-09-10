@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
@@ -59,7 +60,8 @@ import org.springframework.scheduling.support.CronTrigger;
  * Several templates can be due at the same time. Their renders run concurrently &mdash; a slow data
  * source in one template must not hold up another &mdash; but the compare-and-merge step that
  * follows is serialized by a single lock, so simultaneous firings are merged one at a time and none
- * clobbers another.
+ * clobbers another. One given template is additionally serialized with itself, so a cron firing and
+ * an on-demand request for the same file are processed one after the other.
  * </p>
  * <p>
  * Discovery also runs periodically, so a template added while the agent runs starts firing without a
@@ -111,6 +113,19 @@ public class ProgrammableReEvaluationScheduler {
 
 	/** Serializes the merge step so simultaneous firings do not race on the reload. */
 	private final Object lock = new Object();
+
+	/**
+	 * One lock per re-evaluation id, so the same template is never re-evaluated twice at the same
+	 * time. Two different templates hold two different locks and still run in parallel.
+	 * <p>
+	 * A cron firing and an on-demand request can target the same template at the same moment. Without
+	 * this, both would render it, both would publish their result to the provider's cache, and the
+	 * second one could record as the baseline a fragment that was never the one applied &mdash; a
+	 * later re-evaluation producing that same fragment would then be skipped although the running
+	 * configuration holds something else.
+	 * </p>
+	 */
+	private final Map<String, Object> reEvaluationLocks = new ConcurrentHashMap<>();
 
 	/** The scheduled cron tasks per re-evaluation id, so a single one can be cancelled. */
 	private final Map<String, ScheduledFuture<?>> scheduledTasks = new HashMap<>();
@@ -313,11 +328,18 @@ public class ProgrammableReEvaluationScheduler {
 	 * never interleave with a scheduled one, and neither leaves the other's change detection stale.
 	 * </p>
 	 * <p>
+	 * The whole sequence &mdash; render, cache publication, reload and baseline update &mdash; is held
+	 * under a lock private to that re-evaluation ({@link #reEvaluationLocks}), so the same template is
+	 * never processed twice at the same time and the baseline always records the fragment that was
+	 * actually applied. Other templates use other locks and are not delayed by it.
+	 * </p>
+	 * <p>
 	 * The re-evaluation itself runs <b>outside</b> {@link #lock}: it re-runs the data sources behind
-	 * that unit, which can be slow, and holding the lock across it would stall every other firing.
-	 * Only the compare-and-reload step, which must be atomic so simultaneous firings do not clobber one
-	 * another, is guarded. The reload reuses every other unit's cached fragment, so re-evaluating one
-	 * template does not re-run the sources of all the others.
+	 * that unit, which can be slow, and holding the shared lock across it would stall every other
+	 * firing. Only the compare-and-reload step, which must be atomic so simultaneous firings of
+	 * <em>different</em> templates do not clobber one another, is guarded by it. The reload reuses
+	 * every other unit's cached fragment, so re-evaluating one template does not re-run the sources of
+	 * all the others.
 	 * </p>
 	 *
 	 * @param provider       the owning configuration provider
@@ -325,34 +347,38 @@ public class ProgrammableReEvaluationScheduler {
 	 * @return what the re-evaluation ended up doing
 	 */
 	public ReEvaluationOutcome reevaluateNow(final IConfigurationProvider provider, final String reEvaluationId) {
-		final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
-		if (fragment.isEmpty()) {
-			log.warn("Re-evaluation of '{}' produced nothing; keeping the last good value.", reEvaluationId);
-			return ReEvaluationOutcome.NOTHING_PRODUCED;
-		}
-		synchronized (lock) {
-			if (fragment.get().equals(lastFragments.get(reEvaluationId))) {
-				log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
-				return ReEvaluationOutcome.UNCHANGED;
+		// Taken before the shared lock, and never in the other order: discovery and the merge step below
+		// take the shared lock alone, so the two can never wait on each other.
+		synchronized (reEvaluationLocks.computeIfAbsent(reEvaluationId, id -> new Object())) {
+			final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
+			if (fragment.isEmpty()) {
+				log.warn("Re-evaluation of '{}' produced nothing; keeping the last good value.", reEvaluationId);
+				return ReEvaluationOutcome.NOTHING_PRODUCED;
 			}
-			log.info("Re-evaluation of '{}' changed the configuration; reloading.", reEvaluationId);
-			try {
-				// Only this re-evaluation was re-run; the provider serves every other unit from cache, so
-				// one template's cron does not re-run the data sources of all the others.
-				provider.runReusingCachedFragments(reloadTrigger::triggerReload);
-				// The baseline only moves once the change was applied. A failed reload leaves it behind,
-				// so the next firing sees the same difference again and retries instead of going quiet
-				// on a configuration that was never updated.
-				lastFragments.put(reEvaluationId, fragment.get());
-				return ReEvaluationOutcome.RELOADED;
-			} catch (Exception e) {
-				log.error(
-					"Reload after re-evaluation of '{}' failed: {}. The change is kept pending and retried on the next firing.",
-					reEvaluationId,
-					e.getMessage()
-				);
-				log.debug("Reload error:", e);
-				return ReEvaluationOutcome.RELOAD_FAILED;
+			synchronized (lock) {
+				if (fragment.get().equals(lastFragments.get(reEvaluationId))) {
+					log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
+					return ReEvaluationOutcome.UNCHANGED;
+				}
+				log.info("Re-evaluation of '{}' changed the configuration; reloading.", reEvaluationId);
+				try {
+					// Only this re-evaluation was re-run; the provider serves every other unit from cache, so
+					// one template's cron does not re-run the data sources of all the others.
+					provider.runReusingCachedFragments(reloadTrigger::triggerReload);
+					// The baseline only moves once the change was applied. A failed reload leaves it behind,
+					// so the next firing sees the same difference again and retries instead of going quiet
+					// on a configuration that was never updated.
+					lastFragments.put(reEvaluationId, fragment.get());
+					return ReEvaluationOutcome.RELOADED;
+				} catch (Exception e) {
+					log.error(
+						"Reload after re-evaluation of '{}' failed: {}. The change is kept pending and retried on the next firing.",
+						reEvaluationId,
+						e.getMessage()
+					);
+					log.debug("Reload error:", e);
+					return ReEvaluationOutcome.RELOAD_FAILED;
+				}
 			}
 		}
 	}
@@ -371,6 +397,11 @@ public class ProgrammableReEvaluationScheduler {
 			scheduledTasks.clear();
 			scheduledCrons.clear();
 			lastFragments.clear();
+			// Nothing new can be admitted once the context is gone, so the per-template locks are
+			// released with the rest of the state. They are kept while the scheduler runs, even for a
+			// deleted template: dropping one that a re-evaluation still holds would let a concurrent one
+			// take a fresh lock and run beside it.
+			reEvaluationLocks.clear();
 		}
 	}
 }

@@ -86,6 +86,14 @@ public class VelocityConfigurationLoader {
 	private final ScheduleTool scheduleTool = new ScheduleTool();
 
 	/**
+	 * The cron declared by the last render that <b>completed</b>, which is what {@link #getCron()}
+	 * reports. It is set only once a render reached its end, so a render that failed half-way (a data
+	 * source that timed out, for example) keeps the schedule the template last established instead of
+	 * appearing to declare none.
+	 */
+	private volatile String lastDeclaredCron;
+
+	/**
 	 * The engine, built on first use and reused across renders. Only the engine is reused: the
 	 * template itself is re-read on every render (the file resource loader runs with its cache
 	 * disabled), so an edit to the {@code .vm} file is picked up without rebuilding this loader.
@@ -106,12 +114,17 @@ public class VelocityConfigurationLoader {
 
 	/**
 	 * Returns the cron expression the template declared through {@code $schedule.cron(...)} during
-	 * the last render. Meaningful only after a render has run.
+	 * the last render that completed. Meaningful only after a render has run.
+	 * <p>
+	 * A render that failed does not change this value: the template keeps the schedule it last
+	 * declared, so a temporary failure of one of its data sources cannot make it look unscheduled and
+	 * get its cron task cancelled.
+	 * </p>
 	 *
 	 * @return the declared cron expression, or empty when the template declares no schedule
 	 */
-	public synchronized Optional<String> getCron() {
-		return scheduleTool.getCron();
+	public Optional<String> getCron() {
+		return Optional.ofNullable(lastDeclaredCron);
 	}
 
 	/**
@@ -168,6 +181,10 @@ public class VelocityConfigurationLoader {
 		// Render template
 		var writer = new StringWriter();
 		template.merge(context, writer);
+
+		// The render reached its end, so what the template declared is complete: publish it. Doing this
+		// here and not right after reset() is what keeps a failed render from dropping the schedule.
+		lastDeclaredCron = scheduleTool.getCron().orElse(null);
 
 		return writer.toString();
 	}
