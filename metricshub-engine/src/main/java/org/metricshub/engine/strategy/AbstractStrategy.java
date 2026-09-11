@@ -474,6 +474,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		final List<Criterion> healthChecks = connectorIdentity.getHealthChecks();
 		final boolean hasHealthChecks = healthChecks != null && !healthChecks.isEmpty();
 		final boolean useHealthChecks = hasHealthChecks;
+		final String validationType = useHealthChecks ? "Health checks" : "Detection criteria";
 
 		if (!useHealthChecks && connectorIdentity.getDetection() == null) {
 			return true;
@@ -534,9 +535,10 @@ public abstract class AbstractStrategy implements IStrategy {
 		if (failureCount < MAX_CONSECUTIVE_DETECTION_FAILURES) {
 			// Transient failure: log a warning but do NOT stop the connector's job
 			log.warn(
-				"Hostname {} - Detection re-validation failed for connector {} (failure {}/{}). " +
+				"Hostname {} - {} re-validation failed for connector {} (failure {}/{}). " +
 					"Treating as transient; the connector's {} job will continue.",
 				hostname,
+				validationType,
 				connectorId,
 				failureCount,
 				MAX_CONSECUTIVE_DETECTION_FAILURES,
@@ -549,9 +551,10 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		// Threshold exceeded: this is a persistent failure
 		log.error(
-			"Hostname {} - Detection re-validation failed {} consecutive times for connector {}. " +
+			"Hostname {} - {} re-validation failed {} consecutive times for connector {}. " +
 				"The connector no longer matches the host. Stopping the connector's {} job.",
 			hostname,
+			validationType,
 			failureCount,
 			connectorId,
 			jobName
