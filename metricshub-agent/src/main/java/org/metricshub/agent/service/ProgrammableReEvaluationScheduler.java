@@ -350,6 +350,8 @@ public class ProgrammableReEvaluationScheduler {
 		// Taken before the shared lock, and never in the other order: discovery and the merge step below
 		// take the shared lock alone, so the two can never wait on each other.
 		synchronized (reEvaluationLocks.computeIfAbsent(reEvaluationId, id -> new Object())) {
+			seedBaseline(provider, reEvaluationId);
+
 			final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
 			if (fragment.isEmpty()) {
 				log.warn("Re-evaluation of '{}' produced nothing; keeping the last good value.", reEvaluationId);
@@ -380,6 +382,38 @@ public class ProgrammableReEvaluationScheduler {
 					return ReEvaluationOutcome.RELOAD_FAILED;
 				}
 			}
+		}
+	}
+
+	/**
+	 * Records what the running configuration already holds for a re-evaluation, when nothing is known
+	 * about it yet.
+	 * <p>
+	 * Discovery seeds the baseline of every template that declares a schedule. A template that
+	 * declares none is never seen by discovery, yet it can still be re-evaluated on demand: without
+	 * this, its first request would compare against nothing, always conclude that the configuration
+	 * changed, and rebuild it even when the template produced exactly what was already loaded.
+	 * </p>
+	 * <p>
+	 * Called before the render, since the render replaces what the provider holds for that template.
+	 * </p>
+	 *
+	 * @param provider       the owning configuration provider
+	 * @param reEvaluationId the re-evaluation whose baseline must be known
+	 */
+	private void seedBaseline(final IConfigurationProvider provider, final String reEvaluationId) {
+		synchronized (lock) {
+			if (lastFragments.containsKey(reEvaluationId)) {
+				return;
+			}
+		}
+		// Read outside the lock: it is a lookup on the provider, and the merge step must stay free.
+		final Optional<JsonNode> loaded = provider.currentFragment(reEvaluationId);
+		if (loaded.isEmpty()) {
+			return;
+		}
+		synchronized (lock) {
+			lastFragments.putIfAbsent(reEvaluationId, loaded.get());
 		}
 	}
 

@@ -22,7 +22,9 @@ package org.metricshub.web.service;
  */
 
 import jakarta.annotation.PreDestroy;
+import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.service.ConfigurationReloadService;
@@ -225,7 +227,7 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 			ConfigurationReloadService.builder()
 				.withRunningAgentContext(currentContext)
 				.withComparisonContextSupplier(() -> buildContext(configDirectory, extensionManager))
-				.withRestartContextSupplier(() -> buildContext(configDirectory, extensionManager))
+				.withRestartContextSupplier(restartContextSupplier(configDirectory, extensionManager))
 				.withRestartRequester(reloadedContextSupplier -> {
 					agentLifecycleService.restartAsync(reloadedContextSupplier);
 					return true;
@@ -249,6 +251,41 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 		if (currentScheduler != null) {
 			currentScheduler.rediscoverNewRegistrations();
 		}
+	}
+
+	/**
+	 * Builds the supplier that serves a full restart, carrying over the fragment-reuse scope this
+	 * reload runs in, if any.
+	 * <p>
+	 * A reload started by a re-evaluation runs inside
+	 * {@link IConfigurationProvider#runReusingCachedFragments(Runnable)}: the targeted template was
+	 * re-rendered, every other one is served from its cache. That scope belongs to this thread and
+	 * ends when this method's caller returns, while the restart context is built later, on the
+	 * lifecycle service's own thread. Captured here, the scope applies there too, so the restart
+	 * installs the configuration the diff was made on rather than re-running every data source again
+	 * &mdash; which could install something different, or drop a template whose source just failed.
+	 * </p>
+	 * <p>
+	 * Outside such a scope (a manual reload of the whole configuration, for instance) every provider
+	 * returns the supplier untouched and the restart rebuilds everything, as it should.
+	 * </p>
+	 *
+	 * @param configDirectory  the configuration directory the context is built from
+	 * @param extensionManager the extension manager carried into the new context
+	 * @return the supplier handed to the lifecycle service
+	 */
+	private Supplier<AgentContext> restartContextSupplier(
+		final String configDirectory,
+		final ExtensionManager extensionManager
+	) {
+		Supplier<AgentContext> supplier = () -> buildContext(configDirectory, extensionManager);
+		final List<IConfigurationProvider> providers = extensionManager.getConfigurationProviderExtensions();
+		if (providers != null) {
+			for (final IConfigurationProvider provider : providers) {
+				supplier = provider.captureCachedFragmentsScope(supplier);
+			}
+		}
+		return supplier;
 	}
 
 	/**

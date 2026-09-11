@@ -50,7 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ScheduleTool {
 
-	/** The cron declared by the template during the current render pass, or {@code null} if none. */
+	/** The cron declared by the template during the render this tool belongs to, or {@code null}. */
 	private String cron;
 
 	/**
@@ -83,25 +83,11 @@ public class ScheduleTool {
 	}
 
 	/**
-	 * Returns the cron declared by the template during the last render pass.
+	 * Returns the cron declared by the template during the render this tool belongs to.
 	 *
 	 * @return the declared cron expression, or empty when the template declares no schedule
 	 */
 	public Optional<String> getCron() {
 		return Optional.ofNullable(cron);
-	}
-
-	/**
-	 * Clears the declared cron. Called before every render pass so the schedule always reflects the
-	 * template as it is now: re-running the declarations is what re-establishes it, and a directive
-	 * removed from the template correctly leaves no schedule behind.
-	 * <p>
-	 * What this tool collects during a render is only published once that render completes (see
-	 * {@link VelocityConfigurationLoader#getCron()}), so clearing it here does not expose a template
-	 * whose render failed as one declaring no schedule.
-	 * </p>
-	 */
-	void reset() {
-		cron = null;
 	}
 }

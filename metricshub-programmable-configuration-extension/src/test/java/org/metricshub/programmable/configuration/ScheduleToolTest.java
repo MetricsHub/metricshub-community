@@ -53,13 +53,11 @@ class ScheduleToolTest {
 		assertEquals(Optional.of("0/5 * * * * ?"), tool.getCron());
 	}
 
+	/**
+	 * Each render builds its own tool, so a fresh one carries nothing from an earlier render.
+	 */
 	@Test
-	void testResetClearsTheDeclaration() {
-		final ScheduleTool tool = new ScheduleTool();
-		tool.cron("0/5 * * * * ?");
-
-		tool.reset();
-
-		assertTrue(tool.getCron().isEmpty(), "reset() must clear the schedule so a render starts clean");
+	void testANewToolDeclaresNothing() {
+		assertTrue(new ScheduleTool().getCron().isEmpty(), "A tool that saw no declaration holds no schedule");
 	}
 }

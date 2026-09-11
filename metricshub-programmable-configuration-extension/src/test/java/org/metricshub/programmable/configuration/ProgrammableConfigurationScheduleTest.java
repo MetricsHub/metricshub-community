@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.extension.ScheduledReEvaluation;
@@ -197,5 +198,93 @@ class ProgrammableConfigurationScheduleTest {
 		provider.load(tempDir);
 
 		assertTrue(provider.getScheduledReEvaluations().isEmpty(), "A deleted template must not stay scheduled");
+	}
+
+	/**
+	 * A directory that cannot be listed says nothing about which templates still exist. Dropping them
+	 * would have the discovery sweep cancel every schedule over what is often a transient error.
+	 */
+	@Test
+	void testAFailedListingKeepsTheKnownTemplates(@TempDir final Path tempDir) throws Exception {
+		Files.writeString(tempDir.resolve("hosts.vm"), "$schedule.cron('0/5 * * * * ?')\nresources: {}\n");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+		assertEquals(1, provider.getScheduledReEvaluations().size());
+
+		// Listing a directory that is not there fails the same way an unreadable one does.
+		provider.load(tempDir.resolve("gone"));
+
+		assertEquals(
+			1,
+			provider.getScheduledReEvaluations().size(),
+			"A directory that could not be listed must not unschedule the known templates"
+		);
+	}
+
+	/**
+	 * A re-evaluation that ends up requiring a full restart hands the lifecycle service a supplier
+	 * that runs later, on another thread. That deferred build must still reuse the cached fragments,
+	 * so the restart installs the configuration the decision was made on.
+	 */
+	@Test
+	void testTheCapturedScopeAppliesOnAnotherThread(@TempDir final Path tempDir) throws Exception {
+		final Path csvA = tempDir.resolve("a.csv");
+		final Path csvB = tempDir.resolve("b.csv");
+		Files.writeString(csvA, "host-a\n");
+		Files.writeString(csvB, "host-b\n");
+		writeTemplate(tempDir.resolve("a.vm"), csvA, "0/5 * * * * ?");
+		writeTemplate(tempDir.resolve("b.vm"), csvB, "0/5 * * * * ?");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+
+		// Template A is re-evaluated; B's source also changed but must not be re-run.
+		Files.writeString(csvA, "host-a2\n");
+		Files.writeString(csvB, "host-b2\n");
+		provider.reevaluate(tempDir.resolve("a.vm").toAbsolutePath().toString());
+
+		// Captured inside the scope, exactly as the reload does for the restart it may request.
+		final List<Supplier<Collection<JsonNode>>> captured = new ArrayList<>();
+		provider.runReusingCachedFragments(() ->
+			captured.add(provider.captureCachedFragmentsScope(() -> provider.load(tempDir)))
+		);
+
+		// Run it once the scope is long gone, on a thread that never entered it.
+		final List<String> rendered = new ArrayList<>();
+		final Thread deferred = new Thread(() -> rendered.add(captured.get(0).get().toString()));
+		deferred.start();
+		deferred.join(10_000);
+		assertFalse(deferred.isAlive(), "The deferred build must have completed");
+
+		assertTrue(rendered.get(0).contains("host-a2"), "The re-evaluated template must carry its new data");
+		assertFalse(
+			rendered.get(0).contains("host-b2"),
+			"The other template's source must not be re-run on the deferred build either"
+		);
+	}
+
+	/**
+	 * Without the capture, a build running on another thread is in no scope and renders everything
+	 * again. This is what the whole-configuration reload relies on, so it must stay that way.
+	 */
+	@Test
+	void testAnUncapturedBuildOnAnotherThreadRendersEverything(@TempDir final Path tempDir) throws Exception {
+		final Path csv = tempDir.resolve("hosts.csv");
+		Files.writeString(csv, "host-a\n");
+		writeTemplate(tempDir.resolve("hosts.vm"), csv, "0/5 * * * * ?");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+
+		Files.writeString(csv, "host-a\nhost-c\n");
+
+		final List<String> rendered = new ArrayList<>();
+		final Thread deferred = new Thread(() -> rendered.add(provider.load(tempDir).toString()));
+		deferred.start();
+		deferred.join(10_000);
+		assertFalse(deferred.isAlive(), "The build must have completed");
+
+		assertTrue(rendered.get(0).contains("host-c"), "A build outside any scope must render the templates again");
 	}
 }

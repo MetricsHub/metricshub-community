@@ -80,12 +80,6 @@ public class VelocityConfigurationLoader {
 	private Map<String, Object> tools = new HashMap<>();
 
 	/**
-	 * The {@code $schedule} tool of this template. It is per-loader (never shared through the tools
-	 * map) because the schedule it collects belongs to one template.
-	 */
-	private final ScheduleTool scheduleTool = new ScheduleTool();
-
-	/**
 	 * The cron declared by the last render that <b>completed</b>, which is what {@link #getCron()}
 	 * reports. It is set only once a render reached its end, so a render that failed half-way (a data
 	 * source that timed out, for example) keeps the schedule the template last established instead of
@@ -174,16 +168,18 @@ public class VelocityConfigurationLoader {
 		// Add tools to context
 		tools.forEach(context::put);
 
-		// Expose the per-template $schedule tool, cleared so the schedule reflects this render only.
-		scheduleTool.reset();
+		// A $schedule tool of this render's own. Two renders of the same template can overlap (a cron
+		// firing and the configuration watcher's reload, for instance) and they would otherwise write
+		// into one shared tool, so one could publish the other's cron, or no cron at all.
+		final ScheduleTool scheduleTool = new ScheduleTool();
 		context.put("schedule", scheduleTool);
 
 		// Render template
 		var writer = new StringWriter();
 		template.merge(context, writer);
 
-		// The render reached its end, so what the template declared is complete: publish it. Doing this
-		// here and not right after reset() is what keeps a failed render from dropping the schedule.
+		// The render reached its end, so what it declared is complete: publish it in one write. A render
+		// that threw before this point publishes nothing and leaves the previous schedule in place.
 		lastDeclaredCron = scheduleTool.getCron().orElse(null);
 
 		return writer.toString();

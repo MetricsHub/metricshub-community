@@ -572,4 +572,56 @@ class ProgrammableReEvaluationSchedulerTest {
 
 		scheduler.stop();
 	}
+
+	/**
+	 * A template that declares no {@code $schedule.cron(...)} is never seen by discovery, so nothing
+	 * seeds its baseline &mdash; yet it can still be re-evaluated on demand. Its first request must
+	 * compare against what the running configuration already holds, and report that nothing changed
+	 * when the template produced the same thing, instead of rebuilding the configuration for nothing.
+	 */
+	@Test
+	void testAnUnscheduledTemplateComparesAgainstTheLoadedFragment(@TempDir final Path tempDir) throws Exception {
+		final Path csv = tempDir.resolve("hosts.csv");
+		Files.writeString(csv, "host-a,linux,ssh,userA,passA\n");
+		final String csvPath = csv.toString().replace('\\', '/');
+		// No $schedule.cron(...): this template is loaded, but never scheduled.
+		final String tpl = String.join(
+			"\n",
+			"#set($lines = $file.readAllLines(\"__CSV__\"))",
+			"resources:",
+			"#foreach($line in $lines)",
+			"#set($fields = $collection.split($line))",
+			"  $fields.get(0): {}",
+			"#end"
+		).replace("__CSV__", csvPath);
+		Files.writeString(tempDir.resolve("hosts.vm"), tpl);
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+		assertTrue(provider.getScheduledReEvaluations().isEmpty(), "The template declares no schedule");
+
+		final AtomicInteger reloadCount = new AtomicInteger();
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			mock(TaskScheduler.class),
+			reloadCount::incrementAndGet
+		);
+		scheduler.start();
+
+		final String id = tempDir.resolve("hosts.vm").toAbsolutePath().toString();
+
+		// The data did not move, so the first on-demand re-evaluation has nothing to apply.
+		assertEquals(
+			ProgrammableReEvaluationScheduler.ReEvaluationOutcome.UNCHANGED,
+			scheduler.reevaluateNow(provider, id)
+		);
+		assertEquals(0, reloadCount.get(), "Unchanged data must not rebuild the configuration");
+
+		// The data changes: the very next request must reload.
+		Files.writeString(csv, "host-a,linux,ssh,userA,passA\nhost-c,linux,ssh,userC,passC\n");
+		assertEquals(ProgrammableReEvaluationScheduler.ReEvaluationOutcome.RELOADED, scheduler.reevaluateNow(provider, id));
+		assertEquals(1, reloadCount.get(), "Changed data must rebuild the configuration");
+
+		scheduler.stop();
+	}
 }

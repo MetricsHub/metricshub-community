@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Contract for configuration providers.<br>
@@ -136,5 +137,28 @@ public interface IConfigurationProvider {
 	 */
 	default void runReusingCachedFragments(Runnable action) {
 		action.run();
+	}
+
+	/**
+	 * Returns a supplier that reproduces, wherever and whenever it runs, the fragment-reuse scope the
+	 * calling thread is in right now.
+	 * <p>
+	 * {@link #runReusingCachedFragments(Runnable)} applies to one thread and ends when the action
+	 * returns. Work decided inside that scope but carried out later, on another thread &mdash; a
+	 * queued agent restart building its context from a supplier, for instance &mdash; would otherwise
+	 * run outside it and re-run every unit's sources. Capturing the scope here, while it is still
+	 * active, lets that deferred work rebuild the very configuration the scope produced.
+	 * </p>
+	 * <p>
+	 * When the calling thread is in no such scope, or the provider caches nothing, the supplier is
+	 * returned unchanged.
+	 * </p>
+	 *
+	 * @param <T>      what the supplier produces
+	 * @param supplier the deferred work to wrap
+	 * @return the supplier, wrapped in the current scope when there is one
+	 */
+	default <T> Supplier<T> captureCachedFragmentsScope(Supplier<T> supplier) {
+		return supplier;
 	}
 }

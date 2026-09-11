@@ -1,6 +1,7 @@
 package org.metricshub.programmable.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,6 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -370,6 +374,43 @@ class VelocityConfigurationLoaderTest {
 			loader.getCron(),
 			"The schedule declared by the last successful render must survive a failed one"
 		);
+	}
+
+	/**
+	 * Two renders of the same template can overlap: a cron firing or an on-demand request on one side,
+	 * the configuration watcher's reload on the other. Each render collects its declarations in a tool
+	 * of its own, so neither can read or clear the other's, and the schedule stays what the template
+	 * says whichever order they finish in.
+	 */
+	@Test
+	void testConcurrentRendersKeepTheDeclaredCron(@TempDir final Path tempDir) throws Exception {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		final List<String> wrongCrons = Collections.synchronizedList(new ArrayList<>());
+
+		final List<Thread> renders = new ArrayList<>();
+		for (int thread = 0; thread < 4; thread++) {
+			renders.add(
+				new Thread(() -> {
+					for (int round = 0; round < 20; round++) {
+						loader.generateYaml();
+						final Optional<String> cron = loader.getCron();
+						if (!Optional.of("0/5 * * * * ?").equals(cron)) {
+							wrongCrons.add(String.valueOf(cron.orElse(null)));
+						}
+					}
+				})
+			);
+		}
+		renders.forEach(Thread::start);
+		for (final Thread render : renders) {
+			render.join(30_000);
+			assertFalse(render.isAlive(), "Every render must have completed");
+		}
+
+		assertTrue(wrongCrons.isEmpty(), () -> "Overlapping renders reported a wrong schedule: " + wrongCrons);
 	}
 
 	/**

@@ -24,6 +24,7 @@ package org.metricshub.programmable.configuration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.velocity.tools.generic.Alternator;
@@ -132,6 +134,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		final List<JsonNode> configurations = new ArrayList<>();
 		final Set<Path> seenPaths = new HashSet<>();
 
+		boolean listingCompleted = false;
 		try (Stream<Path> stream = Files.list(configDirectory)) {
 			stream
 				.filter((Path path) -> !Files.isDirectory(path))
@@ -146,14 +149,25 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 						log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
 					});
 				});
-		} catch (IOException e) {
+			listingCompleted = true;
+		} catch (IOException | UncheckedIOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
 		}
 
-		// Forget templates whose files are no longer present, so their schedules stop being exposed.
-		loaders.keySet().retainAll(seenPaths);
-		lastFragments.keySet().retainAll(seenPaths);
+		if (listingCompleted) {
+			// Forget templates whose files are no longer present, so their schedules stop being exposed.
+			loaders.keySet().retainAll(seenPaths);
+			lastFragments.keySet().retainAll(seenPaths);
+		} else {
+			// The listing is incomplete, so an absent path proves nothing. Pruning on it would drop every
+			// template, and the next discovery sweep would cancel every schedule over what may well be a
+			// transient permission or filesystem error.
+			log.warn(
+				"The configuration directory '{}' could not be listed; the known templates and their schedules are kept.",
+				configDirectory
+			);
+		}
 
 		final int size = configurations.size();
 		log.info("Loaded {} Velocity configuration fragment{} from '{}'.", size, size > 1 ? "s" : "", configDirectory);
@@ -237,12 +251,33 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 
 	@Override
 	public void runReusingCachedFragments(final Runnable action) {
+		final boolean alreadyInScope = Boolean.TRUE.equals(reuseCachedFragments.get());
 		reuseCachedFragments.set(Boolean.TRUE);
 		try {
 			action.run();
 		} finally {
-			reuseCachedFragments.remove();
+			if (alreadyInScope) {
+				// Nested call: the outer scope is still running and must keep its reuse.
+				reuseCachedFragments.set(Boolean.TRUE);
+			} else {
+				reuseCachedFragments.remove();
+			}
 		}
+	}
+
+	@Override
+	public <T> Supplier<T> captureCachedFragmentsScope(final Supplier<T> supplier) {
+		if (!Boolean.TRUE.equals(reuseCachedFragments.get())) {
+			return supplier;
+		}
+		// Read here, on the thread that is in the scope; applied later, wherever the supplier runs.
+		return () -> {
+			final Object[] result = new Object[1];
+			runReusingCachedFragments(() -> result[0] = supplier.get());
+			@SuppressWarnings("unchecked")
+			final T value = (T) result[0];
+			return value;
+		};
 	}
 
 	/**
