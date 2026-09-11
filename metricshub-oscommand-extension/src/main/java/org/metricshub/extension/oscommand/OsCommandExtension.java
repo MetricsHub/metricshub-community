@@ -124,8 +124,13 @@ public class OsCommandExtension implements IProtocolExtension {
 			.getConfigurations()
 			.get(SshConfiguration.class);
 
-		// Stop the SSH health check if there is not any SSH configuration
-		if (sshConfiguration == null || !telemetryManager.getHostProperties().isMustCheckSshStatus()) {
+		// Without an SSH configuration, OS commands can only run locally: check the local shell instead.
+		if (sshConfiguration == null) {
+			return checkLocalOsCommand(telemetryManager);
+		}
+
+		// Stop the SSH health check when the SSH status doesn't have to be checked
+		if (!telemetryManager.getHostProperties().isMustCheckSshStatus()) {
 			return Optional.empty();
 		}
 
@@ -240,6 +245,33 @@ public class OsCommandExtension implements IProtocolExtension {
 		log.error(errorMessage);
 		log.debug(errorMessage);
 		throw new InvalidConfigurationException(errorMessage);
+	}
+
+	/**
+	 * Checks a host configured with an {@link OsCommandConfiguration} but no {@link SshConfiguration}.
+	 * <p>
+	 * Such a configuration only executes commands on the local machine
+	 * (see {@code OsCommandService.runOsCommand}), so the check is a local command test and is
+	 * skipped for remote hosts.
+	 *
+	 * @param telemetryManager The telemetry manager holding the host configuration and properties
+	 * @return {@code true} or {@code false} when the local shell could be tested, empty otherwise
+	 */
+	private Optional<Boolean> checkLocalOsCommand(final TelemetryManager telemetryManager) {
+		final IConfiguration osCommandConfiguration = telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(OsCommandConfiguration.class);
+
+		if (osCommandConfiguration == null || !telemetryManager.getHostProperties().isLocalhost()) {
+			return Optional.empty();
+		}
+
+		final String hostname = telemetryManager.getHostname(List.of(OsCommandConfiguration.class));
+
+		log.info("Hostname {} - Checking OS Command protocol status. Running a local 'echo test' command.", hostname);
+
+		return Optional.of(UP.equals(localSshTest(hostname)));
 	}
 
 	/**

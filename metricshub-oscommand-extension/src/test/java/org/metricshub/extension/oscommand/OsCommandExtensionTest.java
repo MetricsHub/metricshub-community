@@ -431,6 +431,39 @@ class OsCommandExtensionTest {
 	}
 
 	@Test
+	void testCheckOsCommandHealthLocally() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
+		// Create a telemetry manager holding an OS Command configuration only, no SSH.
+		setup();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(LOCALHOST)
+					.hostname(LOCALHOST)
+					.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().build()))
+					.build()
+			)
+			.build();
+		telemetryManager.getHostProperties().setLocalhost(true);
+
+		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
+
+		assertTrue(osCommandExtension.checkProtocol(telemetryManager).get());
+
+		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
+
+		assertFalse(osCommandExtension.checkProtocol(telemetryManager).get());
+
+		// OS Command alone never reaches a remote host: nothing to check.
+		telemetryManager.getHostProperties().setLocalhost(false);
+
+		assertEquals(Optional.empty(), osCommandExtension.checkProtocol(telemetryManager));
+	}
+
+	@Test
 	void testCheckSshNoHealthWhenNoConfiguration() {
 		// Create a telemetry manager without configuration.
 		final TelemetryManager telemetryManager = createTelemetryManagerWithoutConfig();
