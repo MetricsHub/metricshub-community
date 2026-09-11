@@ -27,33 +27,6 @@
 curl -fsSL https://get.metricshub.com | bash
 ```
 
-## MCP Server
-
-The agent exposes its tools to AI assistants through an MCP server on the web port (`31888` by default, HTTPS, authenticated with an API key created by `metricshub-api-key create <alias>` and passed as `Authorization: Bearer <key>`):
-
-| Transport | Endpoint | Status |
-| --- | --- | --- |
-| Streamable HTTP (recommended) | `https://<host>:31888/mcp` | Default since 3.9.07 (`spring.ai.mcp.server.protocol: STREAMABLE`) |
-| HTTP with SSE (legacy) | `https://<host>:31888/sse` then `POST /mcp/message` | Served alongside for existing clients; hardened against clients that reconnect their event stream without re-initializing |
-
-The legacy transport can be tuned or disabled under the `web:` section of `metricshub.yaml`:
-
-| Setting | Default | Description |
-| --- | --- | --- |
-| `mcp.sse.enabled` | `true` | Serve the legacy SSE endpoints next to `/mcp` (ignored when `spring.ai.mcp.server.protocol` is `SSE`, where they are the only endpoints) |
-| `mcp.sse.message-timeout` | `5m` | Maximum wait for the handling of one message posted on `/mcp/message` (answered with HTTP 504 afterwards; the handling itself is not interrupted) |
-| `mcp.sse.ping-timeout` | `5m` | A session whose keep-alive ping is not answered within this delay is closed |
-| `mcp.sse.initialization-timeout` | `2m` | A session that never completes the `initialize` handshake is closed after this delay |
-| `spring.ai.mcp.server.keep-alive-interval` | `30s` | Keep-alive ping interval of the legacy SSE transport (`spring.ai.mcp.server.streamable-http.keep-alive-interval` for Streamable HTTP) |
-
-## Protocol Health Checks
-
-SSH and OS Command share an extension, but their configurations are distinct: an OS Command configuration alone does not satisfy an SSH check. The guided configuration UI and MCP checks validate that the configuration matches the requested protocol before executing it.
-
-For a localhost resource configured with SSH, MetricsHub preserves its local command execution optimization. A successful check confirms that commands can execute through the collection path; it does not verify the SSH daemon or credentials.
-
-A localhost resource configured only with OS Command reports `metricshub.host.up{protocol="oscommand"}` during collection. A successful check also contributes to `metricshub.host.observed=1`, which means at least one protocol check succeeded. OS Command alone does not establish the health of a remote host.
-
 ## Project Structure
 
 This is a multi-module project:
@@ -85,14 +58,6 @@ This is a multi-module project:
 
 > [!TIP]
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
-
-## File log capture
-
-When a file source uses wildcards or multiple paths, LOG mode includes an empty
-`<<<LOG:file="...">>>` / `<<<END_LOG>>>` block for each accessible file on its first
-poll and on subsequent polls with no new content. The first poll initializes the
-cursor without reading existing content. A single literal path retains its
-content-only output format.
 
 ## How to build the Project
 
@@ -240,3 +205,7 @@ To update source files with the proper header, simply execute the below command:
 ```bash
 mvn license:update-file-header
 ```
+
+## Technical Notes
+
+See [Technical Notes](TECHNICAL_NOTES.md) for MCP server settings, file log capture behavior, and OS Command/SSH health checks.
