@@ -341,6 +341,12 @@
 			<artifactId>picocli</artifactId>
 		</dependency>
 
+		<!-- WinRM Java Client, whose own CLI backs the winrmcli launcher -->
+		<dependency>
+			<groupId>org.metricshub</groupId>
+			<artifactId>winrm-java</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>
