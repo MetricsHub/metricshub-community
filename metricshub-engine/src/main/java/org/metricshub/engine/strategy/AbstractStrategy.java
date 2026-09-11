@@ -472,8 +472,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		final ConnectorIdentity connectorIdentity = currentConnector.getConnectorIdentity();
 		final String connectorId = currentConnector.getCompiledFilename();
 		final List<Criterion> healthChecks = connectorIdentity.getHealthChecks();
-		final boolean hasHealthChecks = healthChecks != null && !healthChecks.isEmpty();
-		final boolean useHealthChecks = hasHealthChecks;
+		final boolean useHealthChecks = healthChecks != null && !healthChecks.isEmpty();
 		final String validationType = useHealthChecks ? "Health checks" : "Detection criteria";
 
 		if (!useHealthChecks && connectorIdentity.getDetection() == null) {
