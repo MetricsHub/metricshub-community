@@ -93,6 +93,16 @@ public class OsCommandExtension implements IProtocolExtension {
 	 */
 	public static final String SSH_TEST_COMMAND = "echo test";
 
+	/**
+	 * Identifier reported for the SSH protocol health check
+	 */
+	public static final String SSH_IDENTIFIER = "ssh";
+
+	/**
+	 * Identifier reported for the OS Command protocol health check
+	 */
+	public static final String OS_COMMAND_IDENTIFIER = "oscommand";
+
 	@Override
 	public boolean isValidConfiguration(IConfiguration configuration) {
 		return configuration instanceof SshConfiguration || configuration instanceof OsCommandConfiguration;
@@ -124,8 +134,13 @@ public class OsCommandExtension implements IProtocolExtension {
 			.getConfigurations()
 			.get(SshConfiguration.class);
 
-		// Stop the SSH health check if there is not any SSH configuration
-		if (sshConfiguration == null || !telemetryManager.getHostProperties().isMustCheckSshStatus()) {
+		// Without an SSH configuration, OS commands can only run locally: check the local shell instead.
+		if (sshConfiguration == null) {
+			return checkLocalOsCommand(telemetryManager);
+		}
+
+		// Stop the SSH health check when the SSH status doesn't have to be checked
+		if (!telemetryManager.getHostProperties().isMustCheckSshStatus()) {
 			return Optional.empty();
 		}
 
@@ -140,7 +155,7 @@ public class OsCommandExtension implements IProtocolExtension {
 
 		// Execute Local test
 		if (telemetryManager.getHostProperties().isOsCommandExecutesLocally()) {
-			sshResult = localSshTest(hostname);
+			sshResult = localSshTest(hostname, OsCommandConfiguration.DEFAULT_TIMEOUT);
 		}
 
 		if (telemetryManager.getHostProperties().isOsCommandExecutesRemotely()) {
@@ -243,14 +258,56 @@ public class OsCommandExtension implements IProtocolExtension {
 	}
 
 	/**
+	 * Checks a host configured with an {@link OsCommandConfiguration} but no {@link SshConfiguration}.
+	 * <p>
+	 * Such a configuration only executes commands on the local machine
+	 * (see {@code OsCommandService.runOsCommand}), so the check is a local command test and is
+	 * skipped for remote hosts. The result is reported as {@value #OS_COMMAND_IDENTIFIER}, not as SSH:
+	 * see {@link #getIdentifier(TelemetryManager)}.
+	 *
+	 * @param telemetryManager The telemetry manager holding the host configuration and properties
+	 * @return {@code true} or {@code false} when the local shell could be tested, empty otherwise
+	 */
+	private Optional<Boolean> checkLocalOsCommand(final TelemetryManager telemetryManager) {
+		final OsCommandConfiguration osCommandConfiguration = (OsCommandConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(OsCommandConfiguration.class);
+
+		// OS Command without SSH cannot reach a remote host, there is nothing to check there
+		if (osCommandConfiguration == null || !telemetryManager.getHostProperties().isLocalhost()) {
+			return Optional.empty();
+		}
+
+		final String hostname = telemetryManager.getHostname(List.of(OsCommandConfiguration.class));
+
+		log.info("Hostname {} - Checking OS Command protocol status. Running a local 'echo test' command.", hostname);
+
+		return Optional.of(UP.equals(localSshTest(hostname, resolveTimeout(osCommandConfiguration))));
+	}
+
+	/**
+	 * Returns the timeout configured for the OS commands, or {@link OsCommandConfiguration#DEFAULT_TIMEOUT}
+	 * when it is not set to a positive value.
+	 *
+	 * @param osCommandConfiguration The OS Command configuration to read the timeout from
+	 * @return The timeout in seconds
+	 */
+	private static long resolveTimeout(final OsCommandConfiguration osCommandConfiguration) {
+		final Long timeout = osCommandConfiguration.getTimeout();
+		return timeout != null && timeout > 0 ? timeout : OsCommandConfiguration.DEFAULT_TIMEOUT;
+	}
+
+	/**
 	 * Performs a local Os Command test to determine whether the SSH protocol is UP.
 	 *
 	 * @param hostname  The hostname on which we perform health check
+	 * @param timeout   The timeout, in seconds, granted to the test command
 	 * @return The SSH health check result after performing the tests
 	 */
-	private Double localSshTest(String hostname) {
+	private Double localSshTest(String hostname, long timeout) {
 		try {
-			if (osCommandService.runLocalCommand(SSH_TEST_COMMAND, OsCommandConfiguration.DEFAULT_TIMEOUT, null) == null) {
+			if (osCommandService.runLocalCommand(SSH_TEST_COMMAND, timeout, null) == null) {
 				log.debug(
 					"Hostname {} - Checking SSH protocol status. Local OS command has not returned any results.",
 					hostname
@@ -332,7 +389,15 @@ public class OsCommandExtension implements IProtocolExtension {
 
 	@Override
 	public String getIdentifier() {
-		return "ssh";
+		return SSH_IDENTIFIER;
+	}
+
+	@Override
+	public String getIdentifier(final TelemetryManager telemetryManager) {
+		// Mirror checkProtocol: without an SSH configuration, the check is a local OS command test
+		return telemetryManager.getHostConfiguration().getConfigurations().containsKey(SshConfiguration.class)
+			? SSH_IDENTIFIER
+			: OS_COMMAND_IDENTIFIER;
 	}
 
 	/**

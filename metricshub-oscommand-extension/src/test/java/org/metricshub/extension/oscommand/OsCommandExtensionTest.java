@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
@@ -428,6 +429,69 @@ class OsCommandExtensionTest {
 
 		// Assert the result
 		assertEquals(Optional.empty(), result);
+	}
+
+	@Test
+	void testCheckOsCommandHealthLocally() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
+		// Create a telemetry manager holding an OS Command configuration only, no SSH.
+		setup();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(LOCALHOST)
+					.hostname(LOCALHOST)
+					.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().timeout(5L).build()))
+					.build()
+			)
+			.build();
+		telemetryManager.getHostProperties().setLocalhost(true);
+
+		// The check is reported as OS Command, never as SSH
+		assertEquals(OsCommandExtension.OS_COMMAND_IDENTIFIER, osCommandExtension.getIdentifier(telemetryManager));
+
+		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
+
+		assertTrue(osCommandExtension.checkProtocol(telemetryManager).get());
+
+		// The configured timeout is granted to the test command, not the default one
+		verify(osCommandService).runLocalCommand(OsCommandExtension.SSH_TEST_COMMAND, 5L, null);
+
+		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
+
+		assertFalse(osCommandExtension.checkProtocol(telemetryManager).get());
+
+		// OS Command alone never reaches a remote host: nothing to check.
+		telemetryManager.getHostProperties().setLocalhost(false);
+
+		assertEquals(Optional.empty(), osCommandExtension.checkProtocol(telemetryManager));
+	}
+
+	@Test
+	void testGetIdentifierFollowsTheCheckedProtocol() {
+		// An SSH configuration means checkProtocol runs the SSH check
+		assertEquals(
+			OsCommandExtension.SSH_IDENTIFIER,
+			osCommandExtension.getIdentifier(createTelemetryManagerWithSshConfig())
+		);
+
+		// Without it, checkProtocol runs the local OS command check
+		setup();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(LOCALHOST)
+					.hostname(LOCALHOST)
+					.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().build()))
+					.build()
+			)
+			.build();
+
+		assertEquals(OsCommandExtension.OS_COMMAND_IDENTIFIER, osCommandExtension.getIdentifier(telemetryManager));
 	}
 
 	@Test

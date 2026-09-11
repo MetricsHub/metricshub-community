@@ -27,23 +27,45 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
+import org.metricshub.engine.telemetry.HostProperties;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpExtension;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.oscommand.OsCommandExtension;
+import org.metricshub.extension.oscommand.OsCommandService;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.ProtocolCheckResponse;
+import org.mockito.MockedConstruction;
 
 class ProtocolHealthCheckServiceTest {
 
@@ -185,5 +207,134 @@ class ProtocolHealthCheckServiceTest {
 
 		assertEquals(HOSTNAME, response.getHostname());
 		assertFalse(response.isReachable());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "ssh", "oscommand" })
+	void testCheckFromAgentContextRejectsSiblingProtocolConfiguration(final String protocol) throws Exception {
+		final IConfiguration configuration = "ssh".equals(protocol)
+			? OsCommandConfiguration.builder().build()
+			: SshConfiguration.sshConfigurationBuilder().build();
+		final OsCommandExtension extension = configureLocalCommandChecks(Map.of(configuration.getClass(), configuration));
+
+		final ProtocolCheckResponse response = service.checkFromAgentContext("localhost", protocol, 5L, extension);
+
+		assertFalse(response.isReachable());
+		verify(extension, never()).checkProtocol(any());
+		verify(extension, never()).buildConfiguration(anyString(), any(), any());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "ssh", "oscommand" })
+	void testCheckWithInlineConfigurationRejectsSiblingProtocolConfiguration(final String protocol) {
+		final String siblingProtocol = "ssh".equals(protocol) ? "oscommand" : "ssh";
+		final IConfiguration configuration = "ssh".equals(protocol)
+			? OsCommandConfiguration.builder().build()
+			: SshConfiguration.sshConfigurationBuilder().build();
+		final OsCommandExtension extension = configureLocalCommandChecks(Map.of());
+
+		final ProtocolCheckResponse response = service.checkWithInlineConfiguration(
+			"localhost",
+			protocol,
+			Map.of(siblingProtocol, configuration)
+		);
+
+		assertEquals("Invalid protocol configuration", response.getErrorMessage());
+		assertFalse(response.isReachable());
+		verify(extension, never()).checkProtocol(any());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "SSH", "oscommand" })
+	void testLocalChecksUseTheRequestedConfigurationAndKeepLocalExecution(final String protocol) throws Exception {
+		try (
+			MockedConstruction<OsCommandService> construction = mockConstruction(
+				OsCommandService.class,
+				(commandService, context) ->
+					when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn("test")
+			)
+		) {
+			final OsCommandExtension extension = configureLocalCommandChecks(
+				Map.of(
+					SshConfiguration.class,
+					SshConfiguration.sshConfigurationBuilder().build(),
+					OsCommandConfiguration.class,
+					OsCommandConfiguration.builder().timeout(5L).build()
+				)
+			);
+
+			assertTrue(service.checkFromAgentContext("localhost", protocol, 5L, extension).isReachable());
+			verify(extension).checkProtocol(
+				argThat(telemetryManager ->
+					telemetryManager
+						.getHostConfiguration()
+						.getConfigurations()
+						.values()
+						.stream()
+						.allMatch(configuration -> configuration.isCorrespondingProtocol(protocol))
+				)
+			);
+
+			final OsCommandService commandService = construction.constructed().getFirst();
+			verify(commandService).runLocalCommand(eq("echo test"), anyLong(), any());
+			when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn(null);
+			assertFalse(service.checkFromAgentContext("localhost", protocol, 5L, extension).isReachable());
+			verify(commandService, never()).runSshCommand(anyString(), anyString(), any(), anyLong(), any(), any(), any());
+		}
+	}
+
+	@Test
+	void testOsCommandCollectionReportsObservedWithOsCommandLabel() throws Exception {
+		try (
+			MockedConstruction<OsCommandService> construction = mockConstruction(
+				OsCommandService.class,
+				(commandService, context) ->
+					when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn("test")
+			)
+		) {
+			final Monitor monitor = Monitor.builder().type("host").isEndpoint(true).build();
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
+				.hostConfiguration(
+					HostConfiguration.builder()
+						.hostname("localhost")
+						.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().timeout(5L).build()))
+						.build()
+				)
+				.hostProperties(HostProperties.builder().isLocalhost(true).mustCheckSshStatus(true).build())
+				.monitors(new HashMap<>(Map.of("host", new HashMap<>(Map.of("localhost", monitor)))))
+				.strategyTime(1L)
+				.build();
+			final ExtensionManager extensionManager = ExtensionManager.builder()
+				.withProtocolExtensions(List.of(new OsCommandExtension()))
+				.build();
+
+			new ProtocolHealthCheckStrategy(telemetryManager, 1L, mock(ClientsExecutor.class), extensionManager).run();
+
+			assertEquals(1.0, monitor.getMetric("metricshub.host.up{protocol=\"oscommand\"}", NumberMetric.class).getValue());
+			assertEquals(1.0, monitor.getMetric("metricshub.host.observed", NumberMetric.class).getValue());
+			assertNull(monitor.getMetric("metricshub.host.up{protocol=\"ssh\"}", NumberMetric.class));
+			verify(construction.constructed().getFirst()).runLocalCommand("echo test", 5L, null);
+		}
+	}
+
+	private OsCommandExtension configureLocalCommandChecks(
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations
+	) {
+		final OsCommandExtension extension = spy(new OsCommandExtension());
+		when(agentContextHolder.getAgentContext().getExtensionManager()).thenReturn(
+			ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build()
+		);
+		when(agentContextHolder.getAgentContext().getTelemetryManagers()).thenReturn(
+			Map.of(
+				"resourceGroup",
+				Map.of(
+					"localhost",
+					TelemetryManager.builder()
+						.hostConfiguration(HostConfiguration.builder().hostname("localhost").configurations(configurations).build())
+						.build()
+				)
+			)
+		);
+		return extension;
 	}
 }

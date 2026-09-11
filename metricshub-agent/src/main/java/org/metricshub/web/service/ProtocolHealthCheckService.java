@@ -149,12 +149,6 @@ public class ProtocolHealthCheckService {
 		final IProtocolExtension extension
 	) {
 		try {
-			if (!extension.isValidConfiguration(configuration)) {
-				return ProtocolCheckResponse.builder()
-					.hostname(hostname)
-					.errorMessage("Invalid protocol configuration")
-					.build();
-			}
 			return executeProtocolCheck(
 				hostname,
 				protocol,
@@ -214,6 +208,10 @@ public class ProtocolHealthCheckService {
 		final IConfiguration configuration,
 		final IProtocolExtension extension
 	) {
+		if (!configuration.isCorrespondingProtocol(protocol) || !extension.isValidConfiguration(configuration)) {
+			return ProtocolCheckResponse.builder().hostname(hostname).errorMessage("Invalid protocol configuration").build();
+		}
+
 		final long resolvedTimeout = NumberHelper.getPositiveOrDefault(
 			timeoutOverride,
 			DEFAULT_PROTOCOL_CHECK_TIMEOUT
@@ -271,6 +269,9 @@ public class ProtocolHealthCheckService {
 			} else {
 				builder.osCommandExecutesRemotely(true);
 			}
+		} else if ("oscommand".equalsIgnoreCase(protocol)) {
+			// OS Command without SSH only runs commands locally
+			builder.osCommandExecutesLocally(isLocal);
 		}
 
 		return builder.build();

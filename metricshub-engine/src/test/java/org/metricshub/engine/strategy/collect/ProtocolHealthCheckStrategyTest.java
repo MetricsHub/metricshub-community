@@ -89,7 +89,7 @@ class ProtocolHealthCheckStrategyTest {
 
 		final String protocol = "snmp";
 
-		doReturn(protocol).when(protocolExtensionMock).getIdentifier();
+		doReturn(protocol).when(protocolExtensionMock).getIdentifier(any(TelemetryManager.class));
 
 		doReturn(Optional.of(true)).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
 
@@ -132,7 +132,7 @@ class ProtocolHealthCheckStrategyTest {
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		final String protocol = "ssh";
-		doReturn(protocol).when(protocolExtensionMock).getIdentifier();
+		doReturn(protocol).when(protocolExtensionMock).getIdentifier(any(TelemetryManager.class));
 		doReturn(Optional.of(false)).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
 
 		final ProtocolHealthCheckStrategy healthCheckStrategy = new ProtocolHealthCheckStrategy(
@@ -170,8 +170,8 @@ class ProtocolHealthCheckStrategyTest {
 			.when(additionalProtocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
-		doReturn("snmp").when(protocolExtensionMock).getIdentifier();
-		doReturn("ssh").when(additionalProtocolExtensionMock).getIdentifier();
+		doReturn("snmp").when(protocolExtensionMock).getIdentifier(any(TelemetryManager.class));
+		doReturn("ssh").when(additionalProtocolExtensionMock).getIdentifier(any(TelemetryManager.class));
 		doReturn(Optional.of(false)).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
 		doReturn(Optional.of(true)).when(additionalProtocolExtensionMock).checkProtocol(any(TelemetryManager.class));
 

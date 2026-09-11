@@ -158,6 +158,20 @@ public interface IProtocolExtension {
 	String getIdentifier();
 
 	/**
+	 * Returns the identifier of the protocol actually exercised by {@link #checkProtocol(TelemetryManager)}
+	 * for the given host.
+	 * <p>
+	 * Extensions handling several protocols override this method so that health metrics are labelled with
+	 * the protocol that was really checked. The default implementation returns {@link #getIdentifier()}.
+	 *
+	 * @param telemetryManager The telemetry manager holding the host configuration and properties.
+	 * @return The protocol identifier as a string.
+	 */
+	default String getIdentifier(TelemetryManager telemetryManager) {
+		return getIdentifier();
+	}
+
+	/**
 	 * Executes a query based on the provided configuration and query parameters.
 	 *
 	 * @param configuration the IConfiguration object containing the configuration details.
