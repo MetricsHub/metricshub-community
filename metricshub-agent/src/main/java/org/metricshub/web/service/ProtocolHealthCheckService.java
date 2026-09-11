@@ -272,9 +272,8 @@ public class ProtocolHealthCheckService {
 				builder.osCommandExecutesRemotely(true);
 			}
 		} else if ("oscommand".equalsIgnoreCase(protocol)) {
-			// OS Command without SSH only runs commands locally: the check is an explicit,
-			// on-demand local shell test, never part of the collected protocol health metrics.
-			builder.mustCheckOsCommandStatus(true).osCommandExecutesLocally(isLocal);
+			// OS Command without SSH only runs commands locally
+			builder.osCommandExecutesLocally(isLocal);
 		}
 
 		return builder.build();

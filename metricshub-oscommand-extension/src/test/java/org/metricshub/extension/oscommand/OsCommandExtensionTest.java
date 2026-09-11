@@ -449,7 +449,9 @@ class OsCommandExtensionTest {
 			)
 			.build();
 		telemetryManager.getHostProperties().setLocalhost(true);
-		telemetryManager.getHostProperties().setMustCheckOsCommandStatus(true);
+
+		// The check is reported as OS Command, never as SSH
+		assertEquals(OsCommandExtension.OS_COMMAND_IDENTIFIER, osCommandExtension.getIdentifier(telemetryManager));
 
 		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -469,8 +471,14 @@ class OsCommandExtensionTest {
 	}
 
 	@Test
-	void testCheckOsCommandNoHealthWhenNotExplicitlyRequested() {
-		// Create a telemetry manager holding an OS Command configuration only, no SSH.
+	void testGetIdentifierFollowsTheCheckedProtocol() {
+		// An SSH configuration means checkProtocol runs the SSH check
+		assertEquals(
+			OsCommandExtension.SSH_IDENTIFIER,
+			osCommandExtension.getIdentifier(createTelemetryManagerWithSshConfig())
+		);
+
+		// Without it, checkProtocol runs the local OS command check
 		setup();
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
@@ -482,11 +490,8 @@ class OsCommandExtensionTest {
 					.build()
 			)
 			.build();
-		telemetryManager.getHostProperties().setLocalhost(true);
-		telemetryManager.getHostProperties().setMustCheckSshStatus(true);
 
-		// The collect strategy never asks for the OS Command check: its metric would be labelled as SSH
-		assertEquals(Optional.empty(), osCommandExtension.checkProtocol(telemetryManager));
+		assertEquals(OsCommandExtension.OS_COMMAND_IDENTIFIER, osCommandExtension.getIdentifier(telemetryManager));
 	}
 
 	@Test

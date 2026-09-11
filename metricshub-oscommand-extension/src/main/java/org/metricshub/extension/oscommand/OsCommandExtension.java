@@ -44,7 +44,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.file.FileSourceProcessor;
 
@@ -93,6 +92,16 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * SSH test command to execute
 	 */
 	public static final String SSH_TEST_COMMAND = "echo test";
+
+	/**
+	 * Identifier reported for the SSH protocol health check
+	 */
+	public static final String SSH_IDENTIFIER = "ssh";
+
+	/**
+	 * Identifier reported for the OS Command protocol health check
+	 */
+	public static final String OS_COMMAND_IDENTIFIER = "oscommand";
 
 	@Override
 	public boolean isValidConfiguration(IConfiguration configuration) {
@@ -253,9 +262,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * <p>
 	 * Such a configuration only executes commands on the local machine
 	 * (see {@code OsCommandService.runOsCommand}), so the check is a local command test and is
-	 * skipped for remote hosts. It is also skipped unless the caller explicitly asked for it through
-	 * {@link org.metricshub.engine.telemetry.HostProperties#isMustCheckOsCommandStatus()}: the collect
-	 * strategy labels health metrics with {@link #getIdentifier()}, and a local shell test is not SSH.
+	 * skipped for remote hosts. The result is reported as {@value #OS_COMMAND_IDENTIFIER}, not as SSH:
+	 * see {@link #getIdentifier(TelemetryManager)}.
 	 *
 	 * @param telemetryManager The telemetry manager holding the host configuration and properties
 	 * @return {@code true} or {@code false} when the local shell could be tested, empty otherwise
@@ -266,14 +274,8 @@ public class OsCommandExtension implements IProtocolExtension {
 			.getConfigurations()
 			.get(OsCommandConfiguration.class);
 
-		final HostProperties hostProperties = telemetryManager.getHostProperties();
-
-		if (osCommandConfiguration == null || !hostProperties.isMustCheckOsCommandStatus()) {
-			return Optional.empty();
-		}
-
 		// OS Command without SSH cannot reach a remote host, there is nothing to check there
-		if (!hostProperties.isLocalhost()) {
+		if (osCommandConfiguration == null || !telemetryManager.getHostProperties().isLocalhost()) {
 			return Optional.empty();
 		}
 
@@ -387,7 +389,15 @@ public class OsCommandExtension implements IProtocolExtension {
 
 	@Override
 	public String getIdentifier() {
-		return "ssh";
+		return SSH_IDENTIFIER;
+	}
+
+	@Override
+	public String getIdentifier(final TelemetryManager telemetryManager) {
+		// Mirror checkProtocol: without an SSH configuration, the check is a local OS command test
+		return telemetryManager.getHostConfiguration().getConfigurations().containsKey(SshConfiguration.class)
+			? SSH_IDENTIFIER
+			: OS_COMMAND_IDENTIFIER;
 	}
 
 	/**
