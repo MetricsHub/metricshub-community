@@ -44,6 +44,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.file.FileSourceProcessor;
 
@@ -145,7 +146,7 @@ public class OsCommandExtension implements IProtocolExtension {
 
 		// Execute Local test
 		if (telemetryManager.getHostProperties().isOsCommandExecutesLocally()) {
-			sshResult = localSshTest(hostname);
+			sshResult = localSshTest(hostname, OsCommandConfiguration.DEFAULT_TIMEOUT);
 		}
 
 		if (telemetryManager.getHostProperties().isOsCommandExecutesRemotely()) {
@@ -252,18 +253,27 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * <p>
 	 * Such a configuration only executes commands on the local machine
 	 * (see {@code OsCommandService.runOsCommand}), so the check is a local command test and is
-	 * skipped for remote hosts.
+	 * skipped for remote hosts. It is also skipped unless the caller explicitly asked for it through
+	 * {@link org.metricshub.engine.telemetry.HostProperties#isMustCheckOsCommandStatus()}: the collect
+	 * strategy labels health metrics with {@link #getIdentifier()}, and a local shell test is not SSH.
 	 *
 	 * @param telemetryManager The telemetry manager holding the host configuration and properties
 	 * @return {@code true} or {@code false} when the local shell could be tested, empty otherwise
 	 */
 	private Optional<Boolean> checkLocalOsCommand(final TelemetryManager telemetryManager) {
-		final IConfiguration osCommandConfiguration = telemetryManager
+		final OsCommandConfiguration osCommandConfiguration = (OsCommandConfiguration) telemetryManager
 			.getHostConfiguration()
 			.getConfigurations()
 			.get(OsCommandConfiguration.class);
 
-		if (osCommandConfiguration == null || !telemetryManager.getHostProperties().isLocalhost()) {
+		final HostProperties hostProperties = telemetryManager.getHostProperties();
+
+		if (osCommandConfiguration == null || !hostProperties.isMustCheckOsCommandStatus()) {
+			return Optional.empty();
+		}
+
+		// OS Command without SSH cannot reach a remote host, there is nothing to check there
+		if (!hostProperties.isLocalhost()) {
 			return Optional.empty();
 		}
 
@@ -271,18 +281,31 @@ public class OsCommandExtension implements IProtocolExtension {
 
 		log.info("Hostname {} - Checking OS Command protocol status. Running a local 'echo test' command.", hostname);
 
-		return Optional.of(UP.equals(localSshTest(hostname)));
+		return Optional.of(UP.equals(localSshTest(hostname, resolveTimeout(osCommandConfiguration))));
+	}
+
+	/**
+	 * Returns the timeout configured for the OS commands, or {@link OsCommandConfiguration#DEFAULT_TIMEOUT}
+	 * when it is not set to a positive value.
+	 *
+	 * @param osCommandConfiguration The OS Command configuration to read the timeout from
+	 * @return The timeout in seconds
+	 */
+	private static long resolveTimeout(final OsCommandConfiguration osCommandConfiguration) {
+		final Long timeout = osCommandConfiguration.getTimeout();
+		return timeout != null && timeout > 0 ? timeout : OsCommandConfiguration.DEFAULT_TIMEOUT;
 	}
 
 	/**
 	 * Performs a local Os Command test to determine whether the SSH protocol is UP.
 	 *
 	 * @param hostname  The hostname on which we perform health check
+	 * @param timeout   The timeout, in seconds, granted to the test command
 	 * @return The SSH health check result after performing the tests
 	 */
-	private Double localSshTest(String hostname) {
+	private Double localSshTest(String hostname, long timeout) {
 		try {
-			if (osCommandService.runLocalCommand(SSH_TEST_COMMAND, OsCommandConfiguration.DEFAULT_TIMEOUT, null) == null) {
+			if (osCommandService.runLocalCommand(SSH_TEST_COMMAND, timeout, null) == null) {
 				log.debug(
 					"Hostname {} - Checking SSH protocol status. Local OS command has not returned any results.",
 					hostname

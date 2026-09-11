@@ -58,6 +58,13 @@ public class HostProperties {
 	private boolean osCommandExecutesRemotely;
 	private boolean mustCheckSshStatus;
 
+	/**
+	 * Whether the local shell must be tested for a host configured with an OS Command configuration
+	 * and no SSH configuration. Only set by on-demand protocol checks: the collect strategy leaves it
+	 * {@code false} so that a local shell test is never published as an SSH health metric.
+	 */
+	private boolean mustCheckOsCommandStatus;
+
 	@Default
 	private Map<String, ConnectorNamespace> connectorNamespaces = new ConcurrentHashMap<>();
 

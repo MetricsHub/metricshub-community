@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
@@ -443,15 +444,19 @@ class OsCommandExtensionTest {
 				HostConfiguration.builder()
 					.hostId(LOCALHOST)
 					.hostname(LOCALHOST)
-					.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().build()))
+					.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().timeout(5L).build()))
 					.build()
 			)
 			.build();
 		telemetryManager.getHostProperties().setLocalhost(true);
+		telemetryManager.getHostProperties().setMustCheckOsCommandStatus(true);
 
 		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
 		assertTrue(osCommandExtension.checkProtocol(telemetryManager).get());
+
+		// The configured timeout is granted to the test command, not the default one
+		verify(osCommandService).runLocalCommand(OsCommandExtension.SSH_TEST_COMMAND, 5L, null);
 
 		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -460,6 +465,27 @@ class OsCommandExtensionTest {
 		// OS Command alone never reaches a remote host: nothing to check.
 		telemetryManager.getHostProperties().setLocalhost(false);
 
+		assertEquals(Optional.empty(), osCommandExtension.checkProtocol(telemetryManager));
+	}
+
+	@Test
+	void testCheckOsCommandNoHealthWhenNotExplicitlyRequested() {
+		// Create a telemetry manager holding an OS Command configuration only, no SSH.
+		setup();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(LOCALHOST)
+					.hostname(LOCALHOST)
+					.configurations(Map.of(OsCommandConfiguration.class, OsCommandConfiguration.builder().build()))
+					.build()
+			)
+			.build();
+		telemetryManager.getHostProperties().setLocalhost(true);
+		telemetryManager.getHostProperties().setMustCheckSshStatus(true);
+
+		// The collect strategy never asks for the OS Command check: its metric would be labelled as SSH
 		assertEquals(Optional.empty(), osCommandExtension.checkProtocol(telemetryManager));
 	}
 
