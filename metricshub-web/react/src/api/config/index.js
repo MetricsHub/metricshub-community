@@ -243,6 +243,44 @@ class ConfigApi {
 	}
 
 	/**
+	 * Re-evaluate a Velocity template and reload the running configuration:
+	 * POST /api/config-files/reevaluate/{fileName}
+	 * @param {string} name The .vm file name
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<{name:string,reloaded:boolean,message:string}>}
+	 */
+	reevaluateTemplate(name, opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/reevaluate/${encodeURIComponent(name)}`,
+				method: "POST",
+				signal,
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e, "Template re-evaluation failed")));
+		});
+	}
+
+	/**
+	 * Re-evaluate the whole configuration: POST /api/config-files/reevaluate
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<{reloaded:boolean,message:string}>}
+	 */
+	reevaluateConfiguration(opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/reevaluate`,
+				method: "POST",
+				signal,
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e, "Configuration re-evaluation failed")));
+		});
+	}
+
+	/**
 	 * Delete a backup file (DELETE /api/config-files/backup/{fileName})
 	 * @param {string} fileName
 	 * @param {{ signal?: AbortSignal }} opts

@@ -239,6 +239,37 @@ export const restoreConfigFromBackup = createAsyncThunk(
 );
 
 /**
+ * Re-evaluate a single Velocity template and reload the running configuration.
+ * @param {{name:string}} param0
+ * @returns {Promise<{name:string,reloaded:boolean,message:string}>}
+ */
+export const reevaluateTemplate = createAsyncThunk(
+	"config/reevaluateTemplate",
+	async ({ name }, { rejectWithValue }) => {
+		try {
+			return await configApi.reevaluateTemplate(name);
+		} catch (e) {
+			return rejectWithValue(e.message);
+		}
+	},
+);
+
+/**
+ * Re-evaluate the whole configuration, re-running every configuration source.
+ * @returns {Promise<{reloaded:boolean,message:string}>}
+ */
+export const reevaluateConfiguration = createAsyncThunk(
+	"config/reevaluateConfiguration",
+	async (_arg, { rejectWithValue }) => {
+		try {
+			return await configApi.reevaluateConfiguration();
+		} catch (e) {
+			return rejectWithValue(e.message);
+		}
+	},
+);
+
+/**
  * Test a Velocity template and return the generated YAML.
  * After evaluating the template, also validates the generated YAML content.
  * @param {{name:string,content:string}} param0

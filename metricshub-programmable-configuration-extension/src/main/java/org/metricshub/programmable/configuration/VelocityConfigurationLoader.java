@@ -27,10 +27,10 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -38,10 +38,16 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.RuntimeConstants.SpaceGobbling;
 
 /**
- * Loads and evaluates a Velocity template configuration file
+ * Loads and evaluates a Velocity template configuration file.
+ * <p>
+ * The template may declare, through the {@code $schedule} tool, how often it must be re-evaluated
+ * (see {@link ScheduleTool}). Rendering the template is what discovers that declaration, so
+ * {@link #getCron()} is meaningful only once a render has run. Re-evaluating is simply rendering
+ * again: every call re-runs the whole template against a fresh context, so nothing is carried over
+ * from a previous render.
+ * </p>
  */
 @Slf4j
-@AllArgsConstructor
 public class VelocityConfigurationLoader {
 
 	/**
@@ -74,6 +80,48 @@ public class VelocityConfigurationLoader {
 	private Map<String, Object> tools = new HashMap<>();
 
 	/**
+	 * The cron declared by the last render that <b>completed</b>, which is what {@link #getCron()}
+	 * reports. It is set only once a render reached its end, so a render that failed half-way (a data
+	 * source that timed out, for example) keeps the schedule the template last established instead of
+	 * appearing to declare none.
+	 */
+	private volatile String lastDeclaredCron;
+
+	/**
+	 * The engine, built on first use and reused across renders. Only the engine is reused: the
+	 * template itself is re-read on every render (the file resource loader runs with its cache
+	 * disabled), so an edit to the {@code .vm} file is picked up without rebuilding this loader.
+	 */
+	private VelocityEngine velocityEngine;
+
+	/**
+	 * Creates a loader for the given template.
+	 *
+	 * @param vmPath path to the {@code .vm} template file
+	 * @param tools  the Velocity tools to expose (for example {@code $http}, {@code $json});
+	 *               {@code $schedule} is added automatically and must not be supplied here
+	 */
+	public VelocityConfigurationLoader(final Path vmPath, final Map<String, Object> tools) {
+		this.vmPath = vmPath;
+		this.tools = tools;
+	}
+
+	/**
+	 * Returns the cron expression the template declared through {@code $schedule.cron(...)} during
+	 * the last render that completed. Meaningful only after a render has run.
+	 * <p>
+	 * A render that failed does not change this value: the template keeps the schedule it last
+	 * declared, so a temporary failure of one of its data sources cannot make it look unscheduled and
+	 * get its cron task cancelled.
+	 * </p>
+	 *
+	 * @return the declared cron expression, or empty when the template declares no schedule
+	 */
+	public Optional<String> getCron() {
+		return Optional.ofNullable(lastDeclaredCron);
+	}
+
+	/**
 	 * Generates a YAML configuration from the Velocity template file.
 	 *
 	 * @return The generated YAML configuration as a String.
@@ -96,29 +144,43 @@ public class VelocityConfigurationLoader {
 	 * @throws Exception if the Velocity template evaluation fails
 	 */
 	public String generateYamlDangerous() throws Exception {
-		// Initialize VelocityEngine
-		final var velocityEngine = new VelocityEngine();
-		var props = new Properties();
-		props.setProperty("resource.loaders", "file");
-		props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
-		props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
-		props.setProperty("resource.loader.file.cache", "false");
-		props.setProperty(SPACE_GOBBLING_PROPERTY, toPropertyValue(resolveSpaceGobbling()));
-		velocityEngine.init(props);
+		// Initialize the VelocityEngine on first use, then reuse it across renders.
+		if (velocityEngine == null) {
+			final var engine = new VelocityEngine();
+			var props = new Properties();
+			props.setProperty("resource.loaders", "file");
+			props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
+			props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
+			props.setProperty("resource.loader.file.cache", "false");
+			props.setProperty(SPACE_GOBBLING_PROPERTY, toPropertyValue(resolveSpaceGobbling()));
+			engine.init(props);
+			velocityEngine = engine;
+		}
 
-		// Load template
+		// Load template. The resource loader cache is disabled, so this re-reads the file and an edit
+		// to the template is picked up on the next render.
 		var templateName = vmPath.getFileName().toString();
 		var template = velocityEngine.getTemplate(templateName, StandardCharsets.UTF_8.name());
 
-		// Prepare context
+		// Prepare a fresh context: a render never reuses values produced by a previous one.
 		var context = new VelocityContext();
 
 		// Add tools to context
 		tools.forEach(context::put);
 
+		// A $schedule tool of this render's own. Two renders of the same template can overlap (a cron
+		// firing and the configuration watcher's reload, for instance) and they would otherwise write
+		// into one shared tool, so one could publish the other's cron, or no cron at all.
+		final ScheduleTool scheduleTool = new ScheduleTool();
+		context.put("schedule", scheduleTool);
+
 		// Render template
 		var writer = new StringWriter();
 		template.merge(context, writer);
+
+		// The render reached its end, so what it declared is complete: publish it in one write. A render
+		// that threw before this point publishes nothing and leaves the previous schedule in place.
+		lastDeclaredCron = scheduleTool.getCron().orElse(null);
 
 		return writer.toString();
 	}

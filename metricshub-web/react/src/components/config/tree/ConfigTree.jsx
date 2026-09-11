@@ -167,6 +167,7 @@ export default function ConfigTree({
 						<FileTreeItem
 							key={f.name}
 							file={f}
+							siblingNames={configFiles.map((sibling) => sibling.name)}
 							isDirty={!!dirtyByName?.[f.name]}
 							validation={filesByName[f.name]?.validation}
 							onSelect={onSelect}

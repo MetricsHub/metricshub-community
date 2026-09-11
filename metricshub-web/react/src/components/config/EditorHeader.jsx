@@ -3,15 +3,16 @@ import SaveIcon from "@mui/icons-material/Save";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import ReevaluateIcon from "@mui/icons-material/PublishedWithChanges";
 import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backup-names";
-import { isVmFile, getFileType } from "../../utils/file-type-utils";
+import { isVmFile, isDraftFile, getFileType } from "../../utils/file-type-utils";
 import FileTypeIcon from "./tree/icons/FileTypeIcons";
 import EncryptPasswordDialog from "../common/EncryptPasswordDialog";
 
 /**
  * Editor header component showing file name, save button, and status.
- * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,onTest?:()=>void,testLoading?:boolean,isReadOnly?:boolean}} props The component props.
+ * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,onTest?:()=>void,testLoading?:boolean,onReevaluate?:()=>void,reevaluateLoading?:boolean,isReadOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The editor header component.
  */
 export default function EditorHeader({
@@ -21,6 +22,8 @@ export default function EditorHeader({
 	onApply,
 	onTest,
 	testLoading = false,
+	onReevaluate,
+	reevaluateLoading = false,
 	isReadOnly = false,
 }) {
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
@@ -32,7 +35,7 @@ export default function EditorHeader({
 	const isVm = !!(selected && isVmFile(selected));
 	const fileType = selected ? getFileType(selected) : "file";
 
-	const isDraft = selected && selected.endsWith(".draft");
+	const isDraft = !!(selected && isDraftFile(selected));
 	const displayName = isDraft
 		? selected.replace(/\.draft$/, "")
 		: (selected ?? "Select a file to edit");
@@ -127,6 +130,20 @@ export default function EditorHeader({
 							}}
 						>
 							{saving ? "Applying..." : "Apply"}
+						</Button>
+					)}
+					{/* A draft is not loaded by the agent, so there is nothing to re-evaluate for it. */}
+					{isVm && !isDraft && onReevaluate && (
+						<Button
+							size="small"
+							variant="outlined"
+							color="inherit"
+							startIcon={<ReevaluateIcon />}
+							onClick={onReevaluate}
+							disabled={!selected || saving || reevaluateLoading}
+							title="Re-evaluate this template and reload the running configuration"
+						>
+							{reevaluateLoading ? "Reevaluating..." : "Reevaluate"}
 						</Button>
 					)}
 					{isVm && onTest && (

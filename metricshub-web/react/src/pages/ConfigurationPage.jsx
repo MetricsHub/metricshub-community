@@ -10,10 +10,12 @@ import {
 	Stack,
 	Drawer,
 	IconButton,
+	Tooltip,
 	Typography,
 	useMediaQuery,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
+import ReevaluateIcon from "@mui/icons-material/PublishedWithChanges";
 import FolderIcon from "@mui/icons-material/Folder";
 import CloseIcon from "@mui/icons-material/Close";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -41,6 +43,8 @@ import {
 	renameConfig,
 	saveDraftConfig,
 	testVelocityTemplate,
+	reevaluateTemplate,
+	reevaluateConfiguration,
 } from "../store/thunks/config-thunks";
 import {
 	fetchOtelConfigList,
@@ -57,6 +61,7 @@ import {
 	deleteLocalFile,
 	clearError as clearConfigError,
 	clearVelocityTestResult,
+	clearReevaluation,
 } from "../store/slices/config-slice";
 import {
 	select as selectOtelFile,
@@ -78,7 +83,7 @@ import QuestionDialog from "../components/common/QuestionDialog";
 import { paths } from "../paths";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { isBackupFileName } from "../utils/backup-names";
-import { isVmFile } from "../utils/file-type-utils";
+import { isVmFile, isDraftFile, isSameConfigFile } from "../utils/file-type-utils";
 import { useAuth } from "../hooks/use-auth";
 
 /** Last file the user had open in the Configuration editor (restored when returning). */
@@ -143,9 +148,11 @@ function ConfigurationPage() {
 		error: otelError,
 	} = otelState;
 	const velocityTestResult = useAppSelector((s) => s.config.velocityTestResult);
+	const reevaluation = useAppSelector((s) => s.config.reevaluation);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null); // { repo, name }
+	const [reloadConfirmOpen, setReloadConfirmOpen] = React.useState(false);
 
 	React.useEffect(() => {
 		if (configError) {
@@ -159,6 +166,18 @@ function ConfigurationPage() {
 			dispatch(clearOtelError());
 		}
 	}, [otelError, snackbar, dispatch]);
+
+	// A re-evaluation (one template, or the whole configuration) reports what it did. Without this,
+	// a failure would only stop the spinner and the user would be left guessing.
+	React.useEffect(() => {
+		if (!reevaluation || reevaluation.loading) return;
+		if (reevaluation.error) {
+			snackbar.show(reevaluation.error, { severity: "error" });
+		} else if (reevaluation.message) {
+			snackbar.show(reevaluation.message, { severity: "success" });
+		}
+		dispatch(clearReevaluation());
+	}, [reevaluation, snackbar, dispatch]);
 
 	React.useEffect(() => {
 		dispatch(fetchConfigList());
@@ -354,9 +373,12 @@ function ConfigurationPage() {
 	const handleCreateConfig = React.useCallback(
 		(type = "yaml") => {
 			const ext = type === "vm" ? "vm" : "yaml";
+			// Compare on the base name: a new file is created as a draft, but it is saved without the
+			// ".draft" suffix. Matching the draft name alone would miss the saved "new-config.vm" and
+			// the new draft would silently overwrite it once saved.
 			let name = `new-config.${ext}.draft`;
 			let i = 1;
-			while (configList.some((f) => f.name === name)) {
+			while (configList.some((f) => isSameConfigFile(f.name, name))) {
 				name = `new-config-${i}.${ext}.draft`;
 				i++;
 			}
@@ -372,9 +394,10 @@ function ConfigurationPage() {
 	);
 
 	const handleCreateOtel = React.useCallback(() => {
+		// Same base-name comparison as handleCreateConfig: a saved file has no ".draft" suffix.
 		let name = "new-otel-config.yaml.draft";
 		let i = 1;
-		while (otelList.some((f) => f.name === name)) {
+		while (otelList.some((f) => isSameConfigFile(f.name, name))) {
 			name = `new-otel-config-${i}.yaml.draft`;
 			i++;
 		}
@@ -396,6 +419,18 @@ function ConfigurationPage() {
 
 	const handleCloseTestResult = React.useCallback(() => {
 		dispatch(clearVelocityTestResult());
+	}, [dispatch]);
+
+	const handleReevaluateTemplate = React.useCallback(() => {
+		if (routeRepo !== "config" || !routeName || !isVmFile(routeName)) return;
+		// A draft is not loaded by the agent, so it has no configuration to refresh.
+		if (isDraftFile(routeName)) return;
+		dispatch(reevaluateTemplate({ name: routeName }));
+	}, [dispatch, routeRepo, routeName]);
+
+	const handleReevaluateConfiguration = React.useCallback(() => {
+		setReloadConfirmOpen(false);
+		dispatch(reevaluateConfiguration());
 	}, [dispatch]);
 
 	React.useEffect(() => {
@@ -533,6 +568,23 @@ function ConfigurationPage() {
 						}}
 					/>
 				</Button>
+				<Tooltip title="Reevaluate Configuration">
+					{/* Wrapped: a disabled button fires no events, so the tooltip needs a live element. */}
+					<span>
+						<Button
+							size="small"
+							variant="outlined"
+							color="inherit"
+							startIcon={<ReevaluateIcon />}
+							onClick={() => setReloadConfirmOpen(true)}
+							disabled={reevaluation?.scope === "configuration" && !!reevaluation?.loading}
+						>
+							{reevaluation?.scope === "configuration" && reevaluation?.loading
+								? "Reloading..."
+								: "Reload"}
+						</Button>
+					</span>
+				</Tooltip>
 				{(configLoadingList || otelLoadingList) && <CircularProgress size={18} />}
 			</Stack>
 			{treeInitialLoading ? (
@@ -645,6 +697,8 @@ function ConfigurationPage() {
 									onApply={() => configEditorRef.current?.apply?.()}
 									onTest={handleTest}
 									testLoading={!!velocityTestResult?.loading}
+									onReevaluate={handleReevaluateTemplate}
+									reevaluateLoading={reevaluation?.scope === "template" && !!reevaluation?.loading}
 									isReadOnly={isReadOnly}
 								/>
 							</Box>
@@ -742,6 +796,23 @@ function ConfigurationPage() {
 					</Stack>
 				</Right>
 			</SplitScreen>
+			{/* Rendered here and not in treeContent, which the drawer and the split view both render. */}
+			<QuestionDialog
+				open={reloadConfirmOpen}
+				title="Reload the configuration"
+				question="This re-runs every configuration source, including all Velocity templates, and applies the result to the running agent. Resources whose settings changed are restarted. Do you want to continue?"
+				onClose={() => setReloadConfirmOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setReloadConfirmOpen(false), autoFocus: true },
+					{
+						btnTitle: "Reload",
+						btnColor: "primary",
+						btnVariant: "contained",
+						btnIcon: <ReevaluateIcon />,
+						callback: handleReevaluateConfiguration,
+					},
+				]}
+			/>
 		</>
 	);
 }
