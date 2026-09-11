@@ -344,7 +344,7 @@ class AbstractStrategyTest {
 	}
 
 	@Test
-	void testHealthChecksValidation() {
+	void testHealthCheckFailure() {
 		final Criterion detectionCriterion = DeviceTypeCriterion.builder()
 			.type("deviceType")
 			.keep(Set.of(DeviceKind.LINUX))
