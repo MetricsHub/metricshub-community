@@ -448,9 +448,7 @@ class AbstractStrategyTest {
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).criteria(List.of(detectionCriterion)).build()
 					)
-					.healthChecks(
-						List.of(firstHealthCheckCriterion, secondHealthCheckCriterion, thirdHealthCheckCriterion)
-					)
+					.healthChecks(List.of(firstHealthCheckCriterion, secondHealthCheckCriterion, thirdHealthCheckCriterion))
 					.build()
 			)
 			.build();
