@@ -46,6 +46,14 @@ The legacy transport can be tuned or disabled under the `web:` section of `metri
 | `mcp.sse.initialization-timeout` | `2m` | A session that never completes the `initialize` handshake is closed after this delay |
 | `spring.ai.mcp.server.keep-alive-interval` | `30s` | Keep-alive ping interval of the legacy SSE transport (`spring.ai.mcp.server.streamable-http.keep-alive-interval` for Streamable HTTP) |
 
+## Protocol Health Checks
+
+SSH and OS Command share an extension, but their configurations are distinct: an OS Command configuration alone does not satisfy an SSH check. The guided configuration UI and MCP checks validate that the configuration matches the requested protocol before executing it.
+
+For a localhost resource configured with SSH, MetricsHub preserves its local command execution optimization. A successful check confirms that commands can execute through the collection path; it does not verify the SSH daemon or credentials.
+
+A localhost resource configured only with OS Command reports `metricshub.host.up{protocol="oscommand"}` during collection. A successful check also contributes to `metricshub.host.observed=1`, which means at least one protocol check succeeded. OS Command alone does not establish the health of a remote host.
+
 ## Project Structure
 
 This is a multi-module project:
@@ -232,4 +240,3 @@ To update source files with the proper header, simply execute the below command:
 ```bash
 mvn license:update-file-header
 ```
-
