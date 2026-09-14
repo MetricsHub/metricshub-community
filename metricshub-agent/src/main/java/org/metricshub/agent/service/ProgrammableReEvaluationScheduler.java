@@ -150,6 +150,15 @@ public class ProgrammableReEvaluationScheduler {
 	private final Map<String, String> scheduledCrons = new HashMap<>();
 
 	/**
+	 * Set by {@link #stop()}, under {@link #lock}. A discovery pass or a re-evaluation can read the
+	 * providers before it gets the lock, and then get it only after a restart stopped this scheduler.
+	 * Checking this flag once it holds the lock stops it from scheduling tasks against the retired
+	 * providers, or reloading from them: this instance is discarded after a restart, so nothing would
+	 * ever cancel what it scheduled.
+	 */
+	private boolean stopped;
+
+	/**
 	 * Creates the scheduler.
 	 *
 	 * @param agentContextHolder holder of the active {@link AgentContext} (source of the providers)
@@ -220,6 +229,10 @@ public class ProgrammableReEvaluationScheduler {
 			return;
 		}
 		synchronized (lock) {
+			if (stopped) {
+				log.debug("Skipping a re-evaluation discovery pass: the scheduler was stopped.");
+				return;
+			}
 			final Set<String> currentIds = new HashSet<>();
 			for (final IConfigurationProvider provider : providers) {
 				for (final ScheduledReEvaluation reEvaluation : provider.getScheduledReEvaluations()) {
@@ -322,7 +335,28 @@ public class ProgrammableReEvaluationScheduler {
 	void onReEvaluation(final IConfigurationProvider provider, final String reEvaluationId) {
 		// A cron firing is just a re-evaluation nobody asked for explicitly: it goes through the very
 		// same path as the manual one, which already logs every outcome.
-		reevaluateNow(provider, reEvaluationId);
+		try {
+			reevaluateNow(provider, reEvaluationId);
+		} catch (SchedulerStoppedException e) {
+			// A firing that was already running when a restart stopped this scheduler: nothing to do.
+			log.debug("Dropped the re-evaluation of '{}': the scheduler was stopped.", reEvaluationId);
+		}
+	}
+
+	/**
+	 * Thrown when a re-evaluation reaches a scheduler that a restart has stopped. The caller can retry
+	 * once the restart is over.
+	 */
+	public static class SchedulerStoppedException extends IllegalStateException {
+
+		private static final long serialVersionUID = 1L;
+
+		/**
+		 * Creates the exception.
+		 */
+		public SchedulerStoppedException() {
+			super("The agent is restarting. Try again once the restart is over.");
+		}
 	}
 
 	/**
@@ -350,6 +384,7 @@ public class ProgrammableReEvaluationScheduler {
 	 * @param provider       the owning configuration provider
 	 * @param reEvaluationId the re-evaluation to refresh
 	 * @return what the re-evaluation ended up doing
+	 * @throws SchedulerStoppedException when a restart stopped this scheduler before the reload
 	 */
 	public ReEvaluationOutcome reevaluateNow(final IConfigurationProvider provider, final String reEvaluationId) {
 		// Taken before the shared lock, and never in the other order: discovery and the merge step below
@@ -363,6 +398,10 @@ public class ProgrammableReEvaluationScheduler {
 				return ReEvaluationOutcome.NOTHING_PRODUCED;
 			}
 			synchronized (lock) {
+				// Checked under the lock: stop() may have run while this template was rendering.
+				if (stopped) {
+					throw new SchedulerStoppedException();
+				}
 				if (fragment.get().equals(lastFragments.get(reEvaluationId))) {
 					log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
 					return ReEvaluationOutcome.UNCHANGED;
@@ -428,6 +467,7 @@ public class ProgrammableReEvaluationScheduler {
 	 */
 	public void stop() {
 		synchronized (lock) {
+			stopped = true;
 			if (sweepFuture != null) {
 				sweepFuture.cancel(false);
 				sweepFuture = null;

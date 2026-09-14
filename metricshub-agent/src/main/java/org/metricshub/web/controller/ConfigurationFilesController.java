@@ -33,12 +33,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.metricshub.agent.deserialization.DeserializationFailure;
 import org.metricshub.agent.service.ProgrammableReEvaluationScheduler.ReEvaluationOutcome;
+import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.TextPlainException;
 import org.metricshub.web.service.ConfigurationFilesService;
 import org.metricshub.web.service.ProgrammableReEvaluationLauncher;
+import org.metricshub.web.service.ProgrammableReEvaluationLauncher.ReloadFailedException;
 import org.metricshub.web.service.VelocityTemplateService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -536,26 +538,48 @@ public class ConfigurationFilesController {
 	/**
 	 * Endpoint to reload the whole configuration, re-running every configuration source instead of a
 	 * single template.
+	 * <p>
+	 * The response says what actually happened. A restart is only requested here: it runs in the
+	 * background, so it is reported as accepted, not as done.
+	 * </p>
 	 *
-	 * @return {@code 200} once the reload has been applied
+	 * @return {@code 200} when the changes were applied or nothing had changed, {@code 202} when a
+	 *         restart of the agent was requested, {@code 500} when the reload failed
 	 * @throws ConfigFilesException when the agent context is not available yet
 	 */
 	@Operation(
 		summary = "Re-evaluate the whole configuration",
 		description = "Re-runs every configuration source and reloads the running configuration.",
 		responses = {
-			@ApiResponse(responseCode = "200", description = "Configuration reloaded"),
-			@ApiResponse(responseCode = "400", description = "The agent context is not available yet")
+			@ApiResponse(responseCode = "200", description = "Changes applied, or nothing to apply"),
+			@ApiResponse(responseCode = "202", description = "The changes require a restart, which was requested"),
+			@ApiResponse(responseCode = "400", description = "The agent context is not available yet"),
+			@ApiResponse(responseCode = "500", description = "The configuration reload failed")
 		}
 	)
 	@PostMapping(value = "/reevaluate", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Object>> reevaluateConfiguration() throws ConfigFilesException {
+		final ReloadResult result;
 		try {
-			programmableReEvaluationLauncher.reloadConfiguration();
-			return ResponseEntity.ok(Map.of("reloaded", true, "message", "Configuration reloaded."));
+			result = programmableReEvaluationLauncher.reloadConfiguration();
 		} catch (IllegalStateException e) {
 			throw new ConfigFilesException(ConfigFilesException.Code.VALIDATION_FAILED, e.getMessage(), e);
+		} catch (ReloadFailedException e) {
+			// The cause is logged by the launcher. It is not echoed here: a configuration parse error can
+			// quote the generated configuration, credentials included.
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+				Map.of("reloaded", false, "message", "The configuration reload failed. See the agent logs for details.")
+			);
 		}
+		return switch (result) {
+			case LOCAL_ONLY -> ResponseEntity.ok(Map.of("reloaded", true, "message", "Configuration reloaded."));
+			case NO_CHANGE -> ResponseEntity.ok(
+				Map.of("reloaded", false, "message", "The configuration is already up to date.")
+			);
+			case GLOBAL_RESTART_REQUIRED -> ResponseEntity.status(HttpStatus.ACCEPTED).body(
+				Map.of("reloaded", false, "message", "The changes require a restart of the agent. The restart was requested.")
+			);
+		};
 	}
 
 	/**

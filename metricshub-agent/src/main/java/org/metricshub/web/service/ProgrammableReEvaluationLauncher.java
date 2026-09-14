@@ -31,6 +31,7 @@ import org.metricshub.agent.service.ConfigurationReloadService;
 import org.metricshub.agent.service.ProgrammableReEvaluationScheduler;
 import org.metricshub.agent.service.ProgrammableReEvaluationScheduler.ReEvaluationOutcome;
 import org.metricshub.agent.service.ReloadService;
+import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IConfigurationProvider;
@@ -198,24 +199,58 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 	 * Reloads the whole configuration on demand, re-running <b>every</b> configuration source rather
 	 * than a single template, and applies the differences.
 	 *
-	 * @throws IllegalStateException when the agent context is unavailable
+	 * @return what the reload did: nothing to apply, resource changes applied in place, or a restart
+	 *         requested (which then runs in the background)
+	 * @throws IllegalStateException    when the agent context is unavailable
+	 * @throws ReloadFailedException when the configuration could not be rebuilt or applied
 	 */
-	public void reloadConfiguration() {
+	public ReloadResult reloadConfiguration() {
 		if (agentContextHolder.getAgentContext() == null) {
 			throw new IllegalStateException("The agent context is not available yet.");
 		}
 		log.info("Manual configuration reload requested.");
-		reload();
+		try {
+			return reload();
+		} catch (Exception e) {
+			log.error("Manual configuration reload failed: {}", e.getMessage());
+			log.debug("Manual configuration reload error:", e);
+			throw new ReloadFailedException(e);
+		}
+	}
+
+	/**
+	 * Thrown when a requested reload could not be carried out, so the caller can report a failure
+	 * instead of a success.
+	 */
+	public static class ReloadFailedException extends RuntimeException {
+
+		private static final long serialVersionUID = 1L;
+
+		/**
+		 * Creates the exception.
+		 *
+		 * @param cause what made the reload fail
+		 */
+		public ReloadFailedException(final Throwable cause) {
+			super(cause);
+		}
 	}
 
 	/**
 	 * Rebuilds the configuration and applies the differences. Invoked by the scheduler after a
 	 * re-evaluation changed a template's output, and by the manual entry points above.
+	 * <p>
+	 * A failure is thrown, not only logged: the scheduler relies on it to keep its baseline behind and
+	 * retry on the next firing, and the reload endpoint relies on it to report the failure.
+	 * </p>
+	 *
+	 * @return what the reload concluded
+	 * @throws IllegalStateException when the agent context is unavailable
 	 */
-	void reload() {
+	ReloadResult reload() {
 		final AgentContext currentContext = agentContextHolder.getAgentContext();
 		if (currentContext == null) {
-			return;
+			throw new IllegalStateException("The agent context is not available.");
 		}
 		// Captured before the reload so the lazily built restart context does not read a context that
 		// is being replaced. The extension manager is loaded once at boot and carried across reloads,
@@ -223,24 +258,19 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 		final String configDirectory = currentContext.getConfigDirectory().toString();
 		final ExtensionManager extensionManager = currentContext.getExtensionManager();
 
-		try {
-			ConfigurationReloadService.builder()
-				.withRunningAgentContext(currentContext)
-				.withComparisonContextSupplier(() -> buildContext(configDirectory, extensionManager))
-				.withRestartContextSupplier(restartContextSupplier(configDirectory, extensionManager))
-				.withRestartRequester(reloadedContextSupplier -> {
-					agentLifecycleService.restartAsync(reloadedContextSupplier);
-					return true;
-				})
-				// A resource-level reload does not rebuild the AgentContext, so nothing else will pick up
-				// the schedule a newly added template declares.
-				.withAfterLocalChanges(this::rediscoverSchedules)
-				.build()
-				.reload();
-		} catch (Exception e) {
-			log.error("Programmable re-evaluation reload failed: {}", e.getMessage());
-			log.debug("Reload error:", e);
-		}
+		return ConfigurationReloadService.builder()
+			.withRunningAgentContext(currentContext)
+			.withComparisonContextSupplier(() -> buildContext(configDirectory, extensionManager))
+			.withRestartContextSupplier(restartContextSupplier(configDirectory, extensionManager))
+			.withRestartRequester(reloadedContextSupplier -> {
+				agentLifecycleService.restartAsync(reloadedContextSupplier);
+				return true;
+			})
+			// A resource-level reload does not rebuild the AgentContext, so nothing else will pick up
+			// the schedule a newly added template declares.
+			.withAfterLocalChanges(this::rediscoverSchedules)
+			.build()
+			.reload();
 	}
 
 	/**

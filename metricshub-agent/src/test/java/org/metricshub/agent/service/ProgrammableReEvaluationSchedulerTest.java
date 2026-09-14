@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -694,5 +695,79 @@ class ProgrammableReEvaluationSchedulerTest {
 		otherReload.join(5000);
 		assertFalse(reEvaluation.isAlive(), "The re-evaluation must have completed");
 		assertFalse(otherReload.isAlive(), "The other reload must have completed");
+	}
+
+	/**
+	 * Builds a provider declaring one scheduled template, whose re-evaluation always produces a new
+	 * fragment.
+	 */
+	private static IConfigurationProvider scheduledProvider() {
+		return new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+				return List.of(new ScheduledReEvaluation("hosts.vm", "0/15 * * * * ?"));
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				return Optional.of(TextNode.valueOf(reEvaluationId + "-" + System.nanoTime()));
+			}
+		};
+	}
+
+	/**
+	 * A discovery pass can read the providers just before a restart stops the scheduler, and only
+	 * get the lock afterwards. It must then schedule nothing: this instance is discarded after the
+	 * restart, so nothing would ever cancel those tasks.
+	 */
+	@Test
+	void testDiscoveryAfterStopSchedulesNothing() {
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(scheduledProvider()),
+			taskScheduler,
+			() -> {}
+		);
+		scheduler.stop();
+
+		scheduler.rediscoverNewRegistrations();
+
+		verify(taskScheduler, never()).schedule(any(Runnable.class), any(Trigger.class));
+	}
+
+	/**
+	 * A re-evaluation that reaches a stopped scheduler must not reload, and must say why to an
+	 * on-demand caller.
+	 */
+	@Test
+	void testReEvaluationAfterStopDoesNotReload() {
+		final IConfigurationProvider provider = scheduledProvider();
+		final AtomicInteger reloadCount = new AtomicInteger();
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			mock(TaskScheduler.class),
+			reloadCount::incrementAndGet
+		);
+		scheduler.stop();
+
+		assertThrows(ProgrammableReEvaluationScheduler.SchedulerStoppedException.class, () ->
+			scheduler.reevaluateNow(provider, "hosts.vm")
+		);
+		// A cron firing that was already running is dropped quietly.
+		assertDoesNotThrow(() -> scheduler.onReEvaluation(provider, "hosts.vm"));
+
+		assertEquals(0, reloadCount.get(), "A stopped scheduler must never reload");
 	}
 }
