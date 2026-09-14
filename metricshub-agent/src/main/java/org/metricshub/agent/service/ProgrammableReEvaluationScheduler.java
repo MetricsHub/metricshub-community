@@ -111,8 +111,13 @@ public class ProgrammableReEvaluationScheduler {
 	private final TaskScheduler taskScheduler;
 	private final ReloadTrigger reloadTrigger;
 
-	/** Serializes the merge step so simultaneous firings do not race on the reload. */
-	private final Object lock = new Object();
+	/**
+	 * Serializes the merge step so simultaneous firings do not race on the reload. It is the lock
+	 * every reload of the agent holds ({@link ConfigurationReloadService#RELOAD_LOCK}), not one of
+	 * this scheduler's own: a cron-driven reload then also waits for a reload started by the file
+	 * watcher or the reload endpoint, and the other way round.
+	 */
+	private final Object lock = ConfigurationReloadService.RELOAD_LOCK;
 
 	/**
 	 * One lock per re-evaluation id, so the same template is never re-evaluated twice at the same

@@ -140,7 +140,7 @@ export default function EditorHeader({
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
 							onClick={onReevaluate}
-							disabled={!selected || saving || reevaluateLoading}
+							disabled={!selected || saving || reevaluateLoading || isReadOnly}
 							title="Re-evaluate this template and reload the running configuration"
 						>
 							{reevaluateLoading ? "Reevaluating..." : "Reevaluate"}

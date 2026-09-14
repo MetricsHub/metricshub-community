@@ -63,6 +63,20 @@ public class ConfigurationReloadService {
 		boolean requestRestart(Supplier<AgentContext> reloadedContextSupplier);
 	}
 
+	/**
+	 * Held by every reload of the running agent, whatever triggered it: the configuration file
+	 * watcher, the on-demand reload endpoint, or a template re-evaluation. {@link ReloadService} edits
+	 * the running context's resource, resource-group, telemetry-manager and schedule maps in place,
+	 * so two reloads running at once could lose updates or leave a half-applied configuration.
+	 * <p>
+	 * It is the only lock the reload paths share. {@link ProgrammableReEvaluationScheduler} uses it as
+	 * its own merge lock rather than a second one: a re-evaluation already holds that lock when it
+	 * reloads, and a reload re-runs the scheduler's discovery, so two separate locks would be taken in
+	 * opposite orders by the two paths and could block each other for good.
+	 * </p>
+	 */
+	static final Object RELOAD_LOCK = new Object();
+
 	/** The context currently serving the agent, compared against the rebuilt one. */
 	private final AgentContext runningAgentContext;
 
@@ -85,6 +99,18 @@ public class ConfigurationReloadService {
 	 * @return what the diff concluded
 	 */
 	public ReloadResult reload() {
+		// One reload at a time, whichever path started it (see RELOAD_LOCK).
+		synchronized (RELOAD_LOCK) {
+			return reloadExclusively();
+		}
+	}
+
+	/**
+	 * Performs the reload. Called with {@link #RELOAD_LOCK} held.
+	 *
+	 * @return what the diff concluded
+	 */
+	private ReloadResult reloadExclusively() {
 		AgentContext comparisonContext = null;
 		final ReloadResult result;
 		try {

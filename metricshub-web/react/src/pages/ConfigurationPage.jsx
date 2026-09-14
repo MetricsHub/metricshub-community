@@ -577,7 +577,9 @@ function ConfigurationPage() {
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
 							onClick={() => setReloadConfirmOpen(true)}
-							disabled={reevaluation?.scope === "configuration" && !!reevaluation?.loading}
+							disabled={
+								isReadOnly || (reevaluation?.scope === "configuration" && !!reevaluation?.loading)
+							}
 						>
 							{reevaluation?.scope === "configuration" && reevaluation?.loading
 								? "Reloading..."

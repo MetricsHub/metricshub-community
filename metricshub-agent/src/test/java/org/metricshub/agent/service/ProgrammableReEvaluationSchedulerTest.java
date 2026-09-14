@@ -624,4 +624,75 @@ class ProgrammableReEvaluationSchedulerTest {
 
 		scheduler.stop();
 	}
+
+	/**
+	 * A reload started outside the scheduler (the reload endpoint, the configuration file watcher)
+	 * must wait for a re-evaluation's reload that is already running, since both edit the same
+	 * running context.
+	 */
+	@Test
+	void testAnotherReloadWaitsForAReEvaluationReload() throws Exception {
+		final CountDownLatch reEvaluationReloading = new CountDownLatch(1);
+		final CountDownLatch releaseReEvaluation = new CountDownLatch(1);
+
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				return Optional.of(TextNode.valueOf(reEvaluationId + "-" + System.nanoTime()));
+			}
+		};
+
+		// The re-evaluation's reload parks until the test releases it.
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () -> {
+			reEvaluationReloading.countDown();
+			try {
+				releaseReEvaluation.await(10, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		});
+		final Thread reEvaluation = new Thread(() -> scheduler.reevaluateNow(provider, "hosts.vm"));
+		reEvaluation.start();
+		assertTrue(reEvaluationReloading.await(5, TimeUnit.SECONDS), "The re-evaluation must be reloading");
+
+		// A reload from another path starts meanwhile.
+		final CountDownLatch otherReloadStarted = new CountDownLatch(1);
+		final AgentContext running = mock(AgentContext.class);
+		final Thread otherReload = new Thread(() ->
+			ConfigurationReloadService.builder()
+				.withRunningAgentContext(running)
+				.withComparisonContextSupplier(() -> {
+					otherReloadStarted.countDown();
+					return running;
+				})
+				.withRestartContextSupplier(() -> running)
+				.withRestartRequester(supplier -> true)
+				.build()
+				.reload()
+		);
+		otherReload.start();
+
+		assertFalse(
+			otherReloadStarted.await(300, TimeUnit.MILLISECONDS),
+			"The other reload must not start while the re-evaluation's reload is running"
+		);
+
+		releaseReEvaluation.countDown();
+		assertTrue(otherReloadStarted.await(5, TimeUnit.SECONDS), "The other reload must run once the first one ends");
+
+		reEvaluation.join(5000);
+		otherReload.join(5000);
+		assertFalse(reEvaluation.isAlive(), "The re-evaluation must have completed");
+		assertFalse(otherReload.isAlive(), "The other reload must have completed");
+	}
 }
