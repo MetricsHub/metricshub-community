@@ -352,7 +352,9 @@ public class DetectionStrategy extends AbstractStrategy {
 				criteria.addAll(connectorIdentity.getHealthChecks());
 			}
 			// Verify SSH Criteria
-			verifySshCriteria(criteria);
+			if (!criteria.isEmpty()) {
+				verifySshCriteria(criteria);
+			}
 		}
 	}
 }
