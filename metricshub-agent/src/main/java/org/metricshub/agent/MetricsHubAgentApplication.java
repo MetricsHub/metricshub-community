@@ -100,6 +100,11 @@ public class MetricsHubAgentApplication implements Runnable {
 			// AgentContextHolder singleton bean is our own instance (used by every service).
 			new Thread(() -> MetricsHubAgentServer.startServer(agentContextHolder)).start();
 
+			// Upgrade reconciliation and the OpAMP supervisor are started by OpAmpStartupHook, a
+			// StartupHook the Spring context above runs once it is ready. Keeping them there rather
+			// than here means the enterprise agent, which boots the same context, needs no wiring
+			// of its own.
+
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = bootAgentContext.getConfigDirectory();
 

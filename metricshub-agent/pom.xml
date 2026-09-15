@@ -46,6 +46,12 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<!-- MetricsHub OpAMP Client -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-opamp-client</artifactId>
+		</dependency>
+
 		<!-- MetricsHub Community Connectors -->
 		<dependency>
 			<groupId>org.metricshub</groupId>
@@ -195,6 +201,13 @@
 			<groupId>org.awaitility</groupId>
 			<artifactId>awaitility</artifactId>
 			<version>4.3.0</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Fake M8B Governor (WebSocket server) for the tunnel tests -->
+		<dependency>
+			<groupId>org.java-websocket</groupId>
+			<artifactId>Java-WebSocket</artifactId>
+			<version>1.6.0</version>
 			<scope>test</scope>
 		</dependency>
 

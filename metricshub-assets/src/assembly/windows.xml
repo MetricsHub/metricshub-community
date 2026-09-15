@@ -87,6 +87,13 @@
 		</fileSet>
 
 		<fileSet>
+			<directory>src/main/resources/windows/upgrade-runner</directory>
+			<outputDirectory>/jpackage/assets/upgrade-runner</outputDirectory>
+			<fileMode>0644</fileMode>
+			<filtered>false</filtered>
+		</fileSet>
+
+		<fileSet>
 			<directory>${project.build.directory}/jpackage</directory>
 			<outputDirectory>/jpackage</outputDirectory>
 			<fileMode>0644</fileMode>

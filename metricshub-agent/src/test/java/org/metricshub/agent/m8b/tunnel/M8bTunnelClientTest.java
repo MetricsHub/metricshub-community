@@ -1,0 +1,708 @@
+package org.metricshub.agent.m8b.tunnel;
+
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyStore;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.agent.m8b.protocol.AgentDescriptor;
+import org.metricshub.agent.m8b.protocol.HostDescriptor;
+import org.metricshub.agent.m8b.protocol.M8bJson;
+import org.metricshub.agent.m8b.protocol.M8bMessage;
+import org.metricshub.agent.m8b.protocol.M8bMessage.AgentRegister;
+import org.metricshub.agent.m8b.protocol.M8bMessage.AgentRegistered;
+import org.metricshub.agent.m8b.protocol.M8bMessage.ToolInvoke;
+import org.metricshub.agent.m8b.protocol.M8bMessage.ToolResult;
+
+class M8bTunnelClientTest {
+
+	private static final String AGENT_UID = "01923e4a-7c1e-7f4b-8a2d-3c5e6f7a8b9c";
+	private static final long TIMEOUT_MS = 10_000;
+
+	private FakeM8bServer server;
+	private M8bTunnelClient client;
+
+	/**
+	 * Listener recording every callback.
+	 */
+	private static final class RecordingListener implements M8bTunnelListener {
+
+		final AtomicInteger registrations = new AtomicInteger();
+		final BlockingQueue<AgentRegistered> registered = new LinkedBlockingQueue<>();
+		final BlockingQueue<ToolInvoke> invocations = new LinkedBlockingQueue<>();
+		final BlockingQueue<Long> invokedGenerations = new LinkedBlockingQueue<>();
+		final BlockingQueue<Integer> disconnections = new LinkedBlockingQueue<>();
+
+		@Override
+		public AgentRegister buildRegistration() {
+			registrations.incrementAndGet();
+			return new AgentRegister(
+				M8bMessage.PROTOCOL_VERSION,
+				new AgentDescriptor("MetricsHub Agent", "3.9.07", "Community", "server-01", "linux", "amd64", "b1", Map.of()),
+				"sha256:0",
+				List.of(),
+				List.of()
+			);
+		}
+
+		@Override
+		public void onRegistered(final AgentRegistered limits) {
+			registered.add(limits);
+		}
+
+		@Override
+		public void onInvoke(final ToolInvoke invoke, final long generation) {
+			invocations.add(invoke);
+			invokedGenerations.add(generation);
+		}
+
+		@Override
+		public void onDisconnected(final int code, final String reason, final long generation) {
+			disconnections.add(code);
+		}
+	}
+
+	@AfterEach
+	void tearDown() throws Exception {
+		if (client != null) {
+			client.stop("test over");
+		}
+		if (server != null) {
+			server.stop(1000);
+		}
+	}
+
+	private M8bTunnelSettings settings(final FakeM8bServer fakeServer, final String certificateFile) {
+		return settings(fakeServer, certificateFile, Duration.ofSeconds(1));
+	}
+
+	private M8bTunnelSettings settings(
+		final FakeM8bServer fakeServer,
+		final String certificateFile,
+		final Duration heartbeatInterval
+	) {
+		return new M8bTunnelSettings(
+			fakeServer.uri(),
+			Map.of("Authorization", "Bearer secret-token"),
+			certificateFile,
+			AGENT_UID,
+			heartbeatInterval,
+			Duration.ofSeconds(5),
+			Duration.ofSeconds(2)
+		);
+	}
+
+	@Test
+	void shouldRegisterWithIdentityHeadersAndHonorServerLimits() throws Exception {
+		server = new FakeM8bServer();
+		// A 1 s heartbeat, because the last assertion is that the interval the server named is the
+		// one being used
+		server.limits = new AgentRegistered(1, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+
+		client.start();
+
+		final Map<String, String> handshake = server.awaitHandshake(TIMEOUT_MS);
+		assertNotNull(handshake, "The client must open the WebSocket");
+		assertEquals("Bearer secret-token", handshake.get("Authorization"));
+		assertEquals(AGENT_UID, handshake.get(M8bTunnelSettings.AGENT_UID_HEADER));
+		assertEquals("/ws/agent", handshake.get("path"));
+
+		final JsonNode register = server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS);
+		assertNotNull(register, "agent.register must be the first frame");
+		assertEquals(1, register.get("protocolVersion").asInt());
+		assertEquals("MetricsHub Agent", register.at("/agent/name").asText());
+
+		final AgentRegistered limits = listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+		assertEquals(server.limits, limits);
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(client::isConnected);
+		assertEquals(server.limits, client.limits());
+
+		// The server asked for a 1 s heartbeat: pings must follow
+		assertNotNull(server.awaitFrame(M8bMessage.HeartbeatPing.TYPE, TIMEOUT_MS), "heartbeat.ping expected");
+	}
+
+	@Test
+	void shouldForwardInvocationsAndSendAnswers() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		final JsonNode arguments = M8bJson.MAPPER.readTree("{\"hostname\":[\"server-01\"]}");
+		server.sendToAll(new ToolInvoke("req-1", "PingHost", arguments, 30_000));
+
+		final ToolInvoke invoke = listener.invocations.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+		assertNotNull(invoke);
+		assertEquals("req-1", invoke.requestId());
+		assertEquals("PingHost", invoke.tool());
+		assertEquals(arguments, invoke.arguments());
+
+		client.send(new ToolResult("req-1", M8bJson.MAPPER.readTree("{\"ok\":true}"), 5));
+
+		final JsonNode result = server.awaitFrame(M8bMessage.ToolResult.TYPE, TIMEOUT_MS);
+		assertNotNull(result);
+		assertEquals("req-1", result.get("requestId").asText());
+		assertTrue(result.at("/result/ok").asBoolean());
+	}
+
+	@Test
+	void shouldAnswerUnknownMessagesWithAnErrorAndStayConnected() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		server.sendToAll("{\"type\":\"tools.list\",\"future\":true}");
+
+		final JsonNode error = server.awaitFrame(M8bMessage.ProtocolError.TYPE, TIMEOUT_MS);
+		assertNotNull(error);
+		assertEquals("UNKNOWN_MESSAGE_TYPE", error.get("code").asText());
+		assertTrue(client.isConnected());
+		assertTrue(listener.disconnections.isEmpty());
+	}
+
+	@Test
+	void shouldReconnectAndReRegisterAfterTheServerDrops() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		server.closeAll(1012, "restart");
+
+		assertEquals(1012, listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		await()
+			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.until(() -> !client.isConnected() || client.isConnected());
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client must register again");
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertEquals(2, listener.registrations.get(), "Each connection builds a fresh registration");
+	}
+
+	@Test
+	void shouldKeepGrowingTheBackoffAcrossSupersededSessions() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+
+		// Two agents sharing a uid supersede each other: registering must not reset the backoff,
+		// otherwise both reconnect at the base delay forever and steal the session in a tight loop.
+		for (int round = 1; round <= 2; round++) {
+			final int expected = round;
+			assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "registration " + expected);
+			server.closeAll(M8bTunnelClient.CLOSE_SUPERSEDED, "superseded");
+			assertEquals(
+				M8bTunnelClient.CLOSE_SUPERSEDED,
+				listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+				"disconnection " + expected
+			);
+			// The counter is incremented when the next attempt is scheduled, just after the listener
+			// is notified, so wait for it rather than racing it. A reset would stall this at 1.
+			await()
+				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+				.until(() -> client.retryFailureCount() == expected);
+		}
+	}
+
+	@Test
+	void shouldRetryWithBackoffWhenSuperseded() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		server.closeAll(M8bTunnelClient.CLOSE_SUPERSEDED, "superseded");
+
+		assertEquals(M8bTunnelClient.CLOSE_SUPERSEDED, listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "A superseded client keeps retrying");
+	}
+
+	@Test
+	void shouldReconnectWhenTheServerStopsAnsweringHeartbeats() throws Exception {
+		server = new FakeM8bServer();
+		// A 1 s heartbeat, so the idle check this test is about fires 2.5 s into the silence below
+		server.limits = new AgentRegistered(1, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// A silent server: pings are no longer answered, so 2.5 heartbeat intervals later the
+		// client gives up on the connection and opens a new one
+		server.autoPong = false;
+
+		final Integer code = listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+		assertEquals(M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT, code);
+		// The close frame must reach the server before the socket is aborted, otherwise the server
+		// records an abnormal disconnect instead of the code the client meant to send
+		assertEquals(
+			M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT,
+			server.awaitClose(TIMEOUT_MS),
+			"The server must observe the heartbeat-timeout close code"
+		);
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client must reconnect");
+	}
+
+	@Test
+	void shouldGiveUpOnAConnectionTheServerNeverAcknowledges() throws Exception {
+		server = new FakeM8bServer();
+		server.autoRegister = false;
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(
+			new M8bTunnelSettings(
+				server.uri(),
+				Map.of(),
+				null,
+				AGENT_UID,
+				Duration.ofSeconds(1),
+				Duration.ofSeconds(1),
+				Duration.ofSeconds(2)
+			),
+			listener
+		);
+		client.start();
+
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+		// No acknowledgement: the registration deadline drops the connection and a new attempt follows
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "A second attempt must follow");
+		assertFalse(client.isConnected());
+		assertTrue(listener.registered.isEmpty(), "onRegistered must not fire without an acknowledgement");
+	}
+
+	@Test
+	void aMessageThatNeverEndsIsDroppedRatherThanBuffered() throws Exception {
+		server = new FakeM8bServer();
+		// A cap small enough to reach quickly; the agent is told it at registration
+		server.limits = new AgentRegistered(30, 4_096, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// Fragments that never say "last": the completed-message backpressure can never engage, so
+		// what has to stop this is the accumulation bound. EMPTY ones, because they are legal and add
+		// nothing to the size -- a byte bound alone would never trip on a stream of them.
+		server.sendFragmentsToAll("", M8bTunnelClient.MAX_INBOUND_FRAGMENTS + 8);
+
+		assertEquals(
+			M8bTunnelClient.CLOSE_MESSAGE_TOO_BIG,
+			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+			"A peer that keeps fragmenting must lose the connection, not the agent its heap"
+		);
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "and the agent reconnects");
+	}
+
+	@Test
+	void aFrameAboveTheServersCapIsDroppedRatherThanSent() throws Exception {
+		server = new FakeM8bServer();
+		// The agent is told a cap of 512 bytes at registration
+		server.limits = new AgentRegistered(30, 512, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// A hosts.updated far above it. Sending it would close the tunnel (1009), which costs the
+		// session rather than the frame.
+		final List<HostDescriptor> huge = new java.util.ArrayList<>();
+		for (int host = 0; host < 200; host++) {
+			huge.add(new HostDescriptor("server-" + host, "rg", Map.of("ssh", "server-" + host + ".example.com"), Map.of()));
+		}
+		client.send(new M8bMessage.HostsUpdated(huge));
+
+		assertNull(server.awaitFrame(M8bMessage.HostsUpdated.TYPE, 1_000), "It must not reach the server");
+		assertTrue(client.isConnected(), "and the tunnel must survive");
+
+		// A small one still goes
+		client.send(new M8bMessage.HostsUpdated(List.of(huge.get(0))));
+		assertNotNull(server.awaitFrame(M8bMessage.HostsUpdated.TYPE, TIMEOUT_MS));
+	}
+
+	@Test
+	void aToolInvokeBeforeRegistrationIsRefusedRatherThanRun() throws Exception {
+		server = new FakeM8bServer();
+		// The ack is withheld, so the session never registers
+		server.autoRegister = false;
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		server.sendToAll(new ToolInvoke("req-1", "ListHosts", M8bJson.MAPPER.createObjectNode(), 10_000));
+
+		// Running it would execute something on a monitored host and then drop the answer, because
+		// there is no registered session to send it on. Refusing says so instead.
+		final JsonNode error = server.awaitFrame(M8bMessage.ProtocolError.TYPE, TIMEOUT_MS);
+		assertNotNull(error, "The peer must be told, not silently obeyed");
+		assertEquals("MALFORMED_MESSAGE", error.path("code").asText());
+		assertTrue(listener.invocations.isEmpty(), "The tool must not have run");
+	}
+
+	@Test
+	void anAbsurdHeartbeatFromTheServerDoesNotWedgeTheTunnel() throws Exception {
+		server = new FakeM8bServer();
+		// Long.MAX_VALUE seconds overflows Duration.toMillis(), and the throw would land inside the
+		// callback that has already cancelled the registration deadline and published the limits --
+		// leaving a client that says it is connected with no heartbeat and no idle detection.
+		server.limits = new AgentRegistered(Long.MAX_VALUE, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertTrue(client.isConnected());
+	}
+
+	@Test
+	void anAbsurdHeartbeatInTheConfigurationDoesNotWedgeItEither() throws Exception {
+		server = new FakeM8bServer();
+		// Nothing asked for by the server, so the CONFIGURED interval is what gets scheduled -- and
+		// this one cannot be. Unexamined, it throws from the same place, after the limits have been
+		// published and the registration deadline cancelled.
+		server.limits = new AgentRegistered(0, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null, Duration.ofSeconds(Long.MAX_VALUE)), listener);
+		client.start();
+
+		assertNotNull(
+			listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+			"Registration must complete: the configured interval needs clamping as much as the server's"
+		);
+		assertTrue(client.isConnected());
+	}
+
+	@Test
+	void theNegotiatedHeartbeatIsClampedRatherThanDiscarded() throws Exception {
+		// The protocol says the server's value overrides the agent's configuration, so a value the
+		// agent cannot honour becomes the nearest value it can -- never the local configuration,
+		// which a governor has no way to see and no way to predict.
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		client = new M8bTunnelClient(settings(server, null, Duration.ofSeconds(30)), new RecordingListener());
+
+		assertEquals(
+			Duration.ofHours(1),
+			client.heartbeatIntervalOf(new AgentRegistered(7_200, 1_048_576L, 2)),
+			"Two hours is schedulable but out of range: the nearest bound, not the configured 30 s"
+		);
+		assertEquals(
+			Duration.ofHours(1),
+			client.heartbeatIntervalOf(new AgentRegistered(Long.MAX_VALUE, 1_048_576L, 2)),
+			"and so is a value that no clock could schedule"
+		);
+		assertEquals(Duration.ofSeconds(1), client.heartbeatIntervalOf(new AgentRegistered(1, 1_048_576L, 2)));
+		assertEquals(
+			Duration.ofSeconds(45),
+			client.heartbeatIntervalOf(new AgentRegistered(45, 1_048_576L, 2)),
+			"A value inside the range is used exactly as sent"
+		);
+		assertEquals(
+			Duration.ofSeconds(30),
+			client.heartbeatIntervalOf(new AgentRegistered(0, 1_048_576L, 2)),
+			"Only an unspecified interval falls back to the configuration"
+		);
+		assertEquals(
+			Duration.ofSeconds(1),
+			client.heartbeatIntervalOf(new AgentRegistered(-5, 1_048_576L, 2)),
+			"A negative is a value out of range, not an absent one: it clamps like any other"
+		);
+	}
+
+	@Test
+	void aFrameTooLargeToSendIsRefusedBeforeAnyCapIsNegotiated() throws Exception {
+		// agent.register goes out before agent.registered can come back, and the negotiated cap goes
+		// with the connection that carried it -- so on every connection there is a window where the
+		// frame carrying every tool schema and every host is the one frame nobody measures. Exempted,
+		// a large enough fleet would be closed 1009, reconnect, and be closed again forever.
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		client = new M8bTunnelClient(settings(server, null), new RecordingListener());
+
+		assertNull(client.limits(), "Nothing has been negotiated yet");
+		// Roughly 12 MB serialized against the 8 MiB default: a large fleet with a description on
+		// every host, not a pathological string
+		final String description = "x".repeat(500);
+		final List<HostDescriptor> enormous = IntStream.range(0, 20_000)
+			.mapToObj(index ->
+				new HostDescriptor(
+					"host-" + index,
+					"group",
+					Map.of("ssh", "host-" + index + ".a-fairly-long-domain-name.example.com"),
+					Map.of("host.name", "host-" + index, "host.type", "linux", "description", description)
+				)
+			)
+			.toList();
+
+		assertFalse(
+			client.send(new M8bMessage.HostsUpdated(enormous)),
+			"Above " + M8bTunnelClient.DEFAULT_MAX_PAYLOAD_BYTES + " bytes it is refused, not sent and closed"
+		);
+		assertTrue(
+			client.send(new M8bMessage.HostsUpdated(enormous.subList(0, 10))),
+			"and an ordinary inventory still goes"
+		);
+	}
+
+	@Test
+	void aGovernorCannotRaiseTheAgentsOwnInboundBound() throws Exception {
+		server = new FakeM8bServer();
+		// An authenticated but faulty or compromised governor advertising no practical limit. The
+		// field is what the SERVER accepts, not permission to fill this agent's heap.
+		server.limits = new AgentRegistered(30, Long.MAX_VALUE, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		// Nine fragments of a mebibyte each: far too few for the fragment bound to notice, so the
+		// only thing that can stop this is the agent's own 8 MiB ceiling.
+		server.sendFragmentsToAll("x".repeat(1024 * 1024), 9);
+
+		assertEquals(
+			M8bTunnelClient.CLOSE_MESSAGE_TOO_BIG,
+			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS),
+			"Past " + M8bTunnelClient.MAX_INBOUND_BYTES + " bytes the connection goes, whatever the server said"
+		);
+	}
+
+	@Test
+	void shouldRejectCleartextEndpointsOutsideLoopback() {
+		final Map<String, String> headers = Map.of("Authorization", "Bearer secret-token");
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new M8bTunnelSettings(URI.create("ws://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null),
+			"Credentials must never travel in cleartext to a remote host"
+		);
+		// A name that merely RESOLVES to loopback is refused too: the resolution that matters is the
+		// one the HTTP client does when it connects, and a record can change between the two
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new M8bTunnelSettings(URI.create("ws://localhost.localdomain/ws/agent"), headers, null, AGENT_UID, null),
+			"Only a loopback LITERAL may carry credentials in cleartext"
+		);
+
+		// Loopback literals and TLS endpoints are fine
+		new M8bTunnelSettings(URI.create("ws://localhost:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("ws://127.0.0.1:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("ws://127.4.5.6:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("ws://[::1]:8080/ws/agent"), headers, null, AGENT_UID, null);
+		new M8bTunnelSettings(URI.create("wss://m8b.example.com/ws/agent"), headers, null, AGENT_UID, null);
+	}
+
+	@Test
+	void shouldKeepACloseFrameWithinWhatTheJdkAccepts() {
+		// The reason travels as UTF-8, and one character can encode as four bytes: a cut counted in
+		// characters would overflow the JDK's 123-byte limit and fail the close frame outright.
+		final String tooLong = "é".repeat(200);
+		final String truncated = M8bTunnelClient.closeReason(tooLong);
+		assertTrue(
+			truncated.getBytes(StandardCharsets.UTF_8).length <= M8bTunnelClient.MAX_CLOSE_REASON_BYTES,
+			"The encoded reason must fit"
+		);
+		assertEquals("é".repeat(61), truncated, "The cut must fall between characters, never inside one");
+		assertEquals("bye", M8bTunnelClient.closeReason("bye"), "A short reason travels untouched");
+		assertEquals("", M8bTunnelClient.closeReason(null));
+
+		// A client may only send 1000 or 3000-4999; 1003 is reserved for the endpoint itself.
+		assertEquals(1000, M8bTunnelClient.wireCloseCode(M8bTunnelClient.CLOSE_UNSUPPORTED_DATA));
+		assertEquals(1000, M8bTunnelClient.wireCloseCode(1000));
+		assertEquals(4003, M8bTunnelClient.wireCloseCode(M8bTunnelClient.CLOSE_HEARTBEAT_TIMEOUT));
+	}
+
+	@Test
+	void aPeerThatOnlyEverPingsIsNotASilentPeer() throws Exception {
+		server = new FakeM8bServer();
+		// No protocol answers at all: the only thing arriving will be WebSocket control Pings
+		server.autoPong = false;
+		// And a 1 s heartbeat, so 4 s of control Pings is well past the idle deadline they answer
+		server.limits = new AgentRegistered(1, 1_048_576L, 2);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		// The server imposes a 1 s heartbeat, so silence past 2.5 s drops the connection
+		for (int tick = 0; tick < 10; tick++) {
+			server.pingAll();
+			Thread.sleep(400);
+		}
+
+		assertEquals(1, listener.registrations.get(), "A peer that keeps pinging has not gone quiet");
+		assertTrue(client.isConnected());
+	}
+
+	@Test
+	void shouldDropTheConnectionOnABinaryFrame() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS));
+
+		server.sendBinaryToAll(new byte[] { 1, 2, 3 });
+
+		assertEquals(
+			M8bTunnelClient.CLOSE_UNSUPPORTED_DATA,
+			listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+		);
+		assertNotNull(server.awaitFrame(M8bMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client reconnects afterwards");
+	}
+
+	@Test
+	void stopShouldEndTheSessionAsThoroughlyAsALostConnection() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		client.stop("shutdown");
+
+		// Whoever holds in-flight work learns it was discarded, whichever way the session ended
+		assertNotNull(listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "A stop is a disconnect too");
+		assertFalse(client.isConnected());
+		assertNull(client.limits(), "Limits must not outlive the session that imposed them");
+	}
+
+	@Test
+	void stoppingTwiceAtOnceShouldNotThrowAtEitherCaller() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		// A shutdown hook and an explicit stop can land together; neither is the failing one
+		final BlockingQueue<Throwable> thrown = new LinkedBlockingQueue<>();
+		final Runnable stopper = () -> {
+			try {
+				client.stop("shutdown");
+			} catch (RuntimeException e) {
+				thrown.add(e);
+			}
+		};
+		final Thread first = new Thread(stopper);
+		final Thread second = new Thread(stopper);
+		first.start();
+		second.start();
+		first.join(TIMEOUT_MS);
+		second.join(TIMEOUT_MS);
+
+		assertTrue(thrown.isEmpty(), "A second stop is meant to be harmless: " + thrown);
+		assertFalse(client.isConnected());
+	}
+
+	@Test
+	void sendAfterStopShouldBeDroppedSilently() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		client.stop("shutdown");
+		// A tool finishing after the shutdown must not blow up the worker thread
+		client.send(new ToolResult("late", M8bJson.MAPPER.createObjectNode(), 1));
+	}
+
+	@Test
+	void shouldCloseNormallyOnStop() throws Exception {
+		server = new FakeM8bServer();
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, null), listener);
+		client.start();
+		assertNotNull(server.awaitHandshake(TIMEOUT_MS));
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+		client.stop("shutdown");
+
+		assertEquals(1000, server.awaitClose(TIMEOUT_MS));
+		await()
+			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.until(() -> server.connectionCount() == 0);
+		// stop() is final: no reconnection
+		assertEquals(null, server.awaitHandshake(1500));
+	}
+
+	@Test
+	void shouldConnectOverTlsWithTheConfiguredCertificate(@TempDir final Path tempDir) throws Exception {
+		final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+		try (InputStream stream = getClass().getResourceAsStream("/upgrade/test-repository.p12")) {
+			keyStore.load(stream, "changeit".toCharArray());
+		}
+		final KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+		keyManagerFactory.init(keyStore, "changeit".toCharArray());
+		final SSLContext sslContext = SSLContext.getInstance("TLS");
+		sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+		final Path pem = tempDir.resolve("m8b-ca.pem");
+		try (InputStream stream = getClass().getResourceAsStream("/upgrade/test-repository.pem")) {
+			Files.copy(stream, pem);
+		}
+
+		server = new FakeM8bServer(sslContext);
+		server.startAndAwait();
+		final RecordingListener listener = new RecordingListener();
+		client = new M8bTunnelClient(settings(server, pem.toString()), listener);
+		client.start();
+
+		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS), "Registration over wss expected");
+		assertTrue(server.uri().getScheme().equals("wss"));
+	}
+}
