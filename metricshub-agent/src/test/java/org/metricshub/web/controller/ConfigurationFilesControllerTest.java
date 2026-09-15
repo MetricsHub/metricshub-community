@@ -23,10 +23,14 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.deserialization.DeserializationFailure;
+import org.metricshub.agent.service.ProgrammableReEvaluationScheduler.ReEvaluationOutcome;
+import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.service.ConfigurationFilesService;
+import org.metricshub.web.service.ProgrammableReEvaluationLauncher;
+import org.metricshub.web.service.ProgrammableReEvaluationLauncher.ReloadFailedException;
 import org.metricshub.web.service.VelocityTemplateService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
@@ -40,6 +44,7 @@ class ConfigurationFilesControllerTest {
 	private MockMvc mockMvc;
 	private ConfigurationFilesService configurationFilesService;
 	private VelocityTemplateService velocityTemplateService;
+	private ProgrammableReEvaluationLauncher programmableReEvaluationLauncher;
 
 	private final ObjectMapper mapper = new ObjectMapper();
 
@@ -47,9 +52,11 @@ class ConfigurationFilesControllerTest {
 	void setup() {
 		configurationFilesService = Mockito.mock(ConfigurationFilesService.class);
 		velocityTemplateService = Mockito.mock(VelocityTemplateService.class);
+		programmableReEvaluationLauncher = Mockito.mock(ProgrammableReEvaluationLauncher.class);
 		final ConfigurationFilesController controller = new ConfigurationFilesController(
 			configurationFilesService,
-			velocityTemplateService
+			velocityTemplateService,
+			programmableReEvaluationLauncher
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new RestExceptionHandler()).build();
 	}
@@ -424,5 +431,123 @@ class ConfigurationFilesControllerTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("Velocity template evaluation failed: Encountered unexpected token"));
+	}
+
+	@Test
+	void testShouldReevaluateVelocityTemplate() throws Exception {
+		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(ReEvaluationOutcome.RELOADED);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.name").value("hosts.vm"))
+			.andExpect(jsonPath("$.reloaded").value(true));
+
+		verify(programmableReEvaluationLauncher, times(1)).reevaluateTemplate("hosts.vm");
+	}
+
+	@Test
+	void testShouldReportConflictWhenTemplateProducesNothing() throws Exception {
+		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(
+			ReEvaluationOutcome.NOTHING_PRODUCED
+		);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.reloaded").value(false));
+	}
+
+	@Test
+	void testShouldReportUnchangedWithoutReloading() throws Exception {
+		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(ReEvaluationOutcome.UNCHANGED);
+
+		// Nothing to apply is a success: the caller gets 200 with reloaded=false.
+		mockMvc
+			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reloaded").value(false));
+	}
+
+	@Test
+	void testShouldReportFailedReload() throws Exception {
+		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(ReEvaluationOutcome.RELOAD_FAILED);
+
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm")).andExpect(status().isInternalServerError());
+	}
+
+	@Test
+	void testShouldRejectReevaluationOfNonVmFile() throws Exception {
+		mockMvc.perform(post("/api/config-files/reevaluate/metricshub.yaml")).andExpect(status().isBadRequest());
+
+		verify(programmableReEvaluationLauncher, times(0)).reevaluateTemplate(Mockito.anyString());
+	}
+
+	/**
+	 * A draft is an unsaved copy the agent never loads, so no provider knows it. The request must be
+	 * rejected here, with a message saying why, rather than reaching the launcher and coming back as
+	 * "no provider handles this file".
+	 */
+	@Test
+	void testShouldRejectReevaluationOfADraft() throws Exception {
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm.draft")).andExpect(status().isBadRequest());
+
+		verify(programmableReEvaluationLauncher, times(0)).reevaluateTemplate(Mockito.anyString());
+	}
+
+	@Test
+	void testShouldReevaluateWholeConfiguration() throws Exception {
+		when(programmableReEvaluationLauncher.reloadConfiguration()).thenReturn(ReloadResult.LOCAL_ONLY);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reloaded").value(true));
+
+		verify(programmableReEvaluationLauncher, times(1)).reloadConfiguration();
+	}
+
+	@Test
+	void testShouldReportAWholeConfigurationAlreadyUpToDate() throws Exception {
+		when(programmableReEvaluationLauncher.reloadConfiguration()).thenReturn(ReloadResult.NO_CHANGE);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reloaded").value(false))
+			.andExpect(jsonPath("$.message").value("The configuration is already up to date."));
+	}
+
+	/**
+	 * A restart runs in the background after the response is sent, so it must be reported as
+	 * accepted, never as done.
+	 */
+	@Test
+	void testShouldReportARequestedRestartAsAccepted() throws Exception {
+		when(programmableReEvaluationLauncher.reloadConfiguration()).thenReturn(ReloadResult.GLOBAL_RESTART_REQUIRED);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate"))
+			.andExpect(status().isAccepted())
+			.andExpect(jsonPath("$.reloaded").value(false));
+	}
+
+	/**
+	 * A reload that failed must be reported as a failure. The cause is not echoed: a configuration
+	 * parse error can quote the generated configuration, credentials included.
+	 */
+	@Test
+	void testShouldReportAFailedWholeConfigurationReload() throws Exception {
+		when(programmableReEvaluationLauncher.reloadConfiguration()).thenThrow(
+			new ReloadFailedException(new IllegalStateException("password: secret"))
+		);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate"))
+			.andExpect(status().isInternalServerError())
+			.andExpect(jsonPath("$.reloaded").value(false))
+			.andExpect(
+				jsonPath("$.message").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("secret")))
+			);
 	}
 }

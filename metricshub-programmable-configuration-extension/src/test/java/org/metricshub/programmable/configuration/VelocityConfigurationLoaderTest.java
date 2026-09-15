@@ -1,6 +1,7 @@
 package org.metricshub.programmable.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,8 +13,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.velocity.runtime.RuntimeConstants.SpaceGobbling;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -278,5 +283,155 @@ class VelocityConfigurationLoaderTest {
 			yaml.lines().noneMatch(String::isBlank),
 			() -> "An unsupported mode should fall back to 'lines', but got:\n" + yaml
 		);
+	}
+
+	@Test
+	void testScheduleDeclarationIsDiscoveredAndPrintsNothing(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		final String yaml = loader.generateYaml();
+
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+		assertTrue(yaml.contains("resources:"), () -> "The body must still render, but got:\n" + yaml);
+		assertTrue(!yaml.contains("schedule"), () -> "The directive must print nothing, but got:\n" + yaml);
+	}
+
+	@Test
+	void testNoScheduleDeclarationYieldsNoCron(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("plain.vm");
+		Files.writeString(templatePath, "resources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		loader.generateYaml();
+
+		assertTrue(loader.getCron().isEmpty(), "A template without $schedule.cron declares no schedule");
+	}
+
+	/**
+	 * The schedule must reflect the template as it is now: re-rendering after the directive was
+	 * removed must leave no schedule behind.
+	 */
+	@Test
+	void testRemovingTheDeclarationClearsTheCronOnNextRender(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		loader.generateYaml();
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+
+		Files.writeString(templatePath, "resources: {}\n", StandardCharsets.UTF_8);
+		loader.generateYaml();
+
+		assertTrue(loader.getCron().isEmpty(), "The removed declaration must not survive the next render");
+	}
+
+	/**
+	 * Velocity tool whose only method fails, standing for a data source ({@code $http}, {@code $sql})
+	 * that is temporarily unreachable. Public so Velocity can introspect it.
+	 */
+	public static class ExplodingTool {
+
+		/**
+		 * Always fails.
+		 *
+		 * @return never returns
+		 */
+		public String explode() {
+			throw new IllegalStateException("The data source is unavailable.");
+		}
+	}
+
+	/**
+	 * A template whose render fails part-way must keep the schedule it last declared. Reporting no
+	 * schedule would have the discovery sweep treat it as undeclared and cancel its cron task, so a
+	 * data source failing once would stop the template from ever being re-evaluated again.
+	 */
+	@Test
+	void testAFailedRenderKeepsTheLastDeclaredCron(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(
+			templatePath,
+			Map.of("boom", new ExplodingTool())
+		);
+		loader.generateYaml();
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+
+		// Same declaration, but a data source read after it now fails.
+		Files.writeString(
+			templatePath,
+			"$schedule.cron('0/5 * * * * ?')\nresources: $boom.explode()\n",
+			StandardCharsets.UTF_8
+		);
+		assertNull(loader.generateYaml(), "A render that throws produces no YAML");
+
+		assertEquals(
+			Optional.of("0/5 * * * * ?"),
+			loader.getCron(),
+			"The schedule declared by the last successful render must survive a failed one"
+		);
+	}
+
+	/**
+	 * Two renders of the same template can overlap: a cron firing or an on-demand request on one side,
+	 * the configuration watcher's reload on the other. Each render collects its declarations in a tool
+	 * of its own, so neither can read or clear the other's, and the schedule stays what the template
+	 * says whichever order they finish in.
+	 */
+	@Test
+	void testConcurrentRendersKeepTheDeclaredCron(@TempDir final Path tempDir) throws Exception {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		final List<String> wrongCrons = Collections.synchronizedList(new ArrayList<>());
+
+		final List<Thread> renders = new ArrayList<>();
+		for (int thread = 0; thread < 4; thread++) {
+			renders.add(
+				new Thread(() -> {
+					for (int round = 0; round < 20; round++) {
+						loader.generateYaml();
+						final Optional<String> cron = loader.getCron();
+						if (!Optional.of("0/5 * * * * ?").equals(cron)) {
+							wrongCrons.add(String.valueOf(cron.orElse(null)));
+						}
+					}
+				})
+			);
+		}
+		renders.forEach(Thread::start);
+		for (final Thread render : renders) {
+			render.join(30_000);
+			assertFalse(render.isAlive(), "Every render must have completed");
+		}
+
+		assertTrue(wrongCrons.isEmpty(), () -> "Overlapping renders reported a wrong schedule: " + wrongCrons);
+	}
+
+	/**
+	 * A template that never rendered successfully declares nothing: there is no earlier schedule to
+	 * fall back on.
+	 */
+	@Test
+	void testAFailedFirstRenderLeavesNoCron(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("scheduled.vm");
+		Files.writeString(
+			templatePath,
+			"$schedule.cron('0/5 * * * * ?')\nresources: $boom.explode()\n",
+			StandardCharsets.UTF_8
+		);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(
+			templatePath,
+			Map.of("boom", new ExplodingTool())
+		);
+		assertNull(loader.generateYaml(), "A render that throws produces no YAML");
+
+		assertTrue(loader.getCron().isEmpty(), "A template that never rendered declares no schedule");
 	}
 }
