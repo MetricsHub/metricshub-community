@@ -19,6 +19,9 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectionType;
 import org.metricshub.engine.connector.model.identity.Detection;
+import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 
 class DetectionDeserializerTest extends DeserializerTest {
 
@@ -63,6 +66,42 @@ class DetectionDeserializerTest extends DeserializerTest {
 		var expectedSupersedes = detection.getConnectorIdentity().getDetection().getSupersedes();
 		assertTrue(expectedSupersedes instanceof HashSet, "supersedes are expected to be a HashSet.");
 		assertEquals(new HashSet<>(List.of("Connector1", "Connector2")), expectedSupersedes);
+	}
+
+	@Test
+	void testHealthChecks() throws IOException {
+		final Connector connector = getConnector("healthChecks");
+		final List<Criterion> healthChecks = connector.getConnectorIdentity().getHealthChecks();
+
+		assertEquals(2, healthChecks.size());
+		assertTrue(healthChecks.get(0) instanceof SnmpGetCriterion);
+		assertEquals("1.3.6.1.4.1.795.10.1.1.3.1.2", ((SnmpGetCriterion) healthChecks.get(0)).getOid());
+		assertTrue(healthChecks.get(1) instanceof SnmpGetNextCriterion);
+		assertEquals("1.3.6.1.4.1.795.10.1.1.3.1.3", ((SnmpGetNextCriterion) healthChecks.get(1)).getOid());
+	}
+
+	@Test
+	void testMissingHealthChecks() throws IOException {
+		final Connector connector = getConnector("detection");
+
+		assertNotNull(connector.getConnectorIdentity().getHealthChecks());
+		assertTrue(connector.getConnectorIdentity().getHealthChecks().isEmpty());
+	}
+
+	@Test
+	void testEmptyHealthChecks() throws IOException {
+		final Connector connector = getConnector("healthChecksEmpty");
+
+		assertNotNull(connector.getConnectorIdentity().getHealthChecks());
+		assertTrue(connector.getConnectorIdentity().getHealthChecks().isEmpty());
+	}
+
+	@Test
+	void testNullHealthChecks() throws IOException {
+		final Connector connector = getConnector("healthChecksNull");
+
+		assertNotNull(connector.getConnectorIdentity().getHealthChecks());
+		assertTrue(connector.getConnectorIdentity().getHealthChecks().isEmpty());
 	}
 
 	/*

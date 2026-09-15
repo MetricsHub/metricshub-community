@@ -375,6 +375,45 @@ class DetectionStrategyTest {
 	}
 
 	@Test
+	void testVerifySshWithLocalHealthCheckCriterion() {
+		// Call getDetectionStrategy to retrieve a ready-to-use detection strategy
+		DetectionStrategy detectionStrategy = getDetectionStrategy();
+		TelemetryManager telemetryManager = detectionStrategy.getTelemetryManager();
+		Connector connector = telemetryManager.getConnectorStore().getStore().get("connector");
+
+		connector.setSourceTypes(Set.of(CommandLineSource.class));
+		CommandLineCriterion localHealthCheckCriterion = CommandLineCriterion.builder()
+			.executeLocally(true)
+			.commandLine("command")
+			.build();
+		connector.getConnectorIdentity().setHealthChecks(List.of(localHealthCheckCriterion));
+
+		detectionStrategy.verifySsh(connector);
+
+		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertFalse(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
+	}
+
+	@Test
+	void testVerifySshWithRemoteHealthCheckCriterion() {
+		// Call getDetectionStrategy to retrieve a ready-to-use detection strategy
+		DetectionStrategy detectionStrategy = getDetectionStrategy();
+		TelemetryManager telemetryManager = detectionStrategy.getTelemetryManager();
+		Connector connector = telemetryManager.getConnectorStore().getStore().get("connector");
+
+		connector.setSourceTypes(Set.of(CommandLineSource.class));
+		CommandLineCriterion remoteHealthCheckCriterion = CommandLineCriterion.builder().commandLine("command").build();
+		connector.getConnectorIdentity().setHealthChecks(List.of(remoteHealthCheckCriterion));
+
+		detectionStrategy.verifySsh(connector);
+
+		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
+		assertFalse(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
+	}
+
+	@Test
 	void testVerifySshCriteria() {
 		// Call getDetectionStrategy to retrieve a ready-to-use detection strategy
 		DetectionStrategy detectionStrategy = getDetectionStrategy();
