@@ -351,9 +351,20 @@ public class DetectionStrategy extends AbstractStrategy {
 			if (connectorIdentity.getHealthChecks() != null) {
 				criteria.addAll(connectorIdentity.getHealthChecks());
 			}
-			// Verify SSH Criteria
+
 			if (!criteria.isEmpty()) {
+				final HostProperties hostProperties = telemetryManager.getHostProperties();
+
+				// Preserve directions required by previously processed connectors
+				final boolean executesLocally = hostProperties.isOsCommandExecutesLocally();
+				final boolean executesRemotely = hostProperties.isOsCommandExecutesRemotely();
+
+				// Verify SSH Criteria
 				verifySshCriteria(criteria);
+
+				// Accumulate this connector's directions with the existing host-wide directions
+				hostProperties.setOsCommandExecutesLocally(executesLocally || hostProperties.isOsCommandExecutesLocally());
+				hostProperties.setOsCommandExecutesRemotely(executesRemotely || hostProperties.isOsCommandExecutesRemotely());
 			}
 		}
 	}
