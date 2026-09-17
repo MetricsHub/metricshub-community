@@ -95,6 +95,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		TOOLS.put("file", new FileTool());
 		TOOLS.put("stringUtils", new StringUtils());
 		TOOLS.put("env", new EnvTool());
+		TOOLS.put("command", new CommandLineTool());
 	}
 
 	/**
