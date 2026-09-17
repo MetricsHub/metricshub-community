@@ -476,6 +476,21 @@ class ConfigurationFilesControllerTest {
 		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm")).andExpect(status().isInternalServerError());
 	}
 
+	/**
+	 * A template change that needs a restart is only accepted: the restart runs after the response.
+	 */
+	@Test
+	void testShouldReportATemplateRestartAsAccepted() throws Exception {
+		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(
+			ReEvaluationOutcome.RESTART_REQUESTED
+		);
+
+		mockMvc
+			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+			.andExpect(status().isAccepted())
+			.andExpect(jsonPath("$.reloaded").value(false));
+	}
+
 	@Test
 	void testShouldRejectReevaluationOfNonVmFile() throws Exception {
 		mockMvc.perform(post("/api/config-files/reevaluate/metricshub.yaml")).andExpect(status().isBadRequest());

@@ -36,6 +36,7 @@ import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IConfigurationProvider;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.dto.RestartStatus;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -56,10 +57,11 @@ import org.springframework.stereotype.Service;
  * by a newly added template is picked up without waiting for a full restart.
  * </p>
  * <p>
- * Around a global restart the schedules are cancelled before the outgoing context is stopped and
- * re-created against the rebuilt one, so no firing runs against a context being torn down. The
- * restart itself is handed a lazy supplier rather than a pre-built context, so a request that gets
- * coalesced away leaks nothing.
+ * Around a global restart the schedules are paused before the new context is built, so no firing
+ * changes what that build reads or runs against a context being torn down. They are re-created
+ * against the rebuilt context when the restart succeeds, and resumed when it fails. The restart
+ * itself is handed a lazy supplier rather than a pre-built context, so a request that gets coalesced
+ * away leaks nothing.
  * </p>
  */
 @Service
@@ -102,13 +104,26 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 		}
 		try {
 			taskScheduler = TaskSchedulingService.newScheduler(POOL_SIZE);
-			scheduler = new ProgrammableReEvaluationScheduler(agentContextHolder, taskScheduler, this::reload);
+			scheduler = new ProgrammableReEvaluationScheduler(
+				agentContextHolder,
+				taskScheduler,
+				this::reload,
+				this::isRestartPending
+			);
 			scheduler.start();
 
-			// A restart stops the services of the outgoing context. Cancel the schedules first, so no
-			// firing can re-evaluate against a context that is being torn down or trigger a reload
-			// while the swap is in progress.
+			// A restart first builds the new context, which re-runs every template and can be slow. Pause
+			// the schedules before that build, so no firing changes the template cache it reads or asks
+			// for another reload meanwhile.
+			agentLifecycleService.addBeforeContextBuildHook(this::quiesce);
+
+			// Also before the services of the outgoing context are stopped, for a restart handed an
+			// already built context. Pausing twice is harmless.
 			agentLifecycleService.addPreRestartHook(this::quiesce);
+
+			// A failed restart leaves the agent on its current context: resume the schedules, with the
+			// baselines kept, so the change whose restart failed is retried.
+			agentLifecycleService.addRestartFailureHook(this::resumeAfterFailedRestart);
 
 			// After a full restart the extension manager (and its providers) is rebuilt, so re-discover
 			// the declared re-evaluations against the new context.
@@ -120,18 +135,34 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 	}
 
 	/**
-	 * Cancels every schedule before a global restart tears the current context down. The scheduler
-	 * itself is kept, and {@link #resync()} re-creates the schedules once the new context is in place.
-	 * Any failure is caught so it never aborts the restart.
+	 * Pauses every schedule before a global restart builds the new context and tears the current one
+	 * down. The scheduler keeps its baselines: {@link #resync()} replaces it once the new context is in
+	 * place, and {@link #resumeAfterFailedRestart()} resumes it if the restart fails. Any failure is
+	 * caught so it never aborts the restart.
 	 */
 	private synchronized void quiesce() {
 		try {
 			if (scheduler != null) {
-				scheduler.stop();
+				scheduler.pause();
 			}
 		} catch (Exception e) {
 			log.error("Failed to quiesce the programmable re-evaluation scheduler: {}", e.getMessage());
 			log.debug("Programmable re-evaluation scheduler quiesce error", e);
+		}
+	}
+
+	/**
+	 * Resumes the schedules paused by {@link #quiesce()} when the restart failed and the agent keeps
+	 * running on its current context. Any failure is caught and logged.
+	 */
+	private synchronized void resumeAfterFailedRestart() {
+		try {
+			if (scheduler != null) {
+				scheduler.resume();
+			}
+		} catch (Exception e) {
+			log.error("Failed to resume the programmable re-evaluation scheduler: {}", e.getMessage());
+			log.debug("Programmable re-evaluation scheduler resume error", e);
 		}
 	}
 
@@ -143,7 +174,12 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 			if (scheduler != null) {
 				scheduler.stop();
 			}
-			scheduler = new ProgrammableReEvaluationScheduler(agentContextHolder, taskScheduler, this::reload);
+			scheduler = new ProgrammableReEvaluationScheduler(
+				agentContextHolder,
+				taskScheduler,
+				this::reload,
+				this::isRestartPending
+			);
 			scheduler.start();
 		} catch (Exception e) {
 			log.error("Failed to re-sync the programmable re-evaluation scheduler: {}", e.getMessage());
@@ -271,6 +307,17 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 			.withAfterLocalChanges(this::rediscoverSchedules)
 			.build()
 			.reload();
+	}
+
+	/**
+	 * Tells whether a restart of the agent is still running, so the scheduler does not request the same
+	 * restart again while it runs.
+	 *
+	 * @return {@code true} while a restart is in progress
+	 */
+	private boolean isRestartPending() {
+		final RestartStatus status = agentLifecycleService.getRestartStatus();
+		return status != null && status.getState() == RestartStatus.State.IN_PROGRESS;
 	}
 
 	/**

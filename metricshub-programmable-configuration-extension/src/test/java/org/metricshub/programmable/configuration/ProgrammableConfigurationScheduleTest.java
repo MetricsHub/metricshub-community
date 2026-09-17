@@ -287,4 +287,32 @@ class ProgrammableConfigurationScheduleTest {
 
 		assertTrue(rendered.get(0).contains("host-c"), "A build outside any scope must render the templates again");
 	}
+
+	/**
+	 * The provider keeps one loader per template across loads and re-evaluations. An edit to a macro
+	 * must reach the running configuration through both, as it does through a template preview.
+	 */
+	@Test
+	void testAnEditedMacroReachesReEvaluationsAndReloads(@TempDir final Path tempDir) throws Exception {
+		final Path vm = tempDir.resolve("hosts.vm");
+		Files.writeString(vm, "$schedule.cron('0/5 * * * * ?')\n#macro(host)old-host#end\nresources:\n  #host(): {}\n");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		assertTrue(provider.load(tempDir).toString().contains("old-host"), "The first load must use the macro");
+		final String id = vm.toAbsolutePath().toString();
+
+		Files.writeString(vm, "$schedule.cron('0/5 * * * * ?')\n#macro(host)new-host#end\nresources:\n  #host(): {}\n");
+
+		assertTrue(
+			provider.reevaluate(id).orElseThrow().toString().contains("new-host"),
+			"A re-evaluation must use the edited macro"
+		);
+		assertTrue(
+			provider.reevaluate(id).orElseThrow().toString().contains("new-host"),
+			"A second re-evaluation must still use the edited macro"
+		);
+		final String reloaded = provider.load(tempDir).toString();
+		assertTrue(reloaded.contains("new-host"), "A full reload must use the edited macro");
+		assertFalse(reloaded.contains("old-host"), "A full reload must not use the old macro body");
+	}
 }

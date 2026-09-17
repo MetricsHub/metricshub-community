@@ -479,6 +479,7 @@ public class ConfigurationFilesController {
 		description = "Re-evaluates a Velocity template (.vm) and reloads the running configuration when its result changed.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Template re-evaluated; reloaded only if it changed"),
+			@ApiResponse(responseCode = "202", description = "The change requires a restart, which was requested"),
 			@ApiResponse(responseCode = "400", description = "Not a .vm file, a draft, or no provider handles it"),
 			@ApiResponse(responseCode = "409", description = "The template produced no configuration"),
 			@ApiResponse(responseCode = "500", description = "The configuration reload failed")
@@ -510,6 +511,14 @@ public class ConfigurationFilesController {
 				// is nothing to apply. That is a success, not a failure.
 				case UNCHANGED -> ResponseEntity.ok(
 					body(fileName, false, "Template re-evaluated; the configuration is already up to date.")
+				);
+				// The restart runs in the background after this response, and can still fail.
+				case RESTART_REQUESTED -> ResponseEntity.status(HttpStatus.ACCEPTED).body(
+					body(
+						fileName,
+						false,
+						"Template re-evaluated. The change requires a restart of the agent, which was requested."
+					)
 				);
 				case NOTHING_PRODUCED -> ResponseEntity.status(HttpStatus.CONFLICT).body(
 					body(fileName, false, "The template produced no configuration; the last good value is kept.")

@@ -32,8 +32,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
+import java.util.function.BooleanSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IConfigurationProvider;
 import org.metricshub.engine.extension.ScheduledReEvaluation;
@@ -78,8 +80,13 @@ public class ProgrammableReEvaluationScheduler {
 	 */
 	@FunctionalInterface
 	public interface ReloadTrigger {
-		/** Rebuilds the running configuration from the current templates and applies changes. */
-		void triggerReload();
+		/**
+		 * Rebuilds the running configuration from the current templates and applies changes.
+		 *
+		 * @return what the reload concluded; {@link ReloadResult#GLOBAL_RESTART_REQUIRED} means a restart
+		 *         was only requested, and runs later
+		 */
+		ReloadResult triggerReload();
 	}
 
 	/**
@@ -92,6 +99,11 @@ public class ProgrammableReEvaluationScheduler {
 		UNCHANGED,
 		/** The fragment changed and the configuration was reloaded. */
 		RELOADED,
+		/**
+		 * The fragment changed and requires a restart of the agent, which was requested. The restart runs
+		 * in the background and can still fail, so the change is not considered applied yet.
+		 */
+		RESTART_REQUESTED,
 		/** The fragment changed but the reload failed; the change is retried on the next firing. */
 		RELOAD_FAILED
 	}
@@ -150,7 +162,8 @@ public class ProgrammableReEvaluationScheduler {
 	private final Map<String, String> scheduledCrons = new HashMap<>();
 
 	/**
-	 * Set by {@link #stop()}, under {@link #lock}. A discovery pass or a re-evaluation can read the
+	 * Set by {@link #pause()} and {@link #stop()}, cleared by {@link #resume()}, always under
+	 * {@link #lock}. A discovery pass or a re-evaluation can read the
 	 * providers before it gets the lock, and then get it only after a restart stopped this scheduler.
 	 * Checking this flag once it holds the lock stops it from scheduling tasks against the retired
 	 * providers, or reloading from them: this instance is discarded after a restart, so nothing would
@@ -159,7 +172,22 @@ public class ProgrammableReEvaluationScheduler {
 	private boolean stopped;
 
 	/**
-	 * Creates the scheduler.
+	 * Per re-evaluation id, the fragment whose change required a restart that was requested but is not
+	 * known to be done. Guarded by {@link #lock}.
+	 * <p>
+	 * A restart runs later, on another thread, and can fail. So the baseline is not moved when one is
+	 * requested: a failed restart must be retried by the next firing. This map stops those next
+	 * firings from requesting the very same restart again while it is still running, which would
+	 * restart the agent a second time for nothing.
+	 * </p>
+	 */
+	private final Map<String, JsonNode> restartRequestedFragments = new HashMap<>();
+
+	/** Tells whether a restart of the agent is still running or queued. */
+	private final BooleanSupplier restartPending;
+
+	/**
+	 * Creates the scheduler, for a setup where no restart is ever pending.
 	 *
 	 * @param agentContextHolder holder of the active {@link AgentContext} (source of the providers)
 	 * @param taskScheduler      the scheduler used to run cron tasks
@@ -170,9 +198,27 @@ public class ProgrammableReEvaluationScheduler {
 		final TaskScheduler taskScheduler,
 		final ReloadTrigger reloadTrigger
 	) {
+		this(agentContextHolder, taskScheduler, reloadTrigger, () -> false);
+	}
+
+	/**
+	 * Creates the scheduler.
+	 *
+	 * @param agentContextHolder holder of the active {@link AgentContext} (source of the providers)
+	 * @param taskScheduler      the scheduler used to run cron tasks
+	 * @param reloadTrigger      callback that rebuilds and applies the configuration after a change
+	 * @param restartPending     tells whether a restart of the agent is still running or queued
+	 */
+	public ProgrammableReEvaluationScheduler(
+		final AgentContextHolder agentContextHolder,
+		final TaskScheduler taskScheduler,
+		final ReloadTrigger reloadTrigger,
+		final BooleanSupplier restartPending
+	) {
 		this.agentContextHolder = agentContextHolder;
 		this.taskScheduler = taskScheduler;
 		this.reloadTrigger = reloadTrigger;
+		this.restartPending = restartPending;
 	}
 
 	/**
@@ -245,7 +291,9 @@ public class ProgrammableReEvaluationScheduler {
 					}
 					if (appliedCron == null) {
 						// Seed the last-known fragment so a first firing with unchanged data does not reload.
-						provider.currentFragment(id).ifPresent(fragment -> lastFragments.put(id, fragment));
+						// Only when none is known: after resume() the baseline kept from before the pause must win,
+						// since the provider's cache may hold a change that was never applied.
+						provider.currentFragment(id).ifPresent(fragment -> lastFragments.putIfAbsent(id, fragment));
 					} else {
 						// The template edited its expression: drop the task still firing on the old one. The
 						// last-known fragment is kept, since only the cadence changed, not the data.
@@ -281,6 +329,7 @@ public class ProgrammableReEvaluationScheduler {
 			}
 			knownIds.remove();
 			lastFragments.remove(id);
+			restartRequestedFragments.remove(id);
 			cancelTask(id);
 			log.info("Re-evaluation of '{}' is no longer declared; its schedule is cancelled.", id);
 		}
@@ -406,15 +455,35 @@ public class ProgrammableReEvaluationScheduler {
 					log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
 					return ReEvaluationOutcome.UNCHANGED;
 				}
+				if (fragment.get().equals(restartRequestedFragments.get(reEvaluationId)) && restartPending.getAsBoolean()) {
+					log.debug(
+						"Re-evaluation of '{}' produced the change a pending restart will apply; no new restart is requested.",
+						reEvaluationId
+					);
+					return ReEvaluationOutcome.RESTART_REQUESTED;
+				}
 				log.info("Re-evaluation of '{}' changed the configuration; reloading.", reEvaluationId);
 				try {
 					// Only this re-evaluation was re-run; the provider serves every other unit from cache, so
 					// one template's cron does not re-run the data sources of all the others.
-					provider.runReusingCachedFragments(reloadTrigger::triggerReload);
+					final ReloadResult[] result = new ReloadResult[1];
+					provider.runReusingCachedFragments(() -> result[0] = reloadTrigger.triggerReload());
+					if (result[0] == ReloadResult.GLOBAL_RESTART_REQUIRED) {
+						// The restart was only requested. The baseline stays where it is, so that if the restart
+						// fails the next firing sees the difference again and retries. A successful restart
+						// replaces this scheduler, and the new one reads the new baseline.
+						restartRequestedFragments.put(reEvaluationId, fragment.get());
+						log.info(
+							"Re-evaluation of '{}' requires a restart of the agent; the restart was requested.",
+							reEvaluationId
+						);
+						return ReEvaluationOutcome.RESTART_REQUESTED;
+					}
 					// The baseline only moves once the change was applied. A failed reload leaves it behind,
 					// so the next firing sees the same difference again and retries instead of going quiet
 					// on a configuration that was never updated.
 					lastFragments.put(reEvaluationId, fragment.get());
+					restartRequestedFragments.remove(reEvaluationId);
 					return ReEvaluationOutcome.RELOADED;
 				} catch (Exception e) {
 					log.error(
@@ -462,10 +531,16 @@ public class ProgrammableReEvaluationScheduler {
 	}
 
 	/**
-	 * Cancels every scheduled re-evaluation task. Called before the owning {@link AgentContext} is
-	 * discarded (e.g. on restart).
+	 * Cancels every cron task and the discovery sweep, and rejects any re-evaluation until
+	 * {@link #resume()}, while keeping what is known about each template: its baseline, and the
+	 * restart its last change requested.
+	 * <p>
+	 * Used while a restart builds the new context, so no firing changes what that build reads. When
+	 * the restart fails, {@link #resume()} picks up where this left off, and a change whose restart
+	 * failed is still seen as a change and retried.
+	 * </p>
 	 */
-	public void stop() {
+	public void pause() {
 		synchronized (lock) {
 			stopped = true;
 			if (sweepFuture != null) {
@@ -474,8 +549,36 @@ public class ProgrammableReEvaluationScheduler {
 			}
 			scheduledTasks.values().forEach(future -> future.cancel(false));
 			scheduledTasks.clear();
+			// Forgotten so that resume() schedules every template again.
 			scheduledCrons.clear();
+		}
+	}
+
+	/**
+	 * Schedules the cron tasks and the discovery sweep again after {@link #pause()}, with the
+	 * baselines kept from before the pause. Does nothing when the scheduler is not paused.
+	 */
+	public void resume() {
+		synchronized (lock) {
+			if (!stopped) {
+				return;
+			}
+			stopped = false;
+			discoverAndSchedule();
+			scheduleDiscoverySweep();
+		}
+	}
+
+	/**
+	 * Cancels every scheduled re-evaluation task and forgets every template. Called before the owning
+	 * {@link AgentContext} is discarded (e.g. on restart). A stopped scheduler is not meant to be
+	 * resumed: a new one is created for the new context.
+	 */
+	public void stop() {
+		synchronized (lock) {
+			pause();
 			lastFragments.clear();
+			restartRequestedFragments.clear();
 			// Nothing new can be admitted once the context is gone, so the per-template locks are
 			// released with the rest of the state. They are kept while the scheduler runs, even for a
 			// deleted template: dropping one that a re-evaluation still holds would let a concurrent one

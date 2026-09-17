@@ -434,4 +434,44 @@ class VelocityConfigurationLoaderTest {
 
 		assertTrue(loader.getCron().isEmpty(), "A template that never rendered declares no schedule");
 	}
+
+	/**
+	 * The same loader renders a template again after it was edited. An edit to the body of a macro the
+	 * template defines must show in the next render, exactly as an edit to the rest of the text does.
+	 */
+	@Test
+	void testAnEditedMacroIsUsedOnTheNextRender(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("macro.vm");
+		Files.writeString(templatePath, "#macro(host)old-host#end\nresources:\n  #host(): {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		final String first = loader.generateYaml();
+		assertTrue(first.contains("old-host"), () -> "The first render must use the macro, but got:\n" + first);
+
+		Files.writeString(templatePath, "#macro(host)new-host#end\nresources:\n  #host(): {}\n", StandardCharsets.UTF_8);
+		final String second = loader.generateYaml();
+
+		assertTrue(second.contains("new-host"), () -> "The edited macro must be used, but got:\n" + second);
+		assertFalse(second.contains("old-host"), () -> "The old macro body must be gone, but got:\n" + second);
+	}
+
+	/**
+	 * A macro removed from the template must not stay available to the next render.
+	 */
+	@Test
+	void testARemovedMacroIsNoLongerApplied(@TempDir final Path tempDir) throws IOException {
+		final Path templatePath = tempDir.resolve("macro.vm");
+		Files.writeString(templatePath, "#macro(host)old-host#end\nresources:\n  #host(): {}\n", StandardCharsets.UTF_8);
+
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
+		loader.generateYaml();
+
+		Files.writeString(templatePath, "resources:\n  #host(): {}\n", StandardCharsets.UTF_8);
+		final String second = loader.generateYaml();
+
+		assertFalse(
+			second != null && second.contains("old-host"),
+			() -> "A macro removed from the template must not be applied, but got:\n" + second
+		);
+	}
 }

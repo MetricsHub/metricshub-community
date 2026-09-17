@@ -174,6 +174,30 @@ public class AgentLifecycleService {
 	private final List<Consumer<AgentContext>> postRestartHooks = new CopyOnWriteArrayList<>();
 
 	/**
+	 * Hooks invoked (in registration order) by every asynchronous restart just before it builds the
+	 * new {@link AgentContext}, on the background restart thread.
+	 * <p>
+	 * Building the context can take a while (every configuration source is re-run), and the
+	 * {@link #preRestartHooks} only run after it. A module whose own background work can change what
+	 * that build reads uses this hook to pause that work first. If the restart then fails, the
+	 * {@link #restartFailureHooks} run so it can resume.
+	 * </p>
+	 * <p>
+	 * Exceptions thrown by a hook are caught and logged; they do not abort the restart.
+	 * </p>
+	 */
+	private final List<Runnable> beforeContextBuildHooks = new CopyOnWriteArrayList<>();
+
+	/**
+	 * Hooks invoked (in registration order) when an asynchronous restart fails, whether building the
+	 * new context or switching to it failed, on the background restart thread.
+	 * <p>
+	 * Exceptions thrown by a hook are caught and logged.
+	 * </p>
+	 */
+	private final List<Runnable> restartFailureHooks = new CopyOnWriteArrayList<>();
+
+	/**
 	 * Predicate consulted during {@link #restart(AgentContext, AgentContext)} to decide
 	 * whether the new context's OpenTelemetry Collector process should actually be launched.
 	 * <p>
@@ -291,6 +315,29 @@ public class AgentLifecycleService {
 	 */
 	public void addPostRestartHook(final Consumer<AgentContext> hook) {
 		postRestartHooks.add(hook);
+	}
+
+	/**
+	 * Registers a hook to be invoked by every asynchronous restart just before it builds the new
+	 * {@link AgentContext}, that is before the {@link #addPreRestartHook(Runnable) pre-restart hooks}.
+	 * Hooks run on the background restart thread and any exception they throw is logged and swallowed
+	 * so it does not abort the restart. Pair it with {@link #addRestartFailureHook(Runnable)} to undo
+	 * its effect when the restart fails.
+	 *
+	 * @param hook the hook to add
+	 */
+	public void addBeforeContextBuildHook(final Runnable hook) {
+		beforeContextBuildHooks.add(hook);
+	}
+
+	/**
+	 * Registers a hook to be invoked when an asynchronous restart fails. Hooks run on the background
+	 * restart thread and any exception they throw is logged and swallowed.
+	 *
+	 * @param hook the hook to add
+	 */
+	public void addRestartFailureHook(final Runnable hook) {
+		restartFailureHooks.add(hook);
 	}
 
 	/**
@@ -689,6 +736,8 @@ public class AgentLifecycleService {
 		AgentContext reloadedContext = null;
 		try {
 			final AgentContext runningContext = agentContextHolder.getAgentContext();
+			// Before the build, which can be slow: modules pause the work that could change what it reads.
+			runHooks(beforeContextBuildHooks, "before-context-build");
 			reloadedContext = reloadedContextSupplier.get();
 			restart(runningContext, reloadedContext);
 			publishStatus(
@@ -710,6 +759,9 @@ public class AgentLifecycleService {
 				Instant.now(),
 				requestId
 			);
+			// The agent keeps running on its current context: modules resume what they paused. Run once
+			// the status says FAILED, so what they resume does not still see a restart in progress.
+			runHooks(restartFailureHooks, "restart-failure");
 		} finally {
 			drainOrRelease();
 		}

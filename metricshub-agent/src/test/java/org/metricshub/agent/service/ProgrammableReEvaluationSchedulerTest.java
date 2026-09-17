@@ -30,10 +30,13 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.service.ProgrammableReEvaluationScheduler.ReEvaluationOutcome;
+import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IConfigurationProvider;
 import org.metricshub.engine.extension.ScheduledReEvaluation;
@@ -45,6 +48,14 @@ import org.springframework.scheduling.Trigger;
 import org.springframework.scheduling.support.CronTrigger;
 
 class ProgrammableReEvaluationSchedulerTest {
+
+	/** A reload callback that counts its calls and applies resource-level changes. */
+	private static ProgrammableReEvaluationScheduler.ReloadTrigger countingReload(final AtomicInteger reloadCount) {
+		return () -> {
+			reloadCount.incrementAndGet();
+			return ReloadResult.LOCAL_ONLY;
+		};
+	}
 
 	/** Builds a context holder exposing the given providers through an extension manager. */
 	private static AgentContextHolder holderFor(final IConfigurationProvider... providers) {
@@ -88,7 +99,7 @@ class ProgrammableReEvaluationSchedulerTest {
 		final var scheduler = new ProgrammableReEvaluationScheduler(
 			holderFor(provider),
 			taskScheduler,
-			reloadCount::incrementAndGet
+			countingReload(reloadCount)
 		);
 
 		scheduler.start();
@@ -143,10 +154,8 @@ class ProgrammableReEvaluationSchedulerTest {
 			}
 		};
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(
-			holderFor(provider),
-			mock(TaskScheduler.class),
-			() -> {}
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () ->
+			ReloadResult.LOCAL_ONLY
 		);
 
 		// Fire "slow" on its own thread; it parks inside reevaluate() until the test releases it.
@@ -199,6 +208,7 @@ class ProgrammableReEvaluationSchedulerTest {
 			}
 			reloads.incrementAndGet();
 			inFlight.decrementAndGet();
+			return ReloadResult.LOCAL_ONLY;
 		});
 
 		// Several templates fire at the same instant.
@@ -255,7 +265,9 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
 
 		// Initial discovery schedules the one known template.
 		scheduler.start();
@@ -304,7 +316,9 @@ class ProgrammableReEvaluationSchedulerTest {
 			mock(ScheduledFuture.class)
 		);
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
 
 		scheduler.start();
 		verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Trigger.class));
@@ -358,7 +372,9 @@ class ProgrammableReEvaluationSchedulerTest {
 		// doReturn avoids the wildcard-capture mismatch of when(...).thenReturn(...) here.
 		doReturn(scriptTask, deletedTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
 
 		scheduler.start();
 		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
@@ -407,7 +423,9 @@ class ProgrammableReEvaluationSchedulerTest {
 		doReturn(firstTask, secondTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 		final ArgumentCaptor<Trigger> triggerCaptor = ArgumentCaptor.forClass(Trigger.class);
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
 
 		scheduler.start();
 		verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Trigger.class));
@@ -463,6 +481,7 @@ class ProgrammableReEvaluationSchedulerTest {
 			if (reloadAttempts.incrementAndGet() == 1) {
 				throw new IllegalStateException("reload failed");
 			}
+			return ReloadResult.LOCAL_ONLY;
 		});
 
 		// First firing: a change is detected, the reload throws and must not be fatal.
@@ -504,7 +523,9 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {});
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
 
 		scheduler.start();
 
@@ -553,10 +574,8 @@ class ProgrammableReEvaluationSchedulerTest {
 			}
 		};
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(
-			holderFor(provider),
-			mock(TaskScheduler.class),
-			() -> {}
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () ->
+			ReloadResult.LOCAL_ONLY
 		);
 
 		final List<Thread> firings = new ArrayList<>();
@@ -605,7 +624,7 @@ class ProgrammableReEvaluationSchedulerTest {
 		final var scheduler = new ProgrammableReEvaluationScheduler(
 			holderFor(provider),
 			mock(TaskScheduler.class),
-			reloadCount::incrementAndGet
+			countingReload(reloadCount)
 		);
 		scheduler.start();
 
@@ -661,6 +680,7 @@ class ProgrammableReEvaluationSchedulerTest {
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
+			return ReloadResult.LOCAL_ONLY;
 		});
 		final Thread reEvaluation = new Thread(() -> scheduler.reevaluateNow(provider, "hosts.vm"));
 		reEvaluation.start();
@@ -735,10 +755,8 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(
-			holderFor(scheduledProvider()),
-			taskScheduler,
-			() -> {}
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(scheduledProvider()), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
 		);
 		scheduler.stop();
 
@@ -758,7 +776,7 @@ class ProgrammableReEvaluationSchedulerTest {
 		final var scheduler = new ProgrammableReEvaluationScheduler(
 			holderFor(provider),
 			mock(TaskScheduler.class),
-			reloadCount::incrementAndGet
+			countingReload(reloadCount)
 		);
 		scheduler.stop();
 
@@ -769,5 +787,172 @@ class ProgrammableReEvaluationSchedulerTest {
 		assertDoesNotThrow(() -> scheduler.onReEvaluation(provider, "hosts.vm"));
 
 		assertEquals(0, reloadCount.get(), "A stopped scheduler must never reload");
+	}
+
+	/** Builds a provider whose re-evaluation always produces the same, changed fragment. */
+	private static IConfigurationProvider fixedFragmentProvider() {
+		return new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				return Optional.of(TextNode.valueOf("changed"));
+			}
+		};
+	}
+
+	/**
+	 * A restart only runs later and can fail. The baseline must not move when one is requested, so a
+	 * failed restart is retried by the next firing.
+	 */
+	@Test
+	void testARequestedRestartIsRetriedWhenItIsNoLongerRunning() {
+		final IConfigurationProvider fixedProvider = fixedFragmentProvider();
+		final AtomicInteger restartRequests = new AtomicInteger();
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(fixedProvider),
+			mock(TaskScheduler.class),
+			() -> {
+				restartRequests.incrementAndGet();
+				return ReloadResult.GLOBAL_RESTART_REQUIRED;
+			},
+			() -> false
+		);
+
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(fixedProvider, "hosts.vm"));
+
+		// The restart is over but this scheduler is still here, so it failed: the same result must retry.
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(fixedProvider, "hosts.vm"));
+		assertEquals(2, restartRequests.get(), "A restart that did not happen must be requested again");
+	}
+
+	/**
+	 * While the requested restart is still running, the next firings must not request it again: that
+	 * would restart the agent a second time for the same change.
+	 */
+	@Test
+	void testARunningRestartIsNotRequestedAgain() {
+		final IConfigurationProvider provider = fixedFragmentProvider();
+		final AtomicInteger restartRequests = new AtomicInteger();
+		final AtomicBoolean restartRunning = new AtomicBoolean();
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			mock(TaskScheduler.class),
+			() -> {
+				restartRequests.incrementAndGet();
+				restartRunning.set(true);
+				return ReloadResult.GLOBAL_RESTART_REQUIRED;
+			},
+			restartRunning::get
+		);
+
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
+
+		assertEquals(1, restartRequests.get(), "The running restart must not be requested again");
+	}
+
+	/**
+	 * Pausing (while a restart builds the new context) cancels the cron tasks and the discovery sweep;
+	 * resuming (after the restart failed) schedules them again.
+	 */
+	@Test
+	void testPauseCancelsTheTasksAndResumeSchedulesThemAgain() {
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		final ScheduledFuture<?> cronFuture = mock(ScheduledFuture.class);
+		doReturn(cronFuture).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+		final IConfigurationProvider provider = scheduledProvider();
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
+
+		scheduler.start();
+		verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Trigger.class));
+
+		scheduler.pause();
+		verify(cronFuture).cancel(false);
+		assertThrows(
+			ProgrammableReEvaluationScheduler.SchedulerStoppedException.class,
+			() -> scheduler.reevaluateNow(provider, "hosts.vm"),
+			"A paused scheduler must not reload"
+		);
+
+		scheduler.resume();
+		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
+		assertDoesNotThrow(() -> scheduler.reevaluateNow(provider, "hosts.vm"));
+
+		scheduler.stop();
+	}
+
+	/**
+	 * The change that requested a failed restart is already in the provider's cache. Resuming must
+	 * keep the baseline from before the pause, not take it from that cache: otherwise the change would
+	 * look applied and never be retried.
+	 */
+	@Test
+	void testAChangeWhoseRestartFailedIsRetriedAfterResume() {
+		final java.util.concurrent.atomic.AtomicReference<JsonNode> cache =
+			new java.util.concurrent.atomic.AtomicReference<>(TextNode.valueOf("original"));
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+				return List.of(new ScheduledReEvaluation("hosts.vm", "0/15 * * * * ?"));
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				// Like the real provider, a re-evaluation publishes its result to the cache.
+				cache.set(TextNode.valueOf("changed"));
+				return Optional.of(cache.get());
+			}
+
+			@Override
+			public Optional<JsonNode> currentFragment(final String reEvaluationId) {
+				return Optional.of(cache.get());
+			}
+		};
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+		final AtomicInteger restartRequests = new AtomicInteger();
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> {
+				restartRequests.incrementAndGet();
+				return ReloadResult.GLOBAL_RESTART_REQUIRED;
+			},
+			() -> false
+		);
+		scheduler.start();
+
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
+
+		// The restart pauses the scheduler, fails, and the scheduler is resumed.
+		scheduler.pause();
+		scheduler.resume();
+
+		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(2, restartRequests.get(), "The change whose restart failed must be retried after resume");
+
+		scheduler.stop();
 	}
 }

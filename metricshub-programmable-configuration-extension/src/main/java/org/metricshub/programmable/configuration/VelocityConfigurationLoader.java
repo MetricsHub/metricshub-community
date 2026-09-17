@@ -88,13 +88,6 @@ public class VelocityConfigurationLoader {
 	private volatile String lastDeclaredCron;
 
 	/**
-	 * The engine, built on first use and reused across renders. Only the engine is reused: the
-	 * template itself is re-read on every render (the file resource loader runs with its cache
-	 * disabled), so an edit to the {@code .vm} file is picked up without rebuilding this loader.
-	 */
-	private VelocityEngine velocityEngine;
-
-	/**
 	 * Creates a loader for the given template.
 	 *
 	 * @param vmPath path to the {@code .vm} template file
@@ -144,21 +137,20 @@ public class VelocityConfigurationLoader {
 	 * @throws Exception if the Velocity template evaluation fails
 	 */
 	public String generateYamlDangerous() throws Exception {
-		// Initialize the VelocityEngine on first use, then reuse it across renders.
-		if (velocityEngine == null) {
-			final var engine = new VelocityEngine();
-			var props = new Properties();
-			props.setProperty("resource.loaders", "file");
-			props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
-			props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
-			props.setProperty("resource.loader.file.cache", "false");
-			props.setProperty(SPACE_GOBBLING_PROPERTY, toPropertyValue(resolveSpaceGobbling()));
-			engine.init(props);
-			velocityEngine = engine;
-		}
+		// A new engine for every render, never one kept from a previous render. The engine keeps the
+		// macros a template defines, and does not replace them when the template is parsed again: a
+		// reused engine would go on applying the old body of an edited macro, or a macro that was
+		// removed, while the rest of the edited template is picked up.
+		final var velocityEngine = new VelocityEngine();
+		var props = new Properties();
+		props.setProperty("resource.loaders", "file");
+		props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
+		props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
+		props.setProperty("resource.loader.file.cache", "false");
+		props.setProperty(SPACE_GOBBLING_PROPERTY, toPropertyValue(resolveSpaceGobbling()));
+		velocityEngine.init(props);
 
-		// Load template. The resource loader cache is disabled, so this re-reads the file and an edit
-		// to the template is picked up on the next render.
+		// Load template
 		var templateName = vmPath.getFileName().toString();
 		var template = velocityEngine.getTemplate(templateName, StandardCharsets.UTF_8.name());
 
