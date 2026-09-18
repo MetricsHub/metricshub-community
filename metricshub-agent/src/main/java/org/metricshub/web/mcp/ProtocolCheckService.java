@@ -65,8 +65,8 @@ public class ProtocolCheckService implements IMCPToolService {
 	 * Checks whether the specified host is reachable using the specified protocol.
 	 *
 	 * @param hostname the target host to check
-	 * @param protocol the name of the protocol to check (e.g., http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, wmi)
-	 * @param timeout optional timeout for the HTTP check in seconds
+	 * @param protocol the name of the protocol to check (e.g., http, ipmi, jdbc, jmx, oscommand, snmp, snmpv3, ssh, wbem, winrm, wmi)
+	 * @param timeout optional timeout for the protocol check in seconds
 	 * @param poolSize optional pool size for concurrent protocol checks; defaults to {@value #DEFAULT_PROTOCOL_CHECK_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
 	 */
@@ -74,14 +74,20 @@ public class ProtocolCheckService implements IMCPToolService {
 		name = "CheckProtocol",
 		description = """
 		Determines if the specified hosts are accessible using a given protocol.
-		Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.
+		Supported protocols include: http, ipmi, jdbc, jmx, oscommand, snmp, snmpv3, ssh, wbem, winrm, and wmi.
+		OS Command (oscommand) checks command execution on the machine running MetricsHub.
+		The target may be localhost, a loopback address, or a hostname/IP address resolving to that machine.
+		SSH checks targeting that machine also use local command execution, following the collection optimization.
 		Provides a response detailing the host reachability status along with the response time.
 		"""
 	)
 	public MultiHostToolResponse<ProtocolCheckResponse> checkProtocol(
 		@ToolParam(description = "The hostname(s) to check") final List<String> hostname,
 		@ToolParam(
-			description = "The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi",
+			description = """
+			The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, oscommand, snmp, snmpv3, ssh, wbem, winrm, and wmi.
+			oscommand applies to the machine running MetricsHub, including localhost, loopback addresses, and hostnames/IPs resolving to that machine.
+			""",
 			required = true
 		) final String protocol,
 		@ToolParam(description = "Timeout for the protocol check in seconds", required = false) final Long timeout,

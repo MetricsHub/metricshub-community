@@ -119,6 +119,9 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 					telemetryManager.getHostname(),
 					telemetryManager.getConnectorStore()
 				);
+				// The protocol that was really checked: an extension handling several protocols
+				// reports the one it exercised for this host
+				final String identifier = protocolExtension.getIdentifier(telemetryManager);
 
 				Double up = DOWN;
 				if (Boolean.TRUE.equals(isUp)) {
@@ -126,7 +129,7 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 					// Collect protocol check response time metric if response up is true
 					metricFactory.collectNumberMetric(
 						endpointHostMonitor,
-						RESPONSE_TIME_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+						RESPONSE_TIME_METRIC_FORMAT.formatted(identifier),
 						responseTime,
 						strategyTime
 					);
@@ -135,7 +138,7 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 				// Collect protocol check metric
 				metricFactory.collectNumberMetric(
 					endpointHostMonitor,
-					UP_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+					UP_METRIC_FORMAT.formatted(identifier),
 					up,
 					strategyTime
 				);
