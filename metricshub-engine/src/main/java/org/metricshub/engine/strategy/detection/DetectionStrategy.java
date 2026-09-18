@@ -340,14 +340,32 @@ public class DetectionStrategy extends AbstractStrategy {
 		// Get the connector identity
 		ConnectorIdentity connectorIdentity = connector.getConnectorIdentity();
 
-		// Test if there are connector detection criteria
-		if (
-			connectorIdentity != null &&
-			connectorIdentity.getDetection() != null &&
-			connectorIdentity.getDetection().getCriteria() != null
-		) {
-			// Verify SSH Criteria
-			verifySshCriteria(connectorIdentity.getDetection().getCriteria());
+		if (connectorIdentity != null) {
+			final List<Criterion> criteria = new ArrayList<>();
+
+			// Test if there are connector detection criteria
+			if (connectorIdentity.getDetection() != null && connectorIdentity.getDetection().getCriteria() != null) {
+				criteria.addAll(connectorIdentity.getDetection().getCriteria());
+			}
+			// Test if there are connector lightweight health checks
+			if (connectorIdentity.getHealthChecks() != null) {
+				criteria.addAll(connectorIdentity.getHealthChecks());
+			}
+
+			if (!criteria.isEmpty()) {
+				final HostProperties hostProperties = telemetryManager.getHostProperties();
+
+				// Preserve directions required by previously processed connectors
+				final boolean executesLocally = hostProperties.isOsCommandExecutesLocally();
+				final boolean executesRemotely = hostProperties.isOsCommandExecutesRemotely();
+
+				// Verify SSH Criteria
+				verifySshCriteria(criteria);
+
+				// Accumulate this connector's directions with the existing host-wide directions
+				hostProperties.setOsCommandExecutesLocally(executesLocally || hostProperties.isOsCommandExecutesLocally());
+				hostProperties.setOsCommandExecutesRemotely(executesRemotely || hostProperties.isOsCommandExecutesRemotely());
+			}
 		}
 	}
 }

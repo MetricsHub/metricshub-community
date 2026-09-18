@@ -414,6 +414,49 @@ public abstract class AbstractConnectorProcessor {
 			return connectorTestResult;
 		}
 
+		return runConnectorCriteria(connector, criteria, hostname);
+	}
+
+	/**
+	 * Run the health-check criteria defined in the given connector.
+	 *
+	 * @param connector The connector we wish to test
+	 * @param hostname  The hostname of the host device
+	 *
+	 * @return {@link ConnectorTestResult} instance which tells if the connector test succeeded or not.
+	 */
+	public ConnectorTestResult runConnectorHealthCheckCriteria(final Connector connector, final String hostname) {
+		final ConnectorTestResult connectorTestResult = ConnectorTestResult.builder().connector(connector).build();
+		final List<Criterion> healthChecks = connector.getConnectorIdentity().getHealthChecks();
+
+		if (healthChecks == null || healthChecks.isEmpty()) {
+			log.warn(
+				"Hostname {} - The connector {} DOES NOT match the platform as it has no health checks to test.",
+				hostname,
+				connector.getConnectorIdentity().getCompiledFilename()
+			);
+			return connectorTestResult;
+		}
+
+		return runConnectorCriteria(connector, healthChecks, hostname);
+	}
+
+	/**
+	 * Runs a criteria list using the same processing path as connector detection.
+	 *
+	 * @param connector The connector defining the criteria
+	 * @param criteria  Criteria to run
+	 * @param hostname  The hostname of the host device
+	 *
+	 * @return {@link ConnectorTestResult} instance which tells if the connector test succeeded or not.
+	 */
+	private ConnectorTestResult runConnectorCriteria(
+		final Connector connector,
+		final List<Criterion> criteria,
+		final String hostname
+	) {
+		final ConnectorTestResult connectorTestResult = ConnectorTestResult.builder().connector(connector).build();
+
 		for (final Criterion criterion : criteria) {
 			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector);
 			if (!criterionTestResult.isSuccess()) {

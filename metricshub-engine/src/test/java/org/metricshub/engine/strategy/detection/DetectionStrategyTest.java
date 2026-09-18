@@ -361,7 +361,7 @@ class DetectionStrategyTest {
 		detectionStrategy.verifySsh(connector);
 
 		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
-		assertFalse(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
 		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
 
 		// verify Ssh with CommandLineSource and CommandLineCriteria that executes locally and remotely
@@ -371,6 +371,45 @@ class DetectionStrategyTest {
 
 		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
 		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
+	}
+
+	@Test
+	void testVerifySshWithLocalHealthCheckCriterion() {
+		// Call getDetectionStrategy to retrieve a ready-to-use detection strategy
+		DetectionStrategy detectionStrategy = getDetectionStrategy();
+		TelemetryManager telemetryManager = detectionStrategy.getTelemetryManager();
+		Connector connector = telemetryManager.getConnectorStore().getStore().get("connector");
+
+		connector.setSourceTypes(Set.of(CommandLineSource.class));
+		CommandLineCriterion localHealthCheckCriterion = CommandLineCriterion.builder()
+			.executeLocally(true)
+			.commandLine("command")
+			.build();
+		connector.getConnectorIdentity().setHealthChecks(List.of(localHealthCheckCriterion));
+
+		detectionStrategy.verifySsh(connector);
+
+		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertFalse(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
+	}
+
+	@Test
+	void testVerifySshWithRemoteHealthCheckCriterion() {
+		// Call getDetectionStrategy to retrieve a ready-to-use detection strategy
+		DetectionStrategy detectionStrategy = getDetectionStrategy();
+		TelemetryManager telemetryManager = detectionStrategy.getTelemetryManager();
+		Connector connector = telemetryManager.getConnectorStore().getStore().get("connector");
+
+		connector.setSourceTypes(Set.of(CommandLineSource.class));
+		CommandLineCriterion remoteHealthCheckCriterion = CommandLineCriterion.builder().commandLine("command").build();
+		connector.getConnectorIdentity().setHealthChecks(List.of(remoteHealthCheckCriterion));
+
+		detectionStrategy.verifySsh(connector);
+
+		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
+		assertFalse(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
 		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
 	}
 
@@ -434,5 +473,46 @@ class DetectionStrategyTest {
 		connector.setSourceTypes(Set.of(CommandLineSource.class));
 		detectionStrategy.verifySshSources(connector.getSourceTypes());
 		assertTrue(telemetryManager.getHostProperties().isMustCheckSshStatus());
+	}
+
+	@Test
+	void testVerifySshAccumulatesDirectionsAcrossConnectors() {
+		DetectionStrategy detectionStrategy = getDetectionStrategy();
+		TelemetryManager telemetryManager = detectionStrategy.getTelemetryManager();
+
+		// First connector requires local command execution
+		CommandLineCriterion localCriterion = CommandLineCriterion.builder()
+			.executeLocally(true)
+			.commandLine("localCommand")
+			.build();
+
+		Detection localDetection = new Detection();
+		localDetection.setCriteria(List.of(localCriterion));
+
+		Connector localConnector = Connector.builder()
+			.connectorIdentity(ConnectorIdentity.builder().detection(localDetection).build())
+			.sourceTypes(Set.of(CommandLineSource.class))
+			.build();
+
+		// Second connector has no detection but requires a remote health check
+		CommandLineCriterion remoteHealthCheck = CommandLineCriterion.builder().commandLine("remoteCommand").build();
+
+		Connector remoteConnector = Connector.builder()
+			.connectorIdentity(ConnectorIdentity.builder().detection(null).healthChecks(List.of(remoteHealthCheck)).build())
+			.build();
+
+		// Process the first connector
+		detectionStrategy.verifySsh(localConnector);
+
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertFalse(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
+
+		// Process the second connector
+		detectionStrategy.verifySsh(remoteConnector);
+
+		// The local requirement from the first connector must be preserved,
+		// while the remote requirement from the second connector must be added.
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
+		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
 	}
 }
