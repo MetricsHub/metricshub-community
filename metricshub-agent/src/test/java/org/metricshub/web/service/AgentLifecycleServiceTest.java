@@ -294,6 +294,62 @@ class AgentLifecycleServiceTest {
 		verify(bootContext).close();
 	}
 
+	/**
+	 * Building the new context can be slow. A module pausing its background work must be told before
+	 * that build starts, not only before the old services are stopped.
+	 */
+	@Test
+	void testBeforeContextBuildHooksRunBeforeTheBuildAndTheOtherHooks() {
+		final AgentContext reloadedContext = mockContext();
+		final java.util.List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+		agentLifecycleService.addBeforeContextBuildHook(() -> events.add("before-build"));
+		agentLifecycleService.addPreRestartHook(() -> events.add("pre"));
+		agentLifecycleService.addPostRestartHook(_ -> events.add("post"));
+		agentLifecycleService.addRestartFailureHook(() -> events.add("failure"));
+
+		agentLifecycleService.restartAsync(() -> {
+			events.add("build");
+			return reloadedContext;
+		});
+
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() ->
+				assertEquals(RestartStatus.State.SUCCEEDED, agentLifecycleService.getRestartStatus().getState())
+			);
+		assertEquals(java.util.List.of("before-build", "build", "pre", "post"), events);
+	}
+
+	/**
+	 * When the build fails, the agent keeps its current context: a module that paused its work must
+	 * be told so it can resume, and only once the status says the restart failed.
+	 */
+	@Test
+	void testRestartFailureHooksRunWhenTheBuildFails() {
+		final java.util.List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		final java.util.concurrent.atomic.AtomicReference<RestartStatus.State> stateSeenByHook =
+			new java.util.concurrent.atomic.AtomicReference<>();
+
+		agentLifecycleService.addBeforeContextBuildHook(() -> events.add("before-build"));
+		agentLifecycleService.addPostRestartHook(_ -> events.add("post"));
+		agentLifecycleService.addRestartFailureHook(() -> {
+			events.add("failure");
+			stateSeenByHook.set(agentLifecycleService.getRestartStatus().getState());
+		});
+
+		agentLifecycleService.restartAsync(() -> {
+			throw new IllegalStateException("build-boom");
+		});
+
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.until(() -> events.contains("failure"));
+		assertEquals(java.util.List.of("before-build", "failure"), events);
+		assertEquals(RestartStatus.State.FAILED, stateSeenByHook.get());
+		assertEquals(bootContext, agentContextHolder.getAgentContext());
+	}
+
 	@Test
 	void testHookExceptionsDoNotAbortRestart() {
 		final AgentContext reloadedContext = mockContext();

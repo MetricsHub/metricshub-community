@@ -1,0 +1,16 @@
+## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+
+#set($result = $command.execute({ "command": "echo host-01 && echo host-02", "timeout": "30" }))
+resources:
+#foreach($line in $result.stdout.split("\n"))
+  #set($hostname = $line.trim())
+  #if(!$hostname.isEmpty())
+  $hostname:
+    attributes:
+      host.name: $hostname
+      host.type: linux
+    protocols:
+      ssh:
+        username: admin
+  #end
+#end

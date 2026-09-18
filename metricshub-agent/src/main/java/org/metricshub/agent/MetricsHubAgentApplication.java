@@ -31,8 +31,8 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.agent.service.ConfigurationReloadService;
 import org.metricshub.agent.service.ReloadService;
-import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
@@ -175,45 +175,27 @@ public class MetricsHubAgentApplication implements Runnable {
 	private void doOnConfigurationChange(final AgentContextHolder agentContextHolder) {
 		final AgentContext currentContext = agentContextHolder.getAgentContext();
 
-		// Build the new agent context eagerly so we can compare configurations, reusing the
-		// boot-time extension manager (extensions do not change while the agent is running).
-		final AgentContext newAgentContext = loadNewAgentContext(currentContext.getExtensionManager());
-
-		final ReloadService reloadService = ReloadService.builder()
+		ConfigurationReloadService.builder()
 			.withRunningAgentContext(currentContext)
-			.withReloadedAgentContext(newAgentContext)
-			.build();
-
-		final ReloadResult result = reloadService.reload();
-
-		switch (result) {
-			case GLOBAL_RESTART_REQUIRED -> {
-				// Route through the lifecycle service so the file-triggered restart shares
-				// the same queue, coalescing policy and status tracking as the API-triggered
-				// one.
+			// Compare against a context built with the boot-time extension manager: extensions do not
+			// change while the agent is running.
+			.withComparisonContextSupplier(() -> loadNewAgentContext(currentContext.getExtensionManager()))
+			// A full restart reloads the extensions as well, so a file-triggered restart picks up new or
+			// updated extension jars exactly like the /restart endpoint.
+			.withRestartContextSupplier(this::reloadExtensionsAndBuildContext)
+			.withRestartRequester(reloadedContextSupplier -> {
+				// Route through the lifecycle service so the file-triggered restart shares the same
+				// queue, coalescing policy and status tracking as the API-triggered one.
 				final AgentLifecycleService lifecycle = MetricsHubAgentServer.getBean(AgentLifecycleService.class);
 				if (lifecycle == null) {
-					log.warn("AgentLifecycleService is not available yet; discarding the freshly built context.");
-					newAgentContext.close();
-					return;
+					log.warn("AgentLifecycleService is not available yet; the restart is not requested.");
+					return false;
 				}
-				// A full restart reloads the extensions as well, so a file-triggered restart picks up new
-				// or updated extension jars exactly like the /restart endpoint. The comparison context only
-				// reused the current manager to diff the configuration and is no longer needed; the restart
-				// rebuilds a context with a freshly loaded extension manager, and AgentLifecycleService
-				// releases the previous loaders after a grace delay.
-				newAgentContext.close();
-				lifecycle.restartAsync(this::reloadExtensionsAndBuildContext);
-			}
-			case LOCAL_ONLY ->
-				// ReloadService already grafted the required TelemetryManagers from newAgentContext
-				// into the running one. The remaining state on newAgentContext is no longer needed.
-				newAgentContext.close();
-			case NO_CHANGE ->
-				// The freshly built context is not needed
-				newAgentContext.close();
-			default -> log.warn("Unknown reload result: {}", result);
-		}
+				lifecycle.restartAsync(reloadedContextSupplier);
+				return true;
+			})
+			.build()
+			.reload();
 	}
 
 	/**
