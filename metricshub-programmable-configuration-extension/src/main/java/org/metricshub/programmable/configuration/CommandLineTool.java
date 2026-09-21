@@ -169,6 +169,9 @@ public class CommandLineTool {
 			final Future<String> stderrFuture = executor.submit(readStreamTask(process.getErrorStream(), charset));
 
 			if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
+				// Kill the children first: once the shell is gone they are no longer its descendants, and on
+				// Windows killing the shell does not kill them (a timed-out script would keep running).
+				process.descendants().forEach(ProcessHandle::destroyForcibly);
 				process.destroyForcibly();
 				throw new TimeoutException(
 					String.format("Command \"%s\" execution has timed out after %d s", command, timeout)
