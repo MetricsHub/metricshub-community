@@ -27,7 +27,9 @@ import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
 import java.util.Map;
 import java.util.Optional;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.metric.AbstractMetric;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 /**
@@ -36,6 +38,16 @@ import org.metricshub.engine.telemetry.metric.NumberMetric;
  * normalization logic for voltage monitor hardware metrics.
  */
 public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
+
+	/**
+	 * Lowest valid voltage limit in volts (-100 V), as in the PSL's isValidVoltageValue.
+	 */
+	private static final double MIN_VALID_VOLTAGE = -100.0;
+
+	/**
+	 * Highest valid voltage limit in volts (450 V), as in the PSL's isValidVoltageValue.
+	 */
+	private static final double MAX_VALID_VOLTAGE = 450.0;
 
 	/**
 	 * Constructs new instance of VoltageMetricNormalizer with the specified strategy time.
@@ -57,7 +69,12 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 	}
 
 	/**
-	 * Normalizes the speed limit metrics.
+	 * Normalizes the voltage limit metrics.
+	 * <p>
+	 * A lone critical limit is kept as the critical level and its degraded limit is derived 10% further in.
+	 * This deliberately diverges from the PSL, which treated a lone threshold as the warning level
+	 * and placed the alarm 10% further out.
+	 * </p>
 	 * @param monitor The monitor to normalize
 	 * @param metricNamePrefix The prefix of the metric name.
 	 */
@@ -65,6 +82,15 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 		if (!isMetricCollected(monitor, metricNamePrefix)) {
 			return;
 		}
+
+		// Discard out-of-range limits (e.g. 65535) so they are neither used below nor published
+		final String limitMetricName = String.format("%s.limit", metricNamePrefix);
+		monitor
+			.getMetrics()
+			.values()
+			.removeIf(
+				metric -> limitMetricName.equals(MetricFactory.extractName(metric.getName())) && isInvalidVoltage(metric)
+			);
 
 		// Get the high critical metric
 		final Optional<NumberMetric> maybeHighCriticaldMetric = findMetricByNamePrefixAndAttributes(
@@ -87,6 +113,16 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 			swapIfFirstLessThanSecond(maybeHighCriticaldMetric.get(), maybeLowCriticalMetric.get());
 		} else if (maybeHighCriticaldMetric.isPresent()) {
 			// Create high degraded metric if only high critical is present
+			final Optional<NumberMetric> maybeHighDegradedMetric = findMetricByNamePrefixAndAttributes(
+				hostname,
+				monitor,
+				limitMetricName,
+				Map.of("limit_type", "high.degraded")
+			);
+			if (maybeHighDegradedMetric.isPresent()) {
+				return;
+			}
+
 			final NumberMetric highCriticalMetric = maybeHighCriticaldMetric.get();
 
 			final String highDegradedMetricName = replaceLimitType(
@@ -102,6 +138,16 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 			);
 		} else if (maybeLowCriticalMetric.isPresent()) {
 			// Create low degraded metric if only low critical is present
+			final Optional<NumberMetric> maybeLowDegradedMetric = findMetricByNamePrefixAndAttributes(
+				hostname,
+				monitor,
+				limitMetricName,
+				Map.of("limit_type", "low.degraded")
+			);
+			if (maybeLowDegradedMetric.isPresent()) {
+				return;
+			}
+
 			final NumberMetric lowCriticalMetric = maybeLowCriticalMetric.get();
 
 			final String lowDegradedMetricName = replaceLimitType(lowCriticalMetric.getName(), "limit_type=\"low.degraded\"");
@@ -113,5 +159,18 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 				lowCriticalValue > 0 ? lowCriticalValue * 1.1 : lowCriticalValue * 0.9
 			);
 		}
+	}
+
+	/**
+	 * Whether the given limit metric holds a value outside [-100, 450] V.
+	 * @param metric The limit metric
+	 * @return true if the value is not a valid voltage
+	 */
+	private static boolean isInvalidVoltage(final AbstractMetric metric) {
+		if (!(metric instanceof NumberMetric numberMetric) || numberMetric.getValue() == null) {
+			return false;
+		}
+		final double value = numberMetric.getValue();
+		return value < MIN_VALID_VOLTAGE || value > MAX_VALID_VOLTAGE;
 	}
 }
