@@ -390,6 +390,12 @@ class VoltageMetricNormalizerTest {
 	}
 
 	@Test
+	void testOutOfRangeDerivedLimitIsNotPublished() {
+		assertNull(limit(normalizeLimits(Map.of("high.critical", -100.0)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED));
+		assertNull(limit(normalizeLimits(Map.of("low.critical", 450.0)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_DEGRADED));
+	}
+
+	@Test
 	void testOutOfRangeLimitIsDiscardedWithoutReading() {
 		final Monitor monitor = normalizeLimits(Map.of("high.critical", 65535.0, "low.critical", 10.5));
 		monitor.getMetrics().remove("hw.voltage");

@@ -132,7 +132,7 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 			);
 
 			final Double highCriticalValue = highCriticalMetric.getValue();
-			collectMetric(
+			collectValidLimit(
 				monitor,
 				highDegradedMetricName,
 				highCriticalValue > 0 ? highCriticalValue * 0.9 : highCriticalValue * 1.1
@@ -154,11 +154,24 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 			final String lowDegradedMetricName = replaceLimitType(lowCriticalMetric.getName(), "limit_type=\"low.degraded\"");
 
 			final Double lowCriticalValue = lowCriticalMetric.getValue();
-			collectMetric(
+			collectValidLimit(
 				monitor,
 				lowDegradedMetricName,
 				lowCriticalValue > 0 ? lowCriticalValue * 1.1 : lowCriticalValue * 0.9
 			);
+		}
+	}
+
+	/**
+	 * Collect a derived limit only if it is within [-100, 450] V, so a limit derived near the boundary
+	 * is not published when a collected one with the same value would have been discarded.
+	 * @param monitor    The monitor to collect the metric
+	 * @param metricName The limit metric name
+	 * @param value      The derived limit value
+	 */
+	private void collectValidLimit(final Monitor monitor, final String metricName, final double value) {
+		if (isValidVoltage(value)) {
+			collectMetric(monitor, metricName, value);
 		}
 	}
 
@@ -171,7 +184,15 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 		if (!(metric instanceof NumberMetric numberMetric) || numberMetric.getValue() == null) {
 			return false;
 		}
-		final double value = numberMetric.getValue();
-		return value < MIN_VALID_VOLTAGE || value > MAX_VALID_VOLTAGE;
+		return !isValidVoltage(numberMetric.getValue());
+	}
+
+	/**
+	 * Whether the given value is within [-100, 450] V, as in the PSL's isValidVoltageValue.
+	 * @param value The voltage value
+	 * @return true if the value is a valid voltage
+	 */
+	private static boolean isValidVoltage(final double value) {
+		return value >= MIN_VALID_VOLTAGE && value <= MAX_VALID_VOLTAGE;
 	}
 }
