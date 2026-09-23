@@ -79,11 +79,8 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 	 * @param metricNamePrefix The prefix of the metric name.
 	 */
 	private void normalizeVoltageLimitMetric(final Monitor monitor, final String metricNamePrefix) {
-		if (!isMetricCollected(monitor, metricNamePrefix)) {
-			return;
-		}
-
-		// Discard out-of-range limits (e.g. 65535) so they are neither used below nor published
+		// Discard out-of-range limits (e.g. 65535) so they are neither used below nor published,
+		// even when the voltage reading itself was not collected
 		final String limitMetricName = String.format("%s.limit", metricNamePrefix);
 		monitor
 			.getMetrics()
@@ -91,6 +88,10 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 			.removeIf(
 				metric -> limitMetricName.equals(MetricFactory.extractName(metric.getName())) && isInvalidVoltage(metric)
 			);
+
+		if (!isMetricCollected(monitor, metricNamePrefix)) {
+			return;
+		}
 
 		// Get the high critical metric
 		final Optional<NumberMetric> maybeHighCriticaldMetric = findMetricByNamePrefixAndAttributes(

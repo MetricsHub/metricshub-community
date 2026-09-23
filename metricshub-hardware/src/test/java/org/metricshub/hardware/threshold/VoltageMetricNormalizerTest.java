@@ -390,6 +390,23 @@ class VoltageMetricNormalizerTest {
 	}
 
 	@Test
+	void testOutOfRangeLimitIsDiscardedWithoutReading() {
+		final Monitor monitor = normalizeLimits(Map.of("high.critical", 65535.0, "low.critical", 10.5));
+		monitor.getMetrics().remove("hw.voltage");
+		final NumberMetric invalid = NumberMetric.builder()
+			.value(65535.0)
+			.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
+			.attributes(Map.of("limit_type", "high.critical"))
+			.build();
+		invalid.setCollectTime(STRATEGY_TIME);
+		monitor.getMetrics().put(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, invalid);
+
+		new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
+		assertNull(limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
+		assertEquals(10.5, limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+	}
+
+	@Test
 	void testInvertedCriticalLimitsAreSwapped() {
 		final Monitor monitor = normalizeLimits(Map.of("low.critical", 13.5, "high.critical", 10.5));
 		assertEquals(10.5, limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
