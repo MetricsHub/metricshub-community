@@ -10,6 +10,8 @@ import {
 	deleteConfig,
 	renameConfig,
 	testVelocityTemplate,
+	reevaluateTemplate,
+	reevaluateConfiguration,
 } from "../thunks/config-thunks";
 
 const initialState = {
@@ -29,6 +31,7 @@ const initialState = {
 		setsById: {},
 	},
 	velocityTestResult: null,
+	reevaluation: null,
 };
 
 const slice = createSlice({
@@ -145,6 +148,9 @@ const slice = createSlice({
 		},
 		clearVelocityTestResult(state) {
 			state.velocityTestResult = null;
+		},
+		clearReevaluation(state) {
+			state.reevaluation = null;
 		},
 	},
 	extraReducers: (b) => {
@@ -332,6 +338,62 @@ const slice = createSlice({
 				// and fires a spurious fetch for the old (deleted) file.
 			})
 
+			.addCase(reevaluateTemplate.pending, (s, a) => {
+				s.reevaluation = {
+					scope: "template",
+					name: a.meta.arg.name,
+					loading: true,
+					message: null,
+					error: null,
+				};
+			})
+			.addCase(reevaluateTemplate.fulfilled, (s, a) => {
+				s.reevaluation = {
+					scope: "template",
+					name: a.payload?.name ?? a.meta.arg.name,
+					loading: false,
+					message: a.payload?.message ?? "Configuration reloaded.",
+					error: null,
+				};
+			})
+			.addCase(reevaluateTemplate.rejected, (s, a) => {
+				s.reevaluation = {
+					scope: "template",
+					name: a.meta?.arg?.name,
+					loading: false,
+					message: null,
+					error: a.payload || a.error?.message || "Template re-evaluation failed",
+				};
+			})
+
+			.addCase(reevaluateConfiguration.pending, (s) => {
+				s.reevaluation = {
+					scope: "configuration",
+					name: null,
+					loading: true,
+					message: null,
+					error: null,
+				};
+			})
+			.addCase(reevaluateConfiguration.fulfilled, (s, a) => {
+				s.reevaluation = {
+					scope: "configuration",
+					name: null,
+					loading: false,
+					message: a.payload?.message ?? "Configuration reloaded.",
+					error: null,
+				};
+			})
+			.addCase(reevaluateConfiguration.rejected, (s, a) => {
+				s.reevaluation = {
+					scope: "configuration",
+					name: null,
+					loading: false,
+					message: null,
+					error: a.payload || a.error?.message || "Configuration re-evaluation failed",
+				};
+			})
+
 			.addCase(testVelocityTemplate.pending, (s, a) => {
 				s.velocityTestResult = {
 					name: a.meta.arg.name,
@@ -415,5 +477,6 @@ export const {
 	deleteBackupSet,
 	clearBackups,
 	clearVelocityTestResult,
+	clearReevaluation,
 } = slice.actions;
 export const configReducer = slice.reducer;
