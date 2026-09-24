@@ -6,7 +6,7 @@
 --vendor "MetricsHub"
 --app-version ${project.version.noSnapshot}
 --resource-dir override
---app-content assets/config,assets/LICENSE,assets/connectors,assets/extensions,assets/web
+--app-content assets/config,assets/LICENSE,assets/connectors,assets/extensions,assets/web,assets/upgrade-runner
 --main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports
 --java-options java.xml/com.sun.org.apache.xerces.internal.parsers=ALL-UNNAMED

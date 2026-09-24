@@ -3,7 +3,7 @@ run-name: Build - Pull Request ${{ github.head_ref }}
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "EPIC-*" ]
   workflow_dispatch:
     inputs:
       debug:
