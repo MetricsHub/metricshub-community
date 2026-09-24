@@ -206,6 +206,7 @@ export default function UnifiedConfigTree({
 							key={f.name}
 							file={f}
 							itemId={`config:${f.name}`}
+							siblingNames={configFiles.map((sibling) => sibling.name)}
 							isDirty={!!configDirtyByName[f.name]}
 							validation={configFilesByName[f.name]?.validation}
 							onSelect={(name) => onSelect("config", name)}
@@ -257,6 +258,7 @@ export default function UnifiedConfigTree({
 							key={f.name}
 							file={f}
 							itemId={`otel:${f.name}`}
+							siblingNames={otelFiles.map((sibling) => sibling.name)}
 							isDirty={!!otelDirtyByName[f.name]}
 							validation={otelFilesByName[f.name]?.validation}
 							onSelect={(name) => onSelect("otel", name)}
