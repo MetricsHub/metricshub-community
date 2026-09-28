@@ -104,6 +104,24 @@ class CentralConfigTest {
 	}
 
 	@Test
+	void emptyingAValueAndDeletingItShouldBeTheSameChannel() throws Exception {
+		final String certificate = """
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  certificateFile: %s
+			""";
+
+		// Deleting a value somebody had already emptied changes nothing a transport can see -- both
+		// read null and blank as "use the system trust store" -- so the supervisors must not read it
+		// as a change and rebuild both clients, dropping whatever the tunnel had in flight
+		final CentralConfig emptied = deserialize(certificate.formatted("\"\""));
+		final CentralConfig deleted = deserialize(certificate.formatted(""));
+		assertEquals(deleted.opamp(), emptied.opamp());
+		assertEquals(deleted.tunnel(), emptied.tunnel());
+	}
+
+	@Test
 	void aChannelShouldBeAbleToTrustNothingOfItsOwn() throws Exception {
 		final CentralConfig central = deserialize(
 			"""
@@ -121,8 +139,11 @@ class CentralConfigTest {
 		// what an overridden endpoint presenting a publicly trusted certificate needs. Read as
 		// nothing, it would be handed the other channel's PRIVATE authority and fail its handshake
 		// for a reason the configuration does not show. Written out, `""` is the operator saying
-		// none; written `certificateFile:` or left out it is absent, and absent inherits
-		assertEquals("", central.tunnel().getCertificateFile());
+		// none; written `certificateFile:` or left out it is absent, and absent inherits.
+		//
+		// The RESOLVED value is null either way, because that is what the transports read: what the
+		// file distinguishes is which value wins, not what the channel ends up trusting
+		assertNull(central.tunnel().getCertificateFile());
 		assertEquals("/shared/private-ca.pem", central.opamp().getCertificateFile());
 	}
 

@@ -122,7 +122,9 @@ public class CentralConfig {
 	private UpgradeConfig upgrade = UpgradeConfig.builder().build();
 
 	/**
-	 * A resolved channel carries no {@code path}, on purpose: it is an INPUT to the resolution and
+	 * A resolved channel carries no {@code path} -- it is set to null rather than left to its
+	 * {@code @Builder.Default}, which would put a default there that is not what the operator wrote.
+	 * On purpose: the path is an INPUT to the resolution and
 	 * never an output. The supervisors compare these copies to decide whether to rebuild a client,
 	 * so a path that produced the same endpoint -- or one an explicit {@code endpoint} overrode
 	 * entirely -- would report a change that is not one, and the tunnel would drop its in-flight
@@ -140,6 +142,7 @@ public class CentralConfig {
 		return OpAmpConfig.builder()
 			.enabled(enabled && channel.isEnabled())
 			.endpoint(endpointOf(channel.getEndpoint(), channel.getPath(), false))
+			.path(null)
 			.headers(sharedWith(channel.getHeaders()))
 			.certificateFile(inherited(channel.getCertificateFile(), certificateFile))
 			.pollInterval(channel.getPollInterval())
@@ -159,6 +162,7 @@ public class CentralConfig {
 		return M8bConfig.builder()
 			.enabled(enabled && channel.isEnabled())
 			.endpoint(endpointOf(channel.getEndpoint(), channel.getPath(), true))
+			.path(null)
 			.headers(sharedWith(channel.getHeaders()))
 			.certificateFile(inherited(channel.getCertificateFile(), certificateFile))
 			.heartbeatInterval(channel.getHeartbeatInterval())
@@ -278,6 +282,12 @@ public class CentralConfig {
 	 * @return the channel's own where it was given one at all, the shared value otherwise
 	 */
 	private static String inherited(final String own, final String shared) {
-		return own == null ? shared : own;
+		final String chosen = own == null ? shared : own;
+		// AND ONCE CHOSEN, NOTHING IS NOTHING. Both transports read null and blank alike as "use the
+		// system trust store", so leaving the two apart here has the supervisors rebuild both clients
+		// -- and the tunnel drop its in-flight invocations -- because somebody deleted a value they
+		// had already emptied. The choice happens FIRST, which is what keeps a blank channel value
+		// able to suppress a shared authority.
+		return chosen == null || chosen.isBlank() ? null : chosen;
 	}
 }
