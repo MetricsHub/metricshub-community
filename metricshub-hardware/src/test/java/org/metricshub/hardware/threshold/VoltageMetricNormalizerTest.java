@@ -1,6 +1,7 @@
 package org.metricshub.hardware.threshold;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -306,5 +307,115 @@ class VoltageMetricNormalizerTest {
 					.getValue()
 			);
 		}
+	}
+
+	/**
+	 * Build a voltage monitor with a 12.01 V reading and the given limits, then normalize it.
+	 *
+	 * @param limits limit_type to value
+	 * @return the normalized monitor
+	 */
+	private static Monitor normalizeLimits(final Map<String, Double> limits) {
+		final Monitor monitor = Monitor.builder().id("monitorOne").type("voltage").build();
+		final NumberMetric reading = NumberMetric.builder().value(12.01).name("hw.voltage").build();
+		reading.setCollectTime(STRATEGY_TIME);
+		monitor.getMetrics().put("hw.voltage", reading);
+		limits.forEach((limitType, value) -> {
+			final String name = HW_VOLTAGE_LIMIT + "{limit_type=\"" + limitType + "\"}";
+			final NumberMetric metric = NumberMetric.builder()
+				.value(value)
+				.name(name)
+				.attributes(Map.of("limit_type", limitType))
+				.build();
+			metric.setCollectTime(STRATEGY_TIME);
+			monitor.getMetrics().put(name, metric);
+		});
+		new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
+		return monitor;
+	}
+
+	private static Double limit(final Monitor monitor, final String name) {
+		final NumberMetric metric = monitor.getMetric(name, NumberMetric.class);
+		return metric == null ? null : metric.getValue();
+	}
+
+	@Test
+	void testCollectedDegradedLimitIsKept() {
+		final Monitor low = normalizeLimits(Map.of("low.critical", 10.5, "low.degraded", 11.0));
+		assertEquals(11.0, limit(low, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_DEGRADED));
+		assertEquals(10.5, limit(low, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+
+		final Monitor high = normalizeLimits(Map.of("high.critical", 13.5, "high.degraded", 13.0));
+		assertEquals(13.0, limit(high, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED));
+		assertEquals(13.5, limit(high, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
+	}
+
+	@Test
+	void testMissingDegradedLimitIsDerived() {
+		assertEquals(
+			11.55,
+			limit(normalizeLimits(Map.of("low.critical", 10.5)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_DEGRADED),
+			1e-9
+		);
+		assertEquals(
+			12.15,
+			limit(normalizeLimits(Map.of("high.critical", 13.5)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED),
+			1e-9
+		);
+		assertEquals(
+			-9.72,
+			limit(normalizeLimits(Map.of("low.critical", -10.8)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_DEGRADED),
+			1e-9
+		);
+	}
+
+	@Test
+	void testOutOfRangeLimitsAreDiscarded() {
+		final Monitor highInvalid = normalizeLimits(Map.of("low.critical", 10.5, "high.critical", 65535.0));
+		assertNull(limit(highInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
+		assertEquals(10.5, limit(highInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+		assertEquals(11.55, limit(highInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_DEGRADED), 1e-9);
+
+		final Monitor lowInvalid = normalizeLimits(Map.of("low.critical", -1000.0, "high.critical", 13.5));
+		assertNull(limit(lowInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+		assertEquals(13.5, limit(lowInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
+		assertEquals(12.15, limit(lowInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED), 1e-9);
+
+		final Monitor degradedInvalid = normalizeLimits(Map.of("high.critical", 13.5, "high.degraded", 450.1));
+		assertEquals(12.15, limit(degradedInvalid, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED), 1e-9);
+
+		final Monitor bounds = normalizeLimits(Map.of("low.critical", -100.0, "high.critical", 450.0));
+		assertEquals(-100.0, limit(bounds, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+		assertEquals(450.0, limit(bounds, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
+	}
+
+	@Test
+	void testOutOfRangeDerivedLimitIsNotPublished() {
+		assertNull(limit(normalizeLimits(Map.of("high.critical", -100.0)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED));
+		assertNull(limit(normalizeLimits(Map.of("low.critical", 450.0)), HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_DEGRADED));
+	}
+
+	@Test
+	void testOutOfRangeLimitIsDiscardedWithoutReading() {
+		final Monitor monitor = normalizeLimits(Map.of("high.critical", 65535.0, "low.critical", 10.5));
+		monitor.getMetrics().remove("hw.voltage");
+		final NumberMetric invalid = NumberMetric.builder()
+			.value(65535.0)
+			.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
+			.attributes(Map.of("limit_type", "high.critical"))
+			.build();
+		invalid.setCollectTime(STRATEGY_TIME);
+		monitor.getMetrics().put(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, invalid);
+
+		new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
+		assertNull(limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
+		assertEquals(10.5, limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+	}
+
+	@Test
+	void testInvertedCriticalLimitsAreSwapped() {
+		final Monitor monitor = normalizeLimits(Map.of("low.critical", 13.5, "high.critical", 10.5));
+		assertEquals(10.5, limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL));
+		assertEquals(13.5, limit(monitor, HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL));
 	}
 }
