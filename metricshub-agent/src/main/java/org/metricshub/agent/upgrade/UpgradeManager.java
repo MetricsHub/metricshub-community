@@ -484,7 +484,7 @@ public class UpgradeManager {
 					installedHash(),
 					offer.version(),
 					offer.packageHash(),
-					"Automatic upgrades are disabled by configuration (upgrade.enabled)"
+					"Automatic upgrades are disabled by configuration (central.upgrade.enabled)"
 				)
 			);
 			return;

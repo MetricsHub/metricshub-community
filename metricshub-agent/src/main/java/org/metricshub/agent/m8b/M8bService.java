@@ -313,7 +313,7 @@ public class M8bService {
 	private static long atLeastOneSecond(final long seconds) {
 		if (seconds < 1) {
 			log.warn(
-				"Invalid m8b.heartbeatInterval {} second(s); using the default {} second(s).",
+				"Invalid central.tunnel.heartbeatInterval {} second(s); using the default {} second(s).",
 				seconds,
 				M8bConfig.DEFAULT_HEARTBEAT_INTERVAL
 			);

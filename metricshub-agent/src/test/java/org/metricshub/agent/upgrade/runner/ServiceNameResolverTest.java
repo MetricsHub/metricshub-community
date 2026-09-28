@@ -92,7 +92,7 @@ class ServiceNameResolverTest {
 		final ServiceNameResolver resolver = linuxResolver(command -> List.of("active"));
 
 		final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> resolver.resolve(null));
-		assertTrue(failure.getMessage().contains("upgrade.serviceName"));
+		assertTrue(failure.getMessage().contains("central.upgrade.serviceName"));
 	}
 
 	@Test
@@ -103,7 +103,7 @@ class ServiceNameResolverTest {
 		final ServiceNameResolver resolver = linuxResolver(command -> List.of("inactive"));
 
 		final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> resolver.resolve(null));
-		assertTrue(failure.getMessage().contains("upgrade.serviceName"));
+		assertTrue(failure.getMessage().contains("central.upgrade.serviceName"));
 	}
 
 	@Test
@@ -141,6 +141,6 @@ class ServiceNameResolverTest {
 		final ServiceNameResolver resolver = linuxResolver(noOutput());
 
 		final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> resolver.resolve(null));
-		assertTrue(failure.getMessage().contains("upgrade.serviceName"));
+		assertTrue(failure.getMessage().contains("central.upgrade.serviceName"));
 	}
 }
