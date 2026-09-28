@@ -251,6 +251,14 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	}
 
 	@Override
+	public void restoreDeclaredSchedule(final String reEvaluationId, final String cron) {
+		final VelocityConfigurationLoader loader = loaders.get(Path.of(reEvaluationId));
+		if (loader != null) {
+			loader.publishDeclaredCron(cron);
+		}
+	}
+
+	@Override
 	public Optional<JsonNode> currentFragment(final String reEvaluationId) {
 		return Optional.ofNullable(lastFragments.get(Path.of(reEvaluationId)));
 	}

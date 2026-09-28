@@ -441,6 +441,14 @@ public class ProgrammableReEvaluationScheduler {
 		synchronized (reEvaluationLocks.computeIfAbsent(reEvaluationId, id -> new Object())) {
 			seedBaseline(provider, reEvaluationId);
 
+			// Taken before the render, which publishes whatever the template declares this time. The
+			// configuration it produces can still be rejected further down, and this is what puts the
+			// schedule back so the next firing can retry.
+			final String appliedCron;
+			synchronized (lock) {
+				appliedCron = scheduledCrons.get(reEvaluationId);
+			}
+
 			final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
 			if (fragment.isEmpty()) {
 				log.warn("Re-evaluation of '{}' produced nothing; keeping the last good value.", reEvaluationId);
@@ -492,6 +500,9 @@ public class ProgrammableReEvaluationScheduler {
 						e.getMessage()
 					);
 					log.debug("Reload error:", e);
+					// Nothing was applied, so the schedule this re-evaluation published must not stand: the
+					// template keeps firing on the one it was running on, and retries the change.
+					provider.restoreDeclaredSchedule(reEvaluationId, appliedCron);
 					return ReEvaluationOutcome.RELOAD_FAILED;
 				}
 			}
