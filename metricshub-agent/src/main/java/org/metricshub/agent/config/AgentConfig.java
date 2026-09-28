@@ -161,15 +161,7 @@ public class AgentConfig {
 
 	@Default
 	@JsonSetter(nulls = SKIP)
-	private OpAmpConfig opamp = OpAmpConfig.builder().build();
-
-	@Default
-	@JsonSetter(nulls = SKIP)
-	private UpgradeConfig upgrade = UpgradeConfig.builder().build();
-
-	@Default
-	@JsonSetter(nulls = SKIP)
-	private M8bConfig m8b = M8bConfig.builder().build();
+	private CentralConfig central = CentralConfig.builder().build();
 
 	/**
 	 * Build a new empty instance

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
@@ -61,7 +62,7 @@ class AgentDescriptorMapperTest {
 			Map.of("service.name", "MetricsHub Enterprise Agent", "version", "3.9.07"),
 			AgentConfig.builder()
 				.attributes(Map.of("site", "paris", "service.version", "3.9.07-custom"))
-				.opamp(OpAmpConfig.builder().attributes(Map.of("site", "data-center-1")).build())
+				.central(CentralConfig.builder().attributes(Map.of("site", "data-center-1")).build())
 				.build()
 		);
 

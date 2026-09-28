@@ -158,7 +158,7 @@ public class M8bService {
 		if (agentContext == null || agentContext.getAgentConfig() == null) {
 			return;
 		}
-		final M8bConfig config = agentContext.getAgentConfig().getM8b();
+		final M8bConfig config = agentContext.getAgentConfig().getCentral().tunnel();
 		if (!Objects.equals(config, activeConfig)) {
 			reconfigure(config);
 			return;

@@ -78,6 +78,18 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Slf4j
 public class AgentContext implements AutoCloseable {
 
+	/**
+	 * The root sections that moved under {@code central:}, and what each is called now.
+	 */
+	private static final Map<String, String> MOVED_UNDER_CENTRAL = Map.of(
+		"opamp",
+		"central.opamp",
+		"m8b",
+		"central.tunnel",
+		"upgrade",
+		"central.upgrade"
+	);
+
 	private AgentInfo agentInfo;
 	private Path configDirectory;
 	private JsonNode configNode;
@@ -220,7 +232,35 @@ public class AgentContext implements AutoCloseable {
 
 		new EnvironmentProcessor().process(configNode);
 
+		reportSectionsThatMoved(configNode);
+
 		return JsonHelper.deserialize(objectMapper, configNode, AgentConfig.class);
+	}
+
+	/**
+	 * Says out loud that a section written where it used to live is being ignored.
+	 *
+	 * <p>The three fleet sections moved under {@code central:}, and unknown keys are dropped
+	 * SILENTLY — the mapper is deliberately lenient, so a file left as it was would start an agent
+	 * that manages nothing, reports nothing and says nothing about why. Reading the tree before it
+	 * is deserialized is the only place the old key still exists to be seen.
+	 *
+	 * <p>Logged rather than fatal: this agent's job is collecting metrics, and refusing to start
+	 * over a management section would take that down too.
+	 *
+	 * @param configNode the configuration as it was written
+	 */
+	private static void reportSectionsThatMoved(final JsonNode configNode) {
+		MOVED_UNDER_CENTRAL.forEach((wasCalled, isNowCalled) -> {
+			if (configNode != null && configNode.has(wasCalled)) {
+				log.error(
+					"The `{}:` section has moved and is IGNORED where it is: write it as `{}:` under the" +
+						" top-level `central:` section. Nothing configured in it applies.",
+					wasCalled,
+					isNowCalled
+				);
+			}
+		});
 	}
 
 	/**

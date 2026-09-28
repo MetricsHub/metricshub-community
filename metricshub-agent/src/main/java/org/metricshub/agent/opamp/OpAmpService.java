@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.OpAmpConfig;
+import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.fleet.FleetHeaders;
@@ -178,7 +179,7 @@ public class OpAmpService {
 			return;
 		}
 
-		final OpAmpConfig config = agentContext.getAgentConfig().getOpamp();
+		final OpAmpConfig config = agentContext.getAgentConfig().getCentral().opamp();
 		final boolean upgradeEnabled = isUpgradeEnabled(agentContext);
 		if (!Objects.equals(config, activeConfig) || !Objects.equals(upgradeEnabled, activeUpgradeEnabled)) {
 			reconfigure(agentContext, config, upgradeEnabled);
@@ -315,7 +316,8 @@ public class OpAmpService {
 	 * @return {@code true} when the {@code upgrade:} section is enabled
 	 */
 	private static boolean isUpgradeEnabled(final AgentContext agentContext) {
-		return agentContext.getAgentConfig().getUpgrade() != null && agentContext.getAgentConfig().getUpgrade().isEnabled();
+		final UpgradeConfig upgrade = agentContext.getAgentConfig().getCentral().getUpgrade();
+		return upgrade != null && upgrade.isEnabled();
 	}
 
 	/**

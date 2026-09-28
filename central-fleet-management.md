@@ -1,7 +1,7 @@
-># Fleet Management — OpAMP and the M8B Tunnel
+># Fleet Management — OpAMP and the Central Tunnel
 
 **Audience:** maintainers of the MetricsHub Community Edition.
-**Scope:** the two channels an agent opens toward its fleet — the embedded OpAMP client (`metricshub-opamp-client`), which reports status and health and performs automatic package upgrades ([§1](#1-what-fleet-management-means-here)-[§12](#12-test-map)), and the M8B AI Governor tunnel, over which the agent advertises its tools and hosts and runs the tools the Governor invokes ([§13](#13-m8b-ai-governor-tunnel)).
+**Scope:** the two channels an agent opens toward its fleet — the embedded OpAMP client (`metricshub-opamp-client`), which reports status and health and performs automatic package upgrades ([§1](#1-what-fleet-management-means-here)-[§12](#12-test-map)), and the Central Governor tunnel, over which the agent advertises its tools and hosts and runs the tools the Governor invokes ([§13](#13-central-governor-tunnel)).
 
 This document starts generic and drills down progressively:
 
@@ -19,7 +19,7 @@ This document starts generic and drills down progressively:
 | [10. Security decisions](#10-security-decisions) | Hardening |
 | [11. Extending the client](#11-extending-the-client) | Contributor |
 | [12. Test map](#12-test-map) | Verification |
-| [13. M8B AI Governor tunnel](#13-m8b-ai-governor-tunnel) | Second channel |
+| [13. Central Governor tunnel](#13-central-governor-tunnel) | Second channel |
 
 ---
 
@@ -625,51 +625,83 @@ Both locations are chosen to **survive the upgrade that writes them** — that i
 
 ## 9. Configuration reference
 
-### 9.1 `opamp:`
+Everything lives under one root, `central:`, because everything here is about ONE server. The two
+channels reach it at the same host with the same credential and the same trusted certificate, so
+those are written once; what stays on a channel is what only that channel has.
+
+`upgrade:` sits beside them rather than under `opamp:`: a package offer arrives over OpAMP, but the
+download speaks to a **repository** — its own hosts, its own credentials, its own certificate
+authority. Nothing here happens without a Central server, which is why it is under this roof; it is
+not an OpAMP transport setting, which is why it is not under that key.
+
+### 9.1 `central:`
 
 ```yaml
-opamp:
+central:
   enabled: true
-  endpoint: https://opamp.example.com/v1/opamp
+  url: https://central.example.com:4320
   headers:
-    Authorization: Bearer ${env::OPAMP_TOKEN}
+    Authorization: Bearer ${env::CENTRAL_TOKEN}
   attributes:
     site: data-center-1
-  # certificateFile: /opt/metricshub/security/opamp-ca.pem
-  # pollInterval: 30s
-  # requestTimeout: 10s
-  # reportHealth: true
+  # certificateFile: /opt/metricshub/security/central-ca.pem
 ```
 
 | Key | Default | Notes |
 |---|---|---|
-| `enabled` | `false` | Fleet management is opt-in |
-| `endpoint` | — | Blank with `enabled: true` logs a warning and starts nothing |
-| `headers` | `{}` | Values may be keystore-encrypted. Entries with a null value are skipped, not fatal |
-| `attributes` | `{}` | Reported in the `AgentDescription`. Merged **last**, so they override both the pre-built agent attributes and the agent-level `attributes:` — the fleet identity can be tailored without touching the attributes attached to the exported metrics |
-| `certificateFile` | system trust store | PEM |
+| `enabled` | `false` | Being managed is opt-in. It turns on **both** channels; either is refused on its own below |
+| `url` | — | `http(s)://host[:port]`, no path: each channel adds its own. Blank with `enabled: true` logs a warning and starts nothing |
+| `headers` | `{}` | Presented on both channels. Values may be keystore-encrypted. Entries with a null value are skipped, not fatal |
+| `certificateFile` | system trust store | PEM for the **server**. The one for package repositories is `upgrade.trustedCertificateFile`, and they are rarely the same |
+| `attributes` | `{}` | Reported as this agent's identity by both channels. Merged **last**, so they override both the pre-built agent attributes and the agent-level `attributes:` — the fleet identity can be tailored without touching the attributes attached to the exported metrics |
+
+### 9.2 `central.opamp:`
+
+```yaml
+central:
+  opamp:
+    # enabled: true
+    # path: /v1/opamp
+    # pollInterval: 30s
+    # requestTimeout: 10s
+    # reportHealth: true
+```
+
+| Key | Default | Notes |
+|---|---|---|
+| `enabled` | `true` | Which `central.enabled` still has to allow. Set it to `false` to be managed without being polled |
+| `path` | `/v1/opamp` | On `central.url` |
+| `endpoint` | — | A complete URL that overrides `central.url` and `path` entirely; for the deployment whose channels do not share an ingress |
+| `headers` | `{}` | Merged over `central.headers` key by key. Same rule: only when the deployment splits the channels |
+| `certificateFile` | `central.certificateFile` | Same rule |
 | `pollInterval` | `30s` | Values below 1 s fall back to the default — a tight loop must never hammer the server |
 | `requestTimeout` | `10s` | Same guard |
 | `reportHealth` | `true` | Drives the `ReportsHealth` capability |
 
-### 9.2 `upgrade:`
+### 9.3 `central.tunnel:`
+
+See [§13.4](#134-configuration-reference--centraltunnel) — the tunnel's own section documents it
+beside the implementation it configures.
+
+### 9.4 `central.upgrade:`
 
 ```yaml
-upgrade:
-  enabled: true
-  allowDowngrade: false
-  hostAllowlist: [ repo.metricshub.com ]
-  # serviceName: metricshub-community-service.service
-  # installTimeout: 30m
-  # trustedCertificateFile: /opt/metricshub/security/repo-ca.pem
-  # downloadHeaders:
-  #   nexus.example.com:
-  #     Authorization: Basic ${env::REPO_CREDENTIALS}
+central:
+  upgrade:
+    enabled: true
+    allowDowngrade: false
+    hostAllowlist: [ repo.metricshub.com ]
+    # serviceName: metricshub-community-service.service
+    # installTimeout: 30m
+    # trustedCertificateFile: /opt/metricshub/security/repo-ca.pem
+    # downloadHeaders:
+    #   nexus.example.com:
+    #     Authorization: Basic ${env::REPO_CREDENTIALS}
 ```
 
 | Key | Default | Notes |
 |---|---|---|
-| `enabled` | `true` | Honored only when `opamp.enabled` is true |
+| `enabled` | `true` | Honored only when `central.opamp.enabled` is true: an offer arrives over that channel |
 | `allowDowngrade` | `false` | Offers older than the running version are refused |
 | `maxPackageSizeBytes` | 1 GiB | |
 | `downloadTimeout` | `1800s` | Per attempt, enforced by the watchdog |
@@ -738,9 +770,9 @@ Golden protobuf fixtures are produced by `GoldenFixtureWriter`, so wire-format r
 
 ---
 
-## 13. M8B AI Governor tunnel
+## 13. Central Governor tunnel
 
-The second fleet channel. Where OpAMP carries *status and upgrades* by polling, the M8B tunnel is a persistent **outbound WebSocket** through which the M8B AI Governor discovers what an agent can do (its tool registry and monitored hosts) and asks it to run troubleshooting tools. Both channels report the **same identity** (§13.5). The wire protocol is specified in [`m8b-tunnel-protocol.md`](m8b-tunnel-protocol.md); this section covers the agent-side implementation.
+The second fleet channel. Where OpAMP carries *status and upgrades* by polling, the Central tunnel is a persistent **outbound WebSocket** through which the Central Governor discovers what an agent can do (its tool registry and monitored hosts) and asks it to run troubleshooting tools. Both channels report the **same identity** (§13.5). The wire protocol is specified in [`central-tunnel-protocol.md`](central-tunnel-protocol.md); this section covers the agent-side implementation.
 
 ### 13.1 Component map
 
@@ -752,7 +784,7 @@ flowchart TB
     Svc --> Inv["HostInventory<br/><i>active telemetry managers</i>"]
     Svc --> Desc["AgentDescriptorMapper<br/><i>identity + edition</i>"]
     Svc --> Bridge["M8bToolBridge<br/><i>tool.invoke → ToolCallback.call</i>"]
-    Client -->|"agent.register · heartbeat.ping · hosts.updated · tool.result/error"| Gov["M8B Governor"]
+    Client -->|"agent.register · heartbeat.ping · hosts.updated · tool.result/error"| Gov["Central Governor"]
     Gov -->|"agent.registered · heartbeat.pong · tool.invoke"| Client
     Client -->|onInvoke| Bridge
     Bridge --> Tools["IMCPToolService beans<br/>ListHosts, GetMetricsFromCacheForHost, …"]
@@ -761,9 +793,10 @@ flowchart TB
 
 | Class | Responsibility |
 |---|---|
-| `agent.config.M8bConfig` | The `m8b:` section (§13.4); a change triggers a configuration reload like `opamp:` |
+| `agent.config.CentralConfig` | The `central:` section (§9, §13.4): the server, and the channels that reach it. A change triggers a configuration reload |
+| `agent.config.M8bConfig` | The `central.tunnel:` channel alone (§13.4) |
 | `web.service.M8bStartupHook` | Starts `M8bService` on `ApplicationReadyEvent`, registers its shutdown; runs in both editions |
-| `agent.m8b.M8bService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `m8b:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
+| `agent.m8b.M8bService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `central:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
 | `agent.m8b.tunnel.M8bTunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
 | `agent.m8b.tunnel.M8bTunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback |
 | `agent.m8b.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
@@ -809,25 +842,28 @@ Two listeners, and they are not the same thing:
 
 The bridge frees an invocation's in-flight slot exactly once, by whichever of three paths reaches it first: the worker's `finally` when it finishes, the deadline when the invocation timed out with its worker still running (or cancelled before it ever ran), and the rejection path when no thread was free to take it. So the deadline does not release the slot when the worker is *gone* — it releases it precisely when the worker has **not** finished, which is the whole point: the Governor has been told the invocation is over, so the slot is its to reuse even though the thread is not.
 
-### 13.4 Configuration reference — `m8b:`
+### 13.4 Configuration reference — `central.tunnel:`
 
 ```yaml
-m8b:
+central:
   enabled: true
-  endpoint: wss://m8b.example.com/ws/agent
+  url: https://central.example.com:4320
   headers:
-    Authorization: Bearer ${env::M8B_TOKEN}
-  # certificateFile: /opt/metricshub/security/m8b-ca.pem
-  # heartbeatInterval: 30s
-  # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+    Authorization: Bearer ${env::CENTRAL_TOKEN}
+  tunnel:
+    # enabled: true
+    # path: /ws/agent
+    # heartbeatInterval: 30s
+    # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
 ```
 
 | Key | Default | Notes |
 |---|---|---|
-| `enabled` | `false` | Opt-in |
-| `endpoint` | — | `wss://`; `ws://` accepted for loopback only. Blank with `enabled: true` logs a warning and starts nothing |
-| `headers` | `{}` | Handshake headers; values may be keystore-encrypted; entries without a value are skipped |
-| `certificateFile` | system trust store | PEM, same builder as OpAMP |
+| `enabled` | `true` | Which `central.enabled` still has to allow. Set it to `false` for fleet management without exposing this agent's tools to the Governor |
+| `path` | `/ws/agent` | On `central.url`, whose scheme becomes `ws` or `wss` accordingly — `ws` is accepted for loopback only |
+| `endpoint` | — | A complete URL that overrides `central.url` and `path` entirely; for the deployment whose channels do not share an ingress |
+| `headers` | `{}` | Merged over `central.headers` key by key. Same rule: only when the deployment splits the channels |
+| `certificateFile` | `central.certificateFile` | Same rule |
 | `heartbeatInterval` | `30s` | Until the server imposes its own in `agent.registered`; values below 1 s fall back to the default |
 | `excludedTools` | `[]` | Never advertised, hence never invokable |
 
@@ -837,7 +873,7 @@ The payload cap and the concurrency cap are **not** configurable on the agent: t
 
 None of its own. The uid comes from `security/opamp-instance-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
 
-One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `m8b:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
+One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `central:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
 
 ### 13.6 Security decisions
 
@@ -849,13 +885,13 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Every outbound frame is bounded, and weighed in bytes | Measured at the socket, so it covers a registration and a `hosts.updated` as well as an answer: a fleet monitoring thousands of hosts can produce either above the cap, and sending it would close the tunnel (`1009`) rather than lose one frame. Above the cap, a result becomes `RESULT_TOO_LARGE`, a failure's detail is truncated rather than the failure going unreported, and anything still too large is dropped with an error in the log — the server's own deadline then ends that one invocation |
 | Only actively monitored hosts are advertised | The Governor never routes to a resource the agent could not validate |
 | `maxInFlight` bounds concurrent **invocations**; the work inside one is bounded by the tool, but it is cancelled with the invocation | A multi-host tool fans out internally, exactly as it does for the agent's own AI features — the tunnel exposes that concurrency, it does not introduce it. Bound it where it is configured (the tool's own pool size), not at the bridge, which cannot tell one tool's fan-out from another's. The deadline's interruption does reach that fan-out: `MultiHostToolExecutor` waits interruptibly and shuts its per-call pool down, so a timed-out invocation stops its per-host work instead of leaving it to run to completion unattended. Per-host work that ignores its interruption keeps its thread, as ever — and keeps the worker too, until its pool has terminated, so it stays under the same thread ceiling rather than accumulating a pool per cancelled invocation |
-| Approvals for sensitive tools live in M8B | The agent cannot tell an approved call from any other; the policy lives where the users are |
+| Approvals for sensitive tools live in Central | The agent cannot tell an approved call from any other; the policy lives where the users are |
 
 ### 13.7 Test map
 
 | Concern | Test |
 |---|---|
-| `m8b:` deserialization and defaults | `M8bConfigTest` |
+| `central:` deserialization, and what a channel inherits from the roof | `CentralConfigTest`, `M8bConfigTest`, `OpAmpConfigTest` |
 | Registry snapshot: sorting, exclusion, defaults, revision stability | `ToolRegistrySnapshotTest` |
 | Host inventory: group scoping, inactive resources skipped | `HostInventoryTest` |
 | Identity and edition | `AgentDescriptorMapperTest` |

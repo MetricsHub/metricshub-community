@@ -23,6 +23,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.AlertingSystemConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.M8bConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.ResourceConfig;
@@ -555,38 +556,50 @@ class ReloadServiceTest {
 				AgentConfig.builder().otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop")).sequential(false).build()
 			),
 			Arguments.of(
-				"opamp",
+				"central.opamp",
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.opamp(OpAmpConfig.builder().enabled(false).build())
+					.central(CentralConfig.builder().opamp(OpAmpConfig.builder().enabled(false).build()).build())
 					.build(),
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.opamp(OpAmpConfig.builder().enabled(true).endpoint("https://opamp.example.com/v1/opamp").build())
+					.central(
+						CentralConfig.builder()
+							.opamp(OpAmpConfig.builder().enabled(true).endpoint("https://opamp.example.com/v1/opamp").build())
+							.build()
+					)
 					.build()
 			),
 			Arguments.of(
-				"m8b",
+				"central.tunnel",
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.m8b(M8bConfig.builder().enabled(false).build())
+					.central(CentralConfig.builder().tunnel(M8bConfig.builder().enabled(false).build()).build())
 					.build(),
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.m8b(M8bConfig.builder().enabled(true).endpoint("wss://m8b.example.com/ws/agent").build())
+					.central(
+						CentralConfig.builder()
+							.tunnel(M8bConfig.builder().enabled(true).endpoint("wss://m8b.example.com/ws/agent").build())
+							.build()
+					)
 					.build()
 			),
 			Arguments.of(
-				"upgrade",
+				"central.upgrade",
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.upgrade(UpgradeConfig.builder().build())
+					.central(CentralConfig.builder().upgrade(UpgradeConfig.builder().build()).build())
 					.build(),
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.upgrade(
-						UpgradeConfig.builder()
-							.downloadHeaders(Map.of("nexus.example.com", Map.of("Authorization", "Basic abc")))
+					.central(
+						CentralConfig.builder()
+							.upgrade(
+								UpgradeConfig.builder()
+									.downloadHeaders(Map.of("nexus.example.com", Map.of("Authorization", "Basic abc")))
+									.build()
+							)
 							.build()
 					)
 					.build()

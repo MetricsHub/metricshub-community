@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.M8bConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.context.AgentContext;
@@ -119,7 +120,7 @@ class M8bServiceTest {
 	}
 
 	private void configure(final M8bConfig m8b) {
-		agentConfig = AgentConfig.builder().m8b(m8b).build();
+		agentConfig = AgentConfig.builder().central(CentralConfig.builder().enabled(true).tunnel(m8b).build()).build();
 	}
 
 	@Test
@@ -177,7 +178,7 @@ class M8bServiceTest {
 			M8bConfig.builder().enabled(true).endpoint(ENDPOINT).excludedTools(Set.of("ExecuteSshCommandline")).build()
 		);
 		agentConfig = AgentConfig.builder()
-			.m8b(agentConfig.getM8b())
+			.central(agentConfig.getCentral())
 			.resources(
 				Map.of(
 					"server-01",
@@ -288,7 +289,7 @@ class M8bServiceTest {
 
 		// A reload that adds a host: the new inventory is pushed
 		agentConfig = AgentConfig.builder()
-			.m8b(agentConfig.getM8b())
+			.central(agentConfig.getCentral())
 			.resources(
 				Map.of(
 					"server-02",
@@ -324,7 +325,7 @@ class M8bServiceTest {
 		active.put("metricshub-top-level-rg", Map.of("server-02", mock(TelemetryManager.class)));
 		when(agentContext.getTelemetryManagers()).thenReturn(active);
 		agentConfig = AgentConfig.builder()
-			.m8b(agentConfig.getM8b())
+			.central(agentConfig.getCentral())
 			.resources(
 				Map.of(
 					"server-02",
