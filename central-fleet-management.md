@@ -188,7 +188,7 @@ The reported attributes are merged in three layers, each overriding the previous
 
 1. the pre-built `AgentInfo` attributes;
 2. the agent-level `attributes:` section of `metricshub.yaml` — the same precedence the agent applies to its self-observability resource;
-3. the `opamp: attributes:` section, which **always wins**: it tailors the identity exposed to the fleet manager without touching the attributes attached to the exported metrics.
+3. the `central.attributes` section, which **always wins**: it tailors the identity exposed to the fleet manager without touching the attributes attached to the exported metrics. Both channels report it, because both read it from there.
 
 | Attribute | Identifying | Source |
 |---|---|---|
@@ -197,7 +197,7 @@ The reported attributes are merged in three layers, each overriding the previous
 | `host.name` | ✅ | Agent host name attribute |
 | `host.arch` | ❌ | `System.getProperty("os.arch")` |
 | `installer.type` | ❌ | `DeploymentDetector.detect()` → `deb`, `rpm`, `msi`, `archive`, `docker` |
-| *every other agent attribute* | ❌ | `AgentInfo` (`os.type`, `host.type`, `agent.host.name`, `name`, `build_number`, `build_date`, `cc_version`), the agent-level `attributes:` and the `opamp: attributes:` (e.g. `site`, `env`, `fleet`) |
+| *every other agent attribute* | ❌ | `AgentInfo` (`os.type`, `host.type`, `agent.host.name`, `name`, `build_number`, `build_date`, `cc_version`), the agent-level `attributes:` and `central.attributes` (e.g. `site`, `env`, `fleet`) |
 
 `installer.type` is what lets an OpAMP server pick the right artifact. Without it the server cannot tell a Debian host from an RPM host and must not offer anything. Blank values are skipped; a failed detection simply omits the attribute. A configured attribute overrides the derived one, so `host.arch` and `installer.type` can be forced from `metricshub.yaml`. Attributes are reported in a stable, sorted order so an unchanged configuration never looks like a change to the client.
 
@@ -315,7 +315,7 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | [`OpAmpStartupHook`](metricshub-agent/src/main/java/org/metricshub/web/service/OpAmpStartupHook.java) | **The wiring**, as a `StartupHook`: reconcile pending upgrade → decide whether the deployment is upgradable → build handler → start `OpAmpService` → register shutdown hook. Runs on `ApplicationReadyEvent`, so the enterprise agent — which boots the same Spring context — needs no wiring of its own |
 | [`MetricsHubAgentApplication`](metricshub-agent/src/main/java/org/metricshub/agent/MetricsHubAgentApplication.java) | Boots the agent context and the Spring server; no longer wires OpAMP itself |
 | [`OpAmpService`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpService.java) | **Lifecycle supervisor.** Lives *outside* the restartable `AgentContext`. Every 30 s: re-reads `central.opamp`, rebuilds the client only on change, otherwise refreshes description and health |
-| [`OpAmpAgentDescriptionMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpAgentDescriptionMapper.java) | `AgentInfo` + `attributes:` + `opamp: attributes:` + `DeploymentKind` → `AgentDescription` |
+| [`OpAmpAgentDescriptionMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpAgentDescriptionMapper.java) | `AgentInfo` + `attributes:` + `central.attributes` + `DeploymentKind` → `AgentDescription` |
 | [`OpAmpHealthMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpHealthMapper.java) | `ApplicationStatus` → `ComponentHealth` |
 | [`OpAmpConfig`](metricshub-agent/src/main/java/org/metricshub/agent/config/OpAmpConfig.java) | The `central.opamp:` channel, resolved against the roof it hangs from |
 
