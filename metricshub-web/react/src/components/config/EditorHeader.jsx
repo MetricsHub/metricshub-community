@@ -12,7 +12,7 @@ import EncryptPasswordDialog from "../common/EncryptPasswordDialog";
 
 /**
  * Editor header component showing file name, save button, and status.
- * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,onTest?:()=>void,testLoading?:boolean,onReevaluate?:()=>void,reevaluateLoading?:boolean,isReadOnly?:boolean}} props The component props.
+ * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,onTest?:()=>void,testLoading?:boolean,onReevaluate?:()=>void,reevaluateLoading?:boolean,reevaluationPending?:boolean,isReadOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The editor header component.
  */
 export default function EditorHeader({
@@ -24,6 +24,7 @@ export default function EditorHeader({
 	testLoading = false,
 	onReevaluate,
 	reevaluateLoading = false,
+	reevaluationPending = false,
 	isReadOnly = false,
 }) {
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
@@ -141,8 +142,12 @@ export default function EditorHeader({
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
 							onClick={onReevaluate}
-							disabled={!selected || saving || reevaluateLoading || isReadOnly}
-							title="Re-evaluate this template and reload the running configuration"
+							disabled={!selected || saving || reevaluationPending || isReadOnly || isDirty}
+							title={
+								isDirty
+									? "Save the template first: a re-evaluation runs the file as it is on disk"
+									: "Re-evaluate this template and reload the running configuration"
+							}
 						>
 							{reevaluateLoading ? "Reevaluating..." : "Reevaluate"}
 						</Button>

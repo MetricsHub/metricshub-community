@@ -95,7 +95,11 @@ public class ProgrammableReEvaluationScheduler {
 	public enum ReEvaluationOutcome {
 		/** The unit produced no fragment; the last good configuration was kept. */
 		NOTHING_PRODUCED,
-		/** The unit produced the same fragment as before; no reload was needed. */
+		/**
+		 * The running configuration was left as it is: the unit produced the same fragment as before, or
+		 * the fragment changed without changing the configuration it takes part in (another source
+		 * overrides what changed).
+		 */
 		UNCHANGED,
 		/** The fragment changed and the configuration was reloaded. */
 		RELOADED,
@@ -492,6 +496,12 @@ public class ProgrammableReEvaluationScheduler {
 					// on a configuration that was never updated.
 					lastFragments.put(reEvaluationId, fragment.get());
 					restartRequestedFragments.remove(reEvaluationId);
+					if (result[0] == ReloadResult.NO_CHANGE) {
+						// The template produced something new, but the configuration it takes part in did not
+						// move: another source overrides what changed. Nothing was applied, so say so.
+						log.info("Re-evaluation of '{}' left the running configuration unchanged.", reEvaluationId);
+						return ReEvaluationOutcome.UNCHANGED;
+					}
 					return ReEvaluationOutcome.RELOADED;
 				} catch (Exception e) {
 					log.error(

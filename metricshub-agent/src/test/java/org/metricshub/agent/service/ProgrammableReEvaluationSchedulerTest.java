@@ -1008,4 +1008,26 @@ class ProgrammableReEvaluationSchedulerTest {
 
 		scheduler.stop();
 	}
+
+	/**
+	 * A template can produce something new while the configuration it takes part in stays the same,
+	 * because another source overrides what changed. Nothing is applied then, so the caller must not be
+	 * told the configuration was reloaded.
+	 */
+	@Test
+	void testAReloadThatChangedNothingIsNotReportedAsReloaded() {
+		final IConfigurationProvider provider = fixedFragmentProvider();
+		final AtomicInteger reloads = new AtomicInteger();
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () -> {
+			reloads.incrementAndGet();
+			return ReloadResult.NO_CHANGE;
+		});
+
+		assertEquals(ReEvaluationOutcome.UNCHANGED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(1, reloads.get(), "The reload still ran: only its outcome differs");
+
+		// The baseline moved all the same: the template did produce that fragment.
+		assertEquals(ReEvaluationOutcome.UNCHANGED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(1, reloads.get(), "An unchanged fragment must not reload again");
+	}
 }
