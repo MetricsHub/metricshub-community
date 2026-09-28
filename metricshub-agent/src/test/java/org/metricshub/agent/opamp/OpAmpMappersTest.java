@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.upgrade.runner.DeploymentKind;
@@ -233,8 +234,8 @@ class OpAmpMappersTest {
 
 		final AgentConfig agentConfig = AgentConfig.builder()
 			.attributes(Map.of("host.name", "agent-host", "site", "agent-site", "env", "production"))
-			.opamp(
-				OpAmpConfig.builder()
+			.central(
+				CentralConfig.builder()
 					.attributes(Map.of("host.name", "opamp-host", "site", "opamp-site", "fleet", "emea"))
 					.build()
 			)
@@ -276,7 +277,7 @@ class OpAmpMappersTest {
 
 		final AgentConfig agentConfig = AgentConfig.builder()
 			.attributes(Map.of("service.version", "agent-version"))
-			.opamp(OpAmpConfig.builder().attributes(Map.of("service.version", "opamp-version")).build())
+			.central(CentralConfig.builder().attributes(Map.of("service.version", "opamp-version")).build())
 			.build();
 
 		final AgentDescription description = OpAmpAgentDescriptionMapper.map(agentInfo, agentConfig, null);

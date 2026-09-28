@@ -98,7 +98,7 @@ public class UpgradeManager {
 	public UpgradeManager(final AgentContextHolder agentContextHolder) {
 		this(
 			() -> agentContextHolder.getAgentContext().getAgentInfo().getAttributes().get(AGENT_INFO_VERSION_ATTRIBUTE_KEY),
-			() -> agentContextHolder.getAgentContext().getAgentConfig().getUpgrade(),
+			() -> agentContextHolder.getAgentContext().getAgentConfig().getCentral().getUpgrade(),
 			UpgradeDirectories.resolveStagingDirectory(),
 			new PackageDownloader(),
 			new PackageValidator(),
@@ -484,7 +484,7 @@ public class UpgradeManager {
 					installedHash(),
 					offer.version(),
 					offer.packageHash(),
-					"Automatic upgrades are disabled by configuration (upgrade.enabled)"
+					"Automatic upgrades are disabled by configuration (central.upgrade.enabled)"
 				)
 			);
 			return;

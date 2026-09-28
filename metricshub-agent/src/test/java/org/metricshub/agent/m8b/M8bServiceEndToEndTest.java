@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.M8bConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.context.AgentContext;
@@ -73,11 +74,11 @@ class M8bServiceEndToEndTest {
 		server.startAndAwait();
 
 		final AgentConfig agentConfig = AgentConfig.builder()
-			.m8b(
-				M8bConfig.builder()
+			.central(
+				CentralConfig.builder()
 					.enabled(true)
-					.endpoint(server.uri().toString())
 					.headers(Map.of("Authorization", "Bearer secret"))
+					.tunnel(M8bConfig.builder().endpoint(server.uri().toString()).build())
 					.build()
 			)
 			.resources(

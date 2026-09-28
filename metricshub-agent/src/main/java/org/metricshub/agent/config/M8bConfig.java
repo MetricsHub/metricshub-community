@@ -37,12 +37,18 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
- * Configuration of the M8B tunnel: the persistent outbound WebSocket connection through which the
- * MetricsHub Agent registers itself (identity, tool registry, host inventory) with the M8B AI
+ * Configuration of the Central tunnel: the persistent outbound WebSocket connection through which
+ * the MetricsHub Agent registers itself (identity, tool registry, host inventory) with the Central
  * Governor and executes the tools the Governor invokes.
  * <p>
- * The tunnel is opt-in. Invocation timeouts, payload caps and concurrency limits are dictated by the
- * server during registration and are deliberately not configurable here.
+ * It is written under {@code central:} as {@code tunnel:}, which carries everything the two channels
+ * share — the URL, the credential, the trusted certificate and the reported identity. What is left
+ * here is what only this channel has. {@link CentralConfig#tunnel()} hands out the resolved
+ * combination; the fields below are what the operator wrote, which is not the same thing.
+ * </p>
+ * <p>
+ * Invocation timeouts, payload caps and concurrency limits are dictated by the server during
+ * registration and are deliberately not configurable here.
  * </p>
  */
 @Data
@@ -57,26 +63,46 @@ public class M8bConfig {
 	public static final long DEFAULT_HEARTBEAT_INTERVAL = 30;
 
 	/**
-	 * Whether the tunnel is enabled. Disabled by default.
+	 * Default path of the tunnel endpoint on the Central server.
 	 */
-	private boolean enabled;
+	public static final String DEFAULT_PATH = "/ws/agent";
 
 	/**
-	 * WebSocket endpoint of the M8B Governor, e.g. {@code wss://m8b.example.com/ws/agent}.
+	 * Whether this channel is enabled, which {@code central.enabled} still has to allow. Enabled
+	 * here by default: the tunnel is how the Governor reaches this agent at all, and an operator
+	 * who wants fleet management without it turns this one off explicitly.
+	 */
+	@Default
+	private boolean enabled = true;
+
+	/**
+	 * Path of the tunnel endpoint on {@code central.url}, whose scheme becomes {@code ws} or
+	 * {@code wss} accordingly.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private String path = DEFAULT_PATH;
+
+	/**
+	 * A complete endpoint for this channel, which overrides {@code central.url} and {@link #path}
+	 * entirely (e.g. {@code wss://central.example.com/ws/agent}). For the deployment where the two
+	 * channels do not come out of the same ingress; elsewhere, leave it unset.
 	 */
 	@JsonSetter(nulls = SKIP)
 	private String endpoint;
 
 	/**
-	 * HTTP headers sent with the WebSocket handshake. Carries the agent credentials, typically
-	 * {@code Authorization: Bearer ...}. Values may be encrypted with the MetricsHub keystore.
+	 * Headers for this channel alone, merged over {@code central.headers} key by key. Both channels
+	 * present the same credential to the same server, so this is for the deployment that splits
+	 * them; elsewhere, write it once on the roof.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
 	private Map<String, String> headers = new HashMap<>();
 
 	/**
-	 * PEM file of the certificate to trust for the M8B server. Defaults to the system trust store.
+	 * A trusted certificate for this channel alone, overriding {@code central.certificateFile}.
+	 * Same rule as {@link #headers}: one server, one authority, unless the deployment splits them.
 	 */
 	@JsonSetter(nulls = SKIP)
 	private String certificateFile;

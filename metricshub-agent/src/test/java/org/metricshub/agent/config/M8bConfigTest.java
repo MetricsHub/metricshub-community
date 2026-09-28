@@ -24,57 +24,79 @@ class M8bConfigTest {
 	}
 
 	@Test
-	void m8bSectionShouldBeDeserialized() throws Exception {
+	void tunnelSectionShouldBeDeserialized() throws Exception {
 		final AgentConfig agentConfig = deserialize(
 			"""
-			m8b:
+			central:
 			  enabled: true
-			  endpoint: wss://m8b.example.com/ws/agent
-			  headers:
-			    Authorization: Bearer my-token
-			  certificateFile: /opt/metricshub/security/m8b-ca.pem
-			  heartbeatInterval: 1m
-			  excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+			  tunnel:
+			    endpoint: wss://central.example.com/ws/agent
+			    headers:
+			      Authorization: Bearer my-token
+			    certificateFile: /opt/metricshub/security/central-ca.pem
+			    heartbeatInterval: 1m
+			    excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
 			"""
 		);
 
-		final M8bConfig m8b = agentConfig.getM8b();
-		assertTrue(m8b.isEnabled());
-		assertEquals("wss://m8b.example.com/ws/agent", m8b.getEndpoint());
-		assertEquals(Map.of("Authorization", "Bearer my-token"), m8b.getHeaders());
-		assertEquals("/opt/metricshub/security/m8b-ca.pem", m8b.getCertificateFile());
-		assertEquals(60, m8b.getHeartbeatInterval());
-		assertEquals(Set.of("ExecuteSshCommandline", "ExecuteWinRemoteCommand"), m8b.getExcludedTools());
+		final M8bConfig tunnel = agentConfig.getCentral().getTunnel();
+		assertTrue(tunnel.isEnabled());
+		assertEquals("wss://central.example.com/ws/agent", tunnel.getEndpoint());
+		assertEquals(Map.of("Authorization", "Bearer my-token"), tunnel.getHeaders());
+		assertEquals("/opt/metricshub/security/central-ca.pem", tunnel.getCertificateFile());
+		assertEquals(60, tunnel.getHeartbeatInterval());
+		assertEquals(Set.of("ExecuteSshCommandline", "ExecuteWinRemoteCommand"), tunnel.getExcludedTools());
 	}
 
 	@Test
-	void m8bShouldBeDisabledByDefault() throws Exception {
+	void tunnelShouldBeDisabledByDefault() throws Exception {
 		final AgentConfig agentConfig = deserialize("loggerLevel: error\n");
 
-		final M8bConfig m8b = agentConfig.getM8b();
-		assertFalse(m8b.isEnabled());
-		assertNull(m8b.getEndpoint());
-		assertTrue(m8b.getHeaders().isEmpty());
-		assertEquals(M8bConfig.DEFAULT_HEARTBEAT_INTERVAL, m8b.getHeartbeatInterval());
-		assertTrue(m8b.getExcludedTools().isEmpty());
+		// The channel says yes and the roof it hangs from says nothing, so nothing runs
+		final M8bConfig tunnel = agentConfig.getCentral().tunnel();
+		assertFalse(tunnel.isEnabled());
+		assertNull(tunnel.getEndpoint());
+		assertTrue(tunnel.getHeaders().isEmpty());
+		assertEquals(M8bConfig.DEFAULT_HEARTBEAT_INTERVAL, tunnel.getHeartbeatInterval());
+		assertTrue(tunnel.getExcludedTools().isEmpty());
 	}
 
 	@Test
 	void nullValuesShouldKeepDefaults() throws Exception {
 		final AgentConfig agentConfig = deserialize(
 			"""
-			m8b:
+			central:
 			  enabled: true
-			  endpoint:
-			  heartbeatInterval:
-			  excludedTools:
+			  tunnel:
+			    endpoint:
+			    heartbeatInterval:
+			    excludedTools:
 			"""
 		);
 
-		final M8bConfig m8b = agentConfig.getM8b();
-		assertTrue(m8b.isEnabled());
-		assertNull(m8b.getEndpoint());
-		assertEquals(M8bConfig.DEFAULT_HEARTBEAT_INTERVAL, m8b.getHeartbeatInterval());
-		assertTrue(m8b.getExcludedTools().isEmpty());
+		final M8bConfig tunnel = agentConfig.getCentral().getTunnel();
+		assertTrue(tunnel.isEnabled());
+		assertNull(tunnel.getEndpoint());
+		assertEquals(M8bConfig.DEFAULT_PATH, tunnel.getPath());
+		assertEquals(M8bConfig.DEFAULT_HEARTBEAT_INTERVAL, tunnel.getHeartbeatInterval());
+		assertTrue(tunnel.getExcludedTools().isEmpty());
+	}
+
+	@Test
+	void tunnelShouldBeRefusableOnItsOwn() throws Exception {
+		final AgentConfig agentConfig = deserialize(
+			"""
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  tunnel:
+			    enabled: false
+			"""
+		);
+
+		// Fleet management without exposing this agent's tools to the Governor: said on the channel,
+		// and the roof being on does not overrule it
+		assertFalse(agentConfig.getCentral().tunnel().isEnabled());
+		assertTrue(agentConfig.getCentral().opamp().isEnabled());
 	}
 }

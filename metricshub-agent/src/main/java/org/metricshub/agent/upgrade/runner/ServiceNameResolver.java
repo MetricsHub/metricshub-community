@@ -126,7 +126,7 @@ public class ServiceNameResolver {
 		final List<String> candidates = windows.getAsBoolean() ? discoverWindowsServices() : discoverLinuxUnits();
 		if (candidates.isEmpty()) {
 			throw new IllegalStateException(
-				"Cannot determine the MetricsHub service name of this installation; set upgrade.serviceName explicitly"
+				"Cannot determine the MetricsHub service name of this installation; set central.upgrade.serviceName explicitly"
 			);
 		}
 		if (candidates.size() == 1) {
@@ -145,7 +145,7 @@ public class ServiceNameResolver {
 				candidates +
 				") and " +
 				(running.isEmpty() ? "none is" : "several are") +
-				" reported running; set upgrade.serviceName explicitly"
+				" reported running; set central.upgrade.serviceName explicitly"
 		);
 	}
 

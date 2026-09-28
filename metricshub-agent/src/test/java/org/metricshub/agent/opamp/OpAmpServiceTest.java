@@ -18,7 +18,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.OpAmpConfig;
+import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.fleet.AgentInstanceUid;
@@ -91,7 +93,7 @@ class OpAmpServiceTest {
 
 	@Test
 	void indeterminateDeploymentDetectionShouldStillReportTheDescription() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		opAmpService.setDeploymentDetector(
 			new DeploymentDetector(command -> {
 				throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
@@ -109,8 +111,13 @@ class OpAmpServiceTest {
 	@Test
 	void reportedDescriptionShouldCarryTheConfiguredAgentAttributes() {
 		final OpAmpConfig opAmpConfig = enabledConfig(ENDPOINT);
-		opAmpConfig.setAttributes(Map.of("fleet", "emea", "site", "opamp-site"));
-		agentConfig.setOpamp(opAmpConfig);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.attributes(Map.of("fleet", "emea", "site", "opamp-site"))
+				.opamp(opAmpConfig)
+				.build()
+		);
 		agentConfig.setAttributes(Map.of("site", "data-center-1", "host.name", "configured-host"));
 
 		opAmpService.supervise();
@@ -163,7 +170,7 @@ class OpAmpServiceTest {
 
 	@Test
 	void enabledConfigurationShouldStartTheClientOnce() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 
 		opAmpService.supervise();
 		opAmpService.supervise();
@@ -178,7 +185,9 @@ class OpAmpServiceTest {
 
 	@Test
 	void enabledConfigurationWithoutEndpointShouldNotStartTheClient() {
-		agentConfig.setOpamp(OpAmpConfig.builder().enabled(true).build());
+		agentConfig.setCentral(
+			CentralConfig.builder().enabled(true).opamp(OpAmpConfig.builder().enabled(true).build()).build()
+		);
 
 		opAmpService.supervise();
 
@@ -187,10 +196,12 @@ class OpAmpServiceTest {
 
 	@Test
 	void configurationChangeShouldRebuildTheClient() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		opAmpService.supervise();
 
-		agentConfig.setOpamp(enabledConfig("https://other.example.com/v1/opamp"));
+		agentConfig.setCentral(
+			CentralConfig.builder().enabled(true).opamp(enabledConfig("https://other.example.com/v1/opamp")).build()
+		);
 		opAmpService.supervise();
 
 		assertEquals(2, factoryInvocations);
@@ -200,10 +211,12 @@ class OpAmpServiceTest {
 
 	@Test
 	void disablingShouldStopTheClient() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		opAmpService.supervise();
 
-		agentConfig.setOpamp(OpAmpConfig.builder().enabled(false).build());
+		agentConfig.setCentral(
+			CentralConfig.builder().enabled(true).opamp(OpAmpConfig.builder().enabled(false).build()).build()
+		);
 		opAmpService.supervise();
 
 		assertEquals(1, factoryInvocations);
@@ -212,7 +225,7 @@ class OpAmpServiceTest {
 
 	@Test
 	void shutdownShouldStopTheClient() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		opAmpService.supervise();
 
 		opAmpService.shutdown();
@@ -222,7 +235,7 @@ class OpAmpServiceTest {
 
 	@Test
 	void clientStartFailureShouldBeContained() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		final OpAmpService failingService = new OpAmpService(agentContextHolder, _ -> {
 			throw new IllegalStateException("Simulated client creation failure");
 		});
@@ -235,7 +248,7 @@ class OpAmpServiceTest {
 
 	@Test
 	void failedStartShouldReleaseTheClientResources() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		org.mockito.Mockito.doThrow(new IllegalStateException("Simulated start failure")).when(client).start();
 
 		opAmpService.supervise();
@@ -245,7 +258,7 @@ class OpAmpServiceTest {
 
 	@Test
 	void startupFailureShouldBeRetriedOnTheNextTick() {
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 		final AtomicReference<Boolean> failFirstAttempt = new AtomicReference<>(true);
 		final OpAmpService retryingService = new OpAmpService(agentContextHolder, _ -> {
 			factoryInvocations++;
@@ -296,7 +309,7 @@ class OpAmpServiceTest {
 			return client;
 		});
 		stubDeploymentDetection(service);
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 
 		service.supervise();
 
@@ -314,8 +327,13 @@ class OpAmpServiceTest {
 			return client;
 		});
 		stubDeploymentDetection(service);
-		agentConfig.setOpamp(enabledConfig(ENDPOINT));
-		agentConfig.setUpgrade(org.metricshub.agent.config.UpgradeConfig.builder().enabled(false).build());
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(enabledConfig(ENDPOINT))
+				.upgrade(UpgradeConfig.builder().enabled(false).build())
+				.build()
+		);
 
 		service.supervise();
 

@@ -101,7 +101,7 @@ public class PackageValidator {
 						offer.version() +
 						" is older than the running version " +
 						currentVersion +
-						" and downgrades are disabled (upgrade.allowDowngrade)"
+						" and downgrades are disabled (central.upgrade.allowDowngrade)"
 				);
 			}
 		}
