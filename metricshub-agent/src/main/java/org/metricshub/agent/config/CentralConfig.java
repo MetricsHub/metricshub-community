@@ -225,13 +225,35 @@ public class CentralConfig {
 	 */
 	private Map<String, String> sharedWith(final Map<String, String> own) {
 		final Map<String, String> merged = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-		if (headers != null) {
-			merged.putAll(headers);
-		}
-		if (own != null) {
-			merged.putAll(own);
-		}
+		copyNamed(headers, merged);
+		copyNamed(own, merged);
 		return merged;
+	}
+
+	/**
+	 * Copies headers that have a name, because a comparator cannot order one that has not.
+	 *
+	 * <p>A map ordered case-insensitively throws on a null key where the plain map this replaced
+	 * simply held it — and this runs before {@link org.metricshub.agent.fleet.FleetHeaders#decrypt},
+	 * which is where a nameless header is meant to be dropped. Both channels resolve through here,
+	 * so one such entry would stop OpAMP and the tunnel alike rather than being ignored.
+	 *
+	 * <p>Not something this YAML parser produces: {@code ~}, {@code null}, {@code ""} and an empty
+	 * key all deserialize to a literal string, never a null. It is a configuration built in code
+	 * that can carry one, and the tolerance is older than this merge.
+	 *
+	 * @param from  what was configured, possibly {@code null}
+	 * @param into  where the named entries go
+	 */
+	private static void copyNamed(final Map<String, String> from, final Map<String, String> into) {
+		if (from == null) {
+			return;
+		}
+		from.forEach((name, value) -> {
+			if (name != null) {
+				into.put(name, value);
+			}
+		});
 	}
 
 	/**

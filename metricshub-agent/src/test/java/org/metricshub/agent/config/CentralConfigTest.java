@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.helper.ConfigHelper;
@@ -99,6 +100,24 @@ class CentralConfigTest {
 		// and the one that stayed is untouched by it
 		assertEquals(Map.of("Authorization", "Bearer shared"), central.opamp().getHeaders());
 		assertEquals("/shared/ca.pem", central.opamp().getCertificateFile());
+	}
+
+	@Test
+	void aHeaderWithoutANameShouldNotStopBothChannels() {
+		final Map<String, String> nameless = new HashMap<>();
+		nameless.put(null, "Bearer nowhere");
+		nameless.put("Authorization", "Bearer real");
+		final CentralConfig central = CentralConfig.builder()
+			.enabled(true)
+			.url("https://central.example.com")
+			.headers(nameless)
+			.build();
+
+		// Ordering case-insensitively means a comparator, and a comparator cannot order a name that
+		// is not there. Left to throw, one nameless entry would stop OpAMP and the tunnel alike --
+		// where the plain map this replaced simply held it for `FleetHeaders.decrypt` to drop
+		assertEquals(Map.of("Authorization", "Bearer real"), central.opamp().getHeaders());
+		assertEquals(Map.of("Authorization", "Bearer real"), central.tunnel().getHeaders());
 	}
 
 	@Test
