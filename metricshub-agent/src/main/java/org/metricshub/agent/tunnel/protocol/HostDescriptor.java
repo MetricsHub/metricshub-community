@@ -24,7 +24,7 @@ package org.metricshub.agent.tunnel.protocol;
 import java.util.Map;
 
 /**
- * A monitored host (MetricsHub resource) reported to the Governor so it can route a host name to
+ * A monitored host (MetricsHub resource) reported to Central so it can route a host name to
  * the agent that monitors it.
  *
  * @param resourceKey   MetricsHub resource key, unique within the agent configuration

@@ -94,7 +94,7 @@ public class TunnelService {
 	 *
 	 * <p>Kept because the protocol has no way to amend it: {@code agent.register} is the only frame
 	 * that carries a descriptor, so a reload that renames the host or adds an attribute can only
-	 * reach the Governor through a new registration.
+	 * reach Central through a new registration.
 	 */
 	private volatile AgentDescriptor advertisedDescriptor;
 
@@ -169,7 +169,7 @@ public class TunnelService {
 			final AgentDescriptor descriptor = AgentDescriptorMapper.map(current.context());
 			if (!descriptor.equals(advertisedDescriptor)) {
 				// There is no frame that amends an identity: agent.register is the only one that
-				// carries a descriptor, so a renamed host or a new attribute reaches the Governor by
+				// carries a descriptor, so a renamed host or a new attribute reaches Central by
 				// registering again. Reconnecting rebuilds the registration from the current context,
 				// which is what the protocol already promises a reconnection does -- and it carries
 				// the hosts with it, so nothing below needs to run.
@@ -182,8 +182,8 @@ public class TunnelService {
 			if (!hosts.equals(advertisedHosts)) {
 				if (!client.send(new HostsUpdated(hosts))) {
 					// Too large for this server to accept, so it was not sent. Recording it as
-					// advertised anyway would leave every later tick seeing nothing to do, and the
-					// Governor routing on the old inventory for as long as the process ran. Left
+					// advertised anyway would leave every later tick seeing nothing to do, and
+					// Central routing on the old inventory for as long as the process ran. Left
 					// unrecorded, the next tick tries again -- which costs a log line every thirty
 					// seconds and recovers by itself if hosts are removed or the server's cap raised.
 					return;
@@ -208,7 +208,7 @@ public class TunnelService {
 	 * <p>
 	 * The generation is read <em>first</em> and re-checked afterwards: recording a generation newer
 	 * than the context it was taken from would make the next tick believe the new inventory had
-	 * already been advertised, and the Governor would keep routing to stale hosts until the next
+	 * already been advertised, and Central would keep routing to stale hosts until the next
 	 * reload or reconnection. The reverse mistake is harmless — the hosts are compared before
 	 * anything is sent.
 	 * </p>
@@ -358,7 +358,7 @@ public class TunnelService {
 
 		@Override
 		public void onDisconnected(final int code, final String reason, final long generation) {
-			// The Governor discarded whatever it had asked for. The generation binding already stops
+			// Central discarded whatever it had asked for. The generation binding already stops
 			// an answer from reaching the next session; this is about the slot, which the bridge
 			// outliving the connection would otherwise hold until the invocation's own deadline.
 			tunnelBridge.cancelGeneration(generation);

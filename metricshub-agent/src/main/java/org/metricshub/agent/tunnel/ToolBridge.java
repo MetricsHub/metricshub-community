@@ -50,7 +50,7 @@ import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolResult;
 import org.springframework.ai.tool.ToolCallback;
 
 /**
- * Executes the tools the Governor invokes through the tunnel, using the very Spring AI
+ * Executes the tools Central invokes through the tunnel, using the very Spring AI
  * {@link ToolCallback}s the agent already exposes to its local AI features.
  * <p>
  * Every invocation is checked against the advertised snapshot (unknown tool), the server-imposed
@@ -67,7 +67,7 @@ public class ToolBridge {
 	/**
 	 * How much of a failure's detail travels back. A result is measured against the server's payload
 	 * cap and refused when it exceeds it; an error has no such fallback — refusing to report a
-	 * failure because the report is too long leaves the Governor waiting on nothing. So the detail is
+	 * failure because the report is too long leaves Central waiting on nothing. So the detail is
 	 * cut instead, small enough that an error frame cannot approach any cap worth configuring.
 	 */
 	static final int MAX_ERROR_DETAIL_CHARS = 1000;
@@ -79,7 +79,7 @@ public class ToolBridge {
 	 * The hard ceiling on threads this bridge may ever hold at once.
 	 *
 	 * <p>The server's {@code maxInFlight} bounds LIVE invocations, and a timed-out one stops being
-	 * live the moment the Governor is told so — but its thread does not stop: a callback blocked in
+	 * live the moment Central is told so — but its thread does not stop: a callback blocked in
 	 * a socket read does not observe an interruption, and nothing in Java can take a thread back.
 	 * Without a second bound, a run of timeouts would admit invocation after invocation while every
 	 * abandoned one kept its thread, its connection and its work on the monitored host. So the pool
@@ -151,7 +151,7 @@ public class ToolBridge {
 	 */
 	public static ExecutorService newWorkerPool() {
 		// SynchronousQueue, not an unbounded one: a request that finds every thread taken must be
-		// refused now, while the Governor can still act on it, rather than queued behind an
+		// refused now, while Central can still act on it, rather than queued behind an
 		// invocation that has already outlived its deadline.
 		return new ThreadPoolExecutor(
 			0,
@@ -203,8 +203,8 @@ public class ToolBridge {
 		}
 		if (invoke.tool() == null || invoke.tool().isBlank()) {
 			// Checked BEFORE the lookup: the advertised map is immutable, so asking it for a null key
-			// throws, and that exception would be swallowed by the tunnel callback -- leaving the
-			// Governor waiting out its full deadline for an answer that was never coming.
+			// throws, and that exception would be swallowed by the tunnel callback -- leaving
+			// Central waiting out its full deadline for an answer that was never coming.
 			answer(
 				new ToolError(invoke.requestId(), ToolErrorCode.INVALID_ARGUMENTS, "tool.invoke requires a tool name"),
 				generation
@@ -345,7 +345,7 @@ public class ToolBridge {
 	 * Gives up on everything a lost connection had asked for.
 	 *
 	 * <p>The generation binding already stops a late answer from reaching the next session. What it
-	 * does not do is give the slot back: this bridge outlives the connection, so work the Governor
+	 * does not do is give the slot back: this bridge outlives the connection, so work Central
 	 * discarded when the socket closed would go on holding its {@code maxInFlight} slot until its
 	 * own deadline — up to five minutes by default — and the NEXT session's invocations would be
 	 * refused {@code TOO_MANY_INFLIGHT} for work nobody is waiting for.
@@ -441,7 +441,7 @@ public class ToolBridge {
 	 * bytes, so a small negotiated cap and a multibyte exception message can still produce a frame
 	 * the server closes the tunnel over (1009) -- losing not just this answer but the session. So
 	 * every answer is weighed here, and one that will not fit is replaced by a report that does. A
-	 * failure the Governor can read beats a failure it never hears about.
+	 * failure Central can read beats a failure it never hears about.
 	 *
 	 * @param answer what the invocation produced
 	 * @return it, or a smaller answer saying the same thing

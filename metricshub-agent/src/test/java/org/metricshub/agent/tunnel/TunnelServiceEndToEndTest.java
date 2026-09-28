@@ -19,7 +19,7 @@ import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.TunnelConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
-import org.metricshub.agent.tunnel.client.FakeGovernorServer;
+import org.metricshub.agent.tunnel.client.FakeCentralServer;
 import org.metricshub.agent.tunnel.client.TunnelClient;
 import org.metricshub.agent.tunnel.protocol.TunnelJson;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage;
@@ -37,7 +37,7 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
  * The whole agent side over a real WebSocket: the Spring AI tool registry built by
- * {@link ToolCallbackConfiguration} is advertised to a fake Governor, and a {@code tool.invoke} of the
+ * {@link ToolCallbackConfiguration} is advertised to a fake Central server, and a {@code tool.invoke} of the
  * real {@code ListHosts} tool comes back as {@code tool.result}.
  */
 @SpringJUnitConfig(classes = { ToolCallbackConfiguration.class, TunnelServiceEndToEndTest.TestConfig.class })
@@ -65,12 +65,12 @@ class TunnelServiceEndToEndTest {
 	@Autowired
 	private AgentContextHolder agentContextHolder;
 
-	private FakeGovernorServer server;
+	private FakeCentralServer server;
 	private TunnelService service;
 
 	@BeforeEach
 	void setUp() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 
 		final AgentConfig agentConfig = AgentConfig.builder()

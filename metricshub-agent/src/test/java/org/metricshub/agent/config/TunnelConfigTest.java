@@ -94,7 +94,7 @@ class TunnelConfigTest {
 			"""
 		);
 
-		// Fleet management without exposing this agent's tools to the Governor: said on the channel,
+		// Fleet management without exposing this agent's tools to Central: said on the channel,
 		// and the roof being on does not overrule it
 		assertFalse(agentConfig.getCentral().tunnel().isEnabled());
 		assertTrue(agentConfig.getCentral().opamp().isEnabled());

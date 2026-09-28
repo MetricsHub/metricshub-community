@@ -341,7 +341,7 @@ class TunnelServiceTest {
 		generation = 3;
 		service.supervise();
 
-		// Recording it as advertised would leave the Governor routing on the old inventory for as
+		// Recording it as advertised would leave Central routing on the old inventory for as
 		// long as this process ran: every later tick would see nothing to do
 		service.supervise();
 		verify(client, times(2)).send(any(HostsUpdated.class));
@@ -362,7 +362,7 @@ class TunnelServiceTest {
 		capturedListeners.get(0).buildRegistration();
 
 		// A reload that renames the host. There is no frame that amends an identity -- agent.register
-		// is the only one carrying a descriptor -- so the only way to tell the Governor is to register
+		// is the only one carrying a descriptor -- so the only way to tell Central is to register
 		// again.
 		when(agentInfo.getAttributes()).thenReturn(Map.of("host.name", "renamed-01", "service.name", "MetricsHub Agent"));
 		generation = 2;

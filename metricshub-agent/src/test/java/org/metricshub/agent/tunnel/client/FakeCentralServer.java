@@ -25,10 +25,10 @@ import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegistered;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.HeartbeatPong;
 
 /**
- * Minimal Governor for the tunnel tests: records handshakes and frames, and answers
+ * Minimal Central server for the tunnel tests: records handshakes and frames, and answers
  * {@code agent.register} and {@code heartbeat.ping} like the real server unless told otherwise.
  */
-public class FakeGovernorServer extends WebSocketServer {
+public class FakeCentralServer extends WebSocketServer {
 
 	private final CountDownLatch started = new CountDownLatch(1);
 	private final BlockingQueue<Map<String, String>> handshakes = new LinkedBlockingQueue<>();
@@ -51,11 +51,11 @@ public class FakeGovernorServer extends WebSocketServer {
 	 */
 	public volatile AgentRegistered limits = new AgentRegistered(30, 1_048_576L, 2);
 
-	public FakeGovernorServer() {
+	public FakeCentralServer() {
 		this(null);
 	}
 
-	public FakeGovernorServer(final SSLContext sslContext) {
+	public FakeCentralServer(final SSLContext sslContext) {
 		super(new InetSocketAddress("127.0.0.1", 0));
 		setReuseAddr(true);
 		this.secure = sslContext != null;
@@ -67,7 +67,7 @@ public class FakeGovernorServer extends WebSocketServer {
 	public void startAndAwait() throws InterruptedException {
 		start();
 		if (!started.await(10, TimeUnit.SECONDS)) {
-			throw new IllegalStateException("The fake Governor did not start");
+			throw new IllegalStateException("The fake Central server did not start");
 		}
 	}
 

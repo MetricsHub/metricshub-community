@@ -1,7 +1,7 @@
-># Fleet Management — OpAMP and the Central Tunnel
+># Central Fleet Management — OpAMP and Tunnel
 
 **Audience:** maintainers of the MetricsHub Community Edition.
-**Scope:** the two channels an agent opens toward its fleet — the embedded OpAMP client (`metricshub-opamp-client`), which reports status and health and performs automatic package upgrades ([§1](#1-what-fleet-management-means-here)-[§12](#12-test-map)), and the Central Governor tunnel, over which the agent advertises its tools and hosts and runs the tools the Governor invokes ([§13](#13-central-governor-tunnel)).
+**Scope:** the two channels an agent opens toward its fleet — the embedded OpAMP client (`metricshub-opamp-client`), which reports status and health and performs automatic package upgrades ([§1](#1-what-fleet-management-means-here)-[§12](#12-test-map)), and the Central tunnel, over which the agent advertises its tools and hosts and runs the tools Central invokes ([§13](#13-central-tunnel)).
 
 This document starts generic and drills down progressively:
 
@@ -19,7 +19,7 @@ This document starts generic and drills down progressively:
 | [10. Security decisions](#10-security-decisions) | Hardening |
 | [11. Extending the client](#11-extending-the-client) | Contributor |
 | [12. Test map](#12-test-map) | Verification |
-| [13. Central Governor tunnel](#13-central-governor-tunnel) | Second channel |
+| [13. Central tunnel](#13-central-tunnel) | Second channel |
 
 ---
 
@@ -512,8 +512,8 @@ sequenceDiagram
 
 | Platform | Mechanism | Script |
 |---|---|---|
-| Linux | `systemd-run --unit=metricshub-upgrade-<id> --collect` — a transient one-shot unit in its own cgroup | [`metricshub-upgrade-runner.sh`](metricshub-assets/src/main/resources/linux/upgrade-runner/metricshub-upgrade-runner.sh) |
-| Windows | One-shot Scheduled Task running as SYSTEM, outside the service's process tree (NSSM would otherwise kill it) | [`metricshub-upgrade-runner.ps1`](metricshub-assets/src/main/resources/windows/upgrade-runner/metricshub-upgrade-runner.ps1) + a generated `metricshub-upgrade-launch.cmd` wrapper |
+| Linux | `systemd-run --unit=metricshub-upgrade-<id> --collect` — a transient one-shot unit in its own cgroup. The script installs through whichever package manager it finds (`apt-get`, then `dnf`, then `yum`), falling back to `dpkg -i` / `rpm -U`, so the distribution's own dependency handling is used where it exists | [`metricshub-upgrade-runner.sh`](metricshub-assets/src/main/resources/linux/upgrade-runner/metricshub-upgrade-runner.sh) |
+| Windows | One-shot Scheduled Task running as SYSTEM, outside the service's process tree (NSSM would otherwise kill it). The MSI is Authenticode-verified before `msiexec` runs | [`metricshub-upgrade-runner.ps1`](metricshub-assets/src/main/resources/windows/upgrade-runner/metricshub-upgrade-runner.ps1) + a generated `metricshub-upgrade-launch.cmd` wrapper |
 | Archive / Docker | `UnsupportedRunnerLauncher` — defensive only; these deployments never advertise `AcceptsPackages` | — |
 
 **Why the runner marker decides, not the running version.** Package hooks and MSI service controls can start the upgraded agent while the installer is still finalizing — and it may still fail afterwards. A running target version alone is therefore not proof of success. The marker is authoritative; the version check is the fallback once the deadline elapses. This also covers the same-version hotfix case, where comparing versions proves nothing.
@@ -708,9 +708,9 @@ central:
 | `downloadRetries` | `3` | |
 | `installTimeout` | `1800s` | Reconciliation deadline; persisted in the transaction so both processes agree |
 | `hostAllowlist` | `[]` | Empty allows any HTTPS host |
-| `downloadHeaders` | `{}` | Keyed by repository **authority** (`host` or `host:port`) — see [§10](#10-security-decisions) |
+| `downloadHeaders` | `{}` | Keyed by repository **authority** (`host` or `host:port`) — see [§10](#10-security-decisions). Values may be keystore-encrypted, like `central.headers` |
 | `trustedCertificateFile` | system trust store | PEM for the repository |
-| `serviceName` | auto-discovered | Per-edition unit/service name; pin it if discovery fails |
+| `serviceName` | auto-discovered | The installed MetricsHub service, found by pattern — `metricshub-*-service.service` unit files on Linux, `MetricsHub *` services on Windows — so Community and Enterprise both work unpinned. Set it when discovery finds nothing, or several |
 | `msiSignatureSubjectContains` | `MetricsHub` | Windows Authenticode subject check |
 
 ---
@@ -723,6 +723,7 @@ These are load-bearing; read the rationale before relaxing any of them.
 |---|---|
 | **Configured download credentials are bound to an operator-named authority** (`host` or `host:port`; a bare host means the scheme's default port) | A compromised OpAMP server must not be able to choose where the agent's credentials are sent. An offer pointing at another host — or another *port* of the same host, which is a different service — receives none of them |
 | **Configured credentials travel over HTTPS only** | An `http` offer matches no configured header set, whatever its host. The loopback plain-HTTP tolerance exists only for unauthenticated development downloads |
+| **Redirects are followed by hand, and the headers stop at the offered origin** | The client runs with `Redirect.NEVER` so every hop is re-validated against the HTTPS requirement and the allowlist; an allowed host could otherwise bounce the download anywhere. The request headers are replayed only to the scheme, host and port originally offered — a same-origin hop keeps them, anything else receives nothing |
 | **Local configuration wins on header name conflicts** (case-insensitive, HTTP semantics) | Operator intent on the machine overrides server metadata; merging into one map also avoids duplicate header lines, since `HttpRequest.Builder.header` appends |
 | **SHA-256 is mandatory** and verified twice: while streaming and recomputed from disk | The streaming hash guards the transfer; the on-disk hash guards everything between download and install |
 | **`server_offered_hash` is package identity, not just a checksum** | A same-version offer with a different identity is installed (hotfix); an offer whose identity matches the recorded installed one is a no-op |
@@ -770,9 +771,9 @@ Golden protobuf fixtures are produced by `GoldenFixtureWriter`, so wire-format r
 
 ---
 
-## 13. Central Governor tunnel
+## 13. Central tunnel
 
-The second fleet channel. Where OpAMP carries *status and upgrades* by polling, the Central tunnel is a persistent **outbound WebSocket** through which the Central Governor discovers what an agent can do (its tool registry and monitored hosts) and asks it to run troubleshooting tools. Both channels report the **same identity** (§13.5). The wire protocol is specified in [`central-tunnel-protocol.md`](central-tunnel-protocol.md); this section covers the agent-side implementation.
+The second fleet channel. Where OpAMP carries *status and upgrades* by polling, the Central tunnel is a persistent **outbound WebSocket** through which Central discovers what an agent can do (its tool registry and monitored hosts) and asks it to run troubleshooting tools. Both channels report the **same identity** (§13.5). The wire protocol is specified in [`central-tunnel-protocol.md`](central-tunnel-protocol.md); this section covers the agent-side implementation.
 
 ### 13.1 Component map
 
@@ -784,7 +785,7 @@ flowchart TB
     Svc --> Inv["HostInventory<br/><i>active telemetry managers</i>"]
     Svc --> Desc["AgentDescriptorMapper<br/><i>identity + edition</i>"]
     Svc --> Bridge["ToolBridge<br/><i>tool.invoke → ToolCallback.call</i>"]
-    Client -->|"agent.register · heartbeat.ping · hosts.updated · tool.result/error"| Gov["Central Governor"]
+    Client -->|"agent.register · heartbeat.ping · hosts.updated · tool.result/error"| Gov["Central"]
     Gov -->|"agent.registered · heartbeat.pong · tool.invoke"| Client
     Client -->|onInvoke| Bridge
     Bridge --> Tools["IMCPToolService beans<br/>ListHosts, GetMetricsFromCacheForHost, …"]
@@ -840,7 +841,7 @@ Two listeners, and they are not the same thing:
 * **`TunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` and `onDisconnected` change bridge state — the latter giving back the `maxInFlight` slots the lost connection's work was holding, which the bridge, outliving that connection, would otherwise hold until each invocation's own deadline. Only `onInvoke` hands off — to the tool pool, carrying the connection generation the answer will be bound to. Anything blocking added to the others stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
   * **One exception**, and it is the one that matters when writing a listener: a `stop()` that cannot reach the tunnel thread at all — interrupted, or timed out because a callback is holding that thread — calls `onDisconnected` from the **stopping** thread instead. That case is precisely the one where the tunnel thread is unavailable, so a listener must not assume `onDisconnected` sees tunnel-thread state consistently; treat it as “discard what you were doing” and nothing more.
 
-The bridge frees an invocation's in-flight slot exactly once, by whichever of three paths reaches it first: the worker's `finally` when it finishes, the deadline when the invocation timed out with its worker still running (or cancelled before it ever ran), and the rejection path when no thread was free to take it. So the deadline does not release the slot when the worker is *gone* — it releases it precisely when the worker has **not** finished, which is the whole point: the Governor has been told the invocation is over, so the slot is its to reuse even though the thread is not.
+The bridge frees an invocation's in-flight slot exactly once, by whichever of three paths reaches it first: the worker's `finally` when it finishes, the deadline when the invocation timed out with its worker still running (or cancelled before it ever ran), and the rejection path when no thread was free to take it. So the deadline does not release the slot when the worker is *gone* — it releases it precisely when the worker has **not** finished, which is the whole point: Central has been told the invocation is over, so the slot is its to reuse even though the thread is not.
 
 ### 13.4 Configuration reference — `central.tunnel:`
 
@@ -859,7 +860,7 @@ central:
 
 | Key | Default | Notes |
 |---|---|---|
-| `enabled` | `true` | Which `central.enabled` still has to allow. Set it to `false` for fleet management without exposing this agent's tools to the Governor |
+| `enabled` | `true` | Which `central.enabled` still has to allow. Set it to `false` for fleet management without exposing this agent's tools to Central |
 | `path` | `/ws/agent` | On `central.url`, whose scheme becomes `ws` or `wss` accordingly — `ws` is accepted for loopback only |
 | `endpoint` | — | A complete URL that overrides `central.url` and `path` entirely; for the deployment whose channels do not share an ingress |
 | `headers` | `{}` | Merged over `central.headers` key by key. Same rule: only when the deployment splits the channels |
@@ -883,7 +884,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Only advertised tools are invokable; `excludedTools` removes a tool from the advertisement itself | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
 | The existing kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
 | Every outbound frame is bounded, and weighed in bytes | Measured at the socket, so it covers a registration and a `hosts.updated` as well as an answer: a fleet monitoring thousands of hosts can produce either above the cap, and sending it would close the tunnel (`1009`) rather than lose one frame. Above the cap, a result becomes `RESULT_TOO_LARGE`, a failure's detail is truncated rather than the failure going unreported, and anything still too large is dropped with an error in the log — the server's own deadline then ends that one invocation |
-| Only actively monitored hosts are advertised | The Governor never routes to a resource the agent could not validate |
+| Only actively monitored hosts are advertised | Central never routes to a resource the agent could not validate |
 | `maxInFlight` bounds concurrent **invocations**; the work inside one is bounded by the tool, but it is cancelled with the invocation | A multi-host tool fans out internally, exactly as it does for the agent's own AI features — the tunnel exposes that concurrency, it does not introduce it. Bound it where it is configured (the tool's own pool size), not at the bridge, which cannot tell one tool's fan-out from another's. The deadline's interruption does reach that fan-out: `MultiHostToolExecutor` waits interruptibly and shuts its per-call pool down, so a timed-out invocation stops its per-host work instead of leaving it to run to completion unattended. Per-host work that ignores its interruption keeps its thread, as ever — and keeps the worker too, until its pool has terminated, so it stays under the same thread ceiling rather than accumulating a pool per cancelled invocation |
 | Approvals for sensitive tools live in Central | The agent cannot tell an approved call from any other; the policy lives where the users are |
 
@@ -896,7 +897,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Host inventory: group scoping, inactive resources skipped | `HostInventoryTest` |
 | Identity and edition | `AgentDescriptorMapperTest` |
 | Wire shape (golden `agent.register`), round trips, unknown types, fingerprint | `TunnelJsonTest` |
-| **Tunnel over a real WebSocket** — headers, limits, invocation round trip, unknown types, reconnection, `4001`, heartbeat timeout, binary frame, unacknowledged registration, stop, TLS | `TunnelClientTest` against `FakeGovernorServer` |
+| **Tunnel over a real WebSocket** — headers, limits, invocation round trip, unknown types, reconnection, `4001`, heartbeat timeout, binary frame, unacknowledged registration, stop, TLS | `TunnelClientTest` against `FakeCentralServer` |
 | Bridge: every error code, deadline answered once, caps, slots released when work outlives its session | `ToolBridgeTest` |
 | Supervisor: config lifecycle, retries, `hosts.updated` | `TunnelServiceTest` |
 | StartupHook wiring and Spring instantiation | `TunnelStartupHookTest` |

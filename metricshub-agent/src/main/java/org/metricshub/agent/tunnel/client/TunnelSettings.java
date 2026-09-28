@@ -29,7 +29,7 @@ import java.util.Map;
 /**
  * Connection settings of the central tunnel, resolved from the {@code central.tunnel:} configuration.
  *
- * @param endpoint          WebSocket endpoint of the Governor ({@code wss://host/ws/agent})
+ * @param endpoint          WebSocket endpoint of Central ({@code wss://host/ws/agent})
  * @param headers           handshake headers, values already decrypted
  * @param certificateFile   PEM certificate to trust for the server; {@code null} for the system trust store
  * @param agentUid          persistent agent instance uid, sent in the handshake

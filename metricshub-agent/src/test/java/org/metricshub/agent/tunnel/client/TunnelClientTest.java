@@ -42,7 +42,7 @@ class TunnelClientTest {
 	private static final String AGENT_UID = "01923e4a-7c1e-7f4b-8a2d-3c5e6f7a8b9c";
 	private static final long TIMEOUT_MS = 10_000;
 
-	private FakeGovernorServer server;
+	private FakeCentralServer server;
 	private TunnelClient client;
 
 	/**
@@ -95,12 +95,12 @@ class TunnelClientTest {
 		}
 	}
 
-	private TunnelSettings settings(final FakeGovernorServer fakeServer, final String certificateFile) {
+	private TunnelSettings settings(final FakeCentralServer fakeServer, final String certificateFile) {
 		return settings(fakeServer, certificateFile, Duration.ofSeconds(1));
 	}
 
 	private TunnelSettings settings(
-		final FakeGovernorServer fakeServer,
+		final FakeCentralServer fakeServer,
 		final String certificateFile,
 		final Duration heartbeatInterval
 	) {
@@ -117,7 +117,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldRegisterWithIdentityHeadersAndHonorServerLimits() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// A 1 s heartbeat, because the last assertion is that the interval the server named is the
 		// one being used
 		server.limits = new AgentRegistered(1, 1_048_576L, 2);
@@ -149,7 +149,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldForwardInvocationsAndSendAnswers() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -175,7 +175,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldAnswerUnknownMessagesWithAnErrorAndStayConnected() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -193,7 +193,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldReconnectAndReRegisterAfterTheServerDrops() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -214,7 +214,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldKeepGrowingTheBackoffAcrossSupersededSessions() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -241,7 +241,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldRetryWithBackoffWhenSuperseded() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -260,7 +260,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldReconnectWhenTheServerStopsAnsweringHeartbeats() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// A 1 s heartbeat, so the idle check this test is about fires 2.5 s into the silence below
 		server.limits = new AgentRegistered(1, 1_048_576L, 2);
 		server.startAndAwait();
@@ -288,7 +288,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldGiveUpOnAConnectionTheServerNeverAcknowledges() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.autoRegister = false;
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
@@ -315,7 +315,7 @@ class TunnelClientTest {
 
 	@Test
 	void aMessageThatNeverEndsIsDroppedRatherThanBuffered() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// A cap small enough to reach quickly; the agent is told it at registration
 		server.limits = new AgentRegistered(30, 4_096, 2);
 		server.startAndAwait();
@@ -340,7 +340,7 @@ class TunnelClientTest {
 
 	@Test
 	void aFrameAboveTheServersCapIsDroppedRatherThanSent() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// The agent is told a cap of 512 bytes at registration
 		server.limits = new AgentRegistered(30, 512, 2);
 		server.startAndAwait();
@@ -368,7 +368,7 @@ class TunnelClientTest {
 
 	@Test
 	void aToolInvokeBeforeRegistrationIsRefusedRatherThanRun() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// The ack is withheld, so the session never registers
 		server.autoRegister = false;
 		server.startAndAwait();
@@ -389,7 +389,7 @@ class TunnelClientTest {
 
 	@Test
 	void anAbsurdHeartbeatFromTheServerDoesNotWedgeTheTunnel() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// Long.MAX_VALUE seconds overflows Duration.toMillis(), and the throw would land inside the
 		// callback that has already cancelled the registration deadline and published the limits --
 		// leaving a client that says it is connected with no heartbeat and no idle detection.
@@ -405,7 +405,7 @@ class TunnelClientTest {
 
 	@Test
 	void anAbsurdHeartbeatInTheConfigurationDoesNotWedgeItEither() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// Nothing asked for by the server, so the CONFIGURED interval is what gets scheduled -- and
 		// this one cannot be. Unexamined, it throws from the same place, after the limits have been
 		// published and the registration deadline cancelled.
@@ -426,8 +426,8 @@ class TunnelClientTest {
 	void theNegotiatedHeartbeatIsClampedRatherThanDiscarded() throws Exception {
 		// The protocol says the server's value overrides the agent's configuration, so a value the
 		// agent cannot honour becomes the nearest value it can -- never the local configuration,
-		// which a governor has no way to see and no way to predict.
-		server = new FakeGovernorServer();
+		// which a server has no way to see and no way to predict.
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		client = new TunnelClient(settings(server, null, Duration.ofSeconds(30)), new RecordingListener());
 
@@ -465,7 +465,7 @@ class TunnelClientTest {
 		// with the connection that carried it -- so on every connection there is a window where the
 		// frame carrying every tool schema and every host is the one frame nobody measures. Exempted,
 		// a large enough fleet would be closed 1009, reconnect, and be closed again forever.
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		client = new TunnelClient(settings(server, null), new RecordingListener());
 
@@ -495,9 +495,9 @@ class TunnelClientTest {
 	}
 
 	@Test
-	void aGovernorCannotRaiseTheAgentsOwnInboundBound() throws Exception {
-		server = new FakeGovernorServer();
-		// An authenticated but faulty or compromised governor advertising no practical limit. The
+	void centralCannotRaiseTheAgentsOwnInboundBound() throws Exception {
+		server = new FakeCentralServer();
+		// An authenticated but faulty or compromised server advertising no practical limit. The
 		// field is what the SERVER accepts, not permission to fill this agent's heap.
 		server.limits = new AgentRegistered(30, Long.MAX_VALUE, 2);
 		server.startAndAwait();
@@ -564,7 +564,7 @@ class TunnelClientTest {
 
 	@Test
 	void aPeerThatOnlyEverPingsIsNotASilentPeer() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		// No protocol answers at all: the only thing arriving will be WebSocket control Pings
 		server.autoPong = false;
 		// And a 1 s heartbeat, so 4 s of control Pings is well past the idle deadline they answer
@@ -587,7 +587,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldDropTheConnectionOnABinaryFrame() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -603,7 +603,7 @@ class TunnelClientTest {
 
 	@Test
 	void stopShouldEndTheSessionAsThoroughlyAsALostConnection() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -620,7 +620,7 @@ class TunnelClientTest {
 
 	@Test
 	void stoppingTwiceAtOnceShouldNotThrowAtEitherCaller() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -649,7 +649,7 @@ class TunnelClientTest {
 
 	@Test
 	void sendAfterStopShouldBeDroppedSilently() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -663,7 +663,7 @@ class TunnelClientTest {
 
 	@Test
 	void shouldCloseNormallyOnStop() throws Exception {
-		server = new FakeGovernorServer();
+		server = new FakeCentralServer();
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, null), listener);
@@ -696,7 +696,7 @@ class TunnelClientTest {
 			Files.copy(stream, pem);
 		}
 
-		server = new FakeGovernorServer(sslContext);
+		server = new FakeCentralServer(sslContext);
 		server.startAndAwait();
 		final RecordingListener listener = new RecordingListener();
 		client = new TunnelClient(settings(server, pem.toString()), listener);

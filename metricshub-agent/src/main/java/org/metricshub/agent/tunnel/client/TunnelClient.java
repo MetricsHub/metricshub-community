@@ -51,7 +51,7 @@ import org.metricshub.opamp.client.http.OpampHttpTransport;
 import org.metricshub.opamp.client.retry.RetrySchedule;
 
 /**
- * Outbound WebSocket tunnel to the Governor, built on the JDK {@link WebSocket}.
+ * Outbound WebSocket tunnel to Central, built on the JDK {@link WebSocket}.
  * <p>
  * All state lives on one daemon thread: connection attempts, inbound frames, heartbeats, sends and
  * reconnections are serialized through {@link #executor}. Every asynchronous continuation carries the
@@ -95,7 +95,7 @@ public class TunnelClient {
 	 *
 	 * <p>The negotiated {@code maxPayloadBytes} is the largest frame the SERVER accepts, which is a
 	 * statement about the server's own buffers and not permission to fill the agent's heap. Letting
-	 * it raise this bound would hand an authenticated but faulty or compromised governor the ability
+	 * it raise this bound would hand an authenticated but faulty or compromised server the ability
 	 * to have the agent buffer as much as it cared to name.
 	 */
 	static final long MAX_INBOUND_BYTES = 8L * 1024 * 1024;
@@ -546,7 +546,7 @@ public class TunnelClient {
 			case HeartbeatPong pong -> log.trace("Central tunnel heartbeat acknowledged.");
 			case ToolInvoke invoke -> onInvoke(frameGeneration, invoke);
 			case ProtocolError protocolError -> log.warn(
-				"Governor reported an error: {} - {}",
+				"Central reported an error: {} - {}",
 				protocolError.code(),
 				protocolError.message()
 			);
@@ -584,21 +584,21 @@ public class TunnelClient {
 			// ZERO exactly, which is also what an absent field deserializes to: the protocol reserves
 			// it, and it alone, for "not specified". A negative is a value, and a value out of range
 			// is clamped below like any other -- treating it as unspecified would put it back on the
-			// local configuration a governor cannot see. Clamped, because a configuration can name a
+			// local configuration a server cannot see. Clamped, because a configuration can name a
 			// duration this agent cannot schedule just as a server can.
 			return schedulable(settings.heartbeatInterval());
 		}
 		// Seconds, compared as seconds: converting first is what would overflow.
 		if (seconds < MIN_HEARTBEAT.toSeconds() || seconds > MAX_HEARTBEAT.toSeconds()) {
 			// CLAMPED to the nearest bound rather than replaced by the configured interval. The
-			// protocol says the server's value overrides the agent's configuration, and a governor
+			// protocol says the server's value overrides the agent's configuration, and a server
 			// cannot see what this agent configured -- so falling back to it would make two agents
 			// answer the same registration at different rates, for reasons neither could report.
 			// The nearest bound is at least the closest honouring of what was asked for, and it is
 			// the same answer in every agent that implements version 1.
 			final Duration clamped = schedulable(Duration.ofSeconds(seconds));
 			log.warn(
-				"Governor asked for a {} second heartbeat, outside {}..{}; using {} instead.",
+				"Central asked for a {} second heartbeat, outside {}..{}; using {} instead.",
 				seconds,
 				MIN_HEARTBEAT.toSeconds(),
 				MAX_HEARTBEAT.toSeconds(),
@@ -805,7 +805,7 @@ public class TunnelClient {
 		// is sent before the answer can arrive -- and on every reconnection, since the negotiated
 		// value goes with the connection that carried it. Exempting it left the one frame nobody
 		// measures carrying every tool schema and every host: a fleet large enough to exceed the
-		// governor's limit would be closed 1009, reconnect, and be closed again, forever.
+		// server's limit would be closed 1009, reconnect, and be closed again, forever.
 		final long cap = current == null ? DEFAULT_MAX_PAYLOAD_BYTES : current.maxPayloadBytes();
 		final int size = text.getBytes(StandardCharsets.UTF_8).length;
 		if (size <= cap) {

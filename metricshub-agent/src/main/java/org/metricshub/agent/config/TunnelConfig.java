@@ -38,8 +38,8 @@ import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * Configuration of the Central tunnel: the persistent outbound WebSocket connection through which
- * the MetricsHub Agent registers itself (identity, tool registry, host inventory) with the Central
- * Governor and executes the tools the Governor invokes.
+ * the MetricsHub Agent registers itself (identity, tool registry, host inventory) with Central and
+ * executes the tools Central invokes.
  * <p>
  * It is written under {@code central:} as {@code tunnel:}, which carries everything the two channels
  * share — the URL, the credential, the trusted certificate and the reported identity. What is left
@@ -69,7 +69,7 @@ public class TunnelConfig {
 
 	/**
 	 * Whether this channel is enabled, which {@code central.enabled} still has to allow. Enabled
-	 * here by default: the tunnel is how the Governor reaches this agent at all, and an operator
+	 * here by default: the tunnel is how Central reaches this agent at all, and an operator
 	 * who wants fleet management without it turns this one off explicitly.
 	 */
 	@Default
@@ -117,7 +117,7 @@ public class TunnelConfig {
 	private long heartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
 
 	/**
-	 * Names of the tools that must never be advertised to (nor invokable by) the Governor.
+	 * Names of the tools that must never be advertised to (nor invokable by) Central.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)

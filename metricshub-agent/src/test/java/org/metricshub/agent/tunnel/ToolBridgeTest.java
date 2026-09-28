@@ -249,7 +249,7 @@ class ToolBridgeTest {
 
 		bridge.invoke(invoke("Slow", 100), GENERATION);
 
-		// The Governor is told the invocation is over, and the slot goes back with the answer even
+		// Central is told the invocation is over, and the slot goes back with the answer even
 		// though the thread running it never will
 		assertEquals(ToolErrorCode.TIMEOUT, assertInstanceOf(ToolError.class, answer()).code());
 		await()
@@ -392,7 +392,7 @@ class ToolBridgeTest {
 					assertEquals(
 						0,
 						queueing.pendingDeadlines(),
-						"Work the Governor discarded must not keep its arguments in the timer queue"
+						"Work Central discarded must not keep its arguments in the timer queue"
 					)
 				);
 		} finally {
@@ -405,7 +405,7 @@ class ToolBridgeTest {
 	@Test
 	void aMalformedInvocationIsAnsweredRatherThanSwallowed() throws Exception {
 		// The advertised map is immutable, so asking it for a null key throws -- and the tunnel
-		// callback would swallow that, leaving the Governor to wait out its whole deadline.
+		// callback would swallow that, leaving Central to wait out its whole deadline.
 		bridge.invoke(new ToolInvoke("req-1", null, TunnelJson.MAPPER.createObjectNode(), 10_000), GENERATION);
 		final ToolError missingTool = assertInstanceOf(ToolError.class, answer());
 		assertEquals(ToolErrorCode.INVALID_ARGUMENTS, missingTool.code());
@@ -442,7 +442,7 @@ class ToolBridgeTest {
 		bridge.invoke(invoke("Slow", 10_000), GENERATION);
 
 		final ToolError error = assertInstanceOf(ToolError.class, answer());
-		assertEquals(ToolErrorCode.EXECUTION_ERROR, error.code(), "The Governor still learns what happened");
+		assertEquals(ToolErrorCode.EXECUTION_ERROR, error.code(), "Central still learns what happened");
 		assertTrue(
 			TunnelJson.write(error).getBytes(StandardCharsets.UTF_8).length <= 512,
 			"and it learns it in a frame the server will accept"

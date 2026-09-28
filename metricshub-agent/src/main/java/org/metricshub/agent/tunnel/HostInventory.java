@@ -37,9 +37,9 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Builds the host inventory reported to the Governor: the hosts the agent is <em>actually</em>
+ * Builds the host inventory reported to Central: the hosts the agent is <em>actually</em>
  * monitoring, i.e. the resources that have an active {@link TelemetryManager}. A configured resource
- * that failed validation has no telemetry manager and is therefore not advertised, so the Governor
+ * that failed validation has no telemetry manager and is therefore not advertised, so Central
  * never routes a tool call to a host the agent cannot reach.
  * <p>
  * A resource key is unique only within its resource group, so a host is identified by the pair

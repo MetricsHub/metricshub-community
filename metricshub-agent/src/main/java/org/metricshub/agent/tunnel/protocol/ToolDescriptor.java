@@ -24,7 +24,7 @@ package org.metricshub.agent.tunnel.protocol;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * A tool advertised to the Governor: the contract the Governor may invoke through the tunnel.
+ * A tool advertised to Central: the contract Central may invoke through the tunnel.
  * Mirrors the Spring AI tool definition (name, description, JSON input schema) so that adding a new
  * {@code IMCPToolService} needs no protocol change.
  *

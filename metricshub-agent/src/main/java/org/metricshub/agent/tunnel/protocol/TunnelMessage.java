@@ -78,7 +78,7 @@ public sealed interface TunnelMessage {
 	 * @param protocolVersion      protocol version implemented by the agent
 	 * @param agent                agent identity
 	 * @param toolRegistryRevision fingerprint of {@code tools}, stable across restarts
-	 * @param tools                tools the Governor may invoke on this agent
+	 * @param tools                tools Central may invoke on this agent
 	 * @param hosts                hosts monitored by this agent
 	 */
 	record AgentRegister(
@@ -160,7 +160,7 @@ public sealed interface TunnelMessage {
 	}
 
 	/**
-	 * Tool invocation request from the Governor.
+	 * Tool invocation request from Central.
 	 *
 	 * @param requestId correlation id echoed in the answer
 	 * @param tool      advertised tool name

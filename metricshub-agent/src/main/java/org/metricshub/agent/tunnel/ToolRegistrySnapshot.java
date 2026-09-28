@@ -36,7 +36,7 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
 
 /**
- * The tools this agent advertises to the Governor, derived from the runtime Spring AI
+ * The tools this agent advertises to Central, derived from the runtime Spring AI
  * {@link ToolCallbackProvider}: every {@code IMCPToolService} tool not explicitly excluded.
  * <p>
  * Tools are sorted by name and the revision is a fingerprint of the descriptors, so the same tool set

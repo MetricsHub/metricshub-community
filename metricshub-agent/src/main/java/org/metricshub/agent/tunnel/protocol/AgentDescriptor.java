@@ -24,7 +24,7 @@ package org.metricshub.agent.tunnel.protocol;
 import java.util.Map;
 
 /**
- * Identity of the MetricsHub Agent as reported to the Governor at registration. The instance uid
+ * Identity of the MetricsHub Agent as reported to Central at registration. The instance uid
  * itself travels in the handshake header, not in this payload.
  *
  * @param name        service name (e.g. {@code MetricsHub Agent})

@@ -33,7 +33,7 @@ import org.metricshub.agent.tunnel.protocol.AgentDescriptor;
 import org.metricshub.web.service.ApplicationStatusService;
 
 /**
- * Builds the {@link AgentDescriptor} sent to the Governor at registration. Reuses the OpAMP
+ * Builds the {@link AgentDescriptor} sent to Central at registration. Reuses the OpAMP
  * attribute resolution so both fleet channels describe the agent identically, and adds the edition,
  * which OpAMP does not report.
  */
