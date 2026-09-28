@@ -1,0 +1,43 @@
+{
+	"type": "agent.register",
+	"protocolVersion": 1,
+	"agent": {
+		"name": "MetricsHub Agent",
+		"version": "3.9.07",
+		"edition": "Community",
+		"hostName": "server-01",
+		"osType": "linux",
+		"arch": "amd64",
+		"buildNumber": "abcdef12",
+		"attributes": {
+			"host.name": "server-01",
+			"service.name": "MetricsHub Agent",
+			"version": "3.9.07"
+		}
+	},
+	"toolRegistryRevision": "sha256:0050cf5717ee1385a12f0b27378ffbf8e03585ec0c15d536ae3730b5f141bfbb",
+	"tools": [
+		{
+			"name": "ListHosts",
+			"description": "Lists hosts",
+			"inputSchema": { "type": "object", "properties": {} }
+		},
+		{
+			"name": "PingHost",
+			"description": "Pings hosts",
+			"inputSchema": {
+				"type": "object",
+				"properties": { "hostname": { "type": "array", "items": { "type": "string" } } },
+				"required": ["hostname"]
+			}
+		}
+	],
+	"hosts": [
+		{
+			"resourceKey": "paris-host1",
+			"resourceGroup": "paris",
+			"hostnames": { "ssh": "paris-host1.example.com" },
+			"attributes": { "host.name": "paris-host1.example.com", "host.type": "linux" }
+		}
+	]
+}
