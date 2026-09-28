@@ -13,7 +13,7 @@ otel:
   # otel.exporter.otlp.metrics.protocol: grpc # Options include grpc and http/protobuf
 
 # MetricsHub Central: the server that manages this agent. Two channels reach it -- OpAMP polling
-# for status, health and package offers, and the tunnel the Central Governor invokes this agent's
+# for status, health and package offers, and the tunnel Central invokes this agent's
 # tools through -- so the server, the credential and the trusted certificate are written ONCE here.
 # Disabled by default.
 # central:
@@ -34,12 +34,12 @@ otel:
 #     # pollInterval: 30s
 #     # reportHealth: true
 #
-#   # The Governor's tunnel. ws/wss is derived from the scheme of url above.
+#   # The Central tunnel. ws/wss is derived from the scheme of url above.
 #   tunnel:
-#     # enabled: false # Fleet management WITHOUT exposing this agent's tools to the Governor
+#     # enabled: false # Fleet management WITHOUT exposing this agent's tools to Central
 #     # path: /ws/agent
 #     # heartbeatInterval: 30s
-#     # Tools never advertised to (nor invokable by) the Governor
+#     # Tools never advertised to (nor invokable by) Central
 #     # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
 #
 #   # What an accepted package offer may do. Beside the channels rather than under opamp:
