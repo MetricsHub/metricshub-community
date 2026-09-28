@@ -577,9 +577,9 @@ function ConfigurationPage() {
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
 							onClick={() => setReloadConfirmOpen(true)}
-							disabled={
-								isReadOnly || (reevaluation?.scope === "configuration" && !!reevaluation?.loading)
-							}
+							// Both actions share one re-evaluation state, so running one must block the other:
+							// starting the second overwrites that state and clears the first indicator mid-flight.
+							disabled={isReadOnly || !!reevaluation?.loading}
 						>
 							{reevaluation?.scope === "configuration" && reevaluation?.loading
 								? "Reloading..."
@@ -701,6 +701,7 @@ function ConfigurationPage() {
 									testLoading={!!velocityTestResult?.loading}
 									onReevaluate={handleReevaluateTemplate}
 									reevaluateLoading={reevaluation?.scope === "template" && !!reevaluation?.loading}
+									reevaluationBusy={!!reevaluation?.loading}
 									isReadOnly={isReadOnly}
 								/>
 							</Box>

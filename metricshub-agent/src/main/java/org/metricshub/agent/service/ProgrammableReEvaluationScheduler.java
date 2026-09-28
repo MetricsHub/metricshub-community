@@ -279,12 +279,13 @@ public class ProgrammableReEvaluationScheduler {
 				log.debug("Skipping a re-evaluation discovery pass: the scheduler was stopped.");
 				return;
 			}
-			final Set<String> currentIds = new HashSet<>();
+			final Set<String> currentKeys = new HashSet<>();
 			for (final IConfigurationProvider provider : providers) {
 				for (final ScheduledReEvaluation reEvaluation : provider.getScheduledReEvaluations()) {
 					final String id = reEvaluation.id();
-					currentIds.add(id);
-					final String appliedCron = scheduledCrons.get(id);
+					final String key = stateKey(provider, id);
+					currentKeys.add(key);
+					final String appliedCron = scheduledCrons.get(key);
 					if (reEvaluation.cron().equals(appliedCron)) {
 						// Already handled by a previous discovery pass, on the very same cron.
 						continue;
@@ -293,11 +294,11 @@ public class ProgrammableReEvaluationScheduler {
 						// Seed the last-known fragment so a first firing with unchanged data does not reload.
 						// Only when none is known: after resume() the baseline kept from before the pause must win,
 						// since the provider's cache may hold a change that was never applied.
-						provider.currentFragment(id).ifPresent(fragment -> lastFragments.putIfAbsent(id, fragment));
+						provider.currentFragment(id).ifPresent(fragment -> lastFragments.putIfAbsent(key, fragment));
 					} else {
 						// The template edited its expression: drop the task still firing on the old one. The
 						// last-known fragment is kept, since only the cadence changed, not the data.
-						cancelTask(id);
+						cancelTask(key);
 						log.info(
 							"Re-evaluation of '{}' changed its cron from '{}' to '{}'; it is rescheduled.",
 							id,
@@ -305,11 +306,11 @@ public class ProgrammableReEvaluationScheduler {
 							reEvaluation.cron()
 						);
 					}
-					scheduledCrons.put(id, reEvaluation.cron());
-					scheduleRegistration(provider, reEvaluation);
+					scheduledCrons.put(key, reEvaluation.cron());
+					scheduleRegistration(provider, key, reEvaluation);
 				}
 			}
-			cancelUndeclared(currentIds);
+			cancelUndeclared(currentKeys);
 		}
 	}
 
@@ -318,30 +319,54 @@ public class ProgrammableReEvaluationScheduler {
 	 * was deleted. Without this, the cron task of a removed template would keep firing against a
 	 * provider that no longer knows it, warning on every tick until the agent is restarted.
 	 *
-	 * @param currentIds the ids the providers declare right now
+	 * @param currentKeys the state keys the providers declare right now
 	 */
-	private void cancelUndeclared(final Set<String> currentIds) {
-		final Iterator<String> knownIds = scheduledCrons.keySet().iterator();
-		while (knownIds.hasNext()) {
-			final String id = knownIds.next();
-			if (currentIds.contains(id)) {
+	private void cancelUndeclared(final Set<String> currentKeys) {
+		final Iterator<String> knownKeys = scheduledCrons.keySet().iterator();
+		while (knownKeys.hasNext()) {
+			final String key = knownKeys.next();
+			if (currentKeys.contains(key)) {
 				continue;
 			}
-			knownIds.remove();
-			lastFragments.remove(id);
-			restartRequestedFragments.remove(id);
-			cancelTask(id);
-			log.info("Re-evaluation of '{}' is no longer declared; its schedule is cancelled.", id);
+			knownKeys.remove();
+			lastFragments.remove(key);
+			restartRequestedFragments.remove(key);
+			cancelTask(key);
+			log.info("Re-evaluation of '{}' is no longer declared; its schedule is cancelled.", idOf(key));
 		}
+	}
+
+	/**
+	 * Builds the key under which this scheduler tracks one re-evaluation. Two providers can hand out
+	 * the same id, since each names its own units, so the owning provider is part of the key: without
+	 * it, one provider's registration would cancel or silently skip the other's.
+	 *
+	 * @param provider       the provider declaring the re-evaluation
+	 * @param reEvaluationId the id the provider gave it
+	 * @return the key identifying that re-evaluation across every state map
+	 */
+	private static String stateKey(final IConfigurationProvider provider, final String reEvaluationId) {
+		return provider.getClass().getName() + '@' + System.identityHashCode(provider) + '\u0000' + reEvaluationId;
+	}
+
+	/**
+	 * Extracts the id a provider declared from a key built by
+	 * {@link #stateKey(IConfigurationProvider, String)}, for logging.
+	 *
+	 * @param key the state key
+	 * @return the re-evaluation id the provider declared
+	 */
+	private static String idOf(final String key) {
+		return key.substring(key.indexOf('\u0000') + 1);
 	}
 
 	/**
 	 * Cancels and forgets the cron task of a single re-evaluation, if it holds one.
 	 *
-	 * @param reEvaluationId the re-evaluation whose task must be cancelled
+	 * @param key the state key of the re-evaluation whose task must be cancelled
 	 */
-	private void cancelTask(final String reEvaluationId) {
-		final ScheduledFuture<?> future = scheduledTasks.remove(reEvaluationId);
+	private void cancelTask(final String key) {
+		final ScheduledFuture<?> future = scheduledTasks.remove(key);
 		if (future != null) {
 			future.cancel(false);
 		}
@@ -351,9 +376,14 @@ public class ProgrammableReEvaluationScheduler {
 	 * Schedules a single re-evaluation's cron task.
 	 *
 	 * @param provider     the owning configuration provider
+	 * @param key          the state key of the re-evaluation
 	 * @param reEvaluation the scheduled re-evaluation (cron + id)
 	 */
-	private void scheduleRegistration(final IConfigurationProvider provider, final ScheduledReEvaluation reEvaluation) {
+	private void scheduleRegistration(
+		final IConfigurationProvider provider,
+		final String key,
+		final ScheduledReEvaluation reEvaluation
+	) {
 		try {
 			final CronTrigger trigger = new CronTrigger(reEvaluation.cron());
 			final ScheduledFuture<?> future = taskScheduler.schedule(
@@ -361,7 +391,7 @@ public class ProgrammableReEvaluationScheduler {
 				trigger
 			);
 			if (future != null) {
-				scheduledTasks.put(reEvaluation.id(), future);
+				scheduledTasks.put(key, future);
 			}
 			log.info("Scheduled re-evaluation of '{}' with cron '{}'.", reEvaluation.id(), reEvaluation.cron());
 		} catch (Exception e) {
@@ -438,7 +468,8 @@ public class ProgrammableReEvaluationScheduler {
 	public ReEvaluationOutcome reevaluateNow(final IConfigurationProvider provider, final String reEvaluationId) {
 		// Taken before the shared lock, and never in the other order: discovery and the merge step below
 		// take the shared lock alone, so the two can never wait on each other.
-		synchronized (reEvaluationLocks.computeIfAbsent(reEvaluationId, id -> new Object())) {
+		final String key = stateKey(provider, reEvaluationId);
+		synchronized (reEvaluationLocks.computeIfAbsent(key, ignored -> new Object())) {
 			seedBaseline(provider, reEvaluationId);
 
 			final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
@@ -451,11 +482,11 @@ public class ProgrammableReEvaluationScheduler {
 				if (stopped) {
 					throw new SchedulerStoppedException();
 				}
-				if (fragment.get().equals(lastFragments.get(reEvaluationId))) {
+				if (fragment.get().equals(lastFragments.get(key))) {
 					log.debug("Re-evaluation of '{}' left the configuration unchanged.", reEvaluationId);
 					return ReEvaluationOutcome.UNCHANGED;
 				}
-				if (fragment.get().equals(restartRequestedFragments.get(reEvaluationId)) && restartPending.getAsBoolean()) {
+				if (fragment.get().equals(restartRequestedFragments.get(key)) && restartPending.getAsBoolean()) {
 					log.debug(
 						"Re-evaluation of '{}' produced the change a pending restart will apply; no new restart is requested.",
 						reEvaluationId
@@ -472,7 +503,7 @@ public class ProgrammableReEvaluationScheduler {
 						// The restart was only requested. The baseline stays where it is, so that if the restart
 						// fails the next firing sees the difference again and retries. A successful restart
 						// replaces this scheduler, and the new one reads the new baseline.
-						restartRequestedFragments.put(reEvaluationId, fragment.get());
+						restartRequestedFragments.put(key, fragment.get());
 						log.info(
 							"Re-evaluation of '{}' requires a restart of the agent; the restart was requested.",
 							reEvaluationId
@@ -482,8 +513,8 @@ public class ProgrammableReEvaluationScheduler {
 					// The baseline only moves once the change was applied. A failed reload leaves it behind,
 					// so the next firing sees the same difference again and retries instead of going quiet
 					// on a configuration that was never updated.
-					lastFragments.put(reEvaluationId, fragment.get());
-					restartRequestedFragments.remove(reEvaluationId);
+					lastFragments.put(key, fragment.get());
+					restartRequestedFragments.remove(key);
 					return ReEvaluationOutcome.RELOADED;
 				} catch (Exception e) {
 					log.error(
@@ -515,8 +546,9 @@ public class ProgrammableReEvaluationScheduler {
 	 * @param reEvaluationId the re-evaluation whose baseline must be known
 	 */
 	private void seedBaseline(final IConfigurationProvider provider, final String reEvaluationId) {
+		final String key = stateKey(provider, reEvaluationId);
 		synchronized (lock) {
-			if (lastFragments.containsKey(reEvaluationId)) {
+			if (lastFragments.containsKey(key)) {
 				return;
 			}
 		}
@@ -526,7 +558,7 @@ public class ProgrammableReEvaluationScheduler {
 			return;
 		}
 		synchronized (lock) {
-			lastFragments.putIfAbsent(reEvaluationId, loaded.get());
+			lastFragments.putIfAbsent(key, loaded.get());
 		}
 	}
 

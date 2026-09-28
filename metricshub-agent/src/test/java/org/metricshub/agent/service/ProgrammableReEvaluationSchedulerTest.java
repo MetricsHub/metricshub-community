@@ -122,6 +122,69 @@ class ProgrammableReEvaluationSchedulerTest {
 	}
 
 	@Test
+	void testTwoProvidersDeclaringTheSameIdWithTheSameCronAreBothScheduled() {
+		// Same id, same cron: the second provider must not be mistaken for the first one, already handled.
+		final IConfigurationProvider first = providerDeclaring("hosts.vm", "0 0/15 * * * ?");
+		final IConfigurationProvider second = providerDeclaring("hosts.vm", "0 0/15 * * * ?");
+
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(first, second), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
+		scheduler.start();
+
+		verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Trigger.class));
+		scheduler.stop();
+	}
+
+	@Test
+	void testAProviderDoesNotCancelAnotherProvidersTaskWithTheSameId() {
+		// Same id, different crons: registering the second must not cancel the first one's task.
+		final IConfigurationProvider first = providerDeclaring("hosts.vm", "0 0/15 * * * ?");
+		final IConfigurationProvider second = providerDeclaring("hosts.vm", "0 0/5 * * * ?");
+
+		final ScheduledFuture<?> firstTask = mock(ScheduledFuture.class);
+		final ScheduledFuture<?> secondTask = mock(ScheduledFuture.class);
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		doReturn(firstTask, secondTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(first, second), taskScheduler, () ->
+			ReloadResult.LOCAL_ONLY
+		);
+		scheduler.start();
+
+		verify(firstTask, never()).cancel(anyBoolean());
+		scheduler.stop();
+	}
+
+	/** A provider declaring a single re-evaluation with the given id and cron. */
+	private static IConfigurationProvider providerDeclaring(final String id, final String cron) {
+		return new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+				return List.of(new ScheduledReEvaluation(id, cron));
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				return Optional.of(TextNode.valueOf(reEvaluationId));
+			}
+		};
+	}
+
+	@Test
 	void testSlowReEvaluationDoesNotBlockAnother() throws Exception {
 		// "slow" blocks on a latch released by the test; "fast" must complete without waiting for it.
 		final CountDownLatch slowStarted = new CountDownLatch(1);

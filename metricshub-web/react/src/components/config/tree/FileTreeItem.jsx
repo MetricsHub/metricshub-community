@@ -143,8 +143,11 @@ export default function FileTreeItem({
 		}
 		// Refuse to rename onto an existing file: the rename would overwrite it silently and its
 		// content would be lost. The editor stays open so the name can be corrected.
+		// Only the row being renamed is exempt: its own draft counterpart is a distinct file, and
+		// renaming onto it would overwrite it just the same.
 		const collides = siblingNames.some(
-			(sibling) => !isSameConfigFile(sibling, file.name) && isSameConfigFile(sibling, next),
+			(sibling) =>
+				sibling.toLowerCase() !== file.name.toLowerCase() && isSameConfigFile(sibling, next),
 		);
 		if (collides) {
 			showSnackbar(`"${stripDraftSuffix(next)}" already exists. Choose a different name.`, {
