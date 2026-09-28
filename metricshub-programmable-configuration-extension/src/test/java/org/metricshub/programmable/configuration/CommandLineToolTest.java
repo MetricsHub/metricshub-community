@@ -18,6 +18,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 
@@ -155,18 +157,47 @@ class CommandLineToolTest {
 	}
 
 	@Test
-	void testCommandLineIsNeverReportedInMessages() {
-		// The command line can carry credentials, so it must not reach any message that gets logged.
+	@EnabledOnOs(OS.WINDOWS)
+	void testCommandLineIsNeverReportedInMessagesOnWindows() {
 		final String secret = "s3cr3t-" + UUID.randomUUID();
+		assertCommandLineNotReported(
+			secret,
+			"echo " + secret + ">NUL & echo boom 1>&2 & exit 1",
+			"echo " + secret + ">NUL & ping -n 6 127.0.0.1 >NUL"
+		);
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testCommandLineIsNeverReportedInMessagesOnLinux() {
+		final String secret = "s3cr3t-" + UUID.randomUUID();
+		assertCommandLineNotReported(
+			secret,
+			"echo " + secret + " >/dev/null; echo boom >&2; exit 1",
+			"echo " + secret + " >/dev/null; sleep 5"
+		);
+	}
+
+	/**
+	 * Checks that neither a failure nor a timeout reports the command line, which can carry
+	 * credentials passed as arguments.
+	 *
+	 * @param secret         the text the commands mention, which must never be reported
+	 * @param failingCommand a command mentioning the secret that writes to stderr and exits non-zero
+	 * @param slowCommand    a command mentioning the secret that outlives a one second timeout
+	 */
+	private void assertCommandLineNotReported(
+		final String secret,
+		final String failingCommand,
+		final String slowCommand
+	) {
 		final IOException failure = assertThrows(IOException.class, () ->
-			commandLineTool.execute(
-				Map.of("command", echoToStderrCommand("boom") + " & exit 1 & echo " + secret, "failOnError", "true")
-			)
+			commandLineTool.execute(Map.of("command", failingCommand, "failOnError", "true"))
 		);
 		assertFalse(failure.getMessage().contains(secret), "the failure message must not carry the command line");
 
 		final TimeoutException timeout = assertThrows(TimeoutException.class, () ->
-			commandLineTool.execute(Map.of("command", sleepCommand(5) + " & echo " + secret, "timeout", "1"))
+			commandLineTool.execute(Map.of("command", slowCommand, "timeout", "1"))
 		);
 		assertFalse(timeout.getMessage().contains(secret), "the timeout message must not carry the command line");
 	}
