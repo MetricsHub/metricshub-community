@@ -122,6 +122,14 @@ public class CentralConfig {
 	private UpgradeConfig upgrade = UpgradeConfig.builder().build();
 
 	/**
+	 * A resolved channel carries no {@code path}, on purpose: it is an INPUT to the resolution and
+	 * never an output. The supervisors compare these copies to decide whether to rebuild a client,
+	 * so a path that produced the same endpoint -- or one an explicit {@code endpoint} overrode
+	 * entirely -- would report a change that is not one, and the tunnel would drop its in-flight
+	 * invocations for a setting with no effect. What the channel runs on is the endpoint.
+	 */
+
+	/**
 	 * The OpAMP channel as it actually runs: its own settings, with everything the two channels
 	 * share filled in from this roof.
 	 *
@@ -134,7 +142,6 @@ public class CentralConfig {
 			.endpoint(endpointOf(channel.getEndpoint(), channel.getPath(), false))
 			.headers(sharedWith(channel.getHeaders()))
 			.certificateFile(inherited(channel.getCertificateFile(), certificateFile))
-			.path(channel.getPath())
 			.pollInterval(channel.getPollInterval())
 			.requestTimeout(channel.getRequestTimeout())
 			.reportHealth(channel.isReportHealth())
@@ -154,7 +161,6 @@ public class CentralConfig {
 			.endpoint(endpointOf(channel.getEndpoint(), channel.getPath(), true))
 			.headers(sharedWith(channel.getHeaders()))
 			.certificateFile(inherited(channel.getCertificateFile(), certificateFile))
-			.path(channel.getPath())
 			.heartbeatInterval(channel.getHeartbeatInterval())
 			.excludedTools(channel.getExcludedTools())
 			.build();

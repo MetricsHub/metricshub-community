@@ -2,6 +2,7 @@ package org.metricshub.agent.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -186,6 +187,39 @@ class CentralConfigTest {
 		assertEquals("Bearer its-own", central.tunnel().getHeaders().get("authorization"));
 		// and the channel that did not override is untouched
 		assertEquals(Map.of("Authorization", "Bearer shared"), central.opamp().getHeaders());
+	}
+
+	@Test
+	void aSettingWithNoEffectShouldNotLookLikeAChange() throws Exception {
+		final String withPath = """
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  tunnel:
+			    endpoint: wss://tunnel.example.net/ws/agent
+			    path: %s
+			""";
+
+		// The supervisors decide whether to rebuild a client by comparing these resolved copies, so
+		// a path an explicit endpoint has overridden must not report a change: the tunnel would be
+		// torn down -- dropping whatever invocations are in flight -- for a setting with no effect
+		assertEquals(
+			deserialize(withPath.formatted("/ws/agent")).tunnel(),
+			deserialize(withPath.formatted("/somewhere/else")).tunnel()
+		);
+
+		// And a path that DOES move the endpoint is still a change, or the comparison would be blind
+		final String noOverride = """
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  tunnel:
+			    path: %s
+			""";
+		assertNotEquals(
+			deserialize(noOverride.formatted("/ws/agent")).tunnel(),
+			deserialize(noOverride.formatted("/somewhere/else")).tunnel()
+		);
 	}
 
 	@Test
