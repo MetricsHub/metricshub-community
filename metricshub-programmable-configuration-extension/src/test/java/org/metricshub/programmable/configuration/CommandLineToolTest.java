@@ -1,6 +1,8 @@
 package org.metricshub.programmable.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,8 +11,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
@@ -116,6 +122,56 @@ class CommandLineToolTest {
 	}
 
 	@Test
+	void testTimeoutAppliesToOutputCollection() {
+		// The shell exits at once but leaves a child holding the output pipes: collecting that output
+		// must not run past the deadline.
+		final long start = System.currentTimeMillis();
+		assertThrows(TimeoutException.class, () ->
+			commandLineTool.execute(Map.of("command", detachedSleepCommand(20), "timeout", "1"))
+		);
+		final long elapsed = System.currentTimeMillis() - start;
+		assertTrue(elapsed < 10_000, "should have given up near the timeout, but took " + elapsed + " ms");
+	}
+
+	@Test
+	void testInterruptionKillsTheCommand() throws Exception {
+		final long baseline = countSleepProcesses();
+		final AtomicReference<Exception> thrown = new AtomicReference<>();
+		final Thread worker = new Thread(() -> {
+			try {
+				commandLineTool.execute(Map.of("command", sleepCommand(30), "timeout", "60"));
+			} catch (Exception e) {
+				thrown.set(e);
+			}
+		});
+		worker.start();
+
+		assertTrue(waitUntil(() -> countSleepProcesses() > baseline), "the command should have started");
+		worker.interrupt();
+		worker.join(30_000);
+
+		assertInstanceOf(InterruptedException.class, thrown.get(), "the caller should see the interruption");
+		assertTrue(waitUntil(() -> countSleepProcesses() <= baseline), "the interrupted command should have been killed");
+	}
+
+	@Test
+	void testCommandLineIsNeverReportedInMessages() {
+		// The command line can carry credentials, so it must not reach any message that gets logged.
+		final String secret = "s3cr3t-" + UUID.randomUUID();
+		final IOException failure = assertThrows(IOException.class, () ->
+			commandLineTool.execute(
+				Map.of("command", echoToStderrCommand("boom") + " & exit 1 & echo " + secret, "failOnError", "true")
+			)
+		);
+		assertFalse(failure.getMessage().contains(secret), "the failure message must not carry the command line");
+
+		final TimeoutException timeout = assertThrows(TimeoutException.class, () ->
+			commandLineTool.execute(Map.of("command", sleepCommand(5) + " & echo " + secret, "timeout", "1"))
+		);
+		assertFalse(timeout.getMessage().contains(secret), "the timeout message must not carry the command line");
+	}
+
+	@Test
 	void testStderr() throws Exception {
 		final CommandLineResult result = commandLineTool.execute(echoToStderrCommand("oops"));
 		assertTrue(result.getStderr().contains("oops"), "stderr should contain the echoed text");
@@ -170,6 +226,41 @@ class CommandLineToolTest {
 
 	private static String dumpFileCommand(final Path file) {
 		return (LocalOsHandler.isWindows() ? "type " : "cat ") + file;
+	}
+
+	/** A command whose shell exits at once, leaving a child holding the output pipes. */
+	private static String detachedSleepCommand(final int seconds) {
+		return LocalOsHandler.isWindows() ? "start /b ping -n " + (seconds + 1) + " 127.0.0.1" : "sleep " + seconds + " &";
+	}
+
+	/** The number of live processes of the program the sleeping command runs. */
+	private static long countSleepProcesses() {
+		final String name = LocalOsHandler.isWindows() ? "ping.exe" : "sleep";
+		return ProcessHandle.allProcesses()
+			.filter(handle ->
+				handle
+					.info()
+					.command()
+					.map(command -> command.toLowerCase(Locale.ROOT).endsWith(name))
+					.orElse(false)
+			)
+			.count();
+	}
+
+	/** Waits up to 15 seconds for the given condition to hold. */
+	private static boolean waitUntil(final BooleanSupplier condition) {
+		for (int i = 0; i < 150; i++) {
+			if (condition.getAsBoolean()) {
+				return true;
+			}
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return false;
+			}
+		}
+		return false;
 	}
 
 	private static String echoToStderrCommand(final String text) {

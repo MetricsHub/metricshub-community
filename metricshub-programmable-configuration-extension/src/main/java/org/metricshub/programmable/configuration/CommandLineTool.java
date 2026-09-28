@@ -131,9 +131,7 @@ public class CommandLineTool {
 
 		final String failOnError = arguments.get("failOnError");
 		if (failOnError != null && Boolean.parseBoolean(failOnError.trim()) && result.getExitCode() != 0) {
-			throw new IOException(
-				String.format("Command \"%s\" failed with exit code %d: %s", command, result.getExitCode(), stderr)
-			);
+			throw new IOException(String.format("Command failed with exit code %d: %s", result.getExitCode(), stderr));
 		}
 
 		return result;
@@ -170,31 +168,94 @@ public class CommandLineTool {
 
 		final Process process = processBuilder.start();
 
+		// One deadline for the whole operation. Waiting for the process to exit is not enough: the shell
+		// can exit while a background child it started still holds the output pipes open, and collecting
+		// that output would then run past the timeout, or never end at all.
+		final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeout);
+
 		// Stdout and stderr are read concurrently, on their own threads: reading them one after the
 		// other could deadlock if the child fills up the other stream's pipe buffer while this thread
 		// is still draining the first one.
 		final ExecutorService executor = Executors.newFixedThreadPool(2);
 		try {
-			final Future<String> stdoutFuture = executor.submit(
-				readStreamTask(process, process.getInputStream(), charset, command)
-			);
-			final Future<String> stderrFuture = executor.submit(
-				readStreamTask(process, process.getErrorStream(), charset, command)
-			);
+			final Future<String> stdoutFuture = executor.submit(readStreamTask(process, process.getInputStream(), charset));
+			final Future<String> stderrFuture = executor.submit(readStreamTask(process, process.getErrorStream(), charset));
 
 			if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
 				killTree(process);
-				throw new TimeoutException(
-					String.format("Command \"%s\" execution has timed out after %d s", command, timeout)
-				);
+				throw timedOut(timeout);
 			}
 
-			return new CommandLineResult(stdoutFuture.get(), stderrFuture.get(), process.exitValue());
+			final String stdout = awaitOutput(stdoutFuture, process, deadline, timeout);
+			final String stderr = awaitOutput(stderrFuture, process, deadline, timeout);
+
+			return new CommandLineResult(stdout, stderr, process.exitValue());
+		} catch (final InterruptedException e) {
+			// The caller gave up: the command must not outlive it.
+			killTree(process);
+			Thread.currentThread().interrupt();
+			throw e;
 		} catch (final ExecutionException e) {
 			final Throwable cause = e.getCause();
 			throw cause instanceof IOException ioException ? ioException : new IOException(cause);
 		} finally {
 			executor.shutdownNow();
+		}
+	}
+
+	/**
+	 * Waits for one of the output streams to be fully read, without going past the given deadline.
+	 * On expiry the command is killed and its streams are closed: a blocking read is not interruptible,
+	 * so closing the stream is what releases the reader thread.
+	 *
+	 * @param future   the reader task
+	 * @param process  the running command
+	 * @param deadline the deadline, as a {@link System#nanoTime()} value
+	 * @param timeout  the configured timeout in seconds, for the error message
+	 * @return the captured output
+	 * @throws IOException          if the stream could not be read
+	 * @throws InterruptedException if the current thread is interrupted while waiting
+	 * @throws TimeoutException     if the output is not fully collected before the deadline
+	 * @throws ExecutionException   if the reader task failed
+	 */
+	private static String awaitOutput(
+		final Future<String> future,
+		final Process process,
+		final long deadline,
+		final int timeout
+	) throws IOException, InterruptedException, TimeoutException, ExecutionException {
+		try {
+			return future.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+		} catch (final TimeoutException e) {
+			killTree(process);
+			closeQuietly(process.getInputStream());
+			closeQuietly(process.getErrorStream());
+			future.cancel(true);
+			throw timedOut(timeout);
+		}
+	}
+
+	/**
+	 * Builds the exception reporting that the command did not complete in time.
+	 *
+	 * @param timeout the configured timeout in seconds
+	 * @return the exception to throw
+	 */
+	private static TimeoutException timedOut(final int timeout) {
+		return new TimeoutException(String.format("Command execution has timed out after %d s", timeout));
+	}
+
+	/**
+	 * Closes the given stream, ignoring any failure: it is only closed to release a reader blocked on
+	 * it, and the command is already being abandoned.
+	 *
+	 * @param stream the stream to close
+	 */
+	private static void closeQuietly(final InputStream stream) {
+		try {
+			stream.close();
+		} catch (final IOException e) {
+			log.debug("Failed to close a stream of a command that timed out.", e);
 		}
 	}
 
@@ -206,14 +267,12 @@ public class CommandLineTool {
 	 * @param process     the running command, killed when its output exceeds the limit
 	 * @param inputStream the stream to read
 	 * @param charset     the charset used to decode the stream's bytes
-	 * @param command     the command line, for the error message
 	 * @return the task, to be submitted to an executor
 	 */
 	private static Callable<String> readStreamTask(
 		final Process process,
 		final InputStream inputStream,
-		final Charset charset,
-		final String command
+		final Charset charset
 	) {
 		return () -> {
 			final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -222,9 +281,7 @@ public class CommandLineTool {
 			while ((read = inputStream.read(chunk)) != -1) {
 				if (buffer.size() + read > MAX_OUTPUT_BYTES) {
 					killTree(process);
-					throw new IOException(
-						String.format("Command \"%s\" produced more than %d bytes of output.", command, MAX_OUTPUT_BYTES)
-					);
+					throw new IOException(String.format("Command produced more than %d bytes of output.", MAX_OUTPUT_BYTES));
 				}
 				buffer.write(chunk, 0, read);
 			}
