@@ -102,6 +102,26 @@ class CentralConfigTest {
 	}
 
 	@Test
+	void aPathWrittenWithoutItsSlashShouldStillBeAPath() throws Exception {
+		final CentralConfig central = deserialize(
+			"""
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  opamp:
+			    path: fleet/v1/opamp
+			  tunnel:
+			    path: fleet/ws/agent
+			"""
+		);
+
+		// Welded on, the path becomes part of the HOST -- a name that resolves to nothing, which
+		// reads like a DNS problem rather than the missing slash it is
+		assertEquals("https://central.example.com/fleet/v1/opamp", central.opamp().getEndpoint());
+		assertEquals("wss://central.example.com/fleet/ws/agent", central.tunnel().getEndpoint());
+	}
+
+	@Test
 	void aChannelShouldOverrideAHeaderItSpellsDifferently() throws Exception {
 		final CentralConfig central = deserialize(
 			"""

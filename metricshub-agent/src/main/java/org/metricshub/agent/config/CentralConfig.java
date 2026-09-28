@@ -177,8 +177,18 @@ public class CentralConfig {
 		}
 		final String base = webSocket ? webSocketScheme(url.trim()) : url.trim();
 		final String tail = path == null || path.isBlank() ? "" : path.trim();
-		final boolean joined = base.endsWith("/") && tail.startsWith("/");
-		return joined ? base + tail.substring(1) : base + tail;
+		if (tail.isEmpty()) {
+			return base;
+		}
+		// BOTH WAYS ROUND, because an operator writes the path either way. Two separators make a
+		// path no server routes; NONE silently welds the path onto the host -- `central.example.com`
+		// and `fleet/v1/opamp` become a hostname that resolves to nothing, which reads like a DNS
+		// problem rather than a typo. Same rule as `UrlHelper.format`, which lives in the HTTP
+		// extension: it is a test-scoped dependency here, and the agent's configuration has no
+		// business compiling against an extension for a concatenation.
+		final String separator = base.endsWith("/") || tail.startsWith("/") ? "" : "/";
+		final String joined = base.endsWith("/") && tail.startsWith("/") ? tail.substring(1) : tail;
+		return base + separator + joined;
 	}
 
 	/**
