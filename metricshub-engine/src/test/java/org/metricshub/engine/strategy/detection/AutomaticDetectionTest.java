@@ -30,10 +30,13 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectionType;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
+import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriterion;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
+import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -380,6 +383,68 @@ class AutomaticDetectionTest {
 				ExtensionManager.empty()
 			).run()
 		);
+	}
+
+	@Test
+	void testDetectionIgnoresHealthChecks() {
+		final Map<String, Map<String, Monitor>> monitors = new HashMap<>();
+		final HostProperties hostProperties = new HostProperties();
+		hostProperties.setLocalhost(true);
+
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(LOCALHOST)
+			.hostId("hostId")
+			.hostType(DeviceKind.LINUX)
+			.resolveHostnameToFqdn(false)
+			.retryDelay(0)
+			.sequential(true)
+			.build();
+
+		final Criterion detectionCriterion = DeviceTypeCriterion.builder()
+			.type("deviceType")
+			.keep(Set.of(DeviceKind.LINUX))
+			.build();
+		final Criterion healthCheckCriterion = DeviceTypeCriterion.builder()
+			.type("deviceType")
+			.keep(Set.of(DeviceKind.WINDOWS))
+			.build();
+		final Connector connector = Connector.builder()
+			.connectorIdentity(
+				ConnectorIdentity.builder()
+					.compiledFilename(CONNECTOR)
+					.detection(
+						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).criteria(List.of(detectionCriterion)).build()
+					)
+					.healthChecks(List.of(healthCheckCriterion))
+					.build()
+			)
+			.sourceTypes(Set.of(CommandLineSource.class))
+			.build();
+
+		final File store = new File(DETECTION_FOLDER);
+		final Path storePath = store.toPath();
+		final ConnectorStore connectorStore = new ConnectorStore(storePath);
+		connectorStore.getStore().put(CONNECTOR, connector);
+
+		final TelemetryManager telemetryManager = new TelemetryManager(
+			monitors,
+			hostProperties,
+			hostConfiguration,
+			connectorStore,
+			STRATEGY_TIME,
+			null
+		);
+		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
+
+		final List<ConnectorTestResult> results = new AutomaticDetection(
+			telemetryManager,
+			clientsExecutor,
+			Set.of(CONNECTOR),
+			ExtensionManager.empty()
+		).run();
+
+		assertEquals(1, results.size());
+		assertTrue(results.get(0).isSuccess());
 	}
 
 	@Test
