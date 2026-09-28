@@ -315,4 +315,35 @@ class ProgrammableConfigurationScheduleTest {
 		assertTrue(reloaded.contains("new-host"), "A full reload must use the edited macro");
 		assertFalse(reloaded.contains("old-host"), "A full reload must not use the old macro body");
 	}
+
+	/**
+	 * A render can succeed and still produce a configuration that cannot be parsed. The previous
+	 * fragment is then kept, so the schedule must be kept too: a render that declares no schedule
+	 * because it took a fallback branch would otherwise have its cron task cancelled, leaving nothing
+	 * to retry with.
+	 */
+	@Test
+	void testAnUnparsableRenderKeepsTheScheduleAndTheFragment(@TempDir final Path tempDir) throws Exception {
+		final Path vm = tempDir.resolve("hosts.vm");
+		Files.writeString(vm, "$schedule.cron('0/5 * * * * ?')\nresources:\n  host-a: {}\n");
+
+		final var provider = new ProgrammableConfigurationProvider();
+		provider.load(tempDir);
+		final String id = vm.toAbsolutePath().toString();
+		final JsonNode goodFragment = provider.currentFragment(id).orElseThrow();
+		assertEquals(1, provider.getScheduledReEvaluations().size());
+
+		// The template now drops its declaration and produces YAML that cannot be parsed.
+		Files.writeString(vm, "resources:\n  host-a: {}\n  : broken\n    indented: wrongly\n");
+
+		assertEquals(Optional.empty(), provider.reevaluate(id), "An unparsable render produces no fragment");
+		assertTrue(provider.load(tempDir).isEmpty(), "An unparsable template contributes no fragment");
+
+		assertEquals(
+			1,
+			provider.getScheduledReEvaluations().size(),
+			"A render whose result was rejected must not cancel the schedule"
+		);
+		assertEquals(goodFragment, provider.currentFragment(id).orElseThrow(), "The last good fragment must be kept");
+	}
 }

@@ -132,8 +132,9 @@ export default function EditorHeader({
 							{saving ? "Applying..." : "Apply"}
 						</Button>
 					)}
-					{/* A draft is not loaded by the agent, so there is nothing to re-evaluate for it. */}
-					{isVm && !isDraft && onReevaluate && (
+					{/* A draft or a backup is not loaded by the agent, so there is nothing to re-evaluate. A
+					    backup of a .vm file keeps the .vm ending, so it must be excluded explicitly. */}
+					{isVm && !isDraft && !isBackup && onReevaluate && (
 						<Button
 							size="small"
 							variant="outlined"

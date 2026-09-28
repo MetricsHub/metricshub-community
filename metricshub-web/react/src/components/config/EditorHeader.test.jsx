@@ -52,4 +52,17 @@ describe("EditorHeader Reevaluate button", () => {
 
 		expect(screen.queryByRole("button", { name: /reevaluate/i })).not.toBeInTheDocument();
 	});
+
+	it("is not shown on a backup, whose name still ends in .vm", () => {
+		render(
+			<EditorHeader
+				selected="backup-20251016-104205__hosts.vm"
+				saving={false}
+				onSave={() => {}}
+				onReevaluate={() => {}}
+			/>,
+		);
+
+		expect(screen.queryByRole("button", { name: /reevaluate/i })).not.toBeInTheDocument();
+	});
 });

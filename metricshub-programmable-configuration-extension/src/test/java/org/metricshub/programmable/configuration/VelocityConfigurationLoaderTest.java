@@ -28,6 +28,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.metricshub.programmable.configuration.VelocityConfigurationLoader.RenderResult;
 
 class VelocityConfigurationLoaderTest {
 
@@ -286,26 +287,34 @@ class VelocityConfigurationLoaderTest {
 	}
 
 	@Test
-	void testScheduleDeclarationIsDiscoveredAndPrintsNothing(@TempDir final Path tempDir) throws IOException {
+	void testScheduleDeclarationIsDiscoveredAndPrintsNothing(@TempDir final Path tempDir) throws Exception {
 		final Path templatePath = tempDir.resolve("scheduled.vm");
 		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
 
 		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
-		final String yaml = loader.generateYaml();
+		final RenderResult rendered = loader.render();
+		final String yaml = rendered.yaml();
 
-		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
+		assertEquals("0/5 * * * * ?", rendered.cron());
 		assertTrue(yaml.contains("resources:"), () -> "The body must still render, but got:\n" + yaml);
 		assertTrue(!yaml.contains("schedule"), () -> "The directive must print nothing, but got:\n" + yaml);
+
+		// Rendering alone declares nothing: the caller publishes once it accepted the result.
+		assertTrue(loader.getCron().isEmpty(), "A render that was not accepted yet must declare no schedule");
+		loader.publishDeclaredCron(rendered.cron());
+		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
 	}
 
 	@Test
-	void testNoScheduleDeclarationYieldsNoCron(@TempDir final Path tempDir) throws IOException {
+	void testNoScheduleDeclarationYieldsNoCron(@TempDir final Path tempDir) throws Exception {
 		final Path templatePath = tempDir.resolve("plain.vm");
 		Files.writeString(templatePath, "resources: {}\n", StandardCharsets.UTF_8);
 
 		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
-		loader.generateYaml();
+		final RenderResult rendered = loader.render();
+		loader.publishDeclaredCron(rendered.cron());
 
+		assertNull(rendered.cron(), "A template without $schedule.cron declares no schedule");
 		assertTrue(loader.getCron().isEmpty(), "A template without $schedule.cron declares no schedule");
 	}
 
@@ -314,16 +323,16 @@ class VelocityConfigurationLoaderTest {
 	 * removed must leave no schedule behind.
 	 */
 	@Test
-	void testRemovingTheDeclarationClearsTheCronOnNextRender(@TempDir final Path tempDir) throws IOException {
+	void testRemovingTheDeclarationClearsTheCronOnNextRender(@TempDir final Path tempDir) throws Exception {
 		final Path templatePath = tempDir.resolve("scheduled.vm");
 		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
 
 		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
-		loader.generateYaml();
+		loader.publishDeclaredCron(loader.render().cron());
 		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
 
 		Files.writeString(templatePath, "resources: {}\n", StandardCharsets.UTF_8);
-		loader.generateYaml();
+		loader.publishDeclaredCron(loader.render().cron());
 
 		assertTrue(loader.getCron().isEmpty(), "The removed declaration must not survive the next render");
 	}
@@ -350,7 +359,7 @@ class VelocityConfigurationLoaderTest {
 	 * data source failing once would stop the template from ever being re-evaluated again.
 	 */
 	@Test
-	void testAFailedRenderKeepsTheLastDeclaredCron(@TempDir final Path tempDir) throws IOException {
+	void testAFailedRenderKeepsTheLastDeclaredCron(@TempDir final Path tempDir) throws Exception {
 		final Path templatePath = tempDir.resolve("scheduled.vm");
 		Files.writeString(templatePath, "$schedule.cron('0/5 * * * * ?')\nresources: {}\n", StandardCharsets.UTF_8);
 
@@ -358,7 +367,7 @@ class VelocityConfigurationLoaderTest {
 			templatePath,
 			Map.of("boom", new ExplodingTool())
 		);
-		loader.generateYaml();
+		loader.publishDeclaredCron(loader.render().cron());
 		assertEquals(Optional.of("0/5 * * * * ?"), loader.getCron());
 
 		// Same declaration, but a data source read after it now fails.
@@ -379,8 +388,7 @@ class VelocityConfigurationLoaderTest {
 	/**
 	 * Two renders of the same template can overlap: a cron firing or an on-demand request on one side,
 	 * the configuration watcher's reload on the other. Each render collects its declarations in a tool
-	 * of its own, so neither can read or clear the other's, and the schedule stays what the template
-	 * says whichever order they finish in.
+	 * of its own and reports them in its own result, so neither can read or clear the other's.
 	 */
 	@Test
 	void testConcurrentRendersKeepTheDeclaredCron(@TempDir final Path tempDir) throws Exception {
@@ -395,10 +403,13 @@ class VelocityConfigurationLoaderTest {
 			renders.add(
 				new Thread(() -> {
 					for (int round = 0; round < 20; round++) {
-						loader.generateYaml();
-						final Optional<String> cron = loader.getCron();
-						if (!Optional.of("0/5 * * * * ?").equals(cron)) {
-							wrongCrons.add(String.valueOf(cron.orElse(null)));
+						try {
+							final String cron = loader.render().cron();
+							if (!"0/5 * * * * ?".equals(cron)) {
+								wrongCrons.add(String.valueOf(cron));
+							}
+						} catch (Exception e) {
+							wrongCrons.add("render failed: " + e.getMessage());
 						}
 					}
 				})
