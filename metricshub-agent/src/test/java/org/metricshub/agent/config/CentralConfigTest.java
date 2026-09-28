@@ -103,6 +103,29 @@ class CentralConfigTest {
 	}
 
 	@Test
+	void aChannelShouldBeAbleToTrustNothingOfItsOwn() throws Exception {
+		final CentralConfig central = deserialize(
+			"""
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  certificateFile: /shared/private-ca.pem
+			  tunnel:
+			    endpoint: wss://tunnel.example.net/ws/agent
+			    certificateFile: ""
+			"""
+		);
+
+		// Both transports read a blank certificate file as "use the system trust store", which is
+		// what an overridden endpoint presenting a publicly trusted certificate needs. Read as
+		// nothing, it would be handed the other channel's PRIVATE authority and fail its handshake
+		// for a reason the configuration does not show. Written out, `""` is the operator saying
+		// none; written `certificateFile:` or left out it is absent, and absent inherits
+		assertEquals("", central.tunnel().getCertificateFile());
+		assertEquals("/shared/private-ca.pem", central.opamp().getCertificateFile());
+	}
+
+	@Test
 	void aHeaderWithoutANameShouldNotStopBothChannels() {
 		final Map<String, String> nameless = new HashMap<>();
 		nameless.put(null, "Bearer nowhere");

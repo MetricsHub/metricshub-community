@@ -257,11 +257,21 @@ public class CentralConfig {
 	}
 
 	/**
+	 * What a channel trusts: its own authority, or the one the roof carries.
+	 *
+	 * <p>ONLY AN ABSENT VALUE INHERITS, and blank is not absent. Both transports read a blank
+	 * certificate file as "use the system trust store", so a channel whose overridden endpoint
+	 * presents a publicly trusted certificate says {@code certificateFile: ""} — and treating that
+	 * as nothing would hand it the private authority of the other channel, whose TLS handshake then
+	 * fails for a reason nothing in the configuration shows. The file says which: written
+	 * {@code certificateFile:} or left out it is null and inherits; written {@code ""} it is the
+	 * operator saying none.
+	 *
 	 * @param own    what the channel was given
 	 * @param shared what the roof carries
-	 * @return the channel's own where it has one, the shared value otherwise
+	 * @return the channel's own where it was given one at all, the shared value otherwise
 	 */
 	private static String inherited(final String own, final String shared) {
-		return own == null || own.isBlank() ? shared : own;
+		return own == null ? shared : own;
 	}
 }
