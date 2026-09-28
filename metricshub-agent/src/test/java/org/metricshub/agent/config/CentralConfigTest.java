@@ -102,6 +102,31 @@ class CentralConfigTest {
 	}
 
 	@Test
+	void aChannelShouldOverrideAHeaderItSpellsDifferently() throws Exception {
+		final CentralConfig central = deserialize(
+			"""
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  headers:
+			    Authorization: Bearer shared
+			  tunnel:
+			    headers:
+			      authorization: Bearer its-own
+			"""
+		);
+
+		// A header name is case-insensitive, and `HttpRequest.Builder.header` APPENDS: kept apart,
+		// these two would send the credential twice in one request and a server reading one value
+		// refuses it. The override has to hold whatever the operator capitalised
+		assertEquals(1, central.tunnel().getHeaders().size());
+		assertEquals("Bearer its-own", central.tunnel().getHeaders().get("Authorization"));
+		assertEquals("Bearer its-own", central.tunnel().getHeaders().get("authorization"));
+		// and the channel that did not override is untouched
+		assertEquals(Map.of("Authorization", "Bearer shared"), central.opamp().getHeaders());
+	}
+
+	@Test
 	void aPathShouldBeAbleToMoveWithoutTheHost() throws Exception {
 		final CentralConfig central = deserialize(
 			"""

@@ -25,8 +25,8 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -198,11 +198,23 @@ public class CentralConfig {
 	}
 
 	/**
+	 * Merges a channel's headers over the shared ones, the way HTTP reads header names.
+	 *
+	 * <p>CASE-INSENSITIVELY, because that is what a header name is. Kept apart, a shared
+	 * {@code Authorization} and a channel's {@code authorization} both reach
+	 * {@code HttpRequest.Builder.header}, which appends rather than replaces — the request then
+	 * carries the credential TWICE, and a server that reads one value refuses it. An override that
+	 * merely spells the name differently must still be an override.
+	 *
+	 * <p>The first spelling seen wins the key and the last value wins the entry, which is exactly
+	 * "the channel overrides the roof": on the wire the spelling means nothing, the value means
+	 * everything.
+	 *
 	 * @param own what the channel was given
-	 * @return the shared headers, with the channel's own overriding them key by key
+	 * @return the shared headers, with the channel's own overriding them name by name
 	 */
 	private Map<String, String> sharedWith(final Map<String, String> own) {
-		final Map<String, String> merged = new LinkedHashMap<>();
+		final Map<String, String> merged = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		if (headers != null) {
 			merged.putAll(headers);
 		}
