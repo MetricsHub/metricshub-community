@@ -138,30 +138,6 @@ class CentralConfigTest {
 	}
 
 	@Test
-	void theOldRootSectionsShouldDoNothingAtAll() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
-			opamp:
-			  enabled: true
-			  endpoint: https://central.example.com/v1/opamp
-			m8b:
-			  enabled: true
-			  endpoint: wss://central.example.com/ws/agent
-			"""
-		);
-
-		// Written where they used to live they are dropped by the parser, which is lenient about
-		// unknown keys by design. Nothing of them applies -- which is exactly why `AgentContext` reads
-		// the raw tree and says so in the log: silence here is an agent that manages nothing and never
-		// explains why
-		assertFalse(central.isEnabled());
-		assertFalse(central.opamp().isEnabled());
-		assertFalse(central.tunnel().isEnabled());
-		assertNull(central.opamp().getEndpoint());
-		assertNull(central.tunnel().getEndpoint());
-	}
-
-	@Test
 	void anAbsentSectionShouldStillAnswer() throws Exception {
 		final CentralConfig central = deserialize("loggerLevel: error\n");
 

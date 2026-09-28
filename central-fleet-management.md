@@ -56,13 +56,13 @@ Three properties drive the whole design:
 
 * **The agent always dials out.** The server never opens a connection to an agent. Only outbound HTTPS egress is required — no inbound firewall rule, no listener on the agent side.
 * **Plain HTTP transport, not WebSocket.** One `POST` carries the agent's status *up* and the server's instructions *down*, in the same request/response pair. The server cannot push or wake an agent: an offer waits server-side until the agent's next poll.
-* **The agent decides.** Every server instruction is an *offer*. The agent validates it against its own local policy (`upgrade:` section) and may refuse it. A compromised server cannot make the agent fetch credentials-bearing downloads from an arbitrary host ([§10](#10-security-decisions)).
+* **The agent decides.** Every server instruction is an *offer*. The agent validates it against its own local policy (`central.upgrade:` section) and may refuse it. A compromised server cannot make the agent fetch credentials-bearing downloads from an arbitrary host ([§10](#10-security-decisions)).
 
 ### 1.2 Poll cadence
 
 | Situation | Next poll |
 |---|---|
-| Nominal | `opamp.pollInterval` (default 30 s) |
+| Nominal | `central.opamp.pollInterval` (default 30 s) |
 | Server set the `ReportFullState` flag | Immediately, with the full state |
 | Terminal package status reached (`Installed` / `InstallFailed`) | Immediately, via `OpampClient.pollNow()` |
 | Transport failure or HTTP != 200 | Exponential backoff with jitter, capped at 10 min, floored by `Retry-After` |
@@ -157,7 +157,7 @@ Assembled by [`AgentToServerAssembler.assemble()`](metricshub-opamp-client/src/m
 | 2 | `sequence_num` | ✅ always | `AgentToServerAssembler` | Incremented on **every** assembled message, retries included |
 | 3 | `agent_description` | ✅ | `OpAmpAgentDescriptionMapper` | Full-state report, or when the value changed since the last **acknowledged** report |
 | 4 | `capabilities` | ✅ always | `HttpPollingOpampClient.computeCapabilities()` | Every message |
-| 5 | `health` | ✅ | `OpAmpHealthMapper` | Same delta rule; suppressed when `opamp.reportHealth: false` |
+| 5 | `health` | ✅ | `OpAmpHealthMapper` | Same delta rule; suppressed when `central.opamp.reportHealth: false` |
 | 6 | `effective_config` | ❌ | — | Not implemented |
 | 7 | `remote_config_status` | ❌ | — | Not implemented |
 | 8 | `package_statuses` | ✅ | `PackageStatusAggregator.toProto()` | Same delta rule; only when a packages handler is registered |
@@ -176,8 +176,8 @@ Assembled by [`AgentToServerAssembler.assemble()`](metricshub-opamp-client/src/m
 | Capability | Advertised when |
 |---|---|
 | `ReportsStatus` (`0x1`) | Always — mandatory |
-| `ReportsHealth` (`0x800`) | `opamp.reportHealth: true` (default) |
-| `AcceptsPackages` (`0x8`) | A packages handler is registered: `upgrade.enabled` **and** the deployment is `deb`/`rpm`/`msi` |
+| `ReportsHealth` (`0x800`) | `central.opamp.reportHealth: true` (default) |
+| `AcceptsPackages` (`0x8`) | A packages handler is registered: `central.upgrade.enabled` **and** the deployment is `deb`/`rpm`/`msi` |
 | `ReportsPackageStatuses` (`0x10`) | Same condition as `AcceptsPackages` |
 
 All other capability bits are 0, which is how the server learns not to send remote config, connection-settings offers or restart commands.
@@ -261,10 +261,10 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | `PackageAvailable.version` | ✅ | Target version, compared with the running one |
 | `PackageAvailable.hash` | ✅ | Package **identity**; drives "already installed?" and is echoed as `server_offered_hash` |
 | `PackageAvailable.type` | ❌ | Not inspected — `TopLevel` is assumed |
-| `DownloadableFile.download_url` | ✅ | Validated against `upgrade.hostAllowlist` and the deployment's expected extension |
+| `DownloadableFile.download_url` | ✅ | Validated against `central.upgrade.hostAllowlist` and the deployment's expected extension |
 | `DownloadableFile.content_hash` | ✅ | Mandatory SHA-256, verified while streaming **and** recomputed from disk |
-| `DownloadableFile.headers` | ✅ | Merged under locally configured `upgrade.downloadHeaders` — local wins ([§10](#10-security-decisions)) |
-| `DownloadableFile.signature` | ❌ | Detached signatures unsupported. On Windows, MSI Authenticode is verified instead (`upgrade.msiSignatureSubjectContains`) |
+| `DownloadableFile.headers` | ✅ | Merged under locally configured `central.upgrade.downloadHeaders` — local wins ([§10](#10-security-decisions)) |
+| `DownloadableFile.signature` | ❌ | Detached signatures unsupported. On Windows, MSI Authenticode is verified instead (`central.upgrade.msiSignatureSubjectContains`) |
 
 ### 3.3 Transport
 
@@ -274,7 +274,7 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | Client | JDK `HttpClient` ([`OpampHttpTransport`](metricshub-opamp-client/src/main/java/org/metricshub/opamp/client/http/OpampHttpTransport.java)) |
 | Success | HTTP 200 only; anything else is a transport failure |
 | `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor |
-| TLS | System trust store, or a PEM pinned via `opamp.certificateFile` |
+| TLS | System trust store, or a PEM pinned via `central.certificateFile` |
 | Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore |
 
 ### 3.4 Not implemented
@@ -282,7 +282,7 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | OpAMP feature | Status | What it would take |
 |---|---|---|
 | Remote configuration (`AcceptsRemoteConfig`, `ReportsEffectiveConfig`, `ReportsRemoteConfig`) | Not implemented | Handle `remote_config`, write `metricshub.yaml`, report `RemoteConfigStatus` + `EffectiveConfig` |
-| Connection settings offers | Not implemented | Handle `connection_settings`, rewrite the `opamp:`/OTLP config, report `ConnectionSettingsStatus` |
+| Connection settings offers | Not implemented | Handle `connection_settings`, rewrite the `central:`/OTLP config, report `ConnectionSettingsStatus` |
 | Restart command | Not implemented | Advertise `AcceptsRestartCommand`, handle `command` |
 | Own telemetry redirection (`ReportsOwnMetrics/Traces/Logs`) | Not implemented | Reconfigure the OTLP exporters from the offer |
 | Custom capabilities / messages | Not implemented | Advertise `CustomCapabilities`, exchange `CustomMessage` |
@@ -314,12 +314,12 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 |---|---|
 | [`OpAmpStartupHook`](metricshub-agent/src/main/java/org/metricshub/web/service/OpAmpStartupHook.java) | **The wiring**, as a `StartupHook`: reconcile pending upgrade → decide whether the deployment is upgradable → build handler → start `OpAmpService` → register shutdown hook. Runs on `ApplicationReadyEvent`, so the enterprise agent — which boots the same Spring context — needs no wiring of its own |
 | [`MetricsHubAgentApplication`](metricshub-agent/src/main/java/org/metricshub/agent/MetricsHubAgentApplication.java) | Boots the agent context and the Spring server; no longer wires OpAMP itself |
-| [`OpAmpService`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpService.java) | **Lifecycle supervisor.** Lives *outside* the restartable `AgentContext`. Every 30 s: re-reads `opamp:`, rebuilds the client only on change, otherwise refreshes description and health |
+| [`OpAmpService`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpService.java) | **Lifecycle supervisor.** Lives *outside* the restartable `AgentContext`. Every 30 s: re-reads `central.opamp`, rebuilds the client only on change, otherwise refreshes description and health |
 | [`OpAmpAgentDescriptionMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpAgentDescriptionMapper.java) | `AgentInfo` + `attributes:` + `opamp: attributes:` + `DeploymentKind` → `AgentDescription` |
 | [`OpAmpHealthMapper`](metricshub-agent/src/main/java/org/metricshub/agent/opamp/OpAmpHealthMapper.java) | `ApplicationStatus` → `ComponentHealth` |
-| [`OpAmpConfig`](metricshub-agent/src/main/java/org/metricshub/agent/config/OpAmpConfig.java) | The `opamp:` YAML section |
+| [`OpAmpConfig`](metricshub-agent/src/main/java/org/metricshub/agent/config/OpAmpConfig.java) | The `central.opamp:` channel, resolved against the roof it hangs from |
 
-**Why a supervisor rather than a context-scoped bean:** the MetricsHub configuration is hot-reloadable and rebuilds the whole `AgentContext`. Tying the OpAMP client to that lifecycle would drop the connection on every unrelated edit. The supervisor compares the `opamp:` (and `upgrade.enabled`) values and rebuilds *only* when they actually change. A failed startup clears `activeConfig`, so the next tick retries — a transient error (missing CA file) doesn't disable OpAMP until restart.
+**Why a supervisor rather than a context-scoped bean:** the MetricsHub configuration is hot-reloadable and rebuilds the whole `AgentContext`. Tying the OpAMP client to that lifecycle would drop the connection on every unrelated edit. The supervisor compares the `central.opamp` (and `central.upgrade.enabled`) values and rebuilds *only* when they actually change. A failed startup clears `activeConfig`, so the next tick retries — a transient error (missing CA file) doesn't disable OpAMP until restart.
 
 ### 4.3 `metricshub-agent` — upgrade side
 
@@ -336,7 +336,7 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | [`UpgradeTransactionStore`](metricshub-agent/src/main/java/org/metricshub/agent/upgrade/transaction/UpgradeTransactionStore.java) / [`UpgradeTransaction`](metricshub-agent/src/main/java/org/metricshub/agent/upgrade/transaction/UpgradeTransaction.java) | The crash-safe journal that survives the restart, plus the installed-package identity record |
 | [`UpgradeLock`](metricshub-agent/src/main/java/org/metricshub/agent/upgrade/UpgradeLock.java) | One upgrade at a time |
 | [`UpgradeDirectories`](metricshub-agent/src/main/java/org/metricshub/agent/upgrade/UpgradeDirectories.java) | Staging directory that survives the package upgrade itself |
-| [`UpgradeConfig`](metricshub-agent/src/main/java/org/metricshub/agent/config/UpgradeConfig.java) | The `upgrade:` YAML section |
+| [`UpgradeConfig`](metricshub-agent/src/main/java/org/metricshub/agent/config/UpgradeConfig.java) | The `central.upgrade:` section |
 
 ---
 
@@ -458,7 +458,7 @@ sequenceDiagram
     Note over AD,C: Returns immediately —<br/>the polling thread must not block
     C->>C: echo all_packages_hash
 
-    UM->>UM: upgrade.enabled? same version+identity? lock.tryAcquire()
+    UM->>UM: central.upgrade.enabled? same version+identity? lock.tryAcquire()
     UM->>V: validateOffer(...)
     Note right of V: extension vs deployment kind<br/>downgrade policy · mandatory SHA-256
 
@@ -652,7 +652,7 @@ central:
 | `enabled` | `false` | Being managed is opt-in. It turns on **both** channels; either is refused on its own below |
 | `url` | — | `http(s)://host[:port]`, no path: each channel adds its own. Blank with `enabled: true` logs a warning and starts nothing |
 | `headers` | `{}` | Presented on both channels. Values may be keystore-encrypted. Entries with a null value are skipped, not fatal |
-| `certificateFile` | system trust store | PEM for the **server**. The one for package repositories is `upgrade.trustedCertificateFile`, and they are rarely the same |
+| `certificateFile` | system trust store | PEM for the **server**. The one for package repositories is `central.upgrade.trustedCertificateFile`, and they are rarely the same |
 | `attributes` | `{}` | Reported as this agent's identity by both channels. Merged **last**, so they override both the pre-built agent attributes and the agent-level `attributes:` — the fleet identity can be tailored without touching the attributes attached to the exported metrics |
 
 ### 9.2 `central.opamp:`
