@@ -23,8 +23,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.AlertingSystemConfig;
+import org.metricshub.agent.config.CentralConfig;
+import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.config.TunnelConfig;
+import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.config.otel.OtelCollectorConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
@@ -550,6 +554,55 @@ class ReloadServiceTest {
 				"sequential",
 				AgentConfig.builder().otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop")).sequential(true).build(),
 				AgentConfig.builder().otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop")).sequential(false).build()
+			),
+			Arguments.of(
+				"central.opamp",
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.central(CentralConfig.builder().opamp(OpAmpConfig.builder().enabled(false).build()).build())
+					.build(),
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.central(
+						CentralConfig.builder()
+							.opamp(OpAmpConfig.builder().enabled(true).endpoint("https://opamp.example.com/v1/opamp").build())
+							.build()
+					)
+					.build()
+			),
+			Arguments.of(
+				"central.tunnel",
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.central(CentralConfig.builder().tunnel(TunnelConfig.builder().enabled(false).build()).build())
+					.build(),
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.central(
+						CentralConfig.builder()
+							.tunnel(TunnelConfig.builder().enabled(true).endpoint("wss://tunnel.example.com/ws/agent").build())
+							.build()
+					)
+					.build()
+			),
+			Arguments.of(
+				"central.upgrade",
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.central(CentralConfig.builder().upgrade(UpgradeConfig.builder().build()).build())
+					.build(),
+				AgentConfig.builder()
+					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
+					.central(
+						CentralConfig.builder()
+							.upgrade(
+								UpgradeConfig.builder()
+									.downloadHeaders(Map.of("nexus.example.com", Map.of("Authorization", "Basic abc")))
+									.build()
+							)
+							.build()
+					)
+					.build()
 			),
 			Arguments.of(
 				"enableSelfMonitoring",

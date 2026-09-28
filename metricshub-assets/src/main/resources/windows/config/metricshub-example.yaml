@@ -12,6 +12,57 @@ otel:
   # otel.exporter.otlp.metrics.endpoint: http://localhost:4317
   # otel.exporter.otlp.metrics.protocol: grpc # Options include grpc and http/protobuf
 
+# MetricsHub Central: the server that manages this agent. Two channels reach it -- OpAMP polling
+# for status, health and package offers, and the tunnel Central invokes this agent's
+# tools through -- so the server, the credential and the trusted certificate are written ONCE here.
+# Disabled by default.
+# central:
+#   enabled: true
+#   url: https://central.example.com:4320
+#   headers:
+#     Authorization: Bearer ${env::CENTRAL_TOKEN}
+#   # certificateFile: C:\ProgramData\MetricsHub\security\central-ca.pem # Trusted certificate (PEM) for the Central server
+#   # Attributes reported as this agent's identity. Merged last, so they override both the
+#   # pre-built agent attributes and the agent-level attributes above. Both channels report them.
+#   # attributes:
+#   #   site: data-center-1
+#
+#   # The polling channel
+#   opamp:
+#     # enabled: true # false to be managed without being polled
+#     # path: /v1/opamp
+#     # pollInterval: 30s
+#     # reportHealth: true
+#
+#   # The Central tunnel. ws/wss is derived from the scheme of url above.
+#   tunnel:
+#     # enabled: false # Fleet management WITHOUT exposing this agent's tools to Central
+#     # path: /ws/agent
+#     # heartbeatInterval: 30s
+#     # Tools never advertised to (nor invokable by) Central
+#     # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+#
+#   # What an accepted package offer may do. Beside the channels rather than under opamp:
+#   # the offer arrives over OpAMP, but the download speaks to a repository -- its own hosts,
+#   # its own credentials, its own certificate authority.
+#   upgrade:
+#     enabled: true
+#     allowDowngrade: false
+#     # serviceName: MetricsHub Community # Discovered automatically; pin it if needed
+#     hostAllowlist: [ repo.metricshub.com ]
+#     # installTimeout: 30m # Deadline for the detached installation (default: 30m)
+#     # trustedCertificateFile: C:\ProgramData\MetricsHub\security\repo-ca.pem # Trusted certificate (PEM) for the package repository
+#     # Headers added to package downloads when the repository requires authentication,
+#     # keyed by repository authority -- host or host:port, a bare host meaning the
+#     # scheme's default port. Each header set is only ever sent to its named origin,
+#     # over HTTPS only.
+#     # Values may be encrypted with the MetricsHub keystore, like central.headers.
+#     # downloadHeaders:
+#     #   nexus.example.com:
+#     #     Authorization: Basic ${env::REPO_CREDENTIALS}
+#     #   nexus.example.com:8443:
+#     #     Authorization: Basic ${env::OTHER_REPO_CREDENTIALS}
+
 # Simple resource configuration
 resources:
 

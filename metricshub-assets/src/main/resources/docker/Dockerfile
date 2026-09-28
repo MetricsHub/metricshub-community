@@ -47,6 +47,11 @@ USER metricshub
 
 ENV PATH="/opt/metricshub/bin:${PATH}"
 
+# Marks this as a container deployment: OpAMP-driven package upgrades are not applicable
+# (container images are upgraded by redeploying the image), so the agent never advertises the
+# OpAMP AcceptsPackages capability here.
+ENV METRICSHUB_DEPLOYMENT="docker"
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -ksSf https://localhost:31888/login | grep -qi 'metricshub'
 
 ENTRYPOINT ["/opt/metricshub/bin/docker-entrypoint.sh"]
