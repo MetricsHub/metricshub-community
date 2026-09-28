@@ -90,6 +90,7 @@
 		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
 		<jdkBuildVersion>25</jdkBuildVersion>
 		<lombok.version>1.18.46</lombok.version>
+		<protobuf.version>4.29.3</protobuf.version>
 		<jacoco.version>0.8.14</jacoco.version>
 		<groovy.version>4.0.31</groovy.version>
 		<debianTagName>trixie</debianTagName>
@@ -111,6 +112,7 @@
 		<module>metricshub-jawk-extension</module>
 		<module>metricshub-jdbc-extension</module>
 		<module>metricshub-jmx-extension</module>
+		<module>metricshub-opamp-client</module>
 		<module>metricshub-oscommand-extension</module>
 		<module>metricshub-ping-extension</module>
 		<module>metricshub-programmable-configuration-extension</module>
@@ -370,7 +372,12 @@
 			<dependency>
 				<groupId>com.google.protobuf</groupId>
 				<artifactId>protobuf-java</artifactId>
-				<version>4.29.3</version>
+				<version>${protobuf.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>metricshub-opamp-client</artifactId>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
