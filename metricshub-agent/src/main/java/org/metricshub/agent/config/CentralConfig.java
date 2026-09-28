@@ -37,7 +37,7 @@ import lombok.NoArgsConstructor;
  * The MetricsHub Central server this agent is managed by, and the channels it opens toward it.
  * <p>
  * Two channels reach the SAME server: {@code opamp}, which polls for status, health and package
- * offers, and {@code tunnel}, the persistent outbound WebSocket the Central Governor invokes the
+ * offers, and {@code tunnel}, the persistent outbound WebSocket Central invokes the
  * agent's tools through. They share a host, a credential, a trusted certificate and an identity, so
  * those are written ONCE here rather than repeated per channel.
  * </p>
@@ -59,7 +59,7 @@ public class CentralConfig {
 	 * <p>
 	 * It turns on BOTH channels: a server that polls an agent it cannot invoke tools on is half a
 	 * link. Either can be refused on its own with {@code opamp.enabled} or {@code tunnel.enabled} —
-	 * an operator who wants fleet management without exposing tools to the Governor says so there.
+	 * an operator who wants fleet management without exposing tools to Central says so there.
 	 * </p>
 	 */
 	private boolean enabled;
@@ -108,11 +108,11 @@ public class CentralConfig {
 	private OpAmpConfig opamp = OpAmpConfig.builder().build();
 
 	/**
-	 * The tunnel channel: the Governor's tool invocations.
+	 * The tunnel channel: Central's tool invocations.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
-	private M8bConfig tunnel = M8bConfig.builder().build();
+	private TunnelConfig tunnel = TunnelConfig.builder().build();
 
 	/**
 	 * What an accepted package offer is allowed to do, and where it may be downloaded from.
@@ -157,9 +157,9 @@ public class CentralConfig {
 	 *
 	 * @return a resolved copy, never the configured instance
 	 */
-	public M8bConfig tunnel() {
-		final M8bConfig channel = tunnel == null ? M8bConfig.builder().build() : tunnel;
-		return M8bConfig.builder()
+	public TunnelConfig tunnel() {
+		final TunnelConfig channel = tunnel == null ? TunnelConfig.builder().build() : tunnel;
+		return TunnelConfig.builder()
 			.enabled(enabled && channel.isEnabled())
 			.endpoint(endpointOf(channel.getEndpoint(), channel.getPath(), true))
 			.path(null)

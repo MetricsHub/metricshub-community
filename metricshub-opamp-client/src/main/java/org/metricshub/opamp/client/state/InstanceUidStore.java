@@ -41,7 +41,7 @@ public class InstanceUidStore {
 	 * Makes "read it, or create it" one step for everything in this process.
 	 *
 	 * <p>Without it the sequence is check-then-generate-then-replace, and an agent with more than one
-	 * fleet channel has more than one caller: the OpAMP client and the M8B tunnel are supervised by
+	 * fleet channel has more than one caller: the OpAMP client and the central tunnel are supervised by
 	 * separate threads, and on a fresh installation both can find no file, both generate, and both
 	 * write — the second replacing the first. Each then returns its OWN uid, so the two channels
 	 * register as different agents, and after a restart whichever lost the write changes identity.
