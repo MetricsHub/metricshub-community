@@ -23,6 +23,7 @@ package org.metricshub.programmable.configuration;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -50,6 +51,13 @@ public class CommandLineTool {
 	 * The default command execution timeout in seconds.
 	 */
 	protected static final int DEFAULT_TIMEOUT = 60;
+
+	/**
+	 * The maximum number of bytes captured from each of the command's output streams. A command
+	 * writing more than this is killed: its output is held in memory, so an endless producer would
+	 * otherwise exhaust the heap long before the timeout fires.
+	 */
+	protected static final int MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 
 	/**
 	 * The shell used to run the command, and the option that makes it read the command from its
@@ -112,11 +120,13 @@ public class CommandLineTool {
 		);
 
 		final String stderr = result.getStderr().trim();
+
+		// The command line is never logged: it may carry credentials passed as arguments.
 		if (result.getExitCode() != 0) {
-			log.warn("Command \"{}\" exited with code {}. Stderr: {}", command, result.getExitCode(), stderr);
+			log.warn("Command exited with code {}. Stderr: {}", result.getExitCode(), stderr);
 		} else if (!stderr.isEmpty()) {
 			// Many tools write progress or notices to stderr even when they succeed.
-			log.debug("Command \"{}\" succeeded but wrote to stderr: {}", command, stderr);
+			log.debug("Command succeeded but wrote to stderr: {}", stderr);
 		}
 
 		final String failOnError = arguments.get("failOnError");
@@ -165,14 +175,15 @@ public class CommandLineTool {
 		// is still draining the first one.
 		final ExecutorService executor = Executors.newFixedThreadPool(2);
 		try {
-			final Future<String> stdoutFuture = executor.submit(readStreamTask(process.getInputStream(), charset));
-			final Future<String> stderrFuture = executor.submit(readStreamTask(process.getErrorStream(), charset));
+			final Future<String> stdoutFuture = executor.submit(
+				readStreamTask(process, process.getInputStream(), charset, command)
+			);
+			final Future<String> stderrFuture = executor.submit(
+				readStreamTask(process, process.getErrorStream(), charset, command)
+			);
 
 			if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
-				// Kill the children first: once the shell is gone they are no longer its descendants, and on
-				// Windows killing the shell does not kill them (a timed-out script would keep running).
-				process.descendants().forEach(ProcessHandle::destroyForcibly);
-				process.destroyForcibly();
+				killTree(process);
 				throw new TimeoutException(
 					String.format("Command \"%s\" execution has timed out after %d s", command, timeout)
 				);
@@ -188,14 +199,48 @@ public class CommandLineTool {
 	}
 
 	/**
-	 * Builds a task that reads the given stream in full and decodes it with the given charset.
+	 * Builds a task that reads the given stream and decodes it with the given charset, up to
+	 * {@link #MAX_OUTPUT_BYTES}. A stream exceeding that size kills the command, so that a runaway
+	 * producer cannot fill the heap while the timeout is still running.
 	 *
+	 * @param process     the running command, killed when its output exceeds the limit
 	 * @param inputStream the stream to read
 	 * @param charset     the charset used to decode the stream's bytes
+	 * @param command     the command line, for the error message
 	 * @return the task, to be submitted to an executor
 	 */
-	private static Callable<String> readStreamTask(final InputStream inputStream, final Charset charset) {
-		return () -> new String(inputStream.readAllBytes(), charset);
+	private static Callable<String> readStreamTask(
+		final Process process,
+		final InputStream inputStream,
+		final Charset charset,
+		final String command
+	) {
+		return () -> {
+			final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+			final byte[] chunk = new byte[8192];
+			int read;
+			while ((read = inputStream.read(chunk)) != -1) {
+				if (buffer.size() + read > MAX_OUTPUT_BYTES) {
+					killTree(process);
+					throw new IOException(
+						String.format("Command \"%s\" produced more than %d bytes of output.", command, MAX_OUTPUT_BYTES)
+					);
+				}
+				buffer.write(chunk, 0, read);
+			}
+			return buffer.toString(charset);
+		};
+	}
+
+	/**
+	 * Kills the given command and everything it started. The children go first: once the shell is
+	 * gone they are no longer its descendants, and on Windows killing the shell leaves them running.
+	 *
+	 * @param process the command to kill
+	 */
+	private static void killTree(final Process process) {
+		process.descendants().forEach(ProcessHandle::destroyForcibly);
+		process.destroyForcibly();
 	}
 
 	/**

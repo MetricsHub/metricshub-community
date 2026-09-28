@@ -97,6 +97,25 @@ class CommandLineToolTest {
 	}
 
 	@Test
+	void testOversizedOutputIsRejected(@TempDir final Path tempDir) throws Exception {
+		// A file larger than the cap, read back by the command: the reader must stop and kill the
+		// command instead of holding it all in memory.
+		final Path bigFile = tempDir.resolve("big.txt");
+		final byte[] megabyte = new byte[1024 * 1024];
+		java.util.Arrays.fill(megabyte, (byte) 'x');
+		try (java.io.OutputStream out = Files.newOutputStream(bigFile)) {
+			for (int i = 0; i < (CommandLineTool.MAX_OUTPUT_BYTES / megabyte.length) + 2; i++) {
+				out.write(megabyte);
+			}
+		}
+
+		final IOException exception = assertThrows(IOException.class, () ->
+			commandLineTool.execute(dumpFileCommand(bigFile))
+		);
+		assertTrue(exception.getMessage().contains("produced more than"), "message should report the overflow");
+	}
+
+	@Test
 	void testStderr() throws Exception {
 		final CommandLineResult result = commandLineTool.execute(echoToStderrCommand("oops"));
 		assertTrue(result.getStderr().contains("oops"), "stderr should contain the echoed text");
@@ -147,6 +166,10 @@ class CommandLineToolTest {
 			exception.getMessage().contains("environment variable"),
 			"exception message should mention the invalid environment variable"
 		);
+	}
+
+	private static String dumpFileCommand(final Path file) {
+		return (LocalOsHandler.isWindows() ? "type " : "cat ") + file;
 	}
 
 	private static String echoToStderrCommand(final String text) {
