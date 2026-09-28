@@ -137,7 +137,7 @@ public class OpampHttpTransport implements OpampTransport {
 
 	/**
 	 * Loads a custom trusted certificate (PEM) into an {@link SSLContext}, following the same
-	 * pattern as the MetricsHub OTLP HTTP client. Shared with the other fleet channels (M8B tunnel)
+	 * pattern as the MetricsHub OTLP HTTP client. Shared with the other fleet channels (central tunnel)
 	 * so every outbound connection trusts a configured server certificate the same way.
 	 *
 	 * @param certificateFile the path to the PEM file containing the trusted certificate

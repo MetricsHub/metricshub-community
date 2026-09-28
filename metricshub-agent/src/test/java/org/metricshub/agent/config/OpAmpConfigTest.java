@@ -22,22 +22,23 @@ class OpAmpConfigTest {
 	}
 
 	@Test
-	void opampSectionShouldBeDeserialized() throws Exception {
+	void opampChannelShouldBeDeserialized() throws Exception {
 		final AgentConfig agentConfig = deserialize(
 			"""
-			opamp:
+			central:
 			  enabled: true
-			  endpoint: https://opamp.example.com/v1/opamp
-			  headers:
-			    Authorization: Bearer my-token
-			  certificateFile: /opt/metricshub/security/opamp-ca.pem
-			  pollInterval: 1m
-			  requestTimeout: 20
-			  reportHealth: false
+			  opamp:
+			    endpoint: https://opamp.example.com/v1/opamp
+			    headers:
+			      Authorization: Bearer my-token
+			    certificateFile: /opt/metricshub/security/opamp-ca.pem
+			    pollInterval: 1m
+			    requestTimeout: 20
+			    reportHealth: false
 			"""
 		);
 
-		final OpAmpConfig opamp = agentConfig.getOpamp();
+		final OpAmpConfig opamp = agentConfig.getCentral().getOpamp();
 		assertTrue(opamp.isEnabled());
 		assertEquals("https://opamp.example.com/v1/opamp", opamp.getEndpoint());
 		assertEquals(Map.of("Authorization", "Bearer my-token"), opamp.getHeaders());
@@ -51,7 +52,8 @@ class OpAmpConfigTest {
 	void opampShouldBeDisabledByDefault() throws Exception {
 		final AgentConfig agentConfig = deserialize("loggerLevel: error\n");
 
-		final OpAmpConfig opamp = agentConfig.getOpamp();
+		// The channel says yes and the roof it hangs from says nothing, so nothing runs
+		final OpAmpConfig opamp = agentConfig.getCentral().opamp();
 		assertFalse(opamp.isEnabled());
 		assertEquals(OpAmpConfig.DEFAULT_POLL_INTERVAL, opamp.getPollInterval());
 		assertEquals(OpAmpConfig.DEFAULT_REQUEST_TIMEOUT, opamp.getRequestTimeout());

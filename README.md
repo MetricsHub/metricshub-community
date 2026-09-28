@@ -1,4 +1,3 @@
-
 ---
 
 <div align=center>
@@ -31,92 +30,41 @@ curl -fsSL https://get.metricshub.com | bash
 
 This is a multi-module project:
 
-* **/**: The root (parent of all submodules)
-* **metricshub-engine**: The brain, the heart of this project. It houses the core logic and essential functionalities that power the entire system. It also loads each extension in its own dedicated class loader, so one extension's libraries and service registrations can never conflict with another's; extensions declare dependencies on sibling extensions through the `MetricsHub-Extension-Requires` manifest attribute.
-* **metricshub-agent**: The MetricsHub Agent module includes a Command-Line Interface (CLI) and is responsible for interacting with the MetricsHub engine. It acts as an entry point, collecting and transmitting data to the OpenTelemetry Collector.
-* **metricshub-ipmi-extension**: Provides support for the Intelligent Platform Management Interface (IPMI) to monitor and manage hardware at the firmware level.
-* **metricshub-oscommand-extension**: Allows execution of OS-level commands and scripts to gather metrics and other data from the operating system.
-* **metricshub-snmp-extension-common**: Contains common functionalities and utilities used by SNMP-based extensions.
-* **metricshub-snmp-extension**: Enables Simple Network Management Protocol (SNMP) for monitoring and managing network devices.
-* **metricshub-snmpv3-extension**: Adds support for SNMPv3, which includes enhanced security features like authentication and encryption.
-* **metricshub-internaldb-extension**: Executes internal database queries using MetricsHub's internal database engine.
-* **metricshub-win-extension-common**: Contains common functionalities and utilities used by Windows-specific extensions.
-* **metricshub-wmi-extension**: Provides support for Windows Management Instrumentation (WMI) to gather detailed information about Windows systems.
-* **metricshub-winrm-extension**: Enables the use of Windows Remote Management (WinRM) for remote management and monitoring of Windows-based systems.
-* **metricshub-wbem-extension**: Supports the Web-Based Enterprise Management (WBEM) standard for accessing management information.
-* **metricshub-ping-extension**: Enables testing the reachability of hosts using ICMP-based ping commands.
-* **metricshub-jawk-extension**: Allows execution of Jawk scripts.
-* **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
-* **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
-* **metricshub-emulation-extension**: Replays recorded protocol exchanges (HTTP, SNMP, WMI, WBEM, SSH, IPMI, JDBC, JMX) from local files, enabling offline testing and development without live infrastructure.
-* **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
-* **metricshub-opamp-client**: In-house minimal [OpAMP](https://opentelemetry.io/docs/specs/opamp/) (Open Agent Management Protocol) client embedded in the MetricsHub Agent for remote management: status, identity and health reporting over HTTP polling, plus package-offer handling for automatic upgrades.
-* **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory. The UI-managed `metricshub-ui.yaml` file is handled separately: it is always merged last, after the fragments of every configuration provider, so settings configured through the web UI override every other configuration source.
-* **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts. Whitespace around Velocity directives in the generated YAML defaults to the `lines` mode, which prevents lines made only of `#set`, `#if`, `#foreach` or `#end` directives from producing blank lines, while preserving the indentation of the surrounding content. This default can be overridden with the `parser.space_gobbling` JVM system property, set through the JVM options of the MetricsHub launcher, for example `-Dparser.space_gobbling=structured`. The accepted values are `none`, `bc`, `lines` and `structured`; any other value is rejected with a warning and falls back to `lines`.
-* **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
-* **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
-* **metricshub-assets**: Generates the assets required to package MetricsHub Community for Windows, Debian, RedHat, and Docker platforms.
+- **/**: The root (parent of all submodules)
+- **metricshub-engine**: The brain, the heart of this project. It houses the core logic and essential functionalities that power the entire system. It also loads each extension in its own dedicated class loader, so one extension's libraries and service registrations can never conflict with another's; extensions declare dependencies on sibling extensions through the `MetricsHub-Extension-Requires` manifest attribute.
+- **metricshub-agent**: The MetricsHub Agent module includes a Command-Line Interface (CLI) and is responsible for interacting with the MetricsHub engine. It acts as an entry point, collecting and transmitting data to the OpenTelemetry Collector.
+- **metricshub-ipmi-extension**: Provides support for the Intelligent Platform Management Interface (IPMI) to monitor and manage hardware at the firmware level.
+- **metricshub-oscommand-extension**: Allows execution of OS-level commands and scripts to gather metrics and other data from the operating system.
+- **metricshub-snmp-extension-common**: Contains common functionalities and utilities used by SNMP-based extensions.
+- **metricshub-snmp-extension**: Enables Simple Network Management Protocol (SNMP) for monitoring and managing network devices.
+- **metricshub-snmpv3-extension**: Adds support for SNMPv3, which includes enhanced security features like authentication and encryption.
+- **metricshub-internaldb-extension**: Executes internal database queries using MetricsHub's internal database engine.
+- **metricshub-win-extension-common**: Contains common functionalities and utilities used by Windows-specific extensions.
+- **metricshub-wmi-extension**: Provides support for Windows Management Instrumentation (WMI) to gather detailed information about Windows systems.
+- **metricshub-winrm-extension**: Enables the use of Windows Remote Management (WinRM) for remote management and monitoring of Windows-based systems.
+- **metricshub-wbem-extension**: Supports the Web-Based Enterprise Management (WBEM) standard for accessing management information.
+- **metricshub-ping-extension**: Enables testing the reachability of hosts using ICMP-based ping commands.
+- **metricshub-jawk-extension**: Allows execution of Jawk scripts.
+- **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
+- **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
+- **metricshub-emulation-extension**: Replays recorded protocol exchanges (HTTP, SNMP, WMI, WBEM, SSH, IPMI, JDBC, JMX) from local files, enabling offline testing and development without live infrastructure.
+- **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
+- **metricshub-opamp-client**: In-house minimal [OpAMP](https://opentelemetry.io/docs/specs/opamp/) (Open Agent Management Protocol) client embedded in the MetricsHub Agent for remote management: status, identity and health reporting over HTTP polling, plus package-offer handling for automatic upgrades.
+- **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory. The UI-managed `metricshub-ui.yaml` file is handled separately: it is always merged last, after the fragments of every configuration provider, so settings configured through the web UI override every other configuration source.
+- **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts. Whitespace around Velocity directives in the generated YAML defaults to the `lines` mode, which prevents lines made only of `#set`, `#if`, `#foreach` or `#end` directives from producing blank lines, while preserving the indentation of the surrounding content. This default can be overridden with the `parser.space_gobbling` JVM system property, set through the JVM options of the MetricsHub launcher, for example `-Dparser.space_gobbling=structured`. The accepted values are `none`, `bc`, `lines` and `structured`; any other value is rejected with a warning and falls back to `lines`.
+- **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
+- **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
+- **metricshub-assets**: Generates the assets required to package MetricsHub Community for Windows, Debian, RedHat, and Docker platforms.
 
 > [!TIP]
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
-
-## Remote Management (OpAMP)
-
-The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling and reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch`, `build_number` and `installer.type` — `deb`, `rpm`, `msi`, `archive` or `docker`, so the server can select the right upgrade artifact), status and health.
-
-On package-manager based installations (Debian, RPM, Windows MSI), the agent also advertises the OpAMP `AcceptsPackages` capability and performs automatic upgrades: the offered package is downloaded from the repository over HTTPS, verified against the offered SHA-256, staged in an upgrade directory that survives the installation, and tracked through a persistent upgrade transaction. The installation itself runs in a detached runner that outlives the agent process — a systemd transient unit on Linux (`systemd-run --unit=metricshub-upgrade-<id> --collect`, installing through `apt-get`/`dnf` with a `dpkg`/`rpm` fallback) and a one-shot SYSTEM scheduled task on Windows (Authenticode-verified `msiexec` installation). The runner stops the service, installs the package, restarts the service and records its result; the agent reconciles that result when it starts again and reports success or failure to the OpAMP server.
-
-The service the runner stops and restarts is resolved per edition and never hardcoded: the agent discovers the installed MetricsHub service (`metricshub-*-service.service` units on Linux, `MetricsHub *` services on Windows), so Community and Enterprise both work out of the box; `upgrade.serviceName` pins it explicitly when needed. The upgrade policy is configured through the top-level `upgrade:` section (`enabled`, `allowDowngrade`, `serviceName`, `hostAllowlist`, `maxPackageSizeBytes`, `downloadTimeout`, `downloadRetries`, `installTimeout`, `trustedCertificateFile`, `msiSignatureSubjectContains`, `downloadHeaders`). Repositories that require authentication are handled with `downloadHeaders`, HTTP headers added to the package download requests, keyed by repository authority — `host` or `host:port`, a bare host binding to the scheme's default port (values may be encrypted with the MetricsHub keystore, exactly like `opamp.headers`). Each header set is bound to its operator-named origin, travels over HTTPS only (a plain-HTTP offer gets nothing, even on loopback), and is never sent anywhere else, whatever download URL an offer carries; on redirects it is withheld from any target outside that origin — a different scheme, host or port receives nothing, while same-origin hops keep it. Credentials stay on the agent, and a compromised OpAMP server cannot pick where they are sent. Archive (tar.gz/zip) and Docker deployments never accept package offers — container images are upgraded by redeploying the image.
-
-The feature is **disabled by default**. Enable it with a top-level `opamp:` section in `metricshub.yaml`:
-
-```yaml
-opamp:
-  enabled: true
-  endpoint: https://opamp.example.com/v1/opamp  # OpAMP server endpoint (plain HTTP transport)
-  headers:                                      # Optional headers sent with every request;
-    Authorization: Bearer ${env::OPAMP_TOKEN}   # values may be encrypted with the MetricsHub keystore
-  certificateFile: /opt/metricshub/security/opamp-ca.pem # Optional trusted certificate (PEM)
-  pollInterval: 30s                             # Interval between two polls (default: 30s)
-  requestTimeout: 10s                           # Timeout of one HTTP exchange (default: 10s)
-  reportHealth: true                            # Report agent health (default: true)
-```
-
-Changing the `opamp:` section triggers a configuration reload; the OpAMP connection itself survives reloads that do not touch this section. The agent identity (`instance_uid`, a UUIDv7) is persisted in the `security` directory next to the MetricsHub keystore, so it survives restarts and upgrades.
-
-## M8B AI Governor (WebSocket tunnel)
-
-The agent can also open a persistent **outbound** WebSocket tunnel to the M8B AI Governor, the AI-driven evolution of MetricsHub Fleet. At registration it reports its identity (name, version, edition, host), the troubleshooting tools it exposes — generated from its own AI/MCP tool registry, so a new tool needs no protocol change — and the hosts it actually monitors. The Governor then resolves a host to the agent monitoring it and runs those tools on demand (`GetMetricsFromCacheForHost`, `CheckProtocol`, `PingHost`, …) to troubleshoot any monitored host from a single assistant, whatever the MetricsHub version or edition of each agent. Only the advertised tools can be invoked, the server dictates the invocation timeout, payload cap and concurrency limit at registration, and the existing SSH/WinRM kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply. The wire protocol is specified in [m8b-tunnel-protocol.md](m8b-tunnel-protocol.md).
-
-The tunnel is **disabled by default**. Enable it with a top-level `m8b:` section in `metricshub.yaml`:
-
-```yaml
-m8b:
-  enabled: true
-  endpoint: wss://m8b.example.com/ws/agent      # M8B Governor WebSocket endpoint
-  headers:                                      # Handshake headers carrying the agent credentials;
-    Authorization: Bearer ${env::M8B_TOKEN}     # values may be encrypted with the MetricsHub keystore
-  certificateFile: /opt/metricshub/security/m8b-ca.pem # Optional trusted certificate (PEM)
-  heartbeatInterval: 30s                        # Heartbeat interval until the server imposes its own (default: 30s)
-  excludedTools: [ ExecuteSshCommandline ]      # Tools never advertised to, nor invokable by, M8B (default: none)
-```
-
-The agent connects with the same persistent identity as OpAMP (the `instance_uid` file in the `security` directory), so the fleet sees one agent whichever channel reports. A lost connection is retried with exponential backoff; each reconnection re-registers the current tools and hosts. Changing the `m8b:` section triggers a configuration reload.
-
-## File log capture
-
-When a file source uses wildcards or multiple paths, LOG mode includes an empty
-`<<<LOG:file="...">>>` / `<<<END_LOG>>>` block for each accessible file on its first
-poll and on subsequent polls with no new content. The first poll initializes the
-cursor without reading existing content. A single literal path retains its
-content-only output format.
 
 ## How to build the Project
 
 ### Requirements
 
-* Have [Maven 3.x properly installed and configured](https://maven.apache.org/download.cgi).
-* Latest LTS Release of [JDK 25 (Temurin)](https://adoptium.net).
+- Have [Maven 3.x properly installed and configured](https://maven.apache.org/download.cgi).
+- Latest LTS Release of [JDK 25 (Temurin)](https://adoptium.net).
 
 ### Embedded runtime
 
@@ -158,31 +106,31 @@ $ mvn clean package
 
 #### Building Windows Packages (.msi)
 
-* **Host:** Windows
-* **Prerequisites:** [WiX Toolset 3.11](https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm) configured in the `PATH`
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
-* Execute the `metricshub-assets\target\assets-local\build-windows.cmd` command. The command will create a `packages` sub-directory containing the unsigned `.msi` file and the `MetricsHub` application folder.
+- **Host:** Windows
+- **Prerequisites:** [WiX Toolset 3.11](https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm) configured in the `PATH`
+- Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
+- Execute the `metricshub-assets\target\assets-local\build-windows.cmd` command. The command will create a `packages` sub-directory containing the unsigned `.msi` file and the `MetricsHub` application folder.
 
 #### Building Linux Packages (.deb, .rpm)
 
 ##### Building all Linux packages with Docker (recommended)
 
-* **Host:** Windows
-* **Prerequisites:** Docker Desktop with QEMU enabled for multi-arch builds
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
-* Execute the `metricshub-assets\target\assets-local\build-docker-linux.cmd` command. The command will create a `packages` sub-directory containing the _x86_ and _arm64_ `.deb` and `.rpm` files and the `metricshub` application folder.
+- **Host:** Windows
+- **Prerequisites:** Docker Desktop with QEMU enabled for multi-arch builds
+- Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
+- Execute the `metricshub-assets\target\assets-local\build-docker-linux.cmd` command. The command will create a `packages` sub-directory containing the _x86_ and _arm64_ `.deb` and `.rpm` files and the `metricshub` application folder.
 
 ##### Building Linux package for your platform
 
-* **Host:** Linux
-* **Debian Prerequisites:** The following packages must be installed `fakeroot` and `gcc-multilib` (for _x86_)
-* **RedHat Prerequisites:** The following package must be installed `rpm-build`
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
-* Execute the `metricshub-assets/target/assets-local/build-linux.sh` command. The command will create a `packages` sub-directory containing the `.deb` **or** `.rpm` file and the `metricshub` application folder for your Linux distribution and CPU architecture.
+- **Host:** Linux
+- **Debian Prerequisites:** The following packages must be installed `fakeroot` and `gcc-multilib` (for _x86_)
+- **RedHat Prerequisites:** The following package must be installed `rpm-build`
+- Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
+- Execute the `metricshub-assets/target/assets-local/build-linux.sh` command. The command will create a `packages` sub-directory containing the `.deb` **or** `.rpm` file and the `metricshub` application folder for your Linux distribution and CPU architecture.
 
 ## Checkstyle
 
-In this project, we use Checkstyle to ensure consistent and clean Java code across our codebase. 
+In this project, we use Checkstyle to ensure consistent and clean Java code across our codebase.
 
 Maven Checkstyle Plugin is configured globally in the main `pom.xml` file, and it verifies the Java code during the build process:
 
@@ -258,6 +206,41 @@ To update source files with the proper header, simply execute the below command:
 mvn license:update-file-header
 ```
 
-## Technical Notes
+## MetricsHub Central
 
-See [Technical Notes](TECHNICAL_NOTES.md) for MCP server settings, file log capture behavior, and OS Command/SSH health checks.
+The agent can be managed by a **MetricsHub Central** server over two outbound channels, both
+declared under the single `central:` section of `metricshub.yaml` and both **disabled by default**:
+
+- **OpAMP** — the agent polls the server, reporting its identity, status and health, and performs
+  the automatic package upgrades the server offers (Debian, RPM and Windows MSI installations).
+- **The Central tunnel** — a persistent outbound WebSocket over which the agent advertises
+  the troubleshooting tools it exposes and the hosts it actually monitors, so the Central can run
+  those tools against any monitored host from a single assistant.
+
+Neither channel needs an inbound firewall rule: the agent always dials out, and every server
+instruction is an offer the agent validates against its own local policy before acting on it.
+
+See [Fleet Management — OpAMP and the Central Tunnel](central-fleet-management.md) for the
+`central:` configuration reference, the workflows and the security decisions, and
+[Central Tunnel Protocol](central-tunnel-protocol.md) for the wire format.
+
+## Documentation
+
+| Document                                                                       | What it covers                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Fleet Management — OpAMP and the Central Tunnel](central-fleet-management.md) | The two channels toward a MetricsHub Central server: connection model, protocol, component responsibilities, workflows, upgrade state machine, threading, on-disk state, the `central:` configuration reference and the security decisions |
+| [Central Tunnel Protocol](central-tunnel-protocol.md)                          | The wire format of the Central tunnel: connection, envelope, messages, lifecycle, tool invocation, compatibility rules                                                                                                                     |
+| [UI — Guided Configuration](UI.md)                                             | The guided configuration forms of the web interface                                                                                                                                                                                        |
+| [Recording and Emulation Guide](EMULATION.md)                                  | Recording protocol exchanges from a real target and replaying them offline                                                                                                                                                                 |
+| [Instructions for AI Agents](AGENTS.md)                                        | The build, formatting and validation workflow expected before a change is proposed                                                                                                                                                         |
+
+### Technical notes
+
+[TECHNICAL_NOTES.md](TECHNICAL_NOTES.md) collects the behavior and configuration details that have
+no document of their own:
+
+| Note                                                                                    | What it covers                                                                                                  |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [MCP Server](TECHNICAL_NOTES.md#mcp-server)                                             | The MCP endpoints served on the web port, and the `web:` settings that tune or disable the legacy SSE transport |
+| [File log capture](TECHNICAL_NOTES.md#file-log-capture)                                 | What LOG mode emits for a file source that uses wildcards or several paths                                      |
+| [OS Command and SSH health checks](TECHNICAL_NOTES.md#os-command-and-ssh-health-checks) | Local execution, the `metricshub.host.up` protocol label, and the OS Command timeout                            |

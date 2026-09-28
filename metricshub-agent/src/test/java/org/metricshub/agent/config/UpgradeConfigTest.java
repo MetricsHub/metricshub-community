@@ -24,17 +24,18 @@ class UpgradeConfigTest {
 	void upgradeSectionShouldBeDeserialized() throws Exception {
 		final AgentConfig agentConfig = deserialize(
 			"""
-			upgrade:
-			  enabled: true
-			  hostAllowlist: [ nexus.example.com ]
-			  downloadHeaders:
-			    nexus.example.com:
-			      Authorization: Basic cmVhZGVyOnNlY3JldA==
-			      X-Repo-Token: my-token
+			central:
+			  upgrade:
+			    enabled: true
+			    hostAllowlist: [ nexus.example.com ]
+			    downloadHeaders:
+			      nexus.example.com:
+			        Authorization: Basic cmVhZGVyOnNlY3JldA==
+			        X-Repo-Token: my-token
 			"""
 		);
 
-		final UpgradeConfig upgrade = agentConfig.getUpgrade();
+		final UpgradeConfig upgrade = agentConfig.getCentral().getUpgrade();
 		assertTrue(upgrade.isEnabled());
 		assertEquals(
 			Map.of("nexus.example.com", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==", "X-Repo-Token", "my-token")),
@@ -48,16 +49,17 @@ class UpgradeConfigTest {
 		// that the parser reads it as one key, not a nested mapping.
 		final AgentConfig agentConfig = deserialize(
 			"""
-			upgrade:
-			  downloadHeaders:
-			    nexus.example.com:8443:
-			      Authorization: Basic cmVhZGVyOnNlY3JldA==
+			central:
+			  upgrade:
+			    downloadHeaders:
+			      nexus.example.com:8443:
+			        Authorization: Basic cmVhZGVyOnNlY3JldA==
 			"""
 		);
 
 		assertEquals(
 			Map.of("nexus.example.com:8443", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")),
-			agentConfig.getUpgrade().getDownloadHeaders()
+			agentConfig.getCentral().getUpgrade().getDownloadHeaders()
 		);
 	}
 
@@ -65,18 +67,19 @@ class UpgradeConfigTest {
 	void downloadHeadersShouldDefaultToEmpty() throws Exception {
 		final AgentConfig agentConfig = deserialize("loggerLevel: error\n");
 
-		assertEquals(Map.of(), agentConfig.getUpgrade().getDownloadHeaders());
+		assertEquals(Map.of(), agentConfig.getCentral().getUpgrade().getDownloadHeaders());
 	}
 
 	@Test
 	void nullDownloadHeadersShouldKeepTheDefault() throws Exception {
 		final AgentConfig agentConfig = deserialize(
 			"""
-			upgrade:
-			  downloadHeaders:
+			central:
+			  upgrade:
+			    downloadHeaders:
 			"""
 		);
 
-		assertEquals(Map.of(), agentConfig.getUpgrade().getDownloadHeaders());
+		assertEquals(Map.of(), agentConfig.getCentral().getUpgrade().getDownloadHeaders());
 	}
 }

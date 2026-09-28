@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import org.metricshub.agent.config.AgentConfig;
-import org.metricshub.agent.config.OpAmpConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.upgrade.runner.DeploymentKind;
 import org.metricshub.opamp.proto.AgentDescription;
@@ -156,10 +156,11 @@ public class OpAmpAgentDescriptionMapper {
 		}
 		if (agentConfig != null) {
 			mergeAttributes(agentConfig.getAttributes(), attributes);
-			final OpAmpConfig opAmpConfig = agentConfig.getOpamp();
-			if (opAmpConfig != null) {
-				// Merged last: the opamp: attributes always override the others
-				mergeAttributes(opAmpConfig.getAttributes(), attributes);
+			final CentralConfig central = agentConfig.getCentral();
+			if (central != null) {
+				// Merged last: the central: attributes always override the others, and both channels
+				// report the same identity because they read it from the same place
+				mergeAttributes(central.getAttributes(), attributes);
 			}
 		}
 		return attributes;

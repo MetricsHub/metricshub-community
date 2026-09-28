@@ -26,7 +26,9 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -35,46 +37,47 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
- * Configuration of the OpAMP (Open Agent Management Protocol) client embedded in the MetricsHub
- * Agent: the polling channel toward the Central server, and its cadence.
+ * Configuration of the Central tunnel: the persistent outbound WebSocket connection through which
+ * the MetricsHub Agent registers itself (identity, tool registry, host inventory) with Central and
+ * executes the tools Central invokes.
  * <p>
- * It is written under {@code central:}, which carries everything the two channels share — the URL,
- * the credential, the trusted certificate and the reported identity. What is left here is what only
- * this channel has. {@link CentralConfig#opamp()} hands out the resolved combination; the fields
- * below are what the operator wrote, which is not the same thing.
+ * It is written under {@code central:} as {@code tunnel:}, which carries everything the two channels
+ * share — the URL, the credential, the trusted certificate and the reported identity. What is left
+ * here is what only this channel has. {@link CentralConfig#tunnel()} hands out the resolved
+ * combination; the fields below are what the operator wrote, which is not the same thing.
+ * </p>
+ * <p>
+ * Invocation timeouts, payload caps and concurrency limits are dictated by the server during
+ * registration and are deliberately not configurable here.
  * </p>
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class OpAmpConfig {
+public class TunnelConfig {
 
 	/**
-	 * Default interval in seconds between two OpAMP polls.
+	 * Default interval, in seconds, between two application-level heartbeats.
 	 */
-	public static final long DEFAULT_POLL_INTERVAL = 30;
+	public static final long DEFAULT_HEARTBEAT_INTERVAL = 30;
 
 	/**
-	 * Default timeout in seconds of one OpAMP HTTP exchange.
+	 * Default path of the tunnel endpoint on the Central server.
 	 */
-	public static final long DEFAULT_REQUEST_TIMEOUT = 10;
-
-	/**
-	 * Default path of the OpAMP endpoint on the Central server.
-	 */
-	public static final String DEFAULT_PATH = "/v1/opamp";
+	public static final String DEFAULT_PATH = "/ws/agent";
 
 	/**
 	 * Whether this channel is enabled, which {@code central.enabled} still has to allow. Enabled
-	 * here by default: saying a server manages this agent says it polls it, and an operator who
-	 * wants the tunnel alone turns this one off explicitly.
+	 * here by default: the tunnel is how Central reaches this agent at all, and an operator
+	 * who wants fleet management without it turns this one off explicitly.
 	 */
 	@Default
 	private boolean enabled = true;
 
 	/**
-	 * Path of the OpAMP endpoint on {@code central.url}.
+	 * Path of the tunnel endpoint on {@code central.url}, whose scheme becomes {@code ws} or
+	 * {@code wss} accordingly.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
@@ -82,7 +85,7 @@ public class OpAmpConfig {
 
 	/**
 	 * A complete endpoint for this channel, which overrides {@code central.url} and {@link #path}
-	 * entirely (e.g. {@code https://opamp.example.com/v1/opamp}). For the deployment where the two
+	 * entirely (e.g. {@code wss://central.example.com/ws/agent}). For the deployment where the two
 	 * channels do not come out of the same ingress; elsewhere, leave it unset.
 	 */
 	@JsonSetter(nulls = SKIP)
@@ -105,24 +108,18 @@ public class OpAmpConfig {
 	private String certificateFile;
 
 	/**
-	 * Interval in seconds between two OpAMP polls.
+	 * Interval, in seconds, between two heartbeats. The server may impose a different value at
+	 * registration time.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = TimeDeserializer.class)
-	private long pollInterval = DEFAULT_POLL_INTERVAL;
+	private long heartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
 
 	/**
-	 * Timeout in seconds of one OpAMP HTTP exchange.
+	 * Names of the tools that must never be advertised to (nor invokable by) Central.
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
-	@JsonDeserialize(using = TimeDeserializer.class)
-	private long requestTimeout = DEFAULT_REQUEST_TIMEOUT;
-
-	/**
-	 * Whether the agent reports its health to the OpAMP server.
-	 */
-	@Default
-	private boolean reportHealth = true;
+	private Set<String> excludedTools = new HashSet<>();
 }
