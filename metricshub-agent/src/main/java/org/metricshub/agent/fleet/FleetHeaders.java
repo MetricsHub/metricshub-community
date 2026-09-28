@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
 
 /**
- * Resolves the HTTP headers a fleet channel (OpAMP, M8B tunnel) sends to its server: values
+ * Resolves the HTTP headers a fleet channel (OpAMP, central tunnel) sends to its server: values
  * encrypted with the MetricsHub keystore are decrypted, plain values pass through unchanged.
  */
 @Slf4j

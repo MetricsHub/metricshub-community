@@ -1,7 +1,7 @@
 # Central Tunnel Protocol — version 1
 
 **Audience:** maintainers of the MetricsHub Agent and of the Central Governor (`MetricsHub/metricshub-fleet`).
-**Status:** authoritative specification. The fleet repository mirrors this file as `docs/tunnel-protocol.md`; the golden fixtures under `metricshub-agent/src/test/resources/m8b/` are copied there unchanged.
+**Status:** authoritative specification. The fleet repository mirrors this file as `docs/tunnel-protocol.md`; the golden fixtures under `metricshub-agent/src/test/resources/tunnel/` are copied there unchanged.
 
 The tunnel is a persistent **outbound** WebSocket opened by every MetricsHub Agent toward the Central Governor. Over it the agent registers its identity, the tools it exposes and the hosts it monitors, and executes the tools the Governor invokes. It complements OpAMP (status and upgrades) and never replaces it.
 
@@ -222,7 +222,7 @@ Both sides bound the invocation with the same `timeoutMs`; there is no cancel me
 1. Adding a message type, a property or an error code is a **minor** change: peers ignore what they do not know and answer unknown types with `error`. `protocolVersion` stays `1`.
 2. Removing or renaming a property, or changing its type, is a **major** change and increments `protocolVersion`. A server refusing a version closes with `1002` after sending `error` `UNSUPPORTED_PROTOCOL_VERSION`.
 3. Tool contracts belong to the agent: a tool's `inputSchema` may differ between agents. The server must validate against the schema advertised by the target agent, never against a fleet-wide definition.
-4. The golden fixtures in `metricshub-agent/src/test/resources/m8b/` pin the wire shape; changing them requires the same change in the fleet repository.
+4. The golden fixtures in `metricshub-agent/src/test/resources/tunnel/` pin the wire shape; changing them requires the same change in the fleet repository.
 
 ## 7. Security
 

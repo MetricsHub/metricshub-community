@@ -778,12 +778,12 @@ The second fleet channel. Where OpAMP carries *status and upgrades* by polling, 
 
 ```mermaid
 flowchart TB
-    Hook["M8bStartupHook<br/><i>StartupHook, both editions</i>"] --> Svc["M8bService<br/><i>supervisor: config → client lifecycle</i>"]
-    Svc --> Client["m8b.tunnel.M8bTunnelClient<br/><i>JDK WebSocket, one owner thread</i>"]
+    Hook["TunnelStartupHook<br/><i>StartupHook, both editions</i>"] --> Svc["TunnelService<br/><i>supervisor: config → client lifecycle</i>"]
+    Svc --> Client["tunnel.client.TunnelClient<br/><i>JDK WebSocket, one owner thread</i>"]
     Svc --> Snap["ToolRegistrySnapshot<br/><i>from the Spring AI ToolCallbackProvider</i>"]
     Svc --> Inv["HostInventory<br/><i>active telemetry managers</i>"]
     Svc --> Desc["AgentDescriptorMapper<br/><i>identity + edition</i>"]
-    Svc --> Bridge["M8bToolBridge<br/><i>tool.invoke → ToolCallback.call</i>"]
+    Svc --> Bridge["ToolBridge<br/><i>tool.invoke → ToolCallback.call</i>"]
     Client -->|"agent.register · heartbeat.ping · hosts.updated · tool.result/error"| Gov["Central Governor"]
     Gov -->|"agent.registered · heartbeat.pong · tool.invoke"| Client
     Client -->|onInvoke| Bridge
@@ -794,16 +794,16 @@ flowchart TB
 | Class | Responsibility |
 |---|---|
 | `agent.config.CentralConfig` | The `central:` section (§9, §13.4): the server, and the channels that reach it. A change triggers a configuration reload |
-| `agent.config.M8bConfig` | The `central.tunnel:` channel alone (§13.4) |
-| `web.service.M8bStartupHook` | Starts `M8bService` on `ApplicationReadyEvent`, registers its shutdown; runs in both editions |
-| `agent.m8b.M8bService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `central:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
-| `agent.m8b.tunnel.M8bTunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
-| `agent.m8b.tunnel.M8bTunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback |
-| `agent.m8b.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
-| `agent.m8b.HostInventory` | Hosts with an active `TelemetryManager`, identified by (resource group, resource key) |
-| `agent.m8b.AgentDescriptorMapper` | Reuses `OpAmpAgentDescriptionMapper.resolveAttributes`, adds the edition |
-| `agent.m8b.M8bToolBridge` | Executes `tool.invoke`: exact-name lookup, in-flight cap, deadline, payload cap; exactly one answer per request |
-| `agent.m8b.protocol.*` | `M8bMessage` (sealed envelope), `ToolErrorCode`, `M8bJson` (lenient mapper, canonical fingerprint) |
+| `agent.config.TunnelConfig` | The `central.tunnel:` channel alone (§13.4) |
+| `web.service.TunnelStartupHook` | Starts `TunnelService` on `ApplicationReadyEvent`, registers its shutdown; runs in both editions |
+| `agent.tunnel.TunnelService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `central:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
+| `agent.tunnel.client.TunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
+| `agent.tunnel.client.TunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback |
+| `agent.tunnel.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
+| `agent.tunnel.HostInventory` | Hosts with an active `TelemetryManager`, identified by (resource group, resource key) |
+| `agent.tunnel.AgentDescriptorMapper` | Reuses `OpAmpAgentDescriptionMapper.resolveAttributes`, adds the edition |
+| `agent.tunnel.ToolBridge` | Executes `tool.invoke`: exact-name lookup, in-flight cap, deadline, payload cap; exactly one answer per request |
+| `agent.tunnel.protocol.*` | `TunnelMessage` (sealed envelope), `ToolErrorCode`, `TunnelJson` (lenient mapper, canonical fingerprint) |
 | `agent.fleet.AgentInstanceUid`, `agent.fleet.FleetHeaders` | Identity file and header decryption shared by both channels |
 
 Adding a tool needs **no protocol change**: implement an `IMCPToolService`, and the next (re)connection advertises it.
@@ -828,16 +828,16 @@ CONNECTING ──open──► REGISTERING ──agent.registered──► CONNE
 
 | Thread | Owner | Work |
 |---|---|---|
-| `metricshub-m8b-supervisor` | `M8bService` | Config reconciliation, `hosts.updated` |
-| `metricshub-m8b-tunnel` | `M8bTunnelClient` | **All** tunnel state: connect, frames, heartbeats, sends (chained: the JDK client refuses concurrent sends), reconnection |
-| `metricshub-m8b-tool-N` | `M8bToolBridge` | One tool execution each. Bounded pool: `maxInFlight` limits live invocations, but a timed-out one gives back its slot and not its thread — a callback blocked in a socket read never observes its interruption — so a hard thread ceiling is what actually bounds the pile-up |
-| `metricshub-m8b-tool-timer` | `M8bToolBridge` | Request deadlines |
+| `metricshub-tunnel-supervisor` | `TunnelService` | Config reconciliation, `hosts.updated` |
+| `metricshub-tunnel-client` | `TunnelClient` | **All** tunnel state: connect, frames, heartbeats, sends (chained: the JDK client refuses concurrent sends), reconnection |
+| `metricshub-tunnel-tool-N` | `ToolBridge` | One tool execution each. Bounded pool: `maxInFlight` limits live invocations, but a timed-out one gives back its slot and not its thread — a callback blocked in a socket read never observes its interruption — so a hard thread ceiling is what actually bounds the pile-up |
+| `metricshub-tunnel-tool-timer` | `ToolBridge` | Request deadlines |
 
 Two listeners, and they are not the same thing:
 
 * **`WebSocket.Listener`** (the JDK's) is called on the HTTP client's own threads, and does deliberately as little as possible: bound the accumulation, reassemble a text frame, hand it to the tunnel thread, ask for the next one. Keep it that way — the next frame is only requested at the END of each callback, so blocking there stops frames arriving at all, and the heartbeat check then reports a peer that is talking as silent.
   * Three bounds, because a peer chooses how big a message is, how many pieces it arrives in, and whether those pieces carry anything. A **complete** message is backpressured by **demand**: the next message is requested only once this one has been handled. The `CompletionStage` `onText` returns is not what does it — the JDK is explicit that the stage has nothing to do with the invocation counter — so not asking for more is the thing that actually holds the peer back. An **incomplete** one is bounded by `maxPayloadBytes` of accumulated **UTF-8 bytes** — counted, not characters, since a character is a lower bound on its encoded size and 4 096 CJK characters would slip past a 4 096-byte cap at some 12 KiB on the wire — and separately by a fragment count, because an empty non-final fragment is legal and adds nothing to the size, so a stream of them would never trip the byte bound. Past any of them the connection is dropped `1009` and — the part that matters — no further fragment is requested.
-* **`M8bTunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` and `onDisconnected` change bridge state — the latter giving back the `maxInFlight` slots the lost connection's work was holding, which the bridge, outliving that connection, would otherwise hold until each invocation's own deadline. Only `onInvoke` hands off — to the tool pool, carrying the connection generation the answer will be bound to. Anything blocking added to the others stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
+* **`TunnelListener`** (ours) is called **on the tunnel thread**, and it does real work synchronously: `buildRegistration()` reads and maps the current agent context, `onRegistered` and `onDisconnected` change bridge state — the latter giving back the `maxInFlight` slots the lost connection's work was holding, which the bridge, outliving that connection, would otherwise hold until each invocation's own deadline. Only `onInvoke` hands off — to the tool pool, carrying the connection generation the answer will be bound to. Anything blocking added to the others stalls registration, heartbeats and reconnection alike, because that one thread owns them all.
   * **One exception**, and it is the one that matters when writing a listener: a `stop()` that cannot reach the tunnel thread at all — interrupted, or timed out because a callback is holding that thread — calls `onDisconnected` from the **stopping** thread instead. That case is precisely the one where the tunnel thread is unavailable, so a listener must not assume `onDisconnected` sees tunnel-thread state consistently; treat it as “discard what you were doing” and nothing more.
 
 The bridge frees an invocation's in-flight slot exactly once, by whichever of three paths reaches it first: the worker's `finally` when it finishes, the deadline when the invocation timed out with its worker still running (or cancelled before it ever ran), and the rejection path when no thread was free to take it. So the deadline does not release the slot when the worker is *gone* — it releases it precisely when the worker has **not** finished, which is the whole point: the Governor has been told the invocation is over, so the slot is its to reuse even though the thread is not.
@@ -891,16 +891,16 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 
 | Concern | Test |
 |---|---|
-| `central:` deserialization, and what a channel inherits from the roof | `CentralConfigTest`, `M8bConfigTest`, `OpAmpConfigTest` |
+| `central:` deserialization, and what a channel inherits from the roof | `CentralConfigTest`, `TunnelConfigTest`, `OpAmpConfigTest` |
 | Registry snapshot: sorting, exclusion, defaults, revision stability | `ToolRegistrySnapshotTest` |
 | Host inventory: group scoping, inactive resources skipped | `HostInventoryTest` |
 | Identity and edition | `AgentDescriptorMapperTest` |
-| Wire shape (golden `agent.register`), round trips, unknown types, fingerprint | `M8bJsonTest` |
-| **Tunnel over a real WebSocket** — headers, limits, invocation round trip, unknown types, reconnection, `4001`, heartbeat timeout, binary frame, unacknowledged registration, stop, TLS | `M8bTunnelClientTest` against `FakeM8bServer` |
-| Bridge: every error code, deadline answered once, caps, slots released when work outlives its session | `M8bToolBridgeTest` |
-| Supervisor: config lifecycle, retries, `hosts.updated` | `M8bServiceTest` |
-| StartupHook wiring and Spring instantiation | `M8bStartupHookTest` |
-| **End to end** — real `ToolCallbackProvider`, `ListHosts` executed over the tunnel | `M8bServiceEndToEndTest` |
+| Wire shape (golden `agent.register`), round trips, unknown types, fingerprint | `TunnelJsonTest` |
+| **Tunnel over a real WebSocket** — headers, limits, invocation round trip, unknown types, reconnection, `4001`, heartbeat timeout, binary frame, unacknowledged registration, stop, TLS | `TunnelClientTest` against `FakeGovernorServer` |
+| Bridge: every error code, deadline answered once, caps, slots released when work outlives its session | `ToolBridgeTest` |
+| Supervisor: config lifecycle, retries, `hosts.updated` | `TunnelServiceTest` |
+| StartupHook wiring and Spring instantiation | `TunnelStartupHookTest` |
+| **End to end** — real `ToolCallbackProvider`, `ListHosts` executed over the tunnel | `TunnelServiceEndToEndTest` |
 | A cancelled invocation stops the multi-host fan-out inside it | `MultiHostToolExecutorTest` |
 
 ---

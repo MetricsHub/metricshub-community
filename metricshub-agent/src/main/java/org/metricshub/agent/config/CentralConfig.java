@@ -112,7 +112,7 @@ public class CentralConfig {
 	 */
 	@Default
 	@JsonSetter(nulls = SKIP)
-	private M8bConfig tunnel = M8bConfig.builder().build();
+	private TunnelConfig tunnel = TunnelConfig.builder().build();
 
 	/**
 	 * What an accepted package offer is allowed to do, and where it may be downloaded from.
@@ -157,9 +157,9 @@ public class CentralConfig {
 	 *
 	 * @return a resolved copy, never the configured instance
 	 */
-	public M8bConfig tunnel() {
-		final M8bConfig channel = tunnel == null ? M8bConfig.builder().build() : tunnel;
-		return M8bConfig.builder()
+	public TunnelConfig tunnel() {
+		final TunnelConfig channel = tunnel == null ? TunnelConfig.builder().build() : tunnel;
+		return TunnelConfig.builder()
 			.enabled(enabled && channel.isEnabled())
 			.endpoint(endpointOf(channel.getEndpoint(), channel.getPath(), true))
 			.path(null)

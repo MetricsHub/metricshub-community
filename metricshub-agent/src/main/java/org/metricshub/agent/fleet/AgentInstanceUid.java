@@ -28,8 +28,8 @@ import org.metricshub.opamp.client.state.InstanceUidStore;
 import org.metricshub.opamp.client.state.UuidV7;
 
 /**
- * The persistent identity of this agent toward the fleet, shared by every fleet channel (OpAMP, M8B
- * tunnel) so the fleet sees one agent whichever channel reports.
+ * The persistent identity of this agent toward the fleet, shared by every fleet channel (OpAMP,
+ * central tunnel) so the fleet sees one agent whichever channel reports.
  * <p>
  * The uid is a UUIDv7 persisted in the MetricsHub {@code security} directory, which survives upgrades.
  * </p>
@@ -38,7 +38,7 @@ public final class AgentInstanceUid {
 
 	/**
 	 * Name of the file holding the uid. Kept for compatibility with agents that created it through
-	 * OpAMP before the M8B tunnel existed.
+	 * OpAMP before the central tunnel existed.
 	 */
 	public static final String FILENAME = "opamp-instance-uid";
 

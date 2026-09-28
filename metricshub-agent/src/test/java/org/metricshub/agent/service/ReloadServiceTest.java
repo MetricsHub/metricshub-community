@@ -24,10 +24,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.AlertingSystemConfig;
 import org.metricshub.agent.config.CentralConfig;
-import org.metricshub.agent.config.M8bConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.config.TunnelConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.config.otel.OtelCollectorConfig;
 import org.metricshub.agent.context.AgentContext;
@@ -574,13 +574,13 @@ class ReloadServiceTest {
 				"central.tunnel",
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.central(CentralConfig.builder().tunnel(M8bConfig.builder().enabled(false).build()).build())
+					.central(CentralConfig.builder().tunnel(TunnelConfig.builder().enabled(false).build()).build())
 					.build(),
 				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.central(
 						CentralConfig.builder()
-							.tunnel(M8bConfig.builder().enabled(true).endpoint("wss://m8b.example.com/ws/agent").build())
+							.tunnel(TunnelConfig.builder().enabled(true).endpoint("wss://tunnel.example.com/ws/agent").build())
 							.build()
 					)
 					.build()
