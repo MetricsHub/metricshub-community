@@ -203,6 +203,25 @@ class CommandLineToolTest {
 	}
 
 	@Test
+	@EnabledOnOs(OS.WINDOWS)
+	void testEnvironmentValueKeepsItsSpaces() throws Exception {
+		// Spaces around a value are part of it: only the name is normalized.
+		final CommandLineResult result = commandLineTool.execute(
+			Map.of("command", "echo [%SPACED%]", "env", "SPACED= padded ")
+		);
+		assertTrue(result.getStdout().contains("[ padded ]"), "the value's spaces must be preserved");
+	}
+
+	@Test
+	void testEnvironmentLinesTolerateCrlf() throws Exception {
+		// A template saved with CRLF must not leak the carriage return into the value.
+		final CommandLineResult result = commandLineTool.execute(
+			Map.of("command", printEnvCommand("CRLF_VAR"), "env", "CRLF_VAR=value\r\nOTHER=x")
+		);
+		assertEquals("value", result.getStdout().trim(), "the carriage return must not reach the value");
+	}
+
+	@Test
 	void testStderr() throws Exception {
 		final CommandLineResult result = commandLineTool.execute(echoToStderrCommand("oops"));
 		assertTrue(result.getStderr().contains("oops"), "stderr should contain the echoed text");

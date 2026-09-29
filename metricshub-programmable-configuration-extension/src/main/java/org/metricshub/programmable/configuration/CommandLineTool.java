@@ -327,7 +327,11 @@ public class CommandLineTool {
 				if (tuple.length != 2) {
 					throw new IllegalArgumentException("Invalid environment variable format: " + line);
 				}
-				result.put(tuple[0].trim(), tuple[1].trim());
+				// Only the name is normalized: leading and trailing spaces are part of the value. Lines are
+				// split on a line feed, so a template saved with CRLF leaves a carriage return behind; that
+				// one belongs to the line ending, not to the value.
+				final String value = tuple[1].endsWith("\r") ? tuple[1].substring(0, tuple[1].length() - 1) : tuple[1];
+				result.put(tuple[0].trim(), value);
 			}
 		}
 		return result;
