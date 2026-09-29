@@ -481,7 +481,7 @@ public class ProgrammableReEvaluationScheduler {
 			// schedule back so the next firing can retry.
 			final String appliedCron;
 			synchronized (lock) {
-				appliedCron = scheduledCrons.get(reEvaluationId);
+				appliedCron = scheduledCrons.get(key);
 			}
 
 			final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
