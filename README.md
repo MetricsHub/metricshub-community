@@ -8,7 +8,7 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/metricshub/metricshub-community?style=for-the-badge)
 [![License](https://img.shields.io/badge/license-AGPL%203.0-7b3e7b?style=for-the-badge)](https://github.com/metricshub/metricshub-community/blob/main/LICENSE)
 
-<a href="https://metricshub.com" target="_blank">
+<a href="https://metricshub.com">
     <picture>
         <source media="(prefers-color-scheme: dark)" srcset=".github/images/logo-dark.svg">
         <source media="(prefers-color-scheme: light)" srcset=".github/images/logo-light.svg">
