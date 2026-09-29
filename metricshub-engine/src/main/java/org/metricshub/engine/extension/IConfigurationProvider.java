@@ -161,4 +161,21 @@ public interface IConfigurationProvider {
 	default <T> Supplier<T> captureCachedFragmentsScope(Supplier<T> supplier) {
 		return supplier;
 	}
+
+	/**
+	 * Puts back the schedule a re-evaluation was running on, after the configuration it produced turned
+	 * out not to be applicable.
+	 * <p>
+	 * {@link #reevaluate(String)} publishes what the unit declared as soon as it produced something
+	 * usable, but the caller only finds out later whether the whole configuration could be applied. A
+	 * unit that declared no schedule this time, and whose configuration was then rejected, would
+	 * otherwise stop being re-evaluated, leaving nothing to retry the change with.
+	 * </p>
+	 *
+	 * @param reEvaluationId an id from {@link #getScheduledReEvaluations()}
+	 * @param cron           the cron expression to put back, or {@code null} when the unit had none
+	 */
+	default void restoreDeclaredSchedule(String reEvaluationId, String cron) {
+		// Providers that declare no schedule have nothing to restore.
+	}
 }

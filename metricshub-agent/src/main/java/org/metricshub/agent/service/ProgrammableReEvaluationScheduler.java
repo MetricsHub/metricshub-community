@@ -95,7 +95,11 @@ public class ProgrammableReEvaluationScheduler {
 	public enum ReEvaluationOutcome {
 		/** The unit produced no fragment; the last good configuration was kept. */
 		NOTHING_PRODUCED,
-		/** The unit produced the same fragment as before; no reload was needed. */
+		/**
+		 * The running configuration was left as it is: the unit produced the same fragment as before, or
+		 * the fragment changed without changing the configuration it takes part in (another source
+		 * overrides what changed).
+		 */
 		UNCHANGED,
 		/** The fragment changed and the configuration was reloaded. */
 		RELOADED,
@@ -472,6 +476,14 @@ public class ProgrammableReEvaluationScheduler {
 		synchronized (reEvaluationLocks.computeIfAbsent(key, ignored -> new Object())) {
 			seedBaseline(provider, reEvaluationId);
 
+			// Taken before the render, which publishes whatever the template declares this time. The
+			// configuration it produces can still be rejected further down, and this is what puts the
+			// schedule back so the next firing can retry.
+			final String appliedCron;
+			synchronized (lock) {
+				appliedCron = scheduledCrons.get(reEvaluationId);
+			}
+
 			final Optional<JsonNode> fragment = provider.reevaluate(reEvaluationId);
 			if (fragment.isEmpty()) {
 				log.warn("Re-evaluation of '{}' produced nothing; keeping the last good value.", reEvaluationId);
@@ -515,6 +527,12 @@ public class ProgrammableReEvaluationScheduler {
 					// on a configuration that was never updated.
 					lastFragments.put(key, fragment.get());
 					restartRequestedFragments.remove(key);
+					if (result[0] == ReloadResult.NO_CHANGE) {
+						// The template produced something new, but the configuration it takes part in did not
+						// move: another source overrides what changed. Nothing was applied, so say so.
+						log.info("Re-evaluation of '{}' left the running configuration unchanged.", reEvaluationId);
+						return ReEvaluationOutcome.UNCHANGED;
+					}
 					return ReEvaluationOutcome.RELOADED;
 				} catch (Exception e) {
 					log.error(
@@ -523,6 +541,9 @@ public class ProgrammableReEvaluationScheduler {
 						e.getMessage()
 					);
 					log.debug("Reload error:", e);
+					// Nothing was applied, so the schedule this re-evaluation published must not stand: the
+					// template keeps firing on the one it was running on, and retries the change.
+					provider.restoreDeclaredSchedule(reEvaluationId, appliedCron);
 					return ReEvaluationOutcome.RELOAD_FAILED;
 				}
 			}

@@ -149,6 +149,9 @@ function ConfigurationPage() {
 	} = otelState;
 	const velocityTestResult = useAppSelector((s) => s.config.velocityTestResult);
 	const reevaluation = useAppSelector((s) => s.config.reevaluation);
+	// One template and the whole configuration share the same state slot, so a second request would
+	// overwrite the first and stop its spinner too early. Only one at a time, whichever it is.
+	const reevaluationPending = !!reevaluation?.loading;
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null); // { repo, name }
@@ -577,9 +580,7 @@ function ConfigurationPage() {
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
 							onClick={() => setReloadConfirmOpen(true)}
-							// Both actions share one re-evaluation state, so running one must block the other:
-							// starting the second overwrites that state and clears the first indicator mid-flight.
-							disabled={isReadOnly || !!reevaluation?.loading}
+							disabled={isReadOnly || reevaluationPending}
 						>
 							{reevaluation?.scope === "configuration" && reevaluation?.loading
 								? "Reloading..."
@@ -700,8 +701,8 @@ function ConfigurationPage() {
 									onTest={handleTest}
 									testLoading={!!velocityTestResult?.loading}
 									onReevaluate={handleReevaluateTemplate}
-									reevaluateLoading={reevaluation?.scope === "template" && !!reevaluation?.loading}
-									reevaluationBusy={!!reevaluation?.loading}
+									reevaluateLoading={reevaluation?.scope === "template" && reevaluationPending}
+									reevaluationPending={reevaluationPending}
 									isReadOnly={isReadOnly}
 								/>
 							</Box>

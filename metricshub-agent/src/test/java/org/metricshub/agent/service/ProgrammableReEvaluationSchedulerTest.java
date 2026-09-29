@@ -1018,4 +1018,79 @@ class ProgrammableReEvaluationSchedulerTest {
 
 		scheduler.stop();
 	}
+
+	/**
+	 * A re-evaluation can produce a usable fragment that the full reload then rejects. If that render
+	 * also dropped the template's schedule, the discovery sweep would cancel its cron task and the
+	 * retry promised by RELOAD_FAILED could never happen. The schedule it was running on is therefore
+	 * put back.
+	 */
+	@Test
+	void testAFailedReloadPutsTheScheduleBack() {
+		final List<String> restored = new ArrayList<>();
+		final IConfigurationProvider provider = new IConfigurationProvider() {
+			@Override
+			public Collection<JsonNode> load(final Path path) {
+				return Collections.emptyList();
+			}
+
+			@Override
+			public Set<String> getFileExtensions() {
+				return Collections.emptySet();
+			}
+
+			@Override
+			public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
+				return List.of(new ScheduledReEvaluation("hosts.vm", "0/15 * * * * ?"));
+			}
+
+			@Override
+			public Optional<JsonNode> reevaluate(final String reEvaluationId) {
+				return Optional.of(TextNode.valueOf("changed"));
+			}
+
+			@Override
+			public void restoreDeclaredSchedule(final String reEvaluationId, final String cron) {
+				restored.add(reEvaluationId + "=" + cron);
+			}
+		};
+		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
+		doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {
+			throw new IllegalStateException("the reloaded configuration is invalid");
+		});
+		scheduler.start();
+
+		assertEquals(ReEvaluationOutcome.RELOAD_FAILED, scheduler.reevaluateNow(provider, "hosts.vm"));
+
+		assertEquals(
+			List.of("hosts.vm=0/15 * * * * ?"),
+			restored,
+			"The schedule the template was running on must be put back"
+		);
+
+		scheduler.stop();
+	}
+
+	/**
+	 * A template can produce something new while the configuration it takes part in stays the same,
+	 * because another source overrides what changed. Nothing is applied then, so the caller must not be
+	 * told the configuration was reloaded.
+	 */
+	@Test
+	void testAReloadThatChangedNothingIsNotReportedAsReloaded() {
+		final IConfigurationProvider provider = fixedFragmentProvider();
+		final AtomicInteger reloads = new AtomicInteger();
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () -> {
+			reloads.incrementAndGet();
+			return ReloadResult.NO_CHANGE;
+		});
+
+		assertEquals(ReEvaluationOutcome.UNCHANGED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(1, reloads.get(), "The reload still ran: only its outcome differs");
+
+		// The baseline moved all the same: the template did produce that fragment.
+		assertEquals(ReEvaluationOutcome.UNCHANGED, scheduler.reevaluateNow(provider, "hosts.vm"));
+		assertEquals(1, reloads.get(), "An unchanged fragment must not reload again");
+	}
 }

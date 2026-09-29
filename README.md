@@ -1,3 +1,4 @@
+
 ---
 
 <div align=center>
@@ -9,11 +10,11 @@
 [![License](https://img.shields.io/badge/license-AGPL%203.0-7b3e7b?style=for-the-badge)](https://github.com/metricshub/metricshub-community/blob/main/LICENSE)
 
 <a href="https://metricshub.com" target="_blank">
-	<picture>
-	<source media="(prefers-color-scheme: dark)" srcset=".github/images/logo-dark.svg">
-	<source media="(prefers-color-scheme: light)" srcset=".github/images/logo-light.svg">
-	<img alt="MetricsHub" src=".github/images/logo-light.svg" width="250">
-	</picture>
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/images/logo-dark.svg">
+        <source media="(prefers-color-scheme: light)" srcset=".github/images/logo-light.svg">
+        <img alt="MetricsHub" src=".github/images/logo-light.svg" width="250">
+    </picture>
 </a>
 <h4>MetricsHub®, is an open-source metrics collection tool that leverages OpenTelemetry for vendor-neutral observability.</h4>
 </div>

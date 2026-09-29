@@ -52,4 +52,43 @@ describe("EditorHeader Reevaluate button", () => {
 
 		expect(screen.queryByRole("button", { name: /reevaluate/i })).not.toBeInTheDocument();
 	});
+
+	it("is disabled while the template has unsaved edits, which the server would ignore", () => {
+		vi.mocked(StoreHooks.useAppSelector).mockImplementation((selector) =>
+			selector({ config: { dirtyByName: { "hosts.vm": true }, filesByName: {} } }),
+		);
+
+		render(
+			<EditorHeader selected="hosts.vm" saving={false} onSave={() => {}} onReevaluate={() => {}} />,
+		);
+
+		expect(screen.getByRole("button", { name: /reevaluate/i })).toBeDisabled();
+	});
+
+	it("is disabled while another re-evaluation is running", () => {
+		render(
+			<EditorHeader
+				selected="hosts.vm"
+				saving={false}
+				onSave={() => {}}
+				onReevaluate={() => {}}
+				reevaluationPending
+			/>,
+		);
+
+		expect(screen.getByRole("button", { name: /reevaluate/i })).toBeDisabled();
+	});
+
+	it("is not shown on a backup, whose name still ends in .vm", () => {
+		render(
+			<EditorHeader
+				selected="backup-20251016-104205__hosts.vm"
+				saving={false}
+				onSave={() => {}}
+				onReevaluate={() => {}}
+			/>,
+		);
+
+		expect(screen.queryByRole("button", { name: /reevaluate/i })).not.toBeInTheDocument();
+	});
 });

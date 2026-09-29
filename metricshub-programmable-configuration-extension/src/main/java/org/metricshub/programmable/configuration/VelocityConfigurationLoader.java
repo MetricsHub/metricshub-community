@@ -75,15 +75,25 @@ public class VelocityConfigurationLoader {
 		.map(VelocityConfigurationLoader::toPropertyValue)
 		.collect(Collectors.joining(", "));
 
+	/**
+	 * What one render produced: the generated configuration, and the schedule the template declared
+	 * while producing it. The declaration is handed to the caller rather than published right away,
+	 * since only the caller can tell whether the generated configuration is usable at all.
+	 *
+	 * @param yaml the generated YAML configuration
+	 * @param cron the cron expression the template declared, or {@code null} when it declared none
+	 */
+	public record RenderResult(String yaml, String cron) {}
+
 	private final Path vmPath;
 
 	private Map<String, Object> tools = new HashMap<>();
 
 	/**
-	 * The cron declared by the last render that <b>completed</b>, which is what {@link #getCron()}
-	 * reports. It is set only once a render reached its end, so a render that failed half-way (a data
-	 * source that timed out, for example) keeps the schedule the template last established instead of
-	 * appearing to declare none.
+	 * The cron of the last render whose result was <b>accepted</b>, which is what {@link #getCron()}
+	 * reports. Set by {@link #publishDeclaredCron(String)} only, so a render that failed half-way (a
+	 * data source that timed out) or produced a configuration the caller rejected (invalid YAML) keeps
+	 * the schedule the template last established instead of appearing to declare none.
 	 */
 	private volatile String lastDeclaredCron;
 
@@ -100,12 +110,12 @@ public class VelocityConfigurationLoader {
 	}
 
 	/**
-	 * Returns the cron expression the template declared through {@code $schedule.cron(...)} during
-	 * the last render that completed. Meaningful only after a render has run.
+	 * Returns the cron expression the template declared through {@code $schedule.cron(...)} during the
+	 * last render whose result was accepted. Meaningful only after such a render.
 	 * <p>
-	 * A render that failed does not change this value: the template keeps the schedule it last
-	 * declared, so a temporary failure of one of its data sources cannot make it look unscheduled and
-	 * get its cron task cancelled.
+	 * A render that failed, or whose result was rejected, does not change this value: the template
+	 * keeps the schedule it last established, so a temporary failure of one of its data sources cannot
+	 * make it look unscheduled and get its cron task cancelled.
 	 * </p>
 	 *
 	 * @return the declared cron expression, or empty when the template declares no schedule
@@ -115,7 +125,22 @@ public class VelocityConfigurationLoader {
 	}
 
 	/**
+	 * Records the schedule of a render whose result the caller accepted, as reported by
+	 * {@link RenderResult#cron()}. From then on {@link #getCron()} returns it, and a template that
+	 * dropped its declaration correctly stops being scheduled.
+	 *
+	 * @param cron the cron expression the accepted render declared, or {@code null} for none
+	 */
+	public void publishDeclaredCron(final String cron) {
+		lastDeclaredCron = cron;
+	}
+
+	/**
 	 * Generates a YAML configuration from the Velocity template file.
+	 * <p>
+	 * The schedule the template declares is <b>not</b> published: use {@link #render()} and
+	 * {@link #publishDeclaredCron(String)} when the generated configuration is going to be applied.
+	 * </p>
 	 *
 	 * @return The generated YAML configuration as a String.
 	 */
@@ -132,11 +157,32 @@ public class VelocityConfigurationLoader {
 	/**
 	 * Generates a YAML configuration from the Velocity template file,
 	 * propagating any exception instead of returning {@code null}.
+	 * <p>
+	 * The schedule the template declares is <b>not</b> published: use {@link #render()} and
+	 * {@link #publishDeclaredCron(String)} when the generated configuration is going to be applied.
+	 * </p>
 	 *
 	 * @return The generated YAML configuration as a String.
 	 * @throws Exception if the Velocity template evaluation fails
 	 */
 	public String generateYamlDangerous() throws Exception {
+		return render().yaml();
+	}
+
+	/**
+	 * Renders the template and returns what it produced, together with the schedule it declared while
+	 * doing so.
+	 * <p>
+	 * Nothing is published here. The declaration only takes effect once the caller has accepted the
+	 * generated configuration and passed it to {@link #publishDeclaredCron(String)}: a render can
+	 * succeed and still produce a configuration that cannot be parsed, and such a render must not
+	 * change the schedule of a template whose last good configuration is kept.
+	 * </p>
+	 *
+	 * @return what this render produced
+	 * @throws Exception if the Velocity template evaluation fails
+	 */
+	public RenderResult render() throws Exception {
 		// A new engine for every render, never one kept from a previous render. The engine keeps the
 		// macros a template defines, and does not replace them when the template is parsed again: a
 		// reused engine would go on applying the old body of an edited macro, or a macro that was
@@ -170,11 +216,8 @@ public class VelocityConfigurationLoader {
 		var writer = new StringWriter();
 		template.merge(context, writer);
 
-		// The render reached its end, so what it declared is complete: publish it in one write. A render
-		// that threw before this point publishes nothing and leaves the previous schedule in place.
-		lastDeclaredCron = scheduleTool.getCron().orElse(null);
-
-		return writer.toString();
+		// Handed to the caller, not published: the generated configuration may still be rejected.
+		return new RenderResult(writer.toString(), scheduleTool.getCron().orElse(null));
 	}
 
 	/**

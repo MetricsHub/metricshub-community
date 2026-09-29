@@ -61,6 +61,7 @@ import org.codehaus.plexus.util.StringUtils;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.extension.IConfigurationProvider;
 import org.metricshub.engine.extension.ScheduledReEvaluation;
+import org.metricshub.programmable.configuration.VelocityConfigurationLoader.RenderResult;
 
 /**
  * This class lists the .vm files under the configuration directory and loads
@@ -200,15 +201,18 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 			// Retain the loader so this template can be re-rendered later on its own schedule.
 			final var loader = loaders.computeIfAbsent(absolutePath, key -> new VelocityConfigurationLoader(key, TOOLS));
 
-			final String yaml = loader.generateYaml();
+			final RenderResult rendered = loader.render();
 
-			if (yaml != null) {
-				// Do not log the rendered YAML: it may contain credentials and other sensitive data.
-				log.debug("Generated a YAML configuration fragment from template '{}'.", path);
-				final JsonNode fragment = YAML_MAPPER.readTree(yaml);
-				lastFragments.put(absolutePath, fragment);
-				return Optional.of(fragment);
-			}
+			// Do not log the rendered YAML: it may contain credentials and other sensitive data.
+			log.debug("Generated a YAML configuration fragment from template '{}'.", path);
+			final JsonNode fragment = YAML_MAPPER.readTree(rendered.yaml());
+
+			// Parsed, so this render is usable: its schedule takes effect with it. A render whose YAML
+			// could not be parsed leaves the previous schedule in place, together with the previous
+			// fragment, so the template keeps being re-evaluated and can recover.
+			loader.publishDeclaredCron(rendered.cron());
+			lastFragments.put(absolutePath, fragment);
+			return Optional.of(fragment);
 		} catch (Exception e) {
 			log.error("Failed to load Velocity configuration fragment: '{}'. Error: {}", path, e.getMessage());
 			log.debug("Failed to load Velocity configuration fragment: '{}'. Exception:", path, e);
@@ -235,13 +239,23 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		}
 		try {
 			// A re-evaluation renders the whole template again, so every data source it reads is re-run.
-			final JsonNode fragment = YAML_MAPPER.readTree(loader.generateYamlDangerous());
+			final RenderResult rendered = loader.render();
+			final JsonNode fragment = YAML_MAPPER.readTree(rendered.yaml());
+			loader.publishDeclaredCron(rendered.cron());
 			lastFragments.put(path, fragment);
 			return Optional.of(fragment);
 		} catch (Exception e) {
 			log.error("Failed to re-evaluate template '{}'. Error: {}", reEvaluationId, e.getMessage());
 			log.debug("Re-evaluation exception:", e);
 			return Optional.empty();
+		}
+	}
+
+	@Override
+	public void restoreDeclaredSchedule(final String reEvaluationId, final String cron) {
+		final VelocityConfigurationLoader loader = loaders.get(Path.of(reEvaluationId));
+		if (loader != null) {
+			loader.publishDeclaredCron(cron);
 		}
 	}
 

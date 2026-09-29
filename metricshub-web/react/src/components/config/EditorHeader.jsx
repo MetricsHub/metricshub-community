@@ -12,7 +12,7 @@ import EncryptPasswordDialog from "../common/EncryptPasswordDialog";
 
 /**
  * Editor header component showing file name, save button, and status.
- * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,onTest?:()=>void,testLoading?:boolean,onReevaluate?:()=>void,reevaluateLoading?:boolean,reevaluationBusy?:boolean,isReadOnly?:boolean}} props The component props.
+ * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,onTest?:()=>void,testLoading?:boolean,onReevaluate?:()=>void,reevaluateLoading?:boolean,reevaluationPending?:boolean,isReadOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The editor header component.
  */
 export default function EditorHeader({
@@ -24,7 +24,7 @@ export default function EditorHeader({
 	testLoading = false,
 	onReevaluate,
 	reevaluateLoading = false,
-	reevaluationBusy = false,
+	reevaluationPending = false,
 	isReadOnly = false,
 }) {
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
@@ -133,18 +133,19 @@ export default function EditorHeader({
 							{saving ? "Applying..." : "Apply"}
 						</Button>
 					)}
-					{/* A draft is not loaded by the agent, so there is nothing to re-evaluate for it. */}
-					{isVm && !isDraft && onReevaluate && (
+					{/* A draft or a backup is not loaded by the agent, so there is nothing to re-evaluate. A
+					    backup of a .vm file keeps the .vm ending, so it must be excluded explicitly. */}
+					{isVm && !isDraft && !isBackup && onReevaluate && (
 						<Button
 							size="small"
 							variant="outlined"
 							color="inherit"
 							startIcon={<ReevaluateIcon />}
 							onClick={onReevaluate}
-							disabled={!selected || saving || reevaluationBusy || isReadOnly || isDirty}
+							disabled={!selected || saving || reevaluationPending || isReadOnly || isDirty}
 							title={
 								isDirty
-									? "Save the template first: re-evaluation runs the version on disk, not your unsaved changes"
+									? "Save the template first: a re-evaluation runs the file as it is on disk"
 									: "Re-evaluate this template and reload the running configuration"
 							}
 						>
