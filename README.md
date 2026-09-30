@@ -227,6 +227,16 @@ See [Fleet Management — OpAMP and the Central Tunnel](central-fleet-management
 
 ## Documentation
 
+### Product Documentation
+
+The official MetricsHub product documentation is available at:
+
+https://metricshub.com/docs/latest
+
+### Internal / Intermediary Documentation
+
+The following documents are intended for internal use or as intermediary technical references within the repository.
+
 | Document                                                                       | What it covers                                                                                                                                                                                                                             |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Fleet Management — OpAMP and the Central Tunnel](central-fleet-management.md) | The two channels toward a MetricsHub Central server: connection model, protocol, component responsibilities, workflows, upgrade state machine, threading, on-disk state, the `central:` configuration reference and the security decisions |
