@@ -653,6 +653,7 @@ central:
 | `url` | — | `http(s)://host[:port]`, no path: each channel adds its own. Blank with `enabled: true` logs a warning and starts nothing |
 | `headers` | `{}` | Presented on both channels. Values may be keystore-encrypted. Entries with a null value are skipped, not fatal |
 | `certificateFile` | system trust store | PEM for the **server**. The one for package repositories is `central.upgrade.trustedCertificateFile`, and they are rarely the same |
+| `insecure` | `false` | Accepts cleartext where the agent otherwise requires TLS: a `ws://` tunnel to **any** host, and package downloads over plain `http://` from **any** host. Off, both accept cleartext for loopback only. On, the tunnel's handshake headers — the credential included — travel unencrypted, and a downloaded package is protected only by the SHA-256 of an offer that may itself have arrived in cleartext ([§10](#10-security-decisions)). For a lab or a first deployment; every cleartext use logs a warning. OpAMP is not gated by it: it accepts `http://` to any host already. Read from this roof only — written under a channel it does nothing |
 | `attributes` | `{}` | Reported as this agent's identity by both channels. Merged **last**, so they override both the pre-built agent attributes and the agent-level `attributes:` — the fleet identity can be tailored without touching the attributes attached to the exported metrics |
 
 ### 9.2 `central.opamp:`
@@ -723,6 +724,7 @@ These are load-bearing; read the rationale before relaxing any of them.
 |---|---|
 | **Configured download credentials are bound to an operator-named authority** (`host` or `host:port`; a bare host means the scheme's default port) | A compromised OpAMP server must not be able to choose where the agent's credentials are sent. An offer pointing at another host — or another *port* of the same host, which is a different service — receives none of them |
 | **Configured credentials travel over HTTPS only** | An `http` offer matches no configured header set, whatever its host. The loopback plain-HTTP tolerance exists only for unauthenticated development downloads |
+| **`central.insecure` lifts the source's TLS requirement, never the credentials'** | Set, a package may be downloaded over plain `http://` from any host — the allowlist and the SHA-256 still apply — but `downloadHeaders` still match only an `https` origin, so no configured credential crosses the wire in cleartext. On Linux nothing signs the package: with OpAMP in cleartext too, whoever is on the path supplies the offer, its hash and the file alike. That is the price of the switch, and why it is off by default |
 | **Redirects are followed by hand, and the headers stop at the offered origin** | The client runs with `Redirect.NEVER` so every hop is re-validated against the HTTPS requirement and the allowlist; an allowed host could otherwise bounce the download anywhere. The request headers are replayed only to the scheme, host and port originally offered — a same-origin hop keeps them, anything else receives nothing |
 | **Local configuration wins on header name conflicts** (case-insensitive, HTTP semantics) | Operator intent on the machine overrides server metadata; merging into one map also avoids duplicate header lines, since `HttpRequest.Builder.header` appends |
 | **SHA-256 is mandatory** and verified twice: while streaming and recomputed from disk | The streaming hash guards the transfer; the on-disk hash guards everything between download and install |
@@ -799,7 +801,7 @@ flowchart TB
 | `web.service.TunnelStartupHook` | Starts `TunnelService` on `ApplicationReadyEvent`, registers its shutdown; runs in both editions |
 | `agent.tunnel.TunnelService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `central:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
 | `agent.tunnel.client.TunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
-| `agent.tunnel.client.TunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback |
+| `agent.tunnel.client.TunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback unless `central.insecure` is set |
 | `agent.tunnel.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
 | `agent.tunnel.HostInventory` | Hosts with an active `TelemetryManager`, identified by (resource group, resource key) |
 | `agent.tunnel.AgentDescriptorMapper` | Reuses `OpAmpAgentDescriptionMapper.resolveAttributes`, adds the edition |
@@ -861,7 +863,7 @@ central:
 | Key | Default | Notes |
 |---|---|---|
 | `enabled` | `true` | Which `central.enabled` still has to allow. Set it to `false` for fleet management without exposing this agent's tools to Central |
-| `path` | `/ws/agent` | On `central.url`, whose scheme becomes `ws` or `wss` accordingly — `ws` is accepted for loopback only |
+| `path` | `/ws/agent` | On `central.url`, whose scheme becomes `ws` or `wss` accordingly — `ws` is accepted for loopback only, unless `central.insecure` is set |
 | `endpoint` | — | A complete URL that overrides `central.url` and `path` entirely; for the deployment whose channels do not share an ingress |
 | `headers` | `{}` | Merged over `central.headers` key by key. Same rule: only when the deployment splits the channels |
 | `certificateFile` | `central.certificateFile` | Same rule |
@@ -880,7 +882,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 
 | Decision | Rationale |
 |---|---|
-| Outbound only, `wss://` required outside a loopback **literal** | Credentials travel in the handshake headers, so cleartext is granted to `localhost`, `127.0.0.0/8` and `::1` as written — never to a name that merely resolves to one. The resolution that would matter is the one the HTTP client does when it connects, and a record can change between the two |
+| Outbound only, `wss://` required outside a loopback **literal** | Credentials travel in the handshake headers, so cleartext is granted to `localhost`, `127.0.0.0/8` and `::1` as written — never to a name that merely resolves to one. The resolution that would matter is the one the HTTP client does when it connects, and a record can change between the two. `central.insecure` lifts the rule for every host, and a tunnel configured in cleartext that way logs a warning |
 | Only advertised tools are invokable; `excludedTools` removes a tool from the advertisement itself | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
 | The existing kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
 | Every outbound frame is bounded, and weighed in bytes | Measured at the socket, so it covers a registration and a `hosts.updated` as well as an answer: a fleet monitoring thousands of hosts can produce either above the cap, and sending it would close the tunnel (`1009`) rather than lose one frame. Above the cap, a result becomes `RESULT_TOO_LARGE`, a failure's detail is truncated rather than the failure going unreported, and anything still too large is dropped with an error in the log — the server's own deadline then ends that one invocation |

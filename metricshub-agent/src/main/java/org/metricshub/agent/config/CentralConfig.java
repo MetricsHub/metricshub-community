@@ -91,6 +91,20 @@ public class CentralConfig {
 	private String certificateFile;
 
 	/**
+	 * Whether cleartext is accepted where the agent otherwise insists on TLS: a {@code ws://} tunnel
+	 * to any host, and package downloads over plain {@code http://} from any host. Off by default,
+	 * when both accept cleartext for loopback addresses only.
+	 * <p>
+	 * Set, the tunnel sends its handshake headers -- the credential included -- unencrypted, and a
+	 * downloaded package is protected by nothing but the SHA-256 of an offer that may itself have
+	 * arrived in cleartext. For a lab or a first deployment, never for a network that is not
+	 * trusted. {@code upgrade.downloadHeaders} still travel over HTTPS only, whatever this says.
+	 * OpAMP is not affected: it accepts {@code http://} to any host already.
+	 * </p>
+	 */
+	private boolean insecure;
+
+	/**
 	 * Attributes reported to the Central server as this agent's identity. They are merged last and
 	 * therefore override both the pre-built agent attributes and the agent-level
 	 * {@code attributes:} section, so what the fleet manager sees can be tailored without changing
@@ -167,7 +181,21 @@ public class CentralConfig {
 			.certificateFile(inherited(channel.getCertificateFile(), certificateFile))
 			.heartbeatInterval(channel.getHeartbeatInterval())
 			.excludedTools(channel.getExcludedTools())
+			.insecure(insecure)
 			.build();
+	}
+
+	/**
+	 * The upgrade policy as it actually runs: its own settings, plus what this roof decides for it.
+	 * <p>
+	 * An absent policy stays absent rather than becoming the defaults: {@code UpgradeManager} reads
+	 * {@code null} as "no upgrades", and the defaults enable them.
+	 * </p>
+	 *
+	 * @return a resolved copy, never the configured instance; {@code null} when none is configured
+	 */
+	public UpgradeConfig upgrade() {
+		return upgrade == null ? null : upgrade.toBuilder().insecure(insecure).build();
 	}
 
 	/**

@@ -247,8 +247,17 @@ public class TunnelService {
 				FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel"),
 				newConfig.getCertificateFile(),
 				uidSupplier.load(),
-				Duration.ofSeconds(atLeastOneSecond(newConfig.getHeartbeatInterval()))
+				Duration.ofSeconds(atLeastOneSecond(newConfig.getHeartbeatInterval())),
+				TunnelSettings.DEFAULT_CONNECT_TIMEOUT,
+				TunnelSettings.DEFAULT_MAX_BACKOFF,
+				newConfig.isInsecure()
 			);
+			if (settings.insecure() && !"wss".equalsIgnoreCase(settings.endpoint().getScheme())) {
+				log.warn(
+					"Central tunnel: central.insecure is set and {} is in cleartext, so the handshake headers -- the credential included -- travel unencrypted.",
+					endpoint
+				);
+			}
 			// The bridge answers on the client it was built for AND on the connection that asked.
 			// Neither half is enough alone: resolving the current client at send time would let a
 			// paused worker answer over a configuration that replaced its own, and pinning the

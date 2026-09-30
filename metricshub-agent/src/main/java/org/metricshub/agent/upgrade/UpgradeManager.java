@@ -98,7 +98,7 @@ public class UpgradeManager {
 	public UpgradeManager(final AgentContextHolder agentContextHolder) {
 		this(
 			() -> agentContextHolder.getAgentContext().getAgentInfo().getAttributes().get(AGENT_INFO_VERSION_ATTRIBUTE_KEY),
-			() -> agentContextHolder.getAgentContext().getAgentConfig().getCentral().getUpgrade(),
+			() -> agentContextHolder.getAgentContext().getAgentConfig().getCentral().upgrade(),
 			UpgradeDirectories.resolveStagingDirectory(),
 			new PackageDownloader(),
 			new PackageValidator(),

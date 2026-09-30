@@ -1,7 +1,9 @@
 package org.metricshub.agent.upgrade.download;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -282,6 +284,43 @@ class PackageDownloaderTest {
 		assertThrows(UpgradeException.class, () ->
 			PackageDownloader.validateSource(offer("http://repo.example.com/metricshub.deb", packageSha256), config())
 		);
+	}
+
+	@Test
+	void insecureShouldAcceptPlainHttpFromAnyHostButKeepTheAllowlist() {
+		final UpgradeConfig insecure = UpgradeConfig.builder().insecure(true).build();
+		assertDoesNotThrow(() ->
+			PackageDownloader.validateSource(offer("http://repo.example.com/metricshub.deb", packageSha256), insecure)
+		);
+
+		// It lifts the TLS requirement and nothing else: the allowlist still decides the host
+		final UpgradeConfig allowlisted = UpgradeConfig.builder()
+			.insecure(true)
+			.hostAllowlist(List.of("repo.metricshub.com"))
+			.build();
+		assertThrows(UpgradeException.class, () ->
+			PackageDownloader.validateSource(offer("http://evil.example.com/metricshub.deb", packageSha256), allowlisted)
+		);
+	}
+
+	@Test
+	void insecureShouldStillKeepConfiguredHeadersOffPlainHttp() throws Exception {
+		// central.insecure lifts the TLS requirement on the SOURCE. It never puts a configured
+		// credential on the wire in cleartext: that rule belongs to the headers, not to the source
+		final UpgradeConfig insecureWithHeaders = UpgradeConfig.builder()
+			.insecure(true)
+			.downloadHeaders(Map.of(baseAuthority(), Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")))
+			.downloadRetries(1)
+			.build();
+
+		downloader.download(
+			offer(baseUrl() + "/headers/metricshub.deb", packageSha256),
+			insecureWithHeaders,
+			tempDir,
+			(_, _) -> {}
+		);
+
+		assertNull(capturedHeaders.get().get("Authorization"), "credentials must never be sent over plain HTTP");
 	}
 
 	@Test

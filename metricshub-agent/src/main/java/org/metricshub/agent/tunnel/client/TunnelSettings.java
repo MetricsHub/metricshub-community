@@ -36,6 +36,7 @@ import java.util.Map;
  * @param heartbeatInterval interval between heartbeats until the server imposes its own
  * @param connectTimeout    deadline for the WebSocket handshake and for the registration acknowledgement
  * @param maxBackoff        cap of the reconnection backoff
+ * @param insecure          whether {@code ws://} is accepted to any host ({@code central.insecure})
  */
 public record TunnelSettings(
 	URI endpoint,
@@ -44,7 +45,8 @@ public record TunnelSettings(
 	String agentUid,
 	Duration heartbeatInterval,
 	Duration connectTimeout,
-	Duration maxBackoff
+	Duration maxBackoff,
+	boolean insecure
 ) {
 	/**
 	 * Name of the handshake header carrying the agent instance uid.
@@ -62,7 +64,7 @@ public record TunnelSettings(
 	public static final Duration DEFAULT_MAX_BACKOFF = Duration.ofMinutes(10);
 
 	/**
-	 * Settings with the default connect timeout and backoff cap.
+	 * Settings with the default connect timeout and backoff cap, accepting cleartext for loopback only.
 	 *
 	 * @param endpoint          WebSocket endpoint
 	 * @param headers           handshake headers
@@ -77,23 +79,36 @@ public record TunnelSettings(
 		final String agentUid,
 		final Duration heartbeatInterval
 	) {
-		this(endpoint, headers, certificateFile, agentUid, heartbeatInterval, DEFAULT_CONNECT_TIMEOUT, DEFAULT_MAX_BACKOFF);
+		this(
+			endpoint,
+			headers,
+			certificateFile,
+			agentUid,
+			heartbeatInterval,
+			DEFAULT_CONNECT_TIMEOUT,
+			DEFAULT_MAX_BACKOFF,
+			false
+		);
 	}
 
 	/**
 	 * Defensive copies and validation. Credentials travel in the handshake headers, so a cleartext
 	 * {@code ws://} endpoint is accepted only for a host written as a loopback literal — never for a
 	 * name that merely resolves to one, since the resolution that matters is the one the HTTP client
-	 * does when it connects, and it can differ from this one.
+	 * does when it connects, and it can differ from this one — unless {@code insecure} says the
+	 * operator accepts cleartext everywhere.
 	 */
 	public TunnelSettings {
 		if (endpoint == null) {
 			throw new IllegalArgumentException("endpoint is required");
 		}
 		final String scheme = endpoint.getScheme() == null ? "" : endpoint.getScheme().toLowerCase(Locale.ROOT);
-		if (!"wss".equals(scheme) && !("ws".equals(scheme) && isLiteralLoopback(endpoint.getHost()))) {
+		final boolean cleartextAllowed = insecure || isLiteralLoopback(endpoint.getHost());
+		if (!"wss".equals(scheme) && !("ws".equals(scheme) && cleartextAllowed)) {
 			throw new IllegalArgumentException(
-				"The tunnel endpoint must use wss:// (ws:// is accepted for loopback only): " + endpoint
+				"The tunnel endpoint must use wss:// (ws:// is accepted for loopback only, or anywhere with " +
+					"central.insecure): " +
+					endpoint
 			);
 		}
 		if (agentUid == null || agentUid.isBlank()) {

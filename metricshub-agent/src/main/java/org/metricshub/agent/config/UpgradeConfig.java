@@ -23,6 +23,7 @@ package org.metricshub.agent.config;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.ArrayList;
@@ -38,13 +39,13 @@ import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * Configuration of the automatic upgrade feature driven by OpAMP package offers: download limits,
- * source restrictions and installation policy. Honored only when the {@code opamp:} section is
- * enabled.
+ * source restrictions and installation policy. Honored only when the {@code central.opamp}
+ * channel is enabled.
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class UpgradeConfig {
 
 	/**
@@ -124,7 +125,7 @@ public class UpgradeConfig {
 	 * (case-insensitively) — never to any other host or port, whatever URL an OpAMP offer
 	 * carries — and on redirects only within the offered origin: a different scheme, host or
 	 * port receives nothing. Values may be encrypted with the MetricsHub keystore, exactly
-	 * like {@code opamp.headers}, and override same-named headers carried by the offer.
+	 * like {@code central.headers}, and override same-named headers carried by the offer.
 	 * Binding each credential to an operator-named origin is deliberate: credentials stay on
 	 * the agent, and a compromised OpAMP server cannot pick where they are sent.
 	 */
@@ -155,4 +156,12 @@ public class UpgradeConfig {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	private String msiSignatureSubjectContains = "MetricsHub";
+
+	/**
+	 * Whether plain {@code http://} downloads are accepted from any host rather than from loopback
+	 * only. Never read from this section: {@link CentralConfig#upgrade()} sets it from
+	 * {@code central.insecure}. It never lets {@link #downloadHeaders} travel in cleartext.
+	 */
+	@JsonIgnore
+	private boolean insecure;
 }
