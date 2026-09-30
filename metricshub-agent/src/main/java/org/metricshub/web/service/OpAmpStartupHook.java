@@ -44,7 +44,7 @@ import org.springframework.stereotype.Service;
  * </p>
  * <p>
  * The {@link OpAmpService} deliberately lives at application level, outside the restartable
- * {@code AgentContext}: its supervisor re-reads the {@code opamp:} configuration from the
+ * {@code AgentContext}: its supervisor re-reads the {@code central.opamp} configuration from the
  * {@link AgentContextHolder} and keeps the OpAMP connection alive across configuration reloads.
  * The hook itself runs once, so a configuration reload never starts a second supervisor.
  * </p>

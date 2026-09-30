@@ -116,7 +116,7 @@ public class PackageDownloader {
 
 	/**
 	 * Resolves the single header map sent with download requests: the offer-carried headers
-	 * overlaid with the operator-configured {@code upgrade.downloadHeaders} entry matching the
+	 * overlaid with the operator-configured {@code central.upgrade.downloadHeaders} entry matching the
 	 * offered origin, whose values may be encrypted with the MetricsHub keystore. Configured
 	 * headers are bound to their operator-named authority ({@code host} or {@code host:port},
 	 * a bare host meaning the scheme's default port): an offer pointing anywhere else — another
@@ -274,7 +274,7 @@ public class PackageDownloader {
 
 	/**
 	 * Decrypts a configured value with the MetricsHub keystore; plain-text values pass through
-	 * unchanged (same behavior as {@code opamp.headers}).
+	 * unchanged (same behavior as {@code central.headers}).
 	 *
 	 * @param value the configured value, possibly encrypted
 	 * @return the decrypted value, or the input when it is not encrypted
