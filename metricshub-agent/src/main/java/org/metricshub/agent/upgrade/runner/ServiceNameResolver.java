@@ -42,7 +42,7 @@ import org.metricshub.engine.common.helpers.LocalOsHandler;
  * Resolution order:
  * </p>
  * <ol>
- *   <li>the explicitly configured {@code upgrade.serviceName}, which an edition or a customer can
+ *   <li>the explicitly configured {@code central.upgrade.serviceName}, which an edition or a customer can
  *       always pin;</li>
  *   <li>discovery of the installed service through a product-level (edition-agnostic) pattern:
  *       {@code metricshub-*-service.service} unit files on Linux, {@code MetricsHub *} service
@@ -50,7 +50,7 @@ import org.metricshub.engine.common.helpers.LocalOsHandler;
  *   <li>when several candidates exist (both editions installed side by side), the one that is
  *       currently running — the agent performing the upgrade is that service. When several (or
  *       none) are running, the choice is ambiguous and resolution fails, requiring
- *       {@code upgrade.serviceName}: guessing could drive the wrong edition's service.</li>
+ *       {@code central.upgrade.serviceName}: guessing could drive the wrong edition's service.</li>
  * </ol>
  */
 @Slf4j

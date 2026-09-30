@@ -46,7 +46,7 @@ import org.metricshub.opamp.proto.KeyValue;
  *   <li>the pre-built {@link AgentInfo} attributes;</li>
  *   <li>the agent-level {@code attributes:} section of {@code metricshub.yaml}, exactly as they
  *       apply to the agent's own resource;</li>
- *   <li>the {@code opamp: attributes:} section, which always wins: it tailors the identity exposed
+ *   <li>the {@code central.attributes} section, which always wins: it tailors the identity exposed
  *       to the fleet manager without touching the attributes attached to the exported metrics.</li>
  * </ol>
  * <p>
@@ -92,7 +92,7 @@ public class OpAmpAgentDescriptionMapper {
 	 *
 	 * @param agentInfo      the agent information holding the pre-built attributes
 	 * @param agentConfig    the agent configuration providing the {@code attributes:} section and the
-	 *                       {@code opamp: attributes:} overrides; may be {@code null}
+	 *                       {@code central.attributes} overrides; may be {@code null}
 	 * @param deploymentKind how MetricsHub was deployed on this host, reported as the lowercase
 	 *                       {@code installer.type} attribute ({@code deb}, {@code rpm}, {@code msi},
 	 *                       {@code archive}, {@code docker}); skipped when {@code null}
@@ -141,7 +141,7 @@ public class OpAmpAgentDescriptionMapper {
 
 	/**
 	 * Merges the attributes reported to the OpAMP server: the pre-built agent attributes, then the
-	 * agent-level {@code attributes:}, then the {@code opamp: attributes:} which always win.
+	 * agent-level {@code attributes:}, then the {@code central.attributes} which always win.
 	 *
 	 * @param agentInfo   the agent information holding the pre-built attributes; may be {@code null}
 	 * @param agentConfig the agent configuration; may be {@code null}

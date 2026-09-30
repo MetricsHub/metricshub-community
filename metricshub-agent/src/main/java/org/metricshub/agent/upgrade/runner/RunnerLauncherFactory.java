@@ -67,7 +67,7 @@ public class RunnerLauncherFactory {
 
 	/**
 	 * Returns the launcher matching the given deployment kind. The service the runner must stop and
-	 * restart is resolved per edition: the configured {@code upgrade.serviceName} wins, otherwise
+	 * restart is resolved per edition: the configured {@code central.upgrade.serviceName} wins, otherwise
 	 * it is discovered from the installed services.
 	 *
 	 * @param deploymentKind the detected deployment kind

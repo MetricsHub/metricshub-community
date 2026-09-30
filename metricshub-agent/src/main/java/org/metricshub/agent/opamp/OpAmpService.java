@@ -50,10 +50,10 @@ import org.metricshub.web.service.ApplicationStatusService;
  * Application-level service owning the embedded OpAMP client.
  * <p>
  * The service lives outside the restartable {@link AgentContext}: a small supervisor tick
- * periodically re-reads the {@code opamp:} configuration from the current context, starts, stops
+ * periodically re-reads the {@code central.opamp} configuration from the current context, starts, stops
  * or rebuilds the OpAMP client only when that configuration changes, and refreshes the agent
  * description and health reported to the OpAMP server. The client connection therefore survives
- * configuration reloads that do not touch the {@code opamp:} section.
+ * configuration reloads that do not touch the {@code central.opamp} channel.
  * </p>
  */
 @Slf4j
@@ -194,7 +194,7 @@ public class OpAmpService {
 	/**
 	 * Builds the agent description reported to the OpAMP server: the pre-built {@code AgentInfo}
 	 * attributes overridden by the agent-level {@code attributes:} and then by the
-	 * {@code opamp: attributes:}, plus the detected deployment kind.
+	 * {@code central.attributes}, plus the detected deployment kind.
 	 *
 	 * @param agentContext the current agent context
 	 * @return the agent description to report
@@ -234,7 +234,7 @@ public class OpAmpService {
 	}
 
 	/**
-	 * Applies a new {@code opamp:} configuration: stops the running client and starts a new one
+	 * Applies a new {@code central.opamp} configuration: stops the running client and starts a new one
 	 * when the configuration enables OpAMP.
 	 *
 	 * @param agentContext the current agent context
@@ -313,7 +313,7 @@ public class OpAmpService {
 	 * Indicates whether automatic upgrades are enabled in the agent configuration.
 	 *
 	 * @param agentContext the current agent context
-	 * @return {@code true} when the {@code upgrade:} section is enabled
+	 * @return {@code true} when {@code central.upgrade} is enabled
 	 */
 	private static boolean isUpgradeEnabled(final AgentContext agentContext) {
 		final UpgradeConfig upgrade = agentContext.getAgentConfig().getCentral().getUpgrade();
