@@ -33,7 +33,7 @@ Agent                                            Central
   │ ◄──────────────────────────────────────────────────── │
 ```
 
-* **Transport:** WebSocket over TLS (`wss://`). Plain `ws://` is tolerated for loopback development only.
+* **Transport:** WebSocket over TLS (`wss://`). Plain `ws://` is tolerated for loopback development only; an agent configured with `central.insecure` uses it toward any host.
 * **Authentication:** `Authorization: Bearer <secret>`; the secret is one of the fleet's configured agent secrets (`central.headers` on the agent side). A bad or missing secret is refused at the handshake with `401`.
 * **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`opamp-instance-uid`) — so the fleet sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
 * **First frame:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`.

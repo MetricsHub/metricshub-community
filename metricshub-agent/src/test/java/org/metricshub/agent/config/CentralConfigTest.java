@@ -291,4 +291,78 @@ class CentralConfigTest {
 		assertNull(central.tunnel().getEndpoint());
 		assertTrue(central.getUpgrade().isEnabled());
 	}
+
+	@Test
+	void insecureShouldBeOffUnlessTheRoofSaysSo() throws Exception {
+		final String roof = """
+			central:
+			  enabled: true
+			  url: http://central.lab:4320
+			%s
+			""";
+
+		final CentralConfig byDefault = deserialize(roof.formatted(""));
+		assertFalse(byDefault.tunnel().isInsecure());
+		assertFalse(byDefault.upgrade().isInsecure());
+
+		final CentralConfig insecure = deserialize(roof.formatted("  insecure: true"));
+		assertTrue(insecure.tunnel().isInsecure());
+		assertTrue(insecure.upgrade().isInsecure());
+
+		// The supervisor rebuilds the tunnel only when its resolved copy changes. Turning the flag
+		// OFF must count as a change, or a cleartext tunnel would stay up after being forbidden
+		assertNotEquals(byDefault.tunnel(), insecure.tunnel());
+	}
+
+	@Test
+	void theResolvedPolicyShouldBeThePolicyWhenTheFlagIsOff() throws Exception {
+		final CentralConfig central = deserialize(
+			"""
+			central:
+			  enabled: true
+			  url: https://central.example.com
+			  upgrade:
+			    enabled: false
+			    allowDowngrade: true
+			    hostAllowlist: [ repo.metricshub.com ]
+			    downloadRetries: 7
+			    installTimeout: 5m
+			    serviceName: metricshub-enterprise-service.service
+			    msiSignatureSubjectContains: Sentry Software
+			    downloadHeaders:
+			      repo.metricshub.com:
+			        Authorization: Basic abc
+			"""
+		);
+
+		// UpgradeManager used to read the configured policy itself. The copy it reads now must be
+		// that policy, field for field -- a copy that dropped one would silently change what an
+		// accepted offer may do
+		assertEquals(central.getUpgrade(), central.upgrade());
+	}
+
+	@Test
+	void anAbsentPolicyShouldStayAbsent() {
+		// UpgradeManager reads null as "no upgrades"; the defaults would enable them
+		assertNull(CentralConfig.builder().upgrade(null).build().upgrade());
+	}
+
+	@Test
+	void insecureShouldOnlyBeReadFromTheRoof() throws Exception {
+		final CentralConfig central = deserialize(
+			"""
+			central:
+			  enabled: true
+			  url: http://central.lab:4320
+			  tunnel:
+			    insecure: true
+			  upgrade:
+			    insecure: true
+			"""
+		);
+
+		// One switch, in one place: written under a channel it is not a second way in
+		assertFalse(central.tunnel().isInsecure());
+		assertFalse(central.upgrade().isInsecure());
+	}
 }

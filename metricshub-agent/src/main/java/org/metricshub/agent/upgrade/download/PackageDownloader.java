@@ -288,7 +288,8 @@ public class PackageDownloader {
 
 	/**
 	 * Validates the download source: HTTPS only (plain HTTP is tolerated for loopback addresses,
-	 * for development and testing) and an optional host allowlist.
+	 * for development and testing, and anywhere with {@code central.insecure}) and an optional host
+	 * allowlist.
 	 *
 	 * @param offer  the package offer
 	 * @param config the upgrade configuration
@@ -304,8 +305,12 @@ public class PackageDownloader {
 		}
 		final String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
 		final String host = uri.getHost() == null ? "" : uri.getHost();
-		if (!"https".equals(scheme) && !("http".equals(scheme) && isLoopback(host))) {
-			throw new UpgradeException("Package downloads require HTTPS: " + offer.downloadUrl());
+		if (!acceptsScheme(scheme, host, config)) {
+			throw new UpgradeException(
+				"Package downloads require HTTPS (plain HTTP is accepted for loopback only, or anywhere with " +
+					"central.insecure): " +
+					offer.downloadUrl()
+			);
 		}
 		if (!config.getHostAllowlist().isEmpty() && config.getHostAllowlist().stream().noneMatch(host::equalsIgnoreCase)) {
 			throw new UpgradeException("Package download host is not in the configured allowlist: " + host);
@@ -351,6 +356,34 @@ public class PackageDownloader {
 		} catch (Exception e) {
 			return false;
 		}
+	}
+
+	/**
+	 * Whether a download source or redirect target may be used with this scheme: HTTPS always,
+	 * plain HTTP for loopback, and plain HTTP anywhere when {@code central.insecure} is set. The
+	 * configured {@code downloadHeaders} are never sent over plain HTTP either way; see
+	 * {@link #matchesOfferedOrigin}.
+	 *
+	 * @param scheme the lower-cased URI scheme
+	 * @param host   the URI host
+	 * @param config the upgrade configuration
+	 * @return whether the scheme is acceptable for that host
+	 */
+	private static boolean acceptsScheme(final String scheme, final String host, final UpgradeConfig config) {
+		if ("https".equals(scheme)) {
+			return true;
+		}
+		if (!"http".equals(scheme)) {
+			return false;
+		}
+		if (isLoopback(host)) {
+			return true;
+		}
+		if (config.isInsecure()) {
+			log.warn("Downloading the package from {} over plain HTTP because central.insecure is set.", host);
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -580,8 +613,12 @@ public class PackageDownloader {
 	private static URI validateRedirectTarget(final URI target, final UpgradeConfig config) throws UpgradeException {
 		final String scheme = target.getScheme() == null ? "" : target.getScheme().toLowerCase(Locale.ROOT);
 		final String host = target.getHost() == null ? "" : target.getHost();
-		if (!"https".equals(scheme) && !("http".equals(scheme) && isLoopback(host))) {
-			throw new UpgradeException("The package download was redirected to a non-HTTPS location: " + target);
+		if (!acceptsScheme(scheme, host, config)) {
+			throw new UpgradeException(
+				"The package download was redirected to a non-HTTPS location (plain HTTP is accepted for loopback " +
+					"only, or anywhere with central.insecure): " +
+					target
+			);
 		}
 		if (!config.getHostAllowlist().isEmpty() && config.getHostAllowlist().stream().noneMatch(host::equalsIgnoreCase)) {
 			throw new UpgradeException("The package download was redirected to a host outside the allowlist: " + host);

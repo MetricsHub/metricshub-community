@@ -23,6 +23,7 @@ package org.metricshub.agent.config;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.HashMap;
@@ -122,4 +123,12 @@ public class TunnelConfig {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	private Set<String> excludedTools = new HashSet<>();
+
+	/**
+	 * Whether {@code ws://} is accepted to any host rather than to loopback only. Never read from this
+	 * section: {@link CentralConfig#tunnel()} sets it from {@code central.insecure}, on the copy the
+	 * supervisor compares -- so turning it off tears a cleartext tunnel down instead of leaving it up.
+	 */
+	@JsonIgnore
+	private boolean insecure;
 }

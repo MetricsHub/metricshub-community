@@ -22,6 +22,9 @@ otel:
 #   headers:
 #     Authorization: Bearer ${env::CENTRAL_TOKEN}
 #   # certificateFile: /opt/metricshub/security/central-ca.pem # Trusted certificate (PEM) for the Central server
+#   # Cleartext to ANY host: ws:// for the tunnel, plain http:// for package downloads. The
+#   # credential then travels unencrypted. Off by default (loopback only); for a lab, never production.
+#   # insecure: false
 #   # Attributes reported as this agent's identity. Merged last, so they override both the
 #   # pre-built agent attributes and the agent-level attributes above. Both channels report them.
 #   # attributes:

@@ -111,7 +111,8 @@ class TunnelClientTest {
 			AGENT_UID,
 			heartbeatInterval,
 			Duration.ofSeconds(5),
-			Duration.ofSeconds(2)
+			Duration.ofSeconds(2),
+			false
 		);
 	}
 
@@ -300,7 +301,8 @@ class TunnelClientTest {
 				AGENT_UID,
 				Duration.ofSeconds(1),
 				Duration.ofSeconds(1),
-				Duration.ofSeconds(2)
+				Duration.ofSeconds(2),
+				false
 			),
 			listener
 		);
@@ -540,6 +542,30 @@ class TunnelClientTest {
 		new TunnelSettings(URI.create("ws://127.4.5.6:8080/ws/agent"), headers, null, AGENT_UID, null);
 		new TunnelSettings(URI.create("ws://[::1]:8080/ws/agent"), headers, null, AGENT_UID, null);
 		new TunnelSettings(URI.create("wss://tunnel.example.com/ws/agent"), headers, null, AGENT_UID, null);
+	}
+
+	@Test
+	void insecureShouldAcceptCleartextToAnyHostAndNothingElse() {
+		final URI remote = URI.create("ws://tunnel.example.com/ws/agent");
+
+		// The operator's explicit choice for a lab: the check that refuses the same endpoint above is
+		// the one this lifts, and only this one
+		final TunnelSettings settings = new TunnelSettings(remote, Map.of(), null, AGENT_UID, null, null, null, true);
+		assertEquals(remote, settings.endpoint());
+
+		// It lifts the TLS requirement, not the scheme rule: a tunnel is still a WebSocket
+		assertThrows(IllegalArgumentException.class, () ->
+			new TunnelSettings(
+				URI.create("http://tunnel.example.com/ws/agent"),
+				Map.of(),
+				null,
+				AGENT_UID,
+				null,
+				null,
+				null,
+				true
+			)
+		);
 	}
 
 	@Test
