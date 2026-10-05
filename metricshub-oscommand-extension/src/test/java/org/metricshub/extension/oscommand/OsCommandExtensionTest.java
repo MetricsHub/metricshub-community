@@ -415,6 +415,37 @@ class OsCommandExtensionTest {
 	}
 
 	@Test
+	void testCheckSshHealthHonorsConfiguredTimeout() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
+		// The SSH configuration sets a 60s timeout
+		final TelemetryManager telemetryManager = createTelemetryManagerWithSshConfig();
+		telemetryManager.getHostProperties().setMustCheckSshStatus(true);
+		telemetryManager.getHostProperties().setOsCommandExecutesLocally(true);
+		telemetryManager.getHostProperties().setOsCommandExecutesRemotely(true);
+
+		doReturn(SUCCESS_RESPONSE)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
+		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
+
+		assertTrue(osCommandExtension.checkProtocol(telemetryManager).get());
+
+		// Both test commands get the configured timeout, not the default one
+		verify(osCommandService).runLocalCommand(OsCommandExtension.SSH_TEST_COMMAND, 60L, null);
+		verify(osCommandService).runSshCommand(
+			eq(OsCommandExtension.SSH_TEST_COMMAND),
+			anyString(),
+			any(SshConfiguration.class),
+			eq(60L),
+			any(),
+			any(),
+			any()
+		);
+	}
+
+	@Test
 	void testCheckSshNoHealthWhenMustCheckFalse() {
 		// Create a telemetry manager using an SSH HostConfiguration.
 		final TelemetryManager telemetryManager = createTelemetryManagerWithSshConfig();

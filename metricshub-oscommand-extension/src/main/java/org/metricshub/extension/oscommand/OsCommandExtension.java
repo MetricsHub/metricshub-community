@@ -153,9 +153,11 @@ public class OsCommandExtension implements IProtocolExtension {
 		// Create and set the SSH result to null
 		Double sshResult = UP;
 
+		final long timeout = resolveTimeout(sshConfiguration);
+
 		// Execute Local test
 		if (telemetryManager.getHostProperties().isOsCommandExecutesLocally()) {
-			sshResult = localSshTest(hostname, OsCommandConfiguration.DEFAULT_TIMEOUT);
+			sshResult = localSshTest(hostname, timeout);
 		}
 
 		if (telemetryManager.getHostProperties().isOsCommandExecutesRemotely()) {
@@ -163,7 +165,8 @@ public class OsCommandExtension implements IProtocolExtension {
 				hostname,
 				sshResult,
 				sshConfiguration,
-				telemetryManager.getHostConfiguration().getHostType()
+				telemetryManager.getHostConfiguration().getHostType(),
+				timeout
 			);
 		}
 
@@ -332,26 +335,21 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * @param hostname           The hostname on which we perform health check
 	 * @param previousSshStatus  The results that will be used to create protocol health check metric
 	 * @param sshConfiguration   The SSH configuration retrieved from the telemetryManager
+	 * @param hostType           The type of the host
+	 * @param timeout            The timeout, in seconds, granted to the test command
 	 * @return The updated SSH status after performing the remote SSH test or the previous SSH status if the SSH test succeeds.
 	 */
 	private Double remoteSshTest(
 		final String hostname,
 		final Double previousSshStatus,
 		final SshConfiguration sshConfiguration,
-		final DeviceKind hostType
+		final DeviceKind hostType,
+		final long timeout
 	) {
 		// CHECKSTYLE:OFF
 		try {
 			if (
-				osCommandService.runSshCommand(
-					SSH_TEST_COMMAND,
-					hostname,
-					sshConfiguration,
-					OsCommandConfiguration.DEFAULT_TIMEOUT,
-					null,
-					null,
-					hostType
-				) ==
+				osCommandService.runSshCommand(SSH_TEST_COMMAND, hostname, sshConfiguration, timeout, null, null, hostType) ==
 				null
 			) {
 				log.debug(
