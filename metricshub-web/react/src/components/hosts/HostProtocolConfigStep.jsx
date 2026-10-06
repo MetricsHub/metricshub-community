@@ -33,6 +33,7 @@ const HostProtocolConfigStep = ({
 	errors = {},
 	hostId,
 	hostName,
+	agentHostname,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
 	showHeader = true,
@@ -40,7 +41,7 @@ const HostProtocolConfigStep = ({
 }) => {
 	const fields = PROTOCOL_FIELDS[protocol] || [];
 	const protocolLabel = PROTOCOL_OPTIONS.find((p) => p.id === protocol)?.label || protocol;
-	const isLocal = isLocalhostHost(hostId, hostName);
+	const isLocal = isLocalhostHost(hostId, hostName, agentHostname);
 	const hostNames = React.useMemo(() => getHostNames(hostName), [hostName]);
 
 	const fieldRequired = (field) => {
@@ -67,6 +68,7 @@ const HostProtocolConfigStep = ({
 				protocol={protocol}
 				hostName={hostName}
 				hostId={hostId}
+				agentHostname={agentHostname}
 				protocolValues={values}
 			/>
 			<ProtocolConfigForm

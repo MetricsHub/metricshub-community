@@ -1,4 +1,5 @@
 import { uiConfigApi } from "../../api/ui-config";
+import { validateHostNameValue } from "../../utils/host-names";
 import { buildProtocolConfigFromForm, collectProtocolConfigErrors } from "./protocol-definitions";
 
 /**
@@ -21,6 +22,7 @@ export const isAbortError = (error) =>
  * @param {string} options.hostname hostname to contact
  * @param {string} [options.hostId] resource id (localhost detection for auth rules)
  * @param {string} [options.hostName] host.name form value (localhost detection)
+ * @param {string} [options.agentHostname] resolved hostname of the agent machine
  * @param {AbortSignal} [options.signal]
  * @returns {Promise<{ severity: "success" | "error" | "warning", message: string } | null>}
  *          the display result, or {@code null} when the request was aborted
@@ -31,11 +33,15 @@ export const runProtocolCheck = async ({
 	hostname,
 	hostId,
 	hostName,
+	agentHostname,
 	signal,
 }) => {
+	const hostnameError = validateHostNameValue(hostname, { required: true });
+	if (hostnameError) return { severity: "warning", message: hostnameError };
 	const validationErrors = collectProtocolConfigErrors(protocol, protocolValues, {
 		hostId,
 		hostName,
+		agentHostname,
 	});
 	const firstError = Object.values(validationErrors)[0];
 	if (firstError) {

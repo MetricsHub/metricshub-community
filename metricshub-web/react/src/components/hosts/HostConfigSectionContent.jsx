@@ -32,6 +32,9 @@ const HostConfigSectionContent = ({
 			return (
 				<HostConfigBasicsSection
 					values={form.state}
+					onResolveHostname={() => form.agentHostname || form.fetchAgentHostname()}
+					resolvingHostname={form.agentHostnameLoading}
+					resolveHostnameError={form.agentHostnameError}
 					onChange={form.patchState}
 					errors={form.errors}
 					resourceGroups={resourceGroups}
@@ -48,6 +51,7 @@ const HostConfigSectionContent = ({
 					errors={form.errors}
 					hostId={form.state.hostId}
 					hostName={form.state.hostName}
+					agentHostname={form.agentHostname}
 					allowPasswordReveal={form.allowPasswordReveal}
 					deferEncryptUntilSave={form.deferEncryptUntilSave}
 					showHeader={showProtocolStepHeader}

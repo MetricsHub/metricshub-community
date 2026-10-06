@@ -29,8 +29,9 @@ const COMPACT_ALERT_SX = {
  * @param {string} [props.hostName] host.name form value
  * @param {string} [props.hostId] resource id
  * @param {Record<string, unknown>} props.protocolValues current protocol form values
+ * @param {string} [props.agentHostname] resolved hostname of the agent machine
  */
-const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
+const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues, agentHostname }) => {
 	const [testing, setTesting] = React.useState(false);
 	const [result, setResult] = React.useState(null);
 	const [hostnamePickerOpen, setHostnamePickerOpen] = React.useState(false);
@@ -60,6 +61,7 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 				hostname,
 				hostId,
 				hostName,
+				agentHostname,
 				signal: controller.signal,
 			});
 			if (abortControllerRef.current === controller) {
@@ -73,14 +75,22 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 				setResult(testResult);
 			}
 		},
-		[hostId, hostName, protocol, protocolValues],
+		[hostId, hostName, protocol, protocolValues, agentHostname],
 	);
 
 	// Runner handed to the multi-host dialog: same check, per-host abort signal.
 	const runHostnameTest = React.useCallback(
 		(hostname, signal) =>
-			runProtocolCheck({ protocol, protocolValues, hostname, hostId, hostName, signal }),
-		[hostId, hostName, protocol, protocolValues],
+			runProtocolCheck({
+				protocol,
+				protocolValues,
+				hostname,
+				hostId,
+				hostName,
+				signal,
+				agentHostname,
+			}),
+		[hostId, hostName, protocol, protocolValues, agentHostname],
 	);
 
 	React.useEffect(

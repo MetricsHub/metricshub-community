@@ -1,5 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { collectProtocolConfigErrors } from "./protocol-definitions";
+import { collectProtocolConfigErrors, PROTOCOL_DEFAULTS } from "./protocol-definitions";
+
+describe.each(["wmi", "winrm"])("%s host credentials", (protocol) => {
+	const validate = (hostName, hostId = "local-resource") =>
+		collectProtocolConfigErrors(protocol, PROTOCOL_DEFAULTS[protocol], {
+			hostId,
+			hostName,
+			agentHostname: "agent-pc",
+		});
+
+	it.each(["localhost", "agent-pc", "AGENT-PC"])("allows empty credentials for %s", (hostName) => {
+		expect(validate(hostName)).toEqual({});
+	});
+
+	it("rejects expressions even when credentials are supplied", () => {
+		const errors = collectProtocolConfigErrors(
+			protocol,
+			{ ...PROTOCOL_DEFAULTS[protocol], username: "admin", password: "secret" },
+			{ hostId: "localhost", hostName: "${env::MY_HOST}" },
+		);
+		expect(errors.hostName).toBeTruthy();
+	});
+
+	it("rejects expressions in protocol hostname overrides", () => {
+		const errors = collectProtocolConfigErrors(
+			protocol,
+			{ ...PROTOCOL_DEFAULTS[protocol], hostname: "${env::MY_HOST}" },
+			{ hostId: "localhost", hostName: "localhost" },
+		);
+		expect(errors.hostname).toBeTruthy();
+	});
+
+	it.each(["ec-win", "192.0.2.1"])("still requires credentials for %s", (hostName) => {
+		expect(validate(hostName)).toMatchObject({
+			username: "Username is required",
+			password: "Password is required",
+		});
+	});
+
+	it("requires credentials when local and remote hostnames are mixed", () => {
+		expect(validate(["agent-pc", "remote-host"])).toMatchObject({
+			username: "Username is required",
+			password: "Password is required",
+		});
+	});
+
+	it("does not exempt a literal remote hostname when only its resource ID is an expression", () => {
+		expect(validate("ec-win", "${env::MY_HOST:-localhost}")).toMatchObject({
+			username: "Username is required",
+			password: "Password is required",
+		});
+	});
+});
 
 describe("collectProtocolConfigErrors SSH credentials", () => {
 	const base = {

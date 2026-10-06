@@ -98,7 +98,7 @@ const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, selectedNo
 			itemId={node.id}
 			label={
 				<ExplorerTreeItemLabel
-					name={node.name}
+					name={node.displayName || node.name}
 					type={node.type}
 					isFolder={isFolder}
 					isSelected={isSelected}

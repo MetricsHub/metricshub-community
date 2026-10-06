@@ -1,5 +1,5 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { getHostNames } from "../../utils/host-names";
+import { getHostNames, validateHostNameValue } from "../../utils/host-names";
 import {
 	buildProtocolHostnamePayload,
 	splitHostnameOverrides,
@@ -1181,13 +1181,23 @@ const TYPICAL_LOCALHOST_HOSTNAMES = new Set([
 const LOCALHOST_OPTIONAL_AUTH_FIELDS = new Set(["username", "password"]);
 
 /**
- * Whether the host identifier or display name refers to the local machine.
+ * Whether host credentials may be omitted for a local host, including the hostname
+ * returned by the agent. Unresolved expressions are not accepted by the form.
  *
  * @param {string} [hostId]
  * @param {string} [hostName]
+ * @param {string} [agentHostname] resolved hostname returned by the agent
  * @returns {boolean}
  */
-export const isLocalhostHost = (hostId, hostName) => {
+export const isLocalhostHost = (hostId, hostName, agentHostname) => {
+	const names = getHostNames(hostName);
+	if (
+		agentHostname &&
+		names.length > 0 &&
+		names.every((name) => name.toLowerCase() === agentHostname.trim().toLowerCase())
+	) {
+		return true;
+	}
 	const candidates = [hostId, hostName];
 	return candidates.some((candidate) => {
 		if (candidate == null || String(candidate).trim() === "") {
@@ -1274,14 +1284,18 @@ export const validatePortValue = (value, { required = false, label = "Port" } = 
  *
  * @param {string} protocol
  * @param {Record<string, unknown>} protocolConfig
- * @param {{ hostId?: string; hostName?: string }} [options]
+ * @param {{ hostId?: string; hostName?: string; agentHostname?: string }} [options]
  * @returns {Record<string, string>}
  */
 export const collectProtocolConfigErrors = (protocol, protocolConfig, options = {}) => {
-	const isLocal = isLocalhostHost(options.hostId, options.hostName);
+	const isLocal = isLocalhostHost(options.hostId, options.hostName, options.agentHostname);
 	const fields = PROTOCOL_FIELDS[protocol] || [];
 	/** @type {Record<string, string>} */
 	const errors = {};
+	const hostnameError = validateHostNameValue(options.hostName);
+	if (hostnameError) errors.hostName = hostnameError;
+	const protocolHostnameError = validateHostNameValue(protocolConfig.hostname);
+	if (protocolHostnameError) errors.hostname = protocolHostnameError;
 
 	for (const field of fields) {
 		if (field.showIf && !field.showIf(protocolConfig)) {

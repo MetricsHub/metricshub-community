@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as React from "react";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import ExplorerTree from "./ExplorerTree";
 import { renderWithReduxAndRouter } from "../../../test/test-utils";
 
@@ -18,6 +18,35 @@ describe("ExplorerTree", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
+
+	it.each(["pc-elyes", "localhost"])(
+		"displays %s and still navigates using the resource ID",
+		async (hostname) => {
+			const onResourceFocus = vi.fn();
+			const hierarchy = {
+				name: "Agent",
+				type: "agent",
+				resources: [
+					{ name: "local-resource", type: "resource", attributes: { "host.name": hostname } },
+				],
+			};
+			renderWithReduxAndRouter(
+				<ExplorerTree
+					onResourceFocus={onResourceFocus}
+					selectedNodeId="root/Agent/local-resource"
+				/>,
+				{
+					initialState: { explorer: { hierarchy, loading: false, error: null } },
+				},
+			);
+			fireEvent.click(await screen.findByText(hostname));
+			expect(onResourceFocus).toHaveBeenCalledWith(
+				expect.objectContaining({ name: "local-resource", id: "root/Agent/local-resource" }),
+				expect.objectContaining({ name: "Agent" }),
+			);
+			expect(screen.getByText(hostname).closest("[data-selected]")).not.toBeNull();
+		},
+	);
 
 	it("renders child nodes from merged collections", async () => {
 		const initialState = {

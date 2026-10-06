@@ -4,6 +4,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import ExplorerTreeItem from "./TreeItem";
 import ExplorerSearch from "./ExplorerSearch";
 import { compareLocale } from "../../../utils/alphabetic-sort";
+import { getHostDisplayName } from "../../hosts/host-config-utils";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { fetchExplorerHierarchy } from "../../../store/thunks/explorer-thunks";
 import {
@@ -38,15 +39,16 @@ const buildTree = (raw) => {
 
 	const walk = (node, pathParts, parent) => {
 		const name = node.name;
+		const displayName = node.type === "resource" ? getHostDisplayName(name, node) : name;
 		const id = [...pathParts, name].join("/");
 		const rawChildren = collectChildren(node);
 		const children = Array.isArray(rawChildren)
 			? rawChildren
 					.map((c) => walk(c, [...pathParts, name], node))
-					.sort((a, b) => compareLocale(a.name, b.name))
+					.sort((a, b) => compareLocale(a.displayName, b.displayName))
 			: [];
 		const isExpandable = children.length > 0;
-		return { id, name, type: node.type, children, parent, isExpandable };
+		return { id, name, displayName, type: node.type, children, parent, isExpandable };
 	};
 
 	return walk(raw, ["root"], null);
