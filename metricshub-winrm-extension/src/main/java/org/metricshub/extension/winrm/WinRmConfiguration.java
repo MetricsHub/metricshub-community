@@ -108,6 +108,19 @@ public class WinRmConfiguration implements IWinConfiguration {
 				)
 		);
 
+		// Basic sends the credentials in clear text with every request: only acceptable under TLS
+		StringHelper.validateConfigurationAttribute(
+			authentications,
+			attr -> attr != null && attr.contains(AuthenticationEnum.BASIC) && TransportProtocols.HTTP.equals(protocol),
+			() ->
+				String.format(
+					"Resource %s - Basic authentication is configured for protocol %s over HTTP, which would send the" +
+						" credentials in clear text. This resource will not be monitored. Please set the protocol to HTTPS.",
+					resourceKey,
+					WINRM_DESCRIPTION
+				)
+		);
+
 		StringHelper.validateConfigurationAttribute(
 			timeout,
 			attr -> attr == null || attr < 0L,
