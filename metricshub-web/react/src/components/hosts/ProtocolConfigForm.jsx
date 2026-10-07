@@ -57,7 +57,6 @@ import {
  * @param {Record<string, unknown>} props.values
  * @param {(name: string, value: unknown) => void} props.onChange
  * @param {Record<string, string>} props.errors
- * @param {(field: import("./protocol-definitions").ProtocolField) => boolean} props.isRequired
  * @param {boolean} [props.allowPasswordReveal]
  * @param {boolean} [props.deferEncryptUntilSave]
  * @param {string[]} [props.hostNames] resource host.name entries, in resource order; above 1 the protocol hostname maps one value per host
@@ -68,7 +67,6 @@ const ProtocolConfigForm = ({
 	values,
 	onChange,
 	errors,
-	isRequired,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
 	hostNames = [],
@@ -79,7 +77,7 @@ const ProtocolConfigForm = ({
 		if (transportLinkedPort && field.name === "port") {
 			return true;
 		}
-		return isRequired(field);
+		return Boolean(field.required);
 	};
 
 	const handleTransportChange = React.useCallback(
@@ -615,11 +613,11 @@ const ProtocolConfigForm = ({
 		const fieldError = errors[field.name];
 		const portInlineError =
 			isPort && !fieldError
-				? validatePortValue(value, { required: isRequired(field), label: field.label })
+				? validatePortValue(value, { required: Boolean(field.required), label: field.label })
 				: null;
 		const timeoutInlineError =
 			isTimeout && !fieldError
-				? validateTimeoutValue(value, { required: isRequired(field), label: field.label })
+				? validateTimeoutValue(value, { required: Boolean(field.required), label: field.label })
 				: null;
 		const displayError = fieldError || portInlineError || timeoutInlineError;
 		const required = showRequiredMarker(field);

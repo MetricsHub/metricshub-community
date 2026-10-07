@@ -20,9 +20,7 @@ export const isAbortError = (error) =>
  * @param {string} options.protocol protocol id (e.g. ssh)
  * @param {Record<string, unknown>} options.protocolValues current protocol form values
  * @param {string} options.hostname hostname to contact
- * @param {string} [options.hostId] resource id (localhost detection for auth rules)
- * @param {string} [options.hostName] host.name form value (localhost detection)
- * @param {string} [options.agentHostname] resolved hostname of the agent machine
+ * @param {string | string[]} [options.hostName] resource host.name form value
  * @param {AbortSignal} [options.signal]
  * @returns {Promise<{ severity: "success" | "error" | "warning", message: string } | null>}
  *          the display result, or {@code null} when the request was aborted
@@ -31,17 +29,13 @@ export const runProtocolCheck = async ({
 	protocol,
 	protocolValues,
 	hostname,
-	hostId,
 	hostName,
-	agentHostname,
 	signal,
 }) => {
 	const hostnameError = validateHostNameValue(hostname, { required: true });
 	if (hostnameError) return { severity: "warning", message: hostnameError };
 	const validationErrors = collectProtocolConfigErrors(protocol, protocolValues, {
-		hostId,
 		hostName,
-		agentHostname,
 	});
 	const firstError = Object.values(validationErrors)[0];
 	if (firstError) {
@@ -69,7 +63,7 @@ export const runProtocolCheck = async ({
 		}
 
 		if (response.errorMessage) {
-			return { severity: "error", message: "Protocol test failed." };
+			return { severity: "error", message: response.errorMessage };
 		}
 
 		if (response.hostUp === 1) {
@@ -83,6 +77,6 @@ export const runProtocolCheck = async ({
 		if (signal?.aborted || isAbortError(error)) {
 			return null;
 		}
-		return { severity: "error", message: "Protocol test failed." };
+		return { severity: "error", message: error?.message || "Protocol test failed." };
 	}
 };

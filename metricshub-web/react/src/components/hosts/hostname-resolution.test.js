@@ -39,50 +39,64 @@ describe("resolved agent hostname in the form", () => {
 			expect(result.current.state.hostName).toBe(hostname);
 			expect(buildHostPayloadFromForm(result.current.state).attributes["host.name"]).toBe(hostname);
 			expect(result.current.state.hostId).toBe("localhost");
+			expect(uiConfigApi.getAgentHostname).not.toHaveBeenCalled();
 		},
 	);
-	it("allows saving the agent hostname without credentials and rejects expressions", async () => {
+	it("allows saving a remote hostname without credentials and rejects expressions", async () => {
 		const { result } = renderHook(() => useHostConfig({ mode: "create" }));
-		await waitFor(() => expect(result.current.agentHostname).toBe("ec-win"));
 		act(() =>
 			result.current.patchState({
 				hostId: "my-resource",
-				hostName: "ec-win",
+				hostName: "remote-server",
 				hostType: "windows",
 				selectedProtocols: ["wmi"],
 				protocols: { wmi: PROTOCOL_DEFAULTS.wmi },
 			}),
 		);
 		await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+		act(() => expect(result.current.validateAllSteps()).toBeNull());
+		expect(buildHostPayloadFromForm(result.current.state).protocols.wmi).not.toHaveProperty(
+			"username",
+		);
+		expect(buildHostPayloadFromForm(result.current.state).protocols.wmi).not.toHaveProperty(
+			"password",
+		);
+		expect(uiConfigApi.getAgentHostname).not.toHaveBeenCalled();
 		act(() => result.current.patchState({ hostName: "${env::COMPUTERNAME:-localhost}" }));
 		expect(result.current.allStepsValid).toBe(false);
 		act(() => result.current.validateBasics());
 		expect(result.current.errors.hostName).toContain("Environment expressions are not supported");
 	});
+	it.each(["ec-win", "localhost"])("fetches %s only when requested", async (hostname) => {
+		uiConfigApi.getAgentHostname.mockResolvedValue(hostname);
+		const { result } = renderHook(() => useHostConfig({ mode: "create" }));
+		expect(uiConfigApi.getAgentHostname).not.toHaveBeenCalled();
+		await act(async () => expect(await result.current.fetchAgentHostname()).toBe(hostname));
+		expect(uiConfigApi.getAgentHostname).toHaveBeenCalledTimes(1);
+		expect(result.current.agentHostnameLoading).toBe(false);
+	});
 	it("reports lookup failure without inventing a resolved hostname", async () => {
 		uiConfigApi.getAgentHostname.mockRejectedValue(new Error("Offline"));
 		const { result } = renderHook(() => useHostConfig({ mode: "create" }));
-		await waitFor(() => expect(result.current.agentHostnameError).toBeTruthy());
-		expect(result.current.agentHostname).toBe("");
+		await act(async () => expect(await result.current.fetchAgentHostname()).toBeNull());
+		expect(result.current.agentHostnameError).toBeTruthy();
 		expect(result.current.agentHostnameLoading).toBe(false);
 	});
 });
 
 describe("protocol checks", () => {
 	it.each(["wmi", "winrm"])(
-		"tests %s with the resolved agent hostname and empty credentials",
+		"tests %s with a remote hostname and empty credentials",
 		async (protocol) => {
 			const result = await runProtocolCheck({
 				protocol,
 				protocolValues: PROTOCOL_DEFAULTS[protocol],
-				hostname: "ec-win",
-				hostName: "ec-win",
-				hostId: "my-resource",
-				agentHostname: "ec-win",
+				hostname: "remote-server",
+				hostName: "remote-server",
 			});
 			expect(result.severity).toBe("success");
 			expect(uiConfigApi.checkProtocol).toHaveBeenCalledWith(
-				expect.objectContaining({ hostname: "ec-win" }),
+				expect.objectContaining({ hostname: "remote-server" }),
 				expect.anything(),
 			);
 		},
@@ -93,7 +107,6 @@ describe("protocol checks", () => {
 			protocolValues: PROTOCOL_DEFAULTS.wmi,
 			hostname: "${env::COMPUTERNAME:-localhost}",
 			hostName: "localhost",
-			hostId: "localhost",
 		});
 		expect(result.severity).toBe("warning");
 		expect(uiConfigApi.checkProtocol).not.toHaveBeenCalled();

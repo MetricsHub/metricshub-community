@@ -1,101 +1,77 @@
 import { describe, expect, it } from "vitest";
 import { collectProtocolConfigErrors, PROTOCOL_DEFAULTS } from "./protocol-definitions";
 
-describe.each(["wmi", "winrm"])("%s host credentials", (protocol) => {
-	const validate = (hostName, hostId = "local-resource") =>
-		collectProtocolConfigErrors(protocol, PROTOCOL_DEFAULTS[protocol], {
-			hostId,
-			hostName,
-			agentHostname: "agent-pc",
-		});
+describe("protocol credentials are validated by the backend", () => {
+	it.each(["ssh", "wmi", "winrm", "wbem", "http", "snmp", "snmpv3", "ipmi", "jdbc", "jmx"])(
+		"allows empty credentials for %s on a remote host",
+		(protocol) => {
+			const errors = collectProtocolConfigErrors(
+				protocol,
+				{
+					...PROTOCOL_DEFAULTS[protocol],
+					username: "",
+					password: "",
+					privateKey: "",
+					community: "",
+					privacy: "AES",
+					privacyPassword: "",
+					url: "jdbc:h2:mem:test",
+				},
+				{ hostName: "remote-server" },
+			);
+			expect(errors).toEqual({});
+		},
+	);
 
-	it.each(["localhost", "agent-pc", "AGENT-PC"])("allows empty credentials for %s", (hostName) => {
-		expect(validate(hostName)).toEqual({});
-	});
+	it.each(["wmi", "winrm"])(
+		"allows %s remote overrides and mixed targets without credentials",
+		(protocol) => {
+			expect(
+				collectProtocolConfigErrors(
+					protocol,
+					{
+						...PROTOCOL_DEFAULTS[protocol],
+						hostname: "remote-server",
+					},
+					{ hostName: "localhost" },
+				),
+			).toEqual({});
+			expect(
+				collectProtocolConfigErrors(protocol, PROTOCOL_DEFAULTS[protocol], {
+					hostName: ["localhost", "remote-server"],
+				}),
+			).toEqual({});
+		},
+	);
 
-	it("rejects expressions even when credentials are supplied", () => {
+	it("still rejects environment expressions in resource and protocol hostnames", () => {
 		const errors = collectProtocolConfigErrors(
-			protocol,
-			{ ...PROTOCOL_DEFAULTS[protocol], username: "admin", password: "secret" },
-			{ hostId: "localhost", hostName: "${env::MY_HOST}" },
+			"wmi",
+			{
+				...PROTOCOL_DEFAULTS.wmi,
+				hostname: "${env::MY_HOST}",
+			},
+			{ hostName: "${env::MY_HOST}" },
 		);
 		expect(errors.hostName).toBeTruthy();
-	});
-
-	it("rejects expressions in protocol hostname overrides", () => {
-		const errors = collectProtocolConfigErrors(
-			protocol,
-			{ ...PROTOCOL_DEFAULTS[protocol], hostname: "${env::MY_HOST}" },
-			{ hostId: "localhost", hostName: "localhost" },
-		);
 		expect(errors.hostname).toBeTruthy();
 	});
 
-	it.each(["ec-win", "192.0.2.1"])("still requires credentials for %s", (hostName) => {
-		expect(validate(hostName)).toMatchObject({
-			username: "Username is required",
-			password: "Password is required",
+	it("still validates non-credential fields", () => {
+		expect(
+			collectProtocolConfigErrors(
+				"ssh",
+				{
+					...PROTOCOL_DEFAULTS.ssh,
+					port: "invalid",
+					timeout: 0,
+				},
+				{ hostName: "remote-server" },
+			),
+		).toEqual({
+			port: "Must be between 1 and 65535.",
+			timeout: "Enter a duration greater than 0.",
 		});
-	});
-
-	it("requires credentials when local and remote hostnames are mixed", () => {
-		expect(validate(["agent-pc", "remote-host"])).toMatchObject({
-			username: "Username is required",
-			password: "Password is required",
-		});
-	});
-
-	it("does not exempt a literal remote hostname when only its resource ID is an expression", () => {
-		expect(validate("ec-win", "${env::MY_HOST:-localhost}")).toMatchObject({
-			username: "Username is required",
-			password: "Password is required",
-		});
-	});
-});
-
-describe("collectProtocolConfigErrors SSH credentials", () => {
-	const base = {
-		username: "admin",
-		port: 22,
-		timeout: "2m",
-	};
-
-	it("requires a password or a private key on a remote host", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "", privateKey: "" },
-			{ hostId: "server-1", hostName: "server-1" },
-		);
-		expect(errors.password).toBe("Password or private key is required");
-	});
-
-	it("accepts a password alone", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "secret", privateKey: "" },
-			{ hostId: "server-1", hostName: "server-1" },
-		);
-		expect(errors.password).toBeUndefined();
-		expect(errors.privateKey).toBeUndefined();
-	});
-
-	it("accepts a private key alone", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "", privateKey: "/home/admin/.ssh/id_rsa" },
-			{ hostId: "server-1", hostName: "server-1" },
-		);
-		expect(errors.password).toBeUndefined();
-		expect(errors.privateKey).toBeUndefined();
-	});
-
-	it("does not require credentials on localhost", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "", privateKey: "" },
-			{ hostId: "localhost", hostName: "localhost" },
-		);
-		expect(errors.password).toBeUndefined();
 	});
 });
 

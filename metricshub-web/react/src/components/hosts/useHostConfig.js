@@ -47,7 +47,7 @@ import {
  * @param {import("./host-config-sections").FormSectionDescriptor[]} steps
  * @returns {boolean}
  */
-const areAllFormSectionsValid = (state, steps, agentHostname) => {
+const areAllFormSectionsValid = (state, steps) => {
 	if (!steps.length) {
 		return false;
 	}
@@ -82,9 +82,7 @@ const areAllFormSectionsValid = (state, steps, agentHostname) => {
 					step.protocolId,
 					state.protocols?.[step.protocolId] || {},
 					{
-						hostId: state.hostId,
 						hostName: state.hostName,
-						agentHostname,
 					},
 				);
 				if (Object.keys(fieldErrors).length > 0) {
@@ -172,7 +170,6 @@ export const useHostConfig = ({
 	sessionPathname = "",
 	onSessionClear,
 }) => {
-	const [agentHostname, setAgentHostname] = React.useState("");
 	const [agentHostnameLoading, setAgentHostnameLoading] = React.useState(false);
 	const [agentHostnameError, setAgentHostnameError] = React.useState(null);
 	const agentHostnameRequest = React.useRef(null);
@@ -185,7 +182,6 @@ export const useHostConfig = ({
 		try {
 			const hostname = await uiConfigApi.getAgentHostname({ signal: controller.signal });
 			if (controller.signal.aborted) return null;
-			setAgentHostname(hostname);
 			return hostname;
 		} catch {
 			if (!controller.signal.aborted) {
@@ -200,9 +196,8 @@ export const useHostConfig = ({
 	}, []);
 	React.useEffect(() => {
 		if (!open) return;
-		void fetchAgentHostname();
 		return () => agentHostnameRequest.current?.abort();
-	}, [open, fetchAgentHostname]);
+	}, [open]);
 
 	const sessionKey = React.useMemo(
 		() =>
@@ -539,7 +534,7 @@ export const useHostConfig = ({
 		baselineStateRef.current = baselineState;
 		if (mode === "edit" && initialState) {
 			const loadedSteps = buildFormSections(nextState);
-			if (areAllFormSectionsValid(nextState, loadedSteps, agentHostname)) {
+			if (areAllFormSectionsValid(nextState, loadedSteps)) {
 				setValidatedStepIds(new Set(loadedSteps.map((step) => step.id)));
 				setInvalidStepIds(new Set());
 			}
@@ -731,9 +726,7 @@ export const useHostConfig = ({
 			}
 			const config = state.protocols?.[step.protocolId] || {};
 			const fieldErrors = collectProtocolConfigErrors(step.protocolId, config, {
-				hostId: state.hostId,
 				hostName: state.hostName,
-				agentHostname,
 			});
 			if (Object.keys(fieldErrors).length > 0) {
 				setErrors(fieldErrors);
@@ -742,7 +735,7 @@ export const useHostConfig = ({
 			setErrors({});
 			return true;
 		},
-		[steps, state, agentHostname],
+		[steps, state],
 	);
 
 	const validateConnectorsStep = React.useCallback(() => {
@@ -937,10 +930,7 @@ export const useHostConfig = ({
 		return null;
 	}, [invalidStepIds, steps, validateStepIndex, validatedStepIds]);
 
-	const allStepsValid = React.useMemo(
-		() => areAllFormSectionsValid(state, steps, agentHostname),
-		[state, steps, agentHostname],
-	);
+	const allStepsValid = React.useMemo(() => areAllFormSectionsValid(state, steps), [state, steps]);
 
 	const commitSavedBaseline = React.useCallback(() => {
 		baselineStateRef.current = normalizeHostFormState(state);
@@ -1035,7 +1025,6 @@ export const useHostConfig = ({
 
 	return {
 		activeStep,
-		agentHostname,
 		agentHostnameLoading,
 		agentHostnameError,
 		fetchAgentHostname,

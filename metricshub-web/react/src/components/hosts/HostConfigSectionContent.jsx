@@ -32,7 +32,7 @@ const HostConfigSectionContent = ({
 			return (
 				<HostConfigBasicsSection
 					values={form.state}
-					onResolveHostname={() => form.agentHostname || form.fetchAgentHostname()}
+					onResolveHostname={form.fetchAgentHostname}
 					resolvingHostname={form.agentHostnameLoading}
 					resolveHostnameError={form.agentHostnameError}
 					onChange={form.patchState}
@@ -49,9 +49,7 @@ const HostConfigSectionContent = ({
 					values={form.state.protocols?.[step.protocolId] || {}}
 					onChange={(name, value) => form.patchProtocolField(step.protocolId, name, value)}
 					errors={form.errors}
-					hostId={form.state.hostId}
 					hostName={form.state.hostName}
-					agentHostname={form.agentHostname}
 					allowPasswordReveal={form.allowPasswordReveal}
 					deferEncryptUntilSave={form.deferEncryptUntilSave}
 					showHeader={showProtocolStepHeader}
