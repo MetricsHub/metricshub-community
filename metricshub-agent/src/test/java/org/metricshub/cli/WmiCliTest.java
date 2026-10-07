@@ -30,7 +30,7 @@ public class WmiCliTest {
 		wmiCli.setQuery(WMI_TEST_QUERY);
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WMI_TEST_QUERY));
-		queryNode.set("queryType", new TextNode("wmi"));
+		queryNode.set("queryType", new TextNode("wql"));
 		assertEquals(queryNode, wmiCli.getQuery());
 	}
 

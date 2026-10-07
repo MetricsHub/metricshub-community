@@ -513,7 +513,11 @@ class WmiExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
-		queryNode.set("queryType", new TextNode(WMI));
+		// The text rendering is the interface's default method: run it, the mock only serves the rows
+		doCallRealMethod()
+			.when(wmiRequestExecutorMock)
+			.executeWqlQuery(anyString(), any(WmiConfiguration.class), anyString(), anyString());
+		queryNode.set("queryType", new TextNode("wql"));
 		WmiConfiguration configuration = WmiConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
@@ -527,6 +531,10 @@ class WmiExtensionTest {
 			EXECUTE_WMI_RESULT
 		);
 		assertEquals(expectedResult, result);
+
+		// "wmi" is the deprecated synonym of "wql"
+		queryNode.set("queryType", new TextNode(WMI));
+		assertEquals(expectedResult, wmiExtension.executeQuery(configuration, queryNode));
 	}
 
 	@Test
@@ -539,6 +547,9 @@ class WmiExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		doCallRealMethod()
+			.when(wmiRequestExecutorMock)
+			.executeWqlQuery(anyString(), any(WmiConfiguration.class), anyString(), anyString());
 		queryNode.set("queryType", new TextNode("wmi"));
 		WmiConfiguration configuration = WmiConfiguration.builder()
 			.hostname(HOST_NAME)
@@ -547,11 +558,12 @@ class WmiExtensionTest {
 			.timeout(120L)
 			.namespace(WMI_TEST_NAMESPACE)
 			.build();
-		assertNull(wmiExtension.executeQuery(configuration, queryNode), "Expected null response");
+		// The failure reaches the caller (CLI, MCP tool) instead of a null result
+		assertThrows(ClientException.class, () -> wmiExtension.executeQuery(configuration, queryNode));
 	}
 
 	@Test
-	void testExecuteQueryRejectsUnsupportedQueryType() {
+	void testExecuteQueryRejectsUnsupportedQueryType() throws Exception {
 		initWmi();
 
 		// Remote file access exists over WinRM only: WMI must not run the path as a command
@@ -566,5 +578,15 @@ class WmiExtensionTest {
 			.namespace(WMI_TEST_NAMESPACE)
 			.build();
 		assertThrows(IllegalArgumentException.class, () -> wmiExtension.executeQuery(configuration, queryNode));
+
+		// "command", and its deprecated synonym "winremote", run a remote command
+		doReturn("output")
+			.when(wmiRequestExecutorMock)
+			.executeWinRemoteCommand(eq(HOST_NAME), any(WmiConfiguration.class), eq("ipconfig"), isNull());
+		queryNode.set("query", new TextNode("ipconfig"));
+		queryNode.set("queryType", new TextNode("command"));
+		assertEquals("output", wmiExtension.executeQuery(configuration, queryNode));
+		queryNode.set("queryType", new TextNode("winremote"));
+		assertEquals("output", wmiExtension.executeQuery(configuration, queryNode));
 	}
 }

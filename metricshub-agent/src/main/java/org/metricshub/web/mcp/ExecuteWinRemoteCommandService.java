@@ -191,10 +191,10 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 		configurationCopy.setHostname(hostname);
 		configurationCopy.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_COMMANDLINE_TIMEOUT).longValue());
 
-		// Create a json node and populate it with the command and queryType (matching WinRemoteCli structure)
+		// Create a json node and populate it with the command and the command query type (matching WinRemoteCli)
 		final var queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(commandline));
-		queryNode.set("queryType", new TextNode("winremote"));
+		queryNode.set("queryType", new TextNode("command"));
 
 		try {
 			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();

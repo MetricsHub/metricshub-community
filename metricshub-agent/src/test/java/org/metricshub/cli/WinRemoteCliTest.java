@@ -32,7 +32,7 @@ public class WinRemoteCliTest {
 		winRemoteCli.setCommand(WINREMOTE_TEST_COMMAND);
 		final ObjectNode commandNode = JsonNodeFactory.instance.objectNode();
 		commandNode.set("query", new TextNode(WINREMOTE_TEST_COMMAND));
-		commandNode.set("queryType", new TextNode("winremote"));
+		commandNode.set("queryType", new TextNode("command"));
 		assertEquals(commandNode, winRemoteCli.getQuery(), "Query node should match expected command and queryType");
 	}
 

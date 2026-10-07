@@ -145,7 +145,7 @@ public class WmiCli implements IQuery, Callable<Integer> {
 	public JsonNode getQuery() {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(query));
-		queryNode.set("queryType", new TextNode(PROTOCOL_IDENTIFIER));
+		queryNode.set("queryType", new TextNode("wql"));
 		return queryNode;
 	}
 

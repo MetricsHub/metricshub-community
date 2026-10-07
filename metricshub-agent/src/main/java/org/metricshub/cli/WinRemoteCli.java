@@ -153,7 +153,7 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 			commandNode.set("queryType", new TextNode("ls"));
 		} else {
 			commandNode.set("query", new TextNode(command));
-			commandNode.set("queryType", new TextNode("winremote"));
+			commandNode.set("queryType", new TextNode("command"));
 		}
 		return commandNode;
 	}
