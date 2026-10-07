@@ -519,4 +519,31 @@ class WinRmExtensionTest {
 			.build();
 		assertNull(winRmExtension.executeQuery(configuration, queryNode), "Expected null response");
 	}
+
+	@Test
+	void testExecuteQueryReadsAndListsFiles() throws Exception {
+		initWinRm();
+		final WinRmConfiguration configuration = WinRmConfiguration.builder()
+			.hostname(HOST_NAME)
+			.username(USERNAME)
+			.password(PASSWORD)
+			.timeout(120L)
+			.build();
+
+		doReturn("line 1\nline 2")
+			.when(winRmRequestExecutorMock)
+			.readRemoteFile(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\app.log"));
+		final ObjectNode fileNode = JsonNodeFactory.instance.objectNode();
+		fileNode.set("query", new TextNode("C:\\logs\\app.log"));
+		fileNode.set("queryType", new TextNode("file"));
+		assertEquals("line 1\nline 2", winRmExtension.executeQuery(configuration, fileNode));
+
+		doReturn("Path;Size;LastModified")
+			.when(winRmRequestExecutorMock)
+			.listRemoteFiles(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\*.log"));
+		final ObjectNode listNode = JsonNodeFactory.instance.objectNode();
+		listNode.set("query", new TextNode("C:\\logs\\*.log"));
+		listNode.set("queryType", new TextNode("ls"));
+		assertEquals("Path;Size;LastModified", winRmExtension.executeQuery(configuration, listNode));
+	}
 }

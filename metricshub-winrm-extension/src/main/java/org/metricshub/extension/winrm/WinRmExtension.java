@@ -315,9 +315,12 @@ public class WinRmExtension implements IProtocolExtension {
 		final String namespace = winRmConfiguration.getNamespace();
 		final String hostname = configuration.getHostname();
 
-		return queryType.equals("wmi")
-			? executeWmiQuery(hostname, winRmConfiguration, query, namespace)
-			: winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null);
+		return switch (queryType) {
+			case "wmi" -> executeWmiQuery(hostname, winRmConfiguration, query, namespace);
+			case "file" -> winRmRequestExecutor.readRemoteFile(hostname, winRmConfiguration, query);
+			case "ls" -> winRmRequestExecutor.listRemoteFiles(hostname, winRmConfiguration, query);
+			default -> winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null);
+		};
 	}
 
 	/**

@@ -549,4 +549,22 @@ class WmiExtensionTest {
 			.build();
 		assertNull(wmiExtension.executeQuery(configuration, queryNode), "Expected null response");
 	}
+
+	@Test
+	void testExecuteQueryRejectsUnsupportedQueryType() {
+		initWmi();
+
+		// Remote file access exists over WinRM only: WMI must not run the path as a command
+		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
+		queryNode.set("query", new TextNode("C:\\logs\\app.log"));
+		queryNode.set("queryType", new TextNode("file"));
+		final WmiConfiguration configuration = WmiConfiguration.builder()
+			.hostname(HOST_NAME)
+			.username(USERNAME)
+			.password(PASSWORD)
+			.timeout(120L)
+			.namespace(WMI_TEST_NAMESPACE)
+			.build();
+		assertThrows(IllegalArgumentException.class, () -> wmiExtension.executeQuery(configuration, queryNode));
+	}
 }

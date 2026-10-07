@@ -106,7 +106,8 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 	@Option(
 		names = "--winrm-auth",
 		description = "Comma-separated ordered list of authentication schemes." +
-			" Possible values are NTLM and KERBEROS. By default, only NTLM is used",
+			" Possible values are NTLM, KERBEROS and BASIC (local accounts by bare user name, over HTTPS)." +
+			" By default, only NTLM is used",
 		order = 7,
 		paramLabel = "AUTH",
 		split = ","

@@ -22,6 +22,7 @@ package org.metricshub.extension.win;
  */
 
 import java.util.List;
+import java.util.Optional;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.ClientException;
 
@@ -89,6 +90,23 @@ public interface IWinRequestExecutor {
 		String command,
 		List<String> embeddedFiles
 	) throws ClientException;
+
+	/**
+	 * Open protocol-native access to the files of a remote Windows host, for a file source poll.
+	 * The default has none: the file source then reads files by running PowerShell scripts as
+	 * remote commands through {@link #executeWinRemoteCommand(String, IWinConfiguration, String, List)}.
+	 *
+	 * @param hostname         The hostname of the device.
+	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
+	 * @return The file operations, to be closed by the caller once the poll is over, or empty when
+	 *         this protocol has no native file access.
+	 */
+	default Optional<WinFileOperations> openFileOperations(
+		final String hostname,
+		final IWinConfiguration winConfiguration
+	) {
+		return Optional.empty();
+	}
 
 	/**
 	 * Whether this error message is an acceptable WMI COM error.

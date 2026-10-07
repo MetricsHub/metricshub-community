@@ -324,9 +324,13 @@ public class WmiExtension implements IProtocolExtension {
 		final String namespace = wmiConfiguration.getNamespace();
 		final String hostname = configuration.getHostname();
 
-		return queryType.equals("wmi")
-			? executeWmiQuery(hostname, wmiConfiguration, query, namespace)
-			: wmiRequestExecutor.executeWinRemoteCommand(hostname, wmiConfiguration, query, null);
+		return switch (queryType) {
+			case "wmi" -> executeWmiQuery(hostname, wmiConfiguration, query, namespace);
+			case "winremote" -> wmiRequestExecutor.executeWinRemoteCommand(hostname, wmiConfiguration, query, null);
+			default -> throw new IllegalArgumentException(
+				String.format("Query type %s is not supported over WMI (supported: wmi, winremote).", queryType)
+			);
+		};
 	}
 
 	/**
