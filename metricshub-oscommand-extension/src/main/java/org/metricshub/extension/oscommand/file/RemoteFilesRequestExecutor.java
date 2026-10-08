@@ -145,8 +145,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 		final String segment = segments.get(index);
 
 		if (index == segments.size() - 1) {
+			final boolean literal = !FileHelper.containsWildcard(segment);
 			for (final FileEntry entry : sshClient.listFiles(directory, nameRegex(segment, false), false)) {
-				final String path = fromSftpPath(entry.path);
+				// A literal file name keeps its configured case, which a Windows listing may not report
+				final String path = fromSftpPath(literal ? join(directory, segment) : entry.path);
 				listedFiles.put(path, entry);
 				resolved.add(path);
 			}
@@ -156,7 +158,7 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 		// A literal segment needs no listing: a missing directory fails when it is listed itself
 		final List<String> subdirectories = FileHelper.containsWildcard(segment)
 			? sshClient.listSubdirectories(directory, nameRegex(segment, true))
-			: List.of(directory.endsWith(FileHelper.SLASH) ? directory + segment : directory + FileHelper.SLASH + segment);
+			: List.of(join(directory, segment));
 
 		for (final String subdirectory : subdirectories) {
 			try {
@@ -189,14 +191,28 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 		if (directory && !windows && !segment.startsWith(".")) {
 			regex.append("(?!\\.)");
 		}
-		for (final char c : segment.toCharArray()) {
-			switch (c) {
-				case '*' -> regex.append(".*");
-				case '?' -> regex.append('.');
-				default -> regex.append(Pattern.quote(String.valueOf(c)));
-			}
-		}
+		// Code points, not chars: a character outside the BMP must be quoted whole
+		segment
+			.codePoints()
+			.forEach(c -> {
+				switch (c) {
+					case '*' -> regex.append(".*");
+					case '?' -> regex.append('.');
+					default -> regex.append(Pattern.quote(Character.toString(c)));
+				}
+			});
 		return regex.append("\\z").toString();
+	}
+
+	/**
+	 * Appends a name to an SFTP directory path.
+	 *
+	 * @param directory the SFTP directory path
+	 * @param name      the name of an entry of the directory
+	 * @return the SFTP path of the entry
+	 */
+	private static String join(final String directory, final String name) {
+		return directory.endsWith(FileHelper.SLASH) ? directory + name : directory + FileHelper.SLASH + name;
 	}
 
 	/**

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -98,9 +99,10 @@ class FileSourceProcessorTest {
 	}
 
 	private Set<String> resolve(final DeviceKind deviceKind, final String... paths) {
+		// Patterns resolve in the given order, so that a failing pattern listed first must not stop the others
 		return new FileSourceProcessor().resolveRemoteFiles(
 			HOSTNAME,
-			Set.of(paths),
+			new LinkedHashSet<>(List.of(paths)),
 			deviceKind,
 			remoteFileOperations(deviceKind)
 		);
@@ -185,8 +187,9 @@ class FileSourceProcessorTest {
 
 	@Test
 	void resolveRemoteFiles_walksWildcardDirectorySegments() throws Exception {
+		// The directory that cannot be listed comes first: its siblings must still be scanned
 		when(sshClient.listSubdirectories(eq("/opt/autosys"), anyString())).thenReturn(
-			List.of("/opt/autosys/autouser01", "/opt/autosys/autouser02", "/opt/autosys/autouser03")
+			List.of("/opt/autosys/autouser03", "/opt/autosys/autouser01", "/opt/autosys/autouser02")
 		);
 		when(sshClient.listFiles(eq("/opt/autosys/autouser01/out"), anyString(), eq(false))).thenReturn(
 			List.of(entry("/opt/autosys/autouser01/out/event_demon.PE2"))
@@ -329,6 +332,39 @@ class FileSourceProcessorTest {
 
 		assertEquals(Set.of("/opt/a.log"), resolve(DeviceKind.LINUX, "/missing/*.log", "relative/path.log", "/opt/*.log"));
 		verify(sshClient, times(2)).listFiles(anyString(), anyString(), eq(false));
+	}
+
+	@Test
+	void resolveRemoteFiles_windowsLiteralFileNameKeepsItsConfiguredCase() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.WINDOWS);
+		// The host reports the name as stored on disk
+		when(sshClient.listFiles(eq("/C:/Logs"), anyString(), eq(false))).thenReturn(
+			List.of(new FileEntry("/C:/Logs/app.log", 42, 1))
+		);
+
+		// Like Get-Item and the local resolver: the configured path is kept, so the single path output and the
+		// cursor key do not depend on the case on disk
+		assertEquals(
+			Set.of("C:\\Logs\\App.LOG"),
+			operations.resolve(FileHelper.parsePathPattern("C:\\Logs\\App.LOG", DeviceKind.WINDOWS))
+		);
+		assertEquals(42L, operations.getFileSize("C:\\Logs\\App.LOG"));
+		assertListed(fileMask("/C:/Logs"), "app.log");
+	}
+
+	@Test
+	void resolveRemoteFiles_matchesCharactersOutsideTheBmpAndFoldsUnicodeCaseOnWindows() throws Exception {
+		resolve(DeviceKind.LINUX, "/data/x😀.log", "/data2/?.log", "/data3/𠀀*/a.log");
+
+		assertListed(fileMask("/data"), "x😀.log");
+		assertNotListed(fileMask("/data"), "x.log", "x😁.log");
+		// '?' is one character, even outside the BMP
+		assertListed(fileMask("/data2"), "😀.log", "a.log");
+		assertNotListed(fileMask("/data2"), "😀😀.log");
+		assertListed(directoryMask("/data3"), "𠀀1");
+
+		resolve(DeviceKind.WINDOWS, "C:\\journaux\\été*.log");
+		assertListed(fileMask("/C:/journaux"), "été1.log", "ÉTÉ1.LOG");
 	}
 
 	@Test
