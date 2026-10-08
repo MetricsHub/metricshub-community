@@ -483,7 +483,11 @@ class WinRmExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
-		queryNode.set("queryType", new TextNode("wmi"));
+		// The text rendering is the interface's default method: run it, the mock only serves the rows
+		doCallRealMethod()
+			.when(winRmRequestExecutorMock)
+			.executeWqlQuery(anyString(), any(WinRmConfiguration.class), anyString(), anyString());
+		queryNode.set("queryType", new TextNode("wql"));
 		WinRmConfiguration configuration = WinRmConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
@@ -497,6 +501,14 @@ class WinRmExtensionTest {
 			WQL_SUCCESS_RESPONSE
 		);
 		assertEquals(expectedResult, result);
+
+		// "wmi" is the deprecated synonym of "wql"
+		queryNode.set("queryType", new TextNode("wmi"));
+		assertEquals(expectedResult, winRmExtension.executeQuery(configuration, queryNode));
+
+		// An unknown query type is rejected, never run as a command
+		queryNode.set("queryType", new TextNode("powershell"));
+		assertThrows(IllegalArgumentException.class, () -> winRmExtension.executeQuery(configuration, queryNode));
 	}
 
 	@Test
@@ -506,6 +518,9 @@ class WinRmExtensionTest {
 		doThrow(ClientException.class)
 			.when(winRmRequestExecutorMock)
 			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString(), isNull());
+		doCallRealMethod()
+			.when(winRmRequestExecutorMock)
+			.executeWqlQuery(anyString(), any(WinRmConfiguration.class), anyString(), anyString());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
@@ -517,6 +532,45 @@ class WinRmExtensionTest {
 			.timeout(120L)
 			.namespace(WINRM_TEST_NAMESPACE)
 			.build();
-		assertNull(winRmExtension.executeQuery(configuration, queryNode), "Expected null response");
+		// The failure reaches the caller (CLI, MCP tool) instead of a null result
+		assertThrows(ClientException.class, () -> winRmExtension.executeQuery(configuration, queryNode));
+	}
+
+	@Test
+	void testExecuteQueryReadsAndListsFiles() throws Exception {
+		initWinRm();
+		final WinRmConfiguration configuration = WinRmConfiguration.builder()
+			.hostname(HOST_NAME)
+			.username(USERNAME)
+			.password(PASSWORD)
+			.timeout(120L)
+			.build();
+
+		doReturn("line 1\nline 2")
+			.when(winRmRequestExecutorMock)
+			.readRemoteFile(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\app.log"));
+		final ObjectNode fileNode = JsonNodeFactory.instance.objectNode();
+		fileNode.set("query", new TextNode("C:\\logs\\app.log"));
+		fileNode.set("queryType", new TextNode("file"));
+		assertEquals("line 1\nline 2", winRmExtension.executeQuery(configuration, fileNode));
+
+		doReturn("Path;Size;LastModified")
+			.when(winRmRequestExecutorMock)
+			.listRemoteFiles(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\*.log"));
+		final ObjectNode listNode = JsonNodeFactory.instance.objectNode();
+		listNode.set("query", new TextNode("C:\\logs\\*.log"));
+		listNode.set("queryType", new TextNode("ls"));
+		assertEquals("Path;Size;LastModified", winRmExtension.executeQuery(configuration, listNode));
+
+		// "command", and its deprecated synonym "winremote", run a remote command
+		doReturn("output")
+			.when(winRmRequestExecutorMock)
+			.executeWinRemoteCommand(eq(HOST_NAME), any(WinRmConfiguration.class), eq("ipconfig"), isNull());
+		final ObjectNode commandNode = JsonNodeFactory.instance.objectNode();
+		commandNode.set("query", new TextNode("ipconfig"));
+		commandNode.set("queryType", new TextNode("command"));
+		assertEquals("output", winRmExtension.executeQuery(configuration, commandNode));
+		commandNode.set("queryType", new TextNode("winremote"));
+		assertEquals("output", winRmExtension.executeQuery(configuration, commandNode));
 	}
 }

@@ -203,7 +203,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 		// Create a json node and populate it with the query
 		final var queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(query));
-		queryNode.set("queryType", new TextNode("wmi"));
+		queryNode.set("queryType", new TextNode("wql"));
 
 		try {
 			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();

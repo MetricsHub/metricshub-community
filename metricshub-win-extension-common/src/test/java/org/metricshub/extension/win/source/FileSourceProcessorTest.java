@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,12 +20,14 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.FileHelper;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
@@ -36,6 +39,7 @@ import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
+import org.metricshub.extension.win.WinFileOperations;
 import org.metricshub.extension.win.WmiTestConfiguration;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -85,22 +89,12 @@ class FileSourceProcessorTest {
 	@Test
 	void resolveRemoteFiles_runsBuiltCommandAndSkipsInvalidPatterns() throws Exception {
 		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
-		final HostConfiguration hostConfiguration = HostConfiguration.builder()
-			.hostname(HOSTNAME)
-			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
-			.hostType(DeviceKind.WINDOWS)
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostProperties(HostProperties.builder().isLocalhost(false).build())
-			.hostConfiguration(hostConfiguration)
-			.build();
 		final String pattern = "D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2";
 		final FileSource fileSource = FileSource.builder()
 			.key("sourceKey")
 			.paths(Set.of(pattern, "logs\\relative.log"))
 			.build();
 
-		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		final String expectedCommand = buildResolveCommand(pattern);
 		when(
 			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), eq(expectedCommand), anyList())
@@ -113,7 +107,11 @@ class FileSourceProcessorTest {
 			mockConfigurationRetriever,
 			CONNECTOR_ID
 		);
-		final Set<String> resolved = processor.resolveRemoteFiles(HOSTNAME, fileSource, telemetryManager);
+		final Set<String> resolved = processor.resolveRemoteFiles(
+			HOSTNAME,
+			fileSource.getPaths(),
+			processor.createScriptFileOperations(HOSTNAME, wmiConfiguration)
+		);
 
 		assertEquals(
 			Set.of(
@@ -124,6 +122,51 @@ class FileSourceProcessorTest {
 		);
 		// The relative path is skipped before any command is run
 		verify(mockWinRequestExecutor, times(1)).executeWinRemoteCommand(anyString(), any(), anyString(), anyList());
+	}
+
+	@Test
+	void testProcessUsesNativeFileOperationsWhenOffered() throws Exception {
+		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
+		final HostProperties hostProperties = HostProperties.builder()
+			.isLocalhost(false)
+			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
+			.build();
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
+			.hostType(DeviceKind.WINDOWS)
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostProperties(hostProperties)
+			.hostConfiguration(hostConfiguration)
+			.build();
+		final FileSource fileSource = FileSource.builder()
+			.key("sourceKey")
+			.mode(FileSourceProcessingMode.FLAT)
+			.paths(Set.of(WINDOWS_ABSOLUTE_PATH))
+			.build();
+		final String resolvedPath = "C:\\Program Files\\MetricsHub\\logs\\test.log";
+
+		// The executor offers protocol-native file operations: they resolve and read, no remote command runs
+		final WinFileOperations nativeFileOperations = mock(WinFileOperations.class);
+		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
+		when(mockWinRequestExecutor.openFileOperations(HOSTNAME, wmiConfiguration)).thenReturn(
+			Optional.of(nativeFileOperations)
+		);
+		when(nativeFileOperations.resolve(any(PathPattern.class))).thenReturn(Set.of(resolvedPath));
+		when(nativeFileOperations.readFileContent(resolvedPath)).thenReturn("content");
+
+		final FileSourceProcessor processor = new FileSourceProcessor(
+			mockWinRequestExecutor,
+			mockConfigurationRetriever,
+			CONNECTOR_ID
+		);
+		final SourceTable result = processor.process(fileSource, telemetryManager);
+
+		assertEquals(expectedMarkedLogCell(resolvedPath, "content"), result.getRawData());
+		// One instance serves the poll and is closed at its end
+		verify(nativeFileOperations).close();
+		verify(mockWinRequestExecutor, never()).executeWinRemoteCommand(any(), any(), any(), any());
 	}
 
 	private final String WINDOWS_ABSOLUTE_PATH = "C:\\Program Files\\MetricsHub\\logs\\*.log";

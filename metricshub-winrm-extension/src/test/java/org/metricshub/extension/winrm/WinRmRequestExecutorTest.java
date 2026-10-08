@@ -3,10 +3,14 @@ package org.metricshub.extension.winrm;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.TransportProtocols;
+import org.metricshub.extension.win.IWinConfiguration;
+import org.metricshub.extension.win.WinFileOperations;
+import org.metricshub.winrm.AuthScheme;
 import org.metricshub.winrm.WinRMClient;
 import org.metricshub.winrm.exceptions.WinRMFaultException;
 import org.metricshub.winrm.exceptions.WindowsRemoteException;
@@ -111,5 +115,45 @@ class WinRmRequestExecutorTest {
 		) {
 			assertEquals("host", client.hostname());
 		}
+
+		// Basic over HTTPS, as the library requires it
+		try (
+			WinRMClient client = WinRmRequestExecutor.newClient(
+				"host",
+				WinRmConfiguration.builder()
+					.username("user")
+					.password("pass".toCharArray())
+					.protocol(TransportProtocols.HTTPS)
+					.authentications(List.of(AuthenticationEnum.BASIC))
+					.timeout(30L)
+					.build()
+			)
+		) {
+			assertEquals("host", client.hostname());
+		}
+	}
+
+	@Test
+	void testToAuthScheme() {
+		assertEquals(AuthScheme.NTLM, WinRmRequestExecutor.toAuthScheme(AuthenticationEnum.NTLM));
+		assertEquals(AuthScheme.KERBEROS, WinRmRequestExecutor.toAuthScheme(AuthenticationEnum.KERBEROS));
+		// Basic used to be silently downgraded to NTLM
+		assertEquals(AuthScheme.BASIC, WinRmRequestExecutor.toAuthScheme(AuthenticationEnum.BASIC));
+	}
+
+	@Test
+	void testOpenFileOperations() throws Exception {
+		final WinRmRequestExecutor winRmRequestExecutor = new WinRmRequestExecutor();
+		final WinRmConfiguration configuration = WinRmConfiguration.builder()
+			.username("user")
+			.password("pass".toCharArray())
+			.timeout(30L)
+			.build();
+		// Building the client connects nothing: the native file operations can be opened and closed offline
+		try (WinFileOperations fileOperations = winRmRequestExecutor.openFileOperations("host", configuration).get()) {
+			assertTrue(fileOperations instanceof WinRmFileOperations);
+		}
+		// Any other Windows configuration falls back to the script-based file operations
+		assertTrue(winRmRequestExecutor.openFileOperations("host", mock(IWinConfiguration.class)).isEmpty());
 	}
 }
