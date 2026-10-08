@@ -78,6 +78,26 @@ jobs:
         distribution: temurin
         cache: maven
 
+    # Keep publishing independent of the Maven version in the runner image.
+    - name: Set up Maven 3.9.16
+      shell: bash
+      run: |
+        archive="$RUNNER_TEMP/apache-maven-3.9.16-bin.tar.gz"
+        curl --fail --silent --show-error --location --retry 3 \
+          https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz \
+          --output "$archive"
+        echo "831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6  $archive" | sha512sum --check
+        tar -xzf "$archive" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+        echo "MAVEN_HOME=$RUNNER_TEMP/apache-maven-3.9.16" >> "$GITHUB_ENV"
+
+    - name: Verify Maven version
+      shell: bash
+      run: |
+        maven_version="$(mvn --version --batch-mode -Dstyle.color=never)"
+        printf '%s\n' "$maven_version"
+        grep -Eq '^Apache Maven 3\.9\.16([[:space:]]|$)' <<< "$maven_version"
+
     - name: Set up Maven settings.xml
       uses: s4u/maven-settings-action@v4.0.0
       with:
