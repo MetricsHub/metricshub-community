@@ -54,6 +54,7 @@ import org.metricshub.engine.strategy.utils.OsCommandHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
+import org.metricshub.extension.win.WinFileOperations;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -109,9 +110,10 @@ public class FileSourceProcessor {
 		}
 
 		// Depending on whether the host is localhost or remote, create file operations
-		final FileOperations fileOperations = isLocalhost
-			? createLocalFileOperations(hostname)
+		final WinFileOperations remoteFileOperations = isLocalhost
+			? null
 			: createRemoteFileOperations(hostname, telemetryManager);
+		final FileOperations fileOperations = isLocalhost ? createLocalFileOperations(hostname) : remoteFileOperations;
 
 		if (fileOperations == null) {
 			log.warn("Hostname {} - Cannot process files: file operations unavailable. Returning an empty table.", hostname);
@@ -126,7 +128,7 @@ public class FileSourceProcessor {
 			if (isLocalhost) {
 				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, paths, DeviceKind.WINDOWS));
 			} else {
-				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, fileSource, telemetryManager));
+				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, paths, remoteFileOperations));
 			}
 
 			if (sourceResolvedPaths.isEmpty()) {
@@ -334,16 +336,16 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Creates a {@link FileOperations} implementation for remote file access on Windows
-	 * using WMI or WinRM. Uses the configured {@link IWinRequestExecutor} to run
-	 * PowerShell commands for file size, content, and offset-based reads.
+	 * Creates the {@link WinFileOperations} for remote file access on Windows: the protocol's
+	 * native file access when the {@link IWinRequestExecutor} offers one (WinRM), otherwise
+	 * PowerShell scripts run as remote commands ({@link #createScriptFileOperations}).
 	 *
 	 * @param hostname the hostname (for logging and context)
 	 * @param telemetryManager the telemetry manager providing Win (WMI/WinRM) configuration
-	 * @return a FileOperations implementation for remote Windows file access, or null if
-	 *         no WMI/WinRM configuration is available for this host
+	 * @return the remote Windows file operations, or null if no WMI/WinRM configuration is
+	 *         available for this host
 	 */
-	private FileOperations createRemoteFileOperations(final String hostname, final TelemetryManager telemetryManager) {
+	private WinFileOperations createRemoteFileOperations(final String hostname, final TelemetryManager telemetryManager) {
 		// Find the configured protocol (WinRM or WMI)
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
@@ -355,7 +357,40 @@ public class FileSourceProcessor {
 			return null;
 		}
 
-		return new FileOperations() {
+		return winRequestExecutor
+			.openFileOperations(hostname, winConfiguration)
+			.orElseGet(() -> createScriptFileOperations(hostname, winConfiguration));
+	}
+
+	/**
+	 * Creates the script-based {@link WinFileOperations}: every operation runs a PowerShell command
+	 * on the host through {@link IWinRequestExecutor#executeWinRemoteCommand}, the reading scripts
+	 * being uploaded as embedded files and their output base64-encoded.
+	 *
+	 * @param hostname         the hostname (for logging and context)
+	 * @param winConfiguration the Win (WMI/WinRM) configuration
+	 * @return the script-based remote Windows file operations
+	 */
+	WinFileOperations createScriptFileOperations(final String hostname, final IWinConfiguration winConfiguration) {
+		return new WinFileOperations() {
+			@Override
+			public Set<String> resolve(final PathPattern pattern) throws ClientException {
+				final String result = winRequestExecutor.executeWinRemoteCommand(
+					hostname,
+					winConfiguration,
+					buildResolveCommand(pattern),
+					new ArrayList<>()
+				);
+
+				// Split by line breaks, validate each line as absolute path, keep only valid paths
+				return FileHelper.parseResolvedPathsFromCommandResult(
+					result,
+					DeviceKind.WINDOWS,
+					hostname,
+					pattern.fullPattern()
+				);
+			}
+
 			@Override
 			public String readFromOffset(String path, Long offset, Integer length) throws IOException {
 				File tempScript = null;
@@ -471,33 +506,20 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Resolves file path patterns on a remote Windows host over WMI or WinRM by running PowerShell
-	 * ({@link #RESOLVE_WINDOWS_FILES_COMMAND}) for each configured pattern.
+	 * Resolves file path patterns on a remote Windows host through the given file operations,
+	 * one pattern at a time; an invalid pattern or a failed resolution is logged and skipped.
 	 *
-	 * @param hostname          target host (for logging and remote command execution)
-	 * @param fileSource        file source whose {@link FileSource#getPaths()} entries are resolved
-	 * @param telemetryManager  used with {@link #configurationRetriever} to obtain Win (WMI/WinRM) configuration
-	 * @return absolute paths validated for Windows; empty if Win is not configured, patterns are empty, or resolution fails
+	 * @param hostname       target host (for logging)
+	 * @param rawPaths       the file source's path patterns
+	 * @param fileOperations the remote Windows file operations (see {@link #createRemoteFileOperations})
+	 * @return absolute paths of the matching files; empty if patterns are empty or every resolution fails
 	 */
 	Set<String> resolveRemoteFiles(
 		final String hostname,
-		final FileSource fileSource,
-		final TelemetryManager telemetryManager
+		final Set<String> rawPaths,
+		final WinFileOperations fileOperations
 	) {
 		final Set<String> absolutePaths = new HashSet<>();
-
-		// Find the configured protocol (WinRM or WMI)
-		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
-
-		if (winConfiguration == null) {
-			log.debug(
-				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Cannot process remote files.",
-				hostname
-			);
-			return absolutePaths;
-		}
-
-		final Set<String> rawPaths = fileSource.getPaths();
 
 		if (rawPaths == null || rawPaths.isEmpty()) {
 			return absolutePaths;
@@ -510,22 +532,8 @@ public class FileSourceProcessor {
 				continue;
 			}
 
-			// Build the PowerShell command to find matching files
-			final String command = buildResolveCommand(pattern);
-
 			try {
-				// Execute SSH command to find matching files on remote host
-				final String result = winRequestExecutor.executeWinRemoteCommand(
-					hostname,
-					winConfiguration,
-					command,
-					new ArrayList<>()
-				);
-
-				// Split by line breaks, validate each line as absolute path, add only valid paths
-				absolutePaths.addAll(
-					FileHelper.parseResolvedPathsFromCommandResult(result, DeviceKind.WINDOWS, hostname, path)
-				);
+				absolutePaths.addAll(fileOperations.resolve(pattern));
 			} catch (ClientException e) {
 				log.info("Hostname {} - Error occurred when resolving path: {}. Message: {}", hostname, path, e.getMessage());
 				log.debug("Hostname {} - Exception occurred when resolving path {}: {}", hostname, path, e);

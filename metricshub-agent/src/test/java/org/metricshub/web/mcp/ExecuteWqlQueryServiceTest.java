@@ -8,6 +8,7 @@ import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WQL_NAMESPAC
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -177,6 +178,10 @@ class ExecuteWqlQueryServiceTest {
 				isNull()
 			)
 		).thenReturn(List.of(List.of("Value1", "Value2")));
+		// The text rendering is the executor interface's default method: run it on the mock
+		doCallRealMethod()
+			.when(wmiRequestExecutorMock)
+			.executeWqlQuery(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE));
 
 		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT)
 			.getHosts()
@@ -222,6 +227,9 @@ class ExecuteWqlQueryServiceTest {
 				isNull()
 			)
 		).thenThrow(new RuntimeException("An error has occurred"));
+		doCallRealMethod()
+			.when(wmiRequestExecutorMock)
+			.executeWqlQuery(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE));
 
 		// Call the execute query method
 		QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT).getHosts().get(0).getResponse();

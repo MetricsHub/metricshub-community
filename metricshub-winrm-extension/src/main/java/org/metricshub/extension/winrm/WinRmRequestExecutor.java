@@ -23,6 +23,8 @@ package org.metricshub.extension.winrm;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -30,25 +32,33 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.FileHelper;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.TransportProtocols;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
+import org.metricshub.extension.win.WinFileOperations;
 import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.winrm.AuthScheme;
+import org.metricshub.winrm.CommandRequest;
 import org.metricshub.winrm.CommandResult;
+import org.metricshub.winrm.RemoteFileInfo;
 import org.metricshub.winrm.WinRMClient;
 import org.metricshub.winrm.WinRMHttpProtocolEnum;
 import org.metricshub.winrm.WqlRequest;
 import org.metricshub.winrm.WqlResult;
 import org.metricshub.winrm.WqlRow;
+import org.metricshub.winrm.exceptions.WinRMClientException;
 import org.metricshub.winrm.exceptions.WinRMFaultException;
 import org.metricshub.winrm.exceptions.WindowsRemoteException;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
@@ -267,12 +277,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		final List<AuthenticationEnum> authentications = winRmConfiguration.getAuthentications();
 		if (authentications != null && !authentications.isEmpty()) {
 			builder.authentication(
-				authentications
-					.stream()
-					.map(authentication ->
-						AuthenticationEnum.KERBEROS.equals(authentication) ? AuthScheme.KERBEROS : AuthScheme.NTLM
-					)
-					.toArray(AuthScheme[]::new)
+				authentications.stream().map(WinRmRequestExecutor::toAuthScheme).toArray(AuthScheme[]::new)
 			);
 		}
 
@@ -280,7 +285,26 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			builder.trustAllCertificates();
 		}
 
+		// A round trip is retried only when the connection could not be established and
+		// authenticated (TCP connect, DNS, TLS handshake), so a command never runs twice, and a
+		// transient network failure no longer costs a whole poll.
+		builder.retries(1, Duration.ofSeconds(5));
+
 		return builder.build();
+	}
+
+	/**
+	 * Map a configured authentication scheme to the winrm-java scheme.
+	 *
+	 * @param authentication the configured scheme
+	 * @return the winrm-java scheme
+	 */
+	static AuthScheme toAuthScheme(final AuthenticationEnum authentication) {
+		return switch (authentication) {
+			case KERBEROS -> AuthScheme.KERBEROS;
+			case BASIC -> AuthScheme.BASIC;
+			default -> AuthScheme.NTLM;
+		};
 	}
 
 	/**
@@ -413,18 +437,20 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		List<String> embeddedFiles
 	) throws ClientException {
 		if (winConfiguration instanceof WinRmConfiguration winRmConfiguration) {
-			return executeRemoteWinRmCommand(hostname, winRmConfiguration, command);
+			return executeRemoteWinRmCommand(hostname, winRmConfiguration, command, embeddedFiles);
 		}
 
 		throw new IllegalStateException("Windows commands can be executed only in WMI and WinRM protocols.");
 	}
 
 	/**
-	 * Execute a WinRM remote command
+	 * Execute a WinRM remote command. The embedded files are copied to the host through the WinRM
+	 * connection first, and their local paths in the command line are rewritten to the remote copies.
 	 *
 	 * @param hostname           The hostname of the device where the WinRM service is running (<code>null</code> for localhost)
 	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout)
 	 * @param command            The command to execute
+	 * @param embeddedFiles      The local files referenced by the command, to copy to the host; may be null or empty
 	 * @return The result of the query
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -432,7 +458,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	public String executeRemoteWinRmCommand(
 		@SpanAttribute("host.hostname") @NonNull final String hostname,
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
-		@SpanAttribute("winrm.command") @NonNull final String command
+		@SpanAttribute("winrm.command") @NonNull final String command,
+		@SpanAttribute("winrm.embedded_files") final List<String> embeddedFiles
 	) throws ClientException {
 		final String username = winRmConfiguration.getUsername();
 		final WinRMHttpProtocolEnum httpProtocol = TransportProtocols.HTTP.equals(winRmConfiguration.getProtocol())
@@ -460,9 +487,13 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		try {
 			final long startTime = System.currentTimeMillis();
 
-			final CommandResult result = withClient(hostname, winRmConfiguration, ClientKind.COMMAND, client ->
-				client.command(command).execute()
-			);
+			final CommandResult result = withClient(hostname, winRmConfiguration, ClientKind.COMMAND, client -> {
+				CommandRequest request = client.command(command);
+				if (embeddedFiles != null && !embeddedFiles.isEmpty()) {
+					request = request.upload(embeddedFiles.stream().map(Path::of).toArray(Path[]::new));
+				}
+				return request.execute();
+			});
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -493,6 +524,76 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		} catch (Exception e) {
 			log.error("Hostname {} - WinRM remote command failed. Errors:\n{}\n", hostname, StringHelper.getStackMessages(e));
 			throw new ClientException(String.format("WinRM remote command failed on %s.", hostname), e);
+		}
+	}
+
+	/**
+	 * Native remote file access through winrm-java: one authenticated connection serves every
+	 * size, read and listing of a file source poll.
+	 */
+	@Override
+	public Optional<WinFileOperations> openFileOperations(
+		final String hostname,
+		final IWinConfiguration winConfiguration
+	) {
+		if (winConfiguration instanceof WinRmConfiguration winRmConfiguration) {
+			return Optional.of(new WinRmFileOperations(newClient(hostname, winRmConfiguration), hostname));
+		}
+		return Optional.empty();
+	}
+
+	/**
+	 * Read a whole file on the remote host as UTF-8 text (capped at winrm-java's default of 64 MiB).
+	 *
+	 * @param hostname           The hostname of the device where the WinRM service is running
+	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout)
+	 * @param path               The absolute path of the file on the host
+	 * @return The content of the file
+	 * @throws ClientException when the file cannot be read (details in cause)
+	 */
+	@WithSpan("Read File WinRM")
+	public String readRemoteFile(
+		@SpanAttribute("host.hostname") @NonNull final String hostname,
+		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
+		@SpanAttribute("winrm.path") @NonNull final String path
+	) throws ClientException {
+		try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
+			return client.file(path).readText(StandardCharsets.UTF_8);
+		} catch (WinRMClientException e) {
+			log.error("Hostname {} - WinRM file read failed. Errors:\n{}\n", hostname, StringHelper.getStackMessages(e));
+			throw new ClientException(String.format("WinRM file read of %s failed on %s.", path, hostname), e);
+		}
+	}
+
+	/**
+	 * List the files matching a path pattern on the remote host, with the syntax of a file
+	 * source's {@code paths} ({@code *} and {@code ?} wildcards in any segment, a trailing
+	 * backslash for all the files of a directory), as a text table.
+	 *
+	 * @param hostname           The hostname of the device where the WinRM service is running
+	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout)
+	 * @param pathPattern        The path pattern, e.g. {@code C:\logs\*.log}
+	 * @return A text table with the path, size and last modification time of each matching file
+	 * @throws ClientException when the pattern is invalid or the listing fails (details in cause)
+	 */
+	@WithSpan("List Files WinRM")
+	public String listRemoteFiles(
+		@SpanAttribute("host.hostname") @NonNull final String hostname,
+		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
+		@SpanAttribute("winrm.path_pattern") @NonNull final String pathPattern
+	) throws ClientException {
+		final PathPattern pattern = FileHelper.parsePathPattern(pathPattern, DeviceKind.WINDOWS);
+		if (pattern == null) {
+			throw new ClientException(String.format("Invalid Windows file path pattern: %s", pathPattern));
+		}
+		try (
+			WinRmFileOperations fileOperations = new WinRmFileOperations(newClient(hostname, winRmConfiguration), hostname)
+		) {
+			final List<List<String>> rows = new ArrayList<>();
+			for (final RemoteFileInfo file : fileOperations.list(pattern)) {
+				rows.add(List.of(file.path(), String.valueOf(file.size()), file.lastModified().toString()));
+			}
+			return TextTableHelper.generateTextTable(new String[] { "Path", "Size", "LastModified" }, rows);
 		}
 	}
 }

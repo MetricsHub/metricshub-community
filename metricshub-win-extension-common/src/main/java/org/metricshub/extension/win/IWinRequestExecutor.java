@@ -21,9 +21,14 @@ package org.metricshub.extension.win;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WMI_DEFAULT_NAMESPACE;
+
 import java.util.List;
+import java.util.Optional;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.common.helpers.TextTableHelper;
 
 /**
  * Interface defining the contract for executing Windows Management Instrumentation (WMI) requests
@@ -89,6 +94,53 @@ public interface IWinRequestExecutor {
 		String command,
 		List<String> embeddedFiles
 	) throws ClientException;
+
+	/**
+	 * Execute a WQL query and render its result as a text table, for the CLI and the MCP tools:
+	 * the columns are the properties the query selects, or no header when it selects {@code *}.
+	 *
+	 * @param hostname         The hostname of the device where the WMI service is running.
+	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
+	 * @param query            The WQL to execute.
+	 * @param namespace        The WMI namespace where all the classes reside; {@code null} for {@code root\cimv2}.
+	 * @return The result as a text table.
+	 * @throws ClientException when anything goes wrong (details in cause).
+	 */
+	default String executeWqlQuery(
+		final String hostname,
+		@NonNull final IWinConfiguration winConfiguration,
+		@NonNull final String query,
+		final String namespace
+	) throws ClientException {
+		final List<List<String>> result = executeWmi(
+			hostname,
+			winConfiguration,
+			query,
+			namespace == null ? WMI_DEFAULT_NAMESPACE : namespace,
+			null
+		);
+		final String[] columns = StringHelper.extractColumns(query);
+		return columns.length == 1 && "*".equals(columns[0])
+			? TextTableHelper.generateTextTable(result)
+			: TextTableHelper.generateTextTable(columns, result);
+	}
+
+	/**
+	 * Open protocol-native access to the files of a remote Windows host, for a file source poll.
+	 * The default has none: the file source then reads files by running PowerShell scripts as
+	 * remote commands through {@link #executeWinRemoteCommand(String, IWinConfiguration, String, List)}.
+	 *
+	 * @param hostname         The hostname of the device.
+	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
+	 * @return The file operations, to be closed by the caller once the poll is over, or empty when
+	 *         this protocol has no native file access.
+	 */
+	default Optional<WinFileOperations> openFileOperations(
+		final String hostname,
+		final IWinConfiguration winConfiguration
+	) {
+		return Optional.empty();
+	}
 
 	/**
 	 * Whether this error message is an acceptable WMI COM error.

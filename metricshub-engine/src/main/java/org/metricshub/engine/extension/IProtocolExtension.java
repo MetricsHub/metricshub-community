@@ -173,6 +173,12 @@ public interface IProtocolExtension {
 
 	/**
 	 * Executes a query based on the provided configuration and query parameters.
+	 * <p>
+	 * The Windows extensions (WMI, WinRM) read {@code query} and {@code queryType} from the node:
+	 * {@code wql} for a WQL query and {@code command} for a remote command, plus, over WinRM only,
+	 * {@code file} to read a remote file and {@code ls} to list the files matching a file source
+	 * path pattern. {@code wmi} and {@code winremote} are the deprecated former names of
+	 * {@code wql} and {@code command}: still accepted, to be removed in a later release.
 	 *
 	 * @param configuration the IConfiguration object containing the configuration details.
 	 * @param queryNode     a JsonNode representing the query to be executed.

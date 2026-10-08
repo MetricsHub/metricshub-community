@@ -84,8 +84,13 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 
 		winremotecli dev-01 --winrm --winrm-username username --winrm-password password --command "systeminfo"
 
+		winremotecli dev-01 --winrm --winrm-username username --winrm-password password --read-file "C:\\logs\\app.log"
+
+		winremotecli dev-01 --winrm --winrm-username username --winrm-password password --list-files "C:\\logs\\*.log"
+
 		Note: If --wmi-password or --winrm-password is not provided, you will be prompted interactively.
 		Either --wmi or --winrm must be specified (but not both).
+		Exactly one of --command, --read-file or --list-files must be specified; --read-file and --list-files require --winrm.
 		""";
 
 	@Parameters(index = "0", paramLabel = "HOSTNAME", description = "Hostname or IP address of the host to monitor")
@@ -102,7 +107,6 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 
 	@Option(
 		names = "--command",
-		required = true,
 		order = 1,
 		paramLabel = "COMMAND",
 		description = "Windows OS command (CMD command) to execute"
@@ -110,14 +114,30 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 	private String command;
 
 	@Option(
-		names = { "-h", "-?", "--help" },
+		names = "--read-file",
 		order = 2,
+		paramLabel = "PATH",
+		description = "Reads a file on the remote host through WinRM, e.g. C:\\logs\\app.log (WinRM only)"
+	)
+	private String readFile;
+
+	@Option(
+		names = "--list-files",
+		order = 3,
+		paramLabel = "PATTERN",
+		description = "Lists the files matching a file source path pattern, e.g. C:\\logs\\*.log (WinRM only)"
+	)
+	private String listFiles;
+
+	@Option(
+		names = { "-h", "-?", "--help" },
+		order = 4,
 		usageHelp = true,
 		description = "Shows this help message and exits"
 	)
 	boolean usageHelpRequested;
 
-	@Option(names = "-v", order = 3, description = "Verbose mode (repeat the option to increase verbosity)")
+	@Option(names = "-v", order = 5, description = "Verbose mode (repeat the option to increase verbosity)")
 	boolean[] verbose;
 
 	PrintWriter printWriter;
@@ -125,8 +145,16 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 	@Override
 	public JsonNode getQuery() {
 		final ObjectNode commandNode = JsonNodeFactory.instance.objectNode();
-		commandNode.set("query", new TextNode(command));
-		commandNode.set("queryType", new TextNode("winremote"));
+		if (readFile != null) {
+			commandNode.set("query", new TextNode(readFile));
+			commandNode.set("queryType", new TextNode("file"));
+		} else if (listFiles != null) {
+			commandNode.set("query", new TextNode(listFiles));
+			commandNode.set("queryType", new TextNode("ls"));
+		} else {
+			commandNode.set("query", new TextNode(command));
+			commandNode.set("queryType", new TextNode("command"));
+		}
 		return commandNode;
 	}
 
@@ -146,8 +174,19 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 			tryInteractivePasswords(System.console()::readPassword);
 		}
 
-		if (command.isBlank()) {
+		if (Stream.of(command, readFile, listFiles).filter(Objects::nonNull).count() != 1) {
+			throw new ParameterException(
+				spec.commandLine(),
+				"Exactly one of --command, --read-file or --list-files must be specified."
+			);
+		}
+
+		if (command != null && command.isBlank()) {
 			throw new ParameterException(spec.commandLine(), "Windows OS command must not be empty nor blank.");
+		}
+
+		if ((readFile != null && readFile.isBlank()) || (listFiles != null && listFiles.isBlank())) {
+			throw new ParameterException(spec.commandLine(), "The file path must not be empty nor blank.");
 		}
 
 		// No protocol at all?
@@ -159,6 +198,10 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 
 		if (wmiConfigCli != null && winRmConfigCli != null) {
 			throw new ParameterException(spec.commandLine(), "Only one protocol should be specified: --winrm or --wmi.");
+		}
+
+		if (command == null && winRmConfigCli == null) {
+			throw new ParameterException(spec.commandLine(), "--read-file and --list-files require --winrm.");
 		}
 	}
 
@@ -292,9 +335,25 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 	 * Prints command execution details.
 	 */
 	void displayCommand(final String protocol) {
-		printWriter.println(Ansi.ansi().a("Hostname ").bold().a(hostname).a(" - Executing Windows remote OS command."));
+		final String action;
+		final String label;
+		final String value;
+		if (readFile != null) {
+			action = "Reading remote file.";
+			label = "File: ";
+			value = readFile;
+		} else if (listFiles != null) {
+			action = "Listing remote files.";
+			label = "Pattern: ";
+			value = listFiles;
+		} else {
+			action = "Executing Windows remote OS command.";
+			label = "Command: ";
+			value = command;
+		}
+		printWriter.println(Ansi.ansi().a("Hostname ").bold().a(hostname).a(" - " + action));
 		printWriter.println(Ansi.ansi().a("Protocol: ").fgBrightBlack().a(protocol).reset().toString());
-		printWriter.println(Ansi.ansi().a("Command: ").fgBrightBlack().a(command).reset().toString());
+		printWriter.println(Ansi.ansi().a(label).fgBrightBlack().a(value).reset().toString());
 		printWriter.flush();
 	}
 

@@ -117,4 +117,30 @@ class WinRmConfigurationTest {
 		assertTrue(winRmConfiguration.isCorrespondingProtocol("WINRM"));
 		assertTrue(winRmConfiguration.isCorrespondingProtocol("WinRm"));
 	}
+
+	@Test
+	void testValidateConfigurationRejectsBasicOverHttp() {
+		// Basic over plain HTTP would send the credentials in clear text
+		final WinRmConfiguration overHttp = WinRmConfiguration.builder()
+			.username("user")
+			.password("pass".toCharArray())
+			.protocol(TransportProtocols.HTTP)
+			.authentications(List.of(AuthenticationEnum.NTLM, AuthenticationEnum.BASIC))
+			.build();
+		final InvalidConfigurationException exception = assertThrows(InvalidConfigurationException.class, () ->
+			overHttp.validateConfiguration("resourceKey")
+		);
+		assertTrue(exception.getMessage().contains("Basic authentication"));
+
+		// The same list over HTTPS is accepted
+		assertDoesNotThrow(() ->
+			WinRmConfiguration.builder()
+				.username("user")
+				.password("pass".toCharArray())
+				.protocol(TransportProtocols.HTTPS)
+				.authentications(List.of(AuthenticationEnum.NTLM, AuthenticationEnum.BASIC))
+				.build()
+				.validateConfiguration("resourceKey")
+		);
+	}
 }
