@@ -307,6 +307,14 @@ public class WinRmExtension implements IProtocolExtension {
 		}
 	}
 
+	/**
+	 * Closes the pooled WinRM clients, deleting their remote shells.
+	 */
+	@Override
+	public void onShutdown() {
+		winRmRequestExecutor.close();
+	}
+
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String query = queryNode.get("query").asText();

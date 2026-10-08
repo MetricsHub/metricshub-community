@@ -21,6 +21,7 @@ package org.metricshub.cli.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.time.Duration;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.metricshub.agent.helper.ConfigHelper;
@@ -30,6 +31,26 @@ import org.metricshub.engine.extension.ExtensionManager;
 public class CliExtensionManager {
 
 	private static final ExtensionManager EXTENSION_MANAGER = ConfigHelper.loadExtensionManager();
+
+	/**
+	 * How long the CLI exit waits for the extensions to release their resources.
+	 */
+	private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
+
+	static {
+		// The CLIs end with System.exit(): release what the extensions keep open between operations
+		// (e.g. pooled WinRM clients and their remote shells) instead of leaving it on the hosts. Bounded,
+		// so that a host that stopped answering cannot hold the exit (or a Ctrl+C) for minutes.
+		Runtime.getRuntime().addShutdownHook(
+			new Thread(() -> {
+				try {
+					Thread.startVirtualThread(EXTENSION_MANAGER::close).join(CLOSE_TIMEOUT);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			})
+		);
+	}
 
 	/**
 	 * Get the extension manager singleton instance.
