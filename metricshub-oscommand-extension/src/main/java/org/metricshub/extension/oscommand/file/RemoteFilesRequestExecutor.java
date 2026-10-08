@@ -44,12 +44,16 @@ import org.metricshub.ssh.SshClient.FileEntry;
 /**
  * Remote file access over the SFTP subsystem of an SSH connection: sizes, byte ranges and whole files are read through
  * ssh-java, and path patterns are resolved with SFTP directory listings, without running any command on the host.
- * Windows paths ({@code C:\logs\app.log}) are translated to the form of the OpenSSH SFTP subsystem
- * ({@code /C:/logs/app.log}). One instance serves a whole file source poll; {@link #close()} releases the connection.
+ * Windows paths ({@code C:\logs\app.log}, {@code \\server\share\app.log}) are translated to the form of the OpenSSH
+ * SFTP subsystem ({@code /C:/logs/app.log}, {@code //server/share/app.log}). One instance serves a whole file source
+ * poll; {@link #close()} releases the connection.
  */
 @Slf4j
 @RequiredArgsConstructor
 public class RemoteFilesRequestExecutor implements FileOperations {
+
+	// A UNC path in the form of the Windows OpenSSH SFTP subsystem: //server/share
+	private static final String UNC_SFTP_PREFIX = "//";
 
 	@NonNull
 	private final SshClient sshClient;
@@ -206,11 +210,16 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	/**
 	 * Converts an absolute path of the remote host into the form of its SFTP subsystem.
 	 *
-	 * @param path the absolute path, {@code C:\logs\app.log} on Windows
-	 * @return the SFTP path, {@code /C:/logs/app.log} on Windows; the path itself otherwise
+	 * @param path the absolute path, {@code C:\logs\app.log} or {@code \\server\share\app.log} on Windows
+	 * @return the SFTP path, {@code /C:/logs/app.log} or {@code //server/share/app.log} on Windows; the path itself
+	 * otherwise
 	 */
 	String toSftpPath(final String path) {
-		return isWindows() ? FileHelper.SLASH + path.replace(FileHelper.BACKSLASH, FileHelper.SLASH) : path;
+		if (!isWindows()) {
+			return path;
+		}
+		final String sftpPath = path.replace(FileHelper.BACKSLASH, FileHelper.SLASH);
+		return sftpPath.startsWith(UNC_SFTP_PREFIX) ? sftpPath : FileHelper.SLASH + sftpPath;
 	}
 
 	/**
@@ -221,7 +230,11 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @return the absolute path of the remote host
 	 */
 	String fromSftpPath(final String sftpPath) {
-		return isWindows() ? sftpPath.substring(1).replace(FileHelper.SLASH, FileHelper.BACKSLASH) : sftpPath;
+		if (!isWindows()) {
+			return sftpPath;
+		}
+		final String path = sftpPath.startsWith(UNC_SFTP_PREFIX) ? sftpPath : sftpPath.substring(1);
+		return path.replace(FileHelper.SLASH, FileHelper.BACKSLASH);
 	}
 
 	@Override

@@ -293,15 +293,24 @@ class FileSourceProcessorTest {
 		when(sshClient.listFiles(eq("/D:/Autosys_waae/AutoUser1/out"), anyString(), eq(false))).thenReturn(
 			List.of(entry("/D:/Autosys_waae/AutoUser1/out/event_demon_PE2"))
 		);
+		// A UNC path keeps its double slash: ///server/share is rejected by the Windows OpenSSH SFTP subsystem
+		when(sshClient.listFiles(eq("//server/share/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry("//server/share/logs/unc.log"))
+		);
 
 		assertEquals(
-			Set.of("C:\\Program Files\\MetricsHub\\logs\\test.log", "D:\\Autosys_waae\\AutoUser1\\out\\event_demon_PE2"),
+			Set.of(
+				"C:\\Program Files\\MetricsHub\\logs\\test.log",
+				"D:\\Autosys_waae\\AutoUser1\\out\\event_demon_PE2",
+				"\\\\server\\share\\logs\\unc.log"
+			),
 			resolve(
 				DeviceKind.WINDOWS,
 				WINDOWS_ABSOLUTE_PATH,
 				"D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2",
 				"C:\\*.log",
-				"E:\\data\\*\\x.log"
+				"E:\\data\\*\\x.log",
+				"\\\\server\\share\\logs\\*.log"
 			)
 		);
 
