@@ -23,29 +23,44 @@ package org.metricshub.extension.oscommand.file;
 
 import java.io.File;
 import java.io.IOException;
-import lombok.Data;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.FileHelper;
+import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.extension.oscommand.OsCommandRequestExecutor;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.ssh.SshClient;
+import org.metricshub.ssh.SshClient.FileEntry;
 
 /**
- * Executes remote file operations via SSH connection.
- * Handles SSH client connection, authentication, and file reading operations.
- * Manages the lifecycle of SSH client resources.
+ * Remote file access over the SFTP subsystem of an SSH connection: sizes, byte ranges and whole files are read through
+ * ssh-java, and path patterns are resolved with SFTP directory listings, without running any command on the host.
+ * Windows paths ({@code C:\logs\app.log}) are translated to the form of the OpenSSH SFTP subsystem
+ * ({@code /C:/logs/app.log}). One instance serves a whole file source poll; {@link #close()} releases the connection.
  */
-@Data
 @Slf4j
 @RequiredArgsConstructor
-public class RemoteFilesRequestExecutor {
+public class RemoteFilesRequestExecutor implements FileOperations {
 
 	@NonNull
-	SshClient sshClient;
+	private final SshClient sshClient;
 
 	@NonNull
-	SshConfiguration sshConfiguration;
+	private final SshConfiguration sshConfiguration;
+
+	private final DeviceKind deviceKind;
+
+	// Files listed by resolve(), by absolute path: their size spares an SFTP stat in getFileSize()
+	private final Map<String, FileEntry> listedFiles = new HashMap<>();
 
 	/**
 	 * Establishes SSH connection to the remote host.
@@ -91,36 +106,152 @@ public class RemoteFilesRequestExecutor {
 	}
 
 	/**
-	 * Retrieves the size of a remote file in bytes.
+	 * Resolves a path pattern into the absolute paths of the regular files matching it, with SFTP listings: each
+	 * wildcard directory segment lists the subdirectories of the directories matched so far, and the last segment lists
+	 * their files. Symbolic links are followed. {@code *} and {@code ?} match within a single segment; on a Unix host,
+	 * names are case-sensitive and a wildcard directory segment does not match dot-prefixed directories, like a shell
+	 * glob. A matched directory that cannot be listed is skipped.
 	 *
-	 * @param path The absolute path to the remote file
-	 * @return The file size in bytes
-	 * @throws Exception If an error occurs during file size retrieval
+	 * @param pattern the parsed path pattern
+	 * @return the absolute paths of the matching files, empty when nothing matches
+	 * @throws IOException when the root of the pattern cannot be listed
 	 */
-	public Long getRemoteFileSize(final String path) throws Exception {
-		return Long.valueOf(sshClient.fileSize(path));
+	public Set<String> resolve(final PathPattern pattern) throws IOException {
+		final Set<String> resolved = new HashSet<>();
+		collectMatchingFiles(toSftpPath(pattern.root()), pattern.segments(), 0, resolved);
+		return resolved;
 	}
 
 	/**
-	 * Reads content from a remote file starting at a specified offset.
-	 * If offset and length are null, reads the entire file content.
+	 * Matches one segment of a path pattern in {@code directory}, recursing into the matching directories and
+	 * collecting the matching files on the last segment.
 	 *
-	 * @param path The absolute path to the remote file
-	 * @param offset The starting position (in bytes) to read from, or null to read from beginning
-	 * @param length The maximum number of bytes to read, or null to read until end of file
-	 * @return The content read from the file as a String
-	 * @throws IOException If an error occurs during file reading
+	 * @param directory the SFTP path of the directory to list
+	 * @param segments  all pattern segments
+	 * @param index     index of the segment to match in {@code directory}
+	 * @param resolved  accumulator of the resolved absolute file paths
+	 * @throws IOException when {@code directory} cannot be listed
 	 */
-	public String readRemoteFileOffsetContent(final String path, final Long offset, final Integer length)
-		throws IOException {
-		return sshClient.readFile(path, offset, length);
+	private void collectMatchingFiles(
+		final String directory,
+		final List<String> segments,
+		final int index,
+		final Set<String> resolved
+	) throws IOException {
+		final String segment = segments.get(index);
+
+		if (index == segments.size() - 1) {
+			for (final FileEntry entry : sshClient.listFiles(directory, nameRegex(segment, false), false)) {
+				final String path = fromSftpPath(entry.path);
+				listedFiles.put(path, entry);
+				resolved.add(path);
+			}
+			return;
+		}
+
+		// A literal segment needs no listing: a missing directory fails when it is listed itself
+		final List<String> subdirectories = FileHelper.containsWildcard(segment)
+			? sshClient.listSubdirectories(directory, nameRegex(segment, true))
+			: List.of(directory.endsWith(FileHelper.SLASH) ? directory + segment : directory + FileHelper.SLASH + segment);
+
+		for (final String subdirectory : subdirectories) {
+			try {
+				collectMatchingFiles(subdirectory, segments, index + 1, resolved);
+			} catch (IOException e) {
+				// One matched directory cannot be listed: skip it and keep scanning its siblings
+				log.debug(
+					"Hostname {} - Unable to scan directory {}: {}",
+					sshConfiguration.getHostname(),
+					subdirectory,
+					e.getMessage()
+				);
+			}
+		}
 	}
 
 	/**
-	 * Closes the SSH client connection and releases associated resources.
-	 * Should be called when file operations are complete to prevent resource leaks.
+	 * Converts a path segment, where only {@code *} and {@code ?} are wildcards, into the regular expression ssh-java
+	 * matches entry names with ({@code Matcher.find()}, case-insensitive): anchored to the whole name, and
+	 * case-sensitive on a Unix host. On a Unix host, a directory segment that does not start with a dot does not match
+	 * dot-prefixed names, like a shell glob; a file name segment does, like {@code find -name}.
+	 *
+	 * @param segment   the path segment
+	 * @param directory whether the segment designates directories (any segment but the last)
+	 * @return the regular expression
 	 */
-	public void closeSshClient() {
+	String nameRegex(final String segment, final boolean directory) {
+		final boolean windows = isWindows();
+		final StringBuilder regex = new StringBuilder(windows ? "(?siu)\\A" : "(?s-i)\\A");
+		if (directory && !windows && !segment.startsWith(".")) {
+			regex.append("(?!\\.)");
+		}
+		for (final char c : segment.toCharArray()) {
+			switch (c) {
+				case '*' -> regex.append(".*");
+				case '?' -> regex.append('.');
+				default -> regex.append(Pattern.quote(String.valueOf(c)));
+			}
+		}
+		return regex.append("\\z").toString();
+	}
+
+	/**
+	 * @return whether the remote host runs Windows, whose OpenSSH SFTP subsystem designates {@code C:\logs} as
+	 * {@code /C:/logs}
+	 */
+	private boolean isWindows() {
+		return DeviceKind.WINDOWS.equals(deviceKind);
+	}
+
+	/**
+	 * Converts an absolute path of the remote host into the form of its SFTP subsystem.
+	 *
+	 * @param path the absolute path, {@code C:\logs\app.log} on Windows
+	 * @return the SFTP path, {@code /C:/logs/app.log} on Windows; the path itself otherwise
+	 */
+	String toSftpPath(final String path) {
+		return isWindows() ? FileHelper.SLASH + path.replace(FileHelper.BACKSLASH, FileHelper.SLASH) : path;
+	}
+
+	/**
+	 * Converts a path of the SFTP subsystem into the absolute path of the remote host, the reverse of
+	 * {@link #toSftpPath(String)}.
+	 *
+	 * @param sftpPath the SFTP path
+	 * @return the absolute path of the remote host
+	 */
+	String fromSftpPath(final String sftpPath) {
+		return isWindows() ? sftpPath.substring(1).replace(FileHelper.SLASH, FileHelper.BACKSLASH) : sftpPath;
+	}
+
+	@Override
+	public Long getFileSize(final String path) {
+		final FileEntry listed = listedFiles.get(path);
+		if (listed != null) {
+			return listed.size;
+		}
+		try {
+			return sshClient.fileSize(toSftpPath(path));
+		} catch (Exception e) {
+			final String hostname = sshConfiguration.getHostname();
+			log.info("Hostname {} - Unable to get \"{}\" file size: {}", hostname, path, e.getMessage());
+			log.debug("Hostname {} - An error has occurred when reading the file size of {}: {}", hostname, path, e);
+			return null;
+		}
+	}
+
+	@Override
+	public String readFromOffset(final String path, final Long offset, final Integer length) throws IOException {
+		return sshClient.readFile(toSftpPath(path), offset, length);
+	}
+
+	@Override
+	public String readFileContent(final String path) throws IOException {
+		return sshClient.readFile(toSftpPath(path), null, null);
+	}
+
+	@Override
+	public void close() {
 		sshClient.close();
 	}
 }

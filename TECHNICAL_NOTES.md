@@ -4,6 +4,7 @@ Detailed behavior and configuration notes for MetricsHub Community.
 
 - [MCP Server](#mcp-server)
 - [File log capture](#file-log-capture)
+- [File source over SSH](#file-source-over-ssh)
 - [OS Command and SSH health checks](#os-command-and-ssh-health-checks)
 
 ## MCP Server
@@ -32,6 +33,15 @@ When a file source uses wildcards or multiple paths, LOG mode includes an empty
 poll and on subsequent polls with no new content. The first poll initializes the
 cursor without reading existing content. A single literal path retains its
 content-only output format.
+
+## File source over SSH
+
+On a remote host reached over SSH, a file source resolves its `paths` and reads the files through the
+SFTP subsystem of the SSH server (`Subsystem sftp` in `sshd_config`, enabled by default); no command is
+run on the host. `*` and `?` match within a single path segment, symbolic links are followed, and only
+regular files are returned. On Linux and UNIX, names are case-sensitive and a wildcard in a directory
+segment does not match hidden (dot-prefixed) directories, as in a shell glob. On Windows (OpenSSH), names
+are case-insensitive.
 
 ## OS Command and SSH health checks
 

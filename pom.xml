@@ -303,7 +303,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>ssh-java</artifactId>
-				<version>1.0.04</version>
+				<version>1.1.00-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
