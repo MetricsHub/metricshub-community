@@ -170,6 +170,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 				String.valueOf(argMap.get("entryKey")),
 				toAwkListString(argMap.get("properties")),
 				String.valueOf(argMap.get("separator")),
+				false,
 				hostname
 			).strip();
 		} catch (Exception exception) {

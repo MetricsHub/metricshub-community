@@ -63,12 +63,19 @@ public class Json2Csv extends Compute {
 	private String separator;
 
 	/**
+	 * How the JSON document is parsed. Default is {@link ParsingMode#TREE}.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private ParsingMode parsingMode = ParsingMode.TREE;
+
+	/**
 	 * Construct a new instance of Json2Csv.
 	 *
-	 * @param type      The type of the computation task.
-	 * @param entryKey  The entry key for Json2Csv computation.
-	 * @param properties The properties for Json2Csv computation.
-	 * @param separator The separator for Json2Csv computation.
+	 * @param type        The type of the computation task.
+	 * @param entryKey    The entry key for Json2Csv computation.
+	 * @param properties  The properties for Json2Csv computation.
+	 * @param separator   The separator for Json2Csv computation.
+	 * @param parsingMode How the JSON document is parsed; null defaults to {@link ParsingMode#TREE}.
 	 */
 	@Builder
 	@JsonCreator
@@ -76,12 +83,27 @@ public class Json2Csv extends Compute {
 		@JsonProperty("type") String type,
 		@JsonProperty("entryKey") String entryKey,
 		@JsonProperty("properties") String properties,
-		@JsonProperty("separator") String separator
+		@JsonProperty("separator") String separator,
+		@JsonProperty("parsingMode") ParsingMode parsingMode
 	) {
 		super(type);
 		this.entryKey = entryKey == null ? "/" : entryKey;
 		this.properties = properties;
 		this.separator = separator == null ? TABLE_SEP : separator;
+		this.parsingMode = parsingMode == null ? ParsingMode.TREE : parsingMode;
+	}
+
+	/**
+	 * How the JSON document is parsed.
+	 */
+	public enum ParsingMode {
+		/** Loads the whole document as a tree in memory. */
+		TREE,
+		/**
+		 * Reads the document as a stream of events and keeps only one element of the entry key array in memory
+		 * at a time. Use it for large lists. The result is the same as with {@link #TREE}.
+		 */
+		EVENTS
 	}
 
 	@Override
@@ -93,13 +115,20 @@ public class Json2Csv extends Compute {
 		addNonNull(stringJoiner, "- entryKey=", entryKey);
 		addNonNull(stringJoiner, "- properties=", properties);
 		addNonNull(stringJoiner, "- separator=", separator);
+		addNonNull(stringJoiner, "- parsingMode=", parsingMode);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Json2Csv copy() {
-		return Json2Csv.builder().type(type).entryKey(entryKey).properties(properties).separator(separator).build();
+		return Json2Csv.builder()
+			.type(type)
+			.entryKey(entryKey)
+			.properties(properties)
+			.separator(separator)
+			.parsingMode(parsingMode)
+			.build();
 	}
 
 	@Override

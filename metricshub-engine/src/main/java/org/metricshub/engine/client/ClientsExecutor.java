@@ -112,14 +112,27 @@ public class ClientsExecutor {
 	 * @param jsonEntryKey  The JSON entry key.
 	 * @param propertyList  The list of properties.
 	 * @param separator     The separator for CSV.
+	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
 	 * @return The CSV representation of the JSON.
 	 * @throws TimeoutException       If the execution times out.
 	 * @throws ExecutionException     If an execution exception occurs.
 	 * @throws InterruptedException   If the execution is interrupted.
 	 */
-	public String executeJson2Csv(String jsonSource, String jsonEntryKey, List<String> propertyList, String separator)
-		throws InterruptedException, ExecutionException, TimeoutException {
-		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, telemetryManager.getHostname());
+	public String executeJson2Csv(
+		String jsonSource,
+		String jsonEntryKey,
+		List<String> propertyList,
+		String separator,
+		boolean eventParsing
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Csv(
+			jsonSource,
+			jsonEntryKey,
+			propertyList,
+			separator,
+			eventParsing,
+			telemetryManager.getHostname()
+		);
 	}
 
 	/**
@@ -129,6 +142,7 @@ public class ClientsExecutor {
 	 * @param jsonEntryKey  The JSON entry key.
 	 * @param propertyList  The list of properties.
 	 * @param separator     The separator for CSV.
+	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
 	 * @param hostname      The hostname, for logging purpose.
 	 * @return The CSV representation of the JSON.
 	 * @throws TimeoutException       If the execution times out.
@@ -140,6 +154,7 @@ public class ClientsExecutor {
 		String jsonEntryKey,
 		List<String> propertyList,
 		String separator,
+		boolean eventParsing,
 		String hostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() ->
@@ -155,7 +170,7 @@ public class ClientsExecutor {
 
 		final Callable<String> jflatToCSV = () -> {
 			try {
-				JFlat jsonFlat = new JFlat(jsonSource);
+				JFlat jsonFlat = new JFlat(jsonSource, eventParsing);
 
 				jsonFlat.parse();
 
