@@ -149,9 +149,18 @@ jobs:
         git fetch
         git checkout ${{ needs.prepare.outputs.tagName }} 2>/dev/null
 
+    # central-publishing-maven-plugin 0.11.0 stages the artifacts with the maven-compat ArtifactInstaller. With
+    # Maven 3.10, that install also writes maven-metadata-local.xml (group/artifact level), _remote.repositories and
+    # .locks into the staging directory, and Central rejects the bundle ("Bundle has content that does NOT have a
+    # .pom file"). Disable the versions metadata generator and the enhanced local repository manager (a NaN priority
+    # disables a Resolver component), and use in-JVM locks. The bundle then holds only the artifacts, as with Maven 3.9.
+    # Same fix as MetricsHub/workflows#39 (v8); see apache/maven#13388.
     - name: Perform MetricsHub Artifacts release to Maven Central
       run: |
         mvn -B -U -Prelease deploy --file pom.xml \
+        -Daether.priority.VersionsMetadataGeneratorFactory=NaN \
+        -Daether.priority.EnhancedLocalRepositoryManagerFactory=NaN \
+        -Daether.syncContext.named.factory=rwlock-local \
         -Dgpg.passphraseServerId=gpg.passphrase \
         -Darguments=-Dgpg.passphraseServerId=gpg.passphrase
       env:
