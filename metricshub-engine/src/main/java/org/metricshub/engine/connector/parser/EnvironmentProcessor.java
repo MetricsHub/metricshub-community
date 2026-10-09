@@ -38,9 +38,10 @@ import lombok.EqualsAndHashCode;
 public class EnvironmentProcessor extends AbstractNodeProcessor {
 
 	/**
-	 * Environment Variable Pattern
+	 * Environment Variable Pattern: {@code ${env::NAME}} or {@code ${env::NAME:-default}}.
+	 * Group 1 is the variable name, group 2 the optional default value.
 	 */
-	private static final Pattern ENV_PATTERN = Pattern.compile("\\$\\{env::([\\w-]+)\\}");
+	private static final Pattern ENV_PATTERN = Pattern.compile("\\$\\{env::([\\w-]+)(?::-([^}]*))?\\}");
 
 	/**
 	 * Constructs a EnvironmentProcessor without a next processor.
@@ -73,17 +74,37 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 	/**
 	 * Replace environment placeholders in the given value with corresponding values from system
 	 * environment variables.
+	 * <p>
+	 * {@code ${env::NAME:-default}} resolves to {@code default} when {@code NAME} is unset or empty
+	 * (shell semantics). {@code ${env::NAME}} is left untouched when {@code NAME} is unset.
 	 *
 	 * @param value        The string to be replaced.
 	 * @return A new {@link String} with the placeholders replaced.
 	 */
-	private String performEnvReplacements(String value) {
+	public String performEnvReplacements(String value) {
+		return performEnvReplacements(value, System::getenv);
+	}
+
+	/**
+	 * Replace environment placeholders in the given value using the given environment lookup.
+	 *
+	 * @param value       The string to be replaced.
+	 * @param envResolver Resolves an environment variable name to its value, or {@code null} if unset.
+	 * @return A new {@link String} with the placeholders replaced.
+	 */
+	static String performEnvReplacements(final String value, final UnaryOperator<String> envResolver) {
 		if (value == null || value.isEmpty()) {
 			return value;
 		}
 
 		return ENV_PATTERN.matcher(value).replaceAll(match -> {
-			final String variableValue = System.getenv(match.group(1));
+			final String variableValue = envResolver.apply(match.group(1));
+			final String defaultValue = match.group(2);
+			if (defaultValue != null) {
+				return Matcher.quoteReplacement(
+					variableValue == null || variableValue.isEmpty() ? defaultValue : variableValue
+				);
+			}
 			if (variableValue != null) {
 				return Matcher.quoteReplacement(variableValue);
 			}

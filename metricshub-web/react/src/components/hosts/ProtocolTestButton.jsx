@@ -27,10 +27,9 @@ const COMPACT_ALERT_SX = {
  * @param {object} props
  * @param {string} props.protocol protocol id (e.g. ssh)
  * @param {string} [props.hostName] host.name form value
- * @param {string} [props.hostId] resource id
  * @param {Record<string, unknown>} props.protocolValues current protocol form values
  */
-const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
+const ProtocolTestButton = ({ protocol, hostName, protocolValues }) => {
 	const [testing, setTesting] = React.useState(false);
 	const [result, setResult] = React.useState(null);
 	const [hostnamePickerOpen, setHostnamePickerOpen] = React.useState(false);
@@ -58,7 +57,6 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 				protocol,
 				protocolValues,
 				hostname,
-				hostId,
 				hostName,
 				signal: controller.signal,
 			});
@@ -73,14 +71,20 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 				setResult(testResult);
 			}
 		},
-		[hostId, hostName, protocol, protocolValues],
+		[hostName, protocol, protocolValues],
 	);
 
 	// Runner handed to the multi-host dialog: same check, per-host abort signal.
 	const runHostnameTest = React.useCallback(
 		(hostname, signal) =>
-			runProtocolCheck({ protocol, protocolValues, hostname, hostId, hostName, signal }),
-		[hostId, hostName, protocol, protocolValues],
+			runProtocolCheck({
+				protocol,
+				protocolValues,
+				hostname,
+				hostName,
+				signal,
+			}),
+		[hostName, protocol, protocolValues],
 	);
 
 	React.useEffect(

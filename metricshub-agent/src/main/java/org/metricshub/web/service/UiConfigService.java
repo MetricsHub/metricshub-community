@@ -41,7 +41,9 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.service.ConfigurationService;
 import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.parser.EnvironmentProcessor;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.uiconfig.AddHostRequestDto;
 import org.metricshub.web.dto.uiconfig.CreateResourceGroupRequestDto;
@@ -105,6 +107,19 @@ public class UiConfigService {
 	}
 
 	/**
+	 * Resolves the agent machine's hostname using the same expression as the installation template.
+	 *
+	 * @return the environment hostname, or {@code localhost} when missing or blank
+	 */
+	public String getAgentHostname() {
+		final String variable = LocalOsHandler.isWindows() ? "COMPUTERNAME" : "HOSTNAME";
+		final String hostname = new EnvironmentProcessor()
+			.performEnvReplacements("${env::" + variable + ":-localhost}")
+			.trim();
+		return hostname.isEmpty() ? "localhost" : hostname;
+	}
+
+	/**
 	 * Lists connectors for the resource configuration form, filtered by host.type and configured protocols.
 	 *
 	 * @param hostType    host.type attribute (e.g. linux)
@@ -147,6 +162,7 @@ public class UiConfigService {
 	 */
 	public UiConfigSnapshotDto getSnapshot() {
 		final ObjectNode root = readUiConfigAsObjectNode();
+		resolveSnapshotHostnames(root);
 		final Map<String, Object> uiResources = asMap(root.get("resources"));
 		final Map<String, Object> uiResourceGroups = asMap(root.get("resourceGroups"));
 
@@ -161,6 +177,7 @@ public class UiConfigService {
 		// get misreported as an external (other-file) definition.
 		final AgentContext context = agentContextHolder.getAgentContext();
 		final JsonNode mergedConfig = loadMergedConfiguration(context);
+		resolveSnapshotHostnames(mergedConfig);
 		final Map<String, Object> mergedResources = asMap(mergedConfig == null ? null : mergedConfig.get("resources"));
 		final Map<String, Object> mergedResourceGroups = asMap(
 			mergedConfig == null ? null : mergedConfig.get("resourceGroups")
@@ -203,6 +220,49 @@ public class UiConfigService {
 			.externalResources(externalResources)
 			.externalResourceGroups(externalResourceGroups)
 			.build();
+	}
+
+	/**
+	 * Resolves hostname values for display without changing configuration keys, other environment
+	 * expressions (such as passwords), or files on disk.
+	 *
+	 * @param configuration configuration snapshot to prepare for the guided form
+	 */
+	private void resolveSnapshotHostnames(final JsonNode configuration) {
+		if (configuration == null) {
+			return;
+		}
+		resolveHostnameField(configuration.path("attributes"), "host.name");
+		configuration.path("protocols").forEach(protocol -> resolveHostnameField(protocol, "hostname"));
+		configuration.path("resources").forEach(this::resolveSnapshotHostnames);
+		configuration.path("resourceGroups").forEach(this::resolveSnapshotHostnames);
+	}
+
+	/**
+	 * Resolves a hostname string or list in a known configuration field.
+	 *
+	 * @param parent attributes or protocol configuration
+	 * @param field hostname field to resolve
+	 */
+	private void resolveHostnameField(final JsonNode parent, final String field) {
+		final JsonNode value = parent.get(field);
+		if (value == null) {
+			return;
+		}
+		final EnvironmentProcessor processor = new EnvironmentProcessor();
+		if (value.isTextual()) {
+			((ObjectNode) parent).put(field, processor.performEnvReplacements(value.asText()));
+		} else if (value.isArray()) {
+			final var resolved = yamlMapper.createArrayNode();
+			value.forEach(item -> {
+				if (item.isTextual()) {
+					resolved.add(processor.performEnvReplacements(item.asText()));
+				} else {
+					resolved.add(item);
+				}
+			});
+			((ObjectNode) parent).set(field, resolved);
+		}
 	}
 
 	/**

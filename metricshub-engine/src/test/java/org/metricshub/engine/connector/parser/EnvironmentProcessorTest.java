@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -146,5 +147,60 @@ class EnvironmentProcessorTest {
 				);
 			}
 		}
+	}
+
+	@Test
+	void testDefaultValue() {
+		final Map<String, String> env = Map.of("SET_VAR", "my-host", "EMPTY_VAR", "");
+
+		assertEquals(
+			"my-host",
+			EnvironmentProcessor.performEnvReplacements("${env::SET_VAR:-localhost}", env::get),
+			"Set variable should win over the default value."
+		);
+		assertEquals(
+			"localhost",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR:-localhost}", env::get),
+			"Unset variable should resolve to the default value."
+		);
+		assertEquals(
+			"localhost",
+			EnvironmentProcessor.performEnvReplacements("${env::EMPTY_VAR:-localhost}", env::get),
+			"Empty variable should resolve to the default value."
+		);
+		assertEquals(
+			"",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR:-}", env::get),
+			"Empty default value should be supported."
+		);
+		assertEquals(
+			"${env::UNSET_VAR}",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR}", env::get),
+			"Unset variable without default should be left untouched."
+		);
+		assertEquals(
+			"",
+			EnvironmentProcessor.performEnvReplacements("${env::EMPTY_VAR}", env::get),
+			"Empty variable without default should resolve to the empty value."
+		);
+		assertEquals(
+			"my-host.domain / localhost",
+			EnvironmentProcessor.performEnvReplacements("${env::SET_VAR:-a}.domain / ${env::UNSET_VAR:-localhost}", env::get),
+			"Multiple placeholders with defaults should all be replaced."
+		);
+		assertEquals(
+			"C:\\$path",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR:-C:\\$path}", env::get),
+			"Default value should be inserted literally."
+		);
+	}
+
+	@Test
+	void testProcessNodeWithDefaultValue() throws IOException {
+		final JsonNode jsonNode = JsonNodeFactory.instance
+			.objectNode()
+			.set("host.name", new TextNode(String.format("${env::%s:-localhost}", UUID.randomUUID())));
+		new EnvironmentProcessor().process(jsonNode);
+		assertEquals("localhost", jsonNode.get("host.name").asText());
 	}
 }

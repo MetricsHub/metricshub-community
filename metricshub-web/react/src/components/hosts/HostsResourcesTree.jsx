@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import ExplorerTreeItem from "../explorer/tree/TreeItem";
 import {
 	getGroupResources,
+	getHostDisplayName,
 	getHostNames,
 	isMultiHostConfig,
 	hostMatchesFilters,
@@ -29,7 +30,7 @@ const draftTreeNode = (draft) => {
 	const draftState = draft.state || {};
 	return {
 		id: draftTreeId(draft.id),
-		// Drafts are labeled by their resource ID, like saved resources.
+		// Drafts are labeled by their resource ID.
 		name: String(draftState.hostId || "").trim() || draft.name,
 		type: getHostNames(draftState.hostName).length > 1 ? "multi-host-resource" : "resource",
 		badge: "draft",
@@ -84,7 +85,7 @@ const externalStandaloneHostTreeId = (hostId) =>
  */
 const externalResourceNode = (id, hostId, hostConfig) => ({
 	id,
-	name: hostId,
+	name: getHostDisplayName(hostId, hostConfig),
 	type: isMultiHostConfig(hostConfig) ? "multi-host-resource" : "resource",
 	children: [],
 	isExpandable: false,
@@ -238,23 +239,23 @@ const HostsResourcesTree = ({
 				.filter(([hostId, hostConfig]) =>
 					hostMatchesFilters(hostId, hostConfig, filterSearch, protocolFilterForHosts),
 				)
-				.sort(([hostIdA], [hostIdB]) => compareLocale(hostIdA, hostIdB))
-				.map(([hostId]) => ({
+				.map(([hostId, hostConfig]) => ({
 					id: groupedHostTreeId(group.name, hostId),
-					name: hostId,
-					type: isMultiHostConfig(resources[hostId]) ? "multi-host-resource" : "resource",
+					name: getHostDisplayName(hostId, hostConfig),
+					type: isMultiHostConfig(hostConfig) ? "multi-host-resource" : "resource",
 					children: [],
 					isExpandable: false,
-				}));
+				}))
+				.sort((a, b) => compareLocale(a.name, b.name));
 
 			// Read-only resources of this (editable) group that live in other YAML files.
 			const externalHostNodes = Object.entries(
 				externalGroupResources(externalResourceGroups[group.name]),
 			)
-				.sort(([a], [b]) => compareLocale(a, b))
 				.map(([hostId, hostConfig]) =>
 					externalResourceNode(externalGroupedHostTreeId(group.name, hostId), hostId, hostConfig),
-				);
+				)
+				.sort((a, b) => compareLocale(a.name, b.name));
 
 			const children = [
 				...hostNodes,
@@ -277,10 +278,10 @@ const HostsResourcesTree = ({
 			.sort(([a], [b]) => compareLocale(a, b))
 			.map(([name, value]) => {
 				const children = Object.entries(externalGroupResources(value))
-					.sort(([a], [b]) => compareLocale(a, b))
 					.map(([hostId, hostConfig]) =>
 						externalResourceNode(externalGroupedHostTreeId(name, hostId), hostId, hostConfig),
-					);
+					)
+					.sort((a, b) => compareLocale(a.name, b.name));
 				return {
 					id: externalGroupTreeId(name),
 					name,
@@ -294,15 +295,15 @@ const HostsResourcesTree = ({
 
 		// Standalone resources defined only in other YAML files — shown read-only (dimmed) under "External".
 		const externalStandaloneNodes = Object.entries(externalResources)
-			.sort(([a], [b]) => compareLocale(a, b))
 			.map(([hostId, hostConfig]) =>
 				externalResourceNode(externalStandaloneHostTreeId(hostId), hostId, hostConfig),
-			);
+			)
+			.sort((a, b) => compareLocale(a.name, b.name));
 
 		const standaloneChildren = [
 			...visibleStandaloneHosts.map((host) => ({
 				id: standaloneHostTreeId(host.hostId),
-				name: host.hostId,
+				name: host.displayName,
 				type: isMultiHostConfig(host.hostConfig) ? "multi-host-resource" : "resource",
 				children: [],
 				isExpandable: false,

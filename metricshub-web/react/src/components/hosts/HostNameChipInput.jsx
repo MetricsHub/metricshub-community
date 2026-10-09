@@ -1,6 +1,8 @@
 import * as React from "react";
 import Autocomplete from "@mui/material/Autocomplete";
-import { Box, Chip, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
+import ComputerIcon from "@mui/icons-material/Computer";
+import { validateHostNameValue } from "../../utils/host-names";
 import { getHostNames } from "./host-config-utils";
 import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import FieldHelpTooltip from "./FieldHelpTooltip";
@@ -153,6 +155,7 @@ export const HostnamesChipField = ({
 	return (
 		<Autocomplete
 			multiple
+			disabled={textFieldProps.disabled}
 			freeSolo
 			disableClearable
 			filterOptions={(options) => options}
@@ -224,9 +227,22 @@ export const HostnamesChipField = ({
  * @param {boolean} [props.error]
  * @param {React.ReactNode} [props.helperText]
  * @param {boolean} [props.staticLabel] render the label above the field instead of a floating label
+ * @param {() => string | Promise<string | null>} [props.onResolveHostname] get the agent's hostname
+ * @param {boolean} [props.resolvingHostname] hostname request in progress
+ * @param {string | null} [props.resolveHostnameError] error from the hostname request
  */
-const HostNameChipInput = ({ value, onChange, error = false, helperText, staticLabel = false }) => {
+const HostNameChipInput = ({
+	value,
+	onChange,
+	error = false,
+	helperText,
+	staticLabel = false,
+	onResolveHostname,
+	resolvingHostname = false,
+	resolveHostnameError,
+}) => {
 	const hostNameCount = getHostNames(value).length;
+	const hostnameError = validateHostNameValue(value);
 	return (
 		<Stack spacing={staticLabel ? 0 : 1}>
 			{staticLabel ? (
@@ -240,6 +256,22 @@ const HostNameChipInput = ({ value, onChange, error = false, helperText, staticL
 					<FieldHelpTooltip
 						title={`MetricsHub attribute: ${HOST_NAME_UI.attributeName}\n\n${HOST_NAME_UI.fieldHelper}`}
 					/>
+					{onResolveHostname ? (
+						<Stack direction="row" alignItems="center" sx={{ ml: "auto", flexShrink: 0 }}>
+							<Button
+								size="small"
+								startIcon={<ComputerIcon />}
+								loading={resolvingHostname}
+								onClick={async () => {
+									const hostname = await onResolveHostname();
+									if (hostname) onChange(hostname);
+								}}
+							>
+								Use agent hostname
+							</Button>
+							<FieldHelpTooltip title="Use this only for the host running the MetricsHub agent. Fills in its hostname, or localhost if unavailable. To monitor a remote host, enter its hostname manually." />
+						</Stack>
+					) : null}
 					{hostNameCount > 1 ? (
 						<Chip
 							size="small"
@@ -254,10 +286,11 @@ const HostNameChipInput = ({ value, onChange, error = false, helperText, staticL
 			<HostnamesChipField
 				value={value}
 				onChange={onChange}
-				error={error}
-				helperText={helperText}
+				error={error || Boolean(hostnameError)}
+				helperText={hostnameError || helperText || resolveHostnameError}
 				textFieldProps={{
 					id: "host-name-input",
+					disabled: resolvingHostname,
 					label: staticLabel ? undefined : HOST_NAME_UI.fieldLabel,
 					hiddenLabel: staticLabel,
 					variant: staticLabel ? "filled" : "outlined",

@@ -22,7 +22,8 @@ import {
 	saveHostFormSession,
 } from "./host-config-session";
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { getHostNames } from "../../utils/host-names";
+import { getHostNames, validateHostNameValue } from "../../utils/host-names";
+import { uiConfigApi } from "../../api/ui-config";
 import { realignHostnameOverrides } from "../../utils/host-name-overrides";
 import {
 	annotateConnectorCatalog,
@@ -56,7 +57,7 @@ const areAllFormSectionsValid = (state, steps) => {
 				if (!String(state.hostId || "").trim()) {
 					return false;
 				}
-				if (!String(state.hostName || "").trim()) {
+				if (validateHostNameValue(state.hostName, { required: true })) {
 					return false;
 				}
 				if (!state.hostType) {
@@ -81,7 +82,6 @@ const areAllFormSectionsValid = (state, steps) => {
 					step.protocolId,
 					state.protocols?.[step.protocolId] || {},
 					{
-						hostId: state.hostId,
 						hostName: state.hostName,
 					},
 				);
@@ -170,6 +170,35 @@ export const useHostConfig = ({
 	sessionPathname = "",
 	onSessionClear,
 }) => {
+	const [agentHostnameLoading, setAgentHostnameLoading] = React.useState(false);
+	const [agentHostnameError, setAgentHostnameError] = React.useState(null);
+	const agentHostnameRequest = React.useRef(null);
+	const fetchAgentHostname = React.useCallback(async () => {
+		agentHostnameRequest.current?.abort();
+		const controller = new AbortController();
+		agentHostnameRequest.current = controller;
+		setAgentHostnameLoading(true);
+		setAgentHostnameError(null);
+		try {
+			const hostname = await uiConfigApi.getAgentHostname({ signal: controller.signal });
+			if (controller.signal.aborted) return null;
+			return hostname;
+		} catch {
+			if (!controller.signal.aborted) {
+				setAgentHostnameError(
+					"Unable to fetch the agent hostname. Try again or enter it manually.",
+				);
+			}
+			return null;
+		} finally {
+			if (!controller.signal.aborted) setAgentHostnameLoading(false);
+		}
+	}, []);
+	React.useEffect(() => {
+		if (!open) return;
+		return () => agentHostnameRequest.current?.abort();
+	}, [open]);
+
 	const sessionKey = React.useMemo(
 		() =>
 			getHostFormSessionKey({
@@ -669,8 +698,9 @@ export const useHostConfig = ({
 		if (!String(state.hostId || "").trim()) {
 			next.hostId = "Resource ID is required";
 		}
-		if (!String(state.hostName || "").trim()) {
-			next.hostName = "host.name is required";
+		const hostnameError = validateHostNameValue(state.hostName, { required: true });
+		if (hostnameError) {
+			next.hostName = hostnameError;
 		}
 		if (!state.hostType) {
 			next.hostType = "host.type is required";
@@ -696,7 +726,6 @@ export const useHostConfig = ({
 			}
 			const config = state.protocols?.[step.protocolId] || {};
 			const fieldErrors = collectProtocolConfigErrors(step.protocolId, config, {
-				hostId: state.hostId,
 				hostName: state.hostName,
 			});
 			if (Object.keys(fieldErrors).length > 0) {
@@ -996,6 +1025,9 @@ export const useHostConfig = ({
 
 	return {
 		activeStep,
+		agentHostnameLoading,
+		agentHostnameError,
+		fetchAgentHostname,
 		steps,
 		furthestStep: state.furthestStep ?? 0,
 		validatedStepIds: [...validatedStepIds],

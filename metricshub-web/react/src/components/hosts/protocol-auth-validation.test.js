@@ -1,49 +1,77 @@
 import { describe, expect, it } from "vitest";
-import { collectProtocolConfigErrors } from "./protocol-definitions";
+import { collectProtocolConfigErrors, PROTOCOL_DEFAULTS } from "./protocol-definitions";
 
-describe("collectProtocolConfigErrors SSH credentials", () => {
-	const base = {
-		username: "admin",
-		port: 22,
-		timeout: "2m",
-	};
+describe("protocol credentials are validated by the backend", () => {
+	it.each(["ssh", "wmi", "winrm", "wbem", "http", "snmp", "snmpv3", "ipmi", "jdbc", "jmx"])(
+		"allows empty credentials for %s on a remote host",
+		(protocol) => {
+			const errors = collectProtocolConfigErrors(
+				protocol,
+				{
+					...PROTOCOL_DEFAULTS[protocol],
+					username: "",
+					password: "",
+					privateKey: "",
+					community: "",
+					privacy: "AES",
+					privacyPassword: "",
+					url: "jdbc:h2:mem:test",
+				},
+				{ hostName: "remote-server" },
+			);
+			expect(errors).toEqual({});
+		},
+	);
 
-	it("requires a password or a private key on a remote host", () => {
+	it.each(["wmi", "winrm"])(
+		"allows %s remote overrides and mixed targets without credentials",
+		(protocol) => {
+			expect(
+				collectProtocolConfigErrors(
+					protocol,
+					{
+						...PROTOCOL_DEFAULTS[protocol],
+						hostname: "remote-server",
+					},
+					{ hostName: "localhost" },
+				),
+			).toEqual({});
+			expect(
+				collectProtocolConfigErrors(protocol, PROTOCOL_DEFAULTS[protocol], {
+					hostName: ["localhost", "remote-server"],
+				}),
+			).toEqual({});
+		},
+	);
+
+	it("still rejects environment expressions in resource and protocol hostnames", () => {
 		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "", privateKey: "" },
-			{ hostId: "server-1", hostName: "server-1" },
+			"wmi",
+			{
+				...PROTOCOL_DEFAULTS.wmi,
+				hostname: "${env::MY_HOST}",
+			},
+			{ hostName: "${env::MY_HOST}" },
 		);
-		expect(errors.password).toBe("Password or private key is required");
+		expect(errors.hostName).toBeTruthy();
+		expect(errors.hostname).toBeTruthy();
 	});
 
-	it("accepts a password alone", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "secret", privateKey: "" },
-			{ hostId: "server-1", hostName: "server-1" },
-		);
-		expect(errors.password).toBeUndefined();
-		expect(errors.privateKey).toBeUndefined();
-	});
-
-	it("accepts a private key alone", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "", privateKey: "/home/admin/.ssh/id_rsa" },
-			{ hostId: "server-1", hostName: "server-1" },
-		);
-		expect(errors.password).toBeUndefined();
-		expect(errors.privateKey).toBeUndefined();
-	});
-
-	it("does not require credentials on localhost", () => {
-		const errors = collectProtocolConfigErrors(
-			"ssh",
-			{ ...base, password: "", privateKey: "" },
-			{ hostId: "localhost", hostName: "localhost" },
-		);
-		expect(errors.password).toBeUndefined();
+	it("still validates non-credential fields", () => {
+		expect(
+			collectProtocolConfigErrors(
+				"ssh",
+				{
+					...PROTOCOL_DEFAULTS.ssh,
+					port: "invalid",
+					timeout: 0,
+				},
+				{ hostName: "remote-server" },
+			),
+		).toEqual({
+			port: "Must be between 1 and 65535.",
+			timeout: "Enter a duration greater than 0.",
+		});
 	});
 });
 

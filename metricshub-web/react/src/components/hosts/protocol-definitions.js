@@ -1,5 +1,5 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { getHostNames } from "../../utils/host-names";
+import { getHostNames, validateHostNameValue } from "../../utils/host-names";
 import {
 	buildProtocolHostnamePayload,
 	splitHostnameOverrides,
@@ -499,7 +499,6 @@ export const PROTOCOL_FIELDS = {
 			name: "username",
 			label: "Username",
 			type: "text",
-			required: true,
 		},
 		{
 			name: "password",
@@ -549,15 +548,15 @@ export const PROTOCOL_FIELDS = {
 		PROTOCOL_HOSTNAME_FIELD,
 	],
 	wmi: [
-		{ name: "username", label: "Username", type: "text", required: true },
-		{ name: "password", label: "Password", type: "password", required: true },
+		{ name: "username", label: "Username", type: "text" },
+		{ name: "password", label: "Password", type: "password" },
 		TIMEOUT_FIELD,
 		PROTOCOL_HOSTNAME_FIELD,
 		{ name: "namespace", label: "Force namespace", type: "text", advanced: true },
 	],
 	winrm: [
-		{ name: "username", label: "Username", type: "text", required: true },
-		{ name: "password", label: "Password", type: "password", required: true },
+		{ name: "username", label: "Username", type: "text" },
+		{ name: "password", label: "Password", type: "password" },
 		{
 			name: "protocol",
 			label: "Transport",
@@ -602,8 +601,8 @@ export const PROTOCOL_FIELDS = {
 		{ name: "namespace", label: "Force namespace", type: "text", advanced: true },
 	],
 	wbem: [
-		{ name: "username", label: "Username", type: "text", required: true },
-		{ name: "password", label: "Password", type: "password", required: true },
+		{ name: "username", label: "Username", type: "text" },
+		{ name: "password", label: "Password", type: "password" },
 		{
 			name: "protocol",
 			label: "Transport",
@@ -660,7 +659,7 @@ export const PROTOCOL_FIELDS = {
 				{ value: "2", label: "v2c" },
 			],
 		},
-		{ name: "community", label: "Community", type: "password", required: true },
+		{ name: "community", label: "Community", type: "password" },
 		{ name: "port", label: "Port", type: "text", required: true, advanced: true },
 		TIMEOUT_FIELD,
 		{
@@ -672,8 +671,8 @@ export const PROTOCOL_FIELDS = {
 		PROTOCOL_HOSTNAME_FIELD,
 	],
 	snmpv3: [
-		{ name: "username", label: "Username", type: "text", required: true },
-		{ name: "password", label: "Password", type: "password", required: true },
+		{ name: "username", label: "Username", type: "text" },
+		{ name: "password", label: "Password", type: "password" },
 		{
 			name: "authType",
 			label: "Authentication",
@@ -704,7 +703,6 @@ export const PROTOCOL_FIELDS = {
 			name: "privacyPassword",
 			label: "Privacy password",
 			type: "password",
-			required: true,
 			showIf: (values) => Boolean(String(values.privacy ?? "").trim()),
 		},
 		{ name: "port", label: "Port", type: "text", required: true, advanced: true },
@@ -740,7 +738,6 @@ export const PROTOCOL_FIELDS = {
 							fieldName: "username",
 							fieldLabel: "Username",
 							fieldType: "text",
-							required: true,
 						},
 						{
 							fieldName: "password",
@@ -817,8 +814,8 @@ export const PROTOCOL_FIELDS = {
 			showIf: (v) => (v._jdbcMode || "manual") === "manual",
 		},
 		// Common fields
-		{ name: "username", label: "Username", type: "text", required: true },
-		{ name: "password", label: "Password", type: "password", required: true },
+		{ name: "username", label: "Username", type: "text" },
+		{ name: "password", label: "Password", type: "password" },
 		TIMEOUT_FIELD,
 		// External JDBC driver, written as protocols.jdbc.driver in metricshub-ui.yaml
 		{
@@ -1168,42 +1165,6 @@ export const protocolConfigToForm = (protocol, config = {}) => {
 	return form;
 };
 
-/** Same set as {@code NetworkHelper.TYPICAL_LOCALHOST_HOSTNAMES} in the engine. */
-const TYPICAL_LOCALHOST_HOSTNAMES = new Set([
-	"localhost",
-	"127.0.0.1",
-	"::1",
-	"0:0:0:0:0:0:0:1",
-	"0000:0000:0000:0000:0000:0000:0000:0001",
-]);
-
-/** Credential fields not required when the target host is localhost. */
-const LOCALHOST_OPTIONAL_AUTH_FIELDS = new Set(["username", "password"]);
-
-/**
- * Whether the host identifier or display name refers to the local machine.
- *
- * @param {string} [hostId]
- * @param {string} [hostName]
- * @returns {boolean}
- */
-export const isLocalhostHost = (hostId, hostName) => {
-	const candidates = [hostId, hostName];
-	return candidates.some((candidate) => {
-		if (candidate == null || String(candidate).trim() === "") {
-			return true;
-		}
-		return TYPICAL_LOCALHOST_HOSTNAMES.has(String(candidate).trim().toLowerCase());
-	});
-};
-
-/**
- * @param {string} fieldName
- * @returns {boolean}
- */
-export const isAuthFieldOptionalOnLocalhost = (fieldName) =>
-	LOCALHOST_OPTIONAL_AUTH_FIELDS.has(fieldName);
-
 /**
  * Active authentication mode for protocols with an auth-choice UI.
  *
@@ -1274,14 +1235,17 @@ export const validatePortValue = (value, { required = false, label = "Port" } = 
  *
  * @param {string} protocol
  * @param {Record<string, unknown>} protocolConfig
- * @param {{ hostId?: string; hostName?: string }} [options]
+ * @param {{ hostName?: string | string[] }} [options]
  * @returns {Record<string, string>}
  */
 export const collectProtocolConfigErrors = (protocol, protocolConfig, options = {}) => {
-	const isLocal = isLocalhostHost(options.hostId, options.hostName);
 	const fields = PROTOCOL_FIELDS[protocol] || [];
 	/** @type {Record<string, string>} */
 	const errors = {};
+	const hostnameError = validateHostNameValue(options.hostName);
+	if (hostnameError) errors.hostName = hostnameError;
+	const protocolHostnameError = validateHostNameValue(protocolConfig.hostname);
+	if (protocolHostnameError) errors.hostname = protocolHostnameError;
 
 	for (const field of fields) {
 		if (field.showIf && !field.showIf(protocolConfig)) {
@@ -1319,25 +1283,8 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 		if (!field.required) {
 			continue;
 		}
-		if (isLocal && isAuthFieldOptionalOnLocalhost(field.name)) {
-			continue;
-		}
 		if (isEmpty) {
 			errors[field.name] = `${field.label} is required`;
-		}
-	}
-
-	if (protocol === "ssh" && !isLocal) {
-		const hasPassword = String(protocolConfig.password || "").trim() !== "";
-		const hasPrivateKey = String(protocolConfig.privateKey || "").trim() !== "";
-		if (!hasPassword && !hasPrivateKey) {
-			errors.password = "Password or private key is required";
-		}
-	}
-
-	if (protocol === "ipmi" && !protocolConfig.skipAuth) {
-		if (!String(protocolConfig.username || "").trim()) {
-			errors.username = "Username is required";
 		}
 	}
 

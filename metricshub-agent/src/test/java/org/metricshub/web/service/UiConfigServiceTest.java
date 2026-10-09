@@ -40,8 +40,13 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.configuration.YamlConfigurationProvider;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
@@ -80,6 +85,16 @@ class UiConfigServiceTest {
 	// getSnapshot
 	// -------------------------------------------------------------------------
 
+	@ParameterizedTest
+	@ValueSource(booleans = { true, false })
+	void testGetAgentHostnameSelectsAgentOperatingSystem(boolean windows) throws Exception {
+		try (var os = Mockito.mockStatic(LocalOsHandler.class)) {
+			os.when(LocalOsHandler::isWindows).thenReturn(windows);
+			final String value = System.getenv(windows ? "COMPUTERNAME" : "HOSTNAME");
+			assertEquals(value == null || value.isBlank() ? "localhost" : value.trim(), service.getAgentHostname());
+		}
+	}
+
 	@Test
 	void testGetSnapshotWhenNoFileReturnsEmptyCollections() {
 		final UiConfigSnapshotDto snapshot = service.getSnapshot();
@@ -87,6 +102,77 @@ class UiConfigServiceTest {
 		assertNotNull(snapshot, "Snapshot should never be null");
 		assertTrue(snapshot.getResources().isEmpty(), "Resources should be empty when no config file exists");
 		assertTrue(snapshot.getResourceGroups().isEmpty(), "Resource groups should be empty when no config file exists");
+	}
+
+	@ParameterizedTest
+	@CsvSource(
+		{
+			"metricshub.yaml, COMPUTERNAME",
+			"metricshub.yaml, HOSTNAME",
+			"metricshub.yaml, METRICSHUB_TEST_UNSET_HOST_41A793",
+			"metricshub-ui.yaml, COMPUTERNAME",
+			"metricshub-ui.yaml, HOSTNAME",
+			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793"
+		}
+	)
+	void testSnapshotResolvesHostnamesWithoutChangingFilesOrOtherFields(String filename, String variable)
+		throws Exception {
+		final String expression = "${env::" + variable + ":-localhost}";
+		final String yaml = """
+			resources:
+			  localhost:
+			    attributes:
+			      host.name: %s
+			      custom.attribute: '${env::COMPUTERNAME:-unchanged}'
+			      hostname: '${env::COMPUTERNAME:-unchanged}'
+			    protocols:
+			      winrm:
+			        hostname: %s
+			        password: '${env::COMPUTERNAME:-unchanged}'
+			resourceGroups:
+			  local:
+			    resources:
+			      localhost:
+			        attributes:
+			          host.name: ['%s', 'remote-host']
+			        protocols:
+			          winrm:
+			            hostname: ['%s', 'remote-protocol']
+			""".formatted(expression, expression, expression, expression);
+		final Path configFile = tempDir.resolve(filename);
+		Files.writeString(configFile, yaml);
+		final AgentContext context = mock(AgentContext.class);
+		when(context.getConfigDirectory()).thenReturn(tempDir);
+		when(context.getExtensionManager()).thenReturn(
+			ExtensionManager.builder().withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider())).build()
+		);
+		final AgentContextHolder holder = mock(AgentContextHolder.class);
+		when(holder.getAgentContext()).thenReturn(context);
+		final UiConfigService svc = new UiConfigService(
+			holder,
+			mock(UiConnectorCompatibilityService.class),
+			new ConnectorStore()
+		);
+		final var snapshot = JsonHelper.buildYamlMapper().valueToTree(svc.getSnapshot());
+		final boolean uiFile = filename.equals("metricshub-ui.yaml");
+		final var resource = snapshot.path(uiFile ? "resources" : "externalResources").path("localhost");
+		final var grouped = snapshot
+			.path(uiFile ? "resourceGroups" : "externalResourceGroups")
+			.path("local")
+			.path("resources")
+			.path("localhost");
+		final String environmentValue = System.getenv(variable);
+		final String expected = environmentValue == null || environmentValue.isEmpty() ? "localhost" : environmentValue;
+		assertEquals(expected, resource.path("attributes").path("host.name").asText());
+		assertEquals(expected, resource.path("protocols").path("winrm").path("hostname").asText());
+		assertEquals(expected, grouped.path("attributes").path("host.name").get(0).asText());
+		assertEquals("remote-host", grouped.path("attributes").path("host.name").get(1).asText());
+		assertEquals(expected, grouped.path("protocols").path("winrm").path("hostname").get(0).asText());
+		assertEquals("remote-protocol", grouped.path("protocols").path("winrm").path("hostname").get(1).asText());
+		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("attributes").path("custom.attribute").asText());
+		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("attributes").path("hostname").asText());
+		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("protocols").path("winrm").path("password").asText());
+		assertEquals(yaml, Files.readString(configFile));
 	}
 
 	@Test
@@ -357,11 +443,12 @@ class UiConfigServiceTest {
 		assertFalse(snapshot.getResourceGroups().containsKey("Remove"), "Deleted group should be gone");
 	}
 
-	@Test
-	void testAddHostPersistsResourceAdvancedFields() {
+	@ParameterizedTest
+	@ValueSource(strings = { "ec-win", "localhost" })
+	void testAddHostPersistsResourceAdvancedFields(String hostname) throws Exception {
 		final AddHostRequestDto request = new AddHostRequestDto();
 		request.setHostId("server-advanced");
-		request.setAttributes(Map.of("host.name", "server-advanced", "host.type", "linux", "site", "Paris"));
+		request.setAttributes(Map.of("host.name", hostname, "host.type", "linux", "site", "Paris"));
 		request.setProtocols(Map.of("ping", Map.of("timeout", 5)));
 		request.setLoggerLevel("debug");
 		request.setCollectPeriod("3m");
@@ -384,6 +471,18 @@ class UiConfigServiceTest {
 		assertEquals(List.of("site"), host.get("enrichments"));
 		assertEquals("Paris", ((Map<?, ?>) host.get("attributes")).get("site"));
 		assertEquals(true, ((Map<?, ?>) host.get("alertingSystem")).get("disable"));
+		final String savedYaml = Files.readString(tempDir.resolve("metricshub-ui.yaml"));
+		assertEquals(
+			hostname,
+			JsonHelper.buildYamlMapper()
+				.readTree(savedYaml)
+				.path("resources")
+				.path("server-advanced")
+				.path("attributes")
+				.path("host.name")
+				.asText()
+		);
+		assertFalse(savedYaml.contains("${env::"));
 	}
 
 	@Test
