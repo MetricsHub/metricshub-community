@@ -288,7 +288,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>simple-http-java</artifactId>
-				<version>1.0.02</version>
+				<version>1.0.03</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
@@ -308,7 +308,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>jflat</artifactId>
-				<version>1.1.00</version>
+				<version>1.2.00</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
