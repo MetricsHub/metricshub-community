@@ -28,6 +28,7 @@ import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_STATE_ME
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -41,6 +42,7 @@ import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.AbstractMetric;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.metricshub.hardware.constants.CommonConstants;
 
@@ -306,6 +308,45 @@ public class HwCollectHelper {
 				);
 				// CHECKSTYLE:ON
 			});
+	}
+
+	/**
+	 * Whether the connector collected the power or the energy of the given monitor during the current cycle.
+	 * Must be called before the engine writes any estimate, otherwise the estimates are reported as collected too.
+	 *
+	 * @param monitor The monitor to check.
+	 * @return <code>true</code> if <code>hw.power</code> or <code>hw.energy</code> is collected for this monitor.
+	 */
+	public static boolean isPowerOrEnergyCollected(final Monitor monitor) {
+		final Map<String, AbstractMetric> metrics = monitor.getMetrics();
+		final AbstractMetric power = metrics.get(generatePowerMetricNameForMonitorType(monitor.getType()));
+		final AbstractMetric energy = metrics.get(generateEnergyMetricNameForMonitorType(monitor.getType()));
+		return (power != null && power.isUpdated()) || (energy != null && energy.isUpdated());
+	}
+
+	/**
+	 * Whether the parent of the given monitor reports its own power (measured by the connector).
+	 * In this case, the monitor's power is already included in its parent's power.
+	 *
+	 * @param monitor            The monitor to check.
+	 * @param telemetryManager   The telemetry manager wrapping the monitors.
+	 * @param measuredMonitorIds The ids of the monitors whose power or energy is measured by the connector.
+	 * @return <code>true</code> if the parent's power is measured.
+	 */
+	public static boolean hasMeasuredParent(
+		final Monitor monitor,
+		final TelemetryManager telemetryManager,
+		final Set<String> measuredMonitorIds
+	) {
+		if (
+			measuredMonitorIds.isEmpty() ||
+			monitor.getAttribute("hw.parent.id") == null ||
+			monitor.getAttribute("hw.parent.type") == null
+		) {
+			return false;
+		}
+		final Monitor parent = telemetryManager.findParentMonitor(monitor);
+		return parent != null && measuredMonitorIds.contains(parent.getId());
 	}
 
 	/**
