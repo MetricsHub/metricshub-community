@@ -31,11 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.common.exception.ControlledSshException;
 import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.TextTableHelper;
@@ -46,7 +42,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProce
 import org.metricshub.engine.strategy.source.FileSourceProcessingResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.extension.oscommand.OsCommandService;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.ssh.SshClient;
 
@@ -55,33 +50,7 @@ import org.metricshub.ssh.SshClient;
  * Supports incremental file reading using cursors to track file position.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class FileSourceProcessor {
-
-	@NonNull
-	private OsCommandService osCommandService;
-
-	// PowerShell command template for resolving file paths on Windows. The full pattern is passed to Get-Item, which
-	// expands wildcards in every segment and, unlike Get-ChildItem, never enumerates the children of a literal directory.
-	public static final String RESOLVE_WINDOWS_FILES_COMMAND =
-		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }\"";
-
-	// Linux find command template for resolving file paths when no directory segment holds a wildcard.
-	public static final String RESOLVE_LINUX_FILES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -name \"%s\" -print";
-
-	// Linux find command template for resolving directory paths.
-	public static final String RESOLVE_LINUX_DIRECTORIES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -print";
-
-	// Linux command template for resolving file paths when a directory segment holds a wildcard. The shell expands the
-	// directory glob, so only matching directories are visited (no traversal of unrelated or unreadable subtrees) and
-	// a wildcard never crosses a separator; as with any shell glob, a wildcard does not match dot-prefixed names. The
-	// filename is then resolved in each matched directory with find, exactly as in RESOLVE_LINUX_FILES_COMMAND.
-	// Arguments are the shell-quoted directory glob and the escaped filename pattern.
-	public static final String RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND =
-		"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
-
-	// A single quote inside the single-quoted `sh -c` script: closes the quote, adds an escaped quote, reopens it.
-	private static final String SINGLE_QUOTE_IN_SCRIPT = "'\\''";
 
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
@@ -109,9 +78,10 @@ public class FileSourceProcessor {
 		}
 
 		// Depending on whether the host is localhost or remote, create file operations
-		final FileOperations fileOperations = isLocalhost
-			? createLocalFileOperations(hostname)
+		final RemoteFilesRequestExecutor remoteFileOperations = isLocalhost
+			? null
 			: createRemoteFileOperations(hostname, telemetryManager);
+		final FileOperations fileOperations = isLocalhost ? createLocalFileOperations(hostname) : remoteFileOperations;
 
 		if (fileOperations == null) {
 			log.warn("Hostname {} - Cannot process files: file operations unavailable. Returning an empty table.", hostname);
@@ -128,7 +98,7 @@ public class FileSourceProcessor {
 			if (isLocalhost) {
 				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, paths, deviceKind));
 			} else {
-				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, fileSource, telemetryManager, deviceKind));
+				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, paths, deviceKind, remoteFileOperations));
 			}
 
 			if (sourceResolvedPaths.isEmpty()) {
@@ -339,14 +309,17 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Creates file operations implementation for remote file access using SSH.
+	 * Creates file operations implementation for remote file access over SFTP.
 	 * Establishes SSH connection and authenticates before returning the operations instance.
 	 *
 	 * @param hostname The hostname for SSH connection
-	 * @param telemetryManager The telemetry manager providing SSH configuration
-	 * @return A FileOperations implementation for remote file access, or null if SSH setup fails
+	 * @param telemetryManager The telemetry manager providing SSH configuration and host type
+	 * @return The remote file operations, or null if SSH setup fails
 	 */
-	private FileOperations createRemoteFileOperations(final String hostname, final TelemetryManager telemetryManager) {
+	private RemoteFilesRequestExecutor createRemoteFileOperations(
+		final String hostname,
+		final TelemetryManager telemetryManager
+	) {
 		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager
 			.getHostConfiguration()
 			.getConfigurations()
@@ -357,49 +330,27 @@ public class FileSourceProcessor {
 			return null;
 		}
 
-		final RemoteFilesRequestExecutor requestExecutor = createRemoteFilesRequestExecutor(hostname, sshConfiguration);
+		final RemoteFilesRequestExecutor requestExecutor = createRemoteFilesRequestExecutor(
+			hostname,
+			sshConfiguration,
+			telemetryManager.getHostConfiguration().getHostType()
+		);
 
 		// Attempt to connect to the remote host
 		if (!requestExecutor.connectSshClient()) {
 			log.warn("Hostname {} - Failed to connect SSH client. Cannot process remote files.", hostname);
-			requestExecutor.closeSshClient();
+			requestExecutor.close();
 			return null;
 		}
 
 		// Attempt to authenticate with the remote host
 		if (!requestExecutor.authenticateSshClient()) {
 			log.warn("Hostname {} - Failed to authenticate SSH client. Cannot process remote files.", hostname);
-			requestExecutor.closeSshClient();
+			requestExecutor.close();
 			return null;
 		}
 
-		return new FileOperations() {
-			@Override
-			public String readFromOffset(String path, Long offset, Integer length) throws IOException {
-				return requestExecutor.readRemoteFileOffsetContent(path, offset, length);
-			}
-
-			@Override
-			public Long getFileSize(String path) throws IOException {
-				try {
-					return requestExecutor.getRemoteFileSize(path);
-				} catch (Exception e) {
-					log.info("Hostname {} - Unable to get \"{}\" file size: {}", hostname, path, e.getMessage());
-					log.debug("Hostname {} - An error has occurred when reading the file size of {}: {}", hostname, path, e);
-					return null;
-				}
-			}
-
-			@Override
-			public void close() {
-				requestExecutor.closeSshClient();
-			}
-
-			@Override
-			public String readFileContent(String path) throws IOException {
-				return requestExecutor.readRemoteFileOffsetContent(path, null, null);
-			}
-		};
+		return requestExecutor;
 	}
 
 	/**
@@ -408,44 +359,35 @@ public class FileSourceProcessor {
 	 *
 	 * @param hostname The hostname for SSH connection
 	 * @param sshConfiguration The SSH configuration containing connection parameters
+	 * @param deviceKind The device kind of the remote host, which determines the form of its paths
 	 * @return A RemoteFilesRequestExecutor instance configured with SSH client and configuration
 	 */
 	protected RemoteFilesRequestExecutor createRemoteFilesRequestExecutor(
 		final String hostname,
-		final SshConfiguration sshConfiguration
+		final SshConfiguration sshConfiguration,
+		final DeviceKind deviceKind
 	) {
-		return new RemoteFilesRequestExecutor(new SshClient(hostname), sshConfiguration);
+		return new RemoteFilesRequestExecutor(new SshClient(hostname), sshConfiguration, deviceKind);
 	}
 
 	/**
-	 * Resolves file paths remotely by executing SSH commands to find matching files.
-	 * Uses OS-specific commands (PowerShell for Windows, find for Linux) to locate files.
+	 * Resolves path patterns into the absolute paths of the matching files on the remote host, with SFTP listings
+	 * (see {@link RemoteFilesRequestExecutor#resolve(PathPattern)}); no command is run on the host. An invalid pattern
+	 * or a failed resolution is logged and skipped.
 	 *
-	 * @param hostname The hostname for SSH connection
-	 * @param fileSource The file source containing path patterns to resolve
-	 * @param telemetryManager The telemetry manager providing SSH configuration
-	 * @param deviceKind The device kind (Windows/Linux) to determine the command format
+	 * @param hostname       The hostname for logging purposes
+	 * @param rawPaths       The file source's path patterns
+	 * @param deviceKind     The device kind of the remote host, which determines the path delimiter
+	 * @param fileOperations The remote file operations
 	 * @return A set of resolved absolute file paths matching the patterns
 	 */
 	Set<String> resolveRemoteFiles(
 		final String hostname,
-		final FileSource fileSource,
-		final TelemetryManager telemetryManager,
-		final DeviceKind deviceKind
+		final Set<String> rawPaths,
+		final DeviceKind deviceKind,
+		final RemoteFilesRequestExecutor fileOperations
 	) {
 		final Set<String> absolutePaths = new HashSet<>();
-
-		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(SshConfiguration.class);
-
-		if (sshConfiguration == null) {
-			log.info("Hostname {} - No SSH configuration found. Cannot resolve remote file paths.", hostname);
-			return absolutePaths;
-		}
-
-		final Set<String> rawPaths = fileSource.getPaths();
 
 		if (rawPaths == null || rawPaths.isEmpty()) {
 			return absolutePaths;
@@ -458,143 +400,14 @@ public class FileSourceProcessor {
 				continue;
 			}
 
-			// Build OS-specific command to find matching files
-			final String command = buildResolveCommand(pattern, deviceKind);
-
 			try {
-				// Execute SSH command to find matching files on remote host
-				final String result = osCommandService.runSshCommand(
-					command,
-					hostname,
-					sshConfiguration,
-					sshConfiguration.getTimeout(),
-					null,
-					command,
-					deviceKind
-				);
-
-				// Split command result by line breaks, validate paths, add only valid paths
-				absolutePaths.addAll(FileHelper.parseResolvedPathsFromCommandResult(result, deviceKind, hostname, path));
-			} catch (ClientException | InterruptedException | ControlledSshException e) {
+				absolutePaths.addAll(fileOperations.resolve(pattern));
+			} catch (IOException e) {
 				log.info("Hostname {} - Error occurred when resolving path: {}. Message: {}", hostname, path, e.getMessage());
 				log.debug("Hostname {} - Exception occurred when resolving path {}: {}", hostname, path, e);
 			}
 		}
 		return absolutePaths;
-	}
-
-	/**
-	 * Builds the OS-specific command that lists the files matching a path pattern on the remote host.
-	 * <ul>
-	 * <li>Windows: the full pattern is passed to {@code Get-Item}, which expands wildcards in every segment.</li>
-	 * <li>Linux with a wildcard in a directory segment: the shell expands the directory glob and {@code find -name}
-	 * resolves the filename in each matched directory.</li>
-	 * <li>Linux otherwise: the existing {@code find -name} command (or the directory listing when the filename is
-	 * {@code *}), so that existing configurations produce unchanged commands.</li>
-	 * </ul>
-	 * In every pattern, glob metacharacters other than {@code *} and {@code ?} are escaped to match literally, and
-	 * shell metacharacters are escaped so that a path is never interpreted by the remote shell.
-	 *
-	 * @param pattern    the parsed path pattern
-	 * @param deviceKind the device kind of the remote host
-	 * @return the command to execute
-	 */
-	static String buildResolveCommand(final PathPattern pattern, final DeviceKind deviceKind) {
-		if (DeviceKind.WINDOWS.equals(deviceKind)) {
-			return RESOLVE_WINDOWS_FILES_COMMAND.formatted(FileHelper.escapePowerShellPattern(pattern.fullPattern()));
-		}
-
-		// Both values end up inside double quotes of the remote shell; the filename is additionally a find pattern
-		final String root = escapeDoubleQuotedShell(pattern.root());
-		final String filename = escapeDoubleQuotedShell(escapeFindMetacharacters(pattern.filename()));
-
-		if (pattern.hasDirectoryWildcard()) {
-			return RESOLVE_LINUX_FILES_IN_MATCHING_DIRECTORIES_COMMAND.formatted(
-				quoteShellGlob(pattern.directoryPattern()),
-				filename.replace("'", SINGLE_QUOTE_IN_SCRIPT)
-			);
-		}
-
-		if ("*".equals(pattern.filename())) {
-			return RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(root);
-		}
-
-		return RESOLVE_LINUX_FILES_COMMAND.formatted(root, filename);
-	}
-
-	/**
-	 * Quotes a directory pattern as a shell glob: literal runs are enclosed in double quotes (with shell metacharacters
-	 * escaped, see {@link #escapeDoubleQuotedShell(String)}) so that spaces, brackets and other special characters are
-	 * taken literally, while {@code *} and {@code ?} are left unquoted so that the shell expands them. A single quote is
-	 * written as {@code '\''} because the glob is embedded in the single-quoted {@code sh -c} script.
-	 *
-	 * @param pattern the directory pattern
-	 * @return the shell glob expression
-	 */
-	static String quoteShellGlob(final String pattern) {
-		final StringBuilder glob = new StringBuilder(pattern.length() + 2);
-		boolean inLiteral = false;
-		for (final char c : pattern.toCharArray()) {
-			if (c == '*' || c == '?') {
-				if (inLiteral) {
-					glob.append('"');
-					inLiteral = false;
-				}
-				glob.append(c);
-				continue;
-			}
-			if (!inLiteral) {
-				glob.append('"');
-				inLiteral = true;
-			}
-			if (c == '\'') {
-				glob.append(SINGLE_QUOTE_IN_SCRIPT);
-			} else {
-				glob.append(escapeDoubleQuotedShell(String.valueOf(c)));
-			}
-		}
-		if (inLiteral) {
-			glob.append('"');
-		}
-		return glob.toString();
-	}
-
-	/**
-	 * Escapes the characters that the shell still interprets inside double quotes ({@code \}, {@code "}, {@code $} and
-	 * {@code `}), so that a value embedded in a double-quoted argument reaches the command verbatim and can never be
-	 * expanded or executed by the shell.
-	 *
-	 * @param value the value to embed in a double-quoted shell argument
-	 * @return the escaped value
-	 */
-	static String escapeDoubleQuotedShell(final String value) {
-		final StringBuilder escaped = new StringBuilder(value.length());
-		for (final char c : value.toCharArray()) {
-			if (c == '\\' || c == '"' || c == '$' || c == '`') {
-				escaped.append('\\');
-			}
-			escaped.append(c);
-		}
-		return escaped.toString();
-	}
-
-	/**
-	 * Escapes the glob metacharacters other than {@code *} and {@code ?} ({@code [}, {@code ]} and {@code \}) in a
-	 * {@code find -name} pattern so that they match literally, consistently with the local resolver. The result still
-	 * has to go through {@link #escapeDoubleQuotedShell(String)} before being embedded in the command.
-	 *
-	 * @param pattern the find pattern
-	 * @return the pattern where only {@code *} and {@code ?} act as wildcards
-	 */
-	static String escapeFindMetacharacters(final String pattern) {
-		final StringBuilder escaped = new StringBuilder(pattern.length());
-		for (final char c : pattern.toCharArray()) {
-			if (c == '[' || c == ']' || c == '\\') {
-				escaped.append('\\');
-			}
-			escaped.append(c);
-		}
-		return escaped.toString();
 	}
 
 	/**
