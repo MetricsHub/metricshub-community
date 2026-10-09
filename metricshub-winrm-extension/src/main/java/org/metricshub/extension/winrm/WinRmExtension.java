@@ -305,7 +305,7 @@ public class WinRmExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * Closes the pooled WinRM clients, deleting their remote shells.
+	 * Closes the pooled WinRM clients.
 	 */
 	@Override
 	public void onShutdown() {

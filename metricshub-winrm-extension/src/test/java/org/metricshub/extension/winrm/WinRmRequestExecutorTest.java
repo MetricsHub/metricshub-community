@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.extension.winrm.WinRmRequestExecutor.ClientKind.COMMAND;
-import static org.metricshub.extension.winrm.WinRmRequestExecutor.ClientKind.WQL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -101,24 +99,23 @@ class WinRmRequestExecutorTest {
 		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofHours(1));
 
 		// Sequential requests share one client
-		final WinRMClient first = executor.withClient("host", configuration("pass"), WQL, client -> client);
-		assertSame(first, executor.withClient("host", configuration("pass"), WQL, client -> client));
+		final WinRMClient first = executor.withClient("host", configuration("pass"), client -> client);
+		assertSame(first, executor.withClient("host", configuration("pass"), client -> client));
 
 		// A concurrent request (here, nested) gets its own client
-		final WinRMClient concurrent = executor.withClient("host", configuration("pass"), WQL, outer ->
-			executor.withClient("host", configuration("pass"), WQL, inner -> inner)
+		final WinRMClient concurrent = executor.withClient("host", configuration("pass"), outer ->
+			executor.withClient("host", configuration("pass"), inner -> inner)
 		);
 		assertNotSame(first, concurrent);
 
 		// The most recently used client is borrowed first, so the extra clients of a burst stay idle and expire
-		assertSame(first, executor.withClient("host", configuration("pass"), WQL, client -> client));
+		assertSame(first, executor.withClient("host", configuration("pass"), client -> client));
 
-		// Another host, changed credentials, or a command (whose client keeps a remote shell) never reuse a WQL client
-		assertNotSame(first, executor.withClient("other", configuration("pass"), WQL, client -> client));
-		assertNotSame(first, executor.withClient("host", configuration("changed"), WQL, client -> client));
-		assertNotSame(first, executor.withClient("host", configuration("pass"), COMMAND, client -> client));
+		// Another host, or changed credentials, never reuse a client
+		assertNotSame(first, executor.withClient("other", configuration("pass"), client -> client));
+		assertNotSame(first, executor.withClient("host", configuration("changed"), client -> client));
 
-		assertEquals(5, created.size());
+		assertEquals(4, created.size());
 		created.forEach(client -> verify(client, never()).close());
 
 		// Shutting down closes the idle clients
@@ -131,10 +128,10 @@ class WinRmRequestExecutorTest {
 		final List<WinRMClient> created = new ArrayList<>();
 		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofMillis(200));
 
-		final WinRMClient client = executor.withClient("host", configuration("pass"), WQL, c -> c);
+		final WinRMClient client = executor.withClient("host", configuration("pass"), c -> c);
 
 		verify(client, timeout(5000)).close();
-		assertNotSame(client, executor.withClient("host", configuration("pass"), WQL, c -> c));
+		assertNotSame(client, executor.withClient("host", configuration("pass"), c -> c));
 	}
 
 	@Test
@@ -143,14 +140,14 @@ class WinRmRequestExecutorTest {
 		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofHours(1));
 
 		assertThrows(IllegalStateException.class, () ->
-			executor.withClient("host", configuration("pass"), COMMAND, client -> {
+			executor.withClient("host", configuration("pass"), client -> {
 				throw new IllegalStateException("timed out");
 			})
 		);
 
 		final WinRMClient failed = created.get(0);
 		verify(failed).close();
-		assertNotSame(failed, executor.withClient("host", configuration("pass"), COMMAND, client -> client));
+		assertNotSame(failed, executor.withClient("host", configuration("pass"), client -> client));
 	}
 
 	/**

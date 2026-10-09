@@ -69,8 +69,11 @@ import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
  * The WinRmRequestExecutor class provides utility methods for executing
  * various WinRm requests locally or on remote hosts.
  * <p>
- * Requests reuse pooled {@link WinRMClient} instances, so the sources of a collect cycle share a few
- * authenticated connections and remote shells instead of opening one per request.
+ * WQL queries reuse pooled {@link WinRMClient} instances, so the WQL sources of a collect cycle share a
+ * few authenticated connections instead of opening one per query. Commands still get a client of their
+ * own: a client keeps the remote shell of its commands, and as long as winrm-java#196 leaks one
+ * operation in that shell whenever a command's terminate Signal fails, a pooled shell would pile them
+ * up to MaxConcurrentOperationsPerUser (15 on Windows Server 2008 R2) within a cycle.
  */
 @Slf4j
 public class WinRmRequestExecutor implements IWinRequestExecutor {
@@ -78,14 +81,13 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	/**
 	 * How long a client stays idle in the pool before it is closed. The requests of a collect cycle
 	 * run back to back and share their clients, while the gap between two cycles (2 minutes by
-	 * default) is longer, so each cycle starts with fresh clients: no remote shell stays open on the
-	 * host between cycles, and no client outlives the 120 seconds after which HTTP.sys drops an idle
-	 * connection anyway.
+	 * default) is longer, so each cycle starts with fresh clients, and no client outlives the 120
+	 * seconds after which HTTP.sys drops an idle connection anyway.
 	 */
 	static final Duration IDLE_TIMEOUT = Duration.ofSeconds(15);
 
 	/**
-	 * Idle clients per host, configuration and kind, most recently used first. A client is a serial
+	 * Idle clients per host and configuration, most recently used first. A client is a serial
 	 * channel, so each concurrent request borrows its own: the pool grows to the host's concurrency,
 	 * and the clients of a burst that are no longer needed sink to the end and expire. A changed
 	 * configuration (new credentials, ...) is another key, so it never reuses an old client.
@@ -96,19 +98,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 
 	private final Duration idleTimeout;
 
-	/**
-	 * What a pooled client runs. The kinds are pooled apart because a client keeps the remote shell of
-	 * its first command until it is closed: WQL clients then never own a shell, and the shells open on
-	 * a host never outnumber its concurrent commands.
-	 */
-	enum ClientKind {
-		/** WQL queries, which need no remote shell. */
-		WQL,
-		/** Commands, which run in the remote shell the client keeps. */
-		COMMAND
-	}
-
-	private record ClientKey(String hostname, WinRmConfiguration configuration, ClientKind kind) {}
+	private record ClientKey(String hostname, WinRmConfiguration configuration) {}
 
 	private record IdleClient(WinRMClient client, long idleSince) {}
 
@@ -134,27 +124,22 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	}
 
 	/**
-	 * Run an operation on a client of the host: an idle one of that kind from the pool when there is
-	 * one, a new one otherwise. After a success, the client goes back to the pool. After a failure, it
-	 * is closed instead: closing hard-closes a connection that a timed-out operation may still be
-	 * blocked on and, when no operation holds the connection any more, deletes the client's remote
-	 * shell. A shell whose command is still blocked is left to the host, which reaps it after its shell
-	 * IdleTimeout, as it did before clients were pooled.
+	 * Run an operation on a client of the host: an idle one from the pool when there is one, a new
+	 * one otherwise. After a success, the client goes back to the pool. After a failure, it is closed
+	 * instead, which hard-closes a connection that a timed-out operation may still be blocked on.
 	 *
 	 * @param <T>                The type of the operation's result
 	 * @param hostname           The hostname of the device where the WinRM service is running
 	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout, ...)
-	 * @param kind               What the operation runs, see {@link ClientKind}
-	 * @param operation          The operation to run on the client
+	 * @param operation          The operation to run on the client, never a command (see the class description)
 	 * @return The result of the operation
 	 */
 	<T> T withClient(
 		final String hostname,
 		final WinRmConfiguration winRmConfiguration,
-		final ClientKind kind,
 		final Function<WinRMClient, T> operation
 	) {
-		final ClientKey key = new ClientKey(hostname, winRmConfiguration, kind);
+		final ClientKey key = new ClientKey(hostname, winRmConfiguration);
 		WinRMClient client = borrow(key);
 		if (client == null) {
 			client = clientFactory.apply(hostname, winRmConfiguration);
@@ -177,7 +162,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	/**
 	 * Take the most recently used idle client of the given key out of the pool.
 	 *
-	 * @param key The host, configuration and kind
+	 * @param key The host and configuration
 	 * @return The client, or {@code null} when none is idle
 	 */
 	private WinRMClient borrow(final ClientKey key) {
@@ -191,7 +176,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	/**
 	 * Put a client back into the pool, and check the pool again once the idle timeout has elapsed.
 	 *
-	 * @param key    The host, configuration and kind
+	 * @param key    The host and configuration
 	 * @param client The client, idle from now on
 	 */
 	private void release(final ClientKey key, final WinRMClient client) {
@@ -216,7 +201,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * Close the clients of the given pool entry that have been idle for the idle timeout. Every
 	 * release schedules this check, so each client is checked when its own idle timeout elapses.
 	 *
-	 * @param key  The host, configuration and kind
+	 * @param key  The host and configuration
 	 * @param idle The idle clients of that key, removed from the pool once empty
 	 */
 	private void closeExpired(final ClientKey key, final Deque<IdleClient> idle) {
@@ -235,7 +220,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	}
 
 	/**
-	 * Close every idle client, deleting their remote shells. Called when the extension shuts down.
+	 * Close every idle client. Called when the extension shuts down.
 	 */
 	public void close() {
 		final List<IdleClient> idle;
@@ -357,7 +342,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		try {
 			final long startTime = System.currentTimeMillis();
 
-			final WqlResult result = withClient(hostname, winRmConfiguration, ClientKind.WQL, client -> {
+			final WqlResult result = withClient(hostname, winRmConfiguration, client -> {
 				final WqlRequest request = client.wql(query);
 				if (!namespace.isBlank()) {
 					request.namespace(namespace);
@@ -455,7 +440,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
 	@WithSpan("Remote Command WinRM")
-	public String executeRemoteWinRmCommand(
+	public static String executeRemoteWinRmCommand(
 		@SpanAttribute("host.hostname") @NonNull final String hostname,
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
 		@SpanAttribute("winrm.command") @NonNull final String command,
@@ -487,13 +472,14 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		try {
 			final long startTime = System.currentTimeMillis();
 
-			final CommandResult result = withClient(hostname, winRmConfiguration, ClientKind.COMMAND, client -> {
+			final CommandResult result;
+			try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
 				CommandRequest request = client.command(command);
 				if (embeddedFiles != null && !embeddedFiles.isEmpty()) {
 					request = request.upload(embeddedFiles.stream().map(Path::of).toArray(Path[]::new));
 				}
-				return request.execute();
-			});
+				result = request.execute();
+			}
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
