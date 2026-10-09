@@ -159,7 +159,9 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	/**
 	 * Execute a {@link Json2Csv} compute on the current source through the context.
 	 *
-	 * @param argMap The array of arguments to use to create the {@link Json2Csv} compute.
+	 * @param argMap The array of arguments to use to create the {@link Json2Csv} compute: jsonSource, entryKey,
+	 *               properties (separated by ";"), separator, and the optional parsingMode ("tree", the default, or
+	 *               "events", see {@link Json2Csv.ParsingMode}).
 	 * @return The table result from the execution of the compute.
 	 */
 	@JawkFunction("json2csv")
@@ -170,7 +172,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 				String.valueOf(argMap.get("entryKey")),
 				toAwkListString(argMap.get("properties")),
 				String.valueOf(argMap.get("separator")),
-				false,
+				argMap.isIn("parsingMode") &&
+					Json2Csv.ParsingMode.EVENTS.name().equalsIgnoreCase(String.valueOf(argMap.get("parsingMode"))),
 				hostname
 			).strip();
 		} catch (Exception exception) {

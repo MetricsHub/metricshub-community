@@ -106,6 +106,23 @@ public class ClientsExecutor {
 	}
 
 	/**
+	 * Execute JSON to CSV operation, the JSON being parsed as a tree.
+	 *
+	 * @param jsonSource    The JSON source string.
+	 * @param jsonEntryKey  The JSON entry key.
+	 * @param propertyList  The list of properties.
+	 * @param separator     The separator for CSV.
+	 * @return The CSV representation of the JSON.
+	 * @throws TimeoutException       If the execution times out.
+	 * @throws ExecutionException     If an execution exception occurs.
+	 * @throws InterruptedException   If the execution is interrupted.
+	 */
+	public String executeJson2Csv(String jsonSource, String jsonEntryKey, List<String> propertyList, String separator)
+		throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, false);
+	}
+
+	/**
 	 * Execute JSON to CSV operation.
 	 *
 	 * @param jsonSource    The JSON source string.
@@ -133,6 +150,29 @@ public class ClientsExecutor {
 			eventParsing,
 			telemetryManager.getHostname()
 		);
+	}
+
+	/**
+	 * Execute JSON to CSV operation, the JSON being parsed as a tree.
+	 *
+	 * @param jsonSource    The JSON source string.
+	 * @param jsonEntryKey  The JSON entry key.
+	 * @param propertyList  The list of properties.
+	 * @param separator     The separator for CSV.
+	 * @param hostname      The hostname, for logging purpose.
+	 * @return The CSV representation of the JSON.
+	 * @throws TimeoutException       If the execution times out.
+	 * @throws ExecutionException     If an execution exception occurs.
+	 * @throws InterruptedException   If the execution is interrupted.
+	 */
+	public static String executeJson2Csv(
+		String jsonSource,
+		String jsonEntryKey,
+		List<String> propertyList,
+		String separator,
+		String hostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, false, hostname);
 	}
 
 	/**
