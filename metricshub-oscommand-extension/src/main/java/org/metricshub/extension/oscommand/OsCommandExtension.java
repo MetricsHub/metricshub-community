@@ -178,7 +178,7 @@ public class OsCommandExtension implements IProtocolExtension {
 		if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
 		} else if (source instanceof FileSource fileSource) {
-			return new FileSourceProcessor(osCommandService).process(fileSource, connectorId, telemetryManager);
+			return new FileSourceProcessor().process(fileSource, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
