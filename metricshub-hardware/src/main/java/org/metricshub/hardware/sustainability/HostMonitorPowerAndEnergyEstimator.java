@@ -31,6 +31,8 @@ import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NonNull;
@@ -52,9 +54,37 @@ public class HostMonitorPowerAndEnergyEstimator {
 	private Monitor hostMonitor;
 	private Double powerConsumption;
 
+	/**
+	 * The ids of the monitors whose power or energy is collected by the connector
+	 */
+	private Set<String> measuredMonitorIds = Set.of();
+
+	/**
+	 * The ids of the monitors whose power has been estimated by the engine during the current cycle.
+	 * Only these values can be rescaled or removed.
+	 */
+	private Set<String> estimatedMonitorIds = Set.of();
+
 	public HostMonitorPowerAndEnergyEstimator(final Monitor monitor, final TelemetryManager telemetryManager) {
 		this.hostMonitor = monitor;
 		this.telemetryManager = telemetryManager;
+	}
+
+	/**
+	 * @param monitor            The host monitor
+	 * @param telemetryManager   The telemetry manager wrapping the monitors
+	 * @param measuredMonitorIds  The ids of the monitors whose power or energy is collected by the connector
+	 * @param estimatedMonitorIds The ids of the monitors whose power has been estimated during the current cycle
+	 */
+	public HostMonitorPowerAndEnergyEstimator(
+		final Monitor monitor,
+		final TelemetryManager telemetryManager,
+		final Set<String> measuredMonitorIds,
+		final Set<String> estimatedMonitorIds
+	) {
+		this(monitor, telemetryManager);
+		this.measuredMonitorIds = measuredMonitorIds;
+		this.estimatedMonitorIds = estimatedMonitorIds;
 	}
 
 	/**
@@ -109,8 +139,16 @@ public class HostMonitorPowerAndEnergyEstimator {
 
 		final Double totalMeasuredPowerConsumption = sumEnclosurePowerConsumptions(enclosureMonitors);
 
+		// Rescaling: the estimated monitors share what remains of the total once the other monitors are deducted
+		final Double measuredMonitorsPowerConsumption = sumPowerConsumptions(monitor -> !isEstimated(monitor));
+		final Double estimatedMonitorsPowerConsumption = sumPowerConsumptions(this::isEstimated);
+		Double remainingPowerConsumption = totalMeasuredPowerConsumption;
+		if (totalMeasuredPowerConsumption != null && measuredMonitorsPowerConsumption != null) {
+			remainingPowerConsumption = Math.max(0.0, totalMeasuredPowerConsumption - measuredMonitorsPowerConsumption);
+		}
+
 		// Adjust monitor power consumptions
-		adjustAllPowerConsumptions(sumEstimatedPowerConsumptions(), totalMeasuredPowerConsumption);
+		adjustAllPowerConsumptions(estimatedMonitorsPowerConsumption, remainingPowerConsumption);
 		powerConsumption = totalMeasuredPowerConsumption;
 		return powerConsumption;
 	}
@@ -161,6 +199,10 @@ public class HostMonitorPowerAndEnergyEstimator {
 			// on the first non-adjusted power and the second adjusted power and from collect to collect this energy gap will persist.
 
 			monitorStream.forEach(monitor -> {
+				// Removal: only remove the values estimated during this cycle
+				if (!isEstimated(monitor)) {
+					return;
+				}
 				final Map<String, AbstractMetric> metrics = monitor.getMetrics();
 				final String powerMetricName = HwCollectHelper.generatePowerMetricNameForMonitorType(monitor.getType());
 				final String energyMetricName = HwCollectHelper.generateEnergyMetricNameForMonitorType(monitor.getType());
@@ -175,6 +217,10 @@ public class HostMonitorPowerAndEnergyEstimator {
 			telemetryManager.getConnectorStore()
 		);
 		monitorStream.forEach(monitor -> {
+			// Rescaling: only rescale the values estimated during this cycle
+			if (!isEstimated(monitor)) {
+				return;
+			}
 			final String powerMetricName = HwCollectHelper.generatePowerMetricNameForMonitorType(monitor.getType());
 			final String energyMetricName = HwCollectHelper.generateEnergyMetricNameForMonitorType(monitor.getType());
 			final Double powerMetricValue = CollectHelper.getNumberMetricValue(monitor, powerMetricName, false);
@@ -281,6 +327,16 @@ public class HostMonitorPowerAndEnergyEstimator {
 	 * @return {@link Double} value. <code>null</code> if the power cannot be collected.
 	 */
 	Double sumEstimatedPowerConsumptions() {
+		return sumPowerConsumptions(monitor -> true);
+	}
+
+	/**
+	 * Perform the sum of the power consumption of the monitors matching the given filter
+	 *
+	 * @param filter The monitors to consider
+	 * @return {@link Double} value. <code>null</code> if the power cannot be collected.
+	 */
+	Double sumPowerConsumptions(final Predicate<Monitor> filter) {
 		// Browse through all the collected objects and perform the sum of parameters using the map-reduce
 		return telemetryManager
 			.getMonitors()
@@ -293,6 +349,8 @@ public class HostMonitorPowerAndEnergyEstimator {
 			.filter(monitor -> !KnownMonitorType.HOST.getKey().equals(monitor.getType())) // We already sum the values for the host
 			.filter(monitor -> !KnownMonitorType.ENCLOSURE.getKey().equals(monitor.getType())) // Skip the enclosure
 			.filter(monitor -> !KnownMonitorType.VM.getKey().equals(monitor.getType())) // Skip VM monitors as their power is already computed based on the host's power
+			.filter(monitor -> !HwCollectHelper.hasMeasuredParent(monitor, telemetryManager, measuredMonitorIds)) // Double counting: already included in the parent's measured power
+			.filter(filter)
 			.map(monitor ->
 				CollectHelper.getNumberMetricValue(
 					monitor,
@@ -303,6 +361,14 @@ public class HostMonitorPowerAndEnergyEstimator {
 			.filter(Objects::nonNull) // skip null power consumption values
 			.reduce(Double::sum)
 			.orElse(null);
+	}
+
+	/**
+	 * @param monitor The monitor to check
+	 * @return <code>true</code> if the monitor's power has been estimated by the engine during the current cycle
+	 */
+	private boolean isEstimated(final Monitor monitor) {
+		return estimatedMonitorIds.contains(monitor.getId());
 	}
 
 	/**
