@@ -175,7 +175,8 @@ public abstract class AbstractStrategy implements IStrategy {
 				.build()
 				.run(() -> runSource(connectorId, attributes, source, previousSourceTable));
 
-			allSourcesAnswered &= sourceTable != failedSourceTable;
+			// A null table (the source processor failed) or the retry sentinel: the source did not answer
+			allSourcesAnswered &= sourceTable != null && sourceTable != failedSourceTable;
 
 			final boolean isNullSourceTable = sourceTable == null;
 			if (isNullSourceTable || sourceTable.isEmpty()) {

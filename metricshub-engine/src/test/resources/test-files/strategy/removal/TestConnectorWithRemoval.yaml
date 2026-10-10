@@ -13,6 +13,11 @@ connector:
     criteria:
       - type: deviceType
         keep: [ linux ]
+beforeAll:
+  # Incremental file source (LOG mode by default), read by the before_all_log and before_all_log_copy jobs
+  logLines:
+    type: file
+    paths: /var/log/before.log
 monitors:
   # Trusted simple job, run sequentially before the jobs of the thread pool (priority monitor type)
   enclosure:
@@ -207,6 +212,24 @@ monitors:
           oid: 1.3.6.1.13
           selectColumns: "ID,1"
       mapping:
+        attributes:
+          id: $1
+  # Guard: no source of its own, the mapping reads the incremental file source of beforeAll
+  before_all_log:
+    simple:
+      mapping:
+        source: "${source::beforeAll.logLines}"
+        attributes:
+          id: $1
+  # Guard: its source is a copy of the incremental file source of beforeAll
+  before_all_log_copy:
+    simple:
+      sources:
+        source(1):
+          type: copy
+          from: "${source::beforeAll.logLines}"
+      mapping:
+        source: "${source::monitors.before_all_log_copy.simple.sources.source(1)}"
         attributes:
           id: $1
   # Defensive: a job of the connector type never removes the connector monitor created by the detection

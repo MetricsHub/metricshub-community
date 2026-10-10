@@ -25,12 +25,19 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
+import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +45,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -50,6 +59,8 @@ import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
+import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
+import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
@@ -57,6 +68,7 @@ import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -308,26 +320,106 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
 
-		return sourcesAnswered && mapped && !hasIncrementalSource(monitorTask);
+		return sourcesAnswered && mapped && !hasIncrementalSource(currentConnector, monitorTask);
 	}
 
 	/**
-	 * Whether the given monitor task has an incremental source. eventLog and file (LOG mode) sources only return the
-	 * entries added since the previous poll: a missing row does not mean a missing entity.
+	 * Whether the monitors of the given task come from an incremental source: one of the task's sources, or a source
+	 * reached, directly or not, through the mapping source and the source references (another job, beforeAll).
+	 * eventLog and file (LOG mode) sources only return the entries added since the previous poll: a missing row does
+	 * not mean a missing entity.
 	 *
-	 * @param monitorTask The monitor task defining the sources
-	 * @return {@code true} if one of the task's sources is incremental
+	 * @param connector   The connector defining the task
+	 * @param monitorTask The monitor task defining the sources and the mapping
+	 * @return {@code true} if one of the sources the task's monitors come from is incremental
 	 */
-	private static boolean hasIncrementalSource(final AbstractMonitorTask monitorTask) {
-		return monitorTask
-			.getSources()
+	private static boolean hasIncrementalSource(final Connector connector, final AbstractMonitorTask monitorTask) {
+		final Map<String, Source> sourcesByKey = getSourcesByKey(connector);
+		final Deque<Source> pending = new ArrayDeque<>(monitorTask.getSources().values());
+		if (monitorTask.getMapping() != null) {
+			addReferencedSources(monitorTask.getMapping().getSource(), sourcesByKey, pending);
+		}
+
+		final Set<Source> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+		while (!pending.isEmpty()) {
+			final Source source = pending.pop();
+			if (!visited.add(source)) {
+				continue;
+			}
+			if (isIncremental(source)) {
+				return true;
+			}
+			source.getReferences().forEach(reference -> addReferencedSources(reference, sourcesByKey, pending));
+		}
+		return false;
+	}
+
+	/**
+	 * Whether the given source is incremental: an eventLog source, or a file source in LOG mode.
+	 *
+	 * @param source The source to check
+	 * @return {@code true} if the source only returns the entries added since the previous poll
+	 */
+	private static boolean isIncremental(final Source source) {
+		if (source instanceof FileSource fileSource) {
+			return fileSource.getMode() == FileSourceProcessingMode.LOG;
+		}
+		return source instanceof EventLogSource;
+	}
+
+	/**
+	 * Add the sources referenced (<code>${source::...}</code>) in the given value to the given queue.
+	 *
+	 * @param value        A mapping source or a source reference value, possibly {@code null}
+	 * @param sourcesByKey The sources of the connector, by source key
+	 * @param pending      The queue of sources to examine
+	 */
+	private static void addReferencedSources(
+		final String value,
+		final Map<String, Source> sourcesByKey,
+		final Deque<Source> pending
+	) {
+		if (value == null) {
+			return;
+		}
+		final Matcher matcher = SOURCE_REF_PATTERN.matcher(value);
+		while (matcher.find()) {
+			final Source source = sourcesByKey.get(matcher.group());
+			if (source != null) {
+				pending.push(source);
+			}
+		}
+	}
+
+	/**
+	 * Get all the sources of the given connector (beforeAll, afterAll and the tasks of every monitor job), by source key.
+	 *
+	 * @param connector The connector defining the sources
+	 * @return a map of source key to source
+	 */
+	private static Map<String, Source> getSourcesByKey(final Connector connector) {
+		final Map<String, Source> sourcesByKey = new HashMap<>();
+		final Stream<Map<String, Source>> jobSources = connector
+			.getMonitors()
 			.values()
 			.stream()
-			.anyMatch(
-				source ->
-					source instanceof EventLogSource ||
-					(source instanceof FileSource fileSource && fileSource.getMode() == FileSourceProcessingMode.LOG)
-			);
+			.flatMap(job -> {
+				if (job instanceof SimpleMonitorJob simpleMonitorJob) {
+					return Stream.<AbstractMonitorTask>of(simpleMonitorJob.getSimple());
+				}
+				if (job instanceof StandardMonitorJob standardMonitorJob) {
+					return Stream.<AbstractMonitorTask>of(standardMonitorJob.getDiscovery(), standardMonitorJob.getCollect());
+				}
+				return Stream.<AbstractMonitorTask>empty();
+			})
+			.filter(Objects::nonNull)
+			.map(AbstractMonitorTask::getSources);
+		Stream.concat(Stream.of(connector.getBeforeAll(), connector.getAfterAll()), jobSources)
+			.filter(Objects::nonNull)
+			.flatMap(sources -> sources.values().stream())
+			.filter(source -> source.getKey() != null)
+			.forEach(source -> sourcesByKey.put(source.getKey(), source));
+		return sourcesByKey;
 	}
 
 	/**

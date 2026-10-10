@@ -520,7 +520,9 @@ class SimpleStrategyTest {
 			"event_log",
 			"log_file",
 			"missing_source_table",
-			"no_mapping_source"
+			"no_mapping_source",
+			"before_all_log",
+			"before_all_log_copy"
 		);
 		final Map<String, Monitor> staleMonitors = Stream.concat(trustedTypes.stream(), untrustedTypes.stream()).collect(
 			Collectors.toMap(Function.identity(), type -> addStaleMonitor(telemetryManager, type))
@@ -539,6 +541,9 @@ class SimpleStrategyTest {
 			.getMonitors()
 			.get("no_attributes");
 		noAttributesJob.getSimple().getMapping().setAttributes(null);
+
+		// The incremental file source of beforeAll, read by before_all_log and before_all_log_copy
+		sourceTables.put("${source::beforeAll.logLines}", "new;1");
 
 		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up
 		telemetryManager
