@@ -504,13 +504,7 @@ class SimpleStrategyTest {
 
 		// Each job type has a monitor discovered by a previous run. The enclosure job runs sequentially, the others in the
 		// thread pool
-		final List<String> trustedTypes = List.of(
-			ENCLOSURE.getKey(),
-			PROCESS,
-			"flat_file",
-			"no_sources",
-			"negative_removal_delay"
-		);
+		final List<String> trustedTypes = List.of(ENCLOSURE.getKey(), PROCESS, "flat_file", "no_sources");
 		final List<String> untrustedTypes = List.of(
 			"empty_source",
 			"no_identifying_attribute",
@@ -522,7 +516,8 @@ class SimpleStrategyTest {
 			"missing_source_table",
 			"no_mapping_source",
 			"before_all_log",
-			"before_all_log_copy"
+			"before_all_log_copy",
+			"null_source"
 		);
 		final Map<String, Monitor> staleMonitors = Stream.concat(trustedTypes.stream(), untrustedTypes.stream()).collect(
 			Collectors.toMap(Function.identity(), type -> addStaleMonitor(telemetryManager, type))
@@ -544,6 +539,25 @@ class SimpleStrategyTest {
 
 		// The incremental file source of beforeAll, read by before_all_log and before_all_log_copy
 		sourceTables.put("${source::beforeAll.logLines}", "new;1");
+
+		// null_source's source(2) answered during the previous run: now the extension returns null, which arrives as an
+		// empty table, so the source is retried then given up
+		final String nullSourceKey = "${source::monitors.null_source.simple.sources.source(2)}";
+		telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
+			.addSourceTable(
+				nullSourceKey,
+				SourceTable.builder().table(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP)).build()
+			);
+		lenient()
+			.doReturn(null)
+			.when(protocolExtensionMock)
+			.processSource(
+				argThat(source -> source != null && nullSourceKey.equals(source.getKey())),
+				anyString(),
+				any(TelemetryManager.class)
+			);
 
 		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up
 		telemetryManager

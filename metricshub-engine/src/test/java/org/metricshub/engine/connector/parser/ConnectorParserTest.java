@@ -2,6 +2,7 @@ package org.metricshub.engine.connector.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -800,5 +801,16 @@ class ConnectorParserTest {
 		// Absent or null: 0
 		assertEquals(0L, monitors.get("absent").getRemovalDelay());
 		assertEquals(0L, monitors.get("null_value").getRemovalDelay());
+	}
+
+	@Test
+	void testNegativeMonitorRemovalDelayRejected() {
+		final ConnectorParserUpdateManagement parser = new ConnectorParserUpdateManagement(
+			"connector/management/removalDelay"
+		);
+
+		// A negative delay is rejected like an invalid duration, -1 included
+		assertThrows(Exception.class, () -> parser.parse("negativeRemovalDelay"));
+		assertThrows(Exception.class, () -> parser.parse("minusOneRemovalDelay"));
 	}
 }

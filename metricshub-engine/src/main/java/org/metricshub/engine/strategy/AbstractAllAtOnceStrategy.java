@@ -714,7 +714,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				final int removed = telemetryManager.removeMonitorsNotDiscoveredAt(
 					type,
 					connectorId,
-					strategyTime - TimeUnit.SECONDS.toMillis(Math.max(0L, removalDelay))
+					strategyTime - TimeUnit.SECONDS.toMillis(removalDelay)
 				);
 				if (removed > 0) {
 					log.info(

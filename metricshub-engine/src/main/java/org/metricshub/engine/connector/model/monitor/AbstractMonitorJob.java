@@ -69,6 +69,18 @@ public class AbstractMonitorJob implements MonitorJob {
 	@JsonDeserialize(using = TimeDeserializer.class)
 	private Long removalDelay = 0L;
 
+	/**
+	 * Set how long (in seconds) a monitor may stay without being rediscovered by its job before it is removed.
+	 *
+	 * @param removalDelay The removal delay in seconds. A negative delay is rejected, like an invalid duration.
+	 */
+	public void setRemovalDelay(final Long removalDelay) {
+		if (removalDelay != null && removalDelay < 0) {
+			throw new IllegalArgumentException("Not valid removalDelay, it must not be negative: " + removalDelay);
+		}
+		this.removalDelay = removalDelay;
+	}
+
 	@JsonSetter(nulls = SKIP)
 	private Map<String, MetricDefinition> metrics = new HashMap<>();
 }

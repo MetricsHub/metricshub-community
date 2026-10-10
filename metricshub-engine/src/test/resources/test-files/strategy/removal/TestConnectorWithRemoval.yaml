@@ -178,19 +178,6 @@ monitors:
         source: "${source::monitors.enclosure.simple.sources.source(1)}"
         attributes:
           id: $1
-  # Trusted simple job: a negative removalDelay is read as 0, the monitors refreshed by the run are kept
-  negative_removal_delay:
-    removalDelay: -5
-    simple:
-      sources:
-        source(1):
-          type: snmpTable
-          oid: 1.3.6.1.11
-          selectColumns: "ID,1"
-      mapping:
-        source: "${source::monitors.negative_removal_delay.simple.sources.source(1)}"
-        attributes:
-          id: $1
   # Guard: the mapping source table is not found
   missing_source_table:
     simple:
@@ -230,6 +217,23 @@ monitors:
           from: "${source::beforeAll.logLines}"
       mapping:
         source: "${source::monitors.before_all_log_copy.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: the extension returns null for source(2), which had data in the previous run, while the mapping table is
+  # not empty
+  null_source:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.15
+          selectColumns: "ID,1"
+        source(2):
+          type: snmpTable
+          oid: 1.3.6.1.16
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.null_source.simple.sources.source(1)}"
         attributes:
           id: $1
   # Defensive: a job of the connector type never removes the connector monitor created by the detection
