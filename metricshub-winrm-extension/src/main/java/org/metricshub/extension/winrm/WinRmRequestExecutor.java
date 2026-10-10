@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -193,7 +194,9 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			for (final WqlRow row : result) {
 				final List<String> values = new ArrayList<>(columns.size());
 				for (final String column : columns) {
-					values.add(row.string(column));
+					// WinRM leaves an empty array out of the response: report it as an empty string, like the
+					// WMI extension does, as the compute steps expect no null value
+					values.add(Objects.toString(row.string(column), ""));
 				}
 				table.add(values);
 			}
