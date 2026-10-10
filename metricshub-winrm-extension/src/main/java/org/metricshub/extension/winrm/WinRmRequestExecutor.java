@@ -32,6 +32,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -359,7 +360,9 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			for (final WqlRow row : result) {
 				final List<String> values = new ArrayList<>(columns.size());
 				for (final String column : columns) {
-					values.add(row.string(column));
+					// WinRM leaves an empty array out of the response: report it as an empty string, like the
+					// WMI extension does, as the compute steps expect no null value
+					values.add(Objects.toString(row.string(column), ""));
 				}
 				table.add(values);
 			}
