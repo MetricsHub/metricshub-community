@@ -1,4 +1,5 @@
 grafana:
+  removalDelay: 1h # keep a monitor no longer returned for 1 hour
   simple: # simple job. Creates monitors and collects assicated metrics. 
     sources:
       grafanaHealth:

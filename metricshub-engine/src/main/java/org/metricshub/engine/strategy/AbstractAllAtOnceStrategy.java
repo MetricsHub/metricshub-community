@@ -25,18 +25,29 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
+import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -48,10 +59,16 @@ import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
+import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
+import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -95,8 +112,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 *
 	 * @param currentConnector The current connector
 	 * @param hostname		   The host name
+	 * @param runStartTime     The {@link System#nanoTime()} at which this strategy run started, used to check the strategy timeout
 	 */
-	private void process(final Connector currentConnector, final String hostname) {
+	private void process(final Connector currentConnector, final String hostname, final long runStartTime) {
 		// Check whether the strategy job name matches at least one of the monitor jobs names of the current connector
 		final boolean connectorHasExpectedJobTypes = hasExpectedJobTypes(currentConnector, getJobName());
 		// If the connector doesn't define any monitor job that matches the given strategy job name, log a message then exit the current discovery or simple operation
@@ -153,8 +171,19 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.filter(entry -> !MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
+		// Set when this run stops waiting for its thread pool: the jobs still running are abandoned
+		boolean poolAbandoned = false;
+
+		// The monitor types whose job ran a trusted pass, i.e. whose monitors that were not rediscovered can be removed
+		final Set<String> trustedTypes = ConcurrentHashMap.newKeySet();
+		final Consumer<Map.Entry<String, MonitorJob>> runJob = entry -> {
+			if (processMonitorJob(currentConnector, hostname, entry)) {
+				trustedTypes.add(entry.getKey());
+			}
+		};
+
 		// Run monitor jobs defined in monitor jobs priority map (host, enclosure, blade, disk_controller and cpu)  in sequential mode
-		sequentialMonitorJobs.entrySet().forEach(entry -> processMonitorJob(currentConnector, hostname, entry));
+		sequentialMonitorJobs.entrySet().forEach(runJob);
 
 		final boolean isSequential = telemetryManager.getHostConfiguration().isSequential();
 		final String mode = isSequential ? "sequential" : "parallel";
@@ -169,7 +198,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 		// If monitor jobs execution is set to "sequential", execute monitor jobs one by one
 		if (isSequential) {
-			otherMonitorJobs.entrySet().forEach(entry -> processMonitorJob(currentConnector, hostname, entry));
+			otherMonitorJobs.entrySet().forEach(runJob);
 		} else {
 			// Execute monitor jobs in parallel
 			// Create a thread pool with a fixed number of threads
@@ -177,9 +206,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				Math.max(1, Math.min(MAX_THREADS_COUNT, otherMonitorJobs.size()))
 			);
 
-			otherMonitorJobs
-				.entrySet()
-				.forEach(entry -> threadsPool.execute(() -> processMonitorJob(currentConnector, hostname, entry)));
+			otherMonitorJobs.entrySet().forEach(entry -> threadsPool.execute(() -> runJob.accept(entry)));
 
 			// Two-phase shutdown: first graceful, then forced
 			threadsPool.shutdown();
@@ -192,9 +219,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 						hostname,
 						THREAD_TIMEOUT
 					);
+					poolAbandoned = true;
 					threadsPool.shutdownNow();
 				}
 			} catch (Exception e) {
+				poolAbandoned = true;
 				threadsPool.shutdownNow();
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
@@ -202,6 +231,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				log.debug("Hostname {} - Waiting for threads' termination aborted with an error.", hostname, e);
 			}
 		}
+
+		// An abandoned run (thread pool or strategy timeout) must not remove monitors: its jobs may have been cut short
+		if (!poolAbandoned && isWithinStrategyTimeout(runStartTime)) {
+			removeMonitorsNotRediscovered(currentConnector, trustedTypes, hostname);
+		}
+
 		// Run AfterAllStrategy that executes afterAll sources
 		final AfterAllStrategy afterAllStrategy = AfterAllStrategy.builder()
 			.clientsExecutor(clientsExecutor)
@@ -220,8 +255,10 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param currentConnector The connector defining the monitor job
 	 * @param hostname         The host name of the monitored resource
 	 * @param monitorJobEntry  The monitor type and its monitor job
+	 * @return {@code true} when the job ran a trusted pass: every source answered, at least one monitor was mapped and the
+	 *         job has no incremental source
 	 */
-	private void processMonitorJob(
+	private boolean processMonitorJob(
 		final Connector currentConnector,
 		final String hostname,
 		final Map.Entry<String, MonitorJob> monitorJobEntry
@@ -234,13 +271,13 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		AbstractMonitorTask monitorTask = retrieveTask(monitorJob);
 
 		if (monitorTask == null) {
-			return;
+			return false;
 		}
 
 		final String monitorType = monitorJobEntry.getKey();
 
 		if (isMonitorFiltered(monitorType)) {
-			return;
+			return false;
 		}
 
 		final JobInfo jobInfo = JobInfo.builder()
@@ -261,7 +298,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.build();
 
 		// Create the sources and the computes for a connector
-		processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+		final boolean sourcesAnswered = processSourcesAndComputes(orderedSources.getSources(), jobInfo);
 
 		// Create the monitors
 		final Mapping mapping = monitorTask.getMapping();
@@ -271,10 +308,118 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
+		final boolean mapped = processSameTypeMonitors(
+			currentConnector,
+			mapping,
+			monitorType,
+			hostname,
+			monitorJob,
+			isDiscovery
+		);
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
+
+		return sourcesAnswered && mapped && !hasIncrementalSource(currentConnector, monitorTask);
+	}
+
+	/**
+	 * Whether the monitors of the given task come from an incremental source: one of the task's sources, or a source
+	 * reached, directly or not, through the mapping source and the source references (another job, beforeAll).
+	 * eventLog and file (LOG mode) sources only return the entries added since the previous poll: a missing row does
+	 * not mean a missing entity.
+	 *
+	 * @param connector   The connector defining the task
+	 * @param monitorTask The monitor task defining the sources and the mapping
+	 * @return {@code true} if one of the sources the task's monitors come from is incremental
+	 */
+	private static boolean hasIncrementalSource(final Connector connector, final AbstractMonitorTask monitorTask) {
+		final Map<String, Source> sourcesByKey = getSourcesByKey(connector);
+		final Deque<Source> pending = new ArrayDeque<>(monitorTask.getSources().values());
+		if (monitorTask.getMapping() != null) {
+			addReferencedSources(monitorTask.getMapping().getSource(), sourcesByKey, pending);
+		}
+
+		final Set<Source> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+		while (!pending.isEmpty()) {
+			final Source source = pending.pop();
+			if (!visited.add(source)) {
+				continue;
+			}
+			if (isIncremental(source)) {
+				return true;
+			}
+			source.getReferences().forEach(reference -> addReferencedSources(reference, sourcesByKey, pending));
+		}
+		return false;
+	}
+
+	/**
+	 * Whether the given source is incremental: an eventLog source, or a file source in LOG mode.
+	 *
+	 * @param source The source to check
+	 * @return {@code true} if the source only returns the entries added since the previous poll
+	 */
+	private static boolean isIncremental(final Source source) {
+		if (source instanceof FileSource fileSource) {
+			return fileSource.getMode() == FileSourceProcessingMode.LOG;
+		}
+		return source instanceof EventLogSource;
+	}
+
+	/**
+	 * Add the sources referenced (<code>${source::...}</code>) in the given value to the given queue.
+	 *
+	 * @param value        A mapping source or a source reference value, possibly {@code null}
+	 * @param sourcesByKey The sources of the connector, by source key
+	 * @param pending      The queue of sources to examine
+	 */
+	private static void addReferencedSources(
+		final String value,
+		final Map<String, Source> sourcesByKey,
+		final Deque<Source> pending
+	) {
+		if (value == null) {
+			return;
+		}
+		final Matcher matcher = SOURCE_REF_PATTERN.matcher(value);
+		while (matcher.find()) {
+			final Source source = sourcesByKey.get(matcher.group());
+			if (source != null) {
+				pending.push(source);
+			}
+		}
+	}
+
+	/**
+	 * Get all the sources of the given connector (beforeAll, afterAll and the tasks of every monitor job), by source key.
+	 *
+	 * @param connector The connector defining the sources
+	 * @return a map of source key to source
+	 */
+	private static Map<String, Source> getSourcesByKey(final Connector connector) {
+		final Map<String, Source> sourcesByKey = new HashMap<>();
+		final Stream<Map<String, Source>> jobSources = connector
+			.getMonitors()
+			.values()
+			.stream()
+			.flatMap(job -> {
+				if (job instanceof SimpleMonitorJob simpleMonitorJob) {
+					return Stream.<AbstractMonitorTask>of(simpleMonitorJob.getSimple());
+				}
+				if (job instanceof StandardMonitorJob standardMonitorJob) {
+					return Stream.<AbstractMonitorTask>of(standardMonitorJob.getDiscovery(), standardMonitorJob.getCollect());
+				}
+				return Stream.<AbstractMonitorTask>empty();
+			})
+			.filter(Objects::nonNull)
+			.map(AbstractMonitorTask::getSources);
+		Stream.concat(Stream.of(connector.getBeforeAll(), connector.getAfterAll()), jobSources)
+			.filter(Objects::nonNull)
+			.flatMap(sources -> sources.values().stream())
+			.filter(source -> source.getKey() != null)
+			.forEach(source -> sourcesByKey.put(source.getKey(), source));
+		return sourcesByKey;
 	}
 
 	/**
@@ -286,8 +431,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param hostname    The host name of the monitored resource
 	 * @param monitorJob  The monitor job defining the discovery or simple task
 	 * @param isDiscovery Whether the task is a discovery, in which case the collected metrics are flagged for a collect time reset
+	 * @return {@code true} if at least one monitor was created or updated
 	 */
-	private void processSameTypeMonitors(
+	private boolean processSameTypeMonitors(
 		final Connector connector,
 		final Mapping mapping,
 		final String monitorType,
@@ -307,7 +453,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				getJobName(),
 				connectorId
 			);
-			return;
+			return false;
 		}
 
 		// Checking for defined attributes to create monitors based on them
@@ -321,7 +467,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				getJobName(),
 				connectorId
 			);
-			return;
+			return false;
 		}
 
 		// Call lookupSourceTable to find the source table
@@ -335,7 +481,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				getJobName(),
 				connectorId
 			);
-			return;
+			return false;
 		}
 
 		// If the source table is not empty, loop over the source table rows
@@ -355,6 +501,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			connectorId
 		);
 
+		int mappedMonitors = 0;
 		for (int i = 0; i < table.size(); i++) {
 			final List<String> row = table.get(i);
 			// Init mapping processor
@@ -408,6 +555,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 			// Create or update the monitor
 			final Monitor monitor = monitorFactory.createOrUpdateMonitor();
+			mappedMonitors++;
 
 			final Map<String, String> contextAttributes = mappingProcessor.interpretContextMappingAttributes(monitor);
 
@@ -439,6 +587,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			monitor.addLegacyParameters(mappingProcessor.interpretNonContextMappingLegacyTextParameters());
 			monitor.addLegacyParameters(mappingProcessor.interpretContextMappingLegacyTextParameters(monitor));
 		}
+
+		return mappedMonitors > 0;
 	}
 
 	/**
@@ -460,6 +610,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * This is the main method. It runs the all the job operations
 	 */
 	public void run() {
+		// Capture the start of this strategy run, used to check the strategy timeout before removing monitors
+		final long runStartTime = System.nanoTime();
+
 		// Get the host name from telemetry manager
 		final String hostname = telemetryManager.getHostname();
 
@@ -504,13 +657,76 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.collect(Collectors.toList()); //NOSONAR
 
 		// Process each connector
-		sortedConnectors.forEach(connector -> process(connector, hostname));
+		sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime));
 
 		// Collect the metricshub.host.configured metric
 		collectHostConfigured(hostname);
 
 		// Collect per-host request metrics (completed/timeout by operation type)
 		collectRequestMetrics(hostname);
+	}
+
+	/**
+	 * Whether this strategy run is still within its timeout. {@link ContextExecutor} interrupts and abandons a strategy
+	 * thread after {@link #getStrategyTimeout()} seconds. An abandoned thread must not remove monitors: its jobs may have
+	 * been cut short and it would race with the next run of the same jobs. RetryOperation clears the
+	 * interrupt flag before it retries, hence the elapsed time, measured with {@link System#nanoTime()} like the timeout
+	 * of {@link ContextExecutor} so that a clock step does not change it.
+	 *
+	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
+	 * @return {@code true} if the thread is not interrupted and the strategy timeout has not elapsed
+	 */
+	private boolean isWithinStrategyTimeout(final long runStartTime) {
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
+		return System.nanoTime() - runStartTime < TimeUnit.SECONDS.toNanos(getStrategyTimeout());
+	}
+
+	/**
+	 * Removes the monitors that the trusted jobs of the given connector did not rediscover during this strategy run.
+	 * Nothing is removed when the connector status is not OK. The connector monitors and the hardware missing device
+	 * detection types are never removed.
+	 *
+	 * @param connector    The connector whose jobs ran
+	 * @param trustedTypes The monitor types whose job ran a trusted pass
+	 * @param hostname     The host name of the monitored resource
+	 */
+	private void removeMonitorsNotRediscovered(
+		final Connector connector,
+		final Set<String> trustedTypes,
+		final String hostname
+	) {
+		final String connectorId = connector.getCompiledFilename();
+		if (!telemetryManager.getHostProperties().getConnectorNamespace(connectorId).isStatusOk()) {
+			return;
+		}
+		trustedTypes
+			.stream()
+			.filter(type -> !KnownMonitorType.CONNECTOR.getKey().equals(type))
+			// Missing devices are kept and reported by HardwarePostDiscoveryStrategy (present = 0)
+			.filter(type -> !StrategyHelper.isMissingDeviceDetectionCandidate(connector, type))
+			.forEach(type -> {
+				// removalDelay (seconds, monitor level): a monitor is removed once not rediscovered for longer than the delay
+				final long removalDelay = Optional.ofNullable(connector.getMonitors().get(type))
+					.map(MonitorJob::getRemovalDelay)
+					.orElse(0L);
+				final int removed = telemetryManager.removeMonitorsNotDiscoveredAt(
+					type,
+					connectorId,
+					strategyTime - TimeUnit.SECONDS.toMillis(removalDelay)
+				);
+				if (removed > 0) {
+					log.info(
+						"Hostname {} - Removed {} {} monitor(s) no longer discovered by connector {} during the {} job.",
+						hostname,
+						removed,
+						type,
+						connectorId,
+						getJobName()
+					);
+				}
+			});
 	}
 
 	/**

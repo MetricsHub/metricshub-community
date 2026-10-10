@@ -46,6 +46,12 @@ public interface MonitorJob extends Serializable {
 	Set<String> getKeys();
 
 	/**
+	 * Returns how long (in seconds) a monitor may stay without being rediscovered by its job before it is removed.
+	 * @return The removal delay in seconds, 0 to remove the monitor at the first trusted run of its job that no longer returns it
+	 */
+	Long getRemovalDelay();
+
+	/**
 	 * Returns a map of metric definitions associated with the monitor job.
 	 * @return A map where the key is a String representing the metric name and the value is a MetricDefinition object.
 	 */

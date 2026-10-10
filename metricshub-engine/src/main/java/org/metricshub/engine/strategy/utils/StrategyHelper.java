@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
@@ -87,5 +88,17 @@ public class StrategyHelper {
 		final Detection detection = connectorIdentity != null ? connectorIdentity.getDetection() : null;
 		final Set<String> connectorTags = detection != null ? detection.getTags() : null;
 		return connectorTags != null && connectorTags.stream().anyMatch(tag -> tag.equalsIgnoreCase("hardware"));
+	}
+
+	/**
+	 * Checks whether the monitors of the given type, produced by the given connector, take part in the hardware
+	 * missing device detection.
+	 *
+	 * @param connector   The connector producing the monitors
+	 * @param monitorType The monitor type
+	 * @return true if the type is a missing device detection type and the connector is a hardware connector
+	 */
+	public static boolean isMissingDeviceDetectionCandidate(final Connector connector, final String monitorType) {
+		return KnownMonitorType.MISSING_DEVICE_DETECTION_TYPES.contains(monitorType) && isHardwareConnector(connector);
 	}
 }

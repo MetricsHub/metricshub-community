@@ -26,9 +26,6 @@ import static org.metricshub.hardware.util.HwCollectHelper.connectorHasHardwareT
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -49,27 +46,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
-
-	/**
-	 * Set of monitor types that should be excluded from hardware missing device detection.
-	 */
-	private static final Set<String> EXCLUDED_MONITOR_TYPES = Stream.of(
-		KnownMonitorType.HOST.getKey(),
-		KnownMonitorType.CONNECTOR.getKey(),
-		KnownMonitorType.LUN.getKey(),
-		KnownMonitorType.LOGICAL_DISK.getKey(),
-		KnownMonitorType.VOLTAGE.getKey(),
-		KnownMonitorType.TEMPERATURE.getKey(),
-		KnownMonitorType.VM.getKey(),
-		KnownMonitorType.LED.getKey()
-	).collect(Collectors.toSet());
-
-	/**
-	 * Set of monitor types that are candidates for hardware missing device.
-	 */
-	private static final Set<String> MONITOR_TYPE_CANDIDATES = KnownMonitorType.KEYS.stream()
-		.filter(type -> !EXCLUDED_MONITOR_TYPES.contains(type))
-		.collect(Collectors.toSet());
 
 	/**
 	 * Create a new instance of {@link HardwarePostDiscoveryStrategy}.<br>
@@ -127,7 +103,7 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	 * @return boolean Whether the monitor is a candidate for hardware missing device detection.
 	 */
 	private boolean isCandidateMonitorType(final String monitorType) {
-		return MONITOR_TYPE_CANDIDATES.contains(monitorType);
+		return KnownMonitorType.MISSING_DEVICE_DETECTION_TYPES.contains(monitorType);
 	}
 
 	@Override

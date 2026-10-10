@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -224,6 +225,41 @@ public class TelemetryManager {
 		synchronized (monitors) {
 			monitors.computeIfAbsent(monitorType, _ -> new HashMap<>()).put(id, monitor);
 			return monitor;
+		}
+	}
+
+	/**
+	 * Removes the monitors of the given type and connector that were not (re)discovered at the given time.
+	 * Copy-on-write: lock-free readers keep iterating the previous map, kept monitors stay the same instances.
+	 *
+	 * @param monitorType   The type of the monitors to examine
+	 * @param connectorId   The identifier of the connector that produced the monitors
+	 * @param discoveryTime The monitors whose discovery time is older than this time are removed
+	 * @return the number of removed monitors
+	 */
+	public int removeMonitorsNotDiscoveredAt(
+		@NonNull final String monitorType,
+		@NonNull final String connectorId,
+		final long discoveryTime
+	) {
+		final Predicate<Monitor> stale = monitor ->
+			!monitor.isEndpoint() &&
+			connectorId.equals(monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID)) &&
+			monitor.getDiscoveryTime() != null &&
+			monitor.getDiscoveryTime() < discoveryTime;
+
+		synchronized (monitors) {
+			final Map<String, Monitor> current = monitors.get(monitorType);
+			if (current == null || current.values().stream().noneMatch(stale)) {
+				return 0;
+			}
+			final Map<String, Monitor> kept = new HashMap<>(current);
+			kept.values().removeIf(stale);
+			// Existing key: not a structural change of the outer map.
+			// Publication to lock-free readers is as racy as addNewMonitor's puts today; switch both levels to
+			// ConcurrentHashMap if it ever matters.
+			monitors.put(monitorType, kept);
+			return current.size() - kept.size();
 		}
 	}
 

@@ -2,6 +2,7 @@ package org.metricshub.engine.telemetry;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.CONNECTOR;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.DISK_CONTROLLER;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +47,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -199,6 +202,101 @@ class TelemetryManagerTest {
 			PHYSICAL_DISK.getKey()
 		);
 		assertEquals(expectedOrder, discoveredMonitors.keySet());
+	}
+
+	@Test
+	void testRemoveMonitorsNotDiscoveredAt() {
+		final long discoveryTime = strategyTime;
+		final Monitor stale = buildMonitor(AAC_CONNECTOR_ID, discoveryTime - 1);
+		final Monitor refreshed = buildMonitor(AAC_CONNECTOR_ID, discoveryTime);
+		final NumberMetric refreshedMetric = NumberMetric.builder().value(1.0).build();
+		refreshed.addMetric("hw.status", refreshedMetric);
+		final Monitor endpoint = buildMonitor(AAC_CONNECTOR_ID, discoveryTime - 1);
+		endpoint.setIsEndpoint(true);
+
+		final Map<String, Monitor> physicalDisks = new HashMap<>(
+			Map.of(
+				"stale",
+				stale,
+				"refreshed",
+				refreshed,
+				"newer",
+				buildMonitor(AAC_CONNECTOR_ID, discoveryTime + 1),
+				"neverDiscovered",
+				buildMonitor(AAC_CONNECTOR_ID, null),
+				"otherConnector",
+				buildMonitor("OtherConnector", discoveryTime - 1),
+				"endpoint",
+				endpoint
+			)
+		);
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(
+				new HashMap<>(
+					Map.of(
+						PHYSICAL_DISK.getKey(),
+						physicalDisks,
+						DISK_CONTROLLER.getKey(),
+						Map.of("stale", buildMonitor(AAC_CONNECTOR_ID, discoveryTime - 1))
+					)
+				)
+			)
+			.build();
+
+		// A lock-free reader iterating the physical disks during the removal
+		final Iterator<Monitor> physicalDisksIterator = physicalDisks.values().iterator();
+		physicalDisksIterator.next();
+
+		assertEquals(
+			1,
+			telemetryManager.removeMonitorsNotDiscoveredAt(PHYSICAL_DISK.getKey(), AAC_CONNECTOR_ID, discoveryTime)
+		);
+
+		// Copy-on-write: the previous map is left untouched and its reader completes
+		assertDoesNotThrow(() -> physicalDisksIterator.forEachRemaining(monitor -> {}));
+		assertEquals(6, physicalDisks.size());
+
+		// Only the stale monitor of the connector is removed, the other monitors are the same instances
+		final Map<String, Monitor> keptPhysicalDisks = telemetryManager.getMonitors().get(PHYSICAL_DISK.getKey());
+		assertEquals(
+			Set.of("refreshed", "newer", "neverDiscovered", "otherConnector", "endpoint"),
+			keptPhysicalDisks.keySet()
+		);
+		assertSame(refreshed, keptPhysicalDisks.get("refreshed"));
+		assertSame(refreshedMetric, keptPhysicalDisks.get("refreshed").getMetric("hw.status"));
+		assertSame(endpoint, keptPhysicalDisks.get("endpoint"));
+
+		// The other types are untouched
+		assertEquals(Set.of("stale"), telemetryManager.getMonitors().get(DISK_CONTROLLER.getKey()).keySet());
+
+		// No match: nothing is removed and the map is not replaced
+		assertEquals(
+			0,
+			telemetryManager.removeMonitorsNotDiscoveredAt(PHYSICAL_DISK.getKey(), AAC_CONNECTOR_ID, discoveryTime)
+		);
+		assertSame(keptPhysicalDisks, telemetryManager.getMonitors().get(PHYSICAL_DISK.getKey()));
+		assertEquals(0, telemetryManager.removeMonitorsNotDiscoveredAt("unknown", AAC_CONNECTOR_ID, discoveryTime));
+
+		// Immutable map: its last monitor is removed and the monitor type is kept with an empty map
+		assertEquals(
+			1,
+			telemetryManager.removeMonitorsNotDiscoveredAt(DISK_CONTROLLER.getKey(), AAC_CONNECTOR_ID, discoveryTime)
+		);
+		assertEquals(Map.of(), telemetryManager.getMonitors().get(DISK_CONTROLLER.getKey()));
+	}
+
+	/**
+	 * Build a monitor produced by the given connector.
+	 *
+	 * @param connectorId   The connector identifier
+	 * @param discoveryTime The discovery time of the monitor
+	 * @return a new {@link Monitor}
+	 */
+	private static Monitor buildMonitor(final String connectorId, final Long discoveryTime) {
+		return Monitor.builder()
+			.attributes(new HashMap<>(Map.of(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId)))
+			.discoveryTime(discoveryTime)
+			.build();
 	}
 
 	@Test

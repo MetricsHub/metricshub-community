@@ -1,0 +1,22 @@
+connector:
+  detection:
+    appliesTo: [ linux ]
+extends:
+- removalDelayHeader
+monitors:
+  overridden:
+    removalDelay: 30s
+  plain_number:
+    removalDelay: 90
+    simple:
+      mapping:
+        source: "${source::monitors.plain_number.simple.sources.source(1)}"
+  absent:
+    simple:
+      mapping:
+        source: "${source::monitors.absent.simple.sources.source(1)}"
+  null_value:
+    removalDelay:
+    simple:
+      mapping:
+        source: "${source::monitors.null_value.simple.sources.source(1)}"
