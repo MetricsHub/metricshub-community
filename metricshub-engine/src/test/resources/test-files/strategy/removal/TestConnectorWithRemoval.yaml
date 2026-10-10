@@ -1,0 +1,223 @@
+connector:
+  displayName: TestConnectorWithRemoval
+  platforms: Test platform
+  reliesOn: SomeWebService
+  version: 1.0
+  information: Test connector for the removal of the monitors that are no longer discovered
+  detection:
+    connectionTypes:
+      - remote
+      - local
+    appliesTo:
+      - Linux
+    criteria:
+      - type: deviceType
+        keep: [ linux ]
+monitors:
+  # Trusted simple job, run sequentially before the jobs of the thread pool (priority monitor type)
+  enclosure:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.10
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.enclosure.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Trusted simple job: the monitors it no longer returns are removed
+  process:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1,2"
+      mapping:
+        source: "${source::monitors.process.simple.sources.source(1)}"
+        attributes:
+          id: $1
+        metrics:
+          test.counter: $2
+          test.rate: rate($2)
+  # Trusted simple job whose monitors are kept for 1 minute after their last discovery
+  idle_entity:
+    removalDelay: 1m
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.2
+          selectColumns: "ID,1,2"
+      mapping:
+        source: "${source::monitors.idle_entity.simple.sources.source(1)}"
+        attributes:
+          id: $1
+        metrics:
+          test.counter: $2
+          test.rate: rate($2)
+  # Trusted discovery job
+  volume:
+    discovery:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.3
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.volume.discovery.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: the mapping source returns an empty table
+  empty_source:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.4
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.empty_source.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: the mapping table is not empty but no row has the serial_number identifying attribute
+  no_identifying_attribute:
+    keys: [ id, serial_number ]
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.5
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.no_identifying_attribute.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: source(2) exhausts its retry while the mapping table is not empty
+  failed_source:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.6
+          selectColumns: "ID,1"
+        source(2):
+          type: snmpTable
+          oid: 1.3.6.1.7
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.failed_source.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: no mapping attributes (consolidation job). The test sets them to null
+  no_attributes:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.8
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.no_attributes.simple.sources.source(1)}"
+  # Guard: the monitor type is excluded by the host configuration
+  excluded:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.9
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.excluded.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: incremental eventLog source
+  event_log:
+    simple:
+      sources:
+        source(1):
+          type: eventLog
+          logName: System
+      mapping:
+        source: "${source::monitors.event_log.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: incremental file source (LOG mode by default)
+  log_file:
+    simple:
+      sources:
+        source(1):
+          type: file
+          paths: /var/log/test.log
+      mapping:
+        source: "${source::monitors.log_file.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Trusted simple job: a file source in FLAT mode is not incremental
+  flat_file:
+    simple:
+      sources:
+        source(1):
+          type: file
+          paths: /var/test.csv
+          mode: flat
+      mapping:
+        source: "${source::monitors.flat_file.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Trusted simple job without sources: its mapping reads the table of the enclosure job, run before the thread pool
+  no_sources:
+    simple:
+      mapping:
+        source: "${source::monitors.enclosure.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Trusted simple job: a negative removalDelay is read as 0, the monitors refreshed by the run are kept
+  negative_removal_delay:
+    removalDelay: -5
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.11
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.negative_removal_delay.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: the mapping source table is not found
+  missing_source_table:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.12
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.missing_source_table.simple.sources.source(2)}"
+        attributes:
+          id: $1
+  # Guard: no mapping source
+  no_mapping_source:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.13
+          selectColumns: "ID,1"
+      mapping:
+        attributes:
+          id: $1
+  # Defensive: a job of the connector type never removes the connector monitor created by the detection
+  connector:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.14
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.connector.simple.sources.source(1)}"
+        attributes:
+          id: $1

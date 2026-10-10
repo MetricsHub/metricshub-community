@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class KnownMonitorTypeTest {
@@ -51,5 +52,28 @@ class KnownMonitorTypeTest {
 		// Test with a non-connector type
 		assertFalse(KnownMonitorType.isConnector("cpu"), "Expected 'cpu' to not be a connector type");
 		assertFalse(KnownMonitorType.isConnector("memory"), "Expected 'memory' to not be a connector type");
+	}
+
+	@Test
+	void testMissingDeviceDetectionTypes() {
+		assertEquals(
+			Set.of(
+				"battery",
+				"blade",
+				"cpu",
+				"disk_controller",
+				"enclosure",
+				"fan",
+				"gpu",
+				"memory",
+				"network",
+				"other_device",
+				"physical_disk",
+				"power_supply",
+				"robotics",
+				"tape_drive"
+			),
+			KnownMonitorType.MISSING_DEVICE_DETECTION_TYPES
+		);
 	}
 }

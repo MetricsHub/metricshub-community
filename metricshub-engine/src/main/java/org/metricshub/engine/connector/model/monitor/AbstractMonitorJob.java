@@ -33,6 +33,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankInLinkedHashSetDeserializer;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * Abstract base class implementing {@link MonitorJob}, holding a set of keys to build a monitor ID.
@@ -59,6 +60,14 @@ public class AbstractMonitorJob implements MonitorJob {
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = NonBlankInLinkedHashSetDeserializer.class)
 	private Set<String> keys = DEFAULT_KEYS;
+
+	/**
+	 * How long (in seconds) a monitor may stay without being rediscovered by its job before it is removed. 0 (the default)
+	 * removes it at the first trusted run of its job that no longer returns it.
+	 */
+	@JsonSetter(nulls = SKIP)
+	@JsonDeserialize(using = TimeDeserializer.class)
+	private Long removalDelay = 0L;
 
 	@JsonSetter(nulls = SKIP)
 	private Map<String, MetricDefinition> metrics = new HashMap<>();

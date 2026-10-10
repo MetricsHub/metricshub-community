@@ -118,6 +118,8 @@ class MonitorJobsDeserializerTest {
 			.simple(simple)
 			.metrics(new HashMap<>())
 			.build();
+		// removalDelay: 1h
+		simpleMonitorJobExpected.setRemovalDelay(3600L);
 		final Map<String, SimpleMonitorJob> expected = Map.of(GRAFANA_MONITOR_JOB_KEY, simpleMonitorJobExpected);
 
 		final Map<String, MonitorJob> result = new MonitorJobsDeserializer().deserialize(yamlParserMock, null);

@@ -134,6 +134,24 @@ public enum KnownMonitorType {
 		.collect(Collectors.toSet());
 
 	/**
+	 * Monitor types that take part in the hardware missing device detection when produced by a "hardware" connector.
+	 */
+	public static final Set<String> MISSING_DEVICE_DETECTION_TYPES = KEYS.stream()
+		.filter(key ->
+			!Set.of(
+				HOST.getKey(),
+				CONNECTOR.getKey(),
+				LUN.getKey(),
+				LOGICAL_DISK.getKey(),
+				VOLTAGE.getKey(),
+				TEMPERATURE.getKey(),
+				VM.getKey(),
+				LED.getKey()
+			).contains(key)
+		)
+		.collect(Collectors.toUnmodifiableSet());
+
+	/**
 	 * Retrieves the {@code KnownMonitorType} enum constant that matches the given string representation,
 	 * ignoring case.
 	 *

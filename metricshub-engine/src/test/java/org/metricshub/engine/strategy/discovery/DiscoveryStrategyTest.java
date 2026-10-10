@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 
 import java.nio.file.Path;
@@ -34,17 +35,20 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Multiply;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.simple.SimpleStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -515,6 +519,82 @@ class DiscoveryStrategyTest {
 					"metricshub.job.duration{job.type=\"discovery\", monitor.type=\"physical_disk\", connector_id=\"AAC\"}"
 				)
 				.getValue()
+		);
+	}
+
+	@Test
+	void testRunRemovesMonitorsNoLongerDiscovered() {
+		final String removalConnectorId = "TestConnectorWithRemoval";
+		final String volumeSource = "${source::monitors.volume.discovery.sources.source(1)}";
+		final String volume1Id = "TestConnectorWithRemoval_volume_volume-1";
+		final String volume2Id = "TestConnectorWithRemoval_volume_volume-2";
+
+		// Create host and connector monitors and set them in the telemetry manager
+		final Monitor hostMonitor = Monitor.builder().type(HOST.getKey()).isEndpoint(true).build();
+		final Monitor connectorMonitor = Monitor.builder().type(CONNECTOR.getKey()).build();
+		connectorMonitor.getAttributes().put("id", removalConnectorId);
+
+		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(
+				new HashMap<>(
+					Map.of(
+						HOST.getKey(),
+						Map.of("anyMonitorId", hostMonitor),
+						CONNECTOR.getKey(),
+						Map.of(String.format(CONNECTOR_ID_FORMAT, CONNECTOR.getKey(), removalConnectorId), connectorMonitor)
+					)
+				)
+			)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostname(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.configurations(Map.of(TestConfiguration.class, snmpConfig))
+					.build()
+			)
+			.connectorStore(new ConnectorStore(Paths.get("src", "test", "resources", "test-files", "strategy", "removal")))
+			.build();
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(protocolExtensionMock))
+			.build();
+
+		// The discovery job of the volumes and the simple job of the processes read these tables
+		final Map<String, String> sourceTables = new HashMap<>(
+			Map.of(volumeSource, "volume-1\nvolume-2", "${source::monitors.process.simple.sources.source(1)}", "process-1;10")
+		);
+		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
+		doReturn(Set.of(SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
+		doAnswer(invocation ->
+			SourceTable.builder()
+				.table(
+					SourceTable.csvToTable(
+						sourceTables.get(invocation.<Source>getArgument(0).getKey()),
+						MetricsHubConstants.TABLE_SEP
+					)
+				)
+				.build()
+		)
+			.when(protocolExtensionMock)
+			.processSource(any(Source.class), anyString(), any(TelemetryManager.class));
+
+		new DiscoveryStrategy(telemetryManager, strategyTime, clientsExecutorMock, extensionManager).run();
+		assertEquals(Set.of(volume1Id, volume2Id), telemetryManager.getMonitors().get("volume").keySet());
+
+		// The SimpleStrategy runs of the collect cycles never remove the monitors of the discovery jobs
+		final long firstCollectTime = strategyTime + 60 * 1000;
+		new SimpleStrategy(telemetryManager, firstCollectTime, clientsExecutorMock, extensionManager).run();
+		new SimpleStrategy(telemetryManager, firstCollectTime + 60 * 1000, clientsExecutorMock, extensionManager).run();
+		assertEquals(Set.of(volume1Id, volume2Id), telemetryManager.getMonitors().get("volume").keySet());
+
+		// The next discovery no longer returns volume-2: it is removed, the monitors of the simple jobs are kept
+		sourceTables.put(volumeSource, "volume-1");
+		new DiscoveryStrategy(telemetryManager, strategyTime + 30 * 60 * 1000, clientsExecutorMock, extensionManager).run();
+		assertEquals(Set.of(volume1Id), telemetryManager.getMonitors().get("volume").keySet());
+		assertEquals(
+			Set.of("TestConnectorWithRemoval_process_process-1"),
+			telemetryManager.getMonitors().get("process").keySet()
 		);
 	}
 

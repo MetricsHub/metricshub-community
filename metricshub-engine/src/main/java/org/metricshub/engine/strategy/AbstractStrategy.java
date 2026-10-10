@@ -114,9 +114,10 @@ public abstract class AbstractStrategy implements IStrategy {
 	 *
 	 * @param sources The {@link List} of {@link Source} instances we wish to execute
 	 * @param jobInfo Information about the job such as hostname, monitorType, job name and connectorName.
+	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
 	 */
-	protected void processSourcesAndComputes(final List<Source> sources, final JobInfo jobInfo) {
-		processSourcesAndComputes(sources, null, jobInfo);
+	protected boolean processSourcesAndComputes(final List<Source> sources, final JobInfo jobInfo) {
+		return processSourcesAndComputes(sources, null, jobInfo);
 	}
 
 	/**
@@ -126,8 +127,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param sources    The {@link List} of {@link Source} instances we wish to execute
 	 * @param attributes Key-value pairs of the monitor's attributes used in the mono instance processing
 	 * @param jobInfo    Information about the job such as hostname, monitorType, job name and connectorName.
+	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
 	 */
-	protected void processSourcesAndComputes(
+	protected boolean processSourcesAndComputes(
 		final List<Source> sources,
 		final Map<String, String> attributes,
 		final JobInfo jobInfo
@@ -143,8 +145,10 @@ public abstract class AbstractStrategy implements IStrategy {
 				connectorId,
 				monitorType
 			);
-			return;
+			return true;
 		}
+
+		boolean allSourcesAnswered = true;
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
@@ -159,15 +163,19 @@ public abstract class AbstractStrategy implements IStrategy {
 				.getSourceTable(sourceKey);
 
 			// Execute the source and retry the operation
-			// in case the source fails but the previous source table didn't fail
+			// in case the source fails but the previous source table didn't fail.
+			// The default value is a per-source sentinel: getting this very instance back means the retry was exhausted.
+			final SourceTable failedSourceTable = SourceTable.empty();
 			SourceTable sourceTable = RetryOperation.<SourceTable>builder()
-				.withDefaultValue(SourceTable.empty())
+				.withDefaultValue(failedSourceTable)
 				.withMaxRetries(1)
 				.withWaitStrategy(telemetryManager.getHostConfiguration().getRetryDelay())
 				.withDescription(String.format("%s [%s]", SOURCE, sourceKey))
 				.withHostname(hostname)
 				.build()
 				.run(() -> runSource(connectorId, attributes, source, previousSourceTable));
+
+			allSourcesAnswered &= sourceTable != failedSourceTable;
 
 			final boolean isNullSourceTable = sourceTable == null;
 			if (isNullSourceTable || sourceTable.isEmpty()) {
@@ -251,6 +259,8 @@ public abstract class AbstractStrategy implements IStrategy {
 				.getConnectorNamespace(connectorId)
 				.addSourceTable(sourceKey, computeProcessor.getSourceTable());
 		}
+
+		return allSourcesAnswered;
 	}
 
 	/**
