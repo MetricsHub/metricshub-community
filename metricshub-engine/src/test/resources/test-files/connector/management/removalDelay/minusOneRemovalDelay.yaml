@@ -1,0 +1,9 @@
+connector:
+  detection:
+    appliesTo: [ linux ]
+monitors:
+  negative:
+    removalDelay: -1
+    simple:
+      mapping:
+        source: "${source::monitors.negative.simple.sources.source(1)}"

@@ -33,6 +33,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankInLinkedHashSetDeserializer;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * Abstract base class implementing {@link MonitorJob}, holding a set of keys to build a monitor ID.
@@ -59,6 +60,26 @@ public class AbstractMonitorJob implements MonitorJob {
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = NonBlankInLinkedHashSetDeserializer.class)
 	private Set<String> keys = DEFAULT_KEYS;
+
+	/**
+	 * How long (in seconds) a monitor may stay without being rediscovered by its job before it is removed. 0 (the default)
+	 * removes it at the first trusted run of its job that no longer returns it.
+	 */
+	@JsonSetter(nulls = SKIP)
+	@JsonDeserialize(using = TimeDeserializer.class)
+	private Long removalDelay = 0L;
+
+	/**
+	 * Set how long (in seconds) a monitor may stay without being rediscovered by its job before it is removed.
+	 *
+	 * @param removalDelay The removal delay in seconds. A negative delay is rejected, like an invalid duration.
+	 */
+	public void setRemovalDelay(final Long removalDelay) {
+		if (removalDelay != null && removalDelay < 0) {
+			throw new IllegalArgumentException("Not valid removalDelay, it must not be negative: " + removalDelay);
+		}
+		this.removalDelay = removalDelay;
+	}
 
 	@JsonSetter(nulls = SKIP)
 	private Map<String, MetricDefinition> metrics = new HashMap<>();

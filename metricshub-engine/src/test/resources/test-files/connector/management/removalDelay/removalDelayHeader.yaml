@@ -1,0 +1,11 @@
+monitors:
+  inherited:
+    removalDelay: 1h
+    simple:
+      mapping:
+        source: "${source::monitors.inherited.simple.sources.source(1)}"
+  overridden:
+    removalDelay: 1h
+    simple:
+      mapping:
+        source: "${source::monitors.overridden.simple.sources.source(1)}"
