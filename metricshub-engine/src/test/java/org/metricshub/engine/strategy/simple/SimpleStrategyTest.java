@@ -517,7 +517,8 @@ class SimpleStrategyTest {
 			"no_mapping_source",
 			"before_all_log",
 			"before_all_log_copy",
-			"null_source"
+			"null_source",
+			"before_all_union"
 		);
 		final Map<String, Monitor> staleMonitors = Stream.concat(trustedTypes.stream(), untrustedTypes.stream()).collect(
 			Collectors.toMap(Function.identity(), type -> addStaleMonitor(telemetryManager, type))
@@ -557,6 +558,17 @@ class SimpleStrategyTest {
 				argThat(source -> source != null && nullSourceKey.equals(source.getKey())),
 				anyString(),
 				any(TelemetryManager.class)
+			);
+
+		// The union of beforeAll read by before_all_union: partA has a row, partB answered during the previous run and is now
+		// empty, so it is retried then given up
+		sourceTables.put("${source::beforeAll.partA}", "new;1");
+		telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
+			.addSourceTable(
+				"${source::beforeAll.partB}",
+				SourceTable.builder().table(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP)).build()
 			);
 
 		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up

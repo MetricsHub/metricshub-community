@@ -157,10 +157,10 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			logBeginOperation(SOURCE, source, sourceKey, connectorId, hostname);
 
-			final SourceTable previousSourceTable = telemetryManager
+			final ConnectorNamespace connectorNamespace = telemetryManager
 				.getHostProperties()
-				.getConnectorNamespace(connectorId)
-				.getSourceTable(sourceKey);
+				.getConnectorNamespace(connectorId);
+			final SourceTable previousSourceTable = connectorNamespace.getSourceTable(sourceKey);
 
 			// Execute the source and retry the operation
 			// in case the source fails but the previous source table didn't fail.
@@ -177,7 +177,14 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			// A null table (the source processor failed) or the retry sentinel: the source did not answer. A null returned
 			// by an extension arrives here as an empty table: the source is retried, then given up, when it had data before
-			allSourcesAnswered &= sourceTable != null && sourceTable != failedSourceTable;
+			final boolean sourceAnswered = sourceTable != null && sourceTable != failedSourceTable;
+			allSourcesAnswered &= sourceAnswered;
+			// Remembered for the jobs that read this source through a reference
+			if (sourceAnswered) {
+				connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
+			} else {
+				connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
+			}
 
 			final boolean isNullSourceTable = sourceTable == null;
 			if (isNullSourceTable || sourceTable.isEmpty()) {

@@ -256,7 +256,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param hostname         The host name of the monitored resource
 	 * @param monitorJobEntry  The monitor type and its monitor job
 	 * @return {@code true} when the job ran a trusted pass: every source answered, at least one monitor was mapped and the
-	 *         job has no incremental source
+	 *         job reads no unreliable source
 	 */
 	private boolean processMonitorJob(
 		final Connector currentConnector,
@@ -320,20 +320,30 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
 
-		return sourcesAnswered && mapped && !hasIncrementalSource(currentConnector, monitorTask);
+		final Set<String> unansweredSourceKeys = telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(currentConnector.getCompiledFilename())
+			.getUnansweredSourceKeys();
+		return sourcesAnswered && mapped && !hasUnreliableSource(currentConnector, monitorTask, unansweredSourceKeys);
 	}
 
 	/**
-	 * Whether the monitors of the given task come from an incremental source: one of the task's sources, or a source
-	 * reached, directly or not, through the mapping source and the source references (another job, beforeAll).
-	 * eventLog and file (LOG mode) sources only return the entries added since the previous poll: a missing row does
-	 * not mean a missing entity.
+	 * Whether the monitors of the given task come from an unreliable source: one of the task's sources, or a source
+	 * reached, directly or not, through the mapping source and the source references (another job, beforeAll), that is
+	 * incremental or did not answer the last time it ran. eventLog and file (LOG mode) sources only return the entries
+	 * added since the previous poll, and a source that did not answer may have dropped rows of a union or a join: in
+	 * both cases a missing row does not mean a missing entity.
 	 *
-	 * @param connector   The connector defining the task
-	 * @param monitorTask The monitor task defining the sources and the mapping
-	 * @return {@code true} if one of the sources the task's monitors come from is incremental
+	 * @param connector            The connector defining the task
+	 * @param monitorTask          The monitor task defining the sources and the mapping
+	 * @param unansweredSourceKeys The keys of the sources that did not answer the last time they ran
+	 * @return {@code true} if one of the sources the task's monitors come from is unreliable
 	 */
-	private static boolean hasIncrementalSource(final Connector connector, final AbstractMonitorTask monitorTask) {
+	private static boolean hasUnreliableSource(
+		final Connector connector,
+		final AbstractMonitorTask monitorTask,
+		final Set<String> unansweredSourceKeys
+	) {
 		final Map<String, Source> sourcesByKey = getSourcesByKey(connector);
 		final Deque<Source> pending = new ArrayDeque<>(monitorTask.getSources().values());
 		if (monitorTask.getMapping() != null) {
@@ -346,7 +356,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			if (!visited.add(source)) {
 				continue;
 			}
-			if (isIncremental(source)) {
+			if (isIncremental(source) || unansweredSourceKeys.contains(source.getKey())) {
 				return true;
 			}
 			source.getReferences().forEach(reference -> addReferencedSources(reference, sourcesByKey, pending));

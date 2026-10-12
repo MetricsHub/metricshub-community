@@ -18,6 +18,20 @@ beforeAll:
   logLines:
     type: file
     paths: /var/log/before.log
+  # Union of two inventories, read by the before_all_union job: partB had data in the previous run and fails
+  partA:
+    type: snmpTable
+    oid: 1.3.6.1.20
+    selectColumns: "ID,1"
+  partB:
+    type: snmpTable
+    oid: 1.3.6.1.21
+    selectColumns: "ID,1"
+  partsUnion:
+    type: tableUnion
+    tables:
+      - ${source::beforeAll.partA}
+      - ${source::beforeAll.partB}
 monitors:
   # Trusted simple job, run sequentially before the jobs of the thread pool (priority monitor type)
   enclosure:
@@ -234,6 +248,13 @@ monitors:
           selectColumns: "ID,1"
       mapping:
         source: "${source::monitors.null_source.simple.sources.source(1)}"
+        attributes:
+          id: $1
+  # Guard: no source of its own, the mapping reads a union of beforeAll whose partB did not answer
+  before_all_union:
+    simple:
+      mapping:
+        source: "${source::beforeAll.partsUnion}"
         attributes:
           id: $1
   # Defensive: a job of the connector type never removes the connector monitor created by the detection
