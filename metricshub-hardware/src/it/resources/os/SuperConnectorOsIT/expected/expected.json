@@ -1465,45 +1465,6 @@
         "type" : "NumberMetric",
         "updated" : true
       },
-      "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}" : {
-        "name" : "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "critical"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.95,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}" : {
-        "name" : "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "degraded"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.9,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.utilization.limit{limit_type=\"degraded\"}" : {
-        "name" : "hw.gpu.utilization.limit{limit_type=\"degraded\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "degraded"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.8,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
       "hw.errors{hw.type=\"gpu\", hw.error.type=\"corrected\"}" : {
         "name" : "hw.errors{hw.type=\"gpu\", hw.error.type=\"corrected\"}",
         "collectTime" : 1732817344387,
@@ -1556,19 +1517,6 @@
         "resetMetricTime" : false,
         "value" : 1.0,
         "previousValue" : 1.0,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.utilization.limit{limit_type=\"critical\"}" : {
-        "name" : "hw.gpu.utilization.limit{limit_type=\"critical\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "critical"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.9,
-        "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
       },
@@ -1697,32 +1645,6 @@
         },
         "resetMetricTime" : false,
         "value" : 0.0,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}" : {
-        "name" : "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "critical"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.95,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}" : {
-        "name" : "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "degraded"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.9,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
@@ -1912,45 +1834,6 @@
         "type" : "NumberMetric",
         "updated" : true
       },
-      "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}" : {
-        "name" : "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "critical"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.95,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}" : {
-        "name" : "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "degraded"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.9,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.utilization.limit{limit_type=\"degraded\"}" : {
-        "name" : "hw.gpu.utilization.limit{limit_type=\"degraded\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "degraded"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.8,
-        "previousValue" : null,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
       "hw.errors{hw.type=\"gpu\", hw.error.type=\"corrected\"}" : {
         "name" : "hw.errors{hw.type=\"gpu\", hw.error.type=\"corrected\"}",
         "collectTime" : 1732817344387,
@@ -2003,19 +1886,6 @@
         "resetMetricTime" : false,
         "value" : 1.0,
         "previousValue" : 1.0,
-        "type" : "NumberMetric",
-        "updated" : true
-      },
-      "hw.gpu.utilization.limit{limit_type=\"critical\"}" : {
-        "name" : "hw.gpu.utilization.limit{limit_type=\"critical\"}",
-        "collectTime" : 1732817344387,
-        "previousCollectTime" : null,
-        "attributes" : {
-          "limit_type" : "critical"
-        },
-        "resetMetricTime" : false,
-        "value" : 0.9,
-        "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
       },
