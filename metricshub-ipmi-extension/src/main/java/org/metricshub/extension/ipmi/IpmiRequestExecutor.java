@@ -121,8 +121,8 @@ public class IpmiRequestExecutor {
 	 * @param sensors  The sensors read from the BMC
 	 */
 	private static void logProblems(final String hostname, final FruList frus, final SensorList sensors) {
-		frus.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI FRUs: {}", hostname, skipped));
-		sensors.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI sensors: {}", hostname, skipped));
+		frus.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI FRUs: Skipped {}", hostname, skipped));
+		sensors.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI sensors: Skipped {}", hostname, skipped));
 		frus.forEach(fru ->
 			fru.problems().forEach(problem -> log.debug("Hostname {} - IPMI FRU {}: {}", hostname, fru.name(), problem))
 		);
