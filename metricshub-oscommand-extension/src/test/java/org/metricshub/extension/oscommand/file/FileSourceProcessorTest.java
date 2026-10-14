@@ -1,7 +1,9 @@
 package org.metricshub.extension.oscommand.file;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -10,17 +12,20 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.helpers.FileHelper;
@@ -33,8 +38,10 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.extension.oscommand.OsCommandService;
 import org.metricshub.extension.oscommand.SshConfiguration;
+import org.metricshub.ssh.SshClient;
+import org.metricshub.ssh.SshClient.FileEntry;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -56,8 +63,9 @@ class FileSourceProcessorTest {
 
 	private final String SOURCE_KEY = "sourceKey";
 
-	@Mock
-	private RemoteFilesRequestExecutor mockRequestExecutor;
+	// Lenient: patterns resolve in Set order, and directories that are not stubbed must simply list nothing
+	@Mock(strictness = Mock.Strictness.LENIENT)
+	private SshClient sshClient;
 
 	private static String expectedMarkedLogCell(final String path, final String rawContent) {
 		final StringBuilder logBlock = new StringBuilder();
@@ -65,186 +73,343 @@ class FileSourceProcessorTest {
 		return logBlock.toString();
 	}
 
-	private static String buildResolveCommand(final String path, final DeviceKind deviceKind) {
-		return FileSourceProcessor.buildResolveCommand(FileHelper.parsePathPattern(path, deviceKind), deviceKind);
-	}
-
-	@Test
-	void buildResolveCommand_windowsPassesFullPatternToGetItem() {
-		final String template =
-			"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }\"";
-
-		assertEquals(
-			template.formatted(WINDOWS_ABSOLUTE_PATH),
-			buildResolveCommand(WINDOWS_ABSOLUTE_PATH, DeviceKind.WINDOWS)
-		);
-		assertEquals(
-			template.formatted("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2"),
-			buildResolveCommand("D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2", DeviceKind.WINDOWS)
-		);
-		assertEquals(template.formatted("C:\\logs\\*"), buildResolveCommand("C:\\logs\\", DeviceKind.WINDOWS));
-		// Brackets are PowerShell wildcard characters: escaped so that only '*' and '?' are wildcards
-		assertEquals(
-			template.formatted("C:\\logs\\app``[1``].log"),
-			buildResolveCommand("C:\\logs\\app[1].log", DeviceKind.WINDOWS)
-		);
-		// $ is never expanded by the double-quoted PowerShell string
-		assertEquals(
-			template.formatted("C:\\data\\`$logs\\node*\\`$(id).log"),
-			buildResolveCommand("C:\\data\\$logs\\node*\\$(id).log", DeviceKind.WINDOWS)
-		);
-	}
-
-	@Test
-	void buildResolveCommand_linuxKeepsNameCommandWithoutDirectoryWildcard() {
-		assertEquals(
-			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"*.log\" -print",
-			buildResolveCommand(LINUX_ABSOLUTE_PATH, DeviceKind.LINUX)
-		);
-		assertEquals(
-			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"*.log\" -print",
-			buildResolveCommand(LINUX_ABSOLUTE_PATH, DeviceKind.AIX)
-		);
-		assertEquals(
-			"find -L \"/opt/metricshub/logs\" -maxdepth 1 -type f -name \"app.log\" -print",
-			buildResolveCommand("/opt/metricshub/logs/app.log", DeviceKind.LINUX)
-		);
-		assertEquals("find -L \"/var/log\" -maxdepth 1 -type f -print", buildResolveCommand("/var/log/", DeviceKind.LINUX));
-		assertEquals(
-			"find -L \"/var/log\" -maxdepth 1 -type f -print",
-			buildResolveCommand("/var/log/*", DeviceKind.LINUX)
-		);
-	}
-
-	@Test
-	void buildResolveCommand_linuxExpandsDirectoryGlobWithDirectoryWildcard() {
-		final String template =
-			"sh -c 'for d in %s; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"%s\" -print; done'";
-
-		assertEquals(
-			template.formatted("\"/opt/autosys/autouser\"*\"/out\"", "event_demon*PE2"),
-			buildResolveCommand("/opt/autosys/autouser*/out/event_demon*PE2", DeviceKind.LINUX)
-		);
-		assertEquals(template.formatted("\"/opt\"*", "x.log"), buildResolveCommand("/opt*/x.log", DeviceKind.LINUX));
-		assertEquals(template.formatted("\"/opt/node\"?", "*"), buildResolveCommand("/opt/node?/", DeviceKind.LINUX));
-		// Brackets, spaces, quotes and shell-special characters in literal runs are quoted or escaped
-		assertEquals(
-			template.formatted("\"/apps/node\"*\"/[prod]\"", "app.log"),
-			buildResolveCommand("/apps/node*/[prod]/app.log", DeviceKind.LINUX)
-		);
-		assertEquals(
-			template.formatted("\"/opt/my app/it'\\''s/\\$x/\\\"q\\\"/node\"*", "app?.log"),
-			buildResolveCommand("/opt/my app/it's/$x/\"q\"/node*/app?.log", DeviceKind.LINUX)
-		);
-	}
-
-	@Test
-	void buildResolveCommand_linuxEscapesGlobMetacharactersOtherThanWildcards() {
-		// Brackets are literal in the filename; only '*' and '?' are wildcards. The find escape (\[) is itself escaped
-		// for the shell double quotes (\\[), which hands \[ to find.
-		assertEquals(
-			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"app\\\\[1\\\\].log\" -print",
-			buildResolveCommand("/opt/logs/app[1].log", DeviceKind.LINUX)
-		);
-		// A literal backslash needs two escaping levels: find (\\), then shell double quotes (\\\\)
-		assertEquals(
-			"find -L \"/opt/logs\" -maxdepth 1 -type f -name \"a\\\\\\\\b*.log\" -print",
-			buildResolveCommand("/opt/logs/a\\b*.log", DeviceKind.LINUX)
-		);
-	}
-
-	@Test
-	void buildResolveCommand_linuxNeverLetsTheShellInterpretPaths() {
-		// $, backtick and double quote are escaped in the root and in the filename: no expansion, no command substitution
-		assertEquals(
-			"find -L \"/opt/\\$x/\\`q\\`\" -maxdepth 1 -type f -name \"\\$(touch pwned)*.log\" -print",
-			buildResolveCommand("/opt/$x/`q`/$(touch pwned)*.log", DeviceKind.LINUX)
-		);
-		assertEquals(
-			"find -L \"/opt/\\\"q\\\"\" -maxdepth 1 -type f -print",
-			buildResolveCommand("/opt/\"q\"/", DeviceKind.LINUX)
-		);
-		// Same inside the single-quoted sh -c script, where a single quote in the filename is also handled
-		assertEquals(
-			"sh -c 'for d in \"/opt/node\"*; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"it'\\''s\\$(id)*.log\" -print; done'",
-			buildResolveCommand("/opt/node*/it's$(id)*.log", DeviceKind.LINUX)
-		);
-	}
-
-	@Test
-	void resolveRemoteFiles_runsBuiltCommandAndSkipsInvalidPatterns() throws Exception {
-		final OsCommandService osCommandService = mock(OsCommandService.class);
-		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+	private SshConfiguration sshConfiguration() {
+		return SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration.builder()
-			.hostname(HOSTNAME)
-			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
-			.hostType(DeviceKind.LINUX)
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
+	}
+
+	private TelemetryManager remoteTelemetryManager(final DeviceKind deviceKind) {
+		return TelemetryManager.builder()
 			.hostProperties(HostProperties.builder().isLocalhost(false).build())
-			.hostConfiguration(hostConfiguration)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOSTNAME)
+					.configurations(Map.of(SshConfiguration.class, sshConfiguration()))
+					.hostType(deviceKind)
+					.build()
+			)
 			.build();
-		final FileSource fileSource = FileSource.builder()
-			.key(SOURCE_KEY)
-			.paths(Set.of("/opt/autosys/autouser*/out/event_demon*PE2", "relative/path.log"))
-			.build();
+	}
 
-		final String expectedCommand =
-			"sh -c 'for d in \"/opt/autosys/autouser\"*\"/out\"; do [ -d \"$d\" ] && find -L \"$d\" -maxdepth 1 -type f -name \"event_demon*PE2\" -print; done'";
-		doReturn("/opt/autosys/autouser01/out/event_demon.PE2\n/opt/autosys/autouser02/out/event_demon_XPE2\n")
-			.when(osCommandService)
-			.runSshCommand(
-				eq(expectedCommand),
-				eq(HOSTNAME),
-				eq(sshConfiguration),
-				anyLong(),
-				any(),
-				eq(expectedCommand),
-				eq(DeviceKind.LINUX)
-			);
+	private RemoteFilesRequestExecutor remoteFileOperations(final DeviceKind deviceKind) {
+		return new RemoteFilesRequestExecutor(sshClient, sshConfiguration(), deviceKind);
+	}
 
-		final FileSourceProcessor processor = new FileSourceProcessor(osCommandService);
-		final Set<String> resolved = processor.resolveRemoteFiles(HOSTNAME, fileSource, telemetryManager, DeviceKind.LINUX);
+	private Set<String> resolve(final DeviceKind deviceKind, final String... paths) {
+		// Patterns resolve in the given order, so that a failing pattern listed first must not stop the others
+		return new FileSourceProcessor().resolveRemoteFiles(
+			HOSTNAME,
+			new LinkedHashSet<>(List.of(paths)),
+			deviceKind,
+			remoteFileOperations(deviceKind)
+		);
+	}
+
+	private static FileEntry entry(final String path) {
+		return new FileEntry(path, 1, 1);
+	}
+
+	/**
+	 * @return the mask the files of {@code directory} were listed with
+	 */
+	private String fileMask(final String directory) throws IOException {
+		final ArgumentCaptor<String> mask = ArgumentCaptor.forClass(String.class);
+		verify(sshClient).listFiles(eq(directory), mask.capture(), eq(false));
+		return mask.getValue();
+	}
+
+	/**
+	 * @return the mask the subdirectories of {@code directory} were listed with
+	 */
+	private String directoryMask(final String directory) throws IOException {
+		final ArgumentCaptor<String> mask = ArgumentCaptor.forClass(String.class);
+		verify(sshClient).listSubdirectories(eq(directory), mask.capture());
+		return mask.getValue();
+	}
+
+	/**
+	 * Whether ssh-java lists a name with a mask: it matches names case-insensitively with {@code Matcher.find()}.
+	 */
+	private static boolean listed(final String mask, final String name) {
+		return Pattern.compile(mask, Pattern.CASE_INSENSITIVE).matcher(name).find();
+	}
+
+	private static void assertListed(final String mask, final String... names) {
+		for (final String name : names) {
+			assertTrue(listed(mask, name), () -> mask + " should match " + name);
+		}
+	}
+
+	private static void assertNotListed(final String mask, final String... names) {
+		for (final String name : names) {
+			assertFalse(listed(mask, name), () -> mask + " should not match " + name);
+		}
+	}
+
+	private void verifyNoCommandRun() throws IOException {
+		verify(sshClient, never()).executeCommand(anyString());
+		verify(sshClient, never()).executeCommand(anyString(), anyInt());
+	}
+
+	@Test
+	void resolveRemoteFiles_listsTheRootWithAnAnchoredCaseSensitiveFileNameMask() throws Exception {
+		when(sshClient.listFiles(eq("/opt/metricshub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/opt/metricshub/logs/a.log"), entry("/opt/metricshub/logs/my app;1.log"))
+		);
+
+		assertEquals(
+			Set.of("/opt/metricshub/logs/a.log", "/opt/metricshub/logs/my app;1.log"),
+			resolve(DeviceKind.LINUX, LINUX_ABSOLUTE_PATH)
+		);
+
+		// Like find -name: case-sensitive, and a wildcard matches dot-prefixed names
+		final String mask = fileMask("/opt/metricshub/logs");
+		assertListed(mask, "a.log", ".hidden.log", "my app;1.log", ".log", "multi\nline.log");
+		assertNotListed(mask, "a.LOG", "a.log.1", "a.txt", "log", "a.log\n");
+		verify(sshClient, never()).listSubdirectories(anyString(), anyString());
+		verifyNoCommandRun();
+	}
+
+	@Test
+	void resolveRemoteFiles_literalFileNameAndWholeDirectory() throws Exception {
+		resolve(DeviceKind.LINUX, "/opt/metricshub/logs/app.log", "/var/log/", "/var/tmp/*");
+
+		final String literal = fileMask("/opt/metricshub/logs");
+		assertListed(literal, "app.log");
+		assertNotListed(literal, "APP.LOG", "xapp.log", "app.logx", "app_log");
+		assertListed(fileMask("/var/log"), "messages", ".hidden", "a;b");
+		assertListed(fileMask("/var/tmp"), "x");
+		verify(sshClient, never()).listSubdirectories(anyString(), anyString());
+	}
+
+	@Test
+	void resolveRemoteFiles_walksWildcardDirectorySegments() throws Exception {
+		// The directory that cannot be listed comes first: its siblings must still be scanned
+		when(sshClient.listSubdirectories(eq("/opt/autosys"), anyString())).thenReturn(
+			List.of("/opt/autosys/autouser03", "/opt/autosys/autouser01", "/opt/autosys/autouser02")
+		);
+		when(sshClient.listFiles(eq("/opt/autosys/autouser01/out"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/opt/autosys/autouser01/out/event_demon.PE2"))
+		);
+		when(sshClient.listFiles(eq("/opt/autosys/autouser02/out"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/opt/autosys/autouser02/out/event_demon_XPE2"))
+		);
+		// A matched directory without "out", or one that cannot be read, is skipped
+		when(sshClient.listFiles(eq("/opt/autosys/autouser03/out"), anyString(), eq(false))).thenThrow(
+			new IOException("No such file")
+		);
 
 		assertEquals(
 			Set.of("/opt/autosys/autouser01/out/event_demon.PE2", "/opt/autosys/autouser02/out/event_demon_XPE2"),
-			resolved
+			resolve(DeviceKind.LINUX, "/opt/autosys/autouser*/out/event_demon*PE2")
 		);
-		// The relative path is skipped before any command is run
-		verify(osCommandService, times(1)).runSshCommand(
-			anyString(),
-			anyString(),
-			any(),
-			anyLong(),
-			any(),
-			anyString(),
-			any()
+
+		final String directories = directoryMask("/opt/autosys");
+		assertListed(directories, "autouser01", "autouser");
+		assertNotListed(directories, "Autouser01", "xautouser01", ".autouser01");
+		final String files = fileMask("/opt/autosys/autouser01/out");
+		assertListed(files, "event_demon.PE2", "event_demonPE2");
+		assertNotListed(files, "event_demon.pe2", "event_demon.PE2.old");
+		verifyNoCommandRun();
+	}
+
+	@Test
+	void resolveRemoteFiles_walksTheRootAndConsecutiveWildcardSegments() throws Exception {
+		when(sshClient.listSubdirectories(eq("/"), anyString())).thenReturn(List.of("/opt", "/opt2"));
+		when(sshClient.listSubdirectories(eq("/opt"), anyString())).thenReturn(List.of("/opt/node1"));
+		when(sshClient.listSubdirectories(eq("/opt2"), anyString())).thenReturn(List.of());
+		when(sshClient.listFiles(eq("/opt/node1"), anyString(), eq(false))).thenReturn(List.of(entry("/opt/node1/x.log")));
+
+		assertEquals(Set.of("/opt/node1/x.log"), resolve(DeviceKind.LINUX, "/opt*/node?/"));
+
+		assertListed(directoryMask("/"), "opt", "opt2");
+		final String node = directoryMask("/opt");
+		assertListed(node, "node1");
+		assertNotListed(node, "node12", "node");
+		assertListed(fileMask("/opt/node1"), "x.log", ".x");
+	}
+
+	@Test
+	void resolveRemoteFiles_wildcardDirectorySegmentsSkipHiddenDirectoriesLikeAShellGlob() throws Exception {
+		resolve(DeviceKind.LINUX, "/opt/*/app.log", "/srv/.node*/app.log", "/data/?ode/app.log");
+
+		final String any = directoryMask("/opt");
+		assertListed(any, "node", "a.b");
+		assertNotListed(any, ".git", ".", "..");
+		final String dotted = directoryMask("/srv");
+		assertListed(dotted, ".node1", ".node");
+		assertNotListed(dotted, "node1");
+		final String question = directoryMask("/data");
+		assertListed(question, "node");
+		assertNotListed(question, ".ode");
+	}
+
+	@Test
+	void resolveRemoteFiles_takesSpecialCharactersLiterally() throws Exception {
+		when(sshClient.listSubdirectories(eq("/opt/my app/it's/$x/\"q\""), anyString())).thenReturn(
+			List.of("/opt/my app/it's/$x/\"q\"/node1")
 		);
+		when(sshClient.listSubdirectories(eq("/apps"), anyString())).thenReturn(List.of("/apps/node1"));
+		when(sshClient.listFiles(eq("/apps/node1/[prod]"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/apps/node1/[prod]/app.log"))
+		);
+
+		assertEquals(
+			Set.of("/apps/node1/[prod]/app.log"),
+			resolve(
+				DeviceKind.LINUX,
+				"/opt/my app/it's/$x/\"q\"/node*/app?.log",
+				"/apps/node*/[prod]/app.log",
+				"/opt/logs/app[1].log",
+				"/opt/logs2/a\\b*.log",
+				"/opt/$x/`q`/$(touch pwned)*.log"
+			)
+		);
+
+		final String question = fileMask("/opt/my app/it's/$x/\"q\"/node1");
+		assertListed(question, "app1.log", "app$.log");
+		assertNotListed(question, "app12.log", "app.log");
+		assertListed(fileMask("/apps/node1/[prod]"), "app.log");
+		final String brackets = fileMask("/opt/logs");
+		assertListed(brackets, "app[1].log");
+		assertNotListed(brackets, "app1.log");
+		final String backslash = fileMask("/opt/logs2");
+		assertListed(backslash, "a\\b.log", "a\\bc.log");
+		assertNotListed(backslash, "ab.log");
+		final String substitution = fileMask("/opt/$x/`q`");
+		assertListed(substitution, "$(touch pwned).log", "$(touch pwned)1.log");
+		assertNotListed(substitution, "pwned.log");
+		verifyNoCommandRun();
+	}
+
+	@Test
+	void resolveRemoteFiles_windowsPathsGoToTheSftpSubsystemAsSlashDrivePaths() throws Exception {
+		when(sshClient.listFiles(eq("/C:/Program Files/MetricsHub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/C:/Program Files/MetricsHub/logs/test.log"))
+		);
+		when(sshClient.listSubdirectories(eq("/D:/Autosys_waae"), anyString())).thenReturn(
+			List.of("/D:/Autosys_waae/AutoUser1")
+		);
+		when(sshClient.listFiles(eq("/D:/Autosys_waae/AutoUser1/out"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/D:/Autosys_waae/AutoUser1/out/event_demon_PE2"))
+		);
+		// A UNC path keeps its double slash: ///server/share is rejected by the Windows OpenSSH SFTP subsystem
+		when(sshClient.listFiles(eq("//server/share/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry("//server/share/logs/unc.log"))
+		);
+
+		assertEquals(
+			Set.of(
+				"C:\\Program Files\\MetricsHub\\logs\\test.log",
+				"D:\\Autosys_waae\\AutoUser1\\out\\event_demon_PE2",
+				"\\\\server\\share\\logs\\unc.log"
+			),
+			resolve(
+				DeviceKind.WINDOWS,
+				WINDOWS_ABSOLUTE_PATH,
+				"D:\\Autosys_waae\\autouser*\\out\\event_demon*PE2",
+				"C:\\*.log",
+				"E:\\data\\*\\x.log",
+				"\\\\server\\share\\logs\\*.log"
+			)
+		);
+
+		// Windows names ignore case, and a wildcard matches dot-prefixed names
+		assertListed(fileMask("/C:/Program Files/MetricsHub/logs"), "test.log", "TEST.LOG", ".hidden.log");
+		assertListed(directoryMask("/D:/Autosys_waae"), "AutoUser1", "autouser");
+		assertListed(directoryMask("/E:/data"), ".git", "node");
+		assertListed(fileMask("/C:/"), "setup.log");
+		verifyNoCommandRun();
+	}
+
+	@Test
+	void resolveRemoteFiles_skipsInvalidPatternsAndRootsThatCannotBeListed() throws Exception {
+		when(sshClient.listFiles(eq("/missing"), anyString(), eq(false))).thenThrow(new IOException("No such file"));
+		when(sshClient.listFiles(eq("/opt"), anyString(), eq(false))).thenReturn(List.of(entry("/opt/a.log")));
+
+		assertEquals(Set.of("/opt/a.log"), resolve(DeviceKind.LINUX, "/missing/*.log", "relative/path.log", "/opt/*.log"));
+		verify(sshClient, times(2)).listFiles(anyString(), anyString(), eq(false));
+	}
+
+	@Test
+	void resolveRemoteFiles_windowsLiteralFileNameKeepsItsConfiguredCase() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.WINDOWS);
+		// The host reports the name as stored on disk
+		when(sshClient.listFiles(eq("/C:/Logs"), anyString(), eq(false))).thenReturn(
+			List.of(new FileEntry("/C:/Logs/app.log", 42, 1))
+		);
+
+		// Like Get-Item and the local resolver: the configured path is kept, so the single path output and the
+		// cursor key do not depend on the case on disk
+		assertEquals(
+			Set.of("C:\\Logs\\App.LOG"),
+			operations.resolve(FileHelper.parsePathPattern("C:\\Logs\\App.LOG", DeviceKind.WINDOWS))
+		);
+		assertEquals(42L, operations.getFileSize("C:\\Logs\\App.LOG"));
+		assertListed(fileMask("/C:/Logs"), "app.log");
+	}
+
+	@Test
+	void resolveRemoteFiles_matchesCharactersOutsideTheBmpAndFoldsUnicodeCaseOnWindows() throws Exception {
+		resolve(DeviceKind.LINUX, "/data/x😀.log", "/data2/?.log", "/data3/𠀀*/a.log");
+
+		assertListed(fileMask("/data"), "x😀.log");
+		assertNotListed(fileMask("/data"), "x.log", "x😁.log");
+		// '?' is one character, even outside the BMP
+		assertListed(fileMask("/data2"), "😀.log", "a.log");
+		assertNotListed(fileMask("/data2"), "😀😀.log");
+		assertListed(directoryMask("/data3"), "𠀀1");
+
+		resolve(DeviceKind.WINDOWS, "C:\\journaux\\été*.log");
+		assertListed(fileMask("/C:/journaux"), "été1.log", "ÉTÉ1.LOG");
+	}
+
+	@Test
+	void remoteFileOperations_translateWindowsPathsAndReuseListedSizes() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.WINDOWS);
+		when(sshClient.listFiles(eq("/C:/logs"), anyString(), eq(false))).thenReturn(
+			List.of(new FileEntry("/C:/logs/listed.log", 42, 1))
+		);
+		operations.resolve(FileHelper.parsePathPattern("C:\\logs\\*.log", DeviceKind.WINDOWS));
+
+		// The listing's size spares a stat; another file is stat'ed with its SFTP path
+		assertEquals(42L, operations.getFileSize("C:\\logs\\listed.log"));
+		when(sshClient.fileSize("/C:/logs/other.log")).thenReturn(7L);
+		assertEquals(7L, operations.getFileSize("C:\\logs\\other.log"));
+		when(sshClient.fileSize("/C:/logs/missing.log")).thenThrow(new IOException("No such file"));
+		assertNull(operations.getFileSize("C:\\logs\\missing.log"));
+
+		when(sshClient.readFile("/C:/logs/listed.log", 10L, 5)).thenReturn("range");
+		assertEquals("range", operations.readFromOffset("C:\\logs\\listed.log", 10L, 5));
+		when(sshClient.readFile("/C:/logs/listed.log", null, null)).thenReturn("whole");
+		assertEquals("whole", operations.readFileContent("C:\\logs\\listed.log"));
+
+		operations.close();
+		verify(sshClient).close();
 	}
 
 	/**
 	 * Test subclass of FileSourceProcessor that overrides the factory method
-	 * to inject the mocked RemoteFilesRequestExecutor.
+	 * to read through the mocked SshClient.
 	 */
 	private static class TestableFileSourceProcessor extends FileSourceProcessor {
 
-		private final RemoteFilesRequestExecutor mockRequestExecutor;
+		private final SshClient sshClient;
 
-		TestableFileSourceProcessor(RemoteFilesRequestExecutor mockRequestExecutor, OsCommandService osCommandService) {
-			super(osCommandService);
-			this.mockRequestExecutor = mockRequestExecutor;
+		TestableFileSourceProcessor(final SshClient sshClient) {
+			this.sshClient = sshClient;
 		}
 
 		@Override
 		protected RemoteFilesRequestExecutor createRemoteFilesRequestExecutor(
 			final String hostname,
-			final SshConfiguration sshConfiguration
+			final SshConfiguration sshConfiguration,
+			final DeviceKind deviceKind
 		) {
-			return mockRequestExecutor;
+			return new RemoteFilesRequestExecutor(sshClient, sshConfiguration, deviceKind);
 		}
 	}
 
@@ -256,7 +421,6 @@ class FileSourceProcessorTest {
 		private final FileOperations mockLocalFileOperations;
 
 		TestableFileSourceProcessorForLocalhost(FileOperations mockLocalFileOperations) {
-			super(new OsCommandService());
 			this.mockLocalFileOperations = mockLocalFileOperations;
 		}
 
@@ -266,26 +430,13 @@ class FileSourceProcessorTest {
 		}
 	}
 
+	private void authenticate() throws IOException {
+		when(sshClient.authenticate(eq(USERNAME), any(char[].class))).thenReturn(true);
+	}
+
 	@Test
 	void testProcessWithWindowsHostFlatMode() throws Exception {
-		final OsCommandService osCommandService = mock(OsCommandService.class);
-
-		// Setup configuration for remote Windows host
-		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
-			.hostname(HOSTNAME)
-			.username(USERNAME)
-			.password(PASSWORD.toCharArray())
-			.build();
-		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration.builder()
-			.hostname(HOSTNAME)
-			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
-			.hostType(DeviceKind.WINDOWS)
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostProperties(hostProperties)
-			.hostConfiguration(hostConfiguration)
-			.build();
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.WINDOWS);
 		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key(SOURCE_KEY)
@@ -293,69 +444,37 @@ class FileSourceProcessorTest {
 			.paths(Set.of(WINDOWS_ABSOLUTE_PATH))
 			.build();
 
-		// Resolved file path (what resolveRemoteFiles would return)
 		final String resolvedPath = "C:\\Program Files\\MetricsHub\\logs\\test.log";
+		final String sftpPath = "/C:/Program Files/MetricsHub/logs/test.log";
 		final String initialContent = "Initial file content";
 		final String newContent = "Initial file content\nNew content added";
 
-		// Setup mocks for RemoteFilesRequestExecutor
-		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
-		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
+		authenticate();
+		when(sshClient.listFiles(eq("/C:/Program Files/MetricsHub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry(sftpPath))
+		);
+		when(sshClient.readFile(sftpPath, null, null)).thenReturn(initialContent, newContent);
 
-		doReturn(resolvedPath)
-			.when(osCommandService)
-			.runSshCommand(
-				anyString(),
-				eq(HOSTNAME),
-				eq(sshConfiguration),
-				anyLong(),
-				any(),
-				anyString(),
-				eq(DeviceKind.WINDOWS)
-			);
-
-		// Create testable processor with injected mock
-		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(sshClient);
 
 		// Iteration 1: First read
-		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(initialContent);
-
-		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 1
+		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content
-		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
-
-		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 2
+		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
 		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+
+		// One SSH connection per poll, closed at its end, and no command run on the host
+		verify(sshClient, times(2)).close();
+		verifyNoCommandRun();
 	}
 
 	@Test
 	void testProcessWithWindowsHostLogMode() throws Exception {
-		final OsCommandService osCommandService = mock(OsCommandService.class);
-
-		// Setup configuration for remote Windows host
-		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
-			.hostname(HOSTNAME)
-			.username(USERNAME)
-			.password(PASSWORD.toCharArray())
-			.build();
-		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration.builder()
-			.hostname(HOSTNAME)
-			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
-			.hostType(DeviceKind.WINDOWS)
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostProperties(hostProperties)
-			.hostConfiguration(hostConfiguration)
-			.build();
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.WINDOWS);
 		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key(SOURCE_KEY)
@@ -363,83 +482,46 @@ class FileSourceProcessorTest {
 			.paths(Set.of(WINDOWS_ABSOLUTE_PATH))
 			.build();
 
-		// Resolved file path
 		final String resolvedPath = "C:\\Program Files\\MetricsHub\\logs\\test.log";
+		final String sftpPath = "/C:/Program Files/MetricsHub/logs/test.log";
 		final long initialFileSize = 50L;
 		final String newContent = "New content added\n";
 		final long newFileSize = initialFileSize + newContent.length();
 
-		// Setup mocks for RemoteFilesRequestExecutor
-		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
-		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
+		authenticate();
+		when(sshClient.listFiles(eq("/C:/Program Files/MetricsHub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(new FileEntry(sftpPath, initialFileSize, 1)),
+			List.of(new FileEntry(sftpPath, newFileSize, 2))
+		);
+		when(sshClient.readFile(sftpPath, initialFileSize, newContent.length())).thenReturn(newContent);
 
-		doReturn(resolvedPath)
-			.when(osCommandService)
-			.runSshCommand(
-				anyString(),
-				eq(HOSTNAME),
-				eq(sshConfiguration),
-				anyLong(),
-				any(),
-				anyString(),
-				eq(DeviceKind.WINDOWS)
-			);
-
-		// Create testable processor with injected mock
-		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(sshClient);
 
 		// Iteration 1: First read - should set cursor and return an empty log block
-		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
-
-		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 1
+		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-		// Verify cursor was set correctly
-		Map<String, Long> cursors = telemetryManager
+		final Map<String, Long> cursors = telemetryManager
 			.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getFileSourceCursors(SOURCE_KEY);
 		assertEquals(initialFileSize, cursors.get(resolvedPath));
 
 		// Iteration 2: Second read with new content
-		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
-		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt())).thenReturn(
-			newContent
-		);
-
-		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 2
+		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
 		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
-
-		// Verify cursor was updated correctly
 		assertEquals(newFileSize, cursors.get(resolvedPath));
+
+		// The sizes come from the listings: no stat round trip
+		verify(sshClient, never()).fileSize(anyString());
+		verifyNoCommandRun();
 	}
 
 	@Test
 	void testProcessWithLinuxHostFlatMode() throws Exception {
-		final OsCommandService osCommandService = mock(OsCommandService.class);
-
-		// Setup configuration for remote Linux host
-		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
-			.hostname(HOSTNAME)
-			.username(USERNAME)
-			.password(PASSWORD.toCharArray())
-			.build();
-		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration.builder()
-			.hostname(HOSTNAME)
-			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
-			.hostType(DeviceKind.LINUX)
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostProperties(hostProperties)
-			.hostConfiguration(hostConfiguration)
-			.build();
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.LINUX);
 		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key(SOURCE_KEY)
@@ -447,71 +529,35 @@ class FileSourceProcessorTest {
 			.paths(Set.of(LINUX_ABSOLUTE_PATH))
 			.build();
 
-		// Resolved file path (what resolveRemoteFiles would return)
 		final String resolvedPath = "/opt/metricshub/logs/test.log";
 		final String initialContent = "Initial log content\nLine 2";
 		final String newContent = "Initial log content\nLine 2\nNew content added";
 
-		// Setup mocks for RemoteFilesRequestExecutor
-		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
-		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
+		authenticate();
+		when(sshClient.listFiles(eq("/opt/metricshub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry(resolvedPath))
+		);
+		when(sshClient.readFile(resolvedPath, null, null)).thenReturn(initialContent, newContent);
 
-		doReturn(resolvedPath)
-			.when(osCommandService)
-			.runSshCommand(
-				anyString(),
-				eq(HOSTNAME),
-				eq(sshConfiguration),
-				anyLong(),
-				any(),
-				anyString(),
-				eq(DeviceKind.LINUX)
-			);
-
-		// Create testable processor with injected mock
-		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(sshClient);
 
 		// Iteration 1: First read
-		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(initialContent);
-
-		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 1
+		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content
-		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
-
-		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 2
+		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
 		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+
+		verify(sshClient, times(2)).close();
+		verifyNoCommandRun();
 	}
 
 	@Test
 	void testProcessWithLinuxHostLogMode() throws Exception {
-		final OsCommandService osCommandService = mock(OsCommandService.class);
-
-		// Setup configuration for remote Linux host
-		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
-			.hostname(HOSTNAME)
-			.username(USERNAME)
-			.password(PASSWORD.toCharArray())
-			.timeout(30L)
-			.port(22)
-			.build();
-		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration.builder()
-			.hostname(HOSTNAME)
-			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
-			.hostType(DeviceKind.LINUX)
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostProperties(hostProperties)
-			.hostConfiguration(hostConfiguration)
-			.build();
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.LINUX);
 		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key(SOURCE_KEY)
@@ -519,61 +565,58 @@ class FileSourceProcessorTest {
 			.paths(Set.of(LINUX_ABSOLUTE_PATH))
 			.build();
 
-		// Resolved file path
 		final String resolvedPath = "/opt/metricshub/logs/test.log";
 		final long initialFileSize = 45L;
 		final String newContent = "New log line added\n";
 		final long newFileSize = initialFileSize + newContent.length();
 
-		// Setup mocks for RemoteFilesRequestExecutor
-		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
-		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
+		authenticate();
+		when(sshClient.listFiles(eq("/opt/metricshub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(new FileEntry(resolvedPath, initialFileSize, 1)),
+			List.of(new FileEntry(resolvedPath, newFileSize, 2))
+		);
+		when(sshClient.readFile(resolvedPath, initialFileSize, newContent.length())).thenReturn(newContent);
 
-		doReturn(resolvedPath)
-			.when(osCommandService)
-			.runSshCommand(
-				anyString(),
-				eq(HOSTNAME),
-				eq(sshConfiguration),
-				anyLong(),
-				any(),
-				anyString(),
-				eq(DeviceKind.LINUX)
-			);
-
-		// Create testable processor with injected mock
-		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(sshClient);
 
 		// Iteration 1: First read - should set cursor and return an empty log block
-		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
-
-		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 1
+		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-		// Verify cursor was set correctly
-		Map<String, Long> cursors = telemetryManager
+		final Map<String, Long> cursors = telemetryManager
 			.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getFileSourceCursors(SOURCE_KEY);
 		assertEquals(initialFileSize, cursors.get(resolvedPath));
 
 		// Iteration 2: Second read with new content
-		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
-		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt())).thenReturn(
-			newContent
-		);
-
-		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
-
-		// Assertions for iteration 2
+		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
 		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
-
-		// Verify cursor was updated correctly
 		assertEquals(newFileSize, cursors.get(resolvedPath));
+
+		verify(sshClient, never()).fileSize(anyString());
+		verifyNoCommandRun();
+	}
+
+	@Test
+	void testProcessReturnsAnEmptyTableWhenAuthenticationFails() throws Exception {
+		final FileSource fileSource = FileSource.builder()
+			.key(SOURCE_KEY)
+			.mode(FileSourceProcessingMode.FLAT)
+			.paths(Set.of(LINUX_ABSOLUTE_PATH))
+			.build();
+
+		final SourceTable result = new TestableFileSourceProcessor(sshClient).process(
+			fileSource,
+			CONNECTOR_ID,
+			remoteTelemetryManager(DeviceKind.LINUX)
+		);
+
+		assertEquals(SourceTable.empty(), result);
+		verify(sshClient).close();
+		verify(sshClient, never()).listFiles(anyString(), any(), eq(false));
 	}
 
 	@Test
@@ -792,7 +835,7 @@ class FileSourceProcessorTest {
 		final Set<String> paths = new java.util.LinkedHashSet<>(java.util.List.of(path1, path2));
 		final Map<String, Long> cursors = new HashMap<>();
 		final FileSource source = FileSource.builder().maxSizePerPoll(100L).build();
-		final FileSourceProcessor processor = new FileSourceProcessor(mock(OsCommandService.class));
+		final FileSourceProcessor processor = new FileSourceProcessor();
 		when(fileOps.getFileSize(path1)).thenReturn(10L, 10L, 14L);
 		when(fileOps.getFileSize(path2)).thenReturn(10L);
 		when(fileOps.readFromOffset(path1, 10L, 4)).thenReturn("line");

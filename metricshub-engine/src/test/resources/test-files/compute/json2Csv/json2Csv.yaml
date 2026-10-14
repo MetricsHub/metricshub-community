@@ -11,3 +11,7 @@ beforeAll:
       - type: json2Csv
         entryKey: /
         properties: property;test;here
+      - type: json2Csv
+        entryKey: /items
+        properties: name
+        parsingMode: Events

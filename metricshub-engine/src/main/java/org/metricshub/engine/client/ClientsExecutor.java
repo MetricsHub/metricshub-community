@@ -106,7 +106,7 @@ public class ClientsExecutor {
 	}
 
 	/**
-	 * Execute JSON to CSV operation.
+	 * Execute JSON to CSV operation, the JSON being parsed as a tree.
 	 *
 	 * @param jsonSource    The JSON source string.
 	 * @param jsonEntryKey  The JSON entry key.
@@ -119,11 +119,41 @@ public class ClientsExecutor {
 	 */
 	public String executeJson2Csv(String jsonSource, String jsonEntryKey, List<String> propertyList, String separator)
 		throws InterruptedException, ExecutionException, TimeoutException {
-		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, telemetryManager.getHostname());
+		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, false);
 	}
 
 	/**
 	 * Execute JSON to CSV operation.
+	 *
+	 * @param jsonSource    The JSON source string.
+	 * @param jsonEntryKey  The JSON entry key.
+	 * @param propertyList  The list of properties.
+	 * @param separator     The separator for CSV.
+	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
+	 * @return The CSV representation of the JSON.
+	 * @throws TimeoutException       If the execution times out.
+	 * @throws ExecutionException     If an execution exception occurs.
+	 * @throws InterruptedException   If the execution is interrupted.
+	 */
+	public String executeJson2Csv(
+		String jsonSource,
+		String jsonEntryKey,
+		List<String> propertyList,
+		String separator,
+		boolean eventParsing
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Csv(
+			jsonSource,
+			jsonEntryKey,
+			propertyList,
+			separator,
+			eventParsing,
+			telemetryManager.getHostname()
+		);
+	}
+
+	/**
+	 * Execute JSON to CSV operation, the JSON being parsed as a tree.
 	 *
 	 * @param jsonSource    The JSON source string.
 	 * @param jsonEntryKey  The JSON entry key.
@@ -142,6 +172,31 @@ public class ClientsExecutor {
 		String separator,
 		String hostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, false, hostname);
+	}
+
+	/**
+	 * Execute JSON to CSV operation.
+	 *
+	 * @param jsonSource    The JSON source string.
+	 * @param jsonEntryKey  The JSON entry key.
+	 * @param propertyList  The list of properties.
+	 * @param separator     The separator for CSV.
+	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
+	 * @param hostname      The hostname, for logging purpose.
+	 * @return The CSV representation of the JSON.
+	 * @throws TimeoutException       If the execution times out.
+	 * @throws ExecutionException     If an execution exception occurs.
+	 * @throws InterruptedException   If the execution is interrupted.
+	 */
+	public static String executeJson2Csv(
+		String jsonSource,
+		String jsonEntryKey,
+		List<String> propertyList,
+		String separator,
+		boolean eventParsing,
+		String hostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing JSON to CSV conversion:\n- Json-source:\n{}\n- Json-entry-key: {}\n" + // NOSONAR
@@ -155,7 +210,7 @@ public class ClientsExecutor {
 
 		final Callable<String> jflatToCSV = () -> {
 			try {
-				JFlat jsonFlat = new JFlat(jsonSource);
+				JFlat jsonFlat = new JFlat(jsonSource, eventParsing);
 
 				jsonFlat.parse();
 

@@ -2,6 +2,7 @@ package org.metricshub.engine.connector.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -10,9 +11,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
@@ -780,5 +783,34 @@ class ConnectorParserTest {
 		// Check physical disk keys
 		final StandardMonitorJob physicalDiskJob = (StandardMonitorJob) connector.getMonitors().get("physical_disk");
 		assertEquals(List.of("id"), new ArrayList<>(physicalDiskJob.getKeys()));
+	}
+
+	@Test
+	void testMonitorRemovalDelay() throws IOException {
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/removalDelay").parse(
+			"monitorRemovalDelay"
+		);
+		final Map<String, MonitorJob> monitors = connector.getMonitors();
+
+		// Duration inherited from the extended connector
+		assertEquals(3600L, monitors.get("inherited").getRemovalDelay());
+		// Duration of the extended connector overridden by the connector
+		assertEquals(30L, monitors.get("overridden").getRemovalDelay());
+		// A plain number is a number of seconds
+		assertEquals(90L, monitors.get("plain_number").getRemovalDelay());
+		// Absent or null: 0
+		assertEquals(0L, monitors.get("absent").getRemovalDelay());
+		assertEquals(0L, monitors.get("null_value").getRemovalDelay());
+	}
+
+	@Test
+	void testNegativeMonitorRemovalDelayRejected() {
+		final ConnectorParserUpdateManagement parser = new ConnectorParserUpdateManagement(
+			"connector/management/removalDelay"
+		);
+
+		// A negative delay is rejected like an invalid duration, -1 included
+		assertThrows(Exception.class, () -> parser.parse("negativeRemovalDelay"));
+		assertThrows(Exception.class, () -> parser.parse("minusOneRemovalDelay"));
 	}
 }

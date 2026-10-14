@@ -2,9 +2,17 @@ package org.metricshub.extension.winrm;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.TransportProtocols;
@@ -65,6 +73,81 @@ class WinRmRequestExecutorTest {
 		);
 
 		assertTrue(winRmRequestExecutor.isAcceptableException(new WqlSyntaxException("bad query", new Exception())));
+	}
+
+	/**
+	 * An executor whose client factory hands out mocks, recording them in the given list.
+	 */
+	private static WinRmRequestExecutor newPoolingExecutor(final List<WinRMClient> created, final Duration idleTimeout) {
+		return new WinRmRequestExecutor(
+			(hostname, configuration) -> {
+				final WinRMClient client = mock(WinRMClient.class);
+				created.add(client);
+				return client;
+			},
+			idleTimeout
+		);
+	}
+
+	private static WinRmConfiguration configuration(final String password) {
+		return WinRmConfiguration.builder().username("user").password(password.toCharArray()).build();
+	}
+
+	@Test
+	void testWithClientReusesIdleClients() {
+		final List<WinRMClient> created = new ArrayList<>();
+		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofHours(1));
+
+		// Sequential requests share one client
+		final WinRMClient first = executor.withClient("host", configuration("pass"), client -> client);
+		assertSame(first, executor.withClient("host", configuration("pass"), client -> client));
+
+		// A concurrent request (here, nested) gets its own client
+		final WinRMClient concurrent = executor.withClient("host", configuration("pass"), outer ->
+			executor.withClient("host", configuration("pass"), inner -> inner)
+		);
+		assertNotSame(first, concurrent);
+
+		// The most recently used client is borrowed first, so the extra clients of a burst stay idle and expire
+		assertSame(first, executor.withClient("host", configuration("pass"), client -> client));
+
+		// Another host, or changed credentials, never reuse a client
+		assertNotSame(first, executor.withClient("other", configuration("pass"), client -> client));
+		assertNotSame(first, executor.withClient("host", configuration("changed"), client -> client));
+
+		assertEquals(4, created.size());
+		created.forEach(client -> verify(client, never()).close());
+
+		// Shutting down closes the idle clients
+		executor.close();
+		created.forEach(client -> verify(client).close());
+	}
+
+	@Test
+	void testWithClientClosesIdleClientsAfterIdleTimeout() {
+		final List<WinRMClient> created = new ArrayList<>();
+		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofMillis(200));
+
+		final WinRMClient client = executor.withClient("host", configuration("pass"), c -> c);
+
+		verify(client, timeout(5000)).close();
+		assertNotSame(client, executor.withClient("host", configuration("pass"), c -> c));
+	}
+
+	@Test
+	void testWithClientClosesClientAfterFailure() {
+		final List<WinRMClient> created = new ArrayList<>();
+		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofHours(1));
+
+		assertThrows(IllegalStateException.class, () ->
+			executor.withClient("host", configuration("pass"), client -> {
+				throw new IllegalStateException("timed out");
+			})
+		);
+
+		final WinRMClient failed = created.get(0);
+		verify(failed).close();
+		assertNotSame(failed, executor.withClient("host", configuration("pass"), client -> client));
 	}
 
 	/**

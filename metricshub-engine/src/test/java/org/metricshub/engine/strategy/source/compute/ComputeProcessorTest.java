@@ -1287,7 +1287,7 @@ class ComputeProcessorTest {
 	}
 
 	@Test
-	void testJson2Csv() {
+	void testJson2Csv() throws Exception {
 		// Retrieve the Json file and extract its content as String
 		final String rawData = ResourceHelper.getResourceAsString(
 			"/test-files/compute/json2Csv/json2CsvSample.json",
@@ -1320,6 +1320,19 @@ class ComputeProcessorTest {
 			"/monitors[0];enclosure-1;enclosure-1;ENCLOSURE;hostId;\n" +
 			"/monitors[1];enclosure-2;enclosure-2;ENCLOSURE;hostId;\n";
 		assertEquals(expectedRawDataResult, sourceTable.getRawData());
+
+		// The events parsing mode gives the same result
+		sourceTable.setRawData(rawData);
+		jsonToCsv.setParsingMode(Json2Csv.ParsingMode.EVENTS);
+		computeProcessor.process(jsonToCsv);
+		assertEquals(expectedRawDataResult, sourceTable.getRawData());
+		Mockito.verify(clientsExecutorMock).executeJson2Csv(
+			rawData,
+			"/monitors",
+			List.of("id", "name", "monitorType", "hostId"),
+			";",
+			true
+		);
 	}
 
 	@Test

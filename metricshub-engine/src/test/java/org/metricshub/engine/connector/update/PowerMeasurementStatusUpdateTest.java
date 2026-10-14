@@ -163,6 +163,10 @@ class PowerMeasurementStatusUpdateTest {
 				return Set.of();
 			}
 
+			public Long getRemovalDelay() {
+				return 0L;
+			}
+
 			public Map<String, MetricDefinition> getMetrics() {
 				return Map.of();
 			}

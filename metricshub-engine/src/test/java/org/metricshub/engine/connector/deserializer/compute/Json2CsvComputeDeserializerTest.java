@@ -28,6 +28,14 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(Json2Csv.builder().type("json2Csv").properties("property;test;here").entryKey("/").build());
+		computes.add(
+			Json2Csv.builder()
+				.type("json2Csv")
+				.properties("name")
+				.entryKey("/items")
+				.parsingMode(Json2Csv.ParsingMode.EVENTS)
+				.build()
+		);
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(

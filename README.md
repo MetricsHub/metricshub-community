@@ -254,4 +254,5 @@ no document of their own:
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | [MCP Server](TECHNICAL_NOTES.md#mcp-server)                                             | The MCP endpoints served on the web port, and the `web:` settings that tune or disable the legacy SSE transport |
 | [File log capture](TECHNICAL_NOTES.md#file-log-capture)                                 | What LOG mode emits for a file source that uses wildcards or several paths                                      |
+| [File source over SSH](TECHNICAL_NOTES.md#file-source-over-ssh)                         | How a file source finds and reads remote files through SFTP, and how its wildcards match                        |
 | [OS Command and SSH health checks](TECHNICAL_NOTES.md#os-command-and-ssh-health-checks) | Local execution, the `metricshub.host.up` protocol label, and the OS Command timeout                            |

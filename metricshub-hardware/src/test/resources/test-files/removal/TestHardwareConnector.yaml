@@ -1,0 +1,41 @@
+connector:
+  displayName: TestHardwareConnector
+  platforms: Test platform
+  reliesOn: SomeWebService
+  version: 1.0
+  information: Test hardware connector for the removal of the monitors that are no longer discovered
+  detection:
+    connectionTypes:
+      - remote
+      - local
+    appliesTo:
+      - Linux
+    tags: [ hardware ]
+    criteria:
+      - type: deviceType
+        keep: [ linux ]
+monitors:
+  # Missing device detection type: kept and reported missing when no longer discovered
+  enclosure:
+    discovery:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.enclosure.discovery.sources.source(1)}"
+        attributes:
+          id: $1
+  # Not a missing device detection type: removed when no longer discovered
+  temperature:
+    discovery:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.2
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.temperature.discovery.sources.source(1)}"
+        attributes:
+          id: $1

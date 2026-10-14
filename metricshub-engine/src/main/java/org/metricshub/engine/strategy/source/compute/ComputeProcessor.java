@@ -1009,7 +1009,8 @@ public class ComputeProcessor implements IComputeProcessor {
 				sourceTable.getRawData(),
 				json2csv.getEntryKey(),
 				jsonToCsvProperties,
-				json2csv.getSeparator()
+				json2csv.getSeparator(),
+				json2csv.getParsingMode() == Json2Csv.ParsingMode.EVENTS
 			);
 
 			if (json2csvResult != null && !json2csvResult.isEmpty()) {
