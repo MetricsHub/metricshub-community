@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import HostNameChipInput from "./HostNameChipInput";
 
-describe("Use agent hostname", () => {
+describe("Use local host", () => {
 	it.each(["ec-win", "localhost"])("fills the field with %s", async (hostname) => {
 		const resolve = vi.fn().mockResolvedValue(hostname);
 		const Form = () => {
@@ -18,7 +18,7 @@ describe("Use agent hostname", () => {
 			);
 		};
 		render(<Form />);
-		fireEvent.click(screen.getByRole("button", { name: "Use agent hostname" }));
+		fireEvent.click(screen.getByRole("button", { name: "Use local host" }));
 		await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue(hostname));
 		expect(resolve).toHaveBeenCalledTimes(1);
 	});
@@ -39,7 +39,7 @@ describe("Use agent hostname", () => {
 				resolvingHostname
 			/>,
 		);
-		expect(screen.getByRole("button", { name: /Use agent hostname/ })).toBeDisabled();
+		expect(screen.getByRole("button", { name: /Use local host/ })).toBeDisabled();
 		expect(screen.getByRole("combobox")).toBeDisabled();
 	});
 	it("keeps the current hostname when a request fails", async () => {
@@ -54,7 +54,7 @@ describe("Use agent hostname", () => {
 				resolveHostnameError="Unable to fetch the agent hostname."
 			/>,
 		);
-		fireEvent.click(screen.getByRole("button", { name: "Use agent hostname" }));
+		fireEvent.click(screen.getByRole("button", { name: "Use local host" }));
 		await waitFor(() => expect(resolve).toHaveBeenCalledTimes(1));
 		expect(onChange).not.toHaveBeenCalled();
 		expect(screen.getByRole("combobox")).toHaveValue("ec-win");

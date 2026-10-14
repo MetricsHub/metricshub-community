@@ -22,6 +22,9 @@ package org.metricshub.engine.connector.parser;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -29,6 +32,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
 
 /**
  * Processor for replacing placeholder values in a JsonNode using environment variables.
@@ -77,6 +81,8 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 	 * <p>
 	 * {@code ${env::NAME:-default}} resolves to {@code default} when {@code NAME} is unset or empty
 	 * (shell semantics). {@code ${env::NAME}} is left untouched when {@code NAME} is unset.
+	 * On Linux, an unset or empty {@code HOSTNAME} is first resolved from the kernel hostname,
+	 * since services do not normally inherit this environment variable.
 	 *
 	 * @param value        The string to be replaced.
 	 * @return A new {@link String} with the placeholders replaced.
@@ -98,7 +104,7 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 		}
 
 		return ENV_PATTERN.matcher(value).replaceAll(match -> {
-			final String variableValue = envResolver.apply(match.group(1));
+			final String variableValue = resolveEnvironmentVariable(match.group(1), envResolver);
 			final String defaultValue = match.group(2);
 			if (defaultValue != null) {
 				return Matcher.quoteReplacement(
@@ -110,5 +116,28 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 			}
 			return Matcher.quoteReplacement(match.group());
 		});
+	}
+
+	/**
+	 * Look up an environment variable, using the Linux hostname when HOSTNAME is unavailable.
+	 *
+	 * @param name        The environment variable name.
+	 * @param envResolver The environment lookup.
+	 * @return The variable value, or the kernel hostname for an unset or empty Linux HOSTNAME.
+	 */
+	private static String resolveEnvironmentVariable(final String name, final UnaryOperator<String> envResolver) {
+		final String value = envResolver.apply(name);
+		if (value != null && !value.isEmpty()) {
+			return value;
+		}
+		if ("HOSTNAME".equals(name) && LocalOsHandler.getOS().filter(LocalOsHandler.LINUX::equals).isPresent()) {
+			try {
+				final String hostname = Files.readString(Path.of("/proc/sys/kernel/hostname")).trim();
+				return hostname.isEmpty() ? value : hostname;
+			} catch (IOException e) {
+				// Keep the expression's fallback behavior if the kernel hostname cannot be read.
+			}
+		}
+		return value;
 	}
 }

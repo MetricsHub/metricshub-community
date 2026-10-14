@@ -109,7 +109,7 @@ public class UiConfigService {
 	/**
 	 * Resolves the agent machine's hostname using the same expression as the installation template.
 	 *
-	 * @return the environment hostname, or {@code localhost} when missing or blank
+	 * @return the environment or Linux kernel hostname, or {@code localhost} when unavailable
 	 */
 	public String getAgentHostname() {
 		final String variable = LocalOsHandler.isWindows() ? "COMPUTERNAME" : "HOSTNAME";

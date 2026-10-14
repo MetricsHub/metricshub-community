@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
@@ -36,6 +37,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,10 +90,16 @@ class UiConfigServiceTest {
 	@ParameterizedTest
 	@ValueSource(booleans = { true, false })
 	void testGetAgentHostnameSelectsAgentOperatingSystem(boolean windows) throws Exception {
-		try (var os = Mockito.mockStatic(LocalOsHandler.class)) {
+		try (var os = Mockito.mockStatic(LocalOsHandler.class); var files = Mockito.mockStatic(Files.class)) {
 			os.when(LocalOsHandler::isWindows).thenReturn(windows);
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(windows ? LocalOsHandler.WINDOWS : LocalOsHandler.LINUX));
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn("agent-linux\n");
 			final String value = System.getenv(windows ? "COMPUTERNAME" : "HOSTNAME");
-			assertEquals(value == null || value.isBlank() ? "localhost" : value.trim(), service.getAgentHostname());
+			final String fallback = windows ? "localhost" : "agent-linux";
+			assertEquals(
+				value == null || value.isEmpty() ? fallback : value.isBlank() ? "localhost" : value.trim(),
+				service.getAgentHostname()
+			);
 		}
 	}
 
@@ -153,7 +161,15 @@ class UiConfigServiceTest {
 			mock(UiConnectorCompatibilityService.class),
 			new ConnectorStore()
 		);
-		final var snapshot = JsonHelper.buildYamlMapper().valueToTree(svc.getSnapshot());
+		final JsonNode snapshot;
+		try (
+			var os = Mockito.mockStatic(LocalOsHandler.class);
+			var files = Mockito.mockStatic(Files.class, Mockito.CALLS_REAL_METHODS)
+		) {
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.LINUX));
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn("agent-linux\n");
+			snapshot = JsonHelper.buildYamlMapper().valueToTree(svc.getSnapshot());
+		}
 		final boolean uiFile = filename.equals("metricshub-ui.yaml");
 		final var resource = snapshot.path(uiFile ? "resources" : "externalResources").path("localhost");
 		final var grouped = snapshot
@@ -162,7 +178,8 @@ class UiConfigServiceTest {
 			.path("resources")
 			.path("localhost");
 		final String environmentValue = System.getenv(variable);
-		final String expected = environmentValue == null || environmentValue.isEmpty() ? "localhost" : environmentValue;
+		final String fallback = variable.equals("HOSTNAME") ? "agent-linux" : "localhost";
+		final String expected = environmentValue == null || environmentValue.isEmpty() ? fallback : environmentValue;
 		assertEquals(expected, resource.path("attributes").path("host.name").asText());
 		assertEquals(expected, resource.path("protocols").path("winrm").path("hostname").asText());
 		assertEquals(expected, grouped.path("attributes").path("host.name").get(0).asText());

@@ -1,7 +1,6 @@
 import * as React from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import { Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
-import ComputerIcon from "@mui/icons-material/Computer";
 import { validateHostNameValue } from "../../utils/host-names";
 import { getHostNames } from "./host-config-utils";
 import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
@@ -256,22 +255,6 @@ const HostNameChipInput = ({
 					<FieldHelpTooltip
 						title={`MetricsHub attribute: ${HOST_NAME_UI.attributeName}\n\n${HOST_NAME_UI.fieldHelper}`}
 					/>
-					{onResolveHostname ? (
-						<Stack direction="row" alignItems="center" sx={{ ml: "auto", flexShrink: 0 }}>
-							<Button
-								size="small"
-								startIcon={<ComputerIcon />}
-								loading={resolvingHostname}
-								onClick={async () => {
-									const hostname = await onResolveHostname();
-									if (hostname) onChange(hostname);
-								}}
-							>
-								Use agent hostname
-							</Button>
-							<FieldHelpTooltip title="Use this only for the host running the MetricsHub agent. Fills in its hostname, or localhost if unavailable. To monitor a remote host, enter its hostname manually." />
-						</Stack>
-					) : null}
 					{hostNameCount > 1 ? (
 						<Chip
 							size="small"
@@ -298,6 +281,37 @@ const HostNameChipInput = ({
 					sx: staticLabel ? filledInputNoLabelSx : undefined,
 				}}
 			/>
+			{staticLabel && onResolveHostname ? (
+				<Stack
+					direction="row"
+					alignItems="center"
+					spacing={0.5}
+					useFlexGap
+					sx={{ pt: 0.5, flexWrap: "wrap", color: "text.secondary" }}
+				>
+					<Button
+						type="button"
+						size="small"
+						color="inherit"
+						loading={resolvingHostname}
+						sx={{
+							typography: "caption",
+							minWidth: 0,
+							p: 0,
+							textTransform: "none",
+							textDecoration: "underline",
+							"&:hover": { bgcolor: "transparent", textDecoration: "underline" },
+						}}
+						onClick={async () => {
+							const hostname = await onResolveHostname();
+							if (hostname) onChange(hostname);
+						}}
+					>
+						Use local host
+					</Button>
+					<FieldHelpTooltip title="For the host running this MetricsHub agent only. Fills in its hostname, or localhost if unavailable. To monitor a remote host, enter its hostname manually." />
+				</Stack>
+			) : null}
 		</Stack>
 	);
 };
