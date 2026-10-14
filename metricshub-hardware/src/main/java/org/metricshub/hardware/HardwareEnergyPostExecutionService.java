@@ -151,6 +151,57 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 	}
 
 	/**
+	 * For the monitors whose power is measured by the connector without an energy counter, derive the energy
+	 * from the measured power (power x time since the previous collect, added to the previous energy).
+	 * This is what the engine did before with the estimated power, so the energy counter keeps being exported.
+	 *
+	 * @param measuredMonitorIds The ids of the monitors whose power or energy is collected by the connector
+	 */
+	private void collectEnergyFromMeasuredPower(final Set<String> measuredMonitorIds) {
+		if (measuredMonitorIds.isEmpty()) {
+			return;
+		}
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
+		telemetryManager
+			.getMonitors()
+			.values()
+			.stream()
+			.map(Map::values)
+			.flatMap(Collection::stream)
+			.filter(monitor -> measuredMonitorIds.contains(monitor.getId()))
+			.forEach(monitor -> {
+				final String powerMetricName = HwCollectHelper.generatePowerMetricNameForMonitorType(monitor.getType());
+				final String energyMetricName = HwCollectHelper.generateEnergyMetricNameForMonitorType(monitor.getType());
+
+				// The connector collects the energy: keep it
+				if (CollectHelper.getUpdatedNumberMetricValue(monitor, energyMetricName) != null) {
+					return;
+				}
+
+				// No measured power in this cycle (e.g. energy only): nothing to derive
+				final Double measuredPower = CollectHelper.getUpdatedNumberMetricValue(monitor, powerMetricName);
+				if (measuredPower == null) {
+					return;
+				}
+
+				final Double energy = HwCollectHelper.estimateEnergyUsingPower(
+					monitor,
+					telemetryManager,
+					measuredPower,
+					powerMetricName,
+					energyMetricName,
+					telemetryManager.getStrategyTime()
+				);
+				if (energy != null) {
+					metricFactory.collectNumberMetric(monitor, energyMetricName, energy, telemetryManager.getStrategyTime());
+				}
+			});
+	}
+
+	/**
 	 * Find the monitors whose power or energy has been collected during the current cycle.
 	 * Called before any estimation, it returns the monitors measured by the connector.
 	 * Called after the estimations, it also returns the monitors estimated by the engine.
@@ -187,10 +238,31 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 			return;
 		}
 
+		// Only the VMs to estimate share the power source: the measured VMs keep their power
 		final Map<String, Double> totalPowerSharesByPowerSource = vmMonitors
 			.values()
 			.stream()
-			.collect(Collectors.toMap(this::getVmPowerSourceMonitorId, HwCollectHelper::getVmPowerShare, Double::sum));
+			.collect(
+				Collectors.toMap(
+					this::getVmPowerSourceMonitorId,
+					monitor -> measuredMonitorIds.contains(monitor.getId()) ? 0.0 : HwCollectHelper.getVmPowerShare(monitor),
+					Double::sum
+				)
+			);
+
+		// The power of the measured VMs is deducted from their power source before it is shared
+		final Map<String, Double> measuredVmPowerByPowerSource = vmMonitors
+			.values()
+			.stream()
+			.filter(monitor -> measuredMonitorIds.contains(monitor.getId()))
+			.filter(monitor -> CollectHelper.getNumberMetricValue(monitor, HW_POWER_VM_METRIC, false) != null)
+			.collect(
+				Collectors.toMap(
+					this::getVmPowerSourceMonitorId,
+					monitor -> CollectHelper.getNumberMetricValue(monitor, HW_POWER_VM_METRIC, false),
+					Double::sum
+				)
+			);
 
 		// For each vm monitor, estimate and collect power and energy consumption metrics
 		vmMonitors
@@ -209,7 +281,13 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 					HW_POWER_VM_METRIC,
 					HW_ENERGY_VM_METRIC,
 					telemetryManager,
-					new VmPowerAndEnergyEstimator(monitor, telemetryManager, totalPowerSharesByPowerSource, isPowerEstimated)
+					new VmPowerAndEnergyEstimator(
+						monitor,
+						telemetryManager,
+						totalPowerSharesByPowerSource,
+						isPowerEstimated,
+						measuredVmPowerByPowerSource
+					)
 				);
 			});
 	}
@@ -330,6 +408,9 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 		// After the estimations: the monitors estimated by the engine are the newly collected ones
 		final Set<String> estimatedMonitorIds = findMonitorIdsWithCollectedPowerOrEnergy();
 		estimatedMonitorIds.removeAll(measuredMonitorIds);
+
+		// The measured monitors are not estimated: derive their energy from the measured power when it is missing
+		collectEnergyFromMeasuredPower(measuredMonitorIds);
 
 		final boolean isPowerMeasured = estimateAndCollectPowerAndEnergyForHost((hostMonitor, manager) ->
 			new HostMonitorPowerAndEnergyEstimator(hostMonitor, manager, measuredMonitorIds, estimatedMonitorIds)

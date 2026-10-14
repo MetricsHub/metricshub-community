@@ -1267,11 +1267,11 @@ class HardwareEnergyPostExecutionServiceTest {
 		final Monitor measuredVm = buildMonitor(KnownMonitorType.VM.getKey(), VM_1_ONLINE);
 		measuredVm.addMetric(HW_VM_POWER_STATE_METRIC, StateSetMetric.builder().value(ON).build());
 		metricFactory.collectNumberMetric(measuredVm, HW_VM_POWER_SHARE_METRIC, 5.0, STRATEGY_TIME);
-		metricFactory.collectNumberMetric(measuredVm, HW_POWER_VM_METRIC, 42.0, STRATEGY_TIME);
+		metricFactory.collectNumberMetric(measuredVm, HW_POWER_VM_METRIC, 80.0, STRATEGY_TIME);
 		measuredVm.addAttribute(POWER_SOURCE_ID_ATTRIBUTE, host.getId());
 		telemetryManager.addNewMonitor(measuredVm, KnownMonitorType.VM.getKey(), VM_1_ONLINE);
 
-		// VM without measured power: still computed from its share of the host power (5 / 10 of 100 W)
+		// VM without measured power: it gets what the measured VM leaves of the host power (100 - 80 = 20 W)
 		final Monitor estimatedVm = buildMonitor(KnownMonitorType.VM.getKey(), VM_ONLINE_3);
 		estimatedVm.addMetric(HW_VM_POWER_STATE_METRIC, StateSetMetric.builder().value(ON).build());
 		metricFactory.collectNumberMetric(estimatedVm, HW_VM_POWER_SHARE_METRIC, 5.0, STRATEGY_TIME);
@@ -1280,7 +1280,77 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		new HardwareEnergyPostExecutionService(telemetryManager).run();
 
-		assertEquals(42.0, CollectHelper.getNumberMetricValue(measuredVm, HW_POWER_VM_METRIC, false));
-		assertEquals(50.0, CollectHelper.getNumberMetricValue(estimatedVm, HW_POWER_VM_METRIC, false));
+		assertEquals(80.0, CollectHelper.getNumberMetricValue(measuredVm, HW_POWER_VM_METRIC, false));
+		assertEquals(20.0, CollectHelper.getNumberMetricValue(estimatedVm, HW_POWER_VM_METRIC, false));
+	}
+
+	@Test
+	void testRunMeasuredVmsExceedingHostPowerLeaveNothingToShare() {
+		final MetricFactory metricFactory = newMetricFactory();
+
+		final Monitor host = buildMonitor(HOST, HOST_1);
+		host.setAsEndpoint();
+		metricFactory.collectNumberMetric(host, HW_HOST_ESTIMATED_POWER, 100.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(host, HOST, HOST_1);
+
+		final Monitor measuredVm = buildMonitor(KnownMonitorType.VM.getKey(), VM_1_ONLINE);
+		measuredVm.addMetric(HW_VM_POWER_STATE_METRIC, StateSetMetric.builder().value(ON).build());
+		metricFactory.collectNumberMetric(measuredVm, HW_VM_POWER_SHARE_METRIC, 5.0, STRATEGY_TIME);
+		metricFactory.collectNumberMetric(measuredVm, HW_POWER_VM_METRIC, 120.0, STRATEGY_TIME);
+		measuredVm.addAttribute(POWER_SOURCE_ID_ATTRIBUTE, host.getId());
+		telemetryManager.addNewMonitor(measuredVm, KnownMonitorType.VM.getKey(), VM_1_ONLINE);
+
+		final Monitor estimatedVm = buildMonitor(KnownMonitorType.VM.getKey(), VM_ONLINE_3);
+		estimatedVm.addMetric(HW_VM_POWER_STATE_METRIC, StateSetMetric.builder().value(ON).build());
+		metricFactory.collectNumberMetric(estimatedVm, HW_VM_POWER_SHARE_METRIC, 5.0, STRATEGY_TIME);
+		estimatedVm.addAttribute(POWER_SOURCE_ID_ATTRIBUTE, host.getId());
+		telemetryManager.addNewMonitor(estimatedVm, KnownMonitorType.VM.getKey(), VM_ONLINE_3);
+
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		assertEquals(120.0, CollectHelper.getNumberMetricValue(measuredVm, HW_POWER_VM_METRIC, false));
+		assertEquals(0.0, CollectHelper.getNumberMetricValue(estimatedVm, HW_POWER_VM_METRIC, false));
+	}
+
+	@Test
+	void testRunDerivesEnergyFromMeasuredPowerWhenEnergyIsMissing() {
+		final MetricFactory metricFactory = newMetricFactory();
+
+		// Fan and GPU whose connector collects the power only (no energy counter)
+		final Monitor fan = buildMonitor(FAN, "fan1");
+		final Monitor gpu = buildMonitor(GPU, "gpu1");
+		telemetryManager.addNewMonitor(fan, FAN, "fan1");
+		telemetryManager.addNewMonitor(gpu, GPU, "gpu1");
+
+		// First cycle: no previous collect, the energy cannot be computed yet
+		metricFactory.collectNumberMetric(fan, FAN_SPEED_METRIC, 5000.0, STRATEGY_TIME);
+		metricFactory.collectNumberMetric(fan, FAN_POWER_METRIC, 7.5, STRATEGY_TIME);
+		metricFactory.collectNumberMetric(gpu, GPU_POWER_METRIC, 300.0, STRATEGY_TIME);
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+		assertNull(fan.getMetric(FAN_ENERGY_METRIC, NumberMetric.class));
+
+		// Next cycle, 120 s later (PrepareCollectStrategy saves the metrics, then the connector collects again)
+		fan
+			.getMetrics()
+			.values()
+			.forEach(metric -> metric.save());
+		gpu
+			.getMetrics()
+			.values()
+			.forEach(metric -> metric.save());
+		telemetryManager.setStrategyTime(NEXT_STRATEGY_TIME);
+		metricFactory.collectNumberMetric(fan, FAN_SPEED_METRIC, 5000.0, NEXT_STRATEGY_TIME);
+		metricFactory.collectNumberMetric(fan, FAN_POWER_METRIC, 7.5, NEXT_STRATEGY_TIME);
+		metricFactory.collectNumberMetric(gpu, GPU_POWER_METRIC, 300.0, NEXT_STRATEGY_TIME);
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		// The measured power is kept, and the energy is derived from it: power x 120 s
+		assertEquals(7.5, CollectHelper.getNumberMetricValue(fan, FAN_POWER_METRIC, false));
+		assertEquals(900.0, CollectHelper.getNumberMetricValue(fan, FAN_ENERGY_METRIC, false));
+		assertEquals(300.0, CollectHelper.getNumberMetricValue(gpu, GPU_POWER_METRIC, false));
+		assertEquals(
+			36000.0,
+			CollectHelper.getNumberMetricValue(gpu, HwCollectHelper.generateEnergyMetricNameForMonitorType(GPU), false)
+		);
 	}
 }
