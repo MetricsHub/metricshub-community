@@ -172,9 +172,13 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 
 	/**
 	 * Estimates and collects power and energy consumption for a VM
-	 * @param isPowerEstimated whether the power consumption is estimated
+	 * @param isPowerEstimated   whether the power consumption is estimated
+	 * @param measuredMonitorIds The ids of the monitors whose power or energy is collected by the connector
 	 */
-	private void estimateAndCollectPowerAndEnergyForVm(final boolean isPowerEstimated) {
+	private void estimateAndCollectPowerAndEnergyForVm(
+		final boolean isPowerEstimated,
+		final Set<String> measuredMonitorIds
+	) {
 		final Map<String, Monitor> vmMonitors = telemetryManager.findMonitorsByType(KnownMonitorType.VM.getKey());
 
 		// If no vm monitors are found, log a message
@@ -195,15 +199,19 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 			.filter(monitor -> !HwCollectHelper.isMissing(monitor))
 			.filter(monitor -> telemetryManager.isConnectorStatusOk(monitor))
 			.filter(monitor -> connectorHasHardwareTag(monitor, telemetryManager))
-			.forEach(monitor ->
+			.forEach(monitor -> {
+				// Estimation: never overwrite the VM power or energy collected by the connector
+				if (measuredMonitorIds.contains(monitor.getId())) {
+					return;
+				}
 				PowerAndEnergyCollectHelper.collectPowerAndEnergy(
 					monitor,
 					HW_POWER_VM_METRIC,
 					HW_ENERGY_VM_METRIC,
 					telemetryManager,
 					new VmPowerAndEnergyEstimator(monitor, telemetryManager, totalPowerSharesByPowerSource, isPowerEstimated)
-				)
-			);
+				);
+			});
 	}
 
 	/**
@@ -326,7 +334,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 		final boolean isPowerMeasured = estimateAndCollectPowerAndEnergyForHost((hostMonitor, manager) ->
 			new HostMonitorPowerAndEnergyEstimator(hostMonitor, manager, measuredMonitorIds, estimatedMonitorIds)
 		);
-		estimateAndCollectPowerAndEnergyForVm(isPowerMeasured);
+		estimateAndCollectPowerAndEnergyForVm(isPowerMeasured, measuredMonitorIds);
 	}
 
 	/**

@@ -1253,4 +1253,34 @@ class HardwareEnergyPostExecutionServiceTest {
 			assertNull(fan.getMetric(FAN_POWER_METRIC, NumberMetric.class));
 		}
 	}
+
+	@Test
+	void testRunDoesNotOverwriteConnectorMeasuredVmPower() {
+		final MetricFactory metricFactory = newMetricFactory();
+
+		final Monitor host = buildMonitor(HOST, HOST_1);
+		host.setAsEndpoint();
+		metricFactory.collectNumberMetric(host, HW_HOST_ESTIMATED_POWER, 100.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(host, HOST, HOST_1);
+
+		// VM whose power is collected by the connector in this cycle
+		final Monitor measuredVm = buildMonitor(KnownMonitorType.VM.getKey(), VM_1_ONLINE);
+		measuredVm.addMetric(HW_VM_POWER_STATE_METRIC, StateSetMetric.builder().value(ON).build());
+		metricFactory.collectNumberMetric(measuredVm, HW_VM_POWER_SHARE_METRIC, 5.0, STRATEGY_TIME);
+		metricFactory.collectNumberMetric(measuredVm, HW_POWER_VM_METRIC, 42.0, STRATEGY_TIME);
+		measuredVm.addAttribute(POWER_SOURCE_ID_ATTRIBUTE, host.getId());
+		telemetryManager.addNewMonitor(measuredVm, KnownMonitorType.VM.getKey(), VM_1_ONLINE);
+
+		// VM without measured power: still computed from its share of the host power (5 / 10 of 100 W)
+		final Monitor estimatedVm = buildMonitor(KnownMonitorType.VM.getKey(), VM_ONLINE_3);
+		estimatedVm.addMetric(HW_VM_POWER_STATE_METRIC, StateSetMetric.builder().value(ON).build());
+		metricFactory.collectNumberMetric(estimatedVm, HW_VM_POWER_SHARE_METRIC, 5.0, STRATEGY_TIME);
+		estimatedVm.addAttribute(POWER_SOURCE_ID_ATTRIBUTE, host.getId());
+		telemetryManager.addNewMonitor(estimatedVm, KnownMonitorType.VM.getKey(), VM_ONLINE_3);
+
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		assertEquals(42.0, CollectHelper.getNumberMetricValue(measuredVm, HW_POWER_VM_METRIC, false));
+		assertEquals(50.0, CollectHelper.getNumberMetricValue(estimatedVm, HW_POWER_VM_METRIC, false));
+	}
 }
