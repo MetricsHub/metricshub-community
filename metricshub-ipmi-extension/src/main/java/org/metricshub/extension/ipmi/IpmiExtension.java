@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
@@ -45,8 +44,6 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.ipmi.client.IpmiClient;
-import org.metricshub.ipmi.client.IpmiClientConfiguration;
 
 /**
  * The IpmiExtension class implements the IProtocolExtension interface to provide support for the IPMI (Intelligent Platform Management Interface) protocol in the MetricsHub engine.
@@ -108,16 +105,7 @@ public class IpmiExtension implements IProtocolExtension {
 
 		// Execute IPMI test command
 		try {
-			ipmiResult = IpmiClient.getChassisStatusAsStringResult(
-				new IpmiClientConfiguration(
-					hostname,
-					ipmiConfiguration.getUsername(),
-					ipmiConfiguration.getPassword(),
-					ArrayHelper.hexToByteArray(ipmiConfiguration.getBmcKey()),
-					ipmiConfiguration.isSkipAuth(),
-					ipmiConfiguration.getTimeout()
-				)
-			);
+			ipmiResult = ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiConfiguration);
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking IPMI protocol status. IPMI exception when performing a IPMI 'Get Chassis Status As String Result' query: ",
