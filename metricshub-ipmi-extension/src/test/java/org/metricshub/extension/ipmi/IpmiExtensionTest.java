@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -33,12 +31,9 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.ipmi.client.IpmiClient;
-import org.metricshub.ipmi.client.IpmiClientConfiguration;
+import org.metricshub.ipmi.client.IpmiTimeoutException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -93,16 +88,14 @@ class IpmiExtensionTest {
 		initIpmi();
 
 		// Mock successful IPMI protocol health check response
-		try (MockedStatic<IpmiClient> staticIpmiClient = Mockito.mockStatic(IpmiClient.class)) {
-			staticIpmiClient
-				.when(() -> IpmiClient.getChassisStatusAsStringResult(any(IpmiClientConfiguration.class)))
-				.thenReturn(SUCCESS_RESPONSE);
+		doReturn(SUCCESS_RESPONSE)
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiDetection(anyString(), any(IpmiConfiguration.class));
 
-			// Start the IPMI Health Check strategy
-			Optional<Boolean> result = ipmiExtension.checkProtocol(telemetryManager);
+		// Start the IPMI Health Check strategy
+		Optional<Boolean> result = ipmiExtension.checkProtocol(telemetryManager);
 
-			assertTrue(result.get());
-		}
+		assertTrue(result.get());
 	}
 
 	@Test
@@ -110,16 +103,12 @@ class IpmiExtensionTest {
 		initIpmi();
 
 		// Mock null IPMI protocol health check response
-		try (MockedStatic<IpmiClient> staticIpmiClient = Mockito.mockStatic(IpmiClient.class)) {
-			staticIpmiClient
-				.when(() -> IpmiClient.getChassisStatusAsStringResult(any(IpmiClientConfiguration.class)))
-				.thenReturn(null);
+		doReturn(null).when(ipmiRequestExecutorMock).executeIpmiDetection(anyString(), any(IpmiConfiguration.class));
 
-			// Start the IPMI Health Check strategy
-			Optional<Boolean> result = ipmiExtension.checkProtocol(telemetryManager);
+		// Start the IPMI Health Check strategy
+		Optional<Boolean> result = ipmiExtension.checkProtocol(telemetryManager);
 
-			assertFalse(result.get());
-		}
+		assertFalse(result.get());
 	}
 
 	@Test
@@ -229,7 +218,7 @@ class IpmiExtensionTest {
 	}
 
 	@Test
-	void testProcessCriterionNullResultTest() throws ExecutionException, InterruptedException, TimeoutException {
+	void testProcessCriterionNullResultTest() {
 		initIpmi();
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().type(IPMI_CRITERION_TYPE).build();
@@ -257,7 +246,7 @@ class IpmiExtensionTest {
 	}
 
 	@Test
-	void testProcessCriterionOk() throws ExecutionException, InterruptedException, TimeoutException {
+	void testProcessCriterionOk() {
 		initIpmi();
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().type(IPMI_CRITERION_TYPE).build();
@@ -284,7 +273,7 @@ class IpmiExtensionTest {
 	}
 
 	@Test
-	void testProcessIpmiSourceOk() throws ExecutionException, InterruptedException, TimeoutException {
+	void testProcessIpmiSourceOk() {
 		initIpmi();
 
 		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
@@ -304,7 +293,7 @@ class IpmiExtensionTest {
 	}
 
 	@Test
-	void testProcessIpmiSourceThrowsException() throws ExecutionException, InterruptedException, TimeoutException {
+	void testProcessIpmiSourceThrowsException() {
 		initIpmi();
 
 		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
@@ -326,7 +315,7 @@ class IpmiExtensionTest {
 	}
 
 	@Test
-	void testProcessIpmiSourceEmptyResult() throws ExecutionException, InterruptedException, TimeoutException {
+	void testProcessIpmiSourceEmptyResult() {
 		initIpmi();
 
 		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
@@ -390,7 +379,7 @@ class IpmiExtensionTest {
 	@Test
 	void testExecuteQueryThrows() throws Exception {
 		initIpmi();
-		doThrow(TimeoutException.class)
+		doThrow(IpmiTimeoutException.class)
 			.when(ipmiRequestExecutorMock)
 			.executeIpmiGetSensors(anyString(), any(IpmiConfiguration.class));
 		IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
