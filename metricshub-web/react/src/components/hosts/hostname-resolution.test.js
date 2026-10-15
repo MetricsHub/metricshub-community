@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement } from "react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { uiConfigApi } from "../../api/ui-config";
 import { useHostConfig } from "./useHostConfig";
 import { runProtocolCheck } from "./protocol-test";
 import { PROTOCOL_DEFAULTS } from "./protocol-definitions";
 import { hostConfigToFormState, buildHostPayloadFromForm } from "./host-config-utils";
+import HostNameChipInput from "./HostNameChipInput";
 
 vi.mock("../../api/ui-config", () => ({
 	uiConfigApi: {
@@ -81,6 +83,134 @@ describe("resolved agent hostname in the form", () => {
 		await act(async () => expect(await result.current.fetchAgentHostname()).toBeNull());
 		expect(result.current.agentHostnameError).toBeTruthy();
 		expect(result.current.agentHostnameLoading).toBe(false);
+	});
+});
+
+describe("preserving YAML hostname expressions", () => {
+	const expression = "${env::HOSTNAME:-localhost}";
+	const overrideExpression = "${env::COLLECTION_HOST:-localhost}";
+	const editableState = (resourceGroup = null) =>
+		hostConfigToFormState(
+			"local-resource",
+			{
+				attributes: { "host.name": "ec-win", "host.type": "windows" },
+				protocols: { wmi: { hostname: "collect-host" } },
+				originalHostnames: {
+					hostName: expression,
+					protocols: { wmi: overrideExpression },
+				},
+			},
+			resourceGroup,
+		);
+
+	it.each([null, "Paris"])(
+		"preserves expressions when editing unrelated fields in %s",
+		async (group) => {
+			const initialState = editableState(group);
+			const { result } = renderHook(() => useHostConfig({ mode: "edit", initialState }));
+			await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+			expect(result.current.state.hostName).toBe("ec-win");
+			expect(result.current.state.protocols.wmi.hostname).toBe("collect-host");
+			act(() => result.current.patchProtocolField("wmi", "timeout", 60));
+			act(() => result.current.patchState({ hostId: "renamed-resource" }));
+			const payload = buildHostPayloadFromForm(result.current.state);
+			expect(payload.attributes["host.name"]).toBe(expression);
+			expect(payload.protocols.wmi.hostname).toBe(overrideExpression);
+			expect(payload.protocols.wmi.timeout).toBe(60);
+			expect(payload.hostId).toBe("renamed-resource");
+			expect(payload.resourceGroup).toBe(group);
+			expect(payload).not.toHaveProperty("originalHostnames");
+			expect(payload.protocols.wmi).not.toHaveProperty("_originalHostname");
+		},
+	);
+
+	it.each(["localhost", "remote-server"])(
+		"saves the manually entered hostname %s literally",
+		async (hostname) => {
+			const initialState = editableState();
+			const { result } = renderHook(() => useHostConfig({ mode: "edit", initialState }));
+			await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+			act(() => result.current.patchState({ hostName: hostname }));
+			const payload = buildHostPayloadFromForm(result.current.state);
+			expect(payload.attributes["host.name"]).toBe(hostname);
+			expect(payload.protocols.wmi.hostname).toBe(overrideExpression);
+		},
+	);
+
+	it("replaces the expression when the button returns the displayed hostname, including after refresh", async () => {
+		const initialState = editableState();
+		let form;
+		const Form = () => {
+			form = useHostConfig({ mode: "edit", initialState, sessionPathname: "/edit/local-resource" });
+			return createElement(HostNameChipInput, {
+				staticLabel: true,
+				value: form.state.hostName,
+				onChange: (hostName) => form.patchState({ hostName }),
+				onResolveHostname: form.fetchAgentHostname,
+			});
+		};
+		const { unmount } = render(createElement(Form));
+		await waitFor(() => expect(form.allStepsValid).toBe(true));
+		fireEvent.focus(screen.getByRole("combobox"));
+		fireEvent.blur(screen.getByRole("combobox"));
+		expect(form.isDirty).toBe(false);
+		fireEvent.click(screen.getByRole("button", { name: "Use agent hostname" }));
+		await waitFor(() => expect(form.isDirty).toBe(true));
+		expect(screen.getByRole("combobox")).toHaveValue("ec-win");
+		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe("ec-win");
+		unmount();
+		render(createElement(Form));
+		await waitFor(() => expect(form.isDirty).toBe(true));
+		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe("ec-win");
+		expect(uiConfigApi.getAgentHostname).toHaveBeenCalledTimes(1);
+		act(() => form.resetToBaseline());
+		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe(expression);
+	});
+
+	it("refreshes the displayed hostname when the same YAML expression resolves differently", async () => {
+		const initialState = editableState();
+		const { result, rerender } = renderHook(
+			({ initialState }) => useHostConfig({ mode: "edit", initialState }),
+			{ initialProps: { initialState } },
+		);
+		await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+		rerender({ initialState: { ...initialState, hostName: "renamed-agent" } });
+		await waitFor(() => expect(result.current.state.hostName).toBe("renamed-agent"));
+		expect(buildHostPayloadFromForm(result.current.state).attributes["host.name"]).toBe(expression);
+		expect(result.current.isDirty).toBe(false);
+	});
+
+	it("preserves only protocol hostnames that were not edited", async () => {
+		const initialState = editableState();
+		const { result } = renderHook(() => useHostConfig({ mode: "edit", initialState }));
+		await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+		act(() => result.current.patchProtocolField("wmi", "hostname", "collect-host"));
+		expect(result.current.isDirty).toBe(true);
+		const payload = buildHostPayloadFromForm(result.current.state);
+		expect(payload.attributes["host.name"]).toBe(expression);
+		expect(payload.protocols.wmi.hostname).toBe("collect-host");
+	});
+
+	it("preserves lists and keeps protocol expressions aligned when hosts are reordered", async () => {
+		const initialState = hostConfigToFormState("multi", {
+			attributes: { "host.name": ["ec-win", "remote"], "host.type": "windows" },
+			protocols: { wmi: { hostname: ["collect-host", "remote-proxy"] } },
+			originalHostnames: {
+				hostName: [expression, "remote"],
+				protocols: { wmi: [overrideExpression, "remote-proxy"] },
+			},
+		});
+		const { result } = renderHook(() => useHostConfig({ mode: "edit", initialState }));
+		await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+		act(() => result.current.patchProtocolField("wmi", "timeout", 60));
+		expect(buildHostPayloadFromForm(result.current.state).attributes["host.name"]).toEqual([
+			expression,
+			"remote",
+		]);
+		act(() => result.current.patchState({ hostName: ["remote", "ec-win"] }));
+		const payload = buildHostPayloadFromForm(result.current.state);
+		expect(payload.attributes["host.name"]).toEqual(["remote", "ec-win"]);
+		expect(payload.protocols.wmi.hostname).toEqual(["remote-proxy", overrideExpression]);
 	});
 });
 

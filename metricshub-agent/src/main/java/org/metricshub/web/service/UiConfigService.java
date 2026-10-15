@@ -224,7 +224,8 @@ public class UiConfigService {
 
 	/**
 	 * Resolves hostname values for display without changing configuration keys, other environment
-	 * expressions (such as passwords), or files on disk.
+	 * expressions (such as passwords), or files on disk. Original values are returned separately
+	 * in {@code originalHostnames} so unrelated form edits can preserve their expressions.
 	 *
 	 * @param configuration configuration snapshot to prepare for the guided form
 	 */
@@ -232,8 +233,27 @@ public class UiConfigService {
 		if (configuration == null) {
 			return;
 		}
-		resolveHostnameField(configuration.path("attributes"), "host.name");
-		configuration.path("protocols").forEach(protocol -> resolveHostnameField(protocol, "hostname"));
+		final ObjectNode originalHostnames = yamlMapper.createObjectNode();
+		final JsonNode originalHostName = resolveHostnameField(configuration.path("attributes"), "host.name");
+		if (originalHostName != null) {
+			originalHostnames.set("hostName", originalHostName);
+		}
+		final ObjectNode originalProtocolHostnames = yamlMapper.createObjectNode();
+		configuration
+			.path("protocols")
+			.properties()
+			.forEach(entry -> {
+				final JsonNode original = resolveHostnameField(entry.getValue(), "hostname");
+				if (original != null) {
+					originalProtocolHostnames.set(entry.getKey(), original);
+				}
+			});
+		if (!originalProtocolHostnames.isEmpty()) {
+			originalHostnames.set("protocols", originalProtocolHostnames);
+		}
+		if (!originalHostnames.isEmpty()) {
+			((ObjectNode) configuration).set("originalHostnames", originalHostnames);
+		}
 		configuration.path("resources").forEach(this::resolveSnapshotHostnames);
 		configuration.path("resourceGroups").forEach(this::resolveSnapshotHostnames);
 	}
@@ -243,11 +263,12 @@ public class UiConfigService {
 	 *
 	 * @param parent attributes or protocol configuration
 	 * @param field hostname field to resolve
+	 * @return the original value when resolution changed it, or {@code null}
 	 */
-	private void resolveHostnameField(final JsonNode parent, final String field) {
+	private JsonNode resolveHostnameField(final JsonNode parent, final String field) {
 		final JsonNode value = parent.get(field);
 		if (value == null) {
-			return;
+			return null;
 		}
 		final EnvironmentProcessor processor = new EnvironmentProcessor();
 		if (value.isTextual()) {
@@ -263,6 +284,7 @@ public class UiConfigService {
 			});
 			((ObjectNode) parent).set(field, resolved);
 		}
+		return value.equals(parent.get(field)) ? null : value;
 	}
 
 	/**

@@ -624,6 +624,8 @@ export const useHostConfig = ({
 		setState((prev) => {
 			let next = { ...prev, ...patch };
 			if (patch.hostName !== undefined) {
+				// Typing or using the agent hostname explicitly replaces the YAML expression.
+				next.originalHostName = null;
 				// Multi-host protocol hostname overrides are positional: when host.name
 				// entries are added, removed, or reordered, keep each override with its
 				// host. (Note: hostNameFingerprint sorts names, so a pure reorder is not
@@ -637,6 +639,11 @@ export const useHostConfig = ({
 						protocols[protocolId] = {
 							...config,
 							hostname: realignHostnameOverrides(prevNames, nextNames, config.hostname),
+							_originalHostname: realignHostnameOverrides(
+								prevNames,
+								nextNames,
+								config._originalHostname,
+							),
 						};
 						remapped = true;
 					}
@@ -873,6 +880,7 @@ export const useHostConfig = ({
 					...(prev.protocols[protocolId] ||
 						protocolConfigToForm(protocolId, PROTOCOL_DEFAULTS[protocolId] || {})),
 					[name]: value,
+					...(name === "hostname" ? { _originalHostname: null } : {}),
 				},
 			},
 		}));

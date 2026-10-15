@@ -186,6 +186,19 @@ class UiConfigServiceTest {
 		assertEquals("remote-host", grouped.path("attributes").path("host.name").get(1).asText());
 		assertEquals(expected, grouped.path("protocols").path("winrm").path("hostname").get(0).asText());
 		assertEquals("remote-protocol", grouped.path("protocols").path("winrm").path("hostname").get(1).asText());
+		assertEquals(expression, resource.path("originalHostnames").path("hostName").asText());
+		assertEquals(expression, resource.path("originalHostnames").path("protocols").path("winrm").asText());
+		assertEquals(
+			List.of(expression, "remote-host"),
+			JsonHelper.buildYamlMapper().convertValue(grouped.path("originalHostnames").path("hostName"), List.class)
+		);
+		assertEquals(
+			List.of(expression, "remote-protocol"),
+			JsonHelper.buildYamlMapper().convertValue(
+				grouped.path("originalHostnames").path("protocols").path("winrm"),
+				List.class
+			)
+		);
 		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("attributes").path("custom.attribute").asText());
 		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("attributes").path("hostname").asText());
 		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("protocols").path("winrm").path("password").asText());
@@ -461,7 +474,7 @@ class UiConfigServiceTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "ec-win", "localhost" })
+	@ValueSource(strings = { "ec-win", "localhost", "${env::METRICSHUB_TEST_UNSET_HOST_41A793:-localhost}" })
 	void testAddHostPersistsResourceAdvancedFields(String hostname) throws Exception {
 		final AddHostRequestDto request = new AddHostRequestDto();
 		request.setHostId("server-advanced");
@@ -499,7 +512,10 @@ class UiConfigServiceTest {
 				.path("host.name")
 				.asText()
 		);
-		assertFalse(savedYaml.contains("${env::"));
+		assertFalse(savedYaml.contains("originalHostnames"));
+		if (!hostname.contains("${env::")) {
+			assertFalse(host.containsKey("originalHostnames"));
+		}
 	}
 
 	@Test
