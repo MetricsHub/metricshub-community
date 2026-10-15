@@ -49,7 +49,7 @@ export const validateHostNameValue = (value, { required = false } = {}) => {
 		return "host.name is required";
 	}
 	if (names.some((name) => /\$\{env::/i.test(name))) {
-		return "Enter a hostname manually or click Use local host. Environment expressions are not supported in this form.";
+		return "Enter a hostname manually or click Use agent hostname. Environment expressions are not supported in this form.";
 	}
 	return null;
 };

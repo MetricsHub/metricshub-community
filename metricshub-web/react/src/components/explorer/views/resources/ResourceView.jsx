@@ -22,7 +22,6 @@ import WarningIcon from "@mui/icons-material/Warning";
 import { debounce } from "@mui/material";
 import { compareLocale } from "../../../../utils/alphabetic-sort";
 import { getMetricValue } from "../../../../utils/metrics-helper";
-import { getHostDisplayName } from "../../../hosts/host-config-utils";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 
 /**
@@ -174,7 +173,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 	const resourceTitle = React.useMemo(
 		() => (
 			<Box component="span" display="flex" alignItems="center" gap={1}>
-				{getHostDisplayName(resource?.id || resource?.key || resource?.name || "", resource)}
+				{resource?.id || resource?.key || resource?.name || ""}
 				{failedConnectors.length > 0 && (
 					<HoverInfo
 						title="Warning"
@@ -186,7 +185,13 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 				)}
 			</Box>
 		),
-		[resource, failedConnectors.length, failedConnectorsDescription],
+		[
+			resource?.id,
+			resource?.key,
+			resource?.name,
+			failedConnectors.length,
+			failedConnectorsDescription,
+		],
 	);
 
 	const hasMetrics = React.useMemo(() => {

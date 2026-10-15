@@ -25,16 +25,14 @@ vi.mock("@mui/x-tree-view", () => ({
 	),
 }));
 
-describe("HostsResourcesTree hostname labels", () => {
+describe("HostsResourcesTree resource ID labels", () => {
 	it.each(["standaloneHost", "groupedHost"])(
-		"shows resolved hostnames but opens the original %s resource",
+		"uses resource IDs for %s labels and navigation",
 		(type) => {
-			const resolvedId = "${env::COMPUTERNAME:-localhost}";
-			const missingIds = ["${env::MISSING_A:-localhost}", "${env::MISSING_B:-localhost}"];
 			const resources = {
-				[resolvedId]: hostConfig("PC-ELYES"),
-				[missingIds[0]]: hostConfig("localhost"),
-				[missingIds[1]]: hostConfig("localhost"),
+				"local-resource": hostConfig("PC-ELYES"),
+				"backup-a": hostConfig("localhost"),
+				"backup-b": hostConfig("localhost"),
 			};
 			const group = type === "groupedHost" ? { groupName: "Paris" } : {};
 			const snapshot =
@@ -43,52 +41,44 @@ describe("HostsResourcesTree hostname labels", () => {
 			render(
 				<HostsResourcesTree
 					snapshot={snapshot}
-					view={{ type, ...group, hostId: resolvedId }}
+					view={{ type, ...group, hostId: "local-resource" }}
 					onViewChange={onViewChange}
 				/>,
 			);
 
-			expect(screen.queryByText(/\$\{env::/)).not.toBeInTheDocument();
-			const resolvedLabel = screen.getByText("PC-ELYES");
-			fireEvent.click(resolvedLabel);
-			expect(onViewChange).toHaveBeenLastCalledWith({ type, ...group, hostId: resolvedId });
-
-			// Two variables can both fall back to localhost without sharing a resource ID.
-			const fallbackLabels = screen.getAllByText("localhost");
-			expect(fallbackLabels).toHaveLength(2);
-			fallbackLabels.forEach((label, index) => {
-				fireEvent.click(label);
-				expect(onViewChange).toHaveBeenLastCalledWith({
-					type,
-					...group,
-					hostId: missingIds[index],
-				});
-			});
+			expect(screen.queryByText("PC-ELYES")).not.toBeInTheDocument();
+			expect(screen.queryByText("localhost")).not.toBeInTheDocument();
+			for (const hostId of Object.keys(resources)) {
+				fireEvent.click(screen.getByText(hostId));
+				expect(onViewChange).toHaveBeenLastCalledWith({ type, ...group, hostId });
+			}
 		},
 	);
 
-	it("uses resolved hostnames for read-only resources from other YAML files", () => {
+	it("uses resource IDs for read-only resources from other YAML files", () => {
 		const onViewChange = vi.fn();
 		render(
 			<HostsResourcesTree
 				snapshot={{
 					resourceGroups: { Paris: { resources: {} } },
 					externalResourceGroups: {
-						Paris: { resources: { "${env::HOSTNAME:-localhost}": hostConfig("ec-linux") } },
+						Paris: { resources: { "linux-resource": hostConfig("ec-linux") } },
 						Remote: {
-							resources: { "${env::COMPUTERNAME:-localhost}": hostConfig("ec-win") },
+							resources: { "windows-resource": hostConfig("ec-win") },
 						},
 					},
-					externalResources: { "${env::MISSING:-localhost}": hostConfig("localhost") },
+					externalResources: { "external-local": hostConfig("localhost") },
 				}}
 				view={{ type: "resourceGroups" }}
 				onViewChange={onViewChange}
 			/>,
 		);
 
-		expect(screen.queryByText(/\$\{env::/)).not.toBeInTheDocument();
 		for (const hostname of ["ec-linux", "ec-win", "localhost"]) {
-			fireEvent.click(screen.getByText(hostname));
+			expect(screen.queryByText(hostname)).not.toBeInTheDocument();
+		}
+		for (const hostId of ["linux-resource", "windows-resource", "external-local"]) {
+			fireEvent.click(screen.getByText(hostId));
 		}
 		expect(onViewChange).not.toHaveBeenCalled();
 	});

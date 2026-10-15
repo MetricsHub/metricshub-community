@@ -20,7 +20,7 @@ describe("ExplorerTree", () => {
 	});
 
 	it.each(["pc-elyes", "localhost"])(
-		"displays %s and still navigates using the resource ID",
+		"uses the resource ID for display and navigation when host.name is %s",
 		async (hostname) => {
 			const onResourceFocus = vi.fn();
 			const hierarchy = {
@@ -39,12 +39,13 @@ describe("ExplorerTree", () => {
 					initialState: { explorer: { hierarchy, loading: false, error: null } },
 				},
 			);
-			fireEvent.click(await screen.findByText(hostname));
+			fireEvent.click(await screen.findByText("local-resource"));
+			expect(screen.queryByText(hostname)).not.toBeInTheDocument();
 			expect(onResourceFocus).toHaveBeenCalledWith(
 				expect.objectContaining({ name: "local-resource", id: "root/Agent/local-resource" }),
 				expect.objectContaining({ name: "Agent" }),
 			);
-			expect(screen.getByText(hostname).closest("[data-selected]")).not.toBeNull();
+			expect(screen.getByText("local-resource").closest("[data-selected]")).not.toBeNull();
 		},
 	);
 

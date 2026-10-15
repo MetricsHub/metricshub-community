@@ -307,9 +307,9 @@ const HostNameChipInput = ({
 							if (hostname) onChange(hostname);
 						}}
 					>
-						Use local host
+						Use agent hostname
 					</Button>
-					<FieldHelpTooltip title="For the host running this MetricsHub agent only. Fills in its hostname, or localhost if unavailable. To monitor a remote host, enter its hostname manually." />
+					<FieldHelpTooltip title="For the agent's host only. Uses its hostname, or localhost if unavailable." />
 				</Stack>
 			) : null}
 		</Stack>
