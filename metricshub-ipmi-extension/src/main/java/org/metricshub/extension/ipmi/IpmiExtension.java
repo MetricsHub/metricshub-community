@@ -98,17 +98,14 @@ public class IpmiExtension implements IProtocolExtension {
 		}
 
 		log.info("Hostname {} - Performing {} protocol health check.", hostname, getIdentifier());
-		log.info(
-			"Hostname {} - Checking IPMI protocol status. Sending a IPMI 'Get Chassis Status As String Result' request.",
-			hostname
-		);
+		log.info("Hostname {} - Checking IPMI protocol status. Sending a IPMI 'Get Chassis Status' request.", hostname);
 
 		// Execute IPMI test command
 		try {
 			ipmiResult = ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiConfiguration);
 		} catch (Exception e) {
 			log.debug(
-				"Hostname {} - Checking IPMI protocol status. IPMI exception when performing a IPMI 'Get Chassis Status As String Result' query: ",
+				"Hostname {} - Checking IPMI protocol status. IPMI exception when performing a IPMI 'Get Chassis Status' query: ",
 				hostname,
 				e
 			);

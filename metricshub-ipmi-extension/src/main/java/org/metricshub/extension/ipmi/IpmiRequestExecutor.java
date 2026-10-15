@@ -31,6 +31,7 @@ import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.ipmi.client.FruList;
 import org.metricshub.ipmi.client.IpmiClient;
+import org.metricshub.ipmi.client.IpmiClientException;
 import org.metricshub.ipmi.client.SensorList;
 
 /**
@@ -45,8 +46,7 @@ public class IpmiRequestExecutor {
 	 * @param hostname          The host name or IP address to query.
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
 	 * @return A string value, e.g., "System power state is up."
-	 * @throws org.metricshub.ipmi.client.IpmiClientException If the BMC refuses the login, does not reply in time or
-	 *                                                         fails the request.
+	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
 	@WithSpan("IPMI Chassis Status")
 	public String executeIpmiDetection(
@@ -139,8 +139,7 @@ public class IpmiRequestExecutor {
 	 * @param hostname          The host for which the {@link IpmiConfiguration} is set.
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance containing the required fields for IPMI requests.
 	 * @return A string containing information about FRUs, sensor states, and readings.
-	 * @throws org.metricshub.ipmi.client.IpmiClientException If the BMC refuses the login, does not reply in time or
-	 *                                                         fails the request.
+	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
 	@WithSpan("IPMI Sensors")
 	public String executeIpmiGetSensors(

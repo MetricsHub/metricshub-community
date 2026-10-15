@@ -2,18 +2,22 @@ package org.metricshub.extension.ipmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.metricshub.ipmi.client.FrusRequest;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientResults;
 import org.metricshub.ipmi.client.IpmiTimeoutException;
 import org.metricshub.ipmi.client.SensorsRequest;
+import org.mockito.MockedStatic;
 
 class IpmiRequestExecutorTest {
 
@@ -101,5 +105,18 @@ class IpmiRequestExecutorTest {
 		) {
 			assertEquals(HOSTNAME, client.host());
 		}
+	}
+
+	@Test
+	void testNewClientSkipAuth() {
+		final IpmiClient.Builder builder = mock(IpmiClient.Builder.class, RETURNS_SELF);
+		try (MockedStatic<IpmiClient> ipmi = mockStatic(IpmiClient.class)) {
+			ipmi.when(() -> IpmiClient.builder(HOSTNAME)).thenReturn(builder);
+			new IpmiRequestExecutor().newClient(HOSTNAME, IpmiConfiguration.builder().skipAuth(true).build());
+		}
+		// skipAuth uses cipher suite 3 without discovery, and a null user name is the anonymous login
+		verify(builder).cipherSuite(3);
+		verify(builder).credentials("", new char[0]);
+		verify(builder).keepAlive(Duration.ZERO);
 	}
 }

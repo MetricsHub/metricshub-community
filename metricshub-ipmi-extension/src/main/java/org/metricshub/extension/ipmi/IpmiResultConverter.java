@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.Fru;
+import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.Sensor;
 import org.metricshub.ipmi.core.coding.commands.fru.record.BoardInfo;
 import org.metricshub.ipmi.core.coding.commands.fru.record.ProductInfo;
@@ -621,7 +622,7 @@ public final class IpmiResultConverter {
 	 * @return <code>true</code> if the EntityId is a panel
 	 */
 	private static boolean isFruPanel(final EntityId entityId) {
-		return entityId != null && PANELS.contains(entityId);
+		return PANELS.contains(entityId);
 	}
 
 	/**
@@ -668,7 +669,7 @@ public final class IpmiResultConverter {
 	/**
 	 * Convert the given {@link ChassisStatus} to a string value
 	 *
-	 * @param chassisStatus The chassis status read by {@link org.metricshub.ipmi.client.IpmiClient#chassisStatus()}
+	 * @param chassisStatus The chassis status read by {@link IpmiClient#chassisStatus()}
 	 * @return String value
 	 */
 	public static String convertResult(final ChassisStatus chassisStatus) {
