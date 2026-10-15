@@ -155,6 +155,7 @@ const HostConfigBasicsSection = ({
 						resolvingHostname={resolvingHostname}
 						resolveHostnameError={resolveHostnameError}
 						value={values.hostName}
+						originalValue={values.originalHostName}
 						onChange={(hostName) => {
 							if (values._editMode || manualHostIdRef.current) {
 								setAutoSuffixMessage("");

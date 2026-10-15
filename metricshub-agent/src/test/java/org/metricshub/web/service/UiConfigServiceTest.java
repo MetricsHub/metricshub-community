@@ -115,17 +115,22 @@ class UiConfigServiceTest {
 	@ParameterizedTest
 	@CsvSource(
 		{
-			"metricshub.yaml, COMPUTERNAME",
-			"metricshub.yaml, HOSTNAME",
-			"metricshub.yaml, METRICSHUB_TEST_UNSET_HOST_41A793",
-			"metricshub-ui.yaml, COMPUTERNAME",
-			"metricshub-ui.yaml, HOSTNAME",
-			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793"
+			"metricshub.yaml, COMPUTERNAME, true",
+			"metricshub.yaml, HOSTNAME, true",
+			"metricshub.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, true",
+			"metricshub.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, false",
+			"metricshub-ui.yaml, COMPUTERNAME, true",
+			"metricshub-ui.yaml, HOSTNAME, true",
+			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, true",
+			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, false"
 		}
 	)
-	void testSnapshotResolvesHostnamesWithoutChangingFilesOrOtherFields(String filename, String variable)
-		throws Exception {
-		final String expression = "${env::" + variable + ":-localhost}";
+	void testSnapshotResolvesHostnamesWithoutChangingFilesOrOtherFields(
+		String filename,
+		String variable,
+		boolean withDefault
+	) throws Exception {
+		final String expression = "${env::" + variable + (withDefault ? ":-localhost}" : "}");
 		final String yaml = """
 			resources:
 			  localhost:
@@ -178,7 +183,7 @@ class UiConfigServiceTest {
 			.path("resources")
 			.path("localhost");
 		final String environmentValue = System.getenv(variable);
-		final String fallback = variable.equals("HOSTNAME") ? "agent-linux" : "localhost";
+		final String fallback = variable.equals("HOSTNAME") ? "agent-linux" : withDefault ? "localhost" : expression;
 		final String expected = environmentValue == null || environmentValue.isEmpty() ? fallback : environmentValue;
 		assertEquals(expected, resource.path("attributes").path("host.name").asText());
 		assertEquals(expected, resource.path("protocols").path("winrm").path("hostname").asText());

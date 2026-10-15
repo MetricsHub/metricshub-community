@@ -1,7 +1,7 @@
 import * as React from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import { Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
-import { validateHostNameValue } from "../../utils/host-names";
+import { hasEnvironmentExpression, validateHostNameValue } from "../../utils/host-names";
 import { getHostNames } from "./host-config-utils";
 import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import FieldHelpTooltip from "./FieldHelpTooltip";
@@ -222,6 +222,7 @@ export const HostnamesChipField = ({
  *
  * @param {object} props
  * @param {string | string[]} props.value
+ * @param {string | string[]} [props.originalValue] unchanged YAML value, if it uses an expression
  * @param {(value: string | string[]) => void} props.onChange
  * @param {boolean} [props.error]
  * @param {React.ReactNode} [props.helperText]
@@ -232,6 +233,7 @@ export const HostnamesChipField = ({
  */
 const HostNameChipInput = ({
 	value,
+	originalValue,
 	onChange,
 	error = false,
 	helperText,
@@ -241,7 +243,8 @@ const HostNameChipInput = ({
 	resolveHostnameError,
 }) => {
 	const hostNameCount = getHostNames(value).length;
-	const hostnameError = validateHostNameValue(value);
+	const hostnameError = validateHostNameValue(value, { originalValue });
+	const unresolved = originalValue != null && hasEnvironmentExpression(value);
 	return (
 		<Stack spacing={staticLabel ? 0 : 1}>
 			{staticLabel ? (
@@ -267,17 +270,25 @@ const HostNameChipInput = ({
 				</Stack>
 			) : null}
 			<HostnamesChipField
-				value={value}
+				value={unresolved ? "" : value}
 				onChange={onChange}
 				error={error || Boolean(hostnameError)}
-				helperText={hostnameError || helperText || resolveHostnameError}
+				helperText={
+					hostnameError ||
+					helperText ||
+					resolveHostnameError ||
+					(unresolved
+						? "Unresolved YAML hostname. Leave unchanged to preserve it, or enter a replacement."
+						: undefined)
+				}
 				textFieldProps={{
+					...(unresolved ? { placeholder: "Unresolved hostname" } : {}),
 					id: "host-name-input",
 					disabled: resolvingHostname,
 					label: staticLabel ? undefined : HOST_NAME_UI.fieldLabel,
 					hiddenLabel: staticLabel,
 					variant: staticLabel ? "filled" : "outlined",
-					required: true,
+					required: !unresolved,
 					sx: staticLabel ? filledInputNoLabelSx : undefined,
 				}}
 			/>

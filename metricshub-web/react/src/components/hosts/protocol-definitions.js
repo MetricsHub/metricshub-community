@@ -1235,16 +1235,20 @@ export const validatePortValue = (value, { required = false, label = "Port" } = 
  *
  * @param {string} protocol
  * @param {Record<string, unknown>} protocolConfig
- * @param {{ hostName?: string | string[] }} [options]
+ * @param {{ hostName?: string | string[], originalHostName?: string | string[] }} [options]
  * @returns {Record<string, string>}
  */
 export const collectProtocolConfigErrors = (protocol, protocolConfig, options = {}) => {
 	const fields = PROTOCOL_FIELDS[protocol] || [];
 	/** @type {Record<string, string>} */
 	const errors = {};
-	const hostnameError = validateHostNameValue(options.hostName);
+	const hostnameError = validateHostNameValue(options.hostName, {
+		originalValue: options.originalHostName,
+	});
 	if (hostnameError) errors.hostName = hostnameError;
-	const protocolHostnameError = validateHostNameValue(protocolConfig.hostname);
+	const protocolHostnameError = validateHostNameValue(protocolConfig.hostname, {
+		originalValue: protocolConfig._originalHostname,
+	});
 	if (protocolHostnameError) errors.hostname = protocolHostnameError;
 
 	for (const field of fields) {

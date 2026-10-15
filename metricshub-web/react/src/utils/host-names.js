@@ -42,13 +42,16 @@ export const normalizeHostNameValue = (hostName) => {
 	return names[0] || "";
 };
 
-/** Validate hostname fields in the guided form; YAML files still support expressions. */
-export const validateHostNameValue = (value, { required = false } = {}) => {
+export const hasEnvironmentExpression = (value) =>
+	getHostNames(value).some((name) => /\$\{env::/i.test(name));
+
+/** YAML values may remain unresolved; editing a hostname clears its originalValue. */
+export const validateHostNameValue = (value, { required = false, originalValue } = {}) => {
 	const names = getHostNames(value);
 	if (required && names.length === 0) {
 		return "host.name is required";
 	}
-	if (names.some((name) => /\$\{env::/i.test(name))) {
+	if (originalValue == null && hasEnvironmentExpression(value)) {
 		return "Enter a hostname manually or click Use agent hostname. Environment expressions are not supported in this form.";
 	}
 	return null;

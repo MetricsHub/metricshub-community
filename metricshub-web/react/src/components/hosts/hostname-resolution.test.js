@@ -4,9 +4,10 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-li
 import { uiConfigApi } from "../../api/ui-config";
 import { useHostConfig } from "./useHostConfig";
 import { runProtocolCheck } from "./protocol-test";
-import { PROTOCOL_DEFAULTS } from "./protocol-definitions";
+import { PROTOCOL_DEFAULTS, PROTOCOL_FIELDS } from "./protocol-definitions";
 import { hostConfigToFormState, buildHostPayloadFromForm } from "./host-config-utils";
 import HostNameChipInput from "./HostNameChipInput";
+import ProtocolConfigForm from "./ProtocolConfigForm";
 
 vi.mock("../../api/ui-config", () => ({
 	uiConfigApi: {
@@ -137,6 +138,90 @@ describe("preserving YAML hostname expressions", () => {
 		},
 	);
 
+	it.each([
+		["${env::UNSET_HOST}", "${env::COLLECTION_HOST}"],
+		[
+			["remote", "${env::UNSET_HOST}"],
+			["remote-proxy", "${env::COLLECTION_HOST}"],
+		],
+	])(
+		"preserves unresolved YAML hostnames through unrelated edits: %j",
+		async (hostName, hostname) => {
+			const initialState = hostConfigToFormState("unresolved", {
+				attributes: { "host.name": hostName, "host.type": "windows" },
+				protocols: { wmi: { hostname } },
+				originalHostnames: { hostName, protocols: { wmi: hostname } },
+			});
+			const { result } = renderHook(() => useHostConfig({ mode: "edit", initialState }));
+			await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+			act(() => result.current.patchProtocolField("wmi", "timeout", 60));
+			act(() => result.current.patchState({ hostId: "renamed" }));
+			act(() => expect(result.current.validateAllSteps()).toBeNull());
+			const payload = buildHostPayloadFromForm(result.current.state);
+			expect(payload.attributes["host.name"]).toEqual(hostName);
+			expect(payload.protocols.wmi.hostname).toEqual(hostname);
+			expect(payload.protocols.wmi.timeout).toBe(60);
+			expect(payload.hostId).toBe("renamed");
+		},
+	);
+
+	it("shows unresolved fields without changing their YAML values, and replaces them only on input", async () => {
+		const hostName = "${env::UNSET_HOST}";
+		const hostname = "${env::COLLECTION_HOST}";
+		const initialState = hostConfigToFormState("unresolved", {
+			attributes: { "host.name": hostName, "host.type": "windows" },
+			protocols: { wmi: { hostname } },
+			originalHostnames: { hostName, protocols: { wmi: hostname } },
+		});
+		let form;
+		const Form = () => {
+			form = useHostConfig({ mode: "edit", initialState });
+			return createElement(
+				"div",
+				null,
+				createElement(HostNameChipInput, {
+					staticLabel: true,
+					value: form.state.hostName,
+					originalValue: form.state.originalHostName,
+					onChange: (value) => form.patchState({ hostName: value }),
+					onResolveHostname: form.fetchAgentHostname,
+				}),
+				createElement(ProtocolConfigForm, {
+					protocol: "wmi",
+					fields: PROTOCOL_FIELDS.wmi
+						.filter((field) => field.name === "hostname")
+						.map((field) => ({ ...field, advanced: false })),
+					values: form.state.protocols.wmi,
+					onChange: (name, value) => form.patchProtocolField("wmi", name, value),
+					errors: form.errors,
+				}),
+			);
+		};
+		render(createElement(Form));
+		await waitFor(() => expect(form.allStepsValid).toBe(true));
+		const [resourceField, protocolField] = screen.getAllByPlaceholderText("Unresolved hostname");
+		for (const field of [resourceField, protocolField]) {
+			expect(field).toHaveValue("");
+			expect(field).not.toHaveAttribute("aria-invalid", "true");
+			fireEvent.focus(field);
+			fireEvent.blur(field);
+		}
+		expect(form.isDirty).toBe(false);
+		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe(hostName);
+		expect(buildHostPayloadFromForm(form.state).protocols.wmi.hostname).toBe(hostname);
+		fireEvent.change(resourceField, { target: { value: hostName } });
+		expect(form.allStepsValid).toBe(false);
+		fireEvent.click(screen.getByRole("button", { name: "Use agent hostname" }));
+		await waitFor(() => expect(form.state.hostName).toBe("ec-win"));
+		expect(form.allStepsValid).toBe(true);
+		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe("ec-win");
+		fireEvent.change(protocolField, { target: { value: hostname } });
+		expect(form.allStepsValid).toBe(false);
+		fireEvent.change(protocolField, { target: { value: "remote-proxy" } });
+		expect(form.allStepsValid).toBe(true);
+		expect(buildHostPayloadFromForm(form.state).protocols.wmi.hostname).toBe("remote-proxy");
+	});
+
 	it("replaces the expression when the button returns the displayed hostname, including after refresh", async () => {
 		const initialState = editableState();
 		let form;
@@ -236,6 +321,21 @@ describe("protocol checks", () => {
 			protocol: "wmi",
 			protocolValues: PROTOCOL_DEFAULTS.wmi,
 			hostname: "${env::COMPUTERNAME:-localhost}",
+			hostName: "localhost",
+		});
+		expect(result.severity).toBe("warning");
+		expect(uiConfigApi.checkProtocol).not.toHaveBeenCalled();
+	});
+	it("does not test an unresolved target even when its YAML expression is preserved", async () => {
+		const expression = "${env::COLLECTION_HOST}";
+		const result = await runProtocolCheck({
+			protocol: "wmi",
+			protocolValues: {
+				...PROTOCOL_DEFAULTS.wmi,
+				hostname: expression,
+				_originalHostname: expression,
+			},
+			hostname: expression,
 			hostName: "localhost",
 		});
 		expect(result.severity).toBe("warning");

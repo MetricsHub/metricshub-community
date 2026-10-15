@@ -21,6 +21,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeferredPasswordEncryptAlert from "./DeferredPasswordEncryptAlert";
 import ProtocolHostnameOverridesTable from "./ProtocolHostnameOverridesTable";
 import ProtocolPasswordField from "./ProtocolPasswordField";
+import { hasEnvironmentExpression } from "../../utils/host-names";
 import {
 	filledInputNoLabelSx,
 	guidedConfigChoiceToggleButtonSx,
@@ -162,7 +163,11 @@ const ProtocolConfigForm = ({
 		if (field.type === "textarea") {
 			return renderTextareaField(field);
 		}
-		if (field.name === "hostname" && hostNames.length > 1) {
+		if (
+			field.name === "hostname" &&
+			hostNames.length > 1 &&
+			!(values._originalHostname != null && hasEnvironmentExpression(values.hostname))
+		) {
 			return renderMultiHostnameField(field);
 		}
 		return renderTextField(field);
@@ -608,6 +613,10 @@ const ProtocolConfigForm = ({
 
 	const renderTextField = (field) => {
 		const value = values[field.name];
+		const unresolved =
+			field.name === "hostname" &&
+			values._originalHostname != null &&
+			hasEnvironmentExpression(value);
 		const isPort = field.name === "port";
 		const isTimeout = field.name === "timeout";
 		const fieldError = errors[field.name];
@@ -621,7 +630,11 @@ const ProtocolConfigForm = ({
 				: null;
 		const displayError = fieldError || portInlineError || timeoutInlineError;
 		const required = showRequiredMarker(field);
-		const helperText = displayError || undefined;
+		const helperText =
+			displayError ||
+			(unresolved
+				? "Unresolved YAML hostname. Leave unchanged to preserve it, or enter a replacement."
+				: undefined);
 		const description = fieldDescription(field);
 		const startAdornment = renderStartAdornment(field.name);
 
@@ -637,7 +650,8 @@ const ProtocolConfigForm = ({
 					{...protocolTextFieldProps}
 					fullWidth
 					type={field.type === "number" && !isPort && !isTimeout ? "number" : "text"}
-					value={value ?? ""}
+					value={unresolved ? "" : (value ?? "")}
+					placeholder={unresolved ? "Unresolved hostname" : undefined}
 					onChange={(e) =>
 						onChange(field.name, isPort ? sanitizePortInput(e.target.value) : e.target.value)
 					}

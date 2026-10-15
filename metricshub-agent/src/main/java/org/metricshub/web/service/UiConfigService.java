@@ -263,7 +263,7 @@ public class UiConfigService {
 	 *
 	 * @param parent attributes or protocol configuration
 	 * @param field hostname field to resolve
-	 * @return the original value when resolution changed it, or {@code null}
+	 * @return the original value if it contains an environment expression, even when unresolved, or {@code null}
 	 */
 	private JsonNode resolveHostnameField(final JsonNode parent, final String field) {
 		final JsonNode value = parent.get(field);
@@ -284,7 +284,7 @@ public class UiConfigService {
 			});
 			((ObjectNode) parent).set(field, resolved);
 		}
-		return value.equals(parent.get(field)) ? null : value;
+		return value.toString().contains("${env::") ? value : null;
 	}
 
 	/**

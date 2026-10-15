@@ -57,7 +57,12 @@ const areAllFormSectionsValid = (state, steps) => {
 				if (!String(state.hostId || "").trim()) {
 					return false;
 				}
-				if (validateHostNameValue(state.hostName, { required: true })) {
+				if (
+					validateHostNameValue(state.hostName, {
+						required: true,
+						originalValue: state.originalHostName,
+					})
+				) {
 					return false;
 				}
 				if (!state.hostType) {
@@ -83,6 +88,7 @@ const areAllFormSectionsValid = (state, steps) => {
 					state.protocols?.[step.protocolId] || {},
 					{
 						hostName: state.hostName,
+						originalHostName: state.originalHostName,
 					},
 				);
 				if (Object.keys(fieldErrors).length > 0) {
@@ -705,7 +711,10 @@ export const useHostConfig = ({
 		if (!String(state.hostId || "").trim()) {
 			next.hostId = "Resource ID is required";
 		}
-		const hostnameError = validateHostNameValue(state.hostName, { required: true });
+		const hostnameError = validateHostNameValue(state.hostName, {
+			required: true,
+			originalValue: state.originalHostName,
+		});
 		if (hostnameError) {
 			next.hostName = hostnameError;
 		}
@@ -734,6 +743,7 @@ export const useHostConfig = ({
 			const config = state.protocols?.[step.protocolId] || {};
 			const fieldErrors = collectProtocolConfigErrors(step.protocolId, config, {
 				hostName: state.hostName,
+				originalHostName: state.originalHostName,
 			});
 			if (Object.keys(fieldErrors).length > 0) {
 				setErrors(fieldErrors);
