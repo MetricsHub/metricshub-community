@@ -486,7 +486,7 @@ class HardwareEnergyPostExecutionServiceTest {
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
 		// Value from a previous cycle (saved): it is not collected by the connector in the current cycle, so it is re-estimated
-		metricFactory.collectNumberMetric(cpu, HW_CPU_POWER, 60.0, telemetryManager.getStrategyTime()).save();
+		metricFactory.collectNumberMetric(cpu, HW_CPU_POWER, 60.0, telemetryManager.getStrategyTime() - 120 * 1000).save();
 		metricFactory.collectNumberMetric(
 			cpu,
 			String.format(PRESENT_STATUS, cpu.getType()),
@@ -507,7 +507,9 @@ class HardwareEnergyPostExecutionServiceTest {
 		);
 
 		// Value from a previous cycle (saved): it is not collected by the connector in the current cycle, so it is re-estimated
-		metricFactory.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime()).save();
+		metricFactory
+			.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime() - 120 * 1000)
+			.save();
 
 		final Monitor disk = Monitor.builder()
 			.id("disk_nvm_1")
@@ -516,7 +518,9 @@ class HardwareEnergyPostExecutionServiceTest {
 			.build();
 
 		// Value from a previous cycle (saved): it is not collected by the connector in the current cycle, so it is re-estimated
-		metricFactory.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime()).save();
+		metricFactory
+			.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime() - 120 * 1000)
+			.save();
 
 		final Monitor diskNoPower = Monitor.builder()
 			.id("disk_noPower")
@@ -1290,6 +1294,34 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		assertNull(cpu.getMetric(CPU_POWER_METRIC, NumberMetric.class));
 		assertEquals(1000.0, CollectHelper.getNumberMetricValue(cpu, CPU_ENERGY_METRIC, false));
+
+		// The stale 150 W is not deducted: the fans share the whole 200 W
+		assertEquals(150.0, CollectHelper.getNumberMetricValue(fan1, FAN_POWER_METRIC, false));
+		assertEquals(50.0, CollectHelper.getNumberMetricValue(fan2, FAN_POWER_METRIC, false));
+	}
+
+	@Test
+	void testRunRemovesStalePowerOnFirstEnergySample() {
+		final MetricFactory metricFactory = newMetricFactory();
+		setUpMeasuredServer(metricFactory, 200.0);
+
+		// CPU switching from power-only to energy-only: stale 150 W from the previous cycle, first energy sample now
+		final Monitor cpu = buildMonitor(KnownMonitorType.CPU.getKey(), "cpu1");
+		metricFactory.collectNumberMetric(cpu, CPU_POWER_METRIC, 150.0, STRATEGY_TIME - 120 * 1000).save();
+		metricFactory.collectNumberMetric(cpu, CPU_ENERGY_METRIC, 100000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(cpu, KnownMonitorType.CPU.getKey(), "cpu1");
+
+		final Monitor fan1 = buildMonitor(FAN, "fan1");
+		metricFactory.collectNumberMetric(fan1, FAN_SPEED_METRIC, 3000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(fan1, FAN, "fan1");
+		final Monitor fan2 = buildMonitor(FAN, "fan2");
+		metricFactory.collectNumberMetric(fan2, FAN_SPEED_METRIC, 1000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(fan2, FAN, "fan2");
+
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		assertNull(cpu.getMetric(CPU_POWER_METRIC, NumberMetric.class));
+		assertEquals(100000.0, CollectHelper.getNumberMetricValue(cpu, CPU_ENERGY_METRIC, false));
 
 		// The stale 150 W is not deducted: the fans share the whole 200 W
 		assertEquals(150.0, CollectHelper.getNumberMetricValue(fan1, FAN_POWER_METRIC, false));
