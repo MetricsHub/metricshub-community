@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
+import static org.metricshub.hardware.common.Constants.CPU_ENERGY_METRIC;
 import static org.metricshub.hardware.common.Constants.CPU_POWER_METRIC;
 import static org.metricshub.hardware.common.Constants.DISK_CONTROLLER_ENERGY_METRIC;
 import static org.metricshub.hardware.common.Constants.DISK_CONTROLLER_POWER_METRIC;
@@ -1023,7 +1024,7 @@ class HardwareEnergyPostExecutionServiceTest {
 		host.setAsEndpoint();
 		telemetryManager.addNewMonitor(host, HOST, HOST);
 
-		final Monitor enclosure = buildMonitor(ENCLOSURE, ENCLOSURE);
+		final Monitor enclosure = buildMonitorWithIdAttribute(ENCLOSURE, ENCLOSURE);
 		if (enclosurePower != null) {
 			metricFactory.collectNumberMetric(enclosure, HW_ENCLOSURE_POWER, enclosurePower, STRATEGY_TIME);
 		}
@@ -1217,6 +1218,58 @@ class HardwareEnergyPostExecutionServiceTest {
 	}
 
 	@Test
+	void testRunDerivesPowerFromMeasuredEnergyWhenPowerIsMissing() {
+		final MetricFactory metricFactory = newMetricFactory();
+		final Monitor host = setUpMeasuredServer(metricFactory, 200.0);
+
+		// CPU whose connector collects the energy counter only (no power)
+		final Monitor cpu = buildMonitor(KnownMonitorType.CPU.getKey(), "cpu1");
+		metricFactory.collectNumberMetric(cpu, CPU_ENERGY_METRIC, 100000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(cpu, KnownMonitorType.CPU.getKey(), "cpu1");
+
+		// Two estimated fans: 3 W and 1 W
+		final Monitor fan1 = buildMonitor(FAN, "fan1");
+		metricFactory.collectNumberMetric(fan1, FAN_SPEED_METRIC, 3000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(fan1, FAN, "fan1");
+		final Monitor fan2 = buildMonitor(FAN, "fan2");
+		metricFactory.collectNumberMetric(fan2, FAN_SPEED_METRIC, 1000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(fan2, FAN, "fan2");
+
+		// First cycle: no previous counter, the power cannot be derived yet
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+		assertNull(cpu.getMetric(CPU_POWER_METRIC, NumberMetric.class));
+
+		// Next cycle, 120 s later: the CPU counter grows by 18000 J, i.e. 150 W
+		telemetryManager
+			.getMonitors()
+			.values()
+			.stream()
+			.flatMap(monitors -> monitors.values().stream())
+			.forEach(monitor ->
+				monitor
+					.getMetrics()
+					.values()
+					.forEach(metric -> metric.save())
+			);
+		telemetryManager.setStrategyTime(NEXT_STRATEGY_TIME);
+		final Monitor enclosure = telemetryManager.findMonitorsByType(ENCLOSURE).get(ENCLOSURE);
+		metricFactory.collectNumberMetric(enclosure, HW_ENCLOSURE_POWER, 200.0, NEXT_STRATEGY_TIME);
+		metricFactory.collectNumberMetric(cpu, CPU_ENERGY_METRIC, 118000.0, NEXT_STRATEGY_TIME);
+		metricFactory.collectNumberMetric(fan1, FAN_SPEED_METRIC, 3000.0, NEXT_STRATEGY_TIME);
+		metricFactory.collectNumberMetric(fan2, FAN_SPEED_METRIC, 1000.0, NEXT_STRATEGY_TIME);
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		// The CPU power is derived from its counter, and the counter is kept
+		assertEquals(150.0, CollectHelper.getNumberMetricValue(cpu, CPU_POWER_METRIC, false));
+		assertEquals(118000.0, CollectHelper.getNumberMetricValue(cpu, CPU_ENERGY_METRIC, false));
+
+		// The fans share the remaining 200 - 150 = 50 W proportionally to their estimates (3/4 and 1/4)
+		assertEquals(37.5, CollectHelper.getNumberMetricValue(fan1, FAN_POWER_METRIC, false));
+		assertEquals(12.5, CollectHelper.getNumberMetricValue(fan2, FAN_POWER_METRIC, false));
+		assertEquals(200.0, CollectHelper.getNumberMetricValue(host, HW_HOST_MEASURED_POWER, false));
+	}
+
+	@Test
 	void testRunGpuWithoutValueThisCycleIsNeitherRescaledNorRemoved() {
 		final MetricFactory metricFactory = newMetricFactory();
 
@@ -1352,5 +1405,65 @@ class HardwareEnergyPostExecutionServiceTest {
 			36000.0,
 			CollectHelper.getNumberMetricValue(gpu, HwCollectHelper.generateEnergyMetricNameForMonitorType(GPU), false)
 		);
+	}
+
+	@Test
+	void testRunEnergyOnlyParentDoesNotPreventChildEstimation() {
+		final MetricFactory metricFactory = newMetricFactory();
+
+		final Monitor host = buildMonitor(HOST, HOST);
+		host.setAsEndpoint();
+		telemetryManager.addNewMonitor(host, HOST, HOST);
+
+		// Disk controller whose energy counter only is collected by the connector: no power in this cycle
+		final Monitor controller = buildMonitorWithIdAttribute(DISK_CONTROLLER, "ctrl0");
+		metricFactory.collectNumberMetric(controller, DISK_CONTROLLER_ENERGY_METRIC, 123456.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(controller, DISK_CONTROLLER, "ctrl0");
+
+		// Physical disk attached to the controller: no measured parent power includes it
+		final Monitor disk = buildMonitorWithIdAttribute(PHYSICAL_DISK, "disk0");
+		setParent(disk, controller);
+		telemetryManager.addNewMonitor(disk, PHYSICAL_DISK, "disk0");
+
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		// The connector energy is kept and no power is estimated for the controller
+		assertEquals(123456.0, CollectHelper.getNumberMetricValue(controller, DISK_CONTROLLER_ENERGY_METRIC, false));
+		assertNull(controller.getMetric(DISK_CONTROLLER_POWER_METRIC, NumberMetric.class));
+
+		// The disk is still estimated (11 W, default SATA 7200 RPM) and counted in the host total: 11 / 0.9
+		assertEquals(11.0, CollectHelper.getNumberMetricValue(disk, PHYSICAL_DISK_POWER_METRIC, false));
+		assertEquals(12.22, CollectHelper.getNumberMetricValue(host, HW_HOST_ESTIMATED_POWER, false));
+	}
+
+	@Test
+	void testRunMeasuredEnclosureDoesNotPreventChildEstimation() {
+		final MetricFactory metricFactory = newMetricFactory();
+		final Monitor host = setUpMeasuredServer(metricFactory, 120.0);
+		final Monitor enclosure = telemetryManager.findMonitorsByType(ENCLOSURE).get(ENCLOSURE);
+
+		// GPU measured by the connector, attached to the enclosure: 100 W
+		final Monitor gpu = buildMonitorWithIdAttribute(GPU, "gpu1");
+		setParent(gpu, enclosure);
+		metricFactory.collectNumberMetric(gpu, GPU_POWER_METRIC, 100.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(gpu, GPU, "gpu1");
+
+		// Two estimated fans attached to the enclosure: 3 W and 1 W
+		final Monitor fan1 = buildMonitorWithIdAttribute(FAN, "fan1");
+		setParent(fan1, enclosure);
+		metricFactory.collectNumberMetric(fan1, FAN_SPEED_METRIC, 3000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(fan1, FAN, "fan1");
+		final Monitor fan2 = buildMonitorWithIdAttribute(FAN, "fan2");
+		setParent(fan2, enclosure);
+		metricFactory.collectNumberMetric(fan2, FAN_SPEED_METRIC, 1000.0, STRATEGY_TIME);
+		telemetryManager.addNewMonitor(fan2, FAN, "fan2");
+
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		// The enclosure power is the server total shared by the components, not a device power including them
+		assertEquals(100.0, CollectHelper.getNumberMetricValue(gpu, GPU_POWER_METRIC, false));
+		assertEquals(15.0, CollectHelper.getNumberMetricValue(fan1, FAN_POWER_METRIC, false));
+		assertEquals(5.0, CollectHelper.getNumberMetricValue(fan2, FAN_POWER_METRIC, false));
+		assertEquals(120.0, CollectHelper.getNumberMetricValue(host, HW_HOST_MEASURED_POWER, false));
 	}
 }

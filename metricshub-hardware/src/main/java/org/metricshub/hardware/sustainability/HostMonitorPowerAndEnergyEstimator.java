@@ -55,9 +55,9 @@ public class HostMonitorPowerAndEnergyEstimator {
 	private Double powerConsumption;
 
 	/**
-	 * The ids of the monitors whose power or energy is collected by the connector
+	 * The ids of the monitors whose power, measured by the connector, already includes their children's power
 	 */
-	private Set<String> measuredMonitorIds = Set.of();
+	private Set<String> measuredPowerParentIds = Set.of();
 
 	/**
 	 * The ids of the monitors whose power has been estimated by the engine during the current cycle.
@@ -73,17 +73,17 @@ public class HostMonitorPowerAndEnergyEstimator {
 	/**
 	 * @param monitor            The host monitor
 	 * @param telemetryManager   The telemetry manager wrapping the monitors
-	 * @param measuredMonitorIds  The ids of the monitors whose power or energy is collected by the connector
+	 * @param measuredPowerParentIds The ids of the monitors whose measured power includes their children's power
 	 * @param estimatedMonitorIds The ids of the monitors whose power has been estimated during the current cycle
 	 */
 	public HostMonitorPowerAndEnergyEstimator(
 		final Monitor monitor,
 		final TelemetryManager telemetryManager,
-		final Set<String> measuredMonitorIds,
+		final Set<String> measuredPowerParentIds,
 		final Set<String> estimatedMonitorIds
 	) {
 		this(monitor, telemetryManager);
-		this.measuredMonitorIds = measuredMonitorIds;
+		this.measuredPowerParentIds = measuredPowerParentIds;
 		this.estimatedMonitorIds = estimatedMonitorIds;
 	}
 
@@ -349,7 +349,7 @@ public class HostMonitorPowerAndEnergyEstimator {
 			.filter(monitor -> !KnownMonitorType.HOST.getKey().equals(monitor.getType())) // We already sum the values for the host
 			.filter(monitor -> !KnownMonitorType.ENCLOSURE.getKey().equals(monitor.getType())) // Skip the enclosure
 			.filter(monitor -> !KnownMonitorType.VM.getKey().equals(monitor.getType())) // Skip VM monitors as their power is already computed based on the host's power
-			.filter(monitor -> !HwCollectHelper.hasMeasuredParent(monitor, telemetryManager, measuredMonitorIds)) // Double counting: already included in the parent's measured power
+			.filter(monitor -> !HwCollectHelper.hasMeasuredParent(monitor, telemetryManager, measuredPowerParentIds)) // Double counting: already included in the parent's measured power
 			.filter(filter)
 			.map(monitor ->
 				CollectHelper.getNumberMetricValue(

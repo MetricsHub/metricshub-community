@@ -330,7 +330,8 @@ public class HwCollectHelper {
 	 *
 	 * @param monitor            The monitor to check.
 	 * @param telemetryManager   The telemetry manager wrapping the monitors.
-	 * @param measuredMonitorIds The ids of the monitors whose power or energy is measured by the connector.
+	 * @param measuredMonitorIds The ids of the monitors whose power, measured by the connector in the current cycle,
+	 *                           includes their children's power (an energy-only parent does not qualify).
 	 * @return <code>true</code> if the parent's power is measured.
 	 */
 	public static boolean hasMeasuredParent(
