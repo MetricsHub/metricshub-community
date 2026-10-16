@@ -45,7 +45,7 @@ describe("resolved agent hostname in the form", () => {
 			expect(uiConfigApi.getAgentHostname).not.toHaveBeenCalled();
 		},
 	);
-	it("allows saving a remote hostname without credentials and rejects expressions", async () => {
+	it("allows saving a remote hostname without credentials, or an expression", async () => {
 		const { result } = renderHook(() => useHostConfig({ mode: "create" }));
 		act(() =>
 			result.current.patchState({
@@ -66,9 +66,12 @@ describe("resolved agent hostname in the form", () => {
 		);
 		expect(uiConfigApi.getAgentHostname).not.toHaveBeenCalled();
 		act(() => result.current.patchState({ hostName: "${env::COMPUTERNAME:-localhost}" }));
-		expect(result.current.allStepsValid).toBe(false);
+		await waitFor(() => expect(result.current.allStepsValid).toBe(true));
 		act(() => result.current.validateBasics());
-		expect(result.current.errors.hostName).toContain("Environment expressions are not supported");
+		expect(result.current.errors.hostName).toBeUndefined();
+		expect(buildHostPayloadFromForm(result.current.state).attributes["host.name"]).toBe(
+			"${env::COMPUTERNAME:-localhost}",
+		);
 	});
 	it.each(["ec-win", "localhost"])("fetches %s only when requested", async (hostname) => {
 		uiConfigApi.getAgentHostname.mockResolvedValue(hostname);
@@ -209,17 +212,93 @@ describe("preserving YAML hostname expressions", () => {
 		expect(form.isDirty).toBe(false);
 		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe(hostName);
 		expect(buildHostPayloadFromForm(form.state).protocols.wmi.hostname).toBe(hostname);
-		fireEvent.change(resourceField, { target: { value: hostName } });
-		expect(form.allStepsValid).toBe(false);
+		// Any typed value, an expression included, is a hostname.
+		fireEvent.change(resourceField, { target: { value: "${env::OTHER_HOST}" } });
+		expect(form.allStepsValid).toBe(true);
+		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe("${env::OTHER_HOST}");
 		fireEvent.click(screen.getByRole("button", { name: "Use agent hostname" }));
 		await waitFor(() => expect(form.state.hostName).toBe("ec-win"));
 		expect(form.allStepsValid).toBe(true);
 		expect(buildHostPayloadFromForm(form.state).attributes["host.name"]).toBe("ec-win");
-		fireEvent.change(protocolField, { target: { value: hostname } });
-		expect(form.allStepsValid).toBe(false);
+		fireEvent.change(protocolField, { target: { value: "${env::OTHER_HOST}" } });
+		expect(form.allStepsValid).toBe(true);
 		fireEvent.change(protocolField, { target: { value: "remote-proxy" } });
 		expect(form.allStepsValid).toBe(true);
 		expect(buildHostPayloadFromForm(form.state).protocols.wmi.hostname).toBe("remote-proxy");
+	});
+
+	it("keeps every name of a mixed list visible and editable without dropping the others", async () => {
+		const hostName = ["${env::UNSET_HOST}", "remote-host"];
+		const hostname = ["${env::COLLECTION_HOST}", "remote-proxy"];
+		const initialState = hostConfigToFormState("mixed", {
+			attributes: { "host.name": hostName, "host.type": "windows" },
+			protocols: { wmi: { hostname } },
+			originalHostnames: { hostName, protocols: { wmi: hostname } },
+		});
+		let form;
+		const Form = () => {
+			form = useHostConfig({ mode: "edit", initialState });
+			return createElement(
+				"div",
+				null,
+				createElement(HostNameChipInput, {
+					staticLabel: true,
+					value: form.state.hostName,
+					originalValue: form.state.originalHostName,
+					allowedExpressions: form.state.unresolvedHostNames,
+					onChange: (value) => form.patchState({ hostName: value }),
+				}),
+				createElement(ProtocolConfigForm, {
+					protocol: "wmi",
+					fields: PROTOCOL_FIELDS.wmi
+						.filter((field) => field.name === "hostname")
+						.map((field) => ({ ...field, advanced: false })),
+					values: form.state.protocols.wmi,
+					onChange: (name, value) => form.patchProtocolField("wmi", name, value),
+					errors: form.errors,
+					hostNames: hostName,
+				}),
+			);
+		};
+		render(createElement(Form));
+		await waitFor(() => expect(form.allStepsValid).toBe(true));
+		expect(screen.queryByPlaceholderText("Unresolved hostname")).toBeNull();
+		expect(screen.getAllByText("${env::UNSET_HOST}").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("remote-host").length).toBeGreaterThan(0);
+		expect(screen.getByText(/Unresolved YAML hostname kept as-is/)).toBeInTheDocument();
+
+		const [input] = screen.getAllByRole("combobox");
+		fireEvent.change(input, { target: { value: "new-host" } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		await waitFor(() =>
+			expect(form.state.hostName).toEqual(["${env::UNSET_HOST}", "remote-host", "new-host"]),
+		);
+		expect(form.allStepsValid).toBe(true);
+		const payload = buildHostPayloadFromForm(form.state);
+		expect(payload.attributes["host.name"]).toEqual([
+			"${env::UNSET_HOST}",
+			"remote-host",
+			"new-host",
+		]);
+		// The new host gets its own name as protocol hostname, like any other added host.
+		expect(payload.protocols.wmi.hostname).toEqual([...hostname, "new-host"]);
+	});
+
+	it("accepts a new expression added to a mixed list", async () => {
+		const hostName = ["${env::UNSET_HOST}", "remote-host"];
+		const initialState = hostConfigToFormState("mixed", {
+			attributes: { "host.name": hostName, "host.type": "windows" },
+			protocols: { wmi: {} },
+			originalHostnames: { hostName },
+		});
+		const { result } = renderHook(() => useHostConfig({ mode: "edit", initialState }));
+		await waitFor(() => expect(result.current.allStepsValid).toBe(true));
+		act(() => result.current.patchState({ hostName: [...hostName, "${env::OTHER_HOST}"] }));
+		expect(result.current.allStepsValid).toBe(true);
+		expect(buildHostPayloadFromForm(result.current.state).attributes["host.name"]).toEqual([
+			...hostName,
+			"${env::OTHER_HOST}",
+		]);
 	});
 
 	it("replaces the expression when the button returns the displayed hostname, including after refresh", async () => {
@@ -316,17 +395,33 @@ describe("protocol checks", () => {
 			);
 		},
 	);
-	it("blocks an expression before contacting the server", async () => {
+	it("sends an expression to the server like any other hostname", async () => {
 		const result = await runProtocolCheck({
 			protocol: "wmi",
 			protocolValues: PROTOCOL_DEFAULTS.wmi,
 			hostname: "${env::COMPUTERNAME:-localhost}",
 			hostName: "localhost",
 		});
-		expect(result.severity).toBe("warning");
-		expect(uiConfigApi.checkProtocol).not.toHaveBeenCalled();
+		expect(result.severity).toBe("success");
+		expect(uiConfigApi.checkProtocol).toHaveBeenCalledWith(
+			expect.objectContaining({ hostname: "${env::COMPUTERNAME:-localhost}" }),
+			expect.anything(),
+		);
 	});
-	it("does not test an unresolved target even when its YAML expression is preserved", async () => {
+	it("tests another host of a list that contains an unresolved expression", async () => {
+		const result = await runProtocolCheck({
+			protocol: "wmi",
+			protocolValues: PROTOCOL_DEFAULTS.wmi,
+			hostname: "remote-host",
+			hostName: ["${env::UNSET_HOST}", "remote-host"],
+		});
+		expect(result.severity).toBe("success");
+		expect(uiConfigApi.checkProtocol).toHaveBeenCalledWith(
+			expect.objectContaining({ hostname: "remote-host" }),
+			expect.anything(),
+		);
+	});
+	it("tests an unresolved target whose YAML expression is preserved", async () => {
 		const expression = "${env::COLLECTION_HOST}";
 		const result = await runProtocolCheck({
 			protocol: "wmi",
@@ -338,7 +433,10 @@ describe("protocol checks", () => {
 			hostname: expression,
 			hostName: "localhost",
 		});
-		expect(result.severity).toBe("warning");
-		expect(uiConfigApi.checkProtocol).not.toHaveBeenCalled();
+		expect(result.severity).toBe("success");
+		expect(uiConfigApi.checkProtocol).toHaveBeenCalledWith(
+			expect.objectContaining({ hostname: expression }),
+			expect.anything(),
+		);
 	});
 });

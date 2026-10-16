@@ -334,7 +334,10 @@ export const buildHostPayloadFromForm = (formState) => {
 		}
 		protocols[protocolId] = buildProtocolConfigFromForm(protocolId, formValues, { hostNames });
 		if (formValues._originalHostname != null) {
-			protocols[protocolId].hostname = formValues._originalHostname;
+			// After host.name edits, new hosts get a blank slot: fill it like the regular path does.
+			protocols[protocolId].hostname = Array.isArray(formValues._originalHostname)
+				? formValues._originalHostname.map((slot, index) => slot || hostNames[index] || "")
+				: formValues._originalHostname;
 		}
 	}
 

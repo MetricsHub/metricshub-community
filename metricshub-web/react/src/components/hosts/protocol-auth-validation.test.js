@@ -44,7 +44,7 @@ describe("protocol credentials are validated by the backend", () => {
 		},
 	);
 
-	it("still rejects environment expressions in resource and protocol hostnames", () => {
+	it("accepts environment expressions in resource and protocol hostnames", () => {
 		const errors = collectProtocolConfigErrors(
 			"wmi",
 			{
@@ -53,8 +53,7 @@ describe("protocol credentials are validated by the backend", () => {
 			},
 			{ hostName: "${env::MY_HOST}" },
 		);
-		expect(errors.hostName).toBeTruthy();
-		expect(errors.hostname).toBeTruthy();
+		expect(errors).toEqual({});
 	});
 
 	it("still validates non-credential fields", () => {

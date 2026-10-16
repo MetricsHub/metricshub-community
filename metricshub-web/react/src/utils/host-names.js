@@ -42,17 +42,35 @@ export const normalizeHostNameValue = (hostName) => {
 	return names[0] || "";
 };
 
-export const hasEnvironmentExpression = (value) =>
-	getHostNames(value).some((name) => /\$\{env::/i.test(name));
+/**
+ * Host names that contain an environment expression, in entry order.
+ *
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+export const getEnvironmentExpressionNames = (value) =>
+	getHostNames(value).filter((name) => /\$\{env::/i.test(name));
 
-/** YAML values may remain unresolved; editing a hostname clears its originalValue. */
-export const validateHostNameValue = (value, { required = false, originalValue } = {}) => {
+export const hasEnvironmentExpression = (value) => getEnvironmentExpressionNames(value).length > 0;
+
+/**
+ * Whether the value is exactly one host name and that name is an environment expression.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export const isSingleEnvironmentExpression = (value) => {
 	const names = getHostNames(value);
-	if (required && names.length === 0) {
+	return names.length === 1 && hasEnvironmentExpression(names[0]);
+};
+
+/**
+ * Only checks presence. Any other value, including an environment expression such as
+ * ${env::NAME} (resolved or not), is treated as a hostname and validated by the backend.
+ */
+export const validateHostNameValue = (value, { required = false } = {}) => {
+	if (required && getHostNames(value).length === 0) {
 		return "host.name is required";
-	}
-	if (originalValue == null && hasEnvironmentExpression(value)) {
-		return "Enter a hostname manually or click Use agent hostname. Environment expressions are not supported in this form.";
 	}
 	return null;
 };

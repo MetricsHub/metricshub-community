@@ -21,7 +21,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeferredPasswordEncryptAlert from "./DeferredPasswordEncryptAlert";
 import ProtocolHostnameOverridesTable from "./ProtocolHostnameOverridesTable";
 import ProtocolPasswordField from "./ProtocolPasswordField";
-import { hasEnvironmentExpression } from "../../utils/host-names";
+import { isSingleEnvironmentExpression } from "../../utils/host-names";
 import {
 	filledInputNoLabelSx,
 	guidedConfigChoiceToggleButtonSx,
@@ -166,7 +166,7 @@ const ProtocolConfigForm = ({
 		if (
 			field.name === "hostname" &&
 			hostNames.length > 1 &&
-			!(values._originalHostname != null && hasEnvironmentExpression(values.hostname))
+			!(values._originalHostname != null && isSingleEnvironmentExpression(values.hostname))
 		) {
 			return renderMultiHostnameField(field);
 		}
@@ -616,7 +616,7 @@ const ProtocolConfigForm = ({
 		const unresolved =
 			field.name === "hostname" &&
 			values._originalHostname != null &&
-			hasEnvironmentExpression(value);
+			isSingleEnvironmentExpression(value);
 		const isPort = field.name === "port";
 		const isTimeout = field.name === "timeout";
 		const fieldError = errors[field.name];

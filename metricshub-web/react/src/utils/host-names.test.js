@@ -13,11 +13,11 @@ describe("validateHostNameValue", () => {
 		"${env::MY_HOST}",
 		"${ENV::MY_HOST}",
 		"prefix-${env::MY_HOST}",
-	])("rejects %s", (value) => {
-		expect(validateHostNameValue(value)).toContain("Environment expressions are not supported");
+	])("accepts %s as a hostname (validated by the backend)", (value) => {
+		expect(validateHostNameValue(value, { required: true })).toBeNull();
 	});
-	it("checks every hostname in a list", () => {
-		expect(validateHostNameValue(["ec-win", "${env::MY_HOST}"])).toBeTruthy();
+	it("accepts expressions anywhere in a list", () => {
+		expect(validateHostNameValue(["ec-win", "${env::MY_HOST}"], { required: true })).toBeNull();
 	});
 	it("requires a value only for required fields", () => {
 		expect(validateHostNameValue("", { required: true })).toBe("host.name is required");

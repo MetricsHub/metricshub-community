@@ -22,12 +22,11 @@ describe("Use agent hostname", () => {
 		await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue(hostname));
 		expect(resolve).toHaveBeenCalledTimes(1);
 	});
-	it("shows a validation error for an unresolved expression", () => {
+	it("accepts a typed environment expression as a hostname", () => {
 		render(
 			<HostNameChipInput staticLabel value="${env::COMPUTERNAME:-localhost}" onChange={vi.fn()} />,
 		);
-		expect(screen.getByRole("combobox")).toHaveAttribute("aria-invalid", "true");
-		expect(screen.getByText(/Environment expressions are not supported/)).toBeInTheDocument();
+		expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-invalid", "true");
 	});
 	it("prevents duplicate requests while resolving", () => {
 		render(

@@ -22,9 +22,6 @@ package org.metricshub.engine.connector.parser;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -32,7 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.metricshub.engine.common.helpers.LocalOsHandler;
+import org.metricshub.engine.common.helpers.NetworkHelper;
 
 /**
  * Processor for replacing placeholder values in a JsonNode using environment variables.
@@ -130,13 +127,9 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 		if (value != null && !value.isEmpty()) {
 			return value;
 		}
-		if ("HOSTNAME".equals(name) && LocalOsHandler.getOS().filter(LocalOsHandler.LINUX::equals).isPresent()) {
-			try {
-				final String hostname = Files.readString(Path.of("/proc/sys/kernel/hostname")).trim();
-				return hostname.isEmpty() ? value : hostname;
-			} catch (IOException e) {
-				// Keep the expression's fallback behavior if the kernel hostname cannot be read.
-			}
+		if ("HOSTNAME".equals(name)) {
+			// Keep the expression's fallback behavior if the kernel hostname cannot be read.
+			return NetworkHelper.getKernelHostname().orElse(value);
 		}
 		return value;
 	}

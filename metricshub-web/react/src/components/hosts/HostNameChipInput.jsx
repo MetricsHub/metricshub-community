@@ -1,7 +1,12 @@
 import * as React from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import { Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
-import { hasEnvironmentExpression, validateHostNameValue } from "../../utils/host-names";
+import {
+	getEnvironmentExpressionNames,
+	hasEnvironmentExpression,
+	isSingleEnvironmentExpression,
+	validateHostNameValue,
+} from "../../utils/host-names";
 import { getHostNames } from "./host-config-utils";
 import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import FieldHelpTooltip from "./FieldHelpTooltip";
@@ -171,7 +176,7 @@ export const HostnamesChipField = ({
 							key={key}
 							label={option}
 							size="medium"
-							color="secondary"
+							color={hasEnvironmentExpression(option) ? "warning" : "secondary"}
 							variant="filled"
 							{...tagProps}
 							sx={HOST_NAME_CHIP_SX}
@@ -243,8 +248,16 @@ const HostNameChipInput = ({
 	resolveHostnameError,
 }) => {
 	const hostNameCount = getHostNames(value).length;
-	const hostnameError = validateHostNameValue(value, { originalValue });
-	const unresolved = originalValue != null && hasEnvironmentExpression(value);
+	const hostnameError = validateHostNameValue(value);
+	// Blank the field only for a lone expression; in a list, keep every chip visible so
+	// editing never drops the other host names.
+	const unresolved = originalValue != null && isSingleEnvironmentExpression(value);
+	const unresolvedNames = getEnvironmentExpressionNames(value);
+	const unresolvedHelper = unresolved
+		? "Unresolved YAML hostname. Leave unchanged to preserve it, or enter a replacement."
+		: unresolvedNames.length > 0
+			? `Unresolved YAML hostname kept as-is: ${unresolvedNames.join(", ")}`
+			: undefined;
 	return (
 		<Stack spacing={staticLabel ? 0 : 1}>
 			{staticLabel ? (
@@ -273,14 +286,7 @@ const HostNameChipInput = ({
 				value={unresolved ? "" : value}
 				onChange={onChange}
 				error={error || Boolean(hostnameError)}
-				helperText={
-					hostnameError ||
-					helperText ||
-					resolveHostnameError ||
-					(unresolved
-						? "Unresolved YAML hostname. Leave unchanged to preserve it, or enter a replacement."
-						: undefined)
-				}
+				helperText={hostnameError || helperText || resolveHostnameError || unresolvedHelper}
 				textFieldProps={{
 					...(unresolved ? { placeholder: "Unresolved hostname" } : {}),
 					id: "host-name-input",
