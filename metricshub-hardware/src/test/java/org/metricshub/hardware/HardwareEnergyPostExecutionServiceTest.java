@@ -1267,6 +1267,33 @@ class HardwareEnergyPostExecutionServiceTest {
 		assertEquals(37.5, CollectHelper.getNumberMetricValue(fan1, FAN_POWER_METRIC, false));
 		assertEquals(12.5, CollectHelper.getNumberMetricValue(fan2, FAN_POWER_METRIC, false));
 		assertEquals(200.0, CollectHelper.getNumberMetricValue(host, HW_HOST_MEASURED_POWER, false));
+
+		// Next cycle, 120 s later: the CPU counter resets, its previous derived power is removed
+		telemetryManager
+			.getMonitors()
+			.values()
+			.stream()
+			.flatMap(monitors -> monitors.values().stream())
+			.forEach(monitor ->
+				monitor
+					.getMetrics()
+					.values()
+					.forEach(metric -> metric.save())
+			);
+		final long resetStrategyTime = NEXT_STRATEGY_TIME + 2 * 60 * 1000;
+		telemetryManager.setStrategyTime(resetStrategyTime);
+		metricFactory.collectNumberMetric(enclosure, HW_ENCLOSURE_POWER, 200.0, resetStrategyTime);
+		metricFactory.collectNumberMetric(cpu, CPU_ENERGY_METRIC, 1000.0, resetStrategyTime);
+		metricFactory.collectNumberMetric(fan1, FAN_SPEED_METRIC, 3000.0, resetStrategyTime);
+		metricFactory.collectNumberMetric(fan2, FAN_SPEED_METRIC, 1000.0, resetStrategyTime);
+		new HardwareEnergyPostExecutionService(telemetryManager).run();
+
+		assertNull(cpu.getMetric(CPU_POWER_METRIC, NumberMetric.class));
+		assertEquals(1000.0, CollectHelper.getNumberMetricValue(cpu, CPU_ENERGY_METRIC, false));
+
+		// The stale 150 W is not deducted: the fans share the whole 200 W
+		assertEquals(150.0, CollectHelper.getNumberMetricValue(fan1, FAN_POWER_METRIC, false));
+		assertEquals(50.0, CollectHelper.getNumberMetricValue(fan2, FAN_POWER_METRIC, false));
 	}
 
 	@Test

@@ -199,6 +199,9 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 						// No previous counter (first collect) or a counter reset (negative rate): no power this cycle
 						if (power != null && power >= 0) {
 							metricFactory.collectNumberMetric(monitor, powerMetricName, power, telemetryManager.getStrategyTime());
+						} else if (CollectHelper.getNumberMetricValue(monitor, energyMetricName, true) != null) {
+							// Counter reset: the power derived in a previous cycle must not be counted in this cycle's totals
+							monitor.getMetrics().remove(powerMetricName);
 						}
 					}
 					return;
