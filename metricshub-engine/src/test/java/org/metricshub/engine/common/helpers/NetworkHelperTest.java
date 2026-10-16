@@ -7,15 +7,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -176,5 +181,53 @@ class NetworkHelperTest {
 	@Test
 	void testCreateUrlWithInvalidIp() throws Exception {
 		assertThrows(UnknownHostException.class, () -> NetworkHelper.createUrl("http", "999.999.999.999", 80));
+	}
+
+	@Test
+	void testIsLocalhostMatchesKernelHostnameWithoutDns() {
+		try (
+			MockedStatic<LocalOsHandler> os = mockStatic(LocalOsHandler.class);
+			MockedStatic<Files> files = mockStatic(Files.class, Mockito.CALLS_REAL_METHODS);
+			MockedStatic<InetAddress> inetAddress = mockStatic(InetAddress.class)
+		) {
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.LINUX));
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn("agent-linux\n");
+			// The machine's own name may not resolve in DNS (e.g. no /etc/hosts entry)
+			inetAddress.when(() -> InetAddress.getByName(anyString())).thenThrow(new UnknownHostException());
+			assertTrue(NetworkHelper.isLocalhost("agent-linux"));
+			assertTrue(NetworkHelper.isLocalhost(" AGENT-LINUX "));
+			assertFalse(NetworkHelper.isLocalhost("remote-" + UUID.randomUUID()));
+		}
+	}
+
+	@Test
+	void testIsMachineHostnameFromEnvironment() {
+		try (MockedStatic<LocalOsHandler> os = mockStatic(LocalOsHandler.class)) {
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.WINDOWS));
+			assertTrue(NetworkHelper.isMachineHostname("ec-win", name -> "COMPUTERNAME".equals(name) ? "EC-WIN" : null));
+			assertTrue(NetworkHelper.isMachineHostname("ec-linux", name -> "HOSTNAME".equals(name) ? "ec-linux" : null));
+			assertFalse(NetworkHelper.isMachineHostname("other-host", name -> "ec-win"));
+			assertFalse(NetworkHelper.isMachineHostname("ec-win", name -> null));
+		}
+	}
+
+	@Test
+	void testGetKernelHostname() {
+		try (
+			MockedStatic<LocalOsHandler> os = mockStatic(LocalOsHandler.class);
+			MockedStatic<Files> files = mockStatic(Files.class, Mockito.CALLS_REAL_METHODS)
+		) {
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.LINUX));
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn("agent-linux\n");
+			assertEquals(Optional.of("agent-linux"), NetworkHelper.getKernelHostname());
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn(" \n");
+			assertEquals(Optional.empty(), NetworkHelper.getKernelHostname());
+			files
+				.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname")))
+				.thenThrow(new IOException("Unavailable"));
+			assertEquals(Optional.empty(), NetworkHelper.getKernelHostname());
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.WINDOWS));
+			assertEquals(Optional.empty(), NetworkHelper.getKernelHostname());
+		}
 	}
 }

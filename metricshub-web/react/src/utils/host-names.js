@@ -41,3 +41,36 @@ export const normalizeHostNameValue = (hostName) => {
 	}
 	return names[0] || "";
 };
+
+/**
+ * Host names that contain an environment expression, in entry order.
+ *
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+export const getEnvironmentExpressionNames = (value) =>
+	getHostNames(value).filter((name) => /\$\{env::/i.test(name));
+
+export const hasEnvironmentExpression = (value) => getEnvironmentExpressionNames(value).length > 0;
+
+/**
+ * Whether the value is exactly one host name and that name is an environment expression.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export const isSingleEnvironmentExpression = (value) => {
+	const names = getHostNames(value);
+	return names.length === 1 && hasEnvironmentExpression(names[0]);
+};
+
+/**
+ * Only checks presence. Any other value, including an environment expression such as
+ * ${env::NAME} (resolved or not), is treated as a hostname and validated by the backend.
+ */
+export const validateHostNameValue = (value, { required = false } = {}) => {
+	if (required && getHostNames(value).length === 0) {
+		return "host.name is required";
+	}
+	return null;
+};
