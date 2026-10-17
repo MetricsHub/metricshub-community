@@ -1,7 +1,7 @@
 # Central Tunnel Protocol — version 1
 
-**Audience:** maintainers of the MetricsHub Agent and of MetricsHub Central (`MetricsHub/metricshub-fleet`).
-**Status:** authoritative specification. The fleet repository mirrors this file as `docs/tunnel-protocol.md`; the golden fixtures under `metricshub-agent/src/test/resources/tunnel/` are copied there unchanged.
+**Audience:** maintainers of the MetricsHub Agent and of MetricsHub Central (`MetricsHub/metricshub-central`).
+**Status:** authoritative specification. Central mirrors this file as `docs/tunnel-protocol.md`; the golden fixture `metricshub-agent/src/test/resources/tunnel/agent-register.json` is copied there unchanged, to `src/test/resources/tunnel/`.
 
 The tunnel is a persistent **outbound** WebSocket opened by every MetricsHub Agent toward Central. Over it the agent registers its identity, the tools it exposes and the hosts it monitors, and executes the tools Central invokes. It complements OpAMP (status and upgrades) and never replaces it.
 
@@ -20,12 +20,12 @@ The tunnel is a persistent **outbound** WebSocket opened by every MetricsHub Age
 ## 1. Connection
 
 ```
-Agent                                            Central
+Agent                                              Central
   │  GET /ws/agent  (Upgrade: websocket)                 │
   │  Authorization: Bearer <agent secret>                │
   │  X-MetricsHub-Agent-Uid: <uuid>                      │
   │ ────────────────────────────────────────────────────► │
-  │  101 Switching Protocols  |  401  |  400             │
+  │  101 Switching Protocols  |  401  |  400  |  503     │
   │ ◄──────────────────────────────────────────────────── │
   │  {"type":"agent.register", ...}                      │
   │ ────────────────────────────────────────────────────► │
@@ -34,9 +34,10 @@ Agent                                            Central
 ```
 
 * **Transport:** WebSocket over TLS (`wss://`). Plain `ws://` is tolerated for loopback development only; an agent configured with `central.insecure` uses it toward any host.
-* **Authentication:** `Authorization: Bearer <secret>`; the secret is one of the fleet's configured agent secrets (`central.headers` on the agent side). A bad or missing secret is refused at the handshake with `401`.
-* **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`opamp-instance-uid`) — so the fleet sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
-* **First frame:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`.
+* **Authentication:** `Authorization: Bearer <secret>`; the secret is one of Central's configured agent secrets (`central.headers` on the agent side). A bad or missing secret is refused at the handshake with `401`.
+* **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`opamp-instance-uid`) — so Central sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
+* **First frame:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`. A frame of any other type before then is answered with `error` `REGISTRATION_REQUIRED` and closed `1002`: nothing may drive a session that has not said who it is.
+* **Capacity:** a server already holding its maximum number of tunnels refuses the handshake with `503`; the agent retries with backoff.
 
 ## 2. Envelope
 
@@ -52,6 +53,7 @@ Rules:
 * Properties whose value is `null` are omitted.
 * Unknown properties are ignored by both sides.
 * A frame whose `type` is unknown is answered with `{"type":"error","code":"UNKNOWN_MESSAGE_TYPE"}` and otherwise ignored; the connection stays open.
+* A message may be split across WebSocket fragments; either side may do so and the receiver reassembles. The server holds a fragment at a time rather than a whole message, and enforces `maxPayloadBytes` on the reassembled size as it grows — so a message that outgrows the cap is closed `1009` without ever being held in full.
 * Binary frames are not used. A binary frame is a protocol error: the server closes `1003`, the agent closes `1000` carrying the reason `Binary frames are not supported` — a WebSocket client may only send `1000` or a code in `[3000, 4999]`, so it states the cause in the reason instead.
 
 ## 3. Messages
@@ -106,7 +108,7 @@ Rules:
 | `agent.version` | MetricsHub version; an explicitly configured `service.version` attribute wins over the built-in version |
 | `agent.edition` | `Community` or `Enterprise` |
 | `agent.hostName`, `agent.osType`, `agent.arch`, `agent.buildNumber` | Agent host identity; any may be absent |
-| `agent.attributes` | Every resolved attribute: pre-built agent attributes, then the agent-level `attributes:`, then the fleet-level `central.attributes` which win |
+| `agent.attributes` | Every resolved attribute: pre-built agent attributes, then the agent-level `attributes:`, then `central.attributes`, which win |
 | `toolRegistryRevision` | `sha256:` + hex SHA-256 of the canonical JSON (sorted keys, no nulls) of `tools`. Equal tool sets give equal revisions |
 | `tools[]` | Advertised tools, sorted by `name`. `name` is unique. `inputSchema` is the JSON schema of the arguments object exactly as generated by the agent (Spring AI). A tool without arguments advertises `{"type":"object","properties":{}}` |
 | `hosts[]` | Hosts the agent actually monitors (configured resources that failed validation are not advertised), sorted by `resourceGroup` then `resourceKey`. A host is identified by the pair (`resourceGroup`, `resourceKey`): a resource key is unique only within its group. `hostnames` maps a protocol name (`ssh`, `snmp`, `wmi`, …) to the host name configured for it; `attributes` are the resource attributes |
@@ -122,7 +124,7 @@ The tool list is the **only** source of truth for what Central may invoke on thi
 | Field | Notes |
 |---|---|
 | `heartbeatIntervalSeconds` | Interval the agent must use for `heartbeat.ping`; overrides the agent configuration. Accepted range **1..3600**; a value outside it is **clamped to the nearest bound**, not replaced by the agent's configuration — a server cannot see what an agent configured, so falling back to it would make two agents answer the same registration at different rates. `0` or absent means "not specified", and only then does the agent's own `heartbeatInterval` apply (clamped to the same range) |
-| `maxPayloadBytes` | Largest text frame the server accepts. A `tool.result` that would exceed it is replaced by `tool.error` `RESULT_TOO_LARGE`. It bounds what the agent *sends*; the agent also keeps a fixed 8 MiB bound on what it *buffers*, and this value can only lower that one — a server saying a larger number is describing its own buffers, not raising the agent's |
+| `maxPayloadBytes` | Largest text **message** the server accepts, counted in UTF-8 bytes after any WebSocket fragments are reassembled. A `tool.result` that would exceed it is replaced by `tool.error` `RESULT_TOO_LARGE`. It bounds what the agent *sends*; the agent also keeps a fixed 8 MiB bound on what it *buffers*, and this value can only lower that one — a server saying a larger number is describing its own buffers, not raising the agent's |
 | `maxInFlight` | Maximum number of concurrent `tool.invoke` the agent executes; additional ones are refused with `TOO_MANY_INFLIGHT` |
 
 ### 3.3 `heartbeat.ping` / `heartbeat.pong`
@@ -194,7 +196,7 @@ Informational; never closes the connection by itself.
           └──────────┘
 ```
 
-* **One session per agent.** When a second connection registers the same uid, the server adopts it and closes the previous one with `4001`. An agent receiving `4001` must not reconnect immediately: another instance owns the identity (duplicate uid file, cloned VM); it retries with backoff and logs a warning.
+* **One session per agent.** When a second connection registers the same uid, the server adopts it immediately -- invocations route to it from that moment -- and closes the previous one with `4001` once the newcomer has proved usable, within one sweep interval (half the heartbeat). If the newcomer turns out to be gone or its secret withdrawn in the meantime, the previous session takes the uid back instead of being closed, so a rotation cannot leave an agent holding a good secret with no tunnel. An agent receiving `4001` must not reconnect immediately: another instance owns the identity (duplicate uid file, cloned VM); it retries with backoff and logs a warning.
 * **Heartbeat.** The agent pings every `heartbeatIntervalSeconds`. Either side closes a connection idle for more than 2.5 × the interval with `4003`.
 * **Reconnection.** After any close the agent re-registers from scratch: the server treats every `agent.register` as the complete current state (tools and hosts). This is how an upgraded agent replaces its previous tool registry.
 * **Shutdown.** The agent closes with `1000`; the server closes with `1001` when it shuts down.
@@ -203,17 +205,19 @@ Informational; never closes the connection by itself.
 |---|---|---|
 | `1000` | agent | Normal shutdown |
 | `1001` | server | Server going away |
-| `1002` | server | Protocol version the server does not implement, after `error` `UNSUPPORTED_PROTOCOL_VERSION` |
+| `1002` | server | Protocol version the server does not implement, after `error` `UNSUPPORTED_PROTOCOL_VERSION`; or a frame other than `agent.register` before registering, after `error` `REGISTRATION_REQUIRED`; or a second `agent.register` on a registered connection, after `error` `ALREADY_REGISTERED` |
 | `1003` | server | Unsupported data (binary frame); the agent closes `1000` with the reason instead |
-| `1009` | server | Frame larger than `maxPayloadBytes` |
+| `1009` | server | Reassembled message larger than `maxPayloadBytes` |
+| `1013` | server | The server cannot record the registration now (its backlog is full); retry with backoff |
 | `4001` | server | Superseded by a newer session for the same uid |
 | `4002` | server | No `agent.register` within 10 s |
 | `4003` | either | Heartbeat timeout |
 | `4004` | server | The agent secret this tunnel presented is no longer configured |
+| `4005` | server | The agent was deleted in Central; reconnecting registers it as new |
 
 ## 5. Tool invocation
 
-Server-side checks happen **before** any frame is sent, in this order: agent known → session connected → tool present in the *runtime* registry of that session → arguments valid against the advertised schema → policy (deny / approval lists). Only then does `tool.invoke` leave the server. The agent re-validates: exact tool name, in-flight cap, timeout, payload cap.
+Server-side checks happen **before** any frame is sent, in this order: a session for that agent on this server → tool present in the *runtime* registry of that session → arguments valid against the advertised schema → policy (deny list, then approval list) → the `tool.invoke` frame within `maxPayloadBytes` → fewer than `maxInFlight` invocations open on that agent. Only then does `tool.invoke` leave the server. The agent re-validates: exact tool name, in-flight cap, timeout, payload cap.
 
 Both sides bound the invocation with the same `timeoutMs`; there is no cancel message. A `tool.result` or `tool.error` whose `requestId` is unknown (already timed out, or from a superseded session) is logged and dropped.
 
@@ -221,15 +225,15 @@ Both sides bound the invocation with the same `timeoutMs`; there is no cancel me
 
 1. Adding a message type, a property or an error code is a **minor** change: peers ignore what they do not know and answer unknown types with `error`. `protocolVersion` stays `1`.
 2. Removing or renaming a property, or changing its type, is a **major** change and increments `protocolVersion`. A server refusing a version closes with `1002` after sending `error` `UNSUPPORTED_PROTOCOL_VERSION`.
-3. Tool contracts belong to the agent: a tool's `inputSchema` may differ between agents. The server must validate against the schema advertised by the target agent, never against a fleet-wide definition.
-4. The golden fixtures in `metricshub-agent/src/test/resources/tunnel/` pin the wire shape; changing them requires the same change in the fleet repository.
+3. Tool contracts belong to the agent: a tool's `inputSchema` may differ between agents. The server must validate against the schema advertised by the target agent, never against one definition shared across agents.
+4. The golden fixtures in `metricshub-agent/src/test/resources/tunnel/` pin the wire shape; changing them requires the same change in the Central repository.
 
 ## 7. Security
 
 | Decision | Rationale |
 |---|---|
 | The agent always dials out; the server never connects to the agent | No inbound firewall rule on monitored sites |
-| Only advertised tools are invokable, and `excludedTools` removes a tool from the advertisement itself | The tool registry is the security boundary; an operator can withdraw a capability without touching the fleet |
+| Only advertised tools are invokable, and `excludedTools` removes a tool from the advertisement itself | The tool registry is the security boundary; an operator can withdraw a capability without touching Central |
 | Existing tool kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
 | Limits (`timeoutMs`, `maxPayloadBytes`, `maxInFlight`) are enforced on both sides | A misbehaving peer cannot exhaust the other |
 | Credentials travel only in the handshake headers, over TLS, to the configured endpoint | Same convention as `central.headers`; values may be keystore-encrypted |
