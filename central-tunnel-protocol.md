@@ -8,7 +8,7 @@ The tunnel is a persistent **outbound** WebSocket opened by every MetricsHub Age
 | Section | Content |
 |---|---|
 | [1. Connection](#1-connection) | Handshake, identity, authentication |
-| [2. Envelope](#2-envelope) | Frame format and discriminator |
+| [2. Envelope](#2-envelope) | Message format and discriminator |
 | [3. Messages](#3-messages) | Field-by-field reference |
 | [4. Lifecycle](#4-lifecycle) | Registration, heartbeats, reconnection, close codes |
 | [5. Tool invocation](#5-tool-invocation) | Correlation, timeouts, error codes |
@@ -36,12 +36,12 @@ Agent                                              Central
 * **Transport:** WebSocket over TLS (`wss://`). Plain `ws://` is tolerated for loopback development only; an agent configured with `central.insecure` uses it toward any host.
 * **Authentication:** `Authorization: Bearer <secret>`; the secret is one of Central's configured agent secrets (`central.headers` on the agent side). A bad or missing secret is refused at the handshake with `401`.
 * **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`opamp-instance-uid`) — so Central sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
-* **First frame:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`. A frame of any other type before then is answered with `error` `REGISTRATION_REQUIRED` and closed `1002`: nothing may drive a session that has not said who it is.
+* **First message:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`. A message of any other type before then is answered with `error` `REGISTRATION_REQUIRED` and closed `1002`: nothing may drive a session that has not said who it is.
 * **Capacity:** a server already holding its maximum number of tunnels refuses the handshake with `503`; the agent retries with backoff.
 
 ## 2. Envelope
 
-Every WebSocket **text** frame carries exactly one JSON object. The `type` property selects the message:
+Every WebSocket **text** message carries exactly one JSON object, whether it arrives in one frame or in fragments the receiver reassembles. The `type` property selects the message:
 
 ```json
 { "type": "heartbeat.ping" }
@@ -52,7 +52,7 @@ Rules:
 * `type` is a dotted lowercase string (`<subject>.<verb|noun>`).
 * Properties whose value is `null` are omitted.
 * Unknown properties are ignored by both sides.
-* A frame whose `type` is unknown is answered with `{"type":"error","code":"UNKNOWN_MESSAGE_TYPE"}` and otherwise ignored; the connection stays open.
+* A message whose `type` is unknown is answered with `{"type":"error","code":"UNKNOWN_MESSAGE_TYPE"}` and otherwise ignored; the connection stays open.
 * A message may be split across WebSocket fragments; either side may do so and the receiver reassembles. The server holds a fragment at a time rather than a whole message, and enforces `maxPayloadBytes` on the reassembled size as it grows — so a message that outgrows the cap is closed `1009` without ever being held in full.
 * Binary frames are not used. A binary frame is a protocol error: the server closes `1003`, the agent closes `1000` carrying the reason `Binary frames are not supported` — a WebSocket client may only send `1000` or a code in `[3000, 4999]`, so it states the cause in the reason instead.
 
@@ -205,7 +205,7 @@ Informational; never closes the connection by itself.
 |---|---|---|
 | `1000` | agent | Normal shutdown |
 | `1001` | server | Server going away |
-| `1002` | server | Protocol version the server does not implement, after `error` `UNSUPPORTED_PROTOCOL_VERSION`; or a frame other than `agent.register` before registering, after `error` `REGISTRATION_REQUIRED`; or a second `agent.register` on a registered connection, after `error` `ALREADY_REGISTERED` |
+| `1002` | server | Protocol version the server does not implement, after `error` `UNSUPPORTED_PROTOCOL_VERSION`; or a message other than `agent.register` before registering, after `error` `REGISTRATION_REQUIRED`; or a second `agent.register` on a registered connection, after `error` `ALREADY_REGISTERED` |
 | `1003` | server | Unsupported data (binary frame); the agent closes `1000` with the reason instead |
 | `1009` | server | Reassembled message larger than `maxPayloadBytes` |
 | `1013` | server | The server cannot record the registration now (its backlog is full); retry with backoff |
@@ -217,7 +217,7 @@ Informational; never closes the connection by itself.
 
 ## 5. Tool invocation
 
-Server-side checks happen **before** any frame is sent, in this order: a session for that agent on this server → tool present in the *runtime* registry of that session → arguments valid against the advertised schema → policy (deny list, then approval list) → the `tool.invoke` frame within `maxPayloadBytes` → fewer than `maxInFlight` invocations open on that agent. Only then does `tool.invoke` leave the server. The agent re-validates: exact tool name, in-flight cap, timeout, payload cap.
+Server-side checks happen **before** anything is sent, in this order: a session for that agent on this server → tool present in the *runtime* registry of that session → arguments valid against the advertised schema → policy (deny list, then approval list) → the `tool.invoke` message within `maxPayloadBytes` → fewer than `maxInFlight` invocations open on that agent. Only then does `tool.invoke` leave the server. The agent re-validates: exact tool name, in-flight cap, timeout, payload cap.
 
 Both sides bound the invocation with the same `timeoutMs`; there is no cancel message. A `tool.result` or `tool.error` whose `requestId` is unknown (already timed out, or from a superseded session) is logged and dropped.
 
