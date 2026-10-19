@@ -3,6 +3,7 @@ package org.metricshub.agent.upgrade.download;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -207,6 +208,22 @@ class PackageDownloaderTest {
 
 		assertTrue(failure.getMessage().contains("SHA-256"));
 		assertEquals(2, requestCount.get(), "The download must be retried");
+	}
+
+	@Test
+	void anUnreachableHostSaysWhatHappenedRatherThanNull() {
+		// NOTHING LISTENS on port 1: the JDK fails the connection with exceptions that carry no message, and
+		// the upgrade then failed with "Package download failed: null"
+		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
+			downloader.download(
+				offer("http://127.0.0.1:1/repo/metricshub.deb", packageSha256),
+				UpgradeConfig.builder().downloadRetries(1).build(),
+				tempDir,
+				(_, _) -> {}
+			)
+		);
+
+		assertFalse(failure.getMessage().endsWith("null"), failure.getMessage());
 	}
 
 	@Test
