@@ -55,6 +55,7 @@ import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.upgrade.UpgradeException;
 import org.metricshub.agent.upgrade.api.PackageOffer;
+import org.metricshub.opamp.client.Failures;
 
 /**
  * Downloads an offered package from the repository over HTTPS, computing its SHA-256 while
@@ -483,7 +484,7 @@ public class PackageDownloader {
 				Files.move(partFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (IOException e) {
-			throw new UpgradeException("Package download failed: " + e.getMessage(), e);
+			throw new UpgradeException("Package download failed: " + Failures.describe(e), e);
 		} finally {
 			try {
 				Files.deleteIfExists(partFile);
