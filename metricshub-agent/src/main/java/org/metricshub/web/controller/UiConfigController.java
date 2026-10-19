@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import org.metricshub.web.dto.uiconfig.AddHostRequestDto;
 import org.metricshub.web.dto.uiconfig.CreateResourceGroupRequestDto;
 import org.metricshub.web.dto.uiconfig.HostUpCheckResponseDto;
@@ -71,6 +72,12 @@ public class UiConfigController {
 	@GetMapping(value = "/hosts", produces = MediaType.APPLICATION_JSON_VALUE)
 	public UiConfigSnapshotDto getSnapshot() {
 		return uiConfigService.getSnapshot();
+	}
+
+	@Operation(summary = "Get the agent machine's hostname, falling back to localhost")
+	@GetMapping(value = "/agent-hostname", produces = MediaType.APPLICATION_JSON_VALUE)
+	public Map<String, String> getAgentHostname() {
+		return Map.of("hostname", uiConfigService.getAgentHostname());
 	}
 
 	@Operation(summary = "Run an on-demand protocol health check (metricshub.host.up)")

@@ -87,6 +87,15 @@ class UiConfigControllerTest {
 	// -------------------------------------------------------------------------
 
 	@Test
+	void testGetAgentHostname() throws Exception {
+		when(uiConfigService.getAgentHostname()).thenReturn("ec-win");
+		mockMvc
+			.perform(get("/api/ui-config/agent-hostname"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.hostname").value("ec-win"));
+	}
+
+	@Test
 	void testCheckProtocolReturnsHostUp() throws Exception {
 		final ProtocolCheckRequestDto request = new ProtocolCheckRequestDto();
 		request.setHostname("server1");

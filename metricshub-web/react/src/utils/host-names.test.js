@@ -1,5 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { getHostNames, normalizeHostNameValue } from "./host-names";
+import { getHostNames, normalizeHostNameValue, validateHostNameValue } from "./host-names";
+
+describe("validateHostNameValue", () => {
+	it.each(["localhost", "ec-win", "192.0.2.1", "ec-win;ec-linux"])(
+		"accepts literal %s",
+		(value) => {
+			expect(validateHostNameValue(value, { required: true })).toBeNull();
+		},
+	);
+	it.each([
+		"${env::COMPUTERNAME:-localhost}",
+		"${env::MY_HOST}",
+		"${ENV::MY_HOST}",
+		"prefix-${env::MY_HOST}",
+	])("accepts %s as a hostname (validated by the backend)", (value) => {
+		expect(validateHostNameValue(value, { required: true })).toBeNull();
+	});
+	it("accepts expressions anywhere in a list", () => {
+		expect(validateHostNameValue(["ec-win", "${env::MY_HOST}"], { required: true })).toBeNull();
+	});
+	it("requires a value only for required fields", () => {
+		expect(validateHostNameValue("", { required: true })).toBe("host.name is required");
+		expect(validateHostNameValue("")).toBeNull();
+	});
+});
 
 // Order is significant end to end: multi-host protocol hostnames are matched to
 // host.name entries by position (PostConfigDeserializer.normalizeProtocolHostnames),

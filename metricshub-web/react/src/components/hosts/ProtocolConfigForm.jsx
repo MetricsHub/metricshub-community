@@ -21,6 +21,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeferredPasswordEncryptAlert from "./DeferredPasswordEncryptAlert";
 import ProtocolHostnameOverridesTable from "./ProtocolHostnameOverridesTable";
 import ProtocolPasswordField from "./ProtocolPasswordField";
+import { isSingleEnvironmentExpression } from "../../utils/host-names";
 import {
 	filledInputNoLabelSx,
 	guidedConfigChoiceToggleButtonSx,
@@ -57,7 +58,6 @@ import {
  * @param {Record<string, unknown>} props.values
  * @param {(name: string, value: unknown) => void} props.onChange
  * @param {Record<string, string>} props.errors
- * @param {(field: import("./protocol-definitions").ProtocolField) => boolean} props.isRequired
  * @param {boolean} [props.allowPasswordReveal]
  * @param {boolean} [props.deferEncryptUntilSave]
  * @param {string[]} [props.hostNames] resource host.name entries, in resource order; above 1 the protocol hostname maps one value per host
@@ -68,7 +68,6 @@ const ProtocolConfigForm = ({
 	values,
 	onChange,
 	errors,
-	isRequired,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
 	hostNames = [],
@@ -79,7 +78,7 @@ const ProtocolConfigForm = ({
 		if (transportLinkedPort && field.name === "port") {
 			return true;
 		}
-		return isRequired(field);
+		return Boolean(field.required);
 	};
 
 	const handleTransportChange = React.useCallback(
@@ -164,7 +163,11 @@ const ProtocolConfigForm = ({
 		if (field.type === "textarea") {
 			return renderTextareaField(field);
 		}
-		if (field.name === "hostname" && hostNames.length > 1) {
+		if (
+			field.name === "hostname" &&
+			hostNames.length > 1 &&
+			!(values._originalHostname != null && isSingleEnvironmentExpression(values.hostname))
+		) {
 			return renderMultiHostnameField(field);
 		}
 		return renderTextField(field);
@@ -610,20 +613,28 @@ const ProtocolConfigForm = ({
 
 	const renderTextField = (field) => {
 		const value = values[field.name];
+		const unresolved =
+			field.name === "hostname" &&
+			values._originalHostname != null &&
+			isSingleEnvironmentExpression(value);
 		const isPort = field.name === "port";
 		const isTimeout = field.name === "timeout";
 		const fieldError = errors[field.name];
 		const portInlineError =
 			isPort && !fieldError
-				? validatePortValue(value, { required: isRequired(field), label: field.label })
+				? validatePortValue(value, { required: Boolean(field.required), label: field.label })
 				: null;
 		const timeoutInlineError =
 			isTimeout && !fieldError
-				? validateTimeoutValue(value, { required: isRequired(field), label: field.label })
+				? validateTimeoutValue(value, { required: Boolean(field.required), label: field.label })
 				: null;
 		const displayError = fieldError || portInlineError || timeoutInlineError;
 		const required = showRequiredMarker(field);
-		const helperText = displayError || undefined;
+		const helperText =
+			displayError ||
+			(unresolved
+				? "Unresolved YAML hostname. Leave unchanged to preserve it, or enter a replacement."
+				: undefined);
 		const description = fieldDescription(field);
 		const startAdornment = renderStartAdornment(field.name);
 
@@ -639,7 +650,8 @@ const ProtocolConfigForm = ({
 					{...protocolTextFieldProps}
 					fullWidth
 					type={field.type === "number" && !isPort && !isTimeout ? "number" : "text"}
-					value={value ?? ""}
+					value={unresolved ? "" : (value ?? "")}
+					placeholder={unresolved ? "Unresolved hostname" : undefined}
 					onChange={(e) =>
 						onChange(field.name, isPort ? sanitizePortInput(e.target.value) : e.target.value)
 					}

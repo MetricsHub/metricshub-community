@@ -257,6 +257,8 @@ export const hostConfigToFormState = (hostId, hostConfig, resourceGroup) => {
 			protocolId,
 			config && typeof config === "object" ? config : PROTOCOL_DEFAULTS[protocolId] || {},
 		);
+		protocols[protocolId]._originalHostname =
+			hostConfig?.originalHostnames?.protocols?.[protocolId];
 	}
 	const selectedProtocols = Object.keys(protocols);
 	const additionalConnectors = parseAdditionalConnectorsFromConfig(
@@ -278,6 +280,7 @@ export const hostConfigToFormState = (hostId, hostConfig, resourceGroup) => {
 		originalTargetType: inGroup ? "group" : "standalone",
 		originalResourceGroup: inGroup ? resourceGroup : "",
 		hostName: normalizeHostNameValue(attrs["host.name"] || ""),
+		originalHostName: hostConfig?.originalHostnames?.hostName,
 		hostType: attrs["host.type"] ? String(attrs["host.type"]) : "",
 		selectedProtocols,
 		protocols,
@@ -330,13 +333,19 @@ export const buildHostPayloadFromForm = (formState) => {
 			continue;
 		}
 		protocols[protocolId] = buildProtocolConfigFromForm(protocolId, formValues, { hostNames });
+		if (formValues._originalHostname != null) {
+			// After host.name edits, new hosts get a blank slot: fill it like the regular path does.
+			protocols[protocolId].hostname = Array.isArray(formValues._originalHostname)
+				? formValues._originalHostname.map((slot, index) => slot || hostNames[index] || "")
+				: formValues._originalHostname;
+		}
 	}
 
 	const payload = {
 		hostId,
 		resourceGroup: targetType === "group" ? resourceGroup : null,
 		attributes: {
-			"host.name": normalizeHostNameValue(hostName),
+			"host.name": formState.originalHostName ?? normalizeHostNameValue(hostName),
 			"host.type": hostType,
 		},
 		protocols,

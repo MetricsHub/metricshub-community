@@ -41,16 +41,6 @@
 		<dependency>
 			<groupId>org.metricshub</groupId>
 			<artifactId>ipmi-java</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-simple</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -177,9 +167,6 @@
 									<include>org.metricshub:ipmi-java</include>
 									<include>org.metricshub:metricshub-ipmi-extension</include>
 								</includes>
-								<excludes>
-									<exclude>org/slf4j/**</exclude>
-								</excludes>
 							</artifactSet>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
