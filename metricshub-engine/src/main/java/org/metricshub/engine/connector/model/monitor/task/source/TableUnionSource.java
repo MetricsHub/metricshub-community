@@ -88,14 +88,16 @@ public class TableUnionSource extends Source {
 
 	@Override
 	public TableUnionSource copy() {
-		return TableUnionSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.tables(tables != null ? new ArrayList<>(tables) : null)
-			.build();
+		return copyFormatAs(
+			TableUnionSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.tables(tables != null ? new ArrayList<>(tables) : null)
+				.build()
+		);
 	}
 
 	@Override

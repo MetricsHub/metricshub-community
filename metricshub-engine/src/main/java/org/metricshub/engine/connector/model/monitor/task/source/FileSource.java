@@ -130,16 +130,18 @@ public class FileSource extends Source {
 
 	@Override
 	public Source copy() {
-		return FileSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.paths(paths != null ? new LinkedHashSet<>(paths) : new LinkedHashSet<>())
-			.maxSizePerPoll(maxSizePerPoll)
-			.mode(mode)
-			.build();
+		return copyFormatAs(
+			FileSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.paths(paths != null ? new LinkedHashSet<>(paths) : new LinkedHashSet<>())
+				.maxSizePerPoll(maxSizePerPoll)
+				.mode(mode)
+				.build()
+		);
 	}
 
 	@Override

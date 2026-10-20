@@ -166,22 +166,24 @@ public class CommandLineSource extends Source {
 	 * @return new {@link CommandLineSource} instance
 	 */
 	public CommandLineSource copy() {
-		return CommandLineSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.commandLine(commandLine)
-			.executeLocally(executeLocally)
-			.exclude(exclude)
-			.keep(keep)
-			.beginAtLineNumber(beginAtLineNumber)
-			.endAtLineNumber(endAtLineNumber)
-			.selectColumns(selectColumns)
-			.separators(separators)
-			.timeout(timeout)
-			.build();
+		return copyFormatAs(
+			CommandLineSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.commandLine(commandLine)
+				.executeLocally(executeLocally)
+				.exclude(exclude)
+				.keep(keep)
+				.beginAtLineNumber(beginAtLineNumber)
+				.endAtLineNumber(endAtLineNumber)
+				.selectColumns(selectColumns)
+				.separators(separators)
+				.timeout(timeout)
+				.build()
+		);
 	}
 
 	@Override

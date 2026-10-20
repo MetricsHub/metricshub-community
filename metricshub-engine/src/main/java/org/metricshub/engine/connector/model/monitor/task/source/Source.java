@@ -27,11 +27,13 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +114,11 @@ public abstract class Source implements Serializable {
 	 */
 	private Set<String> references = new HashSet<>();
 
+	/**
+	 * The format in which the source outputs its result. {@link SourceFormat#TABLE} by default.
+	 */
+	protected SourceFormat formatAs = SourceFormat.TABLE;
+
 	protected Source(
 		String type,
 		List<Compute> computes,
@@ -125,6 +132,54 @@ public abstract class Source implements Serializable {
 		this.key = key;
 		this.executeForEachEntryOf = executeForEachEntryOf;
 		this.references = new HashSet<>();
+	}
+
+	/**
+	 * The formats this source can output. A source supports only {@link SourceFormat#TABLE} unless it overrides
+	 * this method.
+	 *
+	 * @return the supported formats
+	 */
+	@JsonIgnore
+	public Set<SourceFormat> getSupportedFormats() {
+		return EnumSet.of(SourceFormat.TABLE);
+	}
+
+	/**
+	 * Set the output format from its connector value (case-insensitive).
+	 *
+	 * @param value The format, e.g. <code>text</code>
+	 * @throws IllegalArgumentException if the value is not a format supported by this source
+	 */
+	@JsonSetter(nulls = SKIP)
+	public void setFormatAs(final String value) {
+		final Set<SourceFormat> supportedFormats = getSupportedFormats();
+		formatAs = supportedFormats
+			.stream()
+			.filter(format -> format.name().equalsIgnoreCase(value.trim()))
+			.findFirst()
+			.orElseThrow(() ->
+				new IllegalArgumentException(
+					String.format(
+						"Source %s: formatAs '%s' is not supported. Supported formats: %s.",
+						key,
+						value,
+						supportedFormats
+					)
+				)
+			);
+	}
+
+	/**
+	 * Copy the output format of this source to the given copy.
+	 *
+	 * @param <T>  Class of the copy
+	 * @param copy The copy of this source
+	 * @return the copy
+	 */
+	protected <T extends Source> T copyFormatAs(final T copy) {
+		copy.formatAs = formatAs;
+		return copy;
 	}
 
 	/**
@@ -168,6 +223,7 @@ public abstract class Source implements Serializable {
 		stringJoiner.add(new StringBuilder("- ").append(key).append(".type=").append(this.getClass().getSimpleName()));
 
 		addNonNull(stringJoiner, "- forceSerialization=", forceSerialization);
+		addNonNull(stringJoiner, "- formatAs=", formatAs);
 		// A small trick here because the executeForEachEntryOf.toString value is already
 		// formatted that's why we don't need a prefix for the string value of the nested executeForEachEntryOf
 		addNonNull(stringJoiner, EMPTY, executeForEachEntryOf != null ? executeForEachEntryOf.toString() : null);

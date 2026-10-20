@@ -97,15 +97,17 @@ public class WbemSource extends Source {
 
 	@Override
 	public WbemSource copy() {
-		return WbemSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.query(query)
-			.namespace(namespace)
-			.build();
+		return copyFormatAs(
+			WbemSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.query(query)
+				.namespace(namespace)
+				.build()
+		);
 	}
 
 	@Override

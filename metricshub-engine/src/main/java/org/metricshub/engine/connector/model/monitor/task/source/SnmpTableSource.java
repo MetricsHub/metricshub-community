@@ -94,15 +94,17 @@ public class SnmpTableSource extends SnmpSource {
 	 * @return new {@link SnmpTableSource} instance
 	 */
 	public SnmpTableSource copy() {
-		return SnmpTableSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.oid(oid)
-			.selectColumns(selectColumns)
-			.build();
+		return copyFormatAs(
+			SnmpTableSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.oid(oid)
+				.selectColumns(selectColumns)
+				.build()
+		);
 	}
 
 	@Override

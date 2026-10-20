@@ -109,18 +109,20 @@ public class EventLogSource extends Source {
 
 	@Override
 	public Source copy() {
-		return EventLogSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.logName(logName)
-			.eventIds(eventIds != null ? eventIds : new LinkedHashSet<>())
-			.sources(sources != null ? sources : new LinkedHashSet<>())
-			.levels(levels != null ? new LinkedHashSet<>(levels) : new LinkedHashSet<>())
-			.maxEventsPerPoll(maxEventsPerPoll)
-			.build();
+		return copyFormatAs(
+			EventLogSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.logName(logName)
+				.eventIds(eventIds != null ? eventIds : new LinkedHashSet<>())
+				.sources(sources != null ? sources : new LinkedHashSet<>())
+				.levels(levels != null ? new LinkedHashSet<>(levels) : new LinkedHashSet<>())
+				.maxEventsPerPoll(maxEventsPerPoll)
+				.build()
+		);
 	}
 
 	@Override

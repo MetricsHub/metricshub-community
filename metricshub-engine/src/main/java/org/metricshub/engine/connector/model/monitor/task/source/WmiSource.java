@@ -97,15 +97,17 @@ public class WmiSource extends Source {
 
 	@Override
 	public WmiSource copy() {
-		return WmiSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.query(query)
-			.namespace(namespace)
-			.build();
+		return copyFormatAs(
+			WmiSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.query(query)
+				.namespace(namespace)
+				.build()
+		);
 	}
 
 	@Override

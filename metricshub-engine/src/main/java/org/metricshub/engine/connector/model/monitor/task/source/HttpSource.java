@@ -131,20 +131,22 @@ public class HttpSource extends Source {
 	}
 
 	public HttpSource copy() {
-		return HttpSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.method(method)
-			.url(url)
-			.path(path)
-			.header(header)
-			.body(body)
-			.authenticationToken(authenticationToken)
-			.resultContent(resultContent)
-			.build();
+		return copyFormatAs(
+			HttpSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.method(method)
+				.url(url)
+				.path(path)
+				.header(header)
+				.body(body)
+				.authenticationToken(authenticationToken)
+				.resultContent(resultContent)
+				.build()
+		);
 	}
 
 	@Override

@@ -104,17 +104,19 @@ public class InternalDbQuerySource extends Source {
 
 	@Override
 	public InternalDbQuerySource copy() {
-		return InternalDbQuerySource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.tables(
-				tables != null ? tables.stream().map(SqlTable::copy).collect(Collectors.toCollection(ArrayList::new)) : null
-			)
-			.query(query)
-			.build();
+		return copyFormatAs(
+			InternalDbQuerySource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.tables(
+					tables != null ? tables.stream().map(SqlTable::copy).collect(Collectors.toCollection(ArrayList::new)) : null
+				)
+				.query(query)
+				.build()
+		);
 	}
 
 	@Override
