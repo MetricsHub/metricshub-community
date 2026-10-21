@@ -107,16 +107,18 @@ public class JmxSource extends Source {
 		final ExecuteForEachEntryOf executeForEachEntryOfCopy =
 			executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null;
 
-		return JmxSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(computesCopy)
-			.objectName(objectName)
-			.attributes(attributesCopy)
-			.keyProperties(keyPropertiesCopy)
-			.executeForEachEntryOf(executeForEachEntryOfCopy)
-			.build();
+		return copyFormatAs(
+			JmxSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(computesCopy)
+				.objectName(objectName)
+				.attributes(attributesCopy)
+				.keyProperties(keyPropertiesCopy)
+				.executeForEachEntryOf(executeForEachEntryOfCopy)
+				.build()
+		);
 	}
 
 	@Override

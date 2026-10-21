@@ -1,0 +1,9 @@
+---
+connector:
+  detection:
+    appliesTo: [ linux ]
+beforeAll:
+  testStaticSource:
+    type: static
+    value: testValue
+    formatAs: text

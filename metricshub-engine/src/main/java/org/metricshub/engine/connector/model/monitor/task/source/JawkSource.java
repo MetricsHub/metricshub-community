@@ -119,17 +119,19 @@ public class JawkSource extends Source {
 
 	@Override
 	public Source copy() {
-		return JawkSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.script(script)
-			.input(input)
-			.separators(separators)
-			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
-			.build();
+		return copyFormatAs(
+			JawkSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.script(script)
+				.input(input)
+				.separators(separators)
+				.variables(variables != null ? new LinkedHashMap<>(variables) : null)
+				.build()
+		);
 	}
 
 	@Override

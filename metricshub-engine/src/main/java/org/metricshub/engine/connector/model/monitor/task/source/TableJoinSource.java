@@ -132,19 +132,21 @@ public class TableJoinSource extends Source {
 
 	@Override
 	public TableJoinSource copy() {
-		return TableJoinSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.leftTable(leftTable)
-			.rightTable(rightTable)
-			.leftKeyColumn(leftKeyColumn)
-			.rightKeyColumn(rightKeyColumn)
-			.defaultRightLine(defaultRightLine)
-			.keyType(keyType)
-			.build();
+		return copyFormatAs(
+			TableJoinSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.leftTable(leftTable)
+				.rightTable(rightTable)
+				.leftKeyColumn(leftKeyColumn)
+				.rightKeyColumn(rightKeyColumn)
+				.defaultRightLine(defaultRightLine)
+				.keyType(keyType)
+				.build()
+		);
 	}
 
 	@Override

@@ -89,14 +89,16 @@ public class StaticSource extends Source {
 	 * @return a new {@code StaticSource} instance
 	 */
 	public StaticSource copy() {
-		return StaticSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.value(value)
-			.build();
+		return copyFormatAs(
+			StaticSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.value(value)
+				.build()
+		);
 	}
 
 	@Override
