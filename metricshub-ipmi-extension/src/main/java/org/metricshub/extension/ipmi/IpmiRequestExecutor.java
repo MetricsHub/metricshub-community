@@ -23,14 +23,16 @@ package org.metricshub.extension.ipmi;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.time.Duration;
+import java.util.Objects;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.ipmi.client.FruList;
 import org.metricshub.ipmi.client.IpmiClient;
-import org.metricshub.ipmi.client.IpmiClientConfiguration;
+import org.metricshub.ipmi.client.IpmiClientException;
+import org.metricshub.ipmi.client.SensorList;
 
 /**
  * The IpmiRequestExecutor class is responsible for executing IPMI (Intelligent Platform Management Interface) requests to retrieve information about the chassis power state and sensors of a host.
@@ -44,15 +46,13 @@ public class IpmiRequestExecutor {
 	 * @param hostname          The host name or IP address to query.
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
 	 * @return A string value, e.g., "System power state is up."
-	 * @throws InterruptedException If the execution is interrupted.
-	 * @throws ExecutionException   If the execution encounters an exception.
-	 * @throws TimeoutException     If the operation times out.
+	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
 	@WithSpan("IPMI Chassis Status")
 	public String executeIpmiDetection(
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
-	) throws InterruptedException, ExecutionException, TimeoutException {
+	) {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing IPMI detection request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + "- Timeout: {} s\n", // NOSONAR
@@ -65,9 +65,10 @@ public class IpmiRequestExecutor {
 
 		final long startTime = System.currentTimeMillis();
 
-		final String result = IpmiClient.getChassisStatusAsStringResult(
-			buildIpmiConfiguration(hostname, ipmiConfiguration)
-		);
+		final String result;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+			result = IpmiResultConverter.convertResult(bmc.chassisStatus());
+		}
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -88,28 +89,47 @@ public class IpmiRequestExecutor {
 	}
 
 	/**
-	 * Build IPMI configuration
+	 * Creates the IPMI client of one request. The {@link IpmiConfiguration#isSkipAuth() skipAuth} option uses cipher
+	 * suite 3 without asking the BMC which suites it offers, as ipmi-java 1.x did.
 	 *
-	 * @param hostname          The host we wish to set in the {@link IpmiConfiguration}
+	 * @param hostname          The host name or IP address of the BMC
 	 * @param ipmiConfiguration MetricsHub {@link IpmiConfiguration} instance including all the required fields to perform IPMI requests
-	 * @return new instance of {@link IpmiClientConfiguration}
+	 * @return a new {@link IpmiClient}, to close once the request is done
 	 */
-	private static IpmiClientConfiguration buildIpmiConfiguration(
-		@NonNull String hostname,
-		@NonNull IpmiConfiguration ipmiConfiguration
-	) {
-		String username = ipmiConfiguration.getUsername();
-		char[] password = ipmiConfiguration.getPassword();
-		Long timeout = ipmiConfiguration.getTimeout();
+	IpmiClient newClient(@NonNull final String hostname, @NonNull final IpmiConfiguration ipmiConfiguration) {
+		final IpmiClient.Builder builder = IpmiClient.builder(hostname)
+			// A null user name is the anonymous login
+			.credentials(
+				Objects.requireNonNullElse(ipmiConfiguration.getUsername(), ""),
+				Objects.requireNonNullElse(ipmiConfiguration.getPassword(), new char[0])
+			)
+			.bmcKey(ArrayHelper.hexToByteArray(ipmiConfiguration.getBmcKey()))
+			.timeout(Duration.ofSeconds(ipmiConfiguration.getTimeout()))
+			// The client lives for one request: no keep-alive messages
+			.keepAlive(Duration.ZERO);
+		if (ipmiConfiguration.isSkipAuth()) {
+			builder.cipherSuite(3);
+		}
+		return builder.build();
+	}
 
-		return new IpmiClientConfiguration(
-			hostname,
-			username,
-			password,
-			ArrayHelper.hexToByteArray(ipmiConfiguration.getBmcKey()),
-			ipmiConfiguration.isSkipAuth(),
-			timeout,
-			0L // Turn off keep-alive messages sent to the remote host
+	/**
+	 * Logs what ipmi-java skipped or could not read without failing the request: ipmi-java does not log.
+	 *
+	 * @param hostname The host name or IP address of the BMC
+	 * @param frus     The FRUs read from the BMC
+	 * @param sensors  The sensors read from the BMC
+	 */
+	private static void logProblems(final String hostname, final FruList frus, final SensorList sensors) {
+		frus.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI FRUs: Skipped {}", hostname, skipped));
+		sensors.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI sensors: Skipped {}", hostname, skipped));
+		frus.forEach(fru ->
+			fru.problems().forEach(problem -> log.debug("Hostname {} - IPMI FRU {}: {}", hostname, fru.name(), problem))
+		);
+		sensors.forEach(sensor ->
+			sensor
+				.problem()
+				.ifPresent(problem -> log.debug("Hostname {} - IPMI sensor {}: {}", hostname, sensor.name(), problem))
 		);
 	}
 
@@ -119,15 +139,13 @@ public class IpmiRequestExecutor {
 	 * @param hostname          The host for which the {@link IpmiConfiguration} is set.
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance containing the required fields for IPMI requests.
 	 * @return A string containing information about FRUs, sensor states, and readings.
-	 * @throws InterruptedException If the execution is interrupted.
-	 * @throws ExecutionException   If the execution encounters an exception.
-	 * @throws TimeoutException     If the operation times out.
+	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
 	@WithSpan("IPMI Sensors")
 	public String executeIpmiGetSensors(
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
-	) throws InterruptedException, ExecutionException, TimeoutException {
+	) {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing IPMI FRUs and Sensors request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
@@ -141,7 +159,14 @@ public class IpmiRequestExecutor {
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = IpmiClient.getFrusAndSensorsAsStringResult(buildIpmiConfiguration(hostname, ipmiConfiguration));
+		final String result;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+			// One session, and one walk of the SDR repository for both
+			final FruList frus = bmc.frus().execute();
+			final SensorList sensors = bmc.sensors().execute();
+			logProblems(hostname, frus, sensors);
+			result = IpmiResultConverter.convertResult(frus, sensors);
+		}
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 

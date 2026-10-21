@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -25,6 +26,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.WriterAppender;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -146,6 +153,48 @@ class TunnelClientTest {
 
 		// The server asked for a 1 s heartbeat: pings must follow
 		assertNotNull(server.awaitFrame(TunnelMessage.HeartbeatPing.TYPE, TIMEOUT_MS), "heartbeat.ping expected");
+	}
+
+	@Test
+	void aRefusedConnectionIsLoggedByWhatHappenedRatherThanAsNull() throws Exception {
+		// NOTHING LISTENS on port 1, and the JDK refuses the connection with exceptions that carry no
+		// message: logged by its message, the line read "failed: null"
+		final StringWriter written = new StringWriter();
+		final WriterAppender appender = WriterAppender.newBuilder()
+			.setName("refused-connection")
+			.setTarget(written)
+			.setLayout(PatternLayout.newBuilder().withPattern("%m%n").build())
+			.build();
+		appender.start();
+		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
+		final LoggerConfig logger = context.getConfiguration().getLoggerConfig(TunnelClient.class.getName());
+		logger.addAppender(appender, Level.WARN, null);
+		context.updateLoggers();
+		try {
+			client = new TunnelClient(
+				new TunnelSettings(
+					URI.create("ws://127.0.0.1:1/ws/agent"),
+					Map.of("Authorization", "Bearer secret-token"),
+					null,
+					AGENT_UID,
+					Duration.ofSeconds(1),
+					Duration.ofSeconds(5),
+					Duration.ofSeconds(2),
+					false
+				),
+				new RecordingListener()
+			);
+			client.start();
+			await()
+				.atMost(Duration.ofMillis(TIMEOUT_MS))
+				.until(() -> written.toString().contains("Central tunnel connection to"));
+		} finally {
+			logger.removeAppender("refused-connection");
+			context.updateLoggers();
+			appender.stop();
+		}
+		final String logged = written.toString();
+		assertFalse(logged.contains("failed: null"), logged);
 	}
 
 	@Test

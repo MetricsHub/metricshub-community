@@ -4,6 +4,21 @@ import { normalizeAxiosError } from "../../utils/http-errors";
 const BASE = "/api/ui-config";
 
 class UiConfigApi {
+	/** Returns the agent machine's resolved hostname (or localhost). */
+	async getAgentHostname({ signal } = {}) {
+		try {
+			const { data } = await httpRequest({
+				url: `${BASE}/agent-hostname`,
+				method: "GET",
+				headers: { Accept: "application/json" },
+				signal,
+			});
+			return data.hostname;
+		} catch (e) {
+			throw normalizeAxiosError(e);
+		}
+	}
+
 	/**
 	 * @param {object} [options]
 	 * @param {string} [options.hostType]

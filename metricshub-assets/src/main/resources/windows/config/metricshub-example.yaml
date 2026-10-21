@@ -119,7 +119,7 @@ resourceGroups:
     resources:
       localhost:
         attributes:
-          host.name: localhost
+          host.name: ${env::COMPUTERNAME:-localhost} # Name of this machine (falls back to localhost)
           host.type: windows
         protocols:
           wmi:

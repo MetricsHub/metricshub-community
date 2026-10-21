@@ -47,6 +47,7 @@ import org.metricshub.agent.tunnel.protocol.TunnelMessage.HeartbeatPong;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.ProtocolError;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolInvoke;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.Unknown;
+import org.metricshub.opamp.client.Failures;
 import org.metricshub.opamp.client.http.OpampHttpTransport;
 import org.metricshub.opamp.client.retry.RetrySchedule;
 
@@ -424,7 +425,7 @@ public class TunnelClient {
 		if (error != null) {
 			final Throwable cause =
 				error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
-			log.warn("Central tunnel connection to {} failed: {}", settings.endpoint(), cause.getMessage());
+			log.warn("Central tunnel connection to {} failed: {}", settings.endpoint(), Failures.describe(cause));
 			log.debug("Central tunnel connection failed:", cause);
 			scheduleReconnect(connectGeneration);
 			return;

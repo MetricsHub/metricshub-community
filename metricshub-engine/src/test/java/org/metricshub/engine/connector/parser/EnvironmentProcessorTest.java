@@ -4,14 +4,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
 
 class EnvironmentProcessorTest {
 
@@ -145,6 +153,111 @@ class EnvironmentProcessorTest {
 					"Post-processing should replace placeholders in all array elements with actual environment values."
 				);
 			}
+		}
+	}
+
+	@Test
+	void testDefaultValue() {
+		final Map<String, String> env = Map.of("SET_VAR", "my-host", "EMPTY_VAR", "");
+
+		assertEquals(
+			"my-host",
+			EnvironmentProcessor.performEnvReplacements("${env::SET_VAR:-localhost}", env::get),
+			"Set variable should win over the default value."
+		);
+		assertEquals(
+			"localhost",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR:-localhost}", env::get),
+			"Unset variable should resolve to the default value."
+		);
+		assertEquals(
+			"localhost",
+			EnvironmentProcessor.performEnvReplacements("${env::EMPTY_VAR:-localhost}", env::get),
+			"Empty variable should resolve to the default value."
+		);
+		assertEquals(
+			"",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR:-}", env::get),
+			"Empty default value should be supported."
+		);
+		assertEquals(
+			"${env::UNSET_VAR}",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR}", env::get),
+			"Unset variable without default should be left untouched."
+		);
+		assertEquals(
+			"",
+			EnvironmentProcessor.performEnvReplacements("${env::EMPTY_VAR}", env::get),
+			"Empty variable without default should resolve to the empty value."
+		);
+		assertEquals(
+			"my-host.domain / localhost",
+			EnvironmentProcessor.performEnvReplacements("${env::SET_VAR:-a}.domain / ${env::UNSET_VAR:-localhost}", env::get),
+			"Multiple placeholders with defaults should all be replaced."
+		);
+		assertEquals(
+			"C:\\$path",
+			EnvironmentProcessor.performEnvReplacements("${env::UNSET_VAR:-C:\\$path}", env::get),
+			"Default value should be inserted literally."
+		);
+	}
+
+	@Test
+	void testProcessNodeWithDefaultValue() throws IOException {
+		final JsonNode jsonNode = JsonNodeFactory.instance
+			.objectNode()
+			.set("host.name", new TextNode(String.format("${env::%s:-localhost}", UUID.randomUUID())));
+		new EnvironmentProcessor().process(jsonNode);
+		assertEquals("localhost", jsonNode.get("host.name").asText());
+	}
+
+	@ParameterizedTest
+	@CsvSource(
+		{
+			"HOSTNAME, , true, agent-linux",
+			"HOSTNAME, '', true, agent-linux",
+			"HOSTNAME, configured-host, true, configured-host",
+			"HOSTNAME, , false, localhost",
+			"OTHER_HOST, , true, localhost",
+			"COMPUTERNAME, , true, localhost"
+		}
+	)
+	void testLinuxHostnameFallback(String variable, String environmentValue, boolean linux, String expected) {
+		try (var os = mockStatic(LocalOsHandler.class); var files = mockStatic(Files.class)) {
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(linux ? LocalOsHandler.LINUX : LocalOsHandler.WINDOWS));
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn("agent-linux\n");
+			assertEquals(
+				expected,
+				EnvironmentProcessor.performEnvReplacements("${env::" + variable + ":-localhost}", name -> environmentValue)
+			);
+			if (!"agent-linux".equals(expected)) {
+				files.verifyNoInteractions();
+			}
+		}
+	}
+
+	@Test
+	void testUnavailableLinuxHostnamePreservesExpressionFallback() {
+		try (var os = mockStatic(LocalOsHandler.class); var files = mockStatic(Files.class)) {
+			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.LINUX));
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn(" \n");
+			assertEquals(
+				"localhost",
+				EnvironmentProcessor.performEnvReplacements("${env::HOSTNAME:-localhost}", name -> null)
+			);
+			files
+				.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname")))
+				.thenThrow(new IOException("Unavailable"));
+			assertEquals(
+				"localhost",
+				EnvironmentProcessor.performEnvReplacements("${env::HOSTNAME:-localhost}", name -> null)
+			);
+			assertEquals(
+				"custom-host",
+				EnvironmentProcessor.performEnvReplacements("${env::HOSTNAME:-custom-host}", name -> "")
+			);
+			assertEquals("${env::HOSTNAME}", EnvironmentProcessor.performEnvReplacements("${env::HOSTNAME}", name -> null));
+			assertEquals("", EnvironmentProcessor.performEnvReplacements("${env::HOSTNAME}", name -> ""));
 		}
 	}
 }

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
+import org.metricshub.engine.connector.parser.EnvironmentProcessor;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.uiconfig.ProtocolCheckRequestDto;
@@ -45,6 +46,10 @@ public class ProtocolCheckRequestDtoDeserializer extends JsonDeserializer<Protoc
 		if (root == null || root.isNull()) {
 			return request;
 		}
+
+		// Resolve ${env::NAME} expressions like AgentContext does at configuration load time, so the
+		// inline check targets the same hostname and credentials as the saved configuration.
+		new EnvironmentProcessor().process(root);
 
 		final JsonNode hostnameNode = root.get("hostname");
 		if (hostnameNode != null && !hostnameNode.isNull()) {

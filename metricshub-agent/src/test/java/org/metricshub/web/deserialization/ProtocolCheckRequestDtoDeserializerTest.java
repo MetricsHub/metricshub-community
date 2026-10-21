@@ -107,4 +107,31 @@ class ProtocolCheckRequestDtoDeserializerTest {
 		assertEquals("root", ssh.getUsername());
 		assertEquals(2222, ssh.getPort());
 	}
+
+	@Test
+	void testDeserializeResolvesEnvironmentExpressions() throws Exception {
+		// METRICSHUB_UNSET_TEST_VAR is never set, so the ${env::NAME:-default} fallback is used,
+		// which keeps the expectations identical on every platform.
+		final String json = """
+			{
+			  "hostname": "${env::METRICSHUB_UNSET_TEST_VAR:-server3}",
+			  "protocol": "ssh",
+			  "protocolConfig": {
+			    "ssh": {
+			      "hostname": "${env::METRICSHUB_UNSET_TEST_VAR:-server3}",
+			      "username": "${env::METRICSHUB_UNSET_TEST_VAR:-admin}",
+			      "port": 22
+			    }
+			  }
+			}
+			""";
+
+		final ProtocolCheckRequestDto request = objectMapper.readValue(json, ProtocolCheckRequestDto.class);
+
+		assertEquals("server3", request.getHostname());
+		final SshConfiguration ssh = (SshConfiguration) request.getProtocolConfig().get("ssh");
+		assertNotNull(ssh);
+		assertEquals("server3", ssh.getHostname());
+		assertEquals("admin", ssh.getUsername());
+	}
 }

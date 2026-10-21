@@ -49,6 +49,12 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 	private Map<String, Double> totalPowerSharesByPowerSource;
 	private boolean isPowerMeasured;
 
+	/**
+	 * The power of the VMs measured by the connector, by power source. This power is deducted from the power source
+	 * before it is shared among the other VMs.
+	 */
+	private Map<String, Double> measuredVmPowerByPowerSource = Map.of();
+
 	public VmPowerAndEnergyEstimator(
 		final Monitor monitor,
 		final TelemetryManager telemetryManager,
@@ -58,6 +64,24 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 		super(monitor, telemetryManager);
 		this.totalPowerSharesByPowerSource = totalPowerSharesByPowerSource;
 		this.isPowerMeasured = isPowerMeasured;
+	}
+
+	/**
+	 * @param monitor                       The VM monitor
+	 * @param telemetryManager              The telemetry manager wrapping the monitors
+	 * @param totalPowerSharesByPowerSource The total power share of the VMs to estimate, by power source
+	 * @param isPowerMeasured               Whether the host power is measured
+	 * @param measuredVmPowerByPowerSource  The power of the VMs measured by the connector, by power source
+	 */
+	public VmPowerAndEnergyEstimator(
+		final Monitor monitor,
+		final TelemetryManager telemetryManager,
+		final Map<String, Double> totalPowerSharesByPowerSource,
+		final boolean isPowerMeasured,
+		final Map<String, Double> measuredVmPowerByPowerSource
+	) {
+		this(monitor, telemetryManager, totalPowerSharesByPowerSource, isPowerMeasured);
+		this.measuredVmPowerByPowerSource = measuredVmPowerByPowerSource;
 	}
 
 	/**
@@ -113,7 +137,12 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 
 		// Setting the VM's power consumption, energy and energy usage values
 		if (powerSourcePowerConsumption != null && powerSourcePowerConsumption >= 0.0) {
-			estimatedPower = NumberHelper.round(powerSourcePowerConsumption * powerShareRatio, 2, RoundingMode.HALF_UP);
+			// The VMs measured by the connector keep their power: only what remains is shared among the other VMs
+			final double remainingPowerConsumption = Math.max(
+				0.0,
+				powerSourcePowerConsumption - measuredVmPowerByPowerSource.getOrDefault(powerSourceId, 0.0)
+			);
+			estimatedPower = NumberHelper.round(remainingPowerConsumption * powerShareRatio, 2, RoundingMode.HALF_UP);
 		}
 
 		final MetricFactory metricFactory = new MetricFactory(

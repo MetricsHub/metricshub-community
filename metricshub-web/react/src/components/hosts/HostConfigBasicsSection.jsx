@@ -63,6 +63,9 @@ const HostConfigBasicsSection = ({
 	resourceGroups,
 	existingHostIdScopes,
 	onCreateResourceGroup,
+	onResolveHostname,
+	resolvingHostname,
+	resolveHostnameError,
 }) => {
 	const manualHostIdRef = React.useRef(false);
 	const [autoSuffixMessage, setAutoSuffixMessage] = React.useState("");
@@ -148,7 +151,11 @@ const HostConfigBasicsSection = ({
 				<Stack spacing={2}>
 					<HostNameChipInput
 						staticLabel
+						onResolveHostname={onResolveHostname}
+						resolvingHostname={resolvingHostname}
+						resolveHostnameError={resolveHostnameError}
 						value={values.hostName}
+						originalValue={values.originalHostName}
 						onChange={(hostName) => {
 							if (values._editMode || manualHostIdRef.current) {
 								setAutoSuffixMessage("");
