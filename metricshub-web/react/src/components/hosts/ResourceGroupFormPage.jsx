@@ -405,7 +405,13 @@ const ResourceGroupFormPage = ({
 
 	const buildPayload = () => ({
 		name: name.trim(),
-		attributes: currentAttributes,
+		attributes: {
+			...currentAttributes,
+			...(groupNode?.originalHostnames?.hostName != null &&
+			currentAttributes["host.name"] === String(rawAttributes["host.name"] ?? "")
+				? { "host.name": groupNode.originalHostnames.hostName }
+				: {}),
+		},
 		metrics: currentMetrics,
 		...advancedPayload,
 	});

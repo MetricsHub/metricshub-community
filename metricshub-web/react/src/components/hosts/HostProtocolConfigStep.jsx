@@ -4,12 +4,7 @@ import ProtocolConfigForm from "./ProtocolConfigForm";
 import ProtocolTestButton from "./ProtocolTestButton";
 import { guidedConfigBorderedPanelSx } from "./guided-config-form-primitives";
 import { getHostNames } from "./host-config-utils";
-import {
-	PROTOCOL_FIELDS,
-	PROTOCOL_OPTIONS,
-	isAuthFieldOptionalOnLocalhost,
-	isLocalhostHost,
-} from "./protocol-definitions";
+import { PROTOCOL_FIELDS, PROTOCOL_OPTIONS } from "./protocol-definitions";
 
 /**
  * Protocol-specific configuration step.
@@ -19,7 +14,6 @@ import {
  * @param {Record<string, unknown>} props.values
  * @param {(name: string, value: unknown) => void} props.onChange
  * @param {Record<string, string>} [props.errors]
- * @param {string} [props.hostId]
  * @param {string} [props.hostName]
  * @param {boolean} [props.allowPasswordReveal] show/hide toggle on password fields (create flow only)
  * @param {boolean} [props.deferEncryptUntilSave] encrypt protocol passwords on submit only
@@ -31,7 +25,6 @@ const HostProtocolConfigStep = ({
 	values,
 	onChange,
 	errors = {},
-	hostId,
 	hostName,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
@@ -40,15 +33,7 @@ const HostProtocolConfigStep = ({
 }) => {
 	const fields = PROTOCOL_FIELDS[protocol] || [];
 	const protocolLabel = PROTOCOL_OPTIONS.find((p) => p.id === protocol)?.label || protocol;
-	const isLocal = isLocalhostHost(hostId, hostName);
 	const hostNames = React.useMemo(() => getHostNames(hostName), [hostName]);
-
-	const fieldRequired = (field) => {
-		if (isLocal && (isAuthFieldOptionalOnLocalhost(field.name) || field.type === "authChoice")) {
-			return false;
-		}
-		return Boolean(field.required);
-	};
 
 	const header = showHeader ? (
 		<Box>
@@ -63,19 +48,13 @@ const HostProtocolConfigStep = ({
 
 	const formBody = (
 		<Stack spacing={2}>
-			<ProtocolTestButton
-				protocol={protocol}
-				hostName={hostName}
-				hostId={hostId}
-				protocolValues={values}
-			/>
+			<ProtocolTestButton protocol={protocol} hostName={hostName} protocolValues={values} />
 			<ProtocolConfigForm
 				protocol={protocol}
 				fields={fields}
 				values={values}
 				onChange={onChange}
 				errors={errors}
-				isRequired={fieldRequired}
 				allowPasswordReveal={allowPasswordReveal}
 				deferEncryptUntilSave={deferEncryptUntilSave}
 				hostNames={hostNames}

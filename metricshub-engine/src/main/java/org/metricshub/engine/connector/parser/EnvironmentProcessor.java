@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.metricshub.engine.common.helpers.NetworkHelper;
 
 /**
  * Processor for replacing placeholder values in a JsonNode using environment variables.
@@ -38,9 +39,10 @@ import lombok.EqualsAndHashCode;
 public class EnvironmentProcessor extends AbstractNodeProcessor {
 
 	/**
-	 * Environment Variable Pattern
+	 * Environment Variable Pattern: {@code ${env::NAME}} or {@code ${env::NAME:-default}}.
+	 * Group 1 is the variable name, group 2 the optional default value.
 	 */
-	private static final Pattern ENV_PATTERN = Pattern.compile("\\$\\{env::([\\w-]+)\\}");
+	private static final Pattern ENV_PATTERN = Pattern.compile("\\$\\{env::([\\w-]+)(?::-([^}]*))?\\}");
 
 	/**
 	 * Constructs a EnvironmentProcessor without a next processor.
@@ -73,21 +75,62 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 	/**
 	 * Replace environment placeholders in the given value with corresponding values from system
 	 * environment variables.
+	 * <p>
+	 * {@code ${env::NAME:-default}} resolves to {@code default} when {@code NAME} is unset or empty
+	 * (shell semantics). {@code ${env::NAME}} is left untouched when {@code NAME} is unset.
+	 * On Linux, an unset or empty {@code HOSTNAME} is first resolved from the kernel hostname,
+	 * since services do not normally inherit this environment variable.
 	 *
 	 * @param value        The string to be replaced.
 	 * @return A new {@link String} with the placeholders replaced.
 	 */
-	private String performEnvReplacements(String value) {
+	public String performEnvReplacements(String value) {
+		return performEnvReplacements(value, System::getenv);
+	}
+
+	/**
+	 * Replace environment placeholders in the given value using the given environment lookup.
+	 *
+	 * @param value       The string to be replaced.
+	 * @param envResolver Resolves an environment variable name to its value, or {@code null} if unset.
+	 * @return A new {@link String} with the placeholders replaced.
+	 */
+	static String performEnvReplacements(final String value, final UnaryOperator<String> envResolver) {
 		if (value == null || value.isEmpty()) {
 			return value;
 		}
 
 		return ENV_PATTERN.matcher(value).replaceAll(match -> {
-			final String variableValue = System.getenv(match.group(1));
+			final String variableValue = resolveEnvironmentVariable(match.group(1), envResolver);
+			final String defaultValue = match.group(2);
+			if (defaultValue != null) {
+				return Matcher.quoteReplacement(
+					variableValue == null || variableValue.isEmpty() ? defaultValue : variableValue
+				);
+			}
 			if (variableValue != null) {
 				return Matcher.quoteReplacement(variableValue);
 			}
 			return Matcher.quoteReplacement(match.group());
 		});
+	}
+
+	/**
+	 * Look up an environment variable, using the Linux hostname when HOSTNAME is unavailable.
+	 *
+	 * @param name        The environment variable name.
+	 * @param envResolver The environment lookup.
+	 * @return The variable value, or the kernel hostname for an unset or empty Linux HOSTNAME.
+	 */
+	private static String resolveEnvironmentVariable(final String name, final UnaryOperator<String> envResolver) {
+		final String value = envResolver.apply(name);
+		if (value != null && !value.isEmpty()) {
+			return value;
+		}
+		if ("HOSTNAME".equals(name)) {
+			// Keep the expression's fallback behavior if the kernel hostname cannot be read.
+			return NetworkHelper.getKernelHostname().orElse(value);
+		}
+		return value;
 	}
 }

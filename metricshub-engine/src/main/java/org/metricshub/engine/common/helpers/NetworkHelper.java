@@ -21,6 +21,7 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
@@ -29,8 +30,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,7 +64,49 @@ public class NetworkHelper {
 		"0000:0000:0000:0000:0000:0000:0000:0001"
 	);
 
+	/**
+	 * Linux kernel hostname, readable even when the HOSTNAME variable is not exported (services)
+	 */
+	private static final Path KERNEL_HOSTNAME_PATH = Path.of("/proc/sys/kernel/hostname");
+
 	private NetworkHelper() {}
+
+	/**
+	 * Read the Linux kernel hostname.
+	 *
+	 * @return the kernel hostname, or an empty {@link Optional} when not on Linux or unreadable
+	 */
+	public static Optional<String> getKernelHostname() {
+		if (LocalOsHandler.getOS().filter(LocalOsHandler.LINUX::equals).isEmpty()) {
+			return Optional.empty();
+		}
+		try {
+			final String hostname = Files.readString(KERNEL_HOSTNAME_PATH).trim();
+			return hostname.isEmpty() ? Optional.empty() : Optional.of(hostname);
+		} catch (IOException e) {
+			log.debug("Could not read the kernel hostname from {}: ", KERNEL_HOSTNAME_PATH, e);
+			return Optional.empty();
+		}
+	}
+
+	/**
+	 * Check whether the given hostname is this machine's own name ({@code COMPUTERNAME},
+	 * {@code HOSTNAME} or the Linux kernel hostname), without any DNS lookup.
+	 *
+	 * @param hostname    The hostname to check.
+	 * @param envResolver Resolves an environment variable name to its value, or {@code null} if unset.
+	 * @return {@code true} if the hostname matches a name of this machine, ignoring case.
+	 */
+	static boolean isMachineHostname(final String hostname, final UnaryOperator<String> envResolver) {
+		final String candidate = hostname.trim();
+		return Stream.concat(
+			Stream.of(envResolver.apply("COMPUTERNAME"), envResolver.apply("HOSTNAME")),
+			getKernelHostname().stream()
+		)
+			.filter(Objects::nonNull)
+			.map(String::trim)
+			.anyMatch(candidate::equalsIgnoreCase);
+	}
 
 	/**
 	 * Check whether the given hostname is a localhost.
@@ -73,6 +122,12 @@ public class NetworkHelper {
 
 		// Obvious case
 		if (TYPICAL_LOCALHOST_HOSTNAMES.contains(hostname.toLowerCase())) {
+			return true;
+		}
+
+		// This machine's own name (e.g. the default ${env::HOSTNAME:-localhost} host.name) is local
+		// even when DNS cannot resolve it.
+		if (isMachineHostname(hostname, System::getenv)) {
 			return true;
 		}
 

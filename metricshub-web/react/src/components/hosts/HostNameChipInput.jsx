@@ -1,6 +1,12 @@
 import * as React from "react";
 import Autocomplete from "@mui/material/Autocomplete";
-import { Box, Chip, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
+import {
+	getEnvironmentExpressionNames,
+	hasEnvironmentExpression,
+	isSingleEnvironmentExpression,
+	validateHostNameValue,
+} from "../../utils/host-names";
 import { getHostNames } from "./host-config-utils";
 import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import FieldHelpTooltip from "./FieldHelpTooltip";
@@ -153,6 +159,7 @@ export const HostnamesChipField = ({
 	return (
 		<Autocomplete
 			multiple
+			disabled={textFieldProps.disabled}
 			freeSolo
 			disableClearable
 			filterOptions={(options) => options}
@@ -169,7 +176,7 @@ export const HostnamesChipField = ({
 							key={key}
 							label={option}
 							size="medium"
-							color="secondary"
+							color={hasEnvironmentExpression(option) ? "warning" : "secondary"}
 							variant="filled"
 							{...tagProps}
 							sx={HOST_NAME_CHIP_SX}
@@ -220,13 +227,37 @@ export const HostnamesChipField = ({
  *
  * @param {object} props
  * @param {string | string[]} props.value
+ * @param {string | string[]} [props.originalValue] unchanged YAML value, if it uses an expression
  * @param {(value: string | string[]) => void} props.onChange
  * @param {boolean} [props.error]
  * @param {React.ReactNode} [props.helperText]
  * @param {boolean} [props.staticLabel] render the label above the field instead of a floating label
+ * @param {() => string | Promise<string | null>} [props.onResolveHostname] get the agent's hostname
+ * @param {boolean} [props.resolvingHostname] hostname request in progress
+ * @param {string | null} [props.resolveHostnameError] error from the hostname request
  */
-const HostNameChipInput = ({ value, onChange, error = false, helperText, staticLabel = false }) => {
+const HostNameChipInput = ({
+	value,
+	originalValue,
+	onChange,
+	error = false,
+	helperText,
+	staticLabel = false,
+	onResolveHostname,
+	resolvingHostname = false,
+	resolveHostnameError,
+}) => {
 	const hostNameCount = getHostNames(value).length;
+	const hostnameError = validateHostNameValue(value);
+	// Blank the field only for a lone expression; in a list, keep every chip visible so
+	// editing never drops the other host names.
+	const unresolved = originalValue != null && isSingleEnvironmentExpression(value);
+	const unresolvedNames = getEnvironmentExpressionNames(value);
+	const unresolvedHelper = unresolved
+		? "Unresolved YAML hostname. Leave unchanged to preserve it, or enter a replacement."
+		: unresolvedNames.length > 0
+			? `Unresolved YAML hostname kept as-is: ${unresolvedNames.join(", ")}`
+			: undefined;
 	return (
 		<Stack spacing={staticLabel ? 0 : 1}>
 			{staticLabel ? (
@@ -252,19 +283,52 @@ const HostNameChipInput = ({ value, onChange, error = false, helperText, staticL
 				</Stack>
 			) : null}
 			<HostnamesChipField
-				value={value}
+				value={unresolved ? "" : value}
 				onChange={onChange}
-				error={error}
-				helperText={helperText}
+				error={error || Boolean(hostnameError)}
+				helperText={hostnameError || helperText || resolveHostnameError || unresolvedHelper}
 				textFieldProps={{
+					...(unresolved ? { placeholder: "Unresolved hostname" } : {}),
 					id: "host-name-input",
+					disabled: resolvingHostname,
 					label: staticLabel ? undefined : HOST_NAME_UI.fieldLabel,
 					hiddenLabel: staticLabel,
 					variant: staticLabel ? "filled" : "outlined",
-					required: true,
+					required: !unresolved,
 					sx: staticLabel ? filledInputNoLabelSx : undefined,
 				}}
 			/>
+			{staticLabel && onResolveHostname ? (
+				<Stack
+					direction="row"
+					alignItems="center"
+					spacing={0.5}
+					useFlexGap
+					sx={{ pt: 0.5, flexWrap: "wrap", color: "text.secondary" }}
+				>
+					<Button
+						type="button"
+						size="small"
+						color="inherit"
+						loading={resolvingHostname}
+						sx={{
+							typography: "caption",
+							minWidth: 0,
+							p: 0,
+							textTransform: "none",
+							textDecoration: "underline",
+							"&:hover": { bgcolor: "transparent", textDecoration: "underline" },
+						}}
+						onClick={async () => {
+							const hostname = await onResolveHostname();
+							if (hostname) onChange(hostname);
+						}}
+					>
+						Use agent hostname
+					</Button>
+					<FieldHelpTooltip title="For the agent's host only. Uses its hostname, or localhost if unavailable." />
+				</Stack>
+			) : null}
 		</Stack>
 	);
 };

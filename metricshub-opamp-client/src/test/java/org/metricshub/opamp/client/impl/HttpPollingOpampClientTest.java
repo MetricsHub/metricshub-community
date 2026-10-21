@@ -7,7 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.ByteString;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.net.ConnectException;
 import java.net.URI;
+import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -209,6 +214,38 @@ class HttpPollingOpampClientTest {
 
 		final AgentToServer fullState = transport.awaitRequest(AWAIT);
 		assertTrue(fullState.hasAgentDescription());
+	}
+
+	@Test
+	void aRefusedConnectionIsLoggedByWhatHappenedRatherThanAsNull() throws Exception {
+		// WHAT THE JDK'S HttpClient THROWS when nothing listens: a ConnectException with no message, caused by
+		// a ClosedChannelException with none either. Logged by its message, the line read "(null)".
+		final ConnectException refused = new ConnectException();
+		refused.initCause(new ClosedChannelException());
+		final CountDownLatch failed = new CountDownLatch(1);
+		newClient(
+			new OpampClientCallbacks() {
+				@Override
+				public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
+					failed.countDown();
+				}
+			},
+			null
+		);
+		transport.enqueue(new RecordingTransport.ScriptedReply(null, refused));
+		// slf4j-simple writes to whatever System.err is when it logs
+		final PrintStream err = System.err;
+		final ByteArrayOutputStream written = new ByteArrayOutputStream();
+		System.setErr(new PrintStream(written, true, StandardCharsets.UTF_8));
+		try {
+			client.start();
+			// The line is written before the callback is told
+			assertTrue(failed.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
+		} finally {
+			System.setErr(err);
+		}
+		final String logged = written.toString(StandardCharsets.UTF_8);
+		assertTrue(logged.contains("OpAMP exchange failed (ConnectException: ClosedChannelException)"), logged);
 	}
 
 	@Test

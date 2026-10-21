@@ -132,6 +132,7 @@ export const getHostFormCommittedFingerprint = (state) =>
 	JSON.stringify({
 		hostId: String(state.hostId ?? "").trim(),
 		hostName: hostNameFingerprint(state.hostName),
+		originalHostName: state.originalHostName ?? null,
 		hostType: state.hostType ?? "",
 		targetType: state.targetType ?? "standalone",
 		resourceGroup: state.resourceGroup ?? "",
@@ -169,6 +170,7 @@ export const getFormSectionFingerprint = (state, step) => {
 			return JSON.stringify({
 				hostId: String(state.hostId ?? "").trim(),
 				hostName: hostNameFingerprint(state.hostName),
+				originalHostName: state.originalHostName ?? null,
 				hostType: state.hostType ?? "",
 				targetType: state.targetType ?? "standalone",
 				resourceGroup: state.resourceGroup ?? "",

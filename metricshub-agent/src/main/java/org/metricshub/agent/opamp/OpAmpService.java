@@ -371,22 +371,14 @@ public class OpAmpService {
 	}
 
 	/**
-	 * Callbacks logging the OpAMP connectivity transitions.
+	 * Callbacks logging that the OpAMP server answered. A failure is not logged here: the client logs
+	 * every one itself, with its cause and the next attempt.
 	 */
 	static class LoggingCallbacks implements OpampClientCallbacks {
 
 		@Override
 		public void onConnect() {
 			log.info("Connected to the OpAMP server.");
-		}
-
-		@Override
-		public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
-			log.warn(
-				"Connection to the OpAMP server failed ({}); next attempt in {} seconds.",
-				error == null ? "unknown error" : error.getMessage(),
-				nextAttemptDelay.toSeconds()
-			);
 		}
 	}
 }

@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.opamp.client.Failures;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientCallbacks;
 import org.metricshub.opamp.client.OpampClientSettings;
@@ -447,7 +448,7 @@ public class HttpPollingOpampClient implements OpampClient {
 		assembler.requestFullState();
 		connected = false;
 		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
-		log.warn("OpAMP exchange failed ({}); next attempt in {} seconds.", error.getMessage(), delay.toSeconds());
+		log.warn("OpAMP exchange failed ({}); next attempt in {} seconds.", Failures.describe(error), delay.toSeconds());
 		safely("onConnectFailed", () -> callbacks.onConnectFailed(error, delay));
 		return delay;
 	}
