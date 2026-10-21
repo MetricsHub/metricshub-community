@@ -90,7 +90,7 @@
 		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
 		<jdkBuildVersion>25</jdkBuildVersion>
 		<lombok.version>1.18.46</lombok.version>
-		<protobuf.version>4.29.3</protobuf.version>
+		<protobuf.version>4.36.2</protobuf.version>
 		<jacoco.version>0.8.14</jacoco.version>
 		<groovy.version>4.0.31</groovy.version>
 		<debianTagName>trixie</debianTagName>

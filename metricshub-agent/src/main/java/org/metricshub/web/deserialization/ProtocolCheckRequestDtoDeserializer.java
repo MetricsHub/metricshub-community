@@ -21,25 +21,27 @@ package org.metricshub.web.deserialization;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.uiconfig.ProtocolCheckRequestDto;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DatabindException;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
 /**
  * Deserializes {@link ProtocolCheckRequestDto} and builds typed {@link org.metricshub.engine.configuration.IConfiguration}
  * instances for the inline protocol configuration block.
  */
-public class ProtocolCheckRequestDtoDeserializer extends JsonDeserializer<ProtocolCheckRequestDto> {
+public class ProtocolCheckRequestDtoDeserializer extends ValueDeserializer<ProtocolCheckRequestDto> {
+
+	private static final com.fasterxml.jackson.databind.ObjectMapper LEGACY_OBJECT_MAPPER =
+		new com.fasterxml.jackson.databind.ObjectMapper();
 
 	@Override
-	public ProtocolCheckRequestDto deserialize(final JsonParser parser, final DeserializationContext context)
-		throws IOException {
+	public ProtocolCheckRequestDto deserialize(final JsonParser parser, final DeserializationContext context) {
 		final JsonNode root = parser.readValueAsTree();
 		final ProtocolCheckRequestDto request = new ProtocolCheckRequestDto();
 		if (root == null || root.isNull()) {
@@ -57,9 +59,20 @@ public class ProtocolCheckRequestDtoDeserializer extends JsonDeserializer<Protoc
 
 		final ExtensionManager extensionManager = resolveExtensionManager(context);
 		request.setProtocolConfig(
-			ProtocolConfigurationMaps.fromJsonNode(root.get("protocolConfig"), protocol, extensionManager)
+			ProtocolConfigurationMaps.fromJsonNode(toLegacyJsonNode(root.get("protocolConfig")), protocol, extensionManager)
 		);
 		return request;
+	}
+
+	private static com.fasterxml.jackson.databind.JsonNode toLegacyJsonNode(final JsonNode node) {
+		if (node == null) {
+			return null;
+		}
+		try {
+			return LEGACY_OBJECT_MAPPER.readTree(node.toString());
+		} catch (IOException ignored) {
+			return null;
+		}
 	}
 
 	private static ExtensionManager resolveExtensionManager(final DeserializationContext context) {
@@ -74,7 +87,7 @@ public class ProtocolCheckRequestDtoDeserializer extends JsonDeserializer<Protoc
 			if (injectable instanceof AgentContextHolder holder) {
 				return holder.getAgentContext().getExtensionManager();
 			}
-		} catch (JsonMappingException ignored) {
+		} catch (DatabindException ignored) {
 			return null;
 		}
 		return null;

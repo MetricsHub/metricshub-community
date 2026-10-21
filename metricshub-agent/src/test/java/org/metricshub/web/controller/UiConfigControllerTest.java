@@ -34,8 +34,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,9 +51,11 @@ import org.metricshub.web.service.UiConfigService;
 import org.metricshub.web.service.UiProtocolCheckService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.InjectableValues;
+import tools.jackson.databind.json.JsonMapper;
 
 class UiConfigControllerTest {
 
@@ -65,20 +65,19 @@ class UiConfigControllerTest {
 	private final ExtensionManager extensionManager = ExtensionManager.builder()
 		.withProtocolExtensions(List.of(new OsCommandExtension()))
 		.build();
-	private ObjectMapper objectMapper;
+	private JsonMapper objectMapper;
 
 	@BeforeEach
 	void setup() {
 		uiConfigService = Mockito.mock(UiConfigService.class);
 		uiProtocolCheckService = Mockito.mock(UiProtocolCheckService.class);
 		final UiConfigController controller = new UiConfigController(uiConfigService, uiProtocolCheckService);
-		objectMapper = new ObjectMapper();
 		final InjectableValues.Std injectableValues = new InjectableValues.Std();
 		injectableValues.addValue(ExtensionManager.class, extensionManager);
 		injectableValues.addValue(ExtensionManager.class.getName(), extensionManager);
-		objectMapper.setInjectableValues(injectableValues);
+		objectMapper = JsonMapper.builder().injectableValues(injectableValues).build();
 		mockMvc = MockMvcBuilders.standaloneSetup(controller)
-			.setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+			.setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
 			.build();
 	}
 

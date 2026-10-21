@@ -21,8 +21,7 @@ package org.metricshub.web.mcp.transport;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper;
+import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServer.SyncSpecification;
 import io.modelcontextprotocol.server.McpServerFeatures.SyncCompletionSpecification;
@@ -38,7 +37,6 @@ import org.springframework.ai.mcp.server.common.autoconfigure.McpServerStdioDisa
 import org.springframework.ai.mcp.server.common.autoconfigure.properties.McpServerChangeNotificationProperties;
 import org.springframework.ai.mcp.server.common.autoconfigure.properties.McpServerProperties;
 import org.springframework.ai.mcp.server.common.autoconfigure.properties.McpServerProperties.ApiType;
-import org.springframework.ai.mcp.server.common.autoconfigure.properties.McpServerSseProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -48,6 +46,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Registers the hardened legacy MCP "HTTP with SSE" transport ({@link LegacySseServerTransportProvider}).
@@ -68,7 +67,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  * </p>
  */
 @Configuration
-@EnableConfigurationProperties({ McpSseProperties.class, McpServerSseProperties.class })
+@EnableConfigurationProperties({ McpSseProperties.class, LegacySseEndpointProperties.class })
 // Same guard as the Spring AI HTTP transports: the MCP server must be enabled and not in stdio mode, otherwise the
 // Spring AI beans this configuration depends on do not exist
 @Conditional(McpServerStdioDisabledCondition.class)
@@ -87,8 +86,8 @@ public class LegacySseMcpServerConfiguration {
 	 * @return the transport provider
 	 */
 	static LegacySseServerTransportProvider createTransportProvider(
-		final ObjectMapper mcpServerObjectMapper,
-		final McpServerSseProperties sseProperties,
+		final JsonMapper mcpServerObjectMapper,
+		final LegacySseEndpointProperties sseProperties,
 		final McpSseProperties legacySseProperties
 	) {
 		return LegacySseServerTransportProvider.builder()
@@ -135,8 +134,8 @@ public class LegacySseMcpServerConfiguration {
 		 */
 		@Bean
 		LegacySseMcpServer legacySseMcpServer(
-			@Qualifier("mcpServerObjectMapper") final ObjectMapper mcpServerObjectMapper,
-			final McpServerSseProperties sseProperties,
+			@Qualifier("mcpServerJsonMapper") final JsonMapper mcpServerObjectMapper,
+			final LegacySseEndpointProperties sseProperties,
 			final McpSseProperties legacySseProperties,
 			final McpServerProperties serverProperties,
 			final McpServerChangeNotificationProperties changeNotificationProperties,
@@ -264,8 +263,8 @@ public class LegacySseMcpServerConfiguration {
 		 */
 		@Bean
 		LegacySseServerTransportProvider legacySseServerTransportProvider(
-			@Qualifier("mcpServerObjectMapper") final ObjectMapper mcpServerObjectMapper,
-			final McpServerSseProperties sseProperties,
+			@Qualifier("mcpServerJsonMapper") final JsonMapper mcpServerObjectMapper,
+			final LegacySseEndpointProperties sseProperties,
 			final McpSseProperties legacySseProperties
 		) {
 			if (!legacySseProperties.isEnabled()) {
