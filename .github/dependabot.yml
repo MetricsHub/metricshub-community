@@ -1,12 +1,48 @@
 version: 2
+
+# Private MetricsHub Maven repository (Nexus).
+# Dependabot resolves Maven artifacts from this registry in addition to Maven Central.
+# Requires the DEPENDABOT_NEXUS_USERNAME and DEPENDABOT_NEXUS_PASSWORD Dependabot secrets
+# (Settings > Secrets and variables > Dependabot), at repository or organization level.
+registries:
+  nexus-metricshub:
+    type: maven-repository
+    url: https://repo.metricshub.com/repository/maven-public/
+    username: ${{secrets.DEPENDABOT_NEXUS_USERNAME}}
+    password: ${{secrets.DEPENDABOT_NEXUS_PASSWORD}}
+    replaces-base: false
+
 updates:
 - package-ecosystem: maven
+  # The root pom.xml is the reactor: all modules are scanned from here
   directory: "/"
+  registries:
+    - nexus-metricshub
   schedule:
     interval: daily
   # ignore:
   #   - dependency-name: org.apache.maven:*
+  # Group all Maven dependency and plugin updates (all modules) into a single pull request
+  groups:
+    maven-dependencies:
+      applies-to: version-updates
+      patterns:
+        - "*"
+    maven-security:
+      applies-to: security-updates
+      patterns:
+        - "*"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
     interval: "daily"
+  # Group all GitHub Actions version updates into a single pull request
+  groups:
+    github-actions:
+      applies-to: version-updates
+      patterns:
+        - "*"
+    github-actions-security:
+      applies-to: security-updates
+      patterns:
+        - "*"

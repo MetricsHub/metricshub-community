@@ -80,7 +80,10 @@ jobs:
     - name: Check if release is different
       id: check_release
       run: |
-        if [ "${{ steps.get_release.outputs.release }}" != "$CURRENT_VERSION_SEMVER" ]; then
+        if [ -z "${{ steps.get_release.outputs.release }}" ] || [ "${{ steps.get_release.outputs.release }}" = "null" ]; then
+          echo "::warning::Unable to retrieve the latest JRE release from the Adoptium API"
+          echo "create_pr=false" >> $GITHUB_OUTPUT
+        elif [ "${{ steps.get_release.outputs.release }}" != "$CURRENT_VERSION_SEMVER" ]; then
           echo "Release ${{ steps.get_release.outputs.release }} is different from $CURRENT_VERSION_SEMVER"
           echo "NEXT_VERSION_SEMVER=${{ steps.get_release.outputs.release }}" >> $GITHUB_ENV
           NEXT_VERSION=$(echo ${{ steps.get_release.outputs.release }} | sed 's/+/_/g')
@@ -126,7 +129,7 @@ jobs:
 
     - name: Create Pull Request from ${{ env.BRANCH_NAME }} to ${{ github.event.repository.default_branch }}
       if: steps.check_release.outputs.create_pr == 'true'
-      uses: devops-infra/action-pull-request@v1.4.0
+      uses: devops-infra/action-pull-request@v1
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ env.BRANCH_NAME }}
@@ -140,3 +143,18 @@ jobs:
         label: automatic
         get_diff: true
         allow_no_diff: true
+
+    # Only the latest JRE version must be proposed: close any previous JRE pull request
+    # that is still open (not merged) and delete its branch.
+    - name: Close superseded JRE pull requests
+      if: steps.check_release.outputs.create_pr == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: |
+        gh pr list --repo "$GITHUB_REPOSITORY" --state open --base "$DEFAULT_BRANCH" --label automatic --limit 100 --json number,headRefName,title \
+          | jq -r --arg branch "$BRANCH_NAME" '.[] | select(.title | startswith("Prepare JRE ")) | select(.headRefName | startswith("release/v")) | select(.headRefName != $branch) | "\(.number) \(.headRefName)"' \
+          | while read -r number head; do
+              echo "Closing pull request #${number} (${head}), superseded by JRE ${NEXT_VERSION_SEMVER}"
+              gh pr close "$number" --repo "$GITHUB_REPOSITORY" --delete-branch --comment "Superseded by JRE **${NEXT_VERSION_SEMVER}** (branch \`${BRANCH_NAME}\`)."
+            done
