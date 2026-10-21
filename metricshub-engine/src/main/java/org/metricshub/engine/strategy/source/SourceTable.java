@@ -66,7 +66,7 @@ public class SourceTable {
 	 * The format this table carries, so computes and mappings know whether they receive rows or a raw document.
 	 */
 	@Default
-	private SourceFormat format = SourceFormat.TABLE;
+	private String format = SourceFormat.TABLE;
 
 	/**
 	 * Transform the {@link List} table to a {@link String} representation

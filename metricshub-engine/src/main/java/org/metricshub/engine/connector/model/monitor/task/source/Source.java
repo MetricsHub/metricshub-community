@@ -33,12 +33,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.function.UnaryOperator;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -117,7 +118,7 @@ public abstract class Source implements Serializable {
 	/**
 	 * The format in which the source outputs its result. {@link SourceFormat#TABLE} by default.
 	 */
-	protected SourceFormat formatAs = SourceFormat.TABLE;
+	protected String formatAs = SourceFormat.TABLE;
 
 	protected Source(
 		String type,
@@ -141,8 +142,8 @@ public abstract class Source implements Serializable {
 	 * @return the supported formats
 	 */
 	@JsonIgnore
-	public Set<SourceFormat> getSupportedFormats() {
-		return EnumSet.of(SourceFormat.TABLE);
+	public Set<String> getSupportedFormats() {
+		return Set.of(SourceFormat.TABLE);
 	}
 
 	/**
@@ -153,21 +154,19 @@ public abstract class Source implements Serializable {
 	 */
 	@JsonSetter(nulls = SKIP)
 	public void setFormatAs(final String value) {
-		final Set<SourceFormat> supportedFormats = getSupportedFormats();
-		formatAs = supportedFormats
-			.stream()
-			.filter(format -> format.name().equalsIgnoreCase(value.trim()))
-			.findFirst()
-			.orElseThrow(() ->
-				new IllegalArgumentException(
-					String.format(
-						"Source %s: formatAs '%s' is not supported. Supported formats: %s.",
-						key,
-						value,
-						supportedFormats
-					)
+		final String format = value.trim().toLowerCase(Locale.ROOT);
+		final Set<String> supportedFormats = getSupportedFormats();
+		if (!supportedFormats.contains(format)) {
+			throw new IllegalArgumentException(
+				String.format(
+					"Source %s: formatAs '%s' is not supported. Supported formats: %s.",
+					key,
+					value,
+					new TreeSet<>(supportedFormats)
 				)
 			);
+		}
+		formatAs = format;
 	}
 
 	/**

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
@@ -56,8 +55,8 @@ class FormatAsDeserializerTest extends DeserializerTest {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Set<SourceFormat> getSupportedFormats() {
-				return EnumSet.of(SourceFormat.TABLE, SourceFormat.TEXT);
+			public Set<String> getSupportedFormats() {
+				return Set.of(SourceFormat.TABLE, SourceFormat.TEXT);
 			}
 		};
 		source.setValue("testValue");

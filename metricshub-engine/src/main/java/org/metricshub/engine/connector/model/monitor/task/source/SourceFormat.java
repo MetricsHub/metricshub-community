@@ -21,21 +21,23 @@ package org.metricshub.engine.connector.model.monitor.task.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Locale;
-
 /**
- * The format in which a source outputs its result. Every source outputs a {@link #TABLE} by default.
+ * The names of the formats in which a source can output its result, as written in connectors (<code>formatAs</code>).
+ * Formats are plain strings: the engine passes them through without having to know every one of them.
  */
-public enum SourceFormat {
-	/** Rows in {@code SourceTable.table}. */
-	TABLE,
-	/** A raw string in {@code SourceTable.rawData}. */
-	TEXT,
-	/** The file source per-file JSON object. */
-	FILES;
+public final class SourceFormat {
 
-	@Override
-	public String toString() {
-		return name().toLowerCase(Locale.ROOT);
-	}
+	/** Rows in {@code SourceTable.table}. The default for every source. */
+	public static final String TABLE = "table";
+
+	/** A raw string in {@code SourceTable.rawData}. */
+	public static final String TEXT = "text";
+
+	/** The file source per-file JSON object. */
+	public static final String FILES = "files";
+
+	/** An object. */
+	public static final String OBJECT = "object";
+
+	private SourceFormat() {}
 }
