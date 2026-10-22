@@ -156,6 +156,17 @@ if [ "$INSTALL_RC" -ne 0 ]; then
 fi
 
 # 4. Start the (newly installed) service and wait for it to become active.
+# Both editions ship as the "metricshub" package, so installing the other edition is an upgrade
+# that replaces this unit with its own: follow it (same discovery as ServiceNameResolver)
+if [ ! -e "/lib/systemd/system/$SERVICE" ] && [ ! -e "/etc/systemd/system/$SERVICE" ]; then
+	for unit in /lib/systemd/system/metricshub-*-service.service /etc/systemd/system/metricshub-*-service.service; do
+		if [ -e "$unit" ]; then
+			log "$SERVICE was removed by the installation (edition switch); using $(basename "$unit")"
+			SERVICE=$(basename "$unit")
+			break
+		fi
+	done
+fi
 systemctl start "$SERVICE" >>"$LOG" 2>&1 || true
 i=0
 while [ "$i" -lt 60 ]; do
