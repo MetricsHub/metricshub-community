@@ -40,7 +40,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.TextTableHelper;
-import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
@@ -199,31 +198,7 @@ public class SourceProcessor implements ISourceProcessor {
 	@WithSpan("Source IPMI Exec")
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") final IpmiSource ipmiSource) {
-		final String hostname = telemetryManager.getHostname();
-
-		if (ipmiSource == null) {
-			log.error("Hostname {} - IPMI Source cannot be null, the IPMI operation will return an empty result.", hostname);
-			return SourceTable.empty();
-		}
-
-		final DeviceKind hostType = telemetryManager.getHostConfiguration().getHostType();
-
-		if (
-			DeviceKind.WINDOWS.equals(hostType) ||
-			DeviceKind.LINUX.equals(hostType) ||
-			DeviceKind.SOLARIS.equals(hostType) ||
-			DeviceKind.OOB.equals(hostType)
-		) {
-			return processSourceThroughExtension(ipmiSource);
-		}
-
-		log.info(
-			"Hostname {} - Failed to process IPMI source. {} is an unsupported OS for IPMI. Returning an empty table.",
-			hostname,
-			hostType.name()
-		);
-
-		return SourceTable.empty();
+		return processSourceThroughExtension(ipmiSource);
 	}
 
 	@WithSpan("Source OS Command Exec")
