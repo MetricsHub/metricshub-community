@@ -42,7 +42,8 @@ public class ProtocolCheckRequestDtoDeserializer extends ValueDeserializer<Proto
 		new com.fasterxml.jackson.databind.ObjectMapper();
 
 	@Override
-	public ProtocolCheckRequestDto deserialize(final JsonParser parser, final DeserializationContext context) {
+	public ProtocolCheckRequestDto deserialize(final JsonParser parser, final DeserializationContext context)
+		throws DatabindException {
 		final JsonNode root = parser.readValueAsTree();
 		final ProtocolCheckRequestDto request = new ProtocolCheckRequestDto();
 		if (root == null || root.isNull()) {
@@ -51,32 +52,33 @@ public class ProtocolCheckRequestDtoDeserializer extends ValueDeserializer<Proto
 
 		// Resolve ${env::NAME} expressions like AgentContext does at configuration load time, so the
 		// inline check targets the same hostname and credentials as the saved configuration.
-		new EnvironmentProcessor().process(root);
+		final com.fasterxml.jackson.databind.JsonNode legacyRoot = toProcessedLegacyJsonNode(root, context);
 
-		final JsonNode hostnameNode = root.get("hostname");
+		final com.fasterxml.jackson.databind.JsonNode hostnameNode = legacyRoot.get("hostname");
 		if (hostnameNode != null && !hostnameNode.isNull()) {
 			request.setHostname(hostnameNode.asText());
 		}
 
-		final JsonNode protocolNode = root.get("protocol");
+		final com.fasterxml.jackson.databind.JsonNode protocolNode = legacyRoot.get("protocol");
 		final String protocol = protocolNode != null && !protocolNode.isNull() ? protocolNode.asText() : null;
 		request.setProtocol(protocol);
 
 		final ExtensionManager extensionManager = resolveExtensionManager(context);
 		request.setProtocolConfig(
-			ProtocolConfigurationMaps.fromJsonNode(toLegacyJsonNode(root.get("protocolConfig")), protocol, extensionManager)
+			ProtocolConfigurationMaps.fromJsonNode(legacyRoot.get("protocolConfig"), protocol, extensionManager)
 		);
 		return request;
 	}
 
-	private static com.fasterxml.jackson.databind.JsonNode toLegacyJsonNode(final JsonNode node) {
-		if (node == null) {
-			return null;
-		}
+	private static com.fasterxml.jackson.databind.JsonNode toProcessedLegacyJsonNode(
+		final JsonNode node,
+		final DeserializationContext context
+	) throws DatabindException {
 		try {
-			return LEGACY_OBJECT_MAPPER.readTree(node.toString());
-		} catch (IOException ignored) {
-			return null;
+			final com.fasterxml.jackson.databind.JsonNode legacyNode = LEGACY_OBJECT_MAPPER.readTree(node.toString());
+			return new EnvironmentProcessor().process(legacyNode);
+		} catch (IOException exception) {
+			throw DatabindException.from(context, "Unable to process protocol check request", exception);
 		}
 	}
 
