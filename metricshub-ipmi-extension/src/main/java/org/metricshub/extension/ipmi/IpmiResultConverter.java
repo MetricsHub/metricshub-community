@@ -286,23 +286,9 @@ public final class IpmiResultConverter {
 		final double value = sensor.reading().getAsDouble();
 
 		return switch (unit) {
-			case DegreesC, DegreesF, DegreesK -> {
-				final DoubleUnaryOperator toCelsius =
-					unit == SensorUnit.DegreesF
-						? FAHRENHEIT_TO_CELSIUS
-						: unit == SensorUnit.DegreesK
-							? KELVIN_TO_CELSIUS
-							: IDENTITY;
-				yield line(
-					"Temperature",
-					id,
-					name,
-					entity,
-					toCelsius.applyAsDouble(value),
-					threshold(toCelsius, sensor.upperNonCritical()),
-					threshold(toCelsius, sensor.upperCritical(), sensor.upperNonRecoverable())
-				);
-			}
+			case DegreesC -> temperatureLine(sensor, id, name, entity, value, IDENTITY);
+			case DegreesF -> temperatureLine(sensor, id, name, entity, value, FAHRENHEIT_TO_CELSIUS);
+			case DegreesK -> temperatureLine(sensor, id, name, entity, value, KELVIN_TO_CELSIUS);
 			case Volts -> line(
 				"Voltage",
 				id,
@@ -326,6 +312,29 @@ public final class IpmiResultConverter {
 			case Joules -> line("Energy", id, name, entity, value);
 			default -> null;
 		};
+	}
+
+	/**
+	 * @param toCelsius The conversion of the reading and the thresholds to degrees Celsius
+	 * @return the temperature line, in degrees Celsius
+	 */
+	private static String temperatureLine(
+		final Sensor sensor,
+		final String id,
+		final String name,
+		final String entity,
+		final double value,
+		final DoubleUnaryOperator toCelsius
+	) {
+		return line(
+			"Temperature",
+			id,
+			name,
+			entity,
+			toCelsius.applyAsDouble(value),
+			threshold(toCelsius, sensor.upperNonCritical()),
+			threshold(toCelsius, sensor.upperCritical(), sensor.upperNonRecoverable())
+		);
 	}
 
 	private static String line(
