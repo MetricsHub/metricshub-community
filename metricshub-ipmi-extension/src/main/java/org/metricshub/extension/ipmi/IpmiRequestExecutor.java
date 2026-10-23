@@ -115,6 +115,28 @@ public class IpmiRequestExecutor {
 	}
 
 	/**
+	 * Reads the chassis status without failing the request: the FRUs and the sensors are worth collecting from a BMC
+	 * that refuses or does not answer Get Chassis Status.
+	 *
+	 * @param hostname The host name or IP address of the BMC
+	 * @param bmc      The client of the request
+	 * @return the chassis status, or {@code null} when the BMC did not give it
+	 */
+	private static ChassisStatus chassisStatusOrNull(final String hostname, final IpmiClient bmc) {
+		try {
+			return bmc.chassisStatus();
+		} catch (IpmiClientException e) {
+			log.warn(
+				"Hostname {} - IPMI chassis status not read, the Chassis line is left out: {}",
+				hostname,
+				e.getMessage()
+			);
+			log.debug("Hostname {} - IPMI chassis status error:", hostname, e);
+			return null;
+		}
+	}
+
+	/**
 	 * Logs what ipmi-java skipped or could not read without failing the request: ipmi-java does not log.
 	 *
 	 * @param hostname The host name or IP address of the BMC
@@ -163,7 +185,7 @@ public class IpmiRequestExecutor {
 		final String result;
 		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
 			// One session for the three requests, and one walk of the SDR repository for the FRUs and the sensors
-			final ChassisStatus chassisStatus = bmc.chassisStatus();
+			final ChassisStatus chassisStatus = chassisStatusOrNull(hostname, bmc);
 			final FruList frus = bmc.frus().execute();
 			final SensorList sensors = bmc.sensors().execute();
 			logProblems(hostname, frus, sensors);
