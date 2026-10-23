@@ -39,6 +39,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.connector.model.monitor.task.source.SourceFormat;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -60,6 +61,12 @@ public class SourceTable {
 	private List<String> headers = new ArrayList<>();
 
 	private String rawData;
+
+	/**
+	 * The format this table carries, so computes and mappings know whether they receive rows or a raw document.
+	 */
+	@Default
+	private String format = SourceFormat.TABLE;
 
 	/**
 	 * Transform the {@link List} table to a {@link String} representation

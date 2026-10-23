@@ -96,15 +96,17 @@ public class SqlSource extends Source {
 
 	@Override
 	public SqlSource copy() {
-		return SqlSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.database(database)
-			.query(query)
-			.build();
+		return copyFormatAs(
+			SqlSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.database(database)
+				.query(query)
+				.build()
+		);
 	}
 
 	@Override
