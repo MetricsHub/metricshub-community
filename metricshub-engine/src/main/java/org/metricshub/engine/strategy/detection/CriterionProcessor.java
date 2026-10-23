@@ -190,27 +190,7 @@ public class CriterionProcessor {
 	 */
 	@WithSpan("Criterion IPMI Exec")
 	public CriterionTestResult process(@SpanAttribute("criterion.definition") IpmiCriterion ipmiCriterion) {
-		final DeviceKind hostType = telemetryManager.getHostConfiguration().getHostType();
-
-		if (
-			DeviceKind.WINDOWS.equals(hostType) ||
-			DeviceKind.LINUX.equals(hostType) ||
-			DeviceKind.SOLARIS.equals(hostType) ||
-			DeviceKind.OOB.equals(hostType)
-		) {
-			return processCriterionThroughExtension(ipmiCriterion);
-		}
-
-		return CriterionTestResult.builder()
-			.message(
-				String.format(
-					"Hostname %s - Failed to perform IPMI detection. %s is an unsupported OS for IPMI.",
-					telemetryManager.getHostname(),
-					hostType.name()
-				)
-			)
-			.success(false)
-			.build();
+		return processCriterionThroughExtension(ipmiCriterion);
 	}
 
 	/**

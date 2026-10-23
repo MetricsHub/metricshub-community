@@ -44,8 +44,6 @@ import lombok.NonNull;
 public class HostProperties {
 
 	private boolean isLocalhost;
-	private String ipmitoolCommand;
-	private int ipmiExecutionCount;
 
 	@Default
 	private Set<String> possibleWmiNamespaces = new TreeSet<>();

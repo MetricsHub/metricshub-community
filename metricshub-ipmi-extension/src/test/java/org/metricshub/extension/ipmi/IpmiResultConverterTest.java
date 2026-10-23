@@ -624,7 +624,7 @@ public class IpmiResultConverterTest {
 
 		List<Fru> frus = buildSystemBoardFrus();
 
-		String result = IpmiResultConverter.convertResult(frus, sensors);
+		String result = IpmiResultConverter.convertResult(null, frus, sensors);
 		String expected =
 			"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
 			"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected\n" +
@@ -633,6 +633,38 @@ public class IpmiResultConverterTest {
 			"Temperature;0001;Ambient Temp;Front Panel Board 1;22.0;38;41";
 
 		assertEquals(expected, result);
+	}
+
+	@Test
+	void testConvertResultChassisLine() {
+		GetChassisStatusResponseData data = new GetChassisStatusResponseData();
+		// Powered on, power fault, restore policy 01b = PowerRestored
+		data.setCurrentPowerState((byte) 0x29);
+		// AC failed, IPMI command
+		data.setLastPowerEvent((byte) 0x11);
+		// Identify supported and off, cooling fault, intrusion
+		data.setMiscChassisState((byte) 0x49);
+		assertEquals(
+			"Chassis;1;1;0;0;0;1;0;1;0;PowerRestored;Off;AC_FAILED|IPMI_COMMAND\n" +
+				"FRU;IBM;System x3650 M2;KD9098C - 794722G",
+			IpmiResultConverter.convertResult(
+				IpmiClientResults.chassisStatus(data),
+				buildSystemBoardFrus(),
+				Collections.emptyList()
+			)
+		);
+
+		// No identify support, no last power event
+		data.setLastPowerEvent((byte) 0);
+		data.setMiscChassisState((byte) 0);
+		assertEquals(
+			"Chassis;1;1;0;0;0;0;0;0;0;PowerRestored;;",
+			IpmiResultConverter.convertResult(
+				IpmiClientResults.chassisStatus(data),
+				Collections.emptyList(),
+				Collections.emptyList()
+			)
+		);
 	}
 
 	/**
