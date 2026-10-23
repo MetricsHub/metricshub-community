@@ -12,15 +12,27 @@
 	<description>MetricsHub Monitoring Agent</description>
 
 	<properties>
-		<log4j2.version>2.25.4</log4j2.version>
+		<log4j2.version>2.26.1</log4j2.version>
 		<!-- OpenTelemetry Javaagent location -->
 		<otelJavaAgentUrl>https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${openTelemetryVersion}/opentelemetry-javaagent.jar</otelJavaAgentUrl>
 		<jjwt.version>0.13.0</jjwt.version>
-		<spring.boot.version>3.5.8</spring.boot.version>
-		<spring.ai.version>1.1.2</spring.ai.version>
-		<springdoc.version>2.8.17</springdoc.version>
+		<spring.boot.version>4.1.1</spring.boot.version>
+		<spring.ai.version>2.0.1</spring.ai.version>
+		<springdoc.version>3.1.1</springdoc.version>
 		<openai-java.version>4.34.0</openai-java.version>
+		<victools.version>5.0.0</victools.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- Keep Springdoc's Spring Boot transitive modules aligned with the selected Boot patch release. -->
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-web-server</artifactId>
+				<version>${spring.boot.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 
@@ -124,15 +136,32 @@
 			<version>${openai-java.version}</version>
 		</dependency>
 
+		<!-- Spring AI 2 requires the Jackson 3-compatible VicTools 5 line. -->
+		<dependency>
+			<groupId>com.github.victools</groupId>
+			<artifactId>jsonschema-generator</artifactId>
+			<version>${victools.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.victools</groupId>
+			<artifactId>jsonschema-module-jackson</artifactId>
+			<version>${victools.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.victools</groupId>
+			<artifactId>jsonschema-module-swagger-2</artifactId>
+			<version>${victools.version}</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
-			<version>5.6.1</version>
+			<version>5.6.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents.core5</groupId>
 			<artifactId>httpcore5</artifactId>
-			<version>5.4</version>
+			<version>5.4.4</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.httpcomponents.core5</groupId>
@@ -149,6 +178,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 			<version>${spring.boot.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -211,12 +246,6 @@
 			<scope>test</scope>
 		</dependency>
 
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>metricshub-engine</artifactId>
-			<version>${project.version}</version>
-			<scope>test</scope>
-		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-programmable-configuration-extension</artifactId>

@@ -13,7 +13,7 @@ import org.metricshub.web.security.ApiKeyAuthFilter;
 import org.metricshub.web.security.ReadOnlyAccessFilter;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.service.UserService;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.mock.env.MockEnvironment;
 
 class SecurityConfigTest {

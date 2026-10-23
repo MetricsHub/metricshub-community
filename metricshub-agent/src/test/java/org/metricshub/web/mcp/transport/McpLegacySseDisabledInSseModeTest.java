@@ -1,9 +1,9 @@
 package org.metricshub.web.mcp.transport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.modelcontextprotocol.server.transport.WebMvcSseServerTransportProvider;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -47,8 +47,8 @@ class McpLegacySseDisabledInSseModeTest {
 			McpServerTransportProvider.class
 		);
 		assertEquals(1, providers.size(), "Exactly one transport provider is expected: " + providers.keySet());
-		assertTrue(providers.values().iterator().next() instanceof LegacySseServerTransportProvider);
-		assertTrue(applicationContext.getBeansOfType(WebMvcSseServerTransportProvider.class).isEmpty());
+		assertInstanceOf(LegacySseServerTransportProvider.class, providers.values().iterator().next());
+		assertTrue(providers.values().stream().allMatch(LegacySseServerTransportProvider.class::isInstance));
 	}
 
 	@Test

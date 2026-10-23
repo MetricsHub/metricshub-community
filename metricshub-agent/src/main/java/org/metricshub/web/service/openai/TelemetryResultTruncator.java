@@ -21,9 +21,6 @@ package org.metricshub.web.service.openai;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,6 +33,9 @@ import org.metricshub.web.dto.mcp.MonitorTypeItem;
 import org.metricshub.web.dto.mcp.TelemetryResult;
 import org.metricshub.web.mcp.HostToolResponse;
 import org.metricshub.web.mcp.MultiHostToolResponse;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Truncates telemetry results by progressively halving the (host, type) entry
@@ -91,13 +91,13 @@ public class TelemetryResultTruncator {
 	 *
 	 * @param response       the original multi-host response
 	 * @param maxOutputSize  maximum allowed serialized size in bytes (UTF-8); if 0, keeps summaries only
-	 * @param objectMapper   the ObjectMapper for serialization size checks
+	 * @param objectMapper   the JsonMapper for serialization size checks
 	 * @return a TruncationResult with the (possibly truncated) response, summary, and stats
 	 */
 	public static TruncationResult truncate(
 		final MultiHostToolResponse<TelemetryResult> response,
 		final long maxOutputSize,
-		final ObjectMapper objectMapper
+		final JsonMapper objectMapper
 	) {
 		// 1. If null/empty, return immediately with an empty summary
 		if (response == null || response.getHosts() == null || response.getHosts().isEmpty()) {
@@ -108,7 +108,7 @@ public class TelemetryResultTruncator {
 		final String fullJson;
 		try {
 			fullJson = objectMapper.writeValueAsString(response);
-		} catch (JsonProcessingException e) {
+		} catch (JacksonException e) {
 			return new TruncationResult(response, "Failed to serialize response", List.of(), false);
 		}
 
@@ -166,7 +166,7 @@ public class TelemetryResultTruncator {
 					if (sizeInBytes(serialized) <= maxOutputSize) {
 						break;
 					}
-				} catch (JsonProcessingException e) {
+				} catch (JacksonException e) {
 					break;
 				}
 			}

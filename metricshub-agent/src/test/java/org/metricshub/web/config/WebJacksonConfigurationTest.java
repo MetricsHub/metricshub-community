@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
@@ -35,8 +34,8 @@ import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.uiconfig.ProtocolCheckRequestDto;
-import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
+import tools.jackson.databind.json.JsonMapper;
 
 class WebJacksonConfigurationTest {
 
@@ -45,16 +44,19 @@ class WebJacksonConfigurationTest {
 		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(new OsCommandExtension()))
 			.build();
+
 		final AgentContext agentContext = mock(AgentContext.class);
 		when(agentContext.getExtensionManager()).thenReturn(extensionManager);
 
 		final AgentContextHolder agentContextHolder = new AgentContextHolder(agentContext);
-		final Jackson2ObjectMapperBuilderCustomizer customizer =
-			new WebJacksonConfiguration().extensionManagerJacksonCustomizer(agentContextHolder);
 
-		final Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
+		final JsonMapperBuilderCustomizer customizer = new WebJacksonConfiguration().extensionManagerJacksonCustomizer(
+			agentContextHolder
+		);
+
+		final JsonMapper.Builder builder = JsonMapper.builder();
 		customizer.customize(builder);
-		final ObjectMapper objectMapper = builder.build();
+		final JsonMapper objectMapper = builder.build();
 
 		final String json = """
 			{
@@ -71,7 +73,9 @@ class WebJacksonConfigurationTest {
 
 		assertEquals("server1", request.getHostname());
 		assertEquals("ssh", request.getProtocol());
+
 		final SshConfiguration ssh = (SshConfiguration) request.getProtocolConfig().get("ssh");
+
 		assertNotNull(ssh);
 		assertEquals("admin", ssh.getUsername());
 		assertEquals(22, ssh.getPort());

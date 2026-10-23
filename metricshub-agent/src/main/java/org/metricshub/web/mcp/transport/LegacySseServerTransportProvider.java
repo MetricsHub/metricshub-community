@@ -24,6 +24,7 @@ package org.metricshub.web.mcp.transport;
 import io.modelcontextprotocol.common.McpTransportContext;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.TypeRef;
+import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.server.McpTransportContextExtractor;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -31,6 +32,7 @@ import io.modelcontextprotocol.spec.McpSchema.JSONRPCMessage;
 import io.modelcontextprotocol.spec.McpSchema.JSONRPCNotification;
 import io.modelcontextprotocol.spec.McpSchema.JSONRPCRequest;
 import io.modelcontextprotocol.spec.McpSchema.JSONRPCResponse;
+import io.modelcontextprotocol.spec.McpSchema.JSONRPCResponse.JSONRPCError;
 import io.modelcontextprotocol.spec.McpServerSession;
 import io.modelcontextprotocol.spec.McpServerTransport;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
@@ -61,6 +63,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Hardened, MetricsHub-owned fork of the MCP Java SDK 0.17.0
@@ -112,6 +115,11 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 * Default SSE endpoint path as specified by the MCP transport specification.
 	 */
 	public static final String DEFAULT_SSE_ENDPOINT = "/sse";
+
+	/**
+	 * Default endpoint path for client-to-server MCP messages.
+	 */
+	public static final String DEFAULT_MESSAGE_ENDPOINT = "/mcp/message";
 
 	/**
 	 * Default bound applied to the handling of a single JSON-RPC message.
@@ -418,13 +426,17 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 		final Optional<String> sessionIdParam = request.param(SESSION_ID);
 		if (sessionIdParam.isEmpty()) {
-			return ServerResponse.badRequest().body(new McpError("Session ID missing in message endpoint"));
+			return ServerResponse.badRequest().body(
+				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Session ID missing in message endpoint"))
+			);
 		}
 
 		final String sessionId = sessionIdParam.get();
 		final SseSession sseSession = sessions.get(sessionId);
 		if (sseSession == null) {
-			return ServerResponse.status(HttpStatus.NOT_FOUND).body(new McpError("Session not found: " + sessionId));
+			return ServerResponse.status(HttpStatus.NOT_FOUND).body(
+				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Session not found: " + sessionId))
+			);
 		}
 
 		final JSONRPCMessage message;
@@ -432,7 +444,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			message = McpSchema.deserializeJsonRpcMessage(jsonMapper, request.body(String.class));
 		} catch (IllegalArgumentException | IOException | ServletException e) {
 			log.error("Failed to deserialize the MCP message posted on SSE session {}: {}", sessionId, e.getMessage());
-			return ServerResponse.badRequest().body(new McpError("Invalid message format"));
+			return ServerResponse.badRequest().body(
+				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Invalid message format"))
+			);
 		}
 
 		if (
@@ -453,7 +467,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 					McpSchema.JSONRPC_VERSION,
 					initializeRequest.id(),
 					null,
-					new JSONRPCResponse.JSONRPCError(
+					new JSONRPCError(
 						McpSchema.ErrorCodes.INVALID_REQUEST,
 						String.format("MCP session %s already has an initialize request in progress", sseSession.id()),
 						null
@@ -566,7 +580,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			McpSchema.JSONRPC_VERSION,
 			id,
 			null,
-			new JSONRPCResponse.JSONRPCError(
+			new JSONRPCError(
 				McpSchema.ErrorCodes.INVALID_REQUEST,
 				String.format(
 					"MCP session %s is not initialized: send 'initialize' and 'notifications/initialized' before '%s'",
@@ -635,7 +649,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 					McpSchema.JSONRPC_VERSION,
 					id,
 					null,
-					new JSONRPCResponse.JSONRPCError(
+					new JSONRPCError(
 						McpSchema.ErrorCodes.INTERNAL_ERROR,
 						String.format("MCP message '%s' did not complete within %s", method, messageTimeout),
 						null
@@ -650,7 +664,9 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				sseSession.id(),
 				e.getMessage()
 			);
-			return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new McpError(e.getMessage()));
+			return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INTERNAL_ERROR, e.getMessage()))
+			);
 		}
 	}
 
@@ -667,7 +683,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(jsonMapper.writeValueAsString(response));
 		} catch (IOException e) {
-			return ServerResponse.status(status).body(new McpError(response.error().message()));
+			return ServerResponse.status(status).body(new McpError(response.error()));
 		}
 	}
 
@@ -1285,7 +1301,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				throw new IllegalStateException("MessageEndpoint must be set");
 			}
 			return new LegacySseServerTransportProvider(
-				jsonMapper == null ? McpJsonMapper.getDefault() : jsonMapper,
+				jsonMapper == null ? new JacksonMcpJsonMapper(JsonMapper.builder().build()) : jsonMapper,
 				baseUrl,
 				messageEndpoint,
 				sseEndpoint,
