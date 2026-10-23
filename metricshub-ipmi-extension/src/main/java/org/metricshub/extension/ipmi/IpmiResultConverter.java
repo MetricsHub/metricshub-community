@@ -82,20 +82,25 @@ public final class IpmiResultConverter {
 	private IpmiResultConverter() {}
 
 	/**
-	 * Converts the FRUs and the sensors of a BMC to the text format: the FRU lines, then the device state lines, then
-	 * the reading lines.
+	 * Converts the chassis status, the FRUs and the sensors of a BMC to the text format: the chassis line, then the
+	 * FRU lines, then the device state lines, then the reading lines.
 	 *
-	 * @param frus    The FRUs read from the BMC
-	 * @param sensors The sensors read from the BMC
+	 * @param chassisStatus The chassis status read from the BMC, {@code null} to leave the chassis line out
+	 * @param frus          The FRUs read from the BMC
+	 * @param sensors       The sensors read from the BMC
 	 * @return the lines, separated with {@code \n}
 	 */
-	public static String convertResult(final List<Fru> frus, final List<Sensor> sensors) {
+	public static String convertResult(
+		final ChassisStatus chassisStatus,
+		final List<Fru> frus,
+		final List<Sensor> sensors
+	) {
 		final Map<String, FruDevice> frusByEntity = new HashMap<>();
 		final List<String> fruLines = fruLines(frus, frusByEntity);
 		final Collection<String> stateLines = stateLines(sensors, frusByEntity);
 		final Stream<String> readingLines = sensors.stream().map(IpmiResultConverter::readingLine).filter(Objects::nonNull);
 
-		return Stream.of(fruLines.stream(), stateLines.stream(), readingLines)
+		return Stream.of(chassisLine(chassisStatus), fruLines.stream(), stateLines.stream(), readingLines)
 			.flatMap(s -> s)
 			.collect(Collectors.joining("\n"));
 	}
@@ -111,6 +116,44 @@ public final class IpmiResultConverter {
 			return null;
 		}
 		return "System power state is " + (chassisStatus.powerOn() ? "up" : "down");
+	}
+
+	/**
+	 * Builds the chassis line of the source text:
+	 * {@code Chassis;$powerOn;$powerFault;$powerOverload;$interlock;$powerControlFault;$coolingFault;$driveFault;
+	 * $intrusion;$frontPanelLockout;$powerRestorePolicy;$identifyState;$lastPowerEvents}. The flags are {@code 1} or
+	 * {@code 0}, the identify state is empty when the BMC does not support it, and the last power events are
+	 * separated with {@code |}.
+	 *
+	 * @param status The chassis status, {@code null} when it was not read
+	 * @return the line, or an empty stream for a null status
+	 */
+	private static Stream<String> chassisLine(final ChassisStatus status) {
+		if (status == null) {
+			return Stream.empty();
+		}
+		return Stream.of(
+			String.join(
+				";",
+				"Chassis",
+				flag(status.powerOn()),
+				flag(status.powerFault()),
+				flag(status.powerOverload()),
+				flag(status.interlock()),
+				flag(status.powerControlFault()),
+				flag(status.coolingFault()),
+				flag(status.driveFault()),
+				flag(status.intrusion()),
+				flag(status.frontPanelLockout()),
+				String.valueOf(status.powerRestorePolicy()),
+				status.identifyState().map(Enum::name).orElse(EMPTY),
+				status.lastPowerEvents().stream().map(Enum::name).collect(Collectors.joining("|"))
+			)
+		);
+	}
+
+	private static String flag(final boolean set) {
+		return set ? "1" : "0";
 	}
 
 	/**

@@ -29,6 +29,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.FruList;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientException;
@@ -138,7 +139,7 @@ public class IpmiRequestExecutor {
 	 *
 	 * @param hostname          The host for which the {@link IpmiConfiguration} is set.
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance containing the required fields for IPMI requests.
-	 * @return A string containing information about FRUs, sensor states, and readings.
+	 * @return A string containing the chassis status, the FRUs, the sensor states and the readings.
 	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
 	@WithSpan("IPMI Sensors")
@@ -161,11 +162,12 @@ public class IpmiRequestExecutor {
 
 		final String result;
 		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
-			// One session, and one walk of the SDR repository for both
+			// One session for the three requests, and one walk of the SDR repository for the FRUs and the sensors
+			final ChassisStatus chassisStatus = bmc.chassisStatus();
 			final FruList frus = bmc.frus().execute();
 			final SensorList sensors = bmc.sensors().execute();
 			logProblems(hostname, frus, sensors);
-			result = IpmiResultConverter.convertResult(frus, sensors);
+			result = IpmiResultConverter.convertResult(chassisStatus, frus, sensors);
 		}
 
 		final long responseTime = System.currentTimeMillis() - startTime;

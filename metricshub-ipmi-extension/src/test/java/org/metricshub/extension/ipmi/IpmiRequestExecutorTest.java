@@ -70,9 +70,13 @@ class IpmiRequestExecutorTest {
 			IpmiClientResults.sensorList(IpmiResultConverterTest.buildSensors(), "OEM record")
 		);
 		when(bmc.sensors()).thenReturn(sensorsRequest);
+		when(bmc.chassisStatus()).thenReturn(
+			IpmiClientResults.chassisStatus(IpmiResultConverterTest.buildChassisStatusResponseData(1))
+		);
 
 		assertEquals(
-			"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
+			"Chassis;1;0;0;0;0;0;0;0;0;PoweredOff;;\n" +
+				"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
 				"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected\n" +
 				"Battery;1;Battery 1;;;;Battery 1=Transition to OK\n" +
 				"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present\n" +
