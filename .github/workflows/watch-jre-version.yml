@@ -126,7 +126,7 @@ jobs:
 
     - name: Create Pull Request from ${{ env.BRANCH_NAME }} to ${{ github.event.repository.default_branch }}
       if: steps.check_release.outputs.create_pr == 'true'
-      uses: devops-infra/action-pull-request@v1.4.0
+      uses: devops-infra/action-pull-request@v1
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ env.BRANCH_NAME }}
@@ -140,3 +140,20 @@ jobs:
         label: automatic
         get_diff: true
         allow_no_diff: true
+
+    # Only the latest JRE version must be proposed: close the previous JRE pull requests that are still open
+    # (and delete their branches) so that version updates do not accumulate.
+    - name: Close superseded JRE Pull Requests
+      if: steps.check_release.outputs.create_pr == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        new_pr_url=$(gh pr list --head "$BRANCH_NAME" --state open --json url --jq '.[0].url // ""')
+        gh pr list --state open --limit 200 --json number,headRefName,title --jq '.[] | select(.title | startswith("Prepare JRE ")) | select(.headRefName | startswith("release/v")) | "\(.number) \(.headRefName)"' |
+        while read -r pr_number pr_branch; do
+          if [ "$pr_branch" = "$BRANCH_NAME" ]; then
+            continue
+          fi
+          echo "Closing pull request #${pr_number} (${pr_branch}), superseded by JRE ${NEXT_VERSION_SEMVER}"
+          gh pr close "$pr_number" --delete-branch --comment "Superseded by JRE ${NEXT_VERSION_SEMVER} ${new_pr_url}"
+        done
