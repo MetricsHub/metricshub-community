@@ -55,6 +55,18 @@ public class AbstractEmulationExecutor {
 	}
 
 	/**
+	 * Reads a recorded response file, with CRLF line endings converted to LF, so that a replay gives
+	 * the same result whether the file was checked out with LF or CRLF.
+	 *
+	 * @param responseFile the response file to read
+	 * @return the file content with LF line endings
+	 * @throws IOException if the file cannot be read
+	 */
+	public static String readResponseFile(final Path responseFile) throws IOException {
+		return Files.readString(responseFile, StandardCharsets.UTF_8).replace("\r\n", "\n");
+	}
+
+	/**
 	 * Replays a response from an emulation directory using a common execution flow.
 	 *
 	 * @param <I> emulation image type
@@ -130,7 +142,7 @@ public class AbstractEmulationExecutor {
 			return operations.emptyResult();
 		}
 		try {
-			final String content = Files.readString(responseFile, StandardCharsets.UTF_8);
+			final String content = readResponseFile(responseFile);
 			return operations.mapResponse(content);
 		} catch (Exception e) {
 			log.error(
