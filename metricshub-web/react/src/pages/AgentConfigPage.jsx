@@ -45,7 +45,7 @@ const AgentConfigPage = () => {
 
 	if (loading) {
 		return (
-			<Box display="flex" justifyContent="center" alignItems="center" p={6}>
+			<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 6 }}>
 				<CircularProgress />
 			</Box>
 		);
@@ -53,7 +53,7 @@ const AgentConfigPage = () => {
 
 	if (error) {
 		return (
-			<Box p={3}>
+			<Box sx={{ p: 3 }}>
 				<Alert severity="error">{error}</Alert>
 			</Box>
 		);

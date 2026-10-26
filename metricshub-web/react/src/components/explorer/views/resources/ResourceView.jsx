@@ -172,7 +172,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 
 	const resourceTitle = React.useMemo(
 		() => (
-			<Box component="span" display="flex" alignItems="center" gap={1}>
+			<Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 				{resource?.id || resource?.key || resource?.name || ""}
 				{failedConnectors.length > 0 && (
 					<HoverInfo
@@ -207,7 +207,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
-			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
+			<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
 				<CircularProgress />
 			</Box>
 		);
@@ -215,7 +215,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 
 	if ((error && !hierarchy) || (resourceError && !currentResource)) {
 		return (
-			<Box p={2}>
+			<Box sx={{ p: 2 }}>
 				<Typography color="error">{error}</Typography>
 			</Box>
 		);
@@ -223,7 +223,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 
 	if (!hierarchy && !currentResource) {
 		return (
-			<Box p={2}>
+			<Box sx={{ p: 2 }}>
 				<Typography>No data available.</Typography>
 			</Box>
 		);
@@ -231,16 +231,16 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 
 	if (!resource) {
 		return (
-			<Box p={2}>
+			<Box sx={{ p: 2 }}>
 				<Typography>No resource selected.</Typography>
 			</Box>
 		);
 	}
 
 	return (
-		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
+		<Box ref={rootRef} sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
 			<EntityHeader title={resourceTitle} iconType="resource" attributes={resource.attributes}>
-				<Box display="flex" gap={1}>
+				<Box sx={{ display: "flex", gap: 1 }}>
 					<Button
 						size="small"
 						variant="outlined"
