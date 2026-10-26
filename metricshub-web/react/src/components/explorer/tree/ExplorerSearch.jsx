@@ -109,14 +109,16 @@ const ExplorerSearch = () => {
 					{...params}
 					label="Search..."
 					size="small"
-					InputProps={{
-						...params.InputProps,
-						endAdornment: (
-							<React.Fragment>
-								{loading ? <CircularProgress color="inherit" size={20} /> : null}
-								{params.InputProps.endAdornment}
-							</React.Fragment>
-						),
+					slotProps={{
+						input: {
+							...(params.slotProps?.input ?? {}),
+							endAdornment: (
+								<React.Fragment>
+									{loading ? <CircularProgress color="inherit" size={20} /> : null}
+									{params.slotProps?.input?.endAdornment}
+								</React.Fragment>
+							),
+						},
 					}}
 				/>
 			)}
