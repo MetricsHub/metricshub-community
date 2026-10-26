@@ -22,7 +22,6 @@ package org.metricshub.extension.emulation.http;
  */
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -37,6 +36,7 @@ import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
@@ -210,7 +210,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		}
 
 		try {
-			return Files.readString(responseFile, StandardCharsets.UTF_8);
+			return AbstractEmulationExecutor.readResponseFile(responseFile);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to read HTTP emulation response file {}. Error: {}",
