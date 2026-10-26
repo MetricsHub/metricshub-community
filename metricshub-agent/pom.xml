@@ -12,7 +12,7 @@
 	<description>MetricsHub Monitoring Agent</description>
 
 	<properties>
-		<log4j2.version>2.25.4</log4j2.version>
+		<log4j2.version>2.25.5</log4j2.version>
 		<!-- OpenTelemetry Javaagent location -->
 		<otelJavaAgentUrl>https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${openTelemetryVersion}/opentelemetry-javaagent.jar</otelJavaAgentUrl>
 		<jjwt.version>0.13.0</jjwt.version>
@@ -127,12 +127,12 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
-			<version>5.6.1</version>
+			<version>5.6.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents.core5</groupId>
 			<artifactId>httpcore5</artifactId>
-			<version>5.4</version>
+			<version>5.4.3</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.httpcomponents.core5</groupId>
