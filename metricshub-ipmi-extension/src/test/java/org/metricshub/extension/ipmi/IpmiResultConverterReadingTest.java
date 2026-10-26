@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
+import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.IpmiClientResults;
 import org.metricshub.ipmi.core.coding.commands.sdr.GetSensorReadingResponseData;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.EntityId;
@@ -11,7 +12,8 @@ import org.metricshub.ipmi.core.coding.commands.sdr.record.FullSensorRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.SensorUnit;
 
 /**
- * The reading rows of {@link IpmiResultConverter#convertResult(java.util.List, java.util.List)}: when a reading is
+ * The reading rows of {@link IpmiResultConverter#convertResult(ChassisStatus, java.util.List, java.util.List)}: when
+ * a reading is
  * reported and which thresholds go with it.
  */
 class IpmiResultConverterReadingTest {
@@ -38,6 +40,7 @@ class IpmiResultConverterReadingTest {
 
 	private static String convert(FullSensorRecord record, GetSensorReadingResponseData data) {
 		return IpmiResultConverter.convertResult(
+			null,
 			Collections.emptyList(),
 			Collections.singletonList(IpmiClientResults.sensor(record, data))
 		);

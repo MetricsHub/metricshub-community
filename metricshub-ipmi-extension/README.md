@@ -14,9 +14,10 @@ or `System power state is down`.
 
 ## Text output format
 
-The IPMI source receives three groups of lines, in this order:
+The IPMI source receives four groups of lines, in this order:
 
 ```text
+Chassis;1;0;0;0;0;0;0;0;0;PowerRestored;Off;
 FRU;LENOVO;RD350;S4M00000 - 00000000000001
 FRU;LITEON;PS-2451-6L-LF;0000
 Power Unit;3;Power Unit 3;;;;PSU Redundancy=Fully Redundant
@@ -28,6 +29,22 @@ PowerConsumption;000d;System Power;Power Unit 2;92.0
 Fan;0014;Fan 1;Fan Device 1;6600.0;1600;
 Voltage;0022;System 3.3V;System Board 1;3380.0;3040;3560
 ```
+
+### Chassis line
+
+```text
+Chassis;$powerOn;$powerFault;$powerOverload;$interlock;$powerControlFault;$coolingFault;$driveFault;$intrusion;$frontPanelLockout;$powerRestorePolicy;$identifyState;$lastPowerEvents
+```
+
+One line, first, from the Get Chassis Status reply (IPMI 2.0 section 28.2):
+
+| Field                                                                                                                                             | Content                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$powerOn`                                                                                                                                        | `1` when the system is powered on, `0` otherwise                                                                                             |
+| `$powerFault`, `$powerOverload`, `$interlock`, `$powerControlFault`, `$coolingFault`, `$driveFault`, `$intrusion`, `$frontPanelLockout` | `1` when the BMC reports the condition, `0` otherwise                                                                                        |
+| `$powerRestorePolicy`                                                                                                                             | What the system does when AC power returns: `PoweredOff`, `PowerRestored` (its previous state), `PoweredUp` or `Unknown`                    |
+| `$identifyState`                                                                                                                                  | The chassis identify LED: `Off`, `TemporaryOn` or `IndefiniteOn`; empty when the BMC does not report it                                    |
+| `$lastPowerEvents`                                                                                                                                | The causes of the last power-down or power-up, separated with `\|`: `AC_FAILED`, `POWER_OVERLOAD`, `INTERLOCK`, `POWER_FAULT`, `IPMI_COMMAND`; empty when none |
 
 ### FRU lines
 

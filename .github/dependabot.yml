@@ -6,7 +6,28 @@ updates:
     interval: daily
   # ignore:
   #   - dependency-name: org.apache.maven:*
+  # Group all Maven dependency updates (all modules of the reactor) into a single pull request.
+  # Dependabot keeps this pull request up to date when newer versions are released.
+  groups:
+    maven-dependencies:
+      patterns:
+        - "*"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
     interval: "daily"
+  # Group all GitHub Actions version updates into a single pull request.
+  # Workflows should reference rolling major tags (e.g. "v5") when the action publishes them.
+  groups:
+    github-actions:
+      patterns:
+        - "*"
+- package-ecosystem: npm
+  directory: "/metricshub-web/react"
+  schedule:
+    interval: daily
+  # Group all npm dependency updates of the React web project into a single pull request.
+  groups:
+    npm-dependencies:
+      patterns:
+        - "*"
