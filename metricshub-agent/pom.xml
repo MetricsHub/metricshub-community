@@ -21,11 +21,18 @@
 		<springdoc.version>3.1.1</springdoc.version>
 		<openai-java.version>4.34.0</openai-java.version>
 		<victools.version>5.0.0</victools.version>
+		<jackson3.version>3.1.8</jackson3.version>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
-			<!-- Keep Springdoc's Spring Boot transitive modules aligned with the selected Boot patch release. -->
+			<dependency>
+				<groupId>tools.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>${jackson3.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-web-server</artifactId>

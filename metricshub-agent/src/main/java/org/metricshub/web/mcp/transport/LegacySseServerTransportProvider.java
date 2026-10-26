@@ -63,6 +63,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -442,7 +443,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		final JSONRPCMessage message;
 		try {
 			message = McpSchema.deserializeJsonRpcMessage(jsonMapper, request.body(String.class));
-		} catch (IllegalArgumentException | IOException | ServletException e) {
+		} catch (IllegalArgumentException | IOException | ServletException | JacksonException e) {
 			log.error("Failed to deserialize the MCP message posted on SSE session {}: {}", sessionId, e.getMessage());
 			return ServerResponse.badRequest().body(
 				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Invalid message format"))

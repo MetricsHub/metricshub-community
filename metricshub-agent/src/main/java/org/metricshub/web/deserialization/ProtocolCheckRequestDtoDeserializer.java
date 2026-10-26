@@ -21,6 +21,7 @@ package org.metricshub.web.deserialization;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import org.metricshub.engine.connector.parser.EnvironmentProcessor;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -38,8 +39,7 @@ import tools.jackson.databind.ValueDeserializer;
  */
 public class ProtocolCheckRequestDtoDeserializer extends ValueDeserializer<ProtocolCheckRequestDto> {
 
-	private static final com.fasterxml.jackson.databind.ObjectMapper LEGACY_OBJECT_MAPPER =
-		new com.fasterxml.jackson.databind.ObjectMapper();
+	private static final ObjectMapper LEGACY_OBJECT_MAPPER = new ObjectMapper();
 
 	@Override
 	public ProtocolCheckRequestDto deserialize(final JsonParser parser, final DeserializationContext context)
