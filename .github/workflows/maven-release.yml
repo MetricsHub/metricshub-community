@@ -129,7 +129,7 @@ jobs:
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
     - name: Set up Maven settings.xml
-      uses: s4u/maven-settings-action@v4.0.0
+      uses: s4u/maven-settings-action@v4.1.0
       with:
         repositories: >-
           [

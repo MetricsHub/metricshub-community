@@ -63,5 +63,10 @@
 		"prettier": "^3.9.10",
 		"vite": "^8.3.5",
 		"vitest": "^5.0.5"
+	},
+	"overrides": {
+		"@humanfs/node": "0.17.0",
+		"@babel/core": "8.0.7",
+		"esbuild": "0.28.2"
 	}
 }
