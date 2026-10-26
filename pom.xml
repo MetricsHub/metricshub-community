@@ -345,7 +345,7 @@
 			<dependency>
 				<groupId>org.snmp4j</groupId>
 				<artifactId>snmp4j-agent</artifactId>
-				<version>3.5.0</version>
+				<version>3.9.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.commons</groupId>
