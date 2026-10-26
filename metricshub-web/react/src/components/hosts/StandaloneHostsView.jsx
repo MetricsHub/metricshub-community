@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Alert, Box, Button, Chip, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import HostsFilterBar from "./HostsFilterBar";
 import HostsResourceTable from "./HostsResourceTable";
 import { sortHostEntries } from "./hosts-filter-utils";

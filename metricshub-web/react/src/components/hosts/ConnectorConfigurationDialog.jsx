@@ -9,7 +9,7 @@ import {
 	Stack,
 	Typography,
 } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import {
 	createDefaultAdditionalConnectorEntry,
 	isAdditionalConnectorIdTaken,

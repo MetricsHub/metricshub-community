@@ -5,7 +5,7 @@ import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
 import LinkIcon from "@mui/icons-material/Link";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutlined";
 import ReplayIcon from "@mui/icons-material/Replay";
 import SecurityIcon from "@mui/icons-material/Security";
 import SettingsEthernetIcon from "@mui/icons-material/SettingsEthernet";

@@ -14,7 +14,7 @@ import {
 	Typography,
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import SaveAsOutlinedIcon from "@mui/icons-material/SaveAsOutlined";
 import NodeTypeIcons from "../explorer/tree/icons/NodeTypeIcons";
 import { useSnackbar } from "../../hooks/use-snackbar";

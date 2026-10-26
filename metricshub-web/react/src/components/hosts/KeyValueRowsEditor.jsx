@@ -12,8 +12,8 @@ import {
 import { filledInputNoLabelSx, kvEditorBorderedContainerSx } from "./guided-config-form-primitives";
 import { EXPLORER_METRIC_FONT_FAMILY } from "../../utils/metric-font";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutlined";
 
 // Stable per-row IDs so React keys don't reshuffle when the user reorders or
 // edits rows. Module-level counter; ids are not persisted.

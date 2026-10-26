@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
 import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
 import SearchIcon from "@mui/icons-material/Search";
 import { searchFieldSx } from "./guided-config-form-primitives";
