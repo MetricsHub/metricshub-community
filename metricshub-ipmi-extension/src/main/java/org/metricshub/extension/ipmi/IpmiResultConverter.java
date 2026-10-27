@@ -41,7 +41,9 @@ import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.Fru;
 import org.metricshub.ipmi.client.Sensor;
 import org.metricshub.ipmi.core.coding.commands.fru.record.BoardInfo;
+import org.metricshub.ipmi.core.coding.commands.fru.record.PiromInfo;
 import org.metricshub.ipmi.core.coding.commands.fru.record.ProductInfo;
+import org.metricshub.ipmi.core.coding.commands.fru.record.SpdInfo;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.EntityId;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.FullSensorRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.SensorUnit;
@@ -68,16 +70,20 @@ public final class IpmiResultConverter {
 	private static final DoubleUnaryOperator KELVIN_TO_CELSIUS = v -> v - 273.15;
 
 	/**
-	 * A FRU as the text output lists it: {@code FRU;$vendor;$model;$serialNumber}.
+	 * A FRU as the text output lists it: {@code FRU;$vendor;$model;$serialNumber}. The details are the trailing
+	 * columns of the device state line of its entity: {@code $memorySize;$memoryType;$cpuSpeed;$cpuInfo}, filled for a
+	 * memory module (SPD data) or a processor (Intel PIROM), empty otherwise.
 	 */
-	private record FruDevice(String vendor, String model, String serialNumber) {
+	private record FruDevice(String vendor, String model, String serialNumber, String details) {
 		@Override
 		public String toString() {
 			return "FRU;" + vendor + ";" + model + ";" + serialNumber;
 		}
 	}
 
-	private static final FruDevice NO_FRU = new FruDevice(EMPTY, EMPTY, EMPTY);
+	private static final String NO_DETAILS = ";;;";
+
+	private static final FruDevice NO_FRU = new FruDevice(EMPTY, EMPTY, EMPTY, NO_DETAILS);
 
 	private IpmiResultConverter() {}
 
@@ -170,15 +176,25 @@ public final class IpmiResultConverter {
 		final List<FruDevice> incomplete = new ArrayList<>();
 
 		for (final Fru fru : frus) {
-			// The product area when it names a manufacturer, the board area otherwise
+			// The SPD data of a memory module or the PIROM of a processor; otherwise the product area when it names a
+			// manufacturer, the board area otherwise
 			final ProductInfo product = fru.product().orElse(null);
 			final boolean fromProduct = product != null && !isBlank(product.getManufacturerName());
-			final FruDevice device = fromProduct ? fromProduct(product) : fromBoard(fru.board().orElse(null));
+			final FruDevice device = fru
+				.spd()
+				.map(spd -> fromSpd(fru, spd))
+				.or(() -> fru.pirom().map(pirom -> fromPirom(fru, pirom)))
+				.orElseGet(() -> fromProduct ? fromProduct(product) : fromBoard(fru.board().orElse(null)));
 			if (device == null) {
 				continue;
 			}
 
 			frusByEntity.put(entityKey(DeviceDescription.getDeviceType(fru.entity()), fru.entityInstance()), device);
+
+			// A FRU that names neither a vendor nor a model is not listed; its details still go to its device
+			if (isBlank(device.vendor()) && isBlank(device.model())) {
+				continue;
+			}
 
 			final EntityId entity = fru.entity();
 			if (!fromProduct || isBlank(device.model()) || isBlank(device.serialNumber())) {
@@ -199,8 +215,74 @@ public final class IpmiResultConverter {
 		return new FruDevice(
 			orEmpty(product.getManufacturerName()),
 			orEmpty(product.getProductName()),
-			serialNumber(product.getProductSerialNumber(), product.getProductModelNumber())
+			serialNumber(product.getProductSerialNumber(), product.getProductModelNumber()),
+			NO_DETAILS
 		);
+	}
+
+	/**
+	 * @param fru The memory module FRU
+	 * @param spd Its SPD data
+	 * @return the FRU: the module manufacturer, its part number and its serial number (the product or board area
+	 *         when the SPD data does not program them), with its capacity in MB and its type ({@code DDR4 RDIMM ECC})
+	 *         as details; {@code null} when it names neither a vendor nor a model
+	 */
+	private static FruDevice fromSpd(final Fru fru, final SpdInfo spd) {
+		final String type = spd.getMemoryType() + " " + spd.getModuleType() + (spd.isEcc() ? " ECC" : EMPTY);
+		return withIdentity(fru, String.join(";", positive(spd.getCapacityMegabytes()), type.trim(), EMPTY, EMPTY));
+	}
+
+	/**
+	 * @param fru   The processor FRU
+	 * @param pirom Its Processor Information ROM
+	 * @return the FRU: Intel, the S-spec and the PPIN of the processor (the product or board area when the ROM does
+	 *         not program them), with its maximum frequency in MHz and its characteristics (cores, frequencies,
+	 *         caches, TDP, part number) as details; {@code null} when it names neither a vendor nor a model
+	 */
+	private static FruDevice fromPirom(final Fru fru, final PiromInfo pirom) {
+		final List<String> info = new ArrayList<>();
+		if (pirom.getCores() > 0) {
+			info.add(pirom.getCores() + " cores" + (pirom.isHyperThreading() ? " with Hyper-Threading" : EMPTY));
+		}
+		// Either frequency may be left unprogrammed
+		final int base = pirom.getBaseFrequencyMhz();
+		final int max = pirom.getMaxFrequencyMhz();
+		if (max > base && base > 0) {
+			info.add(base + "-" + max + " MHz");
+		} else if (Math.max(base, max) > 0) {
+			info.add(Math.max(base, max) + " MHz");
+		}
+		if (pirom.getL2KilobytesPerCore() > 0) {
+			info.add("L2 " + pirom.getL2KilobytesPerCore() + " KB per core");
+		}
+		if (pirom.getL3Kilobytes() > 0) {
+			info.add("L3 " + pirom.getL3Kilobytes() + " KB");
+		}
+		if (pirom.getTdpWatts() > 0) {
+			info.add("TDP " + pirom.getTdpWatts() + " W");
+		}
+		if (!isBlank(pirom.getPartNumber())) {
+			info.add("Part number " + pirom.getPartNumber());
+		}
+		return withIdentity(fru, String.join(";", EMPTY, EMPTY, positive(Math.max(base, max)), String.join(", ", info)));
+	}
+
+	/**
+	 * @param fru     A FRU whose device returns SPD data or a PIROM
+	 * @param details The details decoded from them
+	 * @return the FRU with the manufacturer, model and serial number ipmi-java takes from its areas (the product
+	 *         area, then the board area, then the SPD data or the PIROM), empty when none names them
+	 */
+	private static FruDevice withIdentity(final Fru fru, final String details) {
+		return new FruDevice(fru.manufacturer(), fru.model(), fru.serialNumber(), details);
+	}
+
+	/**
+	 * @param value A value the ROM gives as 0 when it is not programmed
+	 * @return the value, empty for 0
+	 */
+	private static String positive(final int value) {
+		return value > 0 ? String.valueOf(value) : EMPTY;
 	}
 
 	/**
@@ -214,7 +296,8 @@ public final class IpmiResultConverter {
 		final FruDevice device = new FruDevice(
 			orEmpty(board.getBoardManufacturer()),
 			orEmpty(board.getBoardProductName()),
-			serialNumber(board.getBoardSerialNumber(), board.getBoardPartNumber())
+			serialNumber(board.getBoardSerialNumber(), board.getBoardPartNumber()),
+			NO_DETAILS
 		);
 		return isBlank(device.vendor()) && isBlank(device.model()) ? null : device;
 	}
@@ -234,14 +317,16 @@ public final class IpmiResultConverter {
 
 	/**
 	 * Builds one device state line per entity that has a sensor with an asserted state:
-	 * {@code $deviceType;$deviceId;$deviceUniqueId;$vendor;$model;$serialNumber;$states}.
+	 * {@code $deviceType;$deviceId;$deviceUniqueId;$vendor;$model;$serialNumber;$states;$memorySize;$memoryType;$cpuSpeed;$cpuInfo}.
 	 *
 	 * @param sensors      The sensors read from the BMC
 	 * @param frusByEntity The listed FRUs, by entity key
 	 * @return the device state lines, in the order the entities were first met
 	 */
 	private static Collection<String> stateLines(final List<Sensor> sensors, final Map<String, FruDevice> frusByEntity) {
-		final Map<String, String> linesByEntity = new LinkedHashMap<>();
+		// The line of each entity up to its vendor, model and serial number, then its states
+		final Map<String, String> headsByEntity = new LinkedHashMap<>();
+		final Map<String, String> statesByEntity = new HashMap<>();
 
 		for (final Sensor sensor : sensors) {
 			final String states = buildStates(sensor);
@@ -256,28 +341,33 @@ public final class IpmiResultConverter {
 			final byte instance = (byte) sensor.entityInstance();
 			final String entity = entityKey(deviceType, instance);
 
-			final String line = linesByEntity.get(entity);
-			if (line != null) {
-				linesByEntity.put(entity, line + "|" + states);
-			} else {
-				final FruDevice fru = frusByEntity.getOrDefault(entity, NO_FRU);
-				linesByEntity.put(
-					entity,
-					String.join(
-						";",
-						deviceType,
-						Byte.toString(instance),
-						entity,
-						orEmpty(fru.vendor()),
-						orEmpty(fru.model()),
-						orEmpty(fru.serialNumber()),
-						states
-					)
+			headsByEntity.computeIfAbsent(entity, key -> {
+				final FruDevice fru = frusByEntity.getOrDefault(key, NO_FRU);
+				return String.join(
+					";",
+					deviceType,
+					Byte.toString(instance),
+					key,
+					orEmpty(fru.vendor()),
+					orEmpty(fru.model()),
+					orEmpty(fru.serialNumber())
 				);
-			}
+			});
+			statesByEntity.merge(entity, states, (previous, next) -> previous + "|" + next);
 		}
 
-		return linesByEntity.values();
+		return headsByEntity
+			.entrySet()
+			.stream()
+			.map(entry ->
+				String.join(
+					";",
+					entry.getValue(),
+					statesByEntity.get(entry.getKey()),
+					frusByEntity.getOrDefault(entry.getKey(), NO_FRU).details()
+				)
+			)
+			.toList();
 	}
 
 	/**
