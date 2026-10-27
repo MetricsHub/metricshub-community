@@ -182,8 +182,8 @@ public final class IpmiResultConverter {
 			final boolean fromProduct = product != null && !isBlank(product.getManufacturerName());
 			final FruDevice device = fru
 				.spd()
-				.map(IpmiResultConverter::fromSpd)
-				.or(() -> fru.pirom().map(IpmiResultConverter::fromPirom))
+				.map(spd -> fromSpd(fru, spd))
+				.or(() -> fru.pirom().map(pirom -> fromPirom(fru, pirom)))
 				.orElseGet(() -> fromProduct ? fromProduct(product) : fromBoard(fru.board().orElse(null)));
 			if (device == null) {
 				continue;
@@ -216,36 +216,36 @@ public final class IpmiResultConverter {
 	}
 
 	/**
-	 * @param spd The SPD data of a memory module
-	 * @return the FRU: the module manufacturer, its part number and its serial number, with its capacity in MB and
-	 *         its type ({@code DDR4 RDIMM ECC}) as details
+	 * @param fru The memory module FRU
+	 * @param spd Its SPD data
+	 * @return the FRU: the module manufacturer, its part number and its serial number (the product or board area
+	 *         when the SPD data does not program them), with its capacity in MB and its type ({@code DDR4 RDIMM ECC})
+	 *         as details; {@code null} when it names neither a vendor nor a model
 	 */
-	private static FruDevice fromSpd(final SpdInfo spd) {
+	private static FruDevice fromSpd(final Fru fru, final SpdInfo spd) {
 		final String type = spd.getMemoryType() + " " + spd.getModuleType() + (spd.isEcc() ? " ECC" : EMPTY);
-		return new FruDevice(
-			orEmpty(spd.getManufacturer()),
-			orEmpty(spd.getPartNumber()),
-			orEmpty(spd.getSerialNumber()),
-			String.join(";", positive(spd.getCapacityMegabytes()), type.trim(), EMPTY, EMPTY)
-		);
+		return withIdentity(fru, String.join(";", positive(spd.getCapacityMegabytes()), type.trim(), EMPTY, EMPTY));
 	}
 
 	/**
-	 * @param pirom The Processor Information ROM of an Intel processor
-	 * @return the FRU: Intel, the S-spec and the PPIN of the processor, with its maximum frequency in MHz and its
-	 *         characteristics (cores, frequencies, caches, TDP, part number) as details
+	 * @param fru   The processor FRU
+	 * @param pirom Its Processor Information ROM
+	 * @return the FRU: Intel, the S-spec and the PPIN of the processor (the product or board area when the ROM does
+	 *         not program them), with its maximum frequency in MHz and its characteristics (cores, frequencies,
+	 *         caches, TDP, part number) as details; {@code null} when it names neither a vendor nor a model
 	 */
-	private static FruDevice fromPirom(final PiromInfo pirom) {
+	private static FruDevice fromPirom(final Fru fru, final PiromInfo pirom) {
 		final List<String> info = new ArrayList<>();
 		if (pirom.getCores() > 0) {
 			info.add(pirom.getCores() + " cores" + (pirom.isHyperThreading() ? " with Hyper-Threading" : EMPTY));
 		}
-		if (pirom.getBaseFrequencyMhz() > 0) {
-			info.add(
-				pirom.getMaxFrequencyMhz() > pirom.getBaseFrequencyMhz()
-					? pirom.getBaseFrequencyMhz() + "-" + pirom.getMaxFrequencyMhz() + " MHz"
-					: pirom.getBaseFrequencyMhz() + " MHz"
-			);
+		// Either frequency may be left unprogrammed
+		final int base = pirom.getBaseFrequencyMhz();
+		final int max = pirom.getMaxFrequencyMhz();
+		if (max > base && base > 0) {
+			info.add(base + "-" + max + " MHz");
+		} else if (Math.max(base, max) > 0) {
+			info.add(Math.max(base, max) + " MHz");
 		}
 		if (pirom.getL2KilobytesPerCore() > 0) {
 			info.add("L2 " + pirom.getL2KilobytesPerCore() + " KB per core");
@@ -259,18 +259,19 @@ public final class IpmiResultConverter {
 		if (!isBlank(pirom.getPartNumber())) {
 			info.add("Part number " + pirom.getPartNumber());
 		}
-		return new FruDevice(
-			"Intel",
-			orEmpty(pirom.getSSpec()),
-			orEmpty(pirom.getPpin()),
-			String.join(
-				";",
-				EMPTY,
-				EMPTY,
-				positive(Math.max(pirom.getBaseFrequencyMhz(), pirom.getMaxFrequencyMhz())),
-				String.join(", ", info)
-			)
-		);
+		return withIdentity(fru, String.join(";", EMPTY, EMPTY, positive(Math.max(base, max)), String.join(", ", info)));
+	}
+
+	/**
+	 * @param fru     A FRU whose device returns SPD data or a PIROM
+	 * @param details The details decoded from them
+	 * @return the FRU with the manufacturer, model and serial number ipmi-java takes from its areas (the product
+	 *         area, then the board area, then the SPD data or the PIROM), or {@code null} when none names a vendor or
+	 *         a model
+	 */
+	private static FruDevice withIdentity(final Fru fru, final String details) {
+		final FruDevice device = new FruDevice(fru.manufacturer(), fru.model(), fru.serialNumber(), details);
+		return isBlank(device.vendor()) && isBlank(device.model()) ? null : device;
 	}
 
 	/**

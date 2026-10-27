@@ -676,6 +676,57 @@ public class IpmiResultConverterTest {
 		);
 	}
 
+	@Test
+	void testConvertResultUnprogrammedSpdAndPirom() {
+		// SPD data without manufacturer, date, serial number and part number
+		byte[] blankSpd = DDR4_SPD.clone();
+		Arrays.fill(blankSpd, 320, 329, (byte) 0);
+		Arrays.fill(blankSpd, 329, 349, (byte) ' ');
+		// PIROM without base frequency: zero the P1 frequency of the core section, then fix the checksum
+		byte[] noBase = PIROM.clone();
+		int core = noBase[0x04];
+		noBase[core + 4] = 0;
+		noBase[core + 5] = 0;
+		int sum = 0;
+		for (int i = 0; i < 0x76; i++) {
+			sum += noBase[i];
+		}
+		noBase[0x76] = (byte) -sum;
+
+		// DIMM 1: blank SPD data only; DIMM 2: blank SPD data with a product area; CPU 1: PIROM without base frequency
+		FruDeviceLocatorRecord dimm1 = new FruDeviceLocatorRecord();
+		dimm1.setFruEntityId(EntityId.MemoryDevice.getCode());
+		dimm1.setFruEntityInstance(1);
+		FruDeviceLocatorRecord dimm2 = new FruDeviceLocatorRecord();
+		dimm2.setFruEntityId(EntityId.MemoryDevice.getCode());
+		dimm2.setFruEntityInstance(2);
+		FruDeviceLocatorRecord cpu1 = new FruDeviceLocatorRecord();
+		cpu1.setFruEntityId(EntityId.Processor.getCode());
+		cpu1.setFruEntityInstance(1);
+		List<Fru> frus = List.of(
+			IpmiClientResults.fru(dimm1, List.of(new SpdInfo(blankSpd, 0))),
+			IpmiClientResults.fru(dimm2, List.of(new ProductInfo(BASE_BOARD_PRODUCT_INFO, 360), new SpdInfo(blankSpd, 0))),
+			IpmiClientResults.fru(cpu1, List.of(new PiromInfo(noBase, 0)))
+		);
+
+		List<Sensor> sensors = List.of(
+			IpmiClientResults.sensor(presence(EntityId.MemoryDevice, 1, "DIMM 1"), states(1)),
+			IpmiClientResults.sensor(presence(EntityId.MemoryDevice, 2, "DIMM 2"), states(1)),
+			IpmiClientResults.sensor(presence(EntityId.Processor, 1, "CPU 1"), states(1))
+		);
+
+		// An anonymous FRU is not listed; the product area names the second one
+		assertEquals(
+			"FRU;IBM;System x3650 M2;KD9098C\n" +
+				"FRU;Intel;SR3GH;634AFBC3354D3C6D\n" +
+				"Memory Device;1;Memory Device 1;;;;DIMM 1=Device Present;;;;\n" +
+				"Memory Device;2;Memory Device 2;IBM;System x3650 M2;KD9098C;DIMM 2=Device Present;16384;DDR4 RDIMM ECC;;\n" +
+				"Processor;1;Processor 1;Intel;SR3GH;634AFBC3354D3C6D;CPU 1=Device Present;;;3000;" +
+				"8 cores with Hyper-Threading, 3000 MHz, L2 1024 KB per core, L3 11264 KB, TDP 85 W, Part number 37608DC00416530",
+			IpmiResultConverter.convertResult(null, frus, sensors)
+		);
+	}
+
 	/**
 	 * @return a presence sensor (generic event/reading type 08h) of the given entity
 	 */
