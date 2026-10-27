@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Box, IconButton, Tooltip } from "@mui/material";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutlined";
 
 /**
  * Question-mark help icon with a multi-line tooltip.

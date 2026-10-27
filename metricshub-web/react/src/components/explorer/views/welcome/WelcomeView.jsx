@@ -45,7 +45,7 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 
 	if (loading && !hierarchy) {
 		return (
-			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
+			<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
 				<CircularProgress />
 			</Box>
 		);
@@ -53,7 +53,7 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 
 	if (error && !hierarchy) {
 		return (
-			<Box p={2}>
+			<Box sx={{ p: 2 }}>
 				<Typography color="error">{error}</Typography>
 			</Box>
 		);
@@ -61,14 +61,14 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 
 	if (!hierarchy) {
 		return (
-			<Box p={2}>
+			<Box sx={{ p: 2 }}>
 				<Typography>No data available.</Typography>
 			</Box>
 		);
 	}
 
 	return (
-		<Box p={2} display="flex" flexDirection="column" gap={2}>
+		<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
 			<AgentData agent={hierarchy} totalResources={totalResources} status={status} />
 			<Divider />
 			{renderResourceGroups ? (

@@ -22,7 +22,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
 import SearchIcon from "@mui/icons-material/Search";
@@ -176,7 +176,7 @@ const HostConnectorsCatalogDialog = ({
 		>
 			<DialogTitle>All connectors</DialogTitle>
 			<DialogContent>
-				<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+				<Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
 					Compatibility is evaluated for host.type <strong>{formatHostTypeLabel(hostType)}</strong>{" "}
 					and protocols{" "}
 					<strong>{configuredProtocols.length > 0 ? configuredProtocols.join(", ") : "—"}</strong>.
@@ -184,7 +184,10 @@ const HostConnectorsCatalogDialog = ({
 				</Typography>
 
 				<Box sx={{ mb: 2 }}>
-					<Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: "block" }}>
+					<Typography
+						variant="caption"
+						sx={{ color: "text.secondary", mb: 0.75, display: "block" }}
+					>
 						Search
 					</Typography>
 					<TextField
@@ -195,12 +198,14 @@ const HostConnectorsCatalogDialog = ({
 						onChange={(e) => setSearchQuery(e.target.value)}
 						fullWidth
 						sx={guidedConfigPlaceholderSx}
-						InputProps={{
-							startAdornment: (
-								<InputAdornment position="start">
-									<SearchIcon fontSize="small" color="action" />
-								</InputAdornment>
-							),
+						slotProps={{
+							input: {
+								startAdornment: (
+									<InputAdornment position="start">
+										<SearchIcon fontSize="small" color="action" />
+									</InputAdornment>
+								),
+							},
 						}}
 					/>
 				</Box>
@@ -233,12 +238,11 @@ const HostConnectorsCatalogDialog = ({
 							<Box sx={{ mb: 1.5 }}>
 								<Typography
 									variant="caption"
-									color="text.secondary"
-									sx={{ mb: 0.75, display: "block" }}
+									sx={{ color: "text.secondary", mb: 0.75, display: "block" }}
 								>
 									Active filters
 								</Typography>
-								<Stack direction="row" flexWrap="wrap" gap={0.75}>
+								<Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.75 }}>
 									{activeFilterChips.map(
 										({ dimensionKey, dimensionLabel, value, displayValue }) => (
 											<Chip
@@ -280,7 +284,7 @@ const HostConnectorsCatalogDialog = ({
 												"& .MuiAccordionSummary-content": { my: 0.75 },
 											}}
 										>
-											<Typography variant="body2" fontWeight={600}>
+											<Typography variant="body2" sx={{ fontWeight: 600 }}>
 												{dimension.accordionLabel}
 												{selectedInDimension.size > 0 ? (
 													<Box
@@ -294,11 +298,11 @@ const HostConnectorsCatalogDialog = ({
 										</AccordionSummary>
 										<AccordionDetails sx={{ pt: 0, pb: 1.25 }}>
 											{values.length === 0 ? (
-												<Typography variant="caption" color="text.secondary">
+												<Typography variant="caption" sx={{ color: "text.secondary" }}>
 													No values in the catalog.
 												</Typography>
 											) : (
-												<Stack direction="row" flexWrap="wrap" gap={0.75}>
+												<Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.75 }}>
 													{values.map((value) => {
 														const isSelected = selectedInDimension.has(value);
 														return (
@@ -322,7 +326,7 @@ const HostConnectorsCatalogDialog = ({
 					</Box>
 
 					<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-						<Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+						<Typography variant="caption" sx={{ color: "text.secondary", mb: 1, display: "block" }}>
 							{filteredConnectors.length} shown · {connectors.length} total
 						</Typography>
 						<TableContainer sx={{ flex: 1, maxHeight: { xs: 360, md: 540 } }}>
@@ -342,7 +346,7 @@ const HostConnectorsCatalogDialog = ({
 									{filteredConnectors.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={7}>
-												<Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+												<Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
 													No connectors match your search or filters.
 												</Typography>
 											</TableCell>
@@ -380,8 +384,7 @@ const HostConnectorsCatalogDialog = ({
 														<Stack
 															direction="row"
 															spacing={0.5}
-															alignItems="flex-start"
-															sx={{ minWidth: 0 }}
+															sx={{ alignItems: "flex-start", minWidth: 0 }}
 														>
 															{/* Patched connectors are user-supplied and not in the docs, so no link. */}
 															{!item.patched && (
@@ -391,8 +394,7 @@ const HostConnectorsCatalogDialog = ({
 																<Stack
 																	direction="row"
 																	spacing={0.5}
-																	alignItems="center"
-																	sx={{ minWidth: 0 }}
+																	sx={{ alignItems: "center", minWidth: 0 }}
 																>
 																	<Typography variant="body2" noWrap title={item.displayName || id}>
 																		{item.displayName || id}
@@ -418,10 +420,9 @@ const HostConnectorsCatalogDialog = ({
 																{!item.compatible && reasons.length > 0 && (
 																	<Typography
 																		variant="caption"
-																		color="text.secondary"
 																		noWrap
 																		title={reasons[0]}
-																		display="block"
+																		sx={{ color: "text.secondary", display: "block" }}
 																	>
 																		{reasons[0]}
 																	</Typography>
@@ -430,14 +431,19 @@ const HostConnectorsCatalogDialog = ({
 														</Stack>
 													</TableCell>
 													<TableCell sx={{ width: CATALOG_TABLE_COLUMNS.id }}>
-														<Typography variant="body2" fontFamily="monospace" noWrap title={id}>
+														<Typography
+															variant="body2"
+															sx={{ fontFamily: "monospace" }}
+															noWrap
+															title={id}
+														>
 															{id}
 														</Typography>
 													</TableCell>
 													<TableCell sx={{ width: CATALOG_TABLE_COLUMNS.tags }}>
-														<Stack direction="row" flexWrap="wrap" gap={0.5}>
+														<Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5 }}>
 															{(item.tags || []).length === 0 ? (
-																<Typography variant="caption" color="text.secondary">
+																<Typography variant="caption" sx={{ color: "text.secondary" }}>
 																	—
 																</Typography>
 															) : (
@@ -454,9 +460,9 @@ const HostConnectorsCatalogDialog = ({
 														{protocols}
 													</TableCell>
 													<TableCell sx={{ width: CATALOG_TABLE_COLUMNS.platforms }}>
-														<Stack direction="row" flexWrap="wrap" gap={0.5}>
+														<Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5 }}>
 															{(item.platforms || []).length === 0 ? (
-																<Typography variant="caption" color="text.secondary">
+																<Typography variant="caption" sx={{ color: "text.secondary" }}>
 																	—
 																</Typography>
 															) : (

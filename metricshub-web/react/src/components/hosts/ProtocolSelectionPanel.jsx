@@ -118,10 +118,12 @@ const ProtocolSelectionPanel = ({
 			<Box>
 				<Stack
 					direction={{ xs: "column", sm: "row" }}
-					alignItems={{ xs: "flex-start", sm: "center" }}
-					justifyContent="space-between"
 					spacing={1}
-					sx={{ mb: 1.25 }}
+					sx={{
+						alignItems: { xs: "flex-start", sm: "center" },
+						justifyContent: "space-between",
+						mb: 1.25,
+					}}
 				>
 					<Box>
 						<Typography component="legend" sx={guidedConfigFieldLabelSx}>
@@ -130,7 +132,7 @@ const ProtocolSelectionPanel = ({
 								*
 							</Box>
 						</Typography>
-						<Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+						<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.25 }}>
 							{DEFAULT_HELPER}
 						</Typography>
 					</Box>
@@ -157,7 +159,7 @@ const ProtocolSelectionPanel = ({
 							textAlign: "center",
 						}}
 					>
-						<Typography variant="body2" color="text.secondary">
+						<Typography variant="body2" sx={{ color: "text.secondary" }}>
 							Choose a host type above to see the protocols available for this resource.
 						</Typography>
 					</Box>
@@ -193,11 +195,10 @@ const ProtocolSelectionPanel = ({
 										<Icon sx={{ fontSize: 22 }} />
 									</Box>
 									<Box sx={{ flex: 1, minWidth: 0, pt: 0.25 }}>
-										<Stack direction="row" alignItems="flex-start" spacing={0.75}>
+										<Stack direction="row" spacing={0.75} sx={{ alignItems: "flex-start" }}>
 											<Typography
 												variant="body2"
-												fontWeight={selected ? 700 : 600}
-												sx={{ flex: 1, lineHeight: 1.3 }}
+												sx={{ fontWeight: selected ? 700 : 600, flex: 1, lineHeight: 1.3 }}
 											>
 												{protocol.label}
 											</Typography>
@@ -211,8 +212,7 @@ const ProtocolSelectionPanel = ({
 										</Stack>
 										<Typography
 											variant="caption"
-											color="text.secondary"
-											sx={{ display: "block", mt: 0.5, lineHeight: 1.35 }}
+											sx={{ color: "text.secondary", display: "block", mt: 0.5, lineHeight: 1.35 }}
 										>
 											{summary}
 										</Typography>

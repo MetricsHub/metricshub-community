@@ -201,7 +201,7 @@ function AgentPage() {
 
 				{/* Last updated */}
 				{lastUpdatedAt && (
-					<Typography variant="caption" color="text.secondary" sx={{ textAlign: "right" }}>
+					<Typography variant="caption" sx={{ color: "text.secondary", textAlign: "right" }}>
 						Last updated: {new Date(lastUpdatedAt).toLocaleTimeString()}
 					</Typography>
 				)}

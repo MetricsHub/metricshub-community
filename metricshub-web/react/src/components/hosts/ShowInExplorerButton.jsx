@@ -108,8 +108,7 @@ const ShowInExplorerButton = ({ resourceGroup, hostId, hostConfig, disabled = fa
 							<ListItemText
 								primary={link.label}
 								secondary={link.resourceId !== link.label ? link.resourceId : undefined}
-								primaryTypographyProps={{ noWrap: true }}
-								secondaryTypographyProps={{ noWrap: true }}
+								slotProps={{ primary: { noWrap: true }, secondary: { noWrap: true } }}
 							/>
 						</MenuItem>
 					))}

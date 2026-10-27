@@ -98,7 +98,7 @@ export const ProtocolChips = ({ protocols, healthByProtocol }) => {
 export const ProtocolChipsRow = ({ protocols, healthByProtocol }) => {
 	if (!protocols?.length) {
 		return (
-			<Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+			<Typography variant="caption" sx={{ color: "text.secondary", whiteSpace: "nowrap" }}>
 				No protocols
 			</Typography>
 		);
@@ -130,7 +130,12 @@ export const ProtocolHealthDots = ({ protocols, healthByProtocol }) => {
 		return null;
 	}
 	return (
-		<Stack direction="row" spacing={0.75} alignItems="center" useFlexGap flexWrap="wrap">
+		<Stack
+			direction="row"
+			spacing={0.75}
+			useFlexGap
+			sx={{ alignItems: "center", flexWrap: "wrap" }}
+		>
 			{protocols.map((protocol) => {
 				const up = healthByProtocol?.[protocol];
 				return (

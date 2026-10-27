@@ -220,7 +220,7 @@ export default function EncryptPasswordDialog({
 								},
 							}}
 						/>
-						<Stack direction="row" justifyContent="flex-end" alignItems="center">
+						<Stack direction="row" sx={{ justifyContent: "flex-end", alignItems: "center" }}>
 							<Button
 								variant="contained"
 								onClick={() => void handleEncode()}

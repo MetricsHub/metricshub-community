@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
 import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 
 import NodeTypeIcons from "../explorer/tree/icons/NodeTypeIcons";
@@ -511,20 +511,27 @@ const ResourceGroupFormPage = ({
 			>
 				<Stack
 					direction="row"
-					alignItems="flex-start"
-					justifyContent="space-between"
 					spacing={2}
 					useFlexGap
-					flexWrap="wrap"
+					sx={{ alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}
 				>
-					<Box sx={{ minWidth: 0, flex: 1 }}>
-						<Stack direction="row" alignItems="center" spacing={0.5}>
+					<Box sx={{ minWidth: 0, flex: "1 1 320px" }}>
+						<Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
 							<NodeTypeIcons type="resource-group" fontSize="large" />
-							<Typography variant="h4" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+							<Typography
+								variant="h4"
+								sx={{
+									fontWeight: 700,
+									lineHeight: 1.2,
+									minWidth: 0,
+									flex: 1,
+									overflowWrap: "anywhere",
+								}}
+							>
 								{pageTitle}
 							</Typography>
 						</Stack>
-						<Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+						<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
 							Step {scrollActiveStep + 1} of {steps.length}
 							{stepSubtitle ? ` — ${stepSubtitle}` : ""}
 						</Typography>
@@ -532,10 +539,8 @@ const ResourceGroupFormPage = ({
 					<Stack
 						direction="row"
 						spacing={1}
-						alignItems="center"
 						useFlexGap
-						flexWrap="wrap"
-						sx={{ flexShrink: 0, pt: 0.25 }}
+						sx={{ alignItems: "center", flexWrap: "wrap", maxWidth: "100%", pt: 0.25 }}
 					>
 						{isEdit && onDeleteGroup ? (
 							<Button

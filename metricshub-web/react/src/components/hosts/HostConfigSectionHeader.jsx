@@ -54,7 +54,7 @@ const HostConfigSectionHeader = ({
 	endAction,
 }) => (
 	<Box sx={{ mb: 2.5 }}>
-		<Stack direction="row" alignItems="flex-start" spacing={1.5}>
+		<Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
 			<Box
 				sx={{
 					width: 34,
@@ -95,12 +95,19 @@ const HostConfigSectionHeader = ({
 				{isCompleted ? <CheckIcon sx={{ fontSize: 20 }} /> : stepNumber}
 			</Box>
 			<Box sx={{ minWidth: 0, flex: 1 }}>
-				<Stack direction="row" alignItems="center" spacing={1} useFlexGap flexWrap="wrap">
+				<Stack
+					direction="row"
+					spacing={1}
+					useFlexGap
+					sx={{ alignItems: "center", flexWrap: "wrap" }}
+				>
 					<Typography
 						variant="h5"
-						fontWeight={700}
-						color={isInvalid ? undefined : isEdited ? "text.secondary" : "text.primary"}
-						sx={{ lineHeight: 1.25 }}
+						sx={{
+							fontWeight: 700,
+							color: isInvalid ? undefined : isEdited ? "text.secondary" : "text.primary",
+							lineHeight: 1.25,
+						}}
 					>
 						{step.label}
 					</Typography>
@@ -129,7 +136,7 @@ const HostConfigSectionHeader = ({
 										flexShrink: 0,
 									}}
 								/>
-								<Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+								<Typography variant="caption" sx={{ color: "text.secondary", lineHeight: 1.2 }}>
 									host.up
 								</Typography>
 							</Box>
@@ -137,7 +144,7 @@ const HostConfigSectionHeader = ({
 					) : null}
 				</Stack>
 				{description ? (
-					<Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.35 }}>
+					<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.35, lineHeight: 1.35 }}>
 						{description}
 					</Typography>
 				) : null}

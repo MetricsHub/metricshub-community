@@ -9,7 +9,7 @@ The web application is built using node.js and is packaged into a zip file using
 ## Prerequisites
 
 - Have [Maven 3.x properly installed and configured](https://maven.apache.org/download.cgi).
-- Ensure that you have the required Node.js version specified in the `pom.xml` file.
+- Maven downloads Node.js v26.12.1 into `target/node` for the web build. Use the same version when running npm commands directly from `react/`.
 
 ## Building the Project
 
@@ -22,6 +22,8 @@ The web application is built using node.js and is packaged into a zip file using
    mvn clean package
    ```
    This command will install the necessary Node.js version, build the React application, and package it into a zip file under the `target` directory.
+
+   Keeping Node.js and npm under `target` also lets `mvn clean` remove the previous runtime before an upgrade, preventing files from different npm versions from being mixed.
 
 ## File Naming Conventions
 
@@ -86,6 +88,10 @@ ESLint is configured to enforce code quality. Run before committing:
 ```bash
 npm run lint
 ```
+
+## Log Files
+
+Deletion errors are displayed in the Agent log viewer. Refreshing the logs or reopening the viewer clears the previous deletion error and reloads the list.
 
 ## Testing
 

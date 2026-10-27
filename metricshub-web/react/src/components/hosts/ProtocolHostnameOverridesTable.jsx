@@ -297,7 +297,7 @@ const ProtocolHostnameOverridesTable = ({
 				description="Leave a row blank to use the host.name entry."
 				helpTooltip={helpTooltip}
 				trailing={
-					<Stack direction="row" spacing={0.75} alignItems="center">
+					<Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
 						{duplicateCount > 0 ? (
 							<Tooltip
 								title="Several hosts share one collection hostname — click to show only those rows"
@@ -350,8 +350,7 @@ const ProtocolHostnameOverridesTable = ({
 				{needle ? (
 					<Typography
 						variant="body2"
-						color="text.secondary"
-						sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+						sx={{ color: "text.secondary", whiteSpace: "nowrap", flexShrink: 0 }}
 					>
 						{visibleRows.length} of {hostNames.length}
 					</Typography>
@@ -394,7 +393,7 @@ const ProtocolHostnameOverridesTable = ({
 						) : (
 							<TableRow>
 								<TableCell colSpan={3} sx={{ ...bodyCellSx, py: 1.5 }}>
-									<Typography variant="body2" color="text.secondary">
+									<Typography variant="body2" sx={{ color: "text.secondary" }}>
 										{needle ? "No hosts match your search." : "No duplicate collection hostnames."}
 									</Typography>
 								</TableCell>
@@ -422,8 +421,12 @@ const ProtocolHostnameOverridesTable = ({
 			{helperText ? (
 				<Typography
 					variant="caption"
-					color={error ? "error.main" : "text.secondary"}
-					sx={{ display: "block", mt: 0.5, mx: 1.75 }}
+					sx={{
+						color: error ? "error.main" : "text.secondary",
+						display: "block",
+						mt: 0.5,
+						mx: 1.75,
+					}}
 				>
 					{helperText}
 				</Typography>

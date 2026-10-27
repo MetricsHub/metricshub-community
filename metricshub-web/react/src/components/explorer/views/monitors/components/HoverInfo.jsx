@@ -40,7 +40,7 @@ const HoverInfo = ({ label, value, title, description, unit, children, sx, ...pr
 						{description}
 					</Typography>
 					{displayUnit && (
-						<Typography variant="caption" color="text.secondary">
+						<Typography variant="caption" sx={{ color: "text.secondary" }}>
 							Unit: {displayUnit}
 						</Typography>
 					)}

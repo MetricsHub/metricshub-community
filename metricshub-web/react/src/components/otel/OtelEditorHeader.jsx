@@ -69,11 +69,16 @@ export default function OtelEditorHeader({
 
 	return (
 		<>
-			<Stack direction="row" alignItems="center" justifyContent="space-between">
-				<Stack direction="row" alignItems="center" spacing={0}>
+			<Stack
+				direction="row"
+				sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}
+			>
+				<Stack direction="row" spacing={0} sx={{ alignItems: "center", minWidth: 0, flex: 1 }}>
 					{selected && <FileTypeIcon type={fileType} />}
 					<Typography
 						variant="subtitle1"
+						noWrap
+						title={displayName}
 						sx={{ fontWeight: isDirty ? 510 : 500, transition: "color 0.4s ease" }}
 					>
 						{displayName}
@@ -107,7 +112,12 @@ export default function OtelEditorHeader({
 						/>
 					)}
 				</Stack>
-				<Stack direction="row" spacing={1} alignItems="center">
+				<Stack
+					direction="row"
+					spacing={1}
+					useFlexGap
+					sx={{ alignItems: "center", flexWrap: "wrap", minWidth: 0 }}
+				>
 					{isDraft && onApply && (
 						<Button
 							size="small"

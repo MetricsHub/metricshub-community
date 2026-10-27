@@ -182,9 +182,13 @@ export default function OtelFileTreeItem({
 	const label = (
 		<Stack
 			direction="row"
-			alignItems="center"
-			justifyContent="space-between"
-			sx={{ width: "100%", pr: 1, userSelect: editing ? "text" : "none" }}
+			sx={{
+				alignItems: "center",
+				justifyContent: "space-between",
+				width: "100%",
+				pr: 1,
+				userSelect: editing ? "text" : "none",
+			}}
 		>
 			<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 				{editing ? (

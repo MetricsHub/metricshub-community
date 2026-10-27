@@ -40,7 +40,7 @@ const hostTypeSelectSx = {
 };
 
 const HostTypeOption = ({ hostType }) => (
-	<Stack direction="row" alignItems="center" spacing={1.25}>
+	<Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
 		<HostTypeIcon hostType={hostType} size={HOST_TYPE_FIELD_ICON_SIZE} />
 		<span>{HOST_TYPE_LABELS[hostType] || hostType}</span>
 	</Stack>

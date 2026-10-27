@@ -23,7 +23,7 @@ const InstanceNameWithAttributes = ({
 	const hasAttributes = attributes && Object.keys(attributes).length > 0;
 
 	return (
-		<Box display="flex" alignItems="center" sx={{ minWidth: 0, ...sx }}>
+		<Box sx={{ display: "flex", alignItems: "center", minWidth: 0, ...sx }}>
 			<Box sx={{ minWidth: 0, flexShrink: 1, mr: 1 }}>
 				<TruncatedText text={displayName}>
 					<Typography

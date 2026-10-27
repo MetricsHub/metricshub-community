@@ -124,7 +124,7 @@ const ProtocolTestButton = ({ protocol, hostName, protocolValues }) => {
 
 	return (
 		<>
-			<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+			<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
 				<Button
 					variant="outlined"
 					size="small"

@@ -34,7 +34,7 @@ const MetricsAccordion = ({ metrics }) => {
 		<Accordion
 			expanded={expanded}
 			onChange={handleToggle}
-			TransitionProps={{ unmountOnExit: true }}
+			slotProps={{ transition: { unmountOnExit: true } }}
 			disableGutters
 			elevation={0}
 			square

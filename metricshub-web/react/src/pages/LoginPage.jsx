@@ -75,11 +75,11 @@ const AuthLayoutComponent = (props) => {
 							}}
 						>
 							<Box>
-								<Typography variant="h5" component="h1" fontWeight={600}>
+								<Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
 									Connect to MetricsHub
 								</Typography>
 								{host && (
-									<Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+									<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
 										On{" "}
 										<Box component="span" sx={{ fontWeight: 600 }}>
 											{host}

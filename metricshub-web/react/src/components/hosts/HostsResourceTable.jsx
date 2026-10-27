@@ -112,30 +112,29 @@ const AggregateProtocolChips = ({ protocols, aggregate }) => {
 								<Stack
 									direction="row"
 									spacing={0.75}
-									alignItems="center"
-									sx={{ display: "inline-flex" }}
+									sx={{ alignItems: "center", display: "inline-flex" }}
 								>
 									<Box component="span">{protocol}</Box>
 									{a.up > 0 && (
-										<Stack direction="row" spacing={0.25} alignItems="center">
+										<Stack direction="row" spacing={0.25} sx={{ alignItems: "center" }}>
 											<Box component="span" sx={{ ...COUNT_DOT_SX, bgcolor: "success.main" }} />
-											<Typography variant="caption" component="span" fontWeight={600}>
+											<Typography variant="caption" component="span" sx={{ fontWeight: 600 }}>
 												{a.up}
 											</Typography>
 										</Stack>
 									)}
 									{a.down > 0 && (
-										<Stack direction="row" spacing={0.25} alignItems="center">
+										<Stack direction="row" spacing={0.25} sx={{ alignItems: "center" }}>
 											<Box component="span" sx={{ ...COUNT_DOT_SX, bgcolor: "error.main" }} />
-											<Typography variant="caption" component="span" fontWeight={600}>
+											<Typography variant="caption" component="span" sx={{ fontWeight: 600 }}>
 												{a.down}
 											</Typography>
 										</Stack>
 									)}
 									{a.unknown > 0 && (
-										<Stack direction="row" spacing={0.25} alignItems="center">
+										<Stack direction="row" spacing={0.25} sx={{ alignItems: "center" }}>
 											<Box component="span" sx={{ ...COUNT_DOT_SX, bgcolor: "text.disabled" }} />
-											<Typography variant="caption" component="span" fontWeight={600}>
+											<Typography variant="caption" component="span" sx={{ fontWeight: 600 }}>
 												{a.unknown}
 											</Typography>
 										</Stack>
@@ -162,7 +161,7 @@ const baseColumns = [
 		minWidth: 120,
 		renderCell: (params) => (
 			<TruncatedText text={params.value}>
-				<Typography variant="body2" component="span" fontWeight={500}>
+				<Typography variant="body2" component="span" sx={{ fontWeight: 500 }}>
 					{params.value}
 				</Typography>
 			</TruncatedText>
@@ -244,7 +243,7 @@ const buildColumns = ({
 			const protocols = params.value || [];
 			if (!protocols.length) {
 				return (
-					<Typography variant="body2" color="text.secondary">
+					<Typography variant="body2" sx={{ color: "text.secondary" }}>
 						—
 					</Typography>
 				);
@@ -294,7 +293,7 @@ const buildColumns = ({
 							onSelectedHostIdsChange?.(selectedHostIds.filter((id) => !visible.has(id)));
 						}
 					}}
-					inputProps={{ "aria-label": "Select all resources in this table" }}
+					slotProps={{ input: { "aria-label": "Select all resources in this table" } }}
 				/>
 			),
 			renderCell: (params) => {
@@ -314,7 +313,7 @@ const buildColumns = ({
 							}
 							onSelectedHostIdsChange?.([...next]);
 						}}
-						inputProps={{ "aria-label": `Select resource ${id}` }}
+						slotProps={{ input: { "aria-label": `Select resource ${id}` } }}
 					/>
 				);
 			},

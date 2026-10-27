@@ -8,11 +8,11 @@ import { Box, Typography } from "@mui/material";
  * @param {string} props.lastUpdatedLabel - Label for the last updated time
  */
 const MonitorsHeader = React.memo(({ lastUpdatedLabel }) => (
-	<Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+	<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
 		<Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
 			Connectors
 		</Typography>
-		<Typography variant="caption" color="text.secondary">
+		<Typography variant="caption" sx={{ color: "text.secondary" }}>
 			Last updated: {lastUpdatedLabel}
 		</Typography>
 	</Box>

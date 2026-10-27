@@ -18,13 +18,13 @@ const AboutConnectorsCard = () => (
 			borderColor: "divider",
 		}}
 	>
-		<Stack direction="row" spacing={1.5} alignItems="flex-start">
+		<Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
 			<InfoOutlinedIcon color="primary" sx={{ mt: 0.15, flexShrink: 0 }} />
 			<Box sx={{ minWidth: 0 }}>
-				<Typography variant="subtitle2" color="primary.main" fontWeight={700}>
+				<Typography variant="subtitle2" sx={{ color: "primary.main", fontWeight: 700 }}>
 					About Connectors
 				</Typography>
-				<Typography variant="body2" color="text.primary" sx={{ mt: 0.5, opacity: 0.85 }}>
+				<Typography variant="body2" sx={{ color: "text.primary", mt: 0.5, opacity: 0.85 }}>
 					Connectors collect metrics and data from your resource using the selected protocols.
 				</Typography>
 				<Link
