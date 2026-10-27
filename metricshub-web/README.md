@@ -89,6 +89,10 @@ ESLint is configured to enforce code quality. Run before committing:
 npm run lint
 ```
 
+## Log Files
+
+Deletion errors are displayed in the Agent log viewer. Refreshing the logs or reopening the viewer clears the previous deletion error and reloads the list.
+
 ## Testing
 
 The React application uses [Vitest](https://vitest.dev/) as the test runner with [React Testing Library](https://testing-library.com/react) for component testing.

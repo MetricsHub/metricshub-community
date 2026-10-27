@@ -47,6 +47,7 @@ const logFilesSlice = createSlice({
 			.addCase(fetchLogFiles.pending, (state) => {
 				state.listLoading = true;
 				state.listError = null;
+				state.deleteError = null;
 			})
 			.addCase(fetchLogFiles.fulfilled, (state, action) => {
 				state.listLoading = false;

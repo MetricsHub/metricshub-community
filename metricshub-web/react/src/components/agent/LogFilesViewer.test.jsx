@@ -15,16 +15,16 @@ const file = {
 	lastModificationTime: "2026-10-26T12:00:00Z",
 };
 
-const renderViewer = () => {
-	const store = configureStore({ reducer: { logFiles: logFilesReducer } });
-	render(
+const renderViewer = (store = configureStore({ reducer: { logFiles: logFilesReducer } })) => ({
+	store,
+	...render(
 		<Provider store={store}>
 			<ThemeProvider theme={createTheme({ paletteMode: "dark" })}>
 				<LogFilesViewer />
 			</ThemeProvider>
 		</Provider>,
-	);
-};
+	),
+});
 
 beforeEach(() => {
 	vi.spyOn(logFilesApi, "list").mockResolvedValue([file]);
@@ -48,32 +48,52 @@ describe("log file errors", { timeout: 20_000 }, () => {
 		expect(screen.queryByText("Log content is unavailable")).not.toBeInTheDocument();
 	});
 
-	it.each([false, true])("shows a failed deletion and keeps the file (all: %s)", async (all) => {
-		const deleteApi = all ? logFilesApi.deleteAllFiles : logFilesApi.deleteFile;
-		deleteApi.mockRejectedValueOnce(new Error("Log deletion is unavailable"));
-		renderViewer();
-		await screen.findByText("Latest log content");
-		fireEvent.click(
-			all
-				? screen.getByText("Delete All", { selector: "button" })
-				: screen.getByLabelText(`Delete ${file.name}`),
-		);
-		const title = await screen.findByText(all ? "Delete All Log Files" : "Delete Log File");
-		const dialog = title.closest('[role="dialog"]');
-		fireEvent.click(
-			within(dialog).getByText(all ? "Delete All" : "Delete", { selector: "button" }),
-		);
-		const error = await screen.findByText("Log deletion is unavailable");
-		expect(error.closest('[role="alert"]')).not.toBeNull();
-		await waitFor(() => expect(dialog).not.toBeInTheDocument());
-		expect(screen.getByLabelText(`Delete ${file.name}`)).toBeEnabled();
-		expect(screen.getByText("Latest log content")).toBeInTheDocument();
-		if (all) {
-			expect(deleteApi).toHaveBeenCalledWith();
-		} else {
-			expect(deleteApi).toHaveBeenCalledWith(file.name);
-		}
-	});
+	it.each([
+		{ all: false, recovery: "refresh" },
+		{ all: true, recovery: "refresh" },
+		{ all: false, recovery: "remount" },
+		{ all: true, recovery: "remount" },
+	])(
+		"clears a failed deletion after $recovery and keeps the file (all: $all)",
+		async ({ all, recovery }) => {
+			const deleteApi = all ? logFilesApi.deleteAllFiles : logFilesApi.deleteFile;
+			deleteApi.mockRejectedValueOnce(new Error("Log deletion is unavailable"));
+			const { store, unmount } = renderViewer();
+			await screen.findByText("Latest log content");
+			fireEvent.click(
+				all
+					? screen.getByText("Delete All", { selector: "button" })
+					: screen.getByLabelText(`Delete ${file.name}`),
+			);
+			const title = await screen.findByText(all ? "Delete All Log Files" : "Delete Log File");
+			const dialog = title.closest('[role="dialog"]');
+			fireEvent.click(
+				within(dialog).getByText(all ? "Delete All" : "Delete", { selector: "button" }),
+			);
+			const error = await screen.findByText("Log deletion is unavailable");
+			expect(error.closest('[role="alert"]')).not.toBeNull();
+			await waitFor(() => expect(dialog).not.toBeInTheDocument());
+			expect(screen.getByLabelText(`Delete ${file.name}`)).toBeEnabled();
+			expect(screen.getByText("Latest log content")).toBeInTheDocument();
+			if (all) {
+				expect(deleteApi).toHaveBeenCalledWith();
+			} else {
+				expect(deleteApi).toHaveBeenCalledWith(file.name);
+			}
+
+			logFilesApi.getTail.mockResolvedValueOnce("Refreshed log content");
+			if (recovery === "refresh") {
+				fireEvent.click(screen.getByLabelText("Refresh logs", { selector: "button" }));
+			} else {
+				unmount();
+				renderViewer(store);
+			}
+			expect(await screen.findByText("Refreshed log content")).toBeInTheDocument();
+			expect(logFilesApi.list).toHaveBeenCalledTimes(2);
+			expect(screen.queryByText("Log deletion is unavailable")).not.toBeInTheDocument();
+			expect(screen.getByLabelText(`Delete ${file.name}`)).toBeEnabled();
+		},
+	);
 
 	it.each([false, true])(
 		"clears the content error after deleting the displayed log (all: %s)",
