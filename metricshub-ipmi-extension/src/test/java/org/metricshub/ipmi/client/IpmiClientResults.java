@@ -22,7 +22,7 @@ public final class IpmiClientResults {
 	 * @return a {@link Sensor} without problem
 	 */
 	public static Sensor sensor(final AbstractSensorRecord record, final GetSensorReadingResponseData reading) {
-		return Sensor.of(record, reading, null);
+		return Sensor.of(record, reading, null, null);
 	}
 
 	/**

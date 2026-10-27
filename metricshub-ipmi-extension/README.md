@@ -20,9 +20,9 @@ The IPMI source receives four groups of lines, in this order:
 Chassis;1;0;0;0;0;0;0;0;0;PowerRestored;Off;
 FRU;LENOVO;RD350;S4M00000 - 00000000000001
 FRU;LITEON;PS-2451-6L-LF;0000
-Power Unit;3;Power Unit 3;;;;PSU Redundancy=Fully Redundant
-Power Supply;1;Power Supply 1;;;;PSU1 Present=Presence detected
-Power Supply;2;Power Supply 2;;;;PSU2 Present=Presence detected
+Power Unit;3;Power Unit 3;;;;PSU Redundancy=Fully Redundant;;;;
+Power Supply;1;Power Supply 1;;;;PSU1 Present=Presence detected;;;;
+Power Supply;2;Power Supply 2;;;;PSU2 Present=Presence detected;;;;
 Temperature;0008;Ambient Temp;Air Inlet 1;17.0;37;39
 Temperature;0009;CPU1 DTS;Processor 1;-44.0;;
 PowerConsumption;000d;System Power;Power Unit 2;92.0
@@ -69,7 +69,7 @@ A FRU with neither a vendor nor a model is not listed. The lines are sorted by h
 ### Device state lines
 
 ```text
-$deviceType;$deviceId;$deviceUniqueId;$vendor;$model;$serialNumber;$states
+$deviceType;$deviceId;$deviceUniqueId;$vendor;$model;$serialNumber;$states;$memorySize;$memoryType;$cpuSpeed;$cpuInfo
 ```
 
 One line per **entity** (device) that has at least one sensor with an asserted state:
@@ -81,6 +81,15 @@ One line per **entity** (device) that has at least one sensor with an asserted s
 | `$deviceUniqueId`                    | `$deviceType $deviceId`, for example `Power Supply 1`                                                                                           |
 | `$vendor`, `$model`, `$serialNumber` | From the FRU of the same entity type and instance, if any; empty otherwise                                                                      |
 | `$states`                            | The states of every sensor of the entity, `sensorName=state` separated with `\|`                                                                |
+| `$memorySize`, `$memoryType`         | From the SPD data of a memory module FRU: its capacity in MB and its type, for example `DDR4 RDIMM ECC`; empty otherwise                        |
+| `$cpuSpeed`, `$cpuInfo`              | From the Processor Information ROM of an Intel processor FRU: its maximum frequency in MHz and its cores, frequencies, caches, TDP and part number; empty otherwise |
+
+A memory module whose FRU device returns SPD data is listed with the module manufacturer as `$vendor`, its part number as `$model` and its serial number as `$serialNumber`; an Intel processor whose FRU device returns its PIROM with `Intel`, its S-spec and its PPIN:
+
+```text
+Memory Device;1;Memory Device 1;Samsung;M393A2K43BB1-CTD;409F3CA2;DIMM 1=Device Present;16384;DDR4 RDIMM ECC;;
+Processor;1;Processor 1;Intel;SR3GH;634AFBC3354D3C6D;CPU 1=Device Present;;;3000;8 cores with Hyper-Threading, 2100-3000 MHz, L2 1024 KB per core, L3 11264 KB, TDP 85 W, Part number 37608DC00416530
+```
 
 Sensors that report `Device Absent` are left out.
 

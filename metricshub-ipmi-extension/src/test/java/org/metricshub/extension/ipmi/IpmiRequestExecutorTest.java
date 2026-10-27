@@ -78,9 +78,9 @@ class IpmiRequestExecutorTest {
 		assertEquals(
 			"Chassis;1;0;0;0;0;0;0;0;0;PoweredOff;;\n" +
 				"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
-				"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected\n" +
-				"Battery;1;Battery 1;;;;Battery 1=Transition to OK\n" +
-				"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present\n" +
+				"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected;;;;\n" +
+				"Battery;1;Battery 1;;;;Battery 1=Transition to OK;;;;\n" +
+				"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present;;;;\n" +
 				"Temperature;0001;Ambient Temp;Front Panel Board 1;22.0;38;41",
 			executor().executeIpmiGetSensors(HOSTNAME, ipmiConfiguration)
 		);

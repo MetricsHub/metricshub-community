@@ -3,6 +3,7 @@ package org.metricshub.extension.ipmi;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +14,9 @@ import org.metricshub.ipmi.client.IpmiClientResults;
 import org.metricshub.ipmi.client.Sensor;
 import org.metricshub.ipmi.core.coding.commands.chassis.GetChassisStatusResponseData;
 import org.metricshub.ipmi.core.coding.commands.fru.record.FruRecord;
+import org.metricshub.ipmi.core.coding.commands.fru.record.PiromInfo;
 import org.metricshub.ipmi.core.coding.commands.fru.record.ProductInfo;
+import org.metricshub.ipmi.core.coding.commands.fru.record.SpdInfo;
 import org.metricshub.ipmi.core.coding.commands.sdr.GetSensorReadingResponseData;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.AbstractSensorRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.CompactSensorRecord;
@@ -627,12 +630,112 @@ public class IpmiResultConverterTest {
 		String result = IpmiResultConverter.convertResult(null, frus, sensors);
 		String expected =
 			"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
-			"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected\n" +
-			"Battery;1;Battery 1;;;;Battery 1=Transition to OK\n" +
-			"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present\n" +
+			"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected;;;;\n" +
+			"Battery;1;Battery 1;;;;Battery 1=Transition to OK;;;;\n" +
+			"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present;;;;\n" +
 			"Temperature;0001;Ambient Temp;Front Panel Board 1;22.0;38;41";
 
 		assertEquals(expected, result);
+	}
+
+	@Test
+	void testConvertResultMemoryModuleAndProcessorFrus() {
+		// DIMM 1 and CPU 1, each with a presence sensor; DIMM 2 has a FRU but no sensor, CPU 2 a sensor but no FRU
+		FruDeviceLocatorRecord dimm1 = new FruDeviceLocatorRecord();
+		dimm1.setFruEntityId(EntityId.MemoryDevice.getCode());
+		dimm1.setFruEntityInstance(1);
+		FruDeviceLocatorRecord dimm2 = new FruDeviceLocatorRecord();
+		dimm2.setFruEntityId(EntityId.MemoryDevice.getCode());
+		dimm2.setFruEntityInstance(2);
+		FruDeviceLocatorRecord cpu1 = new FruDeviceLocatorRecord();
+		cpu1.setFruEntityId(EntityId.Processor.getCode());
+		cpu1.setFruEntityInstance(1);
+		List<Fru> frus = List.of(
+			buildSystemBoardFrus().get(0),
+			IpmiClientResults.fru(dimm1, List.of(new SpdInfo(DDR4_SPD, 0))),
+			IpmiClientResults.fru(dimm2, List.of(new SpdInfo(DDR4_SPD, 0))),
+			IpmiClientResults.fru(cpu1, List.of(new PiromInfo(PIROM, 0)))
+		);
+
+		List<Sensor> sensors = List.of(
+			IpmiClientResults.sensor(presence(EntityId.MemoryDevice, 1, "DIMM 1"), states(1)),
+			IpmiClientResults.sensor(presence(EntityId.Processor, 1, "CPU 1"), states(1)),
+			IpmiClientResults.sensor(presence(EntityId.Processor, 2, "CPU 2"), states(1))
+		);
+
+		assertEquals(
+			"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
+				"FRU;Samsung;M393A2K43BB1-CTD;409F3CA2\n" +
+				"FRU;Samsung;M393A2K43BB1-CTD;409F3CA2\n" +
+				"FRU;Intel;SR3GH;634AFBC3354D3C6D\n" +
+				"Memory Device;1;Memory Device 1;Samsung;M393A2K43BB1-CTD;409F3CA2;DIMM 1=Device Present;16384;DDR4 RDIMM ECC;;\n" +
+				"Processor;1;Processor 1;Intel;SR3GH;634AFBC3354D3C6D;CPU 1=Device Present;;;3000;" +
+				"8 cores with Hyper-Threading, 2100-3000 MHz, L2 1024 KB per core, L3 11264 KB, TDP 85 W, Part number 37608DC00416530\n" +
+				"Processor;2;Processor 2;;;;CPU 2=Device Present;;;;",
+			IpmiResultConverter.convertResult(null, frus, sensors)
+		);
+	}
+
+	/**
+	 * @return a presence sensor (generic event/reading type 08h) of the given entity
+	 */
+	private static CompactSensorRecord presence(EntityId entity, int instance, String name) {
+		CompactSensorRecord record = new CompactSensorRecord();
+		record.setId(1);
+		record.setEntityId(entity);
+		record.setEntityInstanceNumber((byte) instance);
+		record.setName(name);
+		record.setSensorType(SensorType.EntityPresence);
+		record.setEventReadingType(0x08);
+		return record;
+	}
+
+	/**
+	 * The processor information ROM of an Intel Xeon Silver 4110 (S-spec SR3GH, 8 cores with Hyper-Threading, 2.1 to
+	 * 3.0 GHz, 11 MB of L3, 85 W), as the FRU device of a processor of a Lenovo XCC returns it.
+	 */
+	private static final byte[] PIROM = bytes(
+		"07 80 00 0d 19 21 2b 31 34 56 65 6c 77 20 53 52 33 47 48 00 08 01 00 01 00 54 06 00 00 00 21 00" +
+			" 30 02 60 09 00 80 00 24 00 00 01 00 04 00 2c 0c 00 00 00 00 50 12 00 06 00 12 00 06 50 13 00 10" +
+			" 00 10 00 10 50 13 50 13 50 13 50 13 50 13 50 13 00 00 00 00 00 00 33 37 36 30 38 44 43 30 30 34" +
+			" 31 36 35 33 30 77 85 00 90 00 59 00 bf eb fb ff 0e 3f 01 09 00 00 15 6d 3c 4d 35 c3 fb 4a 63 00"
+	);
+
+	/**
+	 * The SPD data of a Samsung 16 GB 2Rx8 DDR4-2666 ECC RDIMM (M393A2K43BB1-CTD), made in week 23 of 2019.
+	 */
+	private static final byte[] DDR4_SPD = ddr4Spd();
+
+	private static byte[] ddr4Spd() {
+		byte[] spd = new byte[512];
+		spd[0] = 0x23; // 384 bytes used of 512
+		spd[1] = 0x11; // SPD revision 1.1
+		spd[2] = 0x0C; // DDR4
+		spd[3] = 0x01; // RDIMM
+		spd[4] = (byte) 0x85; // 8 Gb, 4 banks, 2 bank groups
+		spd[12] = 0x09; // 2 ranks, x8
+		spd[13] = 0x0B; // 64 bits + 8 bits of ECC
+		// Module manufacturer: JEDEC bank 1, code CEh (Samsung); made in week 23 of 2019; serial number
+		spd[320] = (byte) 0x80;
+		spd[321] = (byte) 0xCE;
+		spd[322] = 0x01;
+		spd[323] = 0x19;
+		spd[324] = 0x23;
+		System.arraycopy(bytes("40 9F 3C A2"), 0, spd, 325, 4);
+		// Part number, 20 characters padded with spaces, then the revision and the DRAM manufacturer
+		System.arraycopy(String.format("%-20s", "M393A2K43BB1-CTD").getBytes(StandardCharsets.US_ASCII), 0, spd, 329, 20);
+		spd[350] = (byte) 0x80;
+		spd[351] = (byte) 0xCE;
+		return spd;
+	}
+
+	private static byte[] bytes(String hex) {
+		String[] parts = hex.trim().split("\\s+");
+		byte[] result = new byte[parts.length];
+		for (int i = 0; i < parts.length; i++) {
+			result[i] = (byte) Integer.parseInt(parts[i], 16);
+		}
+		return result;
 	}
 
 	@Test
