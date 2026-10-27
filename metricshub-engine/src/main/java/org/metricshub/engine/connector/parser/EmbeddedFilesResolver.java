@@ -242,16 +242,14 @@ public class EmbeddedFilesResolver {
 	/**
 	 * Converts CRLF line endings to LF in a text file, so that a connector behaves the same whether its
 	 * files were checked out with LF or CRLF (a header line or an awk script must not end with CR).
-	 * Like Git, a file that contains a NUL byte is considered binary and left untouched.
+	 * A binary file (see {@link EmbeddedFile#isText(byte[])}) is left untouched.
 	 *
 	 * @param content the file content
 	 * @return the content with LF line endings, or the same array if it is binary
 	 */
 	static byte[] normalizeLineEndings(final byte[] content) {
-		for (byte b : content) {
-			if (b == 0) {
-				return content;
-			}
+		if (!EmbeddedFile.isText(content)) {
+			return content;
 		}
 		final ByteArrayOutputStream out = new ByteArrayOutputStream(content.length);
 		for (int i = 0; i < content.length; i++) {
