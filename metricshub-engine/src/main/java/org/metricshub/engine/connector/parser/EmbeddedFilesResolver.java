@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATT
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -234,8 +235,31 @@ public class EmbeddedFilesResolver {
 		return EmbeddedFile.builder()
 			.id(processedEmbeddedFiles.size() + 1)
 			.filename(filePath.getFileName().toString())
-			.content(Files.readAllBytes(filePath))
+			.content(normalizeLineEndings(Files.readAllBytes(filePath)))
 			.build();
+	}
+
+	/**
+	 * Converts CRLF line endings to LF in a text file, so that a connector behaves the same whether its
+	 * files were checked out with LF or CRLF (a header line or an awk script must not end with CR).
+	 * Like Git, a file that contains a NUL byte is considered binary and left untouched.
+	 *
+	 * @param content the file content
+	 * @return the content with LF line endings, or the same array if it is binary
+	 */
+	static byte[] normalizeLineEndings(final byte[] content) {
+		for (byte b : content) {
+			if (b == 0) {
+				return content;
+			}
+		}
+		final ByteArrayOutputStream out = new ByteArrayOutputStream(content.length);
+		for (int i = 0; i < content.length; i++) {
+			if (content[i] != '\r' || i + 1 == content.length || content[i + 1] != '\n') {
+				out.write(content[i]);
+			}
+		}
+		return out.toByteArray();
 	}
 
 	/**
