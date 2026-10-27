@@ -83,6 +83,7 @@ const logFilesSlice = createSlice({
 				if (state.currentFileName === action.payload.fileName) {
 					state.content = "";
 					state.currentFileName = null;
+					state.contentError = null;
 				}
 			})
 			.addCase(deleteLogFile.rejected, (state, action) => {
@@ -99,6 +100,7 @@ const logFilesSlice = createSlice({
 				state.list = [];
 				state.content = "";
 				state.currentFileName = null;
+				state.contentError = null;
 			})
 			.addCase(deleteAllLogFiles.rejected, (state, action) => {
 				state.deleting = false;

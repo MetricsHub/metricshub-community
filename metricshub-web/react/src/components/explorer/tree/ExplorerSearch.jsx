@@ -110,6 +110,7 @@ const ExplorerSearch = () => {
 					label="Search..."
 					size="small"
 					slotProps={{
+						...params.slotProps,
 						input: {
 							...(params.slotProps?.input ?? {}),
 							endAdornment: (
@@ -134,7 +135,11 @@ const ExplorerSearch = () => {
 								<Typography variant="body1" noWrap>
 									{option.name}
 								</Typography>
-								<Typography variant="caption" color="text.secondary" noWrap display="block">
+								<Typography
+									variant="caption"
+									noWrap
+									sx={{ color: "text.secondary", display: "block" }}
+								>
 									{option.type} {breadcrumbText ? `• ${breadcrumbText}` : ""}
 								</Typography>
 							</Box>

@@ -132,7 +132,7 @@ const AgentData = ({ agent, totalResources, status }) => {
 	}
 
 	return (
-		<Box display="flex" flexDirection="column" gap={2}>
+		<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 			{licenseWarning && (
 				<Collapse in={showLicenseWarning}>
 					<AppAlert

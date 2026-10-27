@@ -277,9 +277,8 @@ const AppBreadcrumbs = ({ sx, action, pathname, embedded = false }) => {
 				return isLast && !to ? (
 					<Typography
 						key={crumb.label}
-						color="text.primary"
 						variant="body2"
-						sx={{ transition: "color 0.4s ease" }}
+						sx={{ color: "text.primary", transition: "color 0.4s ease" }}
 					>
 						{content}
 					</Typography>

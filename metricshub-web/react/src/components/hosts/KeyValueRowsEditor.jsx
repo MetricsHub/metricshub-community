@@ -186,11 +186,11 @@ const KeyValueRowsEditor = ({
 
 	const columnHeaders =
 		labelsAbove && (rows || []).length > 0 ? (
-			<Stack direction="row" spacing={1} alignItems="center" sx={{ px: 0.25 }}>
-				<Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ flex: 1 }}>
+			<Stack direction="row" spacing={1} sx={{ alignItems: "center", px: 0.25 }}>
+				<Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", flex: 1 }}>
 					{keyLabel}
 				</Typography>
-				<Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ flex: 1 }}>
+				<Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", flex: 1 }}>
 					{valueLabel}
 				</Typography>
 				<Box sx={{ width: actionsSlotWidth, flexShrink: 0 }} />
@@ -203,7 +203,7 @@ const KeyValueRowsEditor = ({
 			{(rows || []).map((row) => {
 				const help = helpByKey?.[row.key];
 				return (
-					<Stack key={row.id} direction="row" spacing={1} alignItems="flex-start">
+					<Stack key={row.id} direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
 						<TextField
 							label={labelsAbove ? undefined : keyLabel}
 							hiddenLabel={labelsAbove}
@@ -222,13 +222,12 @@ const KeyValueRowsEditor = ({
 							value={row.value}
 							onChange={(e) => updateRow(row.id, "value", e.target.value)}
 							disabled={disabled}
-							inputProps={valueInputMode ? { inputMode: valueInputMode } : undefined}
+							slotProps={{ htmlInput: valueInputMode ? { inputMode: valueInputMode } : undefined }}
 							sx={fieldSx}
 						/>
 						<Stack
 							direction="row"
-							alignItems="flex-start"
-							sx={{ flexShrink: 0, width: actionsSlotWidth }}
+							sx={{ alignItems: "flex-start", flexShrink: 0, width: actionsSlotWidth }}
 						>
 							{reserveHelpSlot ? (
 								<Box
@@ -265,7 +264,7 @@ const KeyValueRowsEditor = ({
 					</Stack>
 				);
 			})}
-			<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+			<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
 				<Button startIcon={<AddIcon />} size="small" onClick={addRow} disabled={disabled}>
 					{addLabel}
 				</Button>
@@ -301,7 +300,7 @@ const KeyValueRowsEditor = ({
 	return (
 		<Box>
 			{sectionTitle ? (
-				<Typography variant="body2" fontWeight={600} sx={{ display: "block", mb: 0.75 }}>
+				<Typography variant="body2" sx={{ fontWeight: 600, display: "block", mb: 0.75 }}>
 					{sectionTitle}
 				</Typography>
 			) : null}

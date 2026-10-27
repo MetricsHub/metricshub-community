@@ -42,9 +42,8 @@ const HostsFilterBar = ({
 			<Stack
 				direction={{ xs: "column", sm: "row" }}
 				spacing={1}
-				alignItems={{ xs: "stretch", sm: "center" }}
-				flexWrap="wrap"
 				useFlexGap
+				sx={{ alignItems: { xs: "stretch", sm: "center" }, flexWrap: "wrap" }}
 			>
 				<TextField
 					size="small"
@@ -52,12 +51,14 @@ const HostsFilterBar = ({
 					value={search}
 					onChange={(e) => onSearchChange(e.target.value)}
 					sx={{ minWidth: 200, flex: 1 }}
-					InputProps={{
-						startAdornment: (
-							<InputAdornment position="start">
-								<SearchIcon fontSize="small" color="action" />
-							</InputAdornment>
-						),
+					slotProps={{
+						input: {
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon fontSize="small" color="action" />
+								</InputAdornment>
+							),
+						},
 					}}
 				/>
 				<FormControl size="small" sx={{ minWidth: 160 }}>
@@ -95,9 +96,8 @@ const HostsFilterBar = ({
 					<Stack
 						direction="row"
 						spacing={1}
-						flexWrap="wrap"
 						useFlexGap
-						sx={{ ml: { sm: "auto" }, width: { xs: "100%", sm: "auto" } }}
+						sx={{ flexWrap: "wrap", ml: { sm: "auto" }, width: { xs: "100%", sm: "auto" } }}
 					>
 						{actions}
 					</Stack>

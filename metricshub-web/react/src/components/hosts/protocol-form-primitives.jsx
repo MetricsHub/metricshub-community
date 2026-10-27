@@ -105,12 +105,12 @@ export const ProtocolFieldLabelRow = ({
 			{label}
 		</Typography>
 		{required ? (
-			<Typography component="span" color="error.main" sx={{ ...guidedConfigFieldLabelSx, ml: 0 }}>
+			<Typography component="span" sx={{ ...guidedConfigFieldLabelSx, color: "error.main", ml: 0 }}>
 				*
 			</Typography>
 		) : null}
 		{description ? (
-			<Typography variant="body2" color="text.secondary">
+			<Typography variant="body2" sx={{ color: "text.secondary" }}>
 				{description}
 			</Typography>
 		) : null}

@@ -84,54 +84,49 @@ const ResourceGroupOverviewAccordion = ({
 			defaultExpanded={defaultExpanded}
 			variant="outlined"
 			disableGutters
+			slots={{ heading: "div" }}
 			sx={{
 				bgcolor: "transparent",
 				"&:before": { display: "none" },
 				"& .MuiAccordionDetails-root": { bgcolor: "transparent" },
 			}}
 		>
-			<AccordionSummary
-				expandIcon={<ExpandMoreIcon />}
-				sx={{
-					bgcolor: "action.hover",
-					transition: "background-color 0.4s ease",
-					"&:hover": { bgcolor: "action.selected" },
-					"& .MuiAccordionSummary-content": { my: 1 },
-				}}
-			>
-				<Stack
-					direction="row"
-					alignItems="center"
-					justifyContent="space-between"
-					spacing={1}
-					useFlexGap
-					flexWrap="wrap"
-					sx={{ width: "100%", pr: 1 }}
+			<Box sx={{ position: "relative" }}>
+				<AccordionSummary
+					expandIcon={<ExpandMoreIcon />}
+					sx={{
+						bgcolor: "action.hover",
+						transition: "background-color 0.4s ease",
+						"&:hover": { bgcolor: "action.selected" },
+						"& .MuiAccordionSummary-content": { my: 1, pr: 12 },
+					}}
 				>
-					<Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+					<Stack
+						direction="row"
+						spacing={1}
+						useFlexGap
+						sx={{ alignItems: "center", flexWrap: "wrap" }}
+					>
 						<HostsEntityTitle iconType="resource-group" compact>
 							{group.name}
 						</HostsEntityTitle>
 						<Chip size="small" label={resourceCountChipLabel} variant="outlined" />
 					</Stack>
-					<Button
-						variant="text"
-						size="small"
-						startIcon={<OpenInNewIcon fontSize="small" />}
-						onClick={(event) => {
-							event.stopPropagation();
-							onOpenGroup();
-						}}
-						sx={{ flexShrink: 0 }}
-					>
-						Open
-					</Button>
-				</Stack>
-			</AccordionSummary>
+				</AccordionSummary>
+				<Button
+					variant="text"
+					size="small"
+					startIcon={<OpenInNewIcon fontSize="small" />}
+					onClick={onOpenGroup}
+					sx={{ position: "absolute", right: 48, top: "50%", transform: "translateY(-50%)" }}
+				>
+					Open
+				</Button>
+			</Box>
 
 			<AccordionDetails sx={{ p: 2, bgcolor: "transparent" }}>
 				<Stack spacing={2}>
-					<Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+					<Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
 						{onConfigureGroup && (
 							<Button
 								variant="outlined"
@@ -196,9 +191,9 @@ const ResourceGroupOverviewAccordion = ({
 								"& .MuiAccordionSummary-content": { my: 1 },
 							}}
 						>
-							<Stack direction="row" alignItems="center" spacing={1}>
+							<Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
 								<DnsOutlinedIcon fontSize="small" />
-								<Typography fontWeight={600}>Resources</Typography>
+								<Typography sx={{ fontWeight: 600 }}>Resources</Typography>
 							</Stack>
 						</AccordionSummary>
 
@@ -279,7 +274,7 @@ const ResourceGroupsOverviewView = ({
 
 	return (
 		<Stack spacing={2}>
-			<Typography variant="body2" color="text.secondary">
+			<Typography variant="body2" sx={{ color: "text.secondary" }}>
 				{summary.groupCount} resource group{summary.groupCount === 1 ? "" : "s"},{" "}
 				{summary.groupedHostCount} grouped resource
 				{summary.groupedHostCount === 1 ? "" : "s"}. Expand a group to review its configuration and

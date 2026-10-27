@@ -20,7 +20,7 @@ const GuidedConfigTreeActions = ({
 	onCreateHost,
 }) => {
 	return (
-		<Stack direction="row" spacing={1} alignItems="center">
+		<Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
 			<HostsPageHeader
 				busy={busy}
 				disableNewGroup={disableNewGroup}

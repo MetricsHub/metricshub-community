@@ -489,7 +489,7 @@ function ConfigurationPage() {
 
 	const treeContent = (
 		<Stack spacing={1.5} sx={{ p: 1.5 }}>
-			<Stack direction="row" spacing={1} alignItems="center">
+			<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
 				<Button
 					size="small"
 					variant="outlined"
@@ -628,10 +628,11 @@ function ConfigurationPage() {
 	);
 
 	const smallScreenHeader = (
-		<Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1 }}>
+		<Stack direction="row" spacing={1} sx={{ alignItems: "center", px: 1.5, py: 1 }}>
 			<IconButton
 				size="small"
 				onClick={() => setDrawerOpen(true)}
+				aria-label="Open configuration files"
 				sx={{ border: 1, borderColor: "divider", borderRadius: 1 }}
 			>
 				<FolderIcon fontSize="small" />
@@ -648,16 +649,25 @@ function ConfigurationPage() {
 				anchor="left"
 				open={drawerOpen}
 				onClose={() => setDrawerOpen(false)}
-				PaperProps={{ sx: { width: "85%", maxWidth: 360 } }}
+				slotProps={{ paper: { sx: { width: "85%", maxWidth: 360 } } }}
 			>
 				<Stack
 					direction="row"
-					alignItems="center"
-					justifyContent="space-between"
-					sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
+					sx={{
+						alignItems: "center",
+						justifyContent: "space-between",
+						px: 2,
+						py: 1.5,
+						borderBottom: 1,
+						borderColor: "divider",
+					}}
 				>
 					<Typography variant="h6">Configuration</Typography>
-					<IconButton size="small" onClick={() => setDrawerOpen(false)}>
+					<IconButton
+						size="small"
+						onClick={() => setDrawerOpen(false)}
+						aria-label="Close configuration files"
+					>
 						<CloseIcon />
 					</IconButton>
 				</Stack>
@@ -792,7 +802,7 @@ function ConfigurationPage() {
 							)}
 						</Box>
 						{loadingContent && (
-							<Stack direction="row" alignItems="center" spacing={1}>
+							<Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
 								<CircularProgress size={18} />
 								Loading content…
 							</Stack>

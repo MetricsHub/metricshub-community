@@ -203,7 +203,7 @@ const ResourceAdvancedOptionsSection = ({
 							label={inheritLabel}
 							slotProps={{ typography: { sx: guidedConfigFieldLabelSx } }}
 						/>
-						<Typography variant="caption" color="text.secondary" sx={{ display: "block", ml: 4 }}>
+						<Typography variant="caption" sx={{ color: "text.secondary", display: "block", ml: 4 }}>
 							{inheritAdvanced
 								? "Uncheck to set every option below explicitly, so later changes to the defaults won't affect it."
 								: "Every option below is set explicitly and won't be affected by changes to the defaults."}

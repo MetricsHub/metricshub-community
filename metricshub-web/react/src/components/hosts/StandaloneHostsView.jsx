@@ -109,7 +109,7 @@ const StandaloneHostsView = ({
 
 	return (
 		<Stack spacing={2}>
-			<Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+			<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
 				<HostsEntityTitle iconType="resource-group" compact>
 					{NO_RESOURCE_GROUP}
 				</HostsEntityTitle>
@@ -156,7 +156,7 @@ const StandaloneHostsView = ({
 				/>
 			)}
 
-			<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+			<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
 				{protocolFilter !== "all" && (
 					<Chip
 						size="small"
@@ -203,7 +203,7 @@ const StandaloneHostsView = ({
 			)}
 
 			{summary.standaloneCount === 0 && summary.groupCount > 0 && (
-				<Typography variant="body2" color="text.secondary">
+				<Typography variant="body2" sx={{ color: "text.secondary" }}>
 					All resources are organized in resource groups. Open a group from the resources overview.
 				</Typography>
 			)}

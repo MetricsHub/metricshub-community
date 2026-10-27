@@ -37,10 +37,10 @@ const HostProtocolConfigStep = ({
 
 	const header = showHeader ? (
 		<Box>
-			<Typography variant="subtitle1" fontWeight={600}>
+			<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
 				{protocolLabel} configuration
 			</Typography>
-			<Typography variant="body2" color="text.secondary">
+			<Typography variant="body2" sx={{ color: "text.secondary" }}>
 				Settings written under protocols.{protocol} in metricshub-ui.yaml
 			</Typography>
 		</Box>

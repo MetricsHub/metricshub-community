@@ -289,7 +289,7 @@ function ChatPage() {
 					},
 				}}
 			>
-				<Stack direction="row" spacing={1.5} alignItems="flex-end">
+				<Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-end" }}>
 					<TextField
 						inputRef={inputRef}
 						fullWidth
@@ -330,6 +330,7 @@ function ChatPage() {
 					{isLoading ? (
 						<IconButton
 							onClick={handleStop}
+							aria-label="Stop response"
 							sx={{
 								mb: 0.5,
 								bgcolor: theme.palette.error.main,
@@ -346,6 +347,7 @@ function ChatPage() {
 					) : (
 						<IconButton
 							onClick={handleSend}
+							aria-label="Send message"
 							disabled={!input.trim()}
 							sx={{
 								mb: 0.5,
@@ -422,7 +424,11 @@ function ChatPage() {
 							</Typography>
 						)}
 					</Box>
-					<IconButton size="small" onClick={() => setIsReasoningPanelOpen(false)}>
+					<IconButton
+						size="small"
+						aria-label="Close thoughts"
+						onClick={() => setIsReasoningPanelOpen(false)}
+					>
 						<CloseIcon fontSize="small" />
 					</IconButton>
 				</Box>
@@ -760,6 +766,8 @@ function ChatPage() {
 					}}
 				>
 					<Box
+						aria-hidden={!isReasoningPanelOpen}
+						inert={!isReasoningPanelOpen}
 						sx={{
 							position: "absolute",
 							inset: 0,

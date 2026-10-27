@@ -78,6 +78,10 @@ describe("ChatPage", () => {
 
 		expect(screen.getByText("Start a conversation with M8B")).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Tell me about your systems...")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+		expect(screen.queryByRole("button", { name: "Close thoughts" })).not.toBeInTheDocument();
+		const hiddenCloseButton = screen.getByRole("button", { name: "Close thoughts", hidden: true });
+		expect(hiddenCloseButton.closest("[inert]")).toHaveAttribute("aria-hidden", "true");
 	});
 
 	it("sends a message, streams a response, and updates UI state", async () => {
@@ -102,6 +106,7 @@ describe("ChatPage", () => {
 		);
 		expect(store.getState().chat.isLoading).toBe(true);
 		expect(screen.getByText("Generating response...")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Stop response" })).toBeEnabled();
 
 		await act(async () => {
 			handlers?.onChunk?.("Hi there");
@@ -119,5 +124,13 @@ describe("ChatPage", () => {
 
 		expect(screen.getByText("Hello")).toBeInTheDocument();
 		expect(screen.getByText("Hi there")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Thinking" }));
+		const closeThoughtsButton = screen.getByRole("button", { name: "Close thoughts" });
+		expect(closeThoughtsButton.closest("[aria-hidden]")).toHaveAttribute("aria-hidden", "false");
+		expect(closeThoughtsButton.closest("[inert]")).toBeNull();
+		await user.click(closeThoughtsButton);
+		expect(screen.queryByRole("button", { name: "Close thoughts" })).not.toBeInTheDocument();
+		expect(closeThoughtsButton.closest("[inert]")).toHaveAttribute("aria-hidden", "true");
 	});
 });

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import {
 	Box,
@@ -111,7 +111,6 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 	connector,
 	expandedMonitors,
 	handleMonitorToggle,
-	navigate,
 }) {
 	const monitorStorageKeyPrefix = React.useMemo(() => {
 		const resourceKey = resourceId || "unknown";
@@ -130,12 +129,13 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 	);
 	const pivotGroups = React.useMemo(() => buildPivotGroups(sortedInstances), [sortedInstances]);
 	const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
+	const displayName = prettifyKey(monitor.name);
 
 	return (
 		<Accordion
 			expanded={isMonitorExpanded}
 			onChange={handleMonitorToggle(uniqueMonitorKey)}
-			TransitionProps={{ unmountOnExit: true }}
+			slotProps={{ transition: { unmountOnExit: true } }}
 			disableGutters
 			elevation={0}
 			square
@@ -145,75 +145,93 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 				borderColor: "divider",
 			}}
 		>
-			<AccordionSummary
-				expandIcon={<ExpandMoreIcon />}
-				sx={{
-					minHeight: 40,
-					cursor: "pointer",
-					bgcolor: "background.default",
-					pl: 4, // Indent nested monitors
-					transition: "background-color 0.4s ease, color 0.4s ease",
-					"&:hover": {
-						bgcolor: "action.hover",
-					},
-					"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
-				}}
-			>
-				<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
-					<Box
+			<Box sx={{ position: "relative" }}>
+				<AccordionSummary
+					aria-label={`Toggle ${displayName}, ${instances.length} ${instances.length === 1 ? "instance" : "instances"}`}
+					expandIcon={<ExpandMoreIcon />}
+					sx={{
+						minHeight: 40,
+						cursor: "pointer",
+						bgcolor: "background.default",
+						pl: 4, // Indent nested monitors
+						transition: "background-color 0.4s ease, color 0.4s ease",
+						"&:hover": {
+							bgcolor: "action.hover",
+						},
+						"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
+					}}
+				>
+					<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
+						<Box
+							sx={{
+								flexShrink: 0,
+								mr: 1,
+								display: "flex",
+								alignItems: "center",
+								gap: 1,
+							}}
+						>
+							<MonitorTypeIcon
+								type={displayName}
+								fallback={<MonitorIcon sx={{ fontSize: 20 }} />}
+							/>
+							{/* Reserve the link's width while keeping both controls outside each other. */}
+							<Typography
+								variant="subtitle1"
+								component="span"
+								aria-hidden
+								sx={{ fontWeight: 500, visibility: "hidden" }}
+							>
+								{displayName}
+							</Typography>
+						</Box>
+						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+							<CountBadge
+								count={instances.length}
+								title="Number of instances"
+								bgcolor="action.selected"
+								sx={{ fontWeight: 500 }}
+							/>
+						</Box>
+					</Box>
+				</AccordionSummary>
+				<Tooltip
+					title="Open Monitor Type Page"
+					arrow
+					placement="top"
+					disableInteractive
+					describeChild
+				>
+					<Link
+						component={RouterLink}
+						to={paths.explorerMonitorType(
+							resourceGroupName,
+							resourceName,
+							connector.name,
+							monitor.name,
+						)}
+						variant="subtitle1"
+						underline="none"
 						sx={{
-							flexShrink: 0,
-							mr: 1,
-							display: "flex",
-							alignItems: "center",
-							gap: 1,
+							position: "absolute",
+							left: (theme) => `calc(${theme.spacing(5)} + 20px)`,
+							top: "50%",
+							transform: "translateY(-50%)",
+							fontWeight: 500,
+							color: "primary.main",
+							"&:hover": {
+								color: (theme) =>
+									theme.palette.mode === "dark"
+										? theme.palette.common.white
+										: theme.palette.primary.dark,
+								textDecoration: "underline",
+							},
 						}}
 					>
-						<MonitorTypeIcon
-							type={prettifyKey(monitor.name)}
-							fallback={<MonitorIcon sx={{ fontSize: 20 }} />}
-						/>
-						<Tooltip title="Open Monitor Type Page" arrow placement="top" disableInteractive>
-							<Box component="span" sx={{ display: "inline-block" }}>
-								<Typography
-									variant="subtitle1"
-									component="span"
-									onClick={(e) => {
-										e.stopPropagation();
-										navigate(
-											paths.explorerMonitorType(
-												resourceGroupName,
-												resourceName,
-												connector.name,
-												monitor.name,
-											),
-										);
-									}}
-									sx={{
-										fontWeight: 500,
-										cursor: "pointer",
-										color: "primary.main",
-										"&:hover": {
-											color: "common.white",
-											textDecoration: "underline",
-										},
-									}}
-								>
-									{prettifyKey(monitor.name)}
-								</Typography>
-							</Box>
-						</Tooltip>
-					</Box>
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-						<CountBadge
-							count={instances.length}
-							title="Number of instances"
-							bgcolor="action.selected"
-							sx={{ fontWeight: 500 }}
-						/>
-					</Box>
-				</Box>
-			</AccordionSummary>
+						{displayName}
+					</Link>
+				</Tooltip>
+			</Box>
 			<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 				{pivotGroups.length > 0
 					? pivotGroups.map((group) => (
@@ -267,7 +285,6 @@ const ConnectorAccordion = ({
 	const isDarkMode = theme.palette.mode === "dark";
 
 	const dispatch = useDispatch();
-	const navigate = useNavigate();
 	const uiState = useSelector((state) =>
 		resourceId ? selectResourceUiState(resourceId)(state) : null,
 	);
@@ -346,7 +363,7 @@ const ConnectorAccordion = ({
 			id={connectorKey}
 			expanded={isConnectorExpanded}
 			onChange={handleConnectorToggle}
-			TransitionProps={{ unmountOnExit: true }}
+			slotProps={{ transition: { unmountOnExit: true } }}
 			disableGutters
 			elevation={0}
 			square
@@ -534,7 +551,6 @@ const ConnectorAccordion = ({
 							connector={connector}
 							expandedMonitors={expandedMonitors}
 							handleMonitorToggle={handleMonitorToggle}
-							navigate={navigate}
 						/>
 					))}
 				</Box>

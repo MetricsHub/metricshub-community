@@ -52,9 +52,14 @@ export default function VelocityTestResultPanel({
 		<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
 			<Stack
 				direction="row"
-				alignItems="center"
-				justifyContent="space-between"
-				sx={{ px: 1.5, py: 0.5, borderBottom: 1, borderColor: "divider" }}
+				sx={{
+					alignItems: "center",
+					justifyContent: "space-between",
+					px: 1.5,
+					py: 0.5,
+					borderBottom: 1,
+					borderColor: "divider",
+				}}
 			>
 				<Typography variant="subtitle2">Generated YAML Output</Typography>
 				<IconButton size="small" onClick={onClose}>

@@ -46,15 +46,13 @@ const ProfileMenu = ({ username, onSignOut }) => {
 				onClose={handleClose}
 				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
-				MenuListProps={{ sx: { p: 0 } }}
-				PaperProps={{
-					sx: {
-						minWidth: 200,
-					},
+				slotProps={{
+					list: { sx: { p: 0 } },
+					paper: { sx: { minWidth: 200 } },
 				}}
 			>
 				<Box sx={{ px: 2, pt: 1, pb: 1, maxWidth: 260 }}>
-					<Typography variant="caption" color="text.secondary">
+					<Typography variant="caption" sx={{ color: "text.secondary" }}>
 						Signed in as
 					</Typography>
 					<Typography

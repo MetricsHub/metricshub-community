@@ -368,7 +368,11 @@ const GuidedConfigSearch = ({ snapshot, onViewChange }) => {
 								<Typography variant="body1" noWrap>
 									{option.name}
 								</Typography>
-								<Typography variant="caption" color="text.secondary" noWrap display="block">
+								<Typography
+									variant="caption"
+									noWrap
+									sx={{ color: "text.secondary", display: "block" }}
+								>
 									{option.kind} {option.breadcrumb ? `• ${option.breadcrumb}` : ""}
 								</Typography>
 							</Box>

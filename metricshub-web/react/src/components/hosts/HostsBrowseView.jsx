@@ -274,11 +274,11 @@ const HostsBrowseView = ({
 						}}
 					>
 						<Box>
-							<Typography variant="subtitle1" fontWeight={600} gutterBottom>
+							<Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
 								Select a resource group or resource
 							</Typography>
 
-							<Typography variant="body2" color="text.secondary">
+							<Typography variant="body2" sx={{ color: "text.secondary" }}>
 								Use the navigation tree on the left to view group details, resource configuration,
 								or {NO_RESOURCE_GROUP}.
 							</Typography>

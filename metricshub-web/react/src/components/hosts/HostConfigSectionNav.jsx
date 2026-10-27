@@ -137,17 +137,18 @@ const HostConfigSectionNav = ({
 						<Box sx={{ flex: 1, minWidth: 0, pt: 0.25, pb: isLast ? 0 : 0.5 }}>
 							<Typography
 								variant="body2"
-								fontWeight={isActive ? 700 : 500}
-								color={isInvalid ? "error.main" : isEdited ? "text.secondary" : "text.primary"}
-								sx={{ lineHeight: 1.35 }}
+								sx={{
+									fontWeight: isActive ? 700 : 500,
+									color: isInvalid ? "error.main" : isEdited ? "text.secondary" : "text.primary",
+									lineHeight: 1.35,
+								}}
 							>
 								{step.label}
 							</Typography>
 							{description ? (
 								<Typography
 									variant="caption"
-									color="text.secondary"
-									sx={{ display: "block", mt: 0.25, lineHeight: 1.35 }}
+									sx={{ color: "text.secondary", display: "block", mt: 0.25, lineHeight: 1.35 }}
 								>
 									{description}
 								</Typography>

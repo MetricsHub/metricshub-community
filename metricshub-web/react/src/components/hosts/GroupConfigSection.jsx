@@ -59,17 +59,17 @@ const GroupConfigSection = ({
 					"& .MuiAccordionSummary-content": { my: 1 },
 				}}
 			>
-				<Stack direction="row" alignItems="center" spacing={1}>
+				<Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
 					{icon && (
 						<Box component="span" sx={{ display: "inline-flex", alignItems: "center" }}>
 							{icon}
 						</Box>
 					)}
-					<Typography fontWeight={600}>{title}</Typography>
+					<Typography sx={{ fontWeight: 600 }}>{title}</Typography>
 				</Stack>
 			</AccordionSummary>
 
-			<AccordionDetails sx={{ p: 0, bgcolor: "transparent" }}>
+			<AccordionDetails sx={{ p: 0, bgcolor: "transparent", overflowX: "auto" }}>
 				<Table size="small" sx={{ bgcolor: "transparent" }}>
 					<TableHead>
 						<TableRow sx={{ bgcolor: "transparent" }}>

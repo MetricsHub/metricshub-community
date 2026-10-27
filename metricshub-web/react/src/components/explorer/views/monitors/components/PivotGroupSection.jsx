@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography } from "@mui/material";
+import { Box, ButtonBase, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { renderMetricHeader } from "../../common/metric-column-helper";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
@@ -48,6 +48,7 @@ const PivotGroupSection = ({
 	storageKeyPrefix,
 }) => {
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
+	const panelId = React.useId();
 
 	const dispatch = useDispatch();
 	const uiState = useSelector((state) =>
@@ -218,8 +219,13 @@ const PivotGroupSection = ({
 
 	return (
 		<Box>
-			<Box
+			<ButtonBase
+				aria-expanded={open}
+				aria-controls={open ? panelId : undefined}
 				sx={{
+					width: "100%",
+					font: "inherit",
+					textAlign: "left",
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "space-between",
@@ -231,11 +237,20 @@ const PivotGroupSection = ({
 					"&:hover": {
 						bgcolor: "action.hover",
 					},
+					"&.Mui-focusVisible": {
+						outline: "2px solid",
+						outlineColor: "primary.main",
+						outlineOffset: -2,
+					},
 				}}
 				onClick={handleToggle}
 			>
-				<Box sx={{ display: "flex", alignItems: "center", columnGap: 1, flexWrap: "wrap" }}>
+				<Box
+					component="span"
+					sx={{ display: "flex", alignItems: "center", columnGap: 1, flexWrap: "wrap" }}
+				>
 					<Typography
+						component="span"
 						variant="subtitle2"
 						sx={{
 							fontWeight: 500,
@@ -250,6 +265,7 @@ const PivotGroupSection = ({
 
 					{isUtilizationGroup && legendItems.length > 0 && (
 						<Box
+							component="span"
 							sx={{
 								display: "flex",
 								flexWrap: "wrap",
@@ -259,10 +275,12 @@ const PivotGroupSection = ({
 						>
 							{legendItems.map((label) => (
 								<Box
+									component="span"
 									key={label}
 									sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: 10 }}
 								>
 									<Box
+										component="span"
 										sx={{
 											width: 10,
 											height: 10,
@@ -280,8 +298,8 @@ const PivotGroupSection = ({
 
 				<Typography
 					variant="caption"
-					color="text.secondary"
-					sx={{ display: "flex", alignItems: "center", columnGap: 0.5 }}
+					aria-hidden
+					sx={{ color: "text.secondary", display: "flex", alignItems: "center", columnGap: 0.5 }}
 				>
 					<Box
 						component="span"
@@ -295,10 +313,10 @@ const PivotGroupSection = ({
 						▶
 					</Box>
 				</Typography>
-			</Box>
+			</ButtonBase>
 
 			{open && (
-				<Box sx={{ mt: 1, mb: 2 }}>
+				<Box id={panelId} sx={{ mt: 1, mb: 2 }}>
 					<DataGrid
 						rows={rows}
 						columns={columnsWithWidths}

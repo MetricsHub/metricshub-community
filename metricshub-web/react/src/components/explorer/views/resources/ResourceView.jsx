@@ -216,7 +216,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 	if ((error && !hierarchy) || (resourceError && !currentResource)) {
 		return (
 			<Box sx={{ p: 2 }}>
-				<Typography color="error">{error}</Typography>
+				<Typography color="error">{resourceError || error}</Typography>
 			</Box>
 		);
 	}

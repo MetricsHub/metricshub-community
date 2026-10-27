@@ -163,7 +163,7 @@ const ProtocolTestHostnameDialog = ({
 					<Typography variant="h6" sx={{ lineHeight: 1.3 }}>
 						Test connection
 					</Typography>
-					<Typography variant="body2" color="text.secondary">
+					<Typography variant="body2" sx={{ color: "text.secondary" }}>
 						{protocolLabel ? `${protocolLabel} — ` : ""}
 						{hostnames.length} hostnames
 					</Typography>
@@ -234,7 +234,7 @@ const ProtocolTestHostnameDialog = ({
 						})}
 					</List>
 				) : (
-					<Typography variant="body2" color="text.secondary" sx={{ px: 1.25, py: 1 }}>
+					<Typography variant="body2" sx={{ color: "text.secondary", px: 1.25, py: 1 }}>
 						No hostnames match your search.
 					</Typography>
 				)}
