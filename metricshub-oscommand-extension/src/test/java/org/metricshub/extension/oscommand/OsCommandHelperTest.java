@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 import static org.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -229,7 +231,7 @@ class OsCommandHelperTest {
 		checkNoTempEmbeddedFileExist();
 
 		assertThrows(IllegalArgumentException.class, () ->
-			OsCommandHelper.createOsCommandEmbeddedFiles(null, null, EMPTY_EMBEDDED_FILE_MAP, jUnitTempFileCreator)
+			OsCommandHelper.createOsCommandEmbeddedFiles(null, null, EMPTY_EMBEDDED_FILE_MAP, jUnitTempFileCreator, NEW_LINE)
 		);
 
 		// Embedded files are referenced in the command line but cannot be found
@@ -238,13 +240,14 @@ class OsCommandHelperTest {
 				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
 				null,
 				EMPTY_EMBEDDED_FILE_MAP,
-				jUnitTempFileCreator
+				jUnitTempFileCreator,
+				NEW_LINE
 			)
 		);
 
 		assertEquals(
 			Collections.emptyMap(),
-			OsCommandHelper.createOsCommandEmbeddedFiles(CMD, null, EMPTY_EMBEDDED_FILE_MAP, jUnitTempFileCreator)
+			OsCommandHelper.createOsCommandEmbeddedFiles(CMD, null, EMPTY_EMBEDDED_FILE_MAP, jUnitTempFileCreator, NEW_LINE)
 		);
 
 		// case embeddedFile not found
@@ -254,7 +257,8 @@ class OsCommandHelperTest {
 				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
 				null,
 				commandLineEmbeddedFiles,
-				jUnitTempFileCreator
+				jUnitTempFileCreator,
+				NEW_LINE
 			)
 		);
 
@@ -264,7 +268,8 @@ class OsCommandHelperTest {
 				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
 				null,
 				commandLineEmbeddedFiles,
-				jUnitTempFileCreator
+				jUnitTempFileCreator,
+				NEW_LINE
 			)
 		);
 
@@ -279,7 +284,9 @@ class OsCommandHelperTest {
 			);
 
 			mockedOsCommandHelper
-				.when(() -> OsCommandHelper.createTempFileWithEmbeddedFileContent(any(EmbeddedFile.class), isNull(), any()))
+				.when(() ->
+					OsCommandHelper.createTempFileWithEmbeddedFileContent(any(EmbeddedFile.class), isNull(), any(), any())
+				)
 				.thenThrow(IOException.class);
 
 			mockedOsCommandHelper
@@ -288,7 +295,8 @@ class OsCommandHelperTest {
 						EMBEDDED_FILE_1_COPY_COMMAND_LINE,
 						null,
 						commandLineEmbeddedFiles,
-						jUnitTempFileCreator
+						jUnitTempFileCreator,
+						NEW_LINE
 					)
 				)
 				.thenCallRealMethod();
@@ -298,7 +306,8 @@ class OsCommandHelperTest {
 					EMBEDDED_FILE_1_COPY_COMMAND_LINE,
 					null,
 					commandLineEmbeddedFiles,
-					jUnitTempFileCreator
+					jUnitTempFileCreator,
+					NEW_LINE
 				)
 			);
 		}
@@ -316,7 +325,8 @@ class OsCommandHelperTest {
 				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
 				new SudoInformation(true, Set.of(ARCCONF_PATH), SudoInformation.SUDO),
 				commandLineEmbeddedFiles,
-				jUnitTempFileCreator
+				jUnitTempFileCreator,
+				NEW_LINE
 			);
 
 			assertEquals(2, embeddedTempFiles.size());
@@ -669,7 +679,8 @@ class OsCommandHelperTest {
 						COMMAND_TO_UPDATE,
 						null,
 						commandLineEmbeddedFiles,
-						TEMP_FILE_CREATOR
+						TEMP_FILE_CREATOR,
+						WINDOWS_NEW_LINE
 					)
 				)
 				.thenThrow(new IOException(ERROR_IN_FILE1));
@@ -820,7 +831,8 @@ class OsCommandHelperTest {
 						NAVISECCLI_COMMAND,
 						null,
 						commandLineEmbeddedFiles,
-						TEMP_FILE_CREATOR
+						TEMP_FILE_CREATOR,
+						NEW_LINE
 					)
 				)
 				.thenCallRealMethod();
@@ -885,7 +897,8 @@ class OsCommandHelperTest {
 						NAVISECCLI_COMMAND,
 						sudoInformation,
 						commandLineEmbeddedFiles,
-						TEMP_FILE_CREATOR
+						TEMP_FILE_CREATOR,
+						NEW_LINE
 					)
 				)
 				.thenCallRealMethod();
@@ -951,7 +964,8 @@ class OsCommandHelperTest {
 						NAVISECCLI_COMMAND,
 						sudoInformation,
 						commandLineEmbeddedFiles,
-						TEMP_FILE_CREATOR
+						TEMP_FILE_CREATOR,
+						NEW_LINE
 					)
 				)
 				.thenCallRealMethod();
@@ -1017,7 +1031,8 @@ class OsCommandHelperTest {
 						NAVISECCLI_COMMAND,
 						sudoInformation,
 						commandLineEmbeddedFiles,
-						TEMP_FILE_CREATOR
+						TEMP_FILE_CREATOR,
+						NEW_LINE
 					)
 				)
 				.thenCallRealMethod();
@@ -1096,7 +1111,8 @@ class OsCommandHelperTest {
 						SH_EMBEDDED_FILE_1,
 						sudoInformation,
 						commandLineEmbeddedFiles,
-						TEMP_FILE_CREATOR
+						TEMP_FILE_CREATOR,
+						NEW_LINE
 					)
 				)
 				.thenReturn(embeddedTempFiles);

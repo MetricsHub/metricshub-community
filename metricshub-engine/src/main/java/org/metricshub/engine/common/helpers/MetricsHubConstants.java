@@ -75,6 +75,10 @@ public class MetricsHubConstants {
 	 */
 	public static final String NEW_LINE = "\n";
 	/**
+	 * Windows line separator (CRLF)
+	 */
+	public static final String WINDOWS_NEW_LINE = "\r\n";
+	/**
 	 * Tab Character
 	 */
 	public static final String TAB = "\t";

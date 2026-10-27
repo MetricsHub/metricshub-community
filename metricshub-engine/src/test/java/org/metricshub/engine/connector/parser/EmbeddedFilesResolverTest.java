@@ -1,6 +1,8 @@
 package org.metricshub.engine.connector.parser;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,6 +57,16 @@ class EmbeddedFilesResolverTest {
 
 		// Verify the full JsonNode object
 		assertEquals(OBJECT_MAPPER.readTree(EXPECTED_YAML), connector);
+	}
+
+	@Test
+	void testNormalizeLineEndings() {
+		assertArrayEquals(
+			"Accept: json\nBody\n\r".getBytes(),
+			EmbeddedFilesResolver.normalizeLineEndings("Accept: json\r\nBody\r\n\r".getBytes())
+		);
+		final byte[] binary = { 0x7f, 'E', 'L', 'F', 0, '\r', '\n' };
+		assertSame(binary, EmbeddedFilesResolver.normalizeLineEndings(binary));
 	}
 
 	@Test

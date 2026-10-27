@@ -24,6 +24,7 @@ package org.metricshub.extension.oscommand;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_LOCK_TIMEOUT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
 import static org.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
 import static org.metricshub.engine.strategy.utils.OsCommandHelper.createOsCommandEmbeddedFiles;
@@ -440,11 +441,18 @@ public class OsCommandService {
 			);
 		}
 
+		// Embedded files are written with the line endings of the system that executes them
+		final boolean isWindows =
+			isLocalhost || isExecuteLocally
+				? LocalOsHandler.isWindows()
+				: DeviceKind.WINDOWS.equals(telemetryManager.getHostConfiguration().getHostType());
+
 		final Map<String, File> embeddedTempFiles = createOsCommandEmbeddedFiles(
 			commandLine,
 			sudoInformation,
 			EmbeddedFileHelper.findEmbeddedFiles(commandLine, connectorEmbeddedFiles),
-			TEMP_FILE_CREATOR
+			TEMP_FILE_CREATOR,
+			isWindows ? WINDOWS_NEW_LINE : NEW_LINE
 		);
 
 		// Retrieve the hostname from the configurations, otherwise from the telemetryManager.
