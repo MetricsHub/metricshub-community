@@ -191,6 +191,11 @@ public final class IpmiResultConverter {
 
 			frusByEntity.put(entityKey(DeviceDescription.getDeviceType(fru.entity()), fru.entityInstance()), device);
 
+			// A FRU that names neither a vendor nor a model is not listed; its details still go to its device
+			if (isBlank(device.vendor()) && isBlank(device.model())) {
+				continue;
+			}
+
 			final EntityId entity = fru.entity();
 			if (!fromProduct || isBlank(device.model()) || isBlank(device.serialNumber())) {
 				incomplete.add(device);
@@ -266,12 +271,10 @@ public final class IpmiResultConverter {
 	 * @param fru     A FRU whose device returns SPD data or a PIROM
 	 * @param details The details decoded from them
 	 * @return the FRU with the manufacturer, model and serial number ipmi-java takes from its areas (the product
-	 *         area, then the board area, then the SPD data or the PIROM), or {@code null} when none names a vendor or
-	 *         a model
+	 *         area, then the board area, then the SPD data or the PIROM), empty when none names them
 	 */
 	private static FruDevice withIdentity(final Fru fru, final String details) {
-		final FruDevice device = new FruDevice(fru.manufacturer(), fru.model(), fru.serialNumber(), details);
-		return isBlank(device.vendor()) && isBlank(device.model()) ? null : device;
+		return new FruDevice(fru.manufacturer(), fru.model(), fru.serialNumber(), details);
 	}
 
 	/**

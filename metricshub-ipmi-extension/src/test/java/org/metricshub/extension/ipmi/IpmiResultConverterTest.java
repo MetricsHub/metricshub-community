@@ -715,11 +715,11 @@ public class IpmiResultConverterTest {
 			IpmiClientResults.sensor(presence(EntityId.Processor, 1, "CPU 1"), states(1))
 		);
 
-		// An anonymous FRU is not listed; the product area names the second one
+		// An anonymous FRU is not listed but keeps its details; the product area names the second one
 		assertEquals(
 			"FRU;IBM;System x3650 M2;KD9098C\n" +
 				"FRU;Intel;SR3GH;634AFBC3354D3C6D\n" +
-				"Memory Device;1;Memory Device 1;;;;DIMM 1=Device Present;;;;\n" +
+				"Memory Device;1;Memory Device 1;;;;DIMM 1=Device Present;16384;DDR4 RDIMM ECC;;\n" +
 				"Memory Device;2;Memory Device 2;IBM;System x3650 M2;KD9098C;DIMM 2=Device Present;16384;DDR4 RDIMM ECC;;\n" +
 				"Processor;1;Processor 1;Intel;SR3GH;634AFBC3354D3C6D;CPU 1=Device Present;;;3000;" +
 				"8 cores with Hyper-Threading, 3000 MHz, L2 1024 KB per core, L3 11264 KB, TDP 85 W, Part number 37608DC00416530",
