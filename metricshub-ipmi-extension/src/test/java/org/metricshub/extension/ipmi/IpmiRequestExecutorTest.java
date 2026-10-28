@@ -33,6 +33,8 @@ import org.metricshub.ipmi.client.SelEntryList;
 import org.metricshub.ipmi.client.SelRequest;
 import org.metricshub.ipmi.client.SensorList;
 import org.metricshub.ipmi.client.SensorsRequest;
+import org.metricshub.ipmi.core.coding.commands.PrivilegeLevel;
+import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 import org.mockito.MockedStatic;
 
 class IpmiRequestExecutorTest {
@@ -54,6 +56,7 @@ class IpmiRequestExecutorTest {
 	private IpmiRequestExecutor executor() {
 		final IpmiRequestExecutor executor = spy(new IpmiRequestExecutor());
 		doReturn(bmc).when(executor).newClient(HOSTNAME, ipmiConfiguration);
+		doReturn(bmc).when(executor).newClient(HOSTNAME, ipmiConfiguration, PrivilegeLevel.Operator);
 		return executor;
 	}
 
@@ -277,5 +280,35 @@ class IpmiRequestExecutorTest {
 		final IpmiRequestExecutor executor = executor();
 		assertThrows(IpmiTimeoutException.class, () -> executor.executeIpmiProbe(HOSTNAME, ipmiConfiguration));
 		verify(bmc).close();
+	}
+
+	@Test
+	void testExecuteIpmiChassisControl() {
+		when(bmc.chassisStatus()).thenReturn(
+			IpmiClientResults.chassisStatus(IpmiResultConverterTest.buildChassisStatusResponseData(1))
+		);
+
+		assertEquals(
+			"System power state is up",
+			executor().executeIpmiChassisControl(HOSTNAME, ipmiConfiguration, PowerCommand.PowerUp)
+		);
+		verify(bmc).chassisControl(PowerCommand.PowerUp);
+		verify(bmc).close();
+	}
+
+	@Test
+	void testExecuteIpmiChassisIdentify() {
+		assertEquals(
+			"Chassis identify on for 15 s",
+			executor().executeIpmiChassisIdentify(HOSTNAME, ipmiConfiguration, 15, false)
+		);
+		verify(bmc).chassisIdentify(15);
+		assertEquals("Chassis identify off", executor().executeIpmiChassisIdentify(HOSTNAME, ipmiConfiguration, 0, false));
+		verify(bmc).chassisIdentify(0);
+		assertEquals(
+			"Chassis identify on until turned off",
+			executor().executeIpmiChassisIdentify(HOSTNAME, ipmiConfiguration, 0, true)
+		);
+		verify(bmc).chassisIdentifyForever();
 	}
 }

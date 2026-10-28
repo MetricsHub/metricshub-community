@@ -54,6 +54,8 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 
 	private static final String RAW_QUERY = "raw";
 
+	private static final String CHASSIS_QUERY = "chassis";
+
 	/**
 	 * Holds contextual information about the current agent instance.
 	 */
@@ -87,6 +89,9 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		Event Log as CSV with a header line, the whole log or only the entries of the last 'since' duration;
 		'raw' sends one raw command (netFn, command, data) and returns 'completionCode;data' in hex; raw
 		commands can change the BMC state and are disabled by default (JVM flag metricshub.mcp.tool.ipmi.raw.enabled).
+		'chassis' runs an action: 'status' (the power state), 'on', 'off', 'cycle', 'reset', 'soft', 'diag'
+		(power control) or 'identify' (the chassis LED, for 'seconds'); the actions other than 'status' act on
+		the server and are disabled by default (JVM flag metricshub.mcp.tool.ipmi.chassis.enabled).
 		Reading a large SEL takes several seconds per hundred entries: raise the timeout accordingly.
 		"""
 	)
@@ -98,9 +103,17 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 			required = false
 		) final Integer poolSize,
 		@ToolParam(
-			description = "Optional query: 'sensors' (default), 'sel' (System Event Log) or 'raw' (raw command).",
+			description = "Optional query: 'sensors' (default), 'sel' (System Event Log), 'raw' (raw command) or 'chassis' (power state or action).",
 			required = false
 		) final String query,
+		@ToolParam(
+			description = "For 'chassis': 'status' (default), 'on', 'off', 'cycle', 'reset', 'soft', 'diag' or 'identify'.",
+			required = false
+		) final String action,
+		@ToolParam(
+			description = "For 'chassis' 'identify': how long the LED stays on in seconds (default 15), 0 to turn it off, or 'forever'.",
+			required = false
+		) final String seconds,
 		@ToolParam(
 			description = "For 'sel': only the entries of the last duration, e.g. 30m, 1h, 2d, or seconds. Default: the whole log.",
 			required = false
@@ -120,7 +133,17 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 			return MultiHostToolResponse.buildError("The raw IPMI commands are disabled for MCP.");
 		}
 
-		final JsonNode queryNode = buildQueryNode(query, since, netFn, command, data);
+		// A chassis action other than the status acts on the server: same opt-in
+		final boolean chassisAction =
+			CHASSIS_QUERY.equalsIgnoreCase(query == null ? null : query.trim()) &&
+			action != null &&
+			!action.isBlank() &&
+			!"status".equalsIgnoreCase(action.trim());
+		if (chassisAction && !isIpmiChassisEnabledForMCP()) {
+			return MultiHostToolResponse.buildError("The IPMI chassis actions are disabled for MCP.");
+		}
+
+		final JsonNode queryNode = buildQueryNode(query, since, netFn, command, data, action, seconds);
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_IPMI_POOL_SIZE);
 		return agentContextHolder
 			.getAgentContext()
@@ -158,6 +181,8 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	 * @param netFn   The network function of a raw command, or {@code null}
 	 * @param command The command byte of a raw command, or {@code null}
 	 * @param data    The request bytes of a raw command, or {@code null}
+	 * @param action  The chassis action, or {@code null}
+	 * @param seconds The duration of the chassis identify, or {@code null}
 	 * @return the query node, or {@code null}
 	 */
 	static JsonNode buildQueryNode(
@@ -165,7 +190,9 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		final String since,
 		final String netFn,
 		final String command,
-		final String data
+		final String data,
+		final String action,
+		final String seconds
 	) {
 		if (query == null || query.isBlank()) {
 			return null;
@@ -184,6 +211,12 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		if (data != null) {
 			queryNode.put("data", data);
 		}
+		if (action != null) {
+			queryNode.put("action", action);
+		}
+		if (seconds != null) {
+			queryNode.put("seconds", seconds);
+		}
 		return queryNode;
 	}
 
@@ -195,6 +228,16 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	 */
 	static boolean isIpmiRawEnabledForMCP() {
 		return Boolean.getBoolean("metricshub.mcp.tool.ipmi.raw.enabled");
+	}
+
+	/**
+	 * Checks the JVM flag {@code metricshub.mcp.tool.ipmi.chassis.enabled}: the chassis actions power the server
+	 * on, off or cycle it, so they stay off unless the administrator turns them on.
+	 *
+	 * @return {@code true} if the IPMI chassis actions are enabled for MCP; otherwise {@code false}.
+	 */
+	static boolean isIpmiChassisEnabledForMCP() {
+		return Boolean.getBoolean("metricshub.mcp.tool.ipmi.chassis.enabled");
 	}
 
 	QueryResponse executeIpmiQueryWithExtensionSafe(

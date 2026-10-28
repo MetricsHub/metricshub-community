@@ -24,6 +24,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.ipmi.IpmiExtension;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor;
+import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 import org.metricshub.web.AgentContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -90,6 +91,8 @@ class ExecuteIpmiQueryServiceTest {
 			null,
 			null,
 			null,
+			null,
+			null,
 			null
 		);
 
@@ -107,6 +110,8 @@ class ExecuteIpmiQueryServiceTest {
 		// Calling execute query
 		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
 			List.of(HOSTNAME),
+			null,
+			null,
 			null,
 			null,
 			null,
@@ -154,6 +159,8 @@ class ExecuteIpmiQueryServiceTest {
 			null,
 			null,
 			null,
+			null,
+			null,
 			null
 		);
 
@@ -191,7 +198,7 @@ class ExecuteIpmiQueryServiceTest {
 
 		// Call the execute query method
 		QueryResponse result = ipmiQueryService
-			.executeQuery(List.of(HOSTNAME), null, null, null, null, null, null, null)
+			.executeQuery(List.of(HOSTNAME), null, null, null, null, null, null, null, null, null)
 			.getHosts()
 			.get(0)
 			.getResponse();
@@ -233,6 +240,8 @@ class ExecuteIpmiQueryServiceTest {
 			null,
 			"raw",
 			null,
+			null,
+			null,
 			"0x06",
 			"0x01",
 			null
@@ -248,6 +257,8 @@ class ExecuteIpmiQueryServiceTest {
 				null,
 				"RAW",
 				null,
+				null,
+				null,
 				"0x06",
 				"0x01",
 				null
@@ -259,14 +270,95 @@ class ExecuteIpmiQueryServiceTest {
 		assertFalse(ExecuteIpmiQueryService.isIpmiRawEnabledForMCP());
 
 		// The query node of each query type
-		assertNull(ExecuteIpmiQueryService.buildQueryNode(null, "1h", null, null, null));
-		assertNull(ExecuteIpmiQueryService.buildQueryNode(" ", null, null, null, null));
-		final JsonNode sel = ExecuteIpmiQueryService.buildQueryNode("sel", "1h", null, null, null);
+		assertNull(ExecuteIpmiQueryService.buildQueryNode(null, "1h", null, null, null, null, null));
+		assertNull(ExecuteIpmiQueryService.buildQueryNode(" ", null, null, null, null, null, null));
+		final JsonNode sel = ExecuteIpmiQueryService.buildQueryNode("sel", "1h", null, null, null, null, null);
 		assertEquals("sel", sel.get("query").asText());
 		assertEquals("1h", sel.get("since").asText());
 		assertFalse(sel.has("netFn"));
-		final JsonNode raw = ExecuteIpmiQueryService.buildQueryNode("raw", null, "6", "1", "0x00");
+		final JsonNode raw = ExecuteIpmiQueryService.buildQueryNode("raw", null, "6", "1", "0x00", null, null);
 		assertEquals("0x00", raw.get("data").asText());
 		assertFalse(raw.has("since"));
+	}
+
+	@Test
+	void testExecuteIpmiChassisQuery() throws Exception {
+		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
+			.hostname(HOSTNAME)
+			.username("username")
+			.password("password".toCharArray())
+			.build();
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(IpmiConfiguration.class, ipmiConfiguration))
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
+
+		// The power state is read without the opt-in
+		System.clearProperty("metricshub.mcp.tool.ipmi.chassis.enabled");
+		when(ipmiRequestExecutorMock.executeIpmiDetection(eq(HOSTNAME), any(IpmiConfiguration.class))).thenReturn(
+			"System power state is up"
+		);
+		assertEquals(
+			"System power state is up",
+			ipmiQueryService
+				.executeQuery(List.of(HOSTNAME), null, null, "chassis", "status", null, null, null, null, null)
+				.getHosts()
+				.get(0)
+				.getResponse()
+				.getResponse()
+		);
+
+		// A power action needs it
+		final MultiHostToolResponse<QueryResponse> disabled = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			null,
+			"chassis",
+			"off",
+			null,
+			null,
+			null,
+			null,
+			null
+		);
+		assertEquals("The IPMI chassis actions are disabled for MCP.", disabled.getErrorMessage());
+		assertTrue(disabled.getHosts().isEmpty());
+
+		System.setProperty("metricshub.mcp.tool.ipmi.chassis.enabled", "true");
+		try {
+			when(
+				ipmiRequestExecutorMock.executeIpmiChassisControl(
+					eq(HOSTNAME),
+					any(IpmiConfiguration.class),
+					eq(PowerCommand.PowerDown)
+				)
+			).thenReturn("System power state is down");
+			assertEquals(
+				"System power state is down",
+				ipmiQueryService
+					.executeQuery(List.of(HOSTNAME), null, null, "chassis", "off", null, null, null, null, null)
+					.getHosts()
+					.get(0)
+					.getResponse()
+					.getResponse()
+			);
+		} finally {
+			System.clearProperty("metricshub.mcp.tool.ipmi.chassis.enabled");
+		}
+		assertFalse(ExecuteIpmiQueryService.isIpmiChassisEnabledForMCP());
+
+		final JsonNode chassis = ExecuteIpmiQueryService.buildQueryNode(
+			"chassis",
+			null,
+			null,
+			null,
+			null,
+			"identify",
+			"30"
+		);
+		assertEquals("identify", chassis.get("action").asText());
+		assertEquals("30", chassis.get("seconds").asText());
 	}
 }

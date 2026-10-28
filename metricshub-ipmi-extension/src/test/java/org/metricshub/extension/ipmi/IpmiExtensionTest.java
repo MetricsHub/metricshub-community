@@ -44,6 +44,7 @@ import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.IpmiClientResults;
 import org.metricshub.ipmi.client.IpmiTimeoutException;
 import org.metricshub.ipmi.client.SelEntry;
+import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -555,6 +556,51 @@ class IpmiExtensionTest {
 		assertEquals("00;20 01", ipmiExtension.executeQuery(configuration, query));
 
 		final ObjectNode unknown = JsonNodeFactory.instance.objectNode().put("query", "sol");
+		assertThrows(IllegalArgumentException.class, () -> ipmiExtension.executeQuery(configuration, unknown));
+	}
+
+	@Test
+	void testExecuteQueryChassis() throws Exception {
+		initIpmi();
+		final IpmiConfiguration configuration = queryConfiguration();
+
+		doReturn("System power state is down").when(ipmiRequestExecutorMock).executeIpmiDetection(HOST_NAME, configuration);
+		assertEquals(
+			"System power state is down",
+			ipmiExtension.executeQuery(configuration, JsonNodeFactory.instance.objectNode().put("query", "chassis"))
+		);
+
+		doReturn("System power state is up")
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiChassisControl(HOST_NAME, configuration, PowerCommand.PowerUp);
+		assertEquals(
+			"System power state is up",
+			ipmiExtension.executeQuery(
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "On")
+			)
+		);
+
+		doReturn("Chassis identify on for 15 s")
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiChassisIdentify(HOST_NAME, configuration, 15, false);
+		assertEquals(
+			"Chassis identify on for 15 s",
+			ipmiExtension.executeQuery(
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "identify")
+			)
+		);
+		doReturn("Chassis identify on until turned off")
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiChassisIdentify(HOST_NAME, configuration, 0, true);
+		final ObjectNode forever = JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "identify");
+		assertEquals(
+			"Chassis identify on until turned off",
+			ipmiExtension.executeQuery(configuration, forever.put("seconds", "forever"))
+		);
+
+		final ObjectNode unknown = JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "explode");
 		assertThrows(IllegalArgumentException.class, () -> ipmiExtension.executeQuery(configuration, unknown));
 	}
 }

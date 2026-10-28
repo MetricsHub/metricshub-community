@@ -234,7 +234,7 @@ Both sides bound the invocation with the same `timeoutMs`; there is no cancel me
 |---|---|
 | The agent always dials out; the server never connects to the agent | No inbound firewall rule on monitored sites |
 | Only advertised tools are invokable, and `excludedTools` removes a tool from the advertisement itself | The tool registry is the security boundary; an operator can withdraw a capability without touching Central |
-| Existing tool kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`, `metricshub.mcp.tool.ipmi.raw.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
+| Existing tool kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`, `metricshub.mcp.tool.ipmi.raw.enabled`, `metricshub.mcp.tool.ipmi.chassis.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
 | Limits (`timeoutMs`, `maxPayloadBytes`, `maxInFlight`) are enforced on both sides | A misbehaving peer cannot exhaust the other |
 | Credentials travel only in the handshake headers, over TLS, to the configured endpoint | Same convention as `central.headers`; values may be keystore-encrypted |
 | Approvals for sensitive tools are decided in Central, between Central and its users | The agent cannot tell an approved call from any other; the policy lives where the users are |

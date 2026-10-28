@@ -41,6 +41,8 @@ import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.client.SelEntryList;
 import org.metricshub.ipmi.client.SelRequest;
 import org.metricshub.ipmi.client.SensorList;
+import org.metricshub.ipmi.core.coding.commands.PrivilegeLevel;
+import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 import org.metricshub.ipmi.core.coding.commands.sel.SelRecordType;
 
 /**
@@ -106,7 +108,24 @@ public class IpmiRequestExecutor {
 	 * @return a new {@link IpmiClient}, to close once the request is done
 	 */
 	IpmiClient newClient(@NonNull final String hostname, @NonNull final IpmiConfiguration ipmiConfiguration) {
+		return newClient(hostname, ipmiConfiguration, PrivilegeLevel.User);
+	}
+
+	/**
+	 * Creates the IPMI client of one request at the given privilege level: Operator for the chassis actions.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration MetricsHub {@link IpmiConfiguration} instance including all the required fields to perform IPMI requests
+	 * @param privilege         The privilege level of the session
+	 * @return a new {@link IpmiClient}, to close once the request is done
+	 */
+	IpmiClient newClient(
+		@NonNull final String hostname,
+		@NonNull final IpmiConfiguration ipmiConfiguration,
+		@NonNull final PrivilegeLevel privilege
+	) {
 		final IpmiClient.Builder builder = IpmiClient.builder(hostname)
+			.privilege(privilege)
 			// A null user name is the anonymous login
 			.credentials(
 				Objects.requireNonNullElse(ipmiConfiguration.getUsername(), ""),
@@ -445,5 +464,67 @@ public class IpmiRequestExecutor {
 			return new int[0];
 		}
 		return Arrays.stream(data.trim().split(" +")).mapToInt(Integer::decode).toArray();
+	}
+
+	/**
+	 * Sends a power command to the chassis (Chassis Control) and reads the power state afterwards. Needs the
+	 * Operator privilege: the session is opened at the highest level of the user.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
+	 * @param command           The power command
+	 * @return the power state read after the command, e.g. "System power state is up"
+	 * @throws IpmiClientException   If the BMC refuses the login or the command, or does not reply in time.
+	 * @throws IllegalStateException For a power cycle of a system that is off
+	 */
+	@WithSpan("IPMI Chassis Control")
+	public String executeIpmiChassisControl(
+		@SpanAttribute("host.hostname") String hostname,
+		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration,
+		@SpanAttribute("ipmi.command") @NonNull PowerCommand command
+	) {
+		log.info("Hostname {} - Sending the IPMI chassis control command {}", hostname, command);
+		final String result;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration, PrivilegeLevel.Operator)) {
+			bmc.chassisControl(command);
+			result = IpmiResultConverter.convertResult(bmc.chassisStatus());
+		}
+		log.info("Hostname {} - IPMI chassis control command {} sent: {}", hostname, command, result);
+		return result;
+	}
+
+	/**
+	 * Turns the chassis identify (typically a blinking LED) on for the given number of seconds, on until turned
+	 * off, or off. Needs the Operator privilege.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
+	 * @param seconds           How long the identify stays on, 1 to 255; 0 turns it off; ignored when {@code forever}
+	 * @param forever           Whether the identify stays on until turned off (not every BMC implements it)
+	 * @return what was done, e.g. "Chassis identify on for 15 s"
+	 * @throws IpmiClientException      If the BMC refuses the login or the command, or does not reply in time.
+	 * @throws IllegalArgumentException When {@code seconds} is not between 0 and 255
+	 */
+	@WithSpan("IPMI Chassis Identify")
+	public String executeIpmiChassisIdentify(
+		@SpanAttribute("host.hostname") String hostname,
+		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration,
+		@SpanAttribute("ipmi.seconds") int seconds,
+		@SpanAttribute("ipmi.forever") boolean forever
+	) {
+		final String result = forever
+			? "Chassis identify on until turned off"
+			: seconds == 0
+				? "Chassis identify off"
+				: "Chassis identify on for " + seconds + " s";
+		log.info("Hostname {} - IPMI chassis identify: {}", hostname, result);
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration, PrivilegeLevel.Operator)) {
+			if (forever) {
+				bmc.chassisIdentifyForever();
+			} else {
+				bmc.chassisIdentify(seconds);
+			}
+		}
+		return result;
 	}
 }

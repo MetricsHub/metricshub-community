@@ -56,6 +56,7 @@ import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.client.SelEntryList;
+import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 
 /**
  * The IpmiExtension class implements the IProtocolExtension interface to provide support for the IPMI (Intelligent Platform Management Interface) protocol in the MetricsHub engine.
@@ -67,6 +68,29 @@ public class IpmiExtension implements IProtocolExtension {
 	 * The identifier for the Ipmi protocol.
 	 */
 	public static final String IDENTIFIER = "ipmi";
+
+	/**
+	 * The power actions of the chassis query, in the wording of the ipmi-java CLI
+	 */
+	private static final Map<String, PowerCommand> POWER_COMMANDS = Map.of(
+		"on",
+		PowerCommand.PowerUp,
+		"off",
+		PowerCommand.PowerDown,
+		"cycle",
+		PowerCommand.PowerCycle,
+		"reset",
+		PowerCommand.HardReset,
+		"soft",
+		PowerCommand.SoftShutdown,
+		"diag",
+		PowerCommand.DiagnosticInterrupt
+	);
+
+	/**
+	 * How long the chassis identify stays on when the query gives no duration
+	 */
+	private static final String DEFAULT_IDENTIFY_SECONDS = "15";
 
 	private IpmiRequestExecutor ipmiRequestExecutor = new IpmiRequestExecutor();
 
@@ -391,8 +415,9 @@ public class IpmiExtension implements IProtocolExtension {
 	/**
 	 * Runs the query of the MCP tool or the CLI: {@code sensors} (the default, the chassis status, FRUs and
 	 * sensors text), {@code sel} (the System Event Log as CSV with a header line, the entries of the last
-	 * {@code since} duration or the whole log) or {@code raw} (a raw command with {@code netFn}, {@code command}
-	 * and {@code data}).
+	 * {@code since} duration or the whole log), {@code raw} (a raw command with {@code netFn}, {@code command}
+	 * and {@code data}) or {@code chassis} (an {@code action}: {@code status}, {@code on}, {@code off},
+	 * {@code cycle}, {@code reset}, {@code soft}, {@code diag} or {@code identify} with {@code seconds}).
 	 *
 	 * @param configuration The IPMI configuration of the host
 	 * @param query         The query, {@code null} for the sensors
@@ -416,7 +441,10 @@ public class IpmiExtension implements IProtocolExtension {
 					.data(text(query, "data"))
 					.build()
 			);
-			default -> throw new IllegalArgumentException("Unknown IPMI query '" + type + "': expected sensors, sel or raw");
+			case "chassis" -> chassisQuery(hostname, ipmiConfiguration, text(query, "action"), text(query, "seconds"));
+			default -> throw new IllegalArgumentException(
+				"Unknown IPMI query '" + type + "': expected sensors, sel, raw or chassis"
+			);
 		};
 	}
 
@@ -442,6 +470,46 @@ public class IpmiExtension implements IProtocolExtension {
 		}
 		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
 		return IpmiResultConverter.SEL_HEADER + NEW_LINE + SourceTable.tableToCsv(rows, TABLE_SEP, true);
+	}
+
+	/**
+	 * Runs a chassis action for a query.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The IPMI configuration of the host
+	 * @param action            {@code status} (the default), a power command ({@code on}, {@code off},
+	 *                          {@code cycle}, {@code reset}, {@code soft}, {@code diag}) or {@code identify}
+	 * @param seconds           For {@code identify}: how long the LED stays on (default 15), {@code 0} to turn it
+	 *                          off, {@code forever} until turned off
+	 * @return the power state after a power command, or what was done
+	 */
+	private String chassisQuery(
+		final String hostname,
+		final IpmiConfiguration ipmiConfiguration,
+		final String action,
+		final String seconds
+	) {
+		final String resolvedAction = action == null || action.isBlank() ? "status" : action.trim().toLowerCase();
+		if ("identify".equals(resolvedAction)) {
+			final String duration = seconds == null || seconds.isBlank() ? DEFAULT_IDENTIFY_SECONDS : seconds.trim();
+			final boolean forever = "forever".equalsIgnoreCase(duration);
+			return ipmiRequestExecutor.executeIpmiChassisIdentify(
+				hostname,
+				ipmiConfiguration,
+				forever ? 0 : Integer.parseInt(duration),
+				forever
+			);
+		}
+		final PowerCommand command = POWER_COMMANDS.get(resolvedAction);
+		if (command != null) {
+			return ipmiRequestExecutor.executeIpmiChassisControl(hostname, ipmiConfiguration, command);
+		}
+		if ("status".equals(resolvedAction)) {
+			return ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiConfiguration);
+		}
+		throw new IllegalArgumentException(
+			"Unknown IPMI chassis action '" + action + "': expected status, on, off, cycle, reset, soft, diag or identify"
+		);
 	}
 
 	/**
