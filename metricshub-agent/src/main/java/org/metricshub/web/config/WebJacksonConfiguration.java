@@ -21,12 +21,12 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
-import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import tools.jackson.databind.InjectableValues;
 
 /**
  * Jackson customization for REST controllers that deserialize typed protocol configurations.
@@ -41,15 +41,12 @@ public class WebJacksonConfiguration {
 	 * @return Jackson customizer
 	 */
 	@Bean
-	public Jackson2ObjectMapperBuilderCustomizer extensionManagerJacksonCustomizer(
-		final AgentContextHolder agentContextHolder
-	) {
-		return builder ->
-			builder.postConfigurer(objectMapper -> {
-				final InjectableValues.Std injectableValues = new InjectableValues.Std();
-				injectableValues.addValue(ExtensionManager.class, agentContextHolder);
-				injectableValues.addValue(ExtensionManager.class.getName(), agentContextHolder);
-				objectMapper.setInjectableValues(injectableValues);
-			});
+	public JsonMapperBuilderCustomizer extensionManagerJacksonCustomizer(final AgentContextHolder agentContextHolder) {
+		return builder -> {
+			final InjectableValues.Std injectableValues = new InjectableValues.Std();
+			injectableValues.addValue(ExtensionManager.class, agentContextHolder);
+			injectableValues.addValue(ExtensionManager.class.getName(), agentContextHolder);
+			builder.injectableValues(injectableValues);
+		};
 	}
 }

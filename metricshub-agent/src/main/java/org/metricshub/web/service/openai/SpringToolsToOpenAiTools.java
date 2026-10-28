@@ -23,6 +23,7 @@ package org.metricshub.web.service.openai;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.core.JsonValue;
 import com.openai.models.responses.FunctionTool;
 import com.openai.models.responses.FunctionTool.Parameters;
@@ -32,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.NoArgsConstructor;
-import org.springframework.ai.model.ModelOptionsUtils;
 import org.springframework.ai.tool.ToolCallback;
 
 /**
@@ -46,6 +46,7 @@ public final class SpringToolsToOpenAiTools {
 
 	private static final String DEFAULT_SCHEMA = "{\"type\":\"object\",\"properties\":{}}";
 	private static final TypeReference<Map<String, JsonNode>> MAP = new TypeReference<>() {};
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	/**
 	 * Builds a list of OpenAI Tools from the given array of ToolCallbacks.
@@ -69,7 +70,7 @@ public final class SpringToolsToOpenAiTools {
 
 			Map<String, JsonNode> schema;
 			try {
-				schema = ModelOptionsUtils.OBJECT_MAPPER.readValue(schemaJson, MAP);
+				schema = OBJECT_MAPPER.readValue(schemaJson, MAP);
 			} catch (Exception e) {
 				throw new IllegalStateException("Invalid JSON schema for tool: " + def.name(), e);
 			}

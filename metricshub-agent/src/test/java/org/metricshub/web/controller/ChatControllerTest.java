@@ -28,7 +28,6 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.core.http.StreamResponse;
 import com.openai.models.responses.ResponseCreateParams;
@@ -50,6 +49,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Tests for ChatController.
@@ -67,7 +67,7 @@ class ChatControllerTest {
 		chatConfig.setApiKey(""); // Empty API key
 		final OpenAIClient client = mock(OpenAIClient.class);
 		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
-		final ObjectMapper objectMapper = new ObjectMapper();
+		final JsonMapper objectMapper = new JsonMapper();
 		final ChatController controller = new ChatController(
 			Optional.of(client),
 			chatConfig,
@@ -109,7 +109,7 @@ class ChatControllerTest {
 		// Controller under test
 		final List<Tool> tools = List.of();
 		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
-		final ObjectMapper objectMapper = new ObjectMapper();
+		final JsonMapper objectMapper = new JsonMapper();
 		when(toolResponseManagerService.adaptToolOutput(any(), any())).thenAnswer(inv -> inv.getArgument(1));
 		final ChatController controller = new ChatController(
 			Optional.of(client),

@@ -607,8 +607,13 @@ class LegacySseServerTransportProviderTest {
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
 		final String sessionId = openSse(mockMvc).sessionId();
 
+		// Invalid JSON syntax
 		postMessage(mockMvc, sessionId, "{\"jsonrpc\":\"2.0\",\"foo\":").andExpect(status().isBadRequest());
-		assertTrue(session.handled.isEmpty());
+
+		// Valid JSON, but invalid method field type
+		postMessage(mockMvc, sessionId, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":{}}").andExpect(status().isBadRequest());
+
+		assertTrue(session.handled.isEmpty(), "Malformed messages must not reach the session");
 	}
 
 	@Test
