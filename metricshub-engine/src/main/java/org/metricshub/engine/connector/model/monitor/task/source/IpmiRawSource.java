@@ -66,7 +66,7 @@ public class IpmiRawSource extends Source {
 	 *
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
-	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param forceSerialization    ignored: the IPMI sources are always serialized
 	 * @param netFn                 the network function of the request, an even number from 0x00 to 0x3E
 	 * @param command               the command byte
 	 * @param data                  the request bytes, separated with spaces; may be {@code null}
@@ -89,6 +89,15 @@ public class IpmiRawSource extends Source {
 		this.netFn = netFn;
 		this.command = command;
 		this.data = data;
+	}
+
+	/**
+	 * Always {@code true}: a BMC accepts few simultaneous sessions, so the IPMI requests of a connector to a host
+	 * are serialized whatever the connector says.
+	 */
+	@Override
+	public boolean isForceSerialization() {
+		return true;
 	}
 
 	public IpmiRawSource copy() {

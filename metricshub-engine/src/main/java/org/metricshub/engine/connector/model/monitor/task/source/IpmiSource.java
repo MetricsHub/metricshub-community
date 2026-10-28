@@ -50,7 +50,7 @@ public class IpmiSource extends Source {
 	 *
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
-	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param forceSerialization    ignored: the IPMI sources are always serialized
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
 	 */
@@ -64,6 +64,15 @@ public class IpmiSource extends Source {
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+	}
+
+	/**
+	 * Always {@code true}: a BMC accepts few simultaneous sessions, so the IPMI requests of a connector to a host
+	 * are serialized whatever the connector says.
+	 */
+	@Override
+	public boolean isForceSerialization() {
+		return true;
 	}
 
 	public IpmiSource copy() {

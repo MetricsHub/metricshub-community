@@ -1,6 +1,7 @@
 package org.metricshub.engine.connector.deserializer.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
@@ -28,5 +29,7 @@ class IpmiSelSourceDeserializerTest extends DeserializerTest {
 		assertEquals(Map.of("testIpmiSelSource", expected(30)), getConnector("ipmiSel").getBeforeAll());
 		assertEquals(Map.of("testIpmiSelSource", expected(50)), getConnector("ipmiSelDefault").getBeforeAll());
 		assertEquals(Map.of("testIpmiSelSource", expected(-1)), getConnector("ipmiSelUnlimited").getBeforeAll());
+		// Serialized whatever the connector says
+		assertTrue(getConnector("ipmiSelDefault").getBeforeAll().get("testIpmiSelSource").isForceSerialization());
 	}
 }

@@ -1,5 +1,7 @@
 package org.metricshub.engine.connector.deserializer.criterion;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,8 @@ class IpmiCriterionDeserializerTest extends DeserializerTest {
 
 		List<Criterion> expected = new ArrayList<>();
 		expected.add(new IpmiCriterion("ipmi", true));
+		// Serialized whatever the connector says
+		assertTrue(new IpmiCriterion().isForceSerialization());
 
 		compareCriterion(connector, expected);
 	}

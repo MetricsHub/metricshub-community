@@ -39,11 +39,20 @@ public class IpmiCriterion extends Criterion {
 	 * Builder for constructing instances of {@link IpmiCriterion}.
 	 *
 	 * @param type                Type of the criterion.
-	 * @param forceSerialization Flag indicating whether serialization should be forced.
+	 * @param forceSerialization Ignored: the IPMI criterion is always serialized.
 	 */
 	@Builder
 	public IpmiCriterion(String type, boolean forceSerialization) {
 		super(type, forceSerialization);
+	}
+
+	/**
+	 * Always {@code true}: a BMC accepts few simultaneous sessions, so the IPMI requests of a connector to a host
+	 * are serialized whatever the connector says.
+	 */
+	@Override
+	public boolean isForceSerialization() {
+		return true;
 	}
 
 	@Override

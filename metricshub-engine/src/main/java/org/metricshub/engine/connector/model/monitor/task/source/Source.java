@@ -169,7 +169,7 @@ public abstract class Source implements Serializable {
 
 		stringJoiner.add(new StringBuilder("- ").append(key).append(".type=").append(this.getClass().getSimpleName()));
 
-		addNonNull(stringJoiner, "- forceSerialization=", forceSerialization);
+		addNonNull(stringJoiner, "- forceSerialization=", isForceSerialization());
 		// A small trick here because the executeForEachEntryOf.toString value is already
 		// formatted that's why we don't need a prefix for the string value of the nested executeForEachEntryOf
 		addNonNull(stringJoiner, EMPTY, executeForEachEntryOf != null ? executeForEachEntryOf.toString() : null);

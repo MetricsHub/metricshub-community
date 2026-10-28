@@ -70,7 +70,7 @@ public class IpmiSelSource extends Source {
 	 *
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
-	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param forceSerialization    ignored: the IPMI sources are always serialized
 	 * @param maxEventsPerPoll      the maximum number of entries returned by one poll; 0 for the default, negative for no limit
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
@@ -91,6 +91,15 @@ public class IpmiSelSource extends Source {
 		} else {
 			this.maxEventsPerPoll = maxEventsPerPoll > 0 ? maxEventsPerPoll : UNLIMITED_EVENTS_PER_POLL;
 		}
+	}
+
+	/**
+	 * Always {@code true}: a BMC accepts few simultaneous sessions, so the IPMI requests of a connector to a host
+	 * are serialized whatever the connector says.
+	 */
+	@Override
+	public boolean isForceSerialization() {
+		return true;
 	}
 
 	public IpmiSelSource copy() {
