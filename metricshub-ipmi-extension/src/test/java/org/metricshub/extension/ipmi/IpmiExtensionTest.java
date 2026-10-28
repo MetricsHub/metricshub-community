@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -466,19 +467,18 @@ class IpmiExtensionTest {
 		final IpmiSelSource source = IpmiSelSource.builder().key("sel").maxEventsPerPoll(1).build();
 		final SelEntry entry5 = IpmiResultConverterTest.psuFailure(5);
 		final SelEntry entry6 = IpmiResultConverterTest.psuFailure(6);
-		final SelEntry entry7 = IpmiResultConverterTest.psuFailure(7);
 
 		// First poll: the end of the log is located, nothing is read nor returned
 		final SelCursor end = new SelCursor(null, 5, new byte[] { 0x05, 0x00, 0x02 });
 		doReturn(end).when(ipmiRequestExecutorMock).executeIpmiSelEnd(HOST_NAME, configuration);
 		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
 		assertSame(end, namespace.getSourceCursor("sel"));
-		verify(ipmiRequestExecutorMock, never()).executeIpmiSel(any(), any(), any(), anyBoolean());
+		verify(ipmiRequestExecutorMock, never()).executeIpmiSel(any(), any(), any(), anyBoolean(), anyInt());
 
-		// Next poll: two new entries after record 5, one returned (maxEventsPerPoll), the cursor stops at it
-		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6, entry7), null), null))
+		// Next poll: the read stops at maxEventsPerPoll (one entry after record 5), the cursor stops at it
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, end, true);
+			.executeIpmiSel(HOST_NAME, configuration, end, true, 1);
 		final SourceTable table = ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager);
 		assertEquals(1, table.getTable().size());
 		assertEquals("6", table.getTable().get(0).get(0));
@@ -488,14 +488,14 @@ class IpmiExtensionTest {
 		// Nothing new: the cursor stays
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true);
+			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true, 1);
 		assertTrue(ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().isEmpty());
 		assertEquals(SelCursor.of(entry6), namespace.getSourceCursor("sel"));
 
 		// The log was cleared and refilled: its entries come back from the first one
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true);
+			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true, 1);
 		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
 		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
 	}
@@ -517,7 +517,7 @@ class IpmiExtensionTest {
 		// So that the first entry logged is returned by the next poll, which reads the whole log
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, empty, true);
+			.executeIpmiSel(HOST_NAME, configuration, empty, true, 50);
 		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
 		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
 	}
@@ -530,7 +530,7 @@ class IpmiExtensionTest {
 		final SelEntry recent = psuFailureAt(6, Instant.now().getEpochSecond() - 60);
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(old, recent), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, null, true);
+			.executeIpmiSel(HOST_NAME, configuration, null, true, 0);
 
 		final String whole = ipmiExtension.executeQuery(
 			configuration,

@@ -25,7 +25,9 @@ import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ArrayHelper;
@@ -37,7 +39,6 @@ import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientException;
 import org.metricshub.ipmi.client.RawResponse;
 import org.metricshub.ipmi.client.SelEntry;
-import org.metricshub.ipmi.client.SelEntryList;
 import org.metricshub.ipmi.client.SelRequest;
 import org.metricshub.ipmi.client.SensorList;
 import org.metricshub.ipmi.core.coding.commands.PrivilegeLevel;
@@ -374,7 +375,7 @@ public class IpmiRequestExecutor {
 	 * @param entries The entries read
 	 * @param sensors The sensors of the BMC, or {@code null}
 	 */
-	public record SelRead(SelEntryList entries, SensorList sensors) {}
+	public record SelRead(List<SelEntry> entries, SensorList sensors) {}
 
 	/**
 	 * Reads the System Event Log entries added after the cursor: the whole log when the cursor is {@code null} or
@@ -384,6 +385,8 @@ public class IpmiRequestExecutor {
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
 	 * @param since             The cursor of the previous read, or {@code null} for the whole log
 	 * @param withSensors       Whether to read the sensors too, to name the sensors of the system events read
+	 * @param limit             The most entries to read, the walk stops there and the others wait for the next read;
+	 *                          0 or negative for all of them
 	 * @return the entries, with the sensors when asked for and at least one system event was read
 	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
@@ -392,7 +395,8 @@ public class IpmiRequestExecutor {
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration,
 		SelCursor since,
-		boolean withSensors
+		boolean withSensors,
+		int limit
 	) {
 		final long startTime = System.currentTimeMillis();
 
@@ -404,7 +408,15 @@ public class IpmiRequestExecutor {
 			} else if (since != null && since.recordId() > 0 && holds(bmc, since)) {
 				request.since(since.recordId());
 			}
-			final SelEntryList entries = request.execute();
+			final List<SelEntry> entries;
+			if (limit > 0) {
+				// The stream stops the walk at the limit: the entries left are read by the next poll
+				try (Stream<SelEntry> stream = request.stream()) {
+					entries = stream.limit(limit).toList();
+				}
+			} else {
+				entries = request.execute();
+			}
 			// ponytail: naming the sensors of the new events walks the whole SDR and reads every sensor; a
 			// records-only walk needs an ipmi-java API
 			final SensorList sensors =

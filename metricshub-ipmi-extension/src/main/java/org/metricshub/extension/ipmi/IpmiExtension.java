@@ -55,7 +55,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.SelEntry;
-import org.metricshub.ipmi.client.SelEntryList;
 import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 
 /**
@@ -246,8 +245,14 @@ public class IpmiExtension implements IProtocolExtension {
 			return SourceTable.empty();
 		}
 
-		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, cursor, true);
-		final SelEntryList entries = read.entries();
+		final SelRead read = ipmiRequestExecutor.executeIpmiSel(
+			hostname,
+			ipmiConfiguration,
+			cursor,
+			true,
+			source.getMaxEventsPerPoll()
+		);
+		final List<SelEntry> entries = read.entries();
 
 		if (cursor.recordId() > 0 && !entries.isEmpty() && entries.get(0).id() <= cursor.recordId()) {
 			log.info(
@@ -257,27 +262,20 @@ public class IpmiExtension implements IProtocolExtension {
 			);
 		}
 
-		List<SelEntry> kept = entries;
-		final int maxEventsPerPoll = source.getMaxEventsPerPoll();
-		if (maxEventsPerPoll > 0 && kept.size() > maxEventsPerPoll) {
-			kept = kept.subList(0, maxEventsPerPoll);
-		}
-
-		// The cursor stops at the last entry returned: the entries left out are read again by the next poll
-		if (!kept.isEmpty()) {
-			namespace.setSourceCursor(sourceKey, SelCursor.of(kept.get(kept.size() - 1)));
+		// The cursor stops at the last entry returned: the read stops at maxEventsPerPoll, the next poll goes on
+		if (!entries.isEmpty()) {
+			namespace.setSourceCursor(sourceKey, SelCursor.of(entries.get(entries.size() - 1)));
 		}
 
 		log.info(
-			"Hostname {} - IPMI SEL poll of source {}: {} entries read, {} returned, cursor at record {}",
+			"Hostname {} - IPMI SEL poll of source {}: {} entries returned, cursor at record {}",
 			hostname,
 			sourceKey,
 			entries.size(),
-			kept.size(),
-			kept.isEmpty() ? cursor.recordId() : kept.get(kept.size() - 1).id()
+			entries.isEmpty() ? cursor.recordId() : entries.get(entries.size() - 1).id()
 		);
 
-		final List<List<String>> rows = IpmiResultConverter.convertSel(kept, read.sensors());
+		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
 		record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, SourceTable.tableToCsv(rows, ";", true));
 		return SourceTable.builder().table(rows).build();
 	}
@@ -464,7 +462,7 @@ public class IpmiExtension implements IProtocolExtension {
 	 * @return the header line, then one line per entry
 	 */
 	private String selQuery(final String hostname, final IpmiConfiguration ipmiConfiguration, final String since) {
-		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, null, true);
+		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, null, true, 0);
 		List<SelEntry> entries = read.entries();
 		if (since != null && !since.isBlank()) {
 			// An entry logged before the BMC had the time cannot be dated: it is left out

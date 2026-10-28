@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
@@ -175,7 +176,7 @@ class IpmiRequestExecutorTest {
 		when(sensorsRequest.execute()).thenReturn(sensors);
 		when(bmc.sensors()).thenReturn(sensorsRequest);
 
-		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, SelCursor.of(since), true);
+		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, SelCursor.of(since), true, 0);
 
 		assertSame(entries, read.entries());
 		assertSame(sensors, read.sensors());
@@ -193,7 +194,7 @@ class IpmiRequestExecutorTest {
 		when(sensorsRequest.execute()).thenThrow(new IpmiTimeoutException("No reply"));
 		when(bmc.sensors()).thenReturn(sensorsRequest);
 
-		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, null, true);
+		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, null, true, 0);
 
 		assertSame(entries, read.entries());
 		assertNull(read.sensors());
@@ -207,7 +208,7 @@ class IpmiRequestExecutorTest {
 		when(selRequest.execute()).thenReturn(entries);
 		when(bmc.sel()).thenReturn(selRequest);
 
-		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, null, false);
+		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, null, false, 0);
 
 		assertSame(entries, read.entries());
 		assertNull(read.sensors());
@@ -261,7 +262,7 @@ class IpmiRequestExecutorTest {
 		when(rawRequest.execute()).thenReturn(
 			IpmiClientResults.rawResponse(0, new byte[] { (byte) 0xFF, (byte) 0xFF, 0x05, 0x00, 0x02, 0x01 })
 		);
-		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
+		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false, 0).entries());
 		verify(rawRequest).data(0x00, 0x00, 0x05, 0x00, 0x00, 0xFF);
 		verify(selRequest).since(5);
 
@@ -269,26 +270,47 @@ class IpmiRequestExecutorTest {
 		when(rawRequest.execute()).thenReturn(
 			IpmiClientResults.rawResponse(0, new byte[] { (byte) 0xFF, (byte) 0xFF, 0x05, 0x00, 0x02, 0x02 })
 		);
-		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
+		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false, 0).entries());
 		verify(selRequest, times(1)).since(5);
 
 		// The record is gone: the whole log
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xCB, new byte[0]));
-		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
+		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false, 0).entries());
 		verify(selRequest, times(1)).since(5);
 
 		// A busy BMC is not a cleared log: the poll fails and the next one tries again
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xC0, new byte[0]));
 		final IpmiRequestExecutor executor = executor();
-		assertThrows(IpmiClientException.class, () -> executor.executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false));
+		assertThrows(IpmiClientException.class, () ->
+			executor.executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false, 0)
+		);
 
 		// A cursor at an empty log: the whole log
 		assertSame(
 			entries,
-			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 0, null), false).entries()
+			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 0, null), false, 0).entries()
 		);
 		verify(selRequest, never()).since(0);
 		verify(selRequest, never()).since(any(SelEntry.class));
+	}
+
+	@Test
+	void testExecuteIpmiSelLimit() {
+		final SelRequest selRequest = mock(SelRequest.class, RETURNS_SELF);
+		when(selRequest.stream()).thenReturn(
+			Stream.of(
+				IpmiResultConverterTest.psuFailure(6),
+				IpmiResultConverterTest.psuFailure(7),
+				IpmiResultConverterTest.psuFailure(8)
+			)
+		);
+		when(bmc.sel()).thenReturn(selRequest);
+
+		// The walk stops at the limit: the entries left are for the next poll
+		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, null, false, 2);
+		assertEquals(List.of(6, 7), read.entries().stream().map(SelEntry::id).toList());
+		verify(selRequest, never()).execute();
+		verify(bmc).close();
 	}
 
 	@Test
