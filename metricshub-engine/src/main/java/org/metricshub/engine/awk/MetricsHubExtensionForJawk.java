@@ -91,7 +91,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		if (args[0] != null) {
 			return executeSource(Source.fromMap(IpmiSource.class, args[0]));
 		}
-		return executeSource(IpmiSource.builder().forceSerialization(false).build());
+		return executeSource(IpmiSource.builder().build());
 	}
 
 	/**

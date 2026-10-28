@@ -43,6 +43,11 @@ import org.metricshub.engine.extension.recorder.AbstractRecorder;
  *   response: uuid-random.txt
  * - request: GetSensors
  *   response: uuid-random.txt
+ * - request: GetSel
+ *   response: uuid-random.txt
+ * - request: Raw
+ *   query: 06 01
+ *   response: uuid-random.txt
  * </pre>
  *
  * <p>Thread-safe: all writes are synchronized per recorder instance, and one
@@ -61,12 +66,22 @@ public class IpmiRecorder extends AbstractRecorder<IpmiRecorder.IpmiRecordReques
 	 */
 	public static final String GET_SENSORS_REQUEST = "GetSensors";
 
+	/**
+	 * Request type identifier for the IPMI System Event Log entries of one poll.
+	 */
+	public static final String GET_SEL_REQUEST = "GetSel";
+
+	/**
+	 * Request type identifier for a raw IPMI command; its entry carries the request bytes as {@code query}.
+	 */
+	public static final String RAW_REQUEST = "Raw";
+
 	static final String IPMI_SUBDIR = "ipmi";
 	static final String IMAGE_YAML = "image.yaml";
 
 	private static final ConcurrentHashMap<String, IpmiRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	record IpmiRecordRequest(String requestType, String response) {}
+	record IpmiRecordRequest(String requestType, String query, String response) {}
 
 	IpmiRecorder(final String recordOutputDirectory) {
 		super(recordOutputDirectory, IPMI_SUBDIR);
@@ -118,7 +133,18 @@ public class IpmiRecorder extends AbstractRecorder<IpmiRecorder.IpmiRecordReques
 	 * @param response    the raw response string
 	 */
 	public void record(final String requestType, final String response) {
-		recordInternal(new IpmiRecordRequest(requestType, response));
+		record(requestType, null, response);
+	}
+
+	/**
+	 * Records an IPMI response to a request with parameters.
+	 *
+	 * @param requestType the request type identifier
+	 * @param query       the request bytes of a raw command, {@code null} for the other request types
+	 * @param response    the raw response string
+	 */
+	public void record(final String requestType, final String query, final String response) {
+		recordInternal(new IpmiRecordRequest(requestType, query, response));
 	}
 
 	/**
@@ -145,6 +171,9 @@ public class IpmiRecorder extends AbstractRecorder<IpmiRecorder.IpmiRecordReques
 	protected Map<String, Object> buildEntry(final IpmiRecordRequest request, final String responseFileName) {
 		final Map<String, Object> entry = new LinkedHashMap<>();
 		entry.put("request", request.requestType());
+		if (request.query() != null) {
+			entry.put("query", request.query());
+		}
 		entry.put("response", responseFileName);
 		return entry;
 	}

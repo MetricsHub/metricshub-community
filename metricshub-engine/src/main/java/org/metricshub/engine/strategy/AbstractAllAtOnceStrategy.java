@@ -68,6 +68,7 @@ import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
@@ -365,7 +366,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	}
 
 	/**
-	 * Whether the given source is incremental: an eventLog source, or a file source in LOG mode.
+	 * Whether the given source is incremental: an eventLog or ipmiSel source, or a file source in LOG mode.
 	 *
 	 * @param source The source to check
 	 * @return {@code true} if the source only returns the entries added since the previous poll
@@ -374,7 +375,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		if (source instanceof FileSource fileSource) {
 			return fileSource.getMode() == FileSourceProcessingMode.LOG;
 		}
-		return source instanceof EventLogSource;
+		return source instanceof EventLogSource || source instanceof IpmiSelSource;
 	}
 
 	/**

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +52,8 @@ import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -77,6 +80,7 @@ import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpSourceProcessor;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.ipmi.IpmiExtension;
+import org.metricshub.extension.ipmi.IpmiResultConverter;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jdbc.JdbcExtension;
 import org.metricshub.extension.jdbc.SqlCriterionProcessor;
@@ -359,6 +363,8 @@ public class EmulationExtension implements IProtocolExtension {
 			CommandLineSource.class,
 			HttpSource.class,
 			IpmiSource.class,
+			IpmiSelSource.class,
+			IpmiRawSource.class,
 			JmxSource.class,
 			SnmpGetSource.class,
 			SnmpTableSource.class,
@@ -438,6 +444,24 @@ public class EmulationExtension implements IProtocolExtension {
 				wmiSource,
 				telemetryManager
 			);
+		} else if (source instanceof IpmiRawSource rawSource) {
+			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			final String hostname = telemetryManager.getHostname();
+			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
+			final String result = ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiCfg, emulCfg, rawSource);
+			if (result != null) {
+				return SourceTable.builder().table(List.of(IpmiResultConverter.rawRow(result))).build();
+			}
+			return SourceTable.empty();
+		} else if (source instanceof IpmiSelSource) {
+			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			final String hostname = telemetryManager.getHostname();
+			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
+			final String result = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiCfg, emulCfg);
+			if (result != null) {
+				return SourceTable.builder().table(SourceTable.csvToTable(result, ";")).build();
+			}
+			return SourceTable.empty();
 		} else if (source instanceof IpmiSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();

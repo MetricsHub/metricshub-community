@@ -27,6 +27,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
@@ -67,6 +69,22 @@ public interface ISourceProcessor {
 	 * @return The SourceTable result.
 	 */
 	SourceTable process(IpmiSource ipmiSource);
+
+	/**
+	 * Process the IpmiSelSource and return a SourceTable.
+	 *
+	 * @param ipmiSelSource The IpmiSelSource to process.
+	 * @return The SourceTable result.
+	 */
+	SourceTable process(IpmiSelSource ipmiSelSource);
+
+	/**
+	 * Process the IpmiRawSource and return a SourceTable.
+	 *
+	 * @param ipmiRawSource The IpmiRawSource to process.
+	 * @return The SourceTable result.
+	 */
+	SourceTable process(IpmiRawSource ipmiRawSource);
 
 	/**
 	 * Process the CommandLineSource and return a SourceTable.

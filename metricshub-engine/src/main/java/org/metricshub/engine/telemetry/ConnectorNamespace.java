@@ -66,6 +66,13 @@ public class ConnectorNamespace {
 	@Default
 	private Map<String, Map<String, Long>> fileSourceCursors = new ConcurrentHashMap<>();
 
+	/**
+	 * The cursor of each incremental source handled by an extension (the ipmiSel source, for one), by source key.
+	 * The extension owns the type of the cursor.
+	 */
+	@Default
+	private Map<String, Object> sourceCursors = new ConcurrentHashMap<>();
+
 	@Default
 	private ReentrantLock forceSerializationLock = new ReentrantLock(true);
 
@@ -144,5 +151,25 @@ public class ConnectorNamespace {
 	 */
 	public Map<String, Long> getFileSourceCursors(@NonNull String sourceKey) {
 		return fileSourceCursors.computeIfAbsent(sourceKey, _ -> new ConcurrentHashMap<>());
+	}
+
+	/**
+	 * Gets the cursor an extension stored for the specified incremental source.
+	 *
+	 * @param sourceKey the source key
+	 * @return the cursor, or null before the first poll
+	 */
+	public Object getSourceCursor(@NonNull String sourceKey) {
+		return sourceCursors.get(sourceKey);
+	}
+
+	/**
+	 * Stores the cursor of the specified incremental source for its next poll.
+	 *
+	 * @param sourceKey the source key
+	 * @param cursor    the cursor, owned by the extension
+	 */
+	public void setSourceCursor(@NonNull String sourceKey, @NonNull Object cursor) {
+		sourceCursors.put(sourceKey, cursor);
 	}
 }

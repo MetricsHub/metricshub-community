@@ -3,19 +3,26 @@ package org.metricshub.extension.ipmi;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,12 +33,20 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
+import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
+import org.metricshub.ipmi.client.IpmiClientResults;
 import org.metricshub.ipmi.client.IpmiTimeoutException;
+import org.metricshub.ipmi.client.SelEntry;
+import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -391,5 +406,204 @@ class IpmiExtensionTest {
 			.bmcKey(BMC_KEY)
 			.build();
 		assertThrows(Exception.class, () -> ipmiExtension.executeQuery(ipmiConfiguration, null));
+	}
+
+	@Test
+	void testProcessIpmiRawSource() {
+		initIpmi();
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(IpmiConfiguration.class);
+		final IpmiRawSource source = IpmiRawSource.builder().key("raw").netFn("6").command("1").build();
+
+		doReturn("00;20 01").when(ipmiRequestExecutorMock).executeIpmiRaw(HOST_NAME, configuration, source);
+		assertEquals(
+			SourceTable.builder().table(List.of(List.of("00", "20 01"))).build(),
+			ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)
+		);
+
+		// A source that does not hold numbers is an error of the source
+		final IpmiRawSource bad = IpmiRawSource.builder().key("bad").netFn("x").command("1").build();
+		doThrow(new IllegalArgumentException("x"))
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiRaw(HOST_NAME, configuration, bad);
+		assertEquals(SourceTable.empty(), ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager));
+	}
+
+	/**
+	 * @return the configuration of the host with its hostname, as the MCP tool and the CLI pass it to executeQuery
+	 */
+	private IpmiConfiguration queryConfiguration() {
+		final IpmiConfiguration configuration = (IpmiConfiguration) configuration().copy();
+		configuration.setHostname(HOST_NAME);
+		return configuration;
+	}
+
+	private IpmiConfiguration configuration() {
+		return (IpmiConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(IpmiConfiguration.class);
+	}
+
+	/**
+	 * @param id             the record ID
+	 * @param epochSeconds   the timestamp
+	 * @return the system event of {@link IpmiResultConverterTest#PSU_FAILURE_RECORD} at that ID and time
+	 */
+	private static SelEntry psuFailureAt(final int id, final long epochSeconds) {
+		final byte[] record = IpmiResultConverterTest.PSU_FAILURE_RECORD.clone();
+		record[0] = (byte) id;
+		record[1] = (byte) (id >> 8);
+		for (int i = 0; i < 4; i++) {
+			record[3 + i] = (byte) (epochSeconds >> (8 * i));
+		}
+		return IpmiClientResults.selEntry(record, 0);
+	}
+
+	@Test
+	void testProcessIpmiSelSource() {
+		initIpmi();
+		final IpmiConfiguration configuration = configuration();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID);
+		final IpmiSelSource source = IpmiSelSource.builder().key("sel").maxEventsPerPoll(1).build();
+		final SelEntry entry5 = IpmiResultConverterTest.psuFailure(5);
+		final SelEntry entry6 = IpmiResultConverterTest.psuFailure(6);
+
+		// First poll: the end of the log is located, nothing is read nor returned
+		final SelCursor end = new SelCursor(null, 5, new byte[] { 0x05, 0x00, 0x02 });
+		doReturn(end).when(ipmiRequestExecutorMock).executeIpmiSelEnd(HOST_NAME, configuration);
+		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
+		assertSame(end, namespace.getSourceCursor("sel"));
+		verify(ipmiRequestExecutorMock, never()).executeIpmiSel(any(), any(), any(), anyBoolean(), anyInt());
+
+		// Next poll: the read stops at maxEventsPerPoll (one entry after record 5), the cursor stops at it
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6), null), null))
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiSel(HOST_NAME, configuration, end, true, 1);
+		final SourceTable table = ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager);
+		assertEquals(1, table.getTable().size());
+		assertEquals("6", table.getTable().get(0).get(0));
+		assertEquals("", table.getTable().get(0).get(4));
+		assertEquals(SelCursor.of(entry6), namespace.getSourceCursor("sel"));
+
+		// Nothing new: the cursor stays
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(), null), null))
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true, 1);
+		assertTrue(ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().isEmpty());
+		assertEquals(SelCursor.of(entry6), namespace.getSourceCursor("sel"));
+
+		// The log was cleared and refilled: its entries come back from the first one
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true, 1);
+		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
+		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
+	}
+
+	@Test
+	void testProcessIpmiSelSourceEmptyLog() {
+		initIpmi();
+		final IpmiConfiguration configuration = configuration();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID);
+		final IpmiSelSource source = IpmiSelSource.builder().key("sel").build();
+		final SelEntry entry5 = IpmiResultConverterTest.psuFailure(5);
+
+		// An empty log on the first poll still marks the poll as done
+		final SelCursor empty = new SelCursor(null, 0, null);
+		doReturn(empty).when(ipmiRequestExecutorMock).executeIpmiSelEnd(HOST_NAME, configuration);
+		assertTrue(ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().isEmpty());
+		assertSame(empty, namespace.getSourceCursor("sel"));
+
+		// So that the first entry logged is returned by the next poll, which reads the whole log
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiSel(HOST_NAME, configuration, empty, true, 50);
+		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
+		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
+	}
+
+	@Test
+	void testExecuteQuerySel() throws Exception {
+		initIpmi();
+		final IpmiConfiguration configuration = queryConfiguration();
+		final SelEntry old = IpmiResultConverterTest.psuFailure(5);
+		final SelEntry recent = psuFailureAt(6, Instant.now().getEpochSecond() - 60);
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(old, recent), null), null))
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiSel(HOST_NAME, configuration, null, true, 0);
+
+		final String whole = ipmiExtension.executeQuery(
+			configuration,
+			JsonNodeFactory.instance.objectNode().put("query", "sel")
+		);
+		assertTrue(whole.startsWith(IpmiResultConverter.SEL_HEADER + "\n5;1593835520;"), whole);
+		assertTrue(whole.contains("\n6;"), whole);
+
+		final String lastHour = ipmiExtension.executeQuery(
+			configuration,
+			JsonNodeFactory.instance.objectNode().put("query", "SEL").put("since", "1h")
+		);
+		assertFalse(lastHour.contains("5;1593835520;"), lastHour);
+		assertTrue(lastHour.contains("\n6;"), lastHour);
+	}
+
+	@Test
+	void testExecuteQueryRaw() throws Exception {
+		initIpmi();
+		final IpmiConfiguration configuration = queryConfiguration();
+		final IpmiRawSource expected = IpmiRawSource.builder().netFn("0x06").command("0x01").data("0x00").build();
+		doReturn("00;20 01").when(ipmiRequestExecutorMock).executeIpmiRaw(HOST_NAME, configuration, expected);
+
+		final ObjectNode query = JsonNodeFactory.instance.objectNode().put("query", "raw").put("netFn", "0x06");
+		query.put("command", "0x01").put("data", "0x00");
+		assertEquals("00;20 01", ipmiExtension.executeQuery(configuration, query));
+
+		final ObjectNode unknown = JsonNodeFactory.instance.objectNode().put("query", "sol");
+		assertThrows(IllegalArgumentException.class, () -> ipmiExtension.executeQuery(configuration, unknown));
+	}
+
+	@Test
+	void testExecuteQueryChassis() throws Exception {
+		initIpmi();
+		final IpmiConfiguration configuration = queryConfiguration();
+
+		doReturn("System power state is down").when(ipmiRequestExecutorMock).executeIpmiDetection(HOST_NAME, configuration);
+		assertEquals(
+			"System power state is down",
+			ipmiExtension.executeQuery(configuration, JsonNodeFactory.instance.objectNode().put("query", "chassis"))
+		);
+
+		doReturn("System power state is up")
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiChassisControl(HOST_NAME, configuration, PowerCommand.PowerUp);
+		assertEquals(
+			"System power state is up",
+			ipmiExtension.executeQuery(
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "On")
+			)
+		);
+
+		doReturn("Chassis identify on for 15 s")
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiChassisIdentify(HOST_NAME, configuration, 15, false);
+		assertEquals(
+			"Chassis identify on for 15 s",
+			ipmiExtension.executeQuery(
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "identify")
+			)
+		);
+		doReturn("Chassis identify on until turned off")
+			.when(ipmiRequestExecutorMock)
+			.executeIpmiChassisIdentify(HOST_NAME, configuration, 0, true);
+		final ObjectNode forever = JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "identify");
+		assertEquals(
+			"Chassis identify on until turned off",
+			ipmiExtension.executeQuery(configuration, forever.put("seconds", "forever"))
+		);
+
+		final ObjectNode unknown = JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "explode");
+		assertThrows(IllegalArgumentException.class, () -> ipmiExtension.executeQuery(configuration, unknown));
 	}
 }

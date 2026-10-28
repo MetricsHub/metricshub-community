@@ -57,6 +57,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 		@JsonSubTypes.Type(value = CopySource.class, name = "copy"),
 		@JsonSubTypes.Type(value = HttpSource.class, name = "http"),
 		@JsonSubTypes.Type(value = IpmiSource.class, name = "ipmi"),
+		@JsonSubTypes.Type(value = IpmiSelSource.class, name = "ipmiSel"),
+		@JsonSubTypes.Type(value = IpmiRawSource.class, name = "ipmiRaw"),
 		@JsonSubTypes.Type(value = CommandLineSource.class, name = "commandLine"),
 		@JsonSubTypes.Type(value = JawkSource.class, name = "awk"),
 		@JsonSubTypes.Type(value = SnmpGetSource.class, name = "snmpGet"),
@@ -167,7 +169,7 @@ public abstract class Source implements Serializable {
 
 		stringJoiner.add(new StringBuilder("- ").append(key).append(".type=").append(this.getClass().getSimpleName()));
 
-		addNonNull(stringJoiner, "- forceSerialization=", forceSerialization);
+		addNonNull(stringJoiner, "- forceSerialization=", isForceSerialization());
 		// A small trick here because the executeForEachEntryOf.toString value is already
 		// formatted that's why we don't need a prefix for the string value of the nested executeForEachEntryOf
 		addNonNull(stringJoiner, EMPTY, executeForEachEntryOf != null ? executeForEachEntryOf.toString() : null);

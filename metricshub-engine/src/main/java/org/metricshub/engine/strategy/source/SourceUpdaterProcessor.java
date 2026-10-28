@@ -51,6 +51,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
@@ -133,6 +135,16 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(final IpmiSource ipmiSource) {
 		return processSource(ipmiSource.copy());
+	}
+
+	@Override
+	public SourceTable process(final IpmiSelSource ipmiSelSource) {
+		return processSource(ipmiSelSource.copy());
+	}
+
+	@Override
+	public SourceTable process(final IpmiRawSource ipmiRawSource) {
+		return processSource(ipmiRawSource.copy());
 	}
 
 	@Override

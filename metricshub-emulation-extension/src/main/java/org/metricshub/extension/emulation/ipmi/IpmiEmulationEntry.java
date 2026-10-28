@@ -40,6 +40,11 @@ public class IpmiEmulationEntry {
 	private String request;
 
 	/**
+	 * The request bytes of a raw command; {@code null} for the other request types.
+	 */
+	private String query;
+
+	/**
 	 * File name containing the recorded command output.
 	 */
 	private String response;

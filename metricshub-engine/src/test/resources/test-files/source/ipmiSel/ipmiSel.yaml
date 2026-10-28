@@ -1,0 +1,8 @@
+connector:
+  detection:
+    appliesTo: [ oob ]
+
+beforeAll:
+  testIpmiSelSource:
+    type: ipmiSel
+    maxEventsPerPoll: 30

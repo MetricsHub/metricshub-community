@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.Fru;
 import org.metricshub.ipmi.client.IpmiClientResults;
+import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.client.Sensor;
 import org.metricshub.ipmi.core.coding.commands.chassis.GetChassisStatusResponseData;
 import org.metricshub.ipmi.core.coding.commands.fru.record.FruRecord;
@@ -19,6 +20,7 @@ import org.metricshub.ipmi.core.coding.commands.fru.record.ProductInfo;
 import org.metricshub.ipmi.core.coding.commands.fru.record.SpdInfo;
 import org.metricshub.ipmi.core.coding.commands.sdr.GetSensorReadingResponseData;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.AbstractSensorRecord;
+import org.metricshub.ipmi.core.coding.commands.sdr.record.AddressType;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.CompactSensorRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.EntityId;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.FruDeviceLocatorRecord;
@@ -26,6 +28,80 @@ import org.metricshub.ipmi.core.coding.commands.sdr.record.SensorRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.SensorType;
 
 public class IpmiResultConverterTest {
+
+	/**
+	 * SEL record 5: a system event at 2020-07-04T04:05:20Z (5F000000h) from generator 0020h, sensor type
+	 * Power Supply (08h), sensor 0Ah, sensor-specific assertion (6Fh), offset 1 (failure detected)
+	 */
+	public static final byte[] PSU_FAILURE_RECORD = {
+		0x05,
+		0x00,
+		0x02,
+		0x00,
+		0x00,
+		0x00,
+		0x5F,
+		0x20,
+		0x00,
+		0x04,
+		0x08,
+		0x0A,
+		0x6F,
+		0x01,
+		(byte) 0xFF,
+		(byte) 0xFF
+	};
+
+	/**
+	 * SEL record 6: an OEM timestamped record (C0h) of manufacturer 000157h with 6 bytes of data
+	 */
+	public static final byte[] OEM_RECORD = {
+		0x06,
+		0x00,
+		(byte) 0xC0,
+		0x00,
+		0x00,
+		0x00,
+		0x5F,
+		0x57,
+		0x01,
+		0x00,
+		(byte) 0xAA,
+		(byte) 0xBB,
+		(byte) 0xCC,
+		(byte) 0xDD,
+		(byte) 0xEE,
+		(byte) 0xFF
+	};
+
+	/**
+	 * @param id the record ID
+	 * @return the system event of {@link #PSU_FAILURE_RECORD} under another record ID
+	 */
+	public static SelEntry psuFailure(final int id) {
+		final byte[] record = PSU_FAILURE_RECORD.clone();
+		record[0] = (byte) id;
+		record[1] = (byte) (id >> 8);
+		return IpmiClientResults.selEntry(record, 0);
+	}
+
+	/**
+	 * @return the sensor that logged {@link #PSU_FAILURE_RECORD}: owner 20h (IPMB address of owner ID 10h), sensor 0Ah
+	 */
+	public static Sensor psuSensor() {
+		final CompactSensorRecord record = new CompactSensorRecord();
+		record.setId(0x42);
+		record.setSensorOwnerId((byte) 0x10);
+		record.setAddressType(AddressType.IpmbSlaveAddress);
+		record.setSensorOwnerLun((byte) 0);
+		record.setSensorNumber((byte) 0x0A);
+		record.setEntityId(EntityId.PowerSupply);
+		record.setEntityInstanceNumber((byte) 1);
+		record.setName("PS1 Status");
+		record.setSensorType(SensorType.PowerSupply);
+		record.setEventReadingType(0x6f);
+		return IpmiClientResults.sensor(record, null);
+	}
 
 	public static final byte[] BASE_BOARD_PRODUCT_INFO = {
 		1,
@@ -931,5 +1007,52 @@ public class IpmiResultConverterTest {
 		GetChassisStatusResponseData chassisStatus = new GetChassisStatusResponseData();
 		chassisStatus.setCurrentPowerState((byte) powerState);
 		return chassisStatus;
+	}
+
+	@Test
+	void testConvertSel() {
+		final SelEntry event = IpmiClientResults.selEntry(PSU_FAILURE_RECORD, 0);
+		final SelEntry oem = IpmiClientResults.selEntry(OEM_RECORD, 0);
+
+		final List<List<String>> rows = IpmiResultConverter.convertSel(List.of(event, oem), List.of(psuSensor()));
+
+		assertEquals(
+			List.of(
+				"5",
+				"1593835520",
+				"PowerSupply",
+				"0A",
+				"PS1 Status",
+				"Power Supply 1",
+				"6F",
+				event.description(),
+				"Assertion",
+				"0020",
+				""
+			),
+			rows.get(0)
+		);
+		assertEquals(
+			List.of("6", "1593835520", "", "", "", "", "", oem.description(), "", "", "000157 AA BB CC DD EE FF"),
+			rows.get(1)
+		);
+
+		// Without the sensors, the sensor name and entity stay empty
+		final List<String> unnamed = IpmiResultConverter.convertSel(List.of(event), null).get(0);
+		assertEquals("", unnamed.get(4));
+		assertEquals("", unnamed.get(5));
+	}
+
+	@Test
+	void testConvertRaw() {
+		assertEquals(
+			"00;20 01 03",
+			IpmiResultConverter.convertResult(IpmiClientResults.rawResponse(0, new byte[] { 0x20, 0x01, 0x03 }))
+		);
+		assertEquals("C1;", IpmiResultConverter.convertResult(IpmiClientResults.rawResponse(0xC1, new byte[0])));
+		assertEquals(List.of("C1", ""), IpmiResultConverter.rawRow("C1;"));
+		assertEquals(List.of("00", "20 01"), IpmiResultConverter.rawRow("00;20 01"));
+		assertEquals("06 01 00 FF", IpmiResultConverter.rawQuery(6, 1, new int[] { 0, 255 }));
+		assertEquals("06 01", IpmiResultConverter.rawQuery(6, 1, new int[0]));
 	}
 }

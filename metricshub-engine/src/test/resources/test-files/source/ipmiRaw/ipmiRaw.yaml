@@ -1,0 +1,10 @@
+connector:
+  detection:
+    appliesTo: [ oob ]
+
+beforeAll:
+  testIpmiRawSource:
+    type: ipmiRaw
+    netFn: 0x06
+    command: "0x01"
+    data: 0x00 0x01
