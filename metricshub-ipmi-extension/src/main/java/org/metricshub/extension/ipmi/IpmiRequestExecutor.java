@@ -31,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
-import org.metricshub.ipmi.client.BmcCapabilities;
 import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.FruList;
 import org.metricshub.ipmi.client.IpmiClient;
@@ -278,32 +277,6 @@ public class IpmiRequestExecutor {
 	 * Completion code CBh, "requested sensor, data, or record not present": the answer of an empty log
 	 */
 	private static final int RECORD_NOT_PRESENT = 0xCB;
-
-	/**
-	 * Probes the BMC without credentials: Get Channel Authentication Capabilities and Get Channel Cipher Suites,
-	 * outside any session.
-	 *
-	 * @param hostname          The host name or IP address of the BMC
-	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
-	 * @return what the BMC supports, as text
-	 * @throws IpmiClientException If the BMC does not answer or does not support IPMI 2.0.
-	 */
-	@WithSpan("IPMI Probe")
-	public String executeIpmiProbe(
-		@SpanAttribute("host.hostname") String hostname,
-		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
-	) {
-		final long startTime = System.currentTimeMillis();
-
-		final BmcCapabilities capabilities;
-		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
-			capabilities = bmc.capabilities();
-		}
-
-		log.debug("Hostname {} - IPMI probe in {} ms: {}", hostname, System.currentTimeMillis() - startTime, capabilities);
-
-		return capabilities.toString();
-	}
 
 	/**
 	 * The cursor of an ipmiSel source: the last entry returned, or the record ID and the bytes of the last entry when

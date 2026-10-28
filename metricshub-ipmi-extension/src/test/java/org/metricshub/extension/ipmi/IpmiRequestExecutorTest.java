@@ -2,7 +2,6 @@ package org.metricshub.extension.ipmi;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
-import org.metricshub.ipmi.client.BmcCapabilities;
 import org.metricshub.ipmi.client.FrusRequest;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientException;
@@ -316,25 +314,6 @@ class IpmiRequestExecutorTest {
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xC0, new byte[0]));
 		final IpmiRequestExecutor executor = executor();
 		assertThrows(IpmiClientException.class, () -> executor.executeIpmiSelEnd(HOSTNAME, ipmiConfiguration));
-	}
-
-	@Test
-	void testExecuteIpmiProbe() {
-		final BmcCapabilities capabilities = mock(BmcCapabilities.class);
-		when(bmc.capabilities()).thenReturn(capabilities);
-
-		assertNotNull(executor().executeIpmiProbe(HOSTNAME, ipmiConfiguration));
-		verify(bmc).capabilities();
-		verify(bmc).close();
-	}
-
-	@Test
-	void testExecuteIpmiProbeThrowsException() {
-		when(bmc.capabilities()).thenThrow(new IpmiTimeoutException("No reply"));
-
-		final IpmiRequestExecutor executor = executor();
-		assertThrows(IpmiTimeoutException.class, () -> executor.executeIpmiProbe(HOSTNAME, ipmiConfiguration));
-		verify(bmc).close();
 	}
 
 	@Test

@@ -104,7 +104,7 @@ class IpmiExtensionTest {
 		// Mock successful IPMI protocol health check response
 		doReturn(SUCCESS_RESPONSE)
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiProbe(anyString(), any(IpmiConfiguration.class));
+			.executeIpmiDetection(anyString(), any(IpmiConfiguration.class));
 
 		// Start the IPMI Health Check strategy
 		Optional<Boolean> result = ipmiExtension.checkProtocol(telemetryManager);
@@ -117,7 +117,7 @@ class IpmiExtensionTest {
 		initIpmi();
 
 		// Mock null IPMI protocol health check response
-		doReturn(null).when(ipmiRequestExecutorMock).executeIpmiProbe(anyString(), any(IpmiConfiguration.class));
+		doReturn(null).when(ipmiRequestExecutorMock).executeIpmiDetection(anyString(), any(IpmiConfiguration.class));
 
 		// Start the IPMI Health Check strategy
 		Optional<Boolean> result = ipmiExtension.checkProtocol(telemetryManager);
