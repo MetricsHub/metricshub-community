@@ -21,12 +21,16 @@ package org.metricshub.extension.ipmi;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,11 +46,13 @@ import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.client.SelEntryList;
@@ -104,17 +110,16 @@ public class IpmiExtension implements IProtocolExtension {
 		}
 
 		log.info("Hostname {} - Performing {} protocol health check.", hostname, getIdentifier());
-		log.info("Hostname {} - Checking IPMI protocol status. Sending a IPMI 'Get Chassis Status' request.", hostname);
+		log.info(
+			"Hostname {} - Checking IPMI protocol status. Probing the BMC with a sessionless IPMI 'Get Channel Authentication Capabilities' request.",
+			hostname
+		);
 
-		// Execute IPMI test command
+		// Probe the BMC: no credentials, no session
 		try {
-			ipmiResult = ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiConfiguration);
+			ipmiResult = ipmiRequestExecutor.executeIpmiProbe(hostname, ipmiConfiguration);
 		} catch (Exception e) {
-			log.debug(
-				"Hostname {} - Checking IPMI protocol status. IPMI exception when performing a IPMI 'Get Chassis Status' query: ",
-				hostname,
-				e
-			);
+			log.debug("Hostname {} - Checking IPMI protocol status. IPMI exception when probing the BMC: ", hostname, e);
 		}
 		return Optional.of(ipmiResult != null);
 	}
@@ -181,16 +186,8 @@ public class IpmiExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * The cursor of an ipmiSel source: the last entry read, {@code null} while the log is empty. Its presence in the
-	 * connector namespace tells the first poll from the next ones.
-	 *
-	 * @param last The last entry read, or {@code null}
-	 */
-	record SelCursor(SelEntry last) {}
-
-	/**
 	 * Returns the SEL entries added since the previous poll of the source, at most {@code maxEventsPerPoll} of
-	 * them (the others wait for the next poll), and none on the first poll, which only sets the cursor.
+	 * them (the others wait for the next poll), and none on the first poll, which only locates the end of the log.
 	 *
 	 * @param source            The ipmiSel source
 	 * @param connectorId       The connector, whose namespace keeps the cursor
@@ -209,12 +206,20 @@ public class IpmiExtension implements IProtocolExtension {
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(connectorId);
 		final String sourceKey = source.getKey();
 		final SelCursor cursor = (SelCursor) namespace.getSourceCursor(sourceKey);
-		final SelEntry since = cursor == null ? null : cursor.last();
 
-		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, since, cursor != null);
+		if (cursor == null) {
+			// The first poll locates the end of the log without reading it, and reports no backlog
+			final int lastId = ipmiRequestExecutor.executeIpmiSelLastId(hostname, ipmiConfiguration);
+			namespace.setSourceCursor(sourceKey, new SelCursor(null, lastId));
+			log.info("Hostname {} - First IPMI SEL poll of source {}: cursor at record {}", hostname, sourceKey, lastId);
+			record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, "");
+			return SourceTable.empty();
+		}
+
+		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, cursor, true);
 		final SelEntryList entries = read.entries();
 
-		if (since != null && !entries.isEmpty() && entries.get(0).id() <= since.id()) {
+		if (cursor.recordId() > 0 && !entries.isEmpty() && entries.get(0).id() <= cursor.recordId()) {
 			log.info(
 				"Hostname {} - The IPMI System Event Log was cleared since the previous poll of source {}: reading it from its first entry.",
 				hostname,
@@ -222,20 +227,16 @@ public class IpmiExtension implements IProtocolExtension {
 			);
 		}
 
-		// The first poll sets the cursor and reports no backlog
-		List<SelEntry> kept = cursor == null ? List.of() : entries;
+		List<SelEntry> kept = entries;
 		final int maxEventsPerPoll = source.getMaxEventsPerPoll();
 		if (maxEventsPerPoll > 0 && kept.size() > maxEventsPerPoll) {
 			kept = kept.subList(0, maxEventsPerPoll);
 		}
 
 		// The cursor stops at the last entry returned: the entries left out are read again by the next poll
-		final SelEntry last = !kept.isEmpty()
-			? kept.get(kept.size() - 1)
-			: !entries.isEmpty()
-				? entries.get(entries.size() - 1)
-				: since;
-		namespace.setSourceCursor(sourceKey, new SelCursor(last));
+		if (!kept.isEmpty()) {
+			namespace.setSourceCursor(sourceKey, SelCursor.of(kept.get(kept.size() - 1)));
+		}
 
 		log.info(
 			"Hostname {} - IPMI SEL poll of source {}: {} entries read, {} returned, cursor at record {}",
@@ -243,7 +244,7 @@ public class IpmiExtension implements IProtocolExtension {
 			sourceKey,
 			entries.size(),
 			kept.size(),
-			last == null ? null : last.id()
+			kept.isEmpty() ? cursor.recordId() : kept.get(kept.size() - 1).id()
 		);
 
 		final List<List<String>> rows = IpmiResultConverter.convertSel(kept, read.sensors());
@@ -387,9 +388,68 @@ public class IpmiExtension implements IProtocolExtension {
 		}
 	}
 
+	/**
+	 * Runs the query of the MCP tool or the CLI: {@code sensors} (the default, the chassis status, FRUs and
+	 * sensors text), {@code sel} (the System Event Log as CSV with a header line, the entries of the last
+	 * {@code since} duration or the whole log) or {@code raw} (a raw command with {@code netFn}, {@code command}
+	 * and {@code data}).
+	 *
+	 * @param configuration The IPMI configuration of the host
+	 * @param query         The query, {@code null} for the sensors
+	 * @return the result text
+	 * @throws Exception If the query is unknown or the BMC fails it
+	 */
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
 		final String hostname = configuration.getHostname();
-		return ipmiRequestExecutor.executeIpmiGetSensors(hostname, (IpmiConfiguration) configuration);
+		final IpmiConfiguration ipmiConfiguration = (IpmiConfiguration) configuration;
+		final String type = text(query, "query");
+		return switch (type == null ? "sensors" : type.trim().toLowerCase()) {
+			case "sensors" -> ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
+			case "sel" -> selQuery(hostname, ipmiConfiguration, text(query, "since"));
+			case "raw" -> ipmiRequestExecutor.executeIpmiRaw(
+				hostname,
+				ipmiConfiguration,
+				IpmiRawSource.builder()
+					.netFn(text(query, "netFn"))
+					.command(text(query, "command"))
+					.data(text(query, "data"))
+					.build()
+			);
+			default -> throw new IllegalArgumentException("Unknown IPMI query '" + type + "': expected sensors, sel or raw");
+		};
+	}
+
+	/**
+	 * Reads the System Event Log for a query.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The IPMI configuration of the host
+	 * @param since             A duration ({@code 30m}, {@code 1h}, {@code 2d}, or seconds) to keep only the entries
+	 *                          logged since then; {@code null} or blank for the whole log
+	 * @return the header line, then one line per entry
+	 */
+	private String selQuery(final String hostname, final IpmiConfiguration ipmiConfiguration, final String since) {
+		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, null, true);
+		List<SelEntry> entries = read.entries();
+		if (since != null && !since.isBlank()) {
+			// An entry logged before the BMC had the time cannot be dated: it is left out
+			final Instant from = Instant.now().minusSeconds(TimeDeserializer.interpretValueOf(since.trim()));
+			entries = entries
+				.stream()
+				.filter(entry -> entry.timestamp().map(from::isBefore).orElse(false))
+				.toList();
+		}
+		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
+		return IpmiResultConverter.SEL_HEADER + NEW_LINE + SourceTable.tableToCsv(rows, TABLE_SEP, true);
+	}
+
+	/**
+	 * @param query The query node, possibly {@code null}
+	 * @param field The field name
+	 * @return the text of the field, {@code null} when absent
+	 */
+	private static String text(final JsonNode query, final String field) {
+		return query != null && query.hasNonNull(field) ? query.get(field).asText() : null;
 	}
 }

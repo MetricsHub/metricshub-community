@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.ipmi.client.BmcCapabilities;
 import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.FruList;
 import org.metricshub.ipmi.client.IpmiClient;
@@ -218,6 +219,95 @@ public class IpmiRequestExecutor {
 	}
 
 	/**
+	 * The network function of the storage commands (IPMI 2.0 Table 5-1)
+	 */
+	private static final int STORAGE_NETFN = 0x0A;
+
+	/**
+	 * Get SEL Entry (IPMI 2.0 Table 31-2)
+	 */
+	private static final int GET_SEL_ENTRY = 0x43;
+
+	/**
+	 * Get SEL Entry request for the last entry of the log: no reservation, record ID FFFFh, whole record
+	 */
+	private static final int[] LAST_SEL_ENTRY_REQUEST = { 0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF };
+
+	/**
+	 * Probes the BMC without credentials: Get Channel Authentication Capabilities and Get Channel Cipher Suites,
+	 * outside any session.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
+	 * @return what the BMC supports, as text
+	 * @throws IpmiClientException If the BMC does not answer or does not support IPMI 2.0.
+	 */
+	@WithSpan("IPMI Probe")
+	public String executeIpmiProbe(
+		@SpanAttribute("host.hostname") String hostname,
+		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
+	) {
+		final long startTime = System.currentTimeMillis();
+
+		final BmcCapabilities capabilities;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+			capabilities = bmc.capabilities();
+		}
+
+		log.debug("Hostname {} - IPMI probe in {} ms: {}", hostname, System.currentTimeMillis() - startTime, capabilities);
+
+		return capabilities.toString();
+	}
+
+	/**
+	 * The cursor of an ipmiSel source: the last entry returned, or only the record ID of the last entry when the
+	 * first poll located the end of the log without reading it. With the entry, ipmi-java tells a log cleared and
+	 * filled again up to the same ID from a log that only grew.
+	 *
+	 * @param entry    The last entry returned, or {@code null} before the first entry is returned
+	 * @param recordId The record ID of the last entry, 0 when the log was empty
+	 */
+	public record SelCursor(SelEntry entry, int recordId) {
+		/**
+		 * @param entry The last entry returned
+		 * @return the cursor at that entry
+		 */
+		public static SelCursor of(final SelEntry entry) {
+			return new SelCursor(entry, entry.id());
+		}
+	}
+
+	/**
+	 * Reads the record ID of the last entry of the System Event Log without reading the log: Get SEL Entry of record
+	 * FFFFh.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
+	 * @return the record ID of the last entry, 0 when the log is empty
+	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
+	 */
+	@WithSpan("IPMI SEL Last Record")
+	public int executeIpmiSelLastId(
+		@SpanAttribute("host.hostname") String hostname,
+		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
+	) {
+		final RawResponse response;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+			response = bmc.raw(STORAGE_NETFN, GET_SEL_ENTRY).data(LAST_SEL_ENTRY_REQUEST).execute();
+		}
+
+		// Next record ID (2 bytes), then the record, which starts with its ID
+		final byte[] data = response.data();
+		if (response.rawCompletionCode() != 0 || data.length < 4) {
+			log.debug("Hostname {} - The IPMI SEL has no last entry: {}", hostname, response);
+			return 0;
+		}
+		final int lastId = (data[2] & 0xFF) | ((data[3] & 0xFF) << 8);
+		log.debug("Hostname {} - The last IPMI SEL entry is record {}", hostname, lastId);
+		return lastId;
+	}
+
+	/**
 	 * The entries of one SEL read, with the sensors of the SDR repository when the sensors of the entries were to be
 	 * named, {@code null} otherwise.
 	 *
@@ -227,12 +317,12 @@ public class IpmiRequestExecutor {
 	public record SelRead(SelEntryList entries, SensorList sensors) {}
 
 	/**
-	 * Reads the System Event Log entries added after {@code since}: the whole log when {@code since} is
-	 * {@code null}, or when the log no longer holds it (it was cleared).
+	 * Reads the System Event Log entries added after the cursor: the whole log when the cursor is {@code null} or
+	 * at an empty log, or when the log no longer holds the cursor (it was cleared).
 	 *
 	 * @param hostname          The host name or IP address of the BMC
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
-	 * @param since             The last entry of the previous read, or {@code null} for the whole log
+	 * @param since             The cursor of the previous read, or {@code null} for the whole log
 	 * @param withSensors       Whether to read the sensors too, to name the sensors of the system events read
 	 * @return the entries, with the sensors when asked for and at least one system event was read
 	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
@@ -241,7 +331,7 @@ public class IpmiRequestExecutor {
 	public SelRead executeIpmiSel(
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration,
-		SelEntry since,
+		SelCursor since,
 		boolean withSensors
 	) {
 		final long startTime = System.currentTimeMillis();
@@ -249,8 +339,10 @@ public class IpmiRequestExecutor {
 		final SelRead result;
 		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
 			final SelRequest request = bmc.sel();
-			if (since != null) {
-				request.since(since);
+			if (since != null && since.entry() != null) {
+				request.since(since.entry());
+			} else if (since != null && since.recordId() > 0) {
+				request.since(since.recordId());
 			}
 			final SelEntryList entries = request.execute();
 			// ponytail: naming the sensors of the new events walks the whole SDR and reads every sensor; a
@@ -266,7 +358,7 @@ public class IpmiRequestExecutor {
 			"Hostname {} - Read {} IPMI SEL entries{} in {} ms",
 			hostname,
 			result.entries().size(),
-			since == null ? "" : " after record " + since.id(),
+			since == null ? "" : " after record " + since.recordId(),
 			System.currentTimeMillis() - startTime
 		);
 

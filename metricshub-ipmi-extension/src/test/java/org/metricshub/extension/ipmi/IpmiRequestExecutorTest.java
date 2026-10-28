@@ -1,6 +1,7 @@
 package org.metricshub.extension.ipmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,7 +20,9 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
+import org.metricshub.ipmi.client.BmcCapabilities;
 import org.metricshub.ipmi.client.FrusRequest;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientResults;
@@ -167,7 +170,7 @@ class IpmiRequestExecutorTest {
 		when(sensorsRequest.execute()).thenReturn(sensors);
 		when(bmc.sensors()).thenReturn(sensorsRequest);
 
-		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, since, true);
+		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, SelCursor.of(since), true);
 
 		assertSame(entries, read.entries());
 		assertSame(sensors, read.sensors());
@@ -214,5 +217,65 @@ class IpmiRequestExecutorTest {
 		assertThrows(IllegalArgumentException.class, () -> IpmiRequestExecutor.rawQuery(noNetFn));
 		final IpmiRawSource badData = IpmiRawSource.builder().netFn("6").command("1").data("0x00 zz").build();
 		assertThrows(IllegalArgumentException.class, () -> IpmiRequestExecutor.rawQuery(badData));
+	}
+
+	@Test
+	void testExecuteIpmiSelFromRecordId() {
+		final SelEntryList entries = IpmiClientResults.selEntryList(List.of(IpmiResultConverterTest.psuFailure(6)), null);
+		final SelRequest selRequest = mock(SelRequest.class, RETURNS_SELF);
+		when(selRequest.execute()).thenReturn(entries);
+		when(bmc.sel()).thenReturn(selRequest);
+
+		// A cursor at a record ID only: the entries after that ID
+		assertSame(
+			entries,
+			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 5), false).entries()
+		);
+		verify(selRequest).since(5);
+
+		// A cursor at an empty log: the whole log
+		assertSame(
+			entries,
+			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 0), false).entries()
+		);
+		verify(selRequest, never()).since(0);
+		verify(selRequest, never()).since(any(SelEntry.class));
+	}
+
+	@Test
+	void testExecuteIpmiSelLastId() {
+		final RawRequest rawRequest = mock(RawRequest.class, RETURNS_SELF);
+		when(bmc.raw(0x0A, 0x43)).thenReturn(rawRequest);
+
+		// Next record ID FFFFh, then the record 0283h
+		when(rawRequest.execute()).thenReturn(
+			IpmiClientResults.rawResponse(0, new byte[] { (byte) 0xFF, (byte) 0xFF, (byte) 0x83, 0x02, 0x02 })
+		);
+		assertEquals(0x283, executor().executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
+		verify(rawRequest).data(0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF);
+		verify(bmc).close();
+
+		// An empty log: requested record not present
+		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xCB, new byte[0]));
+		assertEquals(0, executor().executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
+	}
+
+	@Test
+	void testExecuteIpmiProbe() {
+		final BmcCapabilities capabilities = mock(BmcCapabilities.class);
+		when(bmc.capabilities()).thenReturn(capabilities);
+
+		assertNotNull(executor().executeIpmiProbe(HOSTNAME, ipmiConfiguration));
+		verify(bmc).capabilities();
+		verify(bmc).close();
+	}
+
+	@Test
+	void testExecuteIpmiProbeThrowsException() {
+		when(bmc.capabilities()).thenThrow(new IpmiTimeoutException("No reply"));
+
+		final IpmiRequestExecutor executor = executor();
+		assertThrows(IpmiTimeoutException.class, () -> executor.executeIpmiProbe(HOSTNAME, ipmiConfiguration));
+		verify(bmc).close();
 	}
 }

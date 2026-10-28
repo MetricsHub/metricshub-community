@@ -1,13 +1,16 @@
 package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
@@ -78,7 +82,16 @@ class ExecuteIpmiQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null
+		);
 
 		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
 		assertEquals("No IPMI configuration found for hostname.", result.getHosts().get(0).getResponse().getError(), () ->
@@ -92,7 +105,16 @@ class ExecuteIpmiQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null
+		);
 
 		assertEquals("The IPMI extension is not available", result.getErrorMessage());
 		assertTrue(result.getHosts().isEmpty(), () -> "No per-host responses expected when extension is missing");
@@ -124,7 +146,16 @@ class ExecuteIpmiQueryServiceTest {
 			"Success"
 		);
 
-		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, 8);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			8,
+			null,
+			null,
+			null,
+			null,
+			null
+		);
 
 		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
 		assertEquals("Success", result.getHosts().get(0).getResponse().getResponse(), () ->
@@ -159,12 +190,65 @@ class ExecuteIpmiQueryServiceTest {
 		);
 
 		// Call the execute query method
-		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).getHosts().get(0).getResponse();
+		QueryResponse result = ipmiQueryService
+			.executeQuery(List.of(HOSTNAME), null, null, null, null, null, null, null)
+			.getHosts()
+			.get(0)
+			.getResponse();
 
 		// Assertions
 		assertNotNull(result.getError(), () -> "Error should be returned when executor throws");
 		assertTrue(result.getError().contains("An error has occurred"), () ->
 			"Error message should include the thrown text"
 		);
+	}
+
+	@Test
+	void testExecuteIpmiRawQuery() throws Exception {
+		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
+			.hostname(HOSTNAME)
+			.username("username")
+			.password("password".toCharArray())
+			.build();
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(IpmiConfiguration.class, ipmiConfiguration))
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
+
+		when(
+			ipmiRequestExecutorMock.executeIpmiRaw(
+				eq(HOSTNAME),
+				any(IpmiConfiguration.class),
+				eq(IpmiRawSource.builder().netFn("0x06").command("0x01").build())
+			)
+		).thenReturn("00;20 01");
+
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			null,
+			"raw",
+			null,
+			"0x06",
+			"0x01",
+			null
+		);
+
+		assertEquals("00;20 01", result.getHosts().get(0).getResponse().getResponse());
+	}
+
+	@Test
+	void testBuildQueryNode() {
+		assertNull(ExecuteIpmiQueryService.buildQueryNode(null, "1h", null, null, null));
+		assertNull(ExecuteIpmiQueryService.buildQueryNode(" ", null, null, null, null));
+		final JsonNode sel = ExecuteIpmiQueryService.buildQueryNode("sel", "1h", null, null, null);
+		assertEquals("sel", sel.get("query").asText());
+		assertEquals("1h", sel.get("since").asText());
+		assertFalse(sel.has("netFn"));
+		final JsonNode raw = ExecuteIpmiQueryService.buildQueryNode("raw", null, "6", "1", "0x00");
+		assertEquals("0x00", raw.get("data").asText());
+		assertFalse(raw.has("since"));
 	}
 }

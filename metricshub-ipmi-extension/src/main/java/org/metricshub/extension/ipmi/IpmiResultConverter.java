@@ -65,6 +65,12 @@ public final class IpmiResultConverter {
 
 	private static final HexFormat HEX = HexFormat.ofDelimiter(" ").withUpperCase();
 
+	/**
+	 * The columns of the rows of {@link #convertSel(List, List)}, as a CSV header line
+	 */
+	public static final String SEL_HEADER =
+		"recordId;timestamp;sensorType;sensorNumber;sensorName;entity;eventType;description;direction;generatorId;oem";
+
 	private static final Set<EntityId> PANELS = EnumSet.of(
 		EntityId.FrontPanelBoard,
 		EntityId.BackPanelBoard,
