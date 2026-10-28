@@ -366,12 +366,17 @@ public class IpmiRequestExecutor {
 	 * @param bmc   The client of the request
 	 * @param since The cursor of the first poll
 	 * @return whether the record of the cursor is still in the log, unchanged
+	 * @throws IpmiClientException If the BMC fails the request otherwise than with "record not present": a busy BMC
+	 *                             is not a cleared log, the next poll tries again
 	 */
 	private static boolean holds(final IpmiClient bmc, final SelCursor since) {
 		final RawResponse response = bmc
 			.raw(STORAGE_NETFN, GET_SEL_ENTRY)
 			.data(0x00, 0x00, since.recordId() & 0xFF, since.recordId() >> 8, 0x00, 0xFF)
 			.execute();
+		if (response.rawCompletionCode() != 0 && response.rawCompletionCode() != RECORD_NOT_PRESENT) {
+			throw new IpmiClientException("Get SEL Entry of record " + since.recordId() + " failed: " + response);
+		}
 		final byte[] data = response.data();
 		final byte[] record = since.record();
 		final boolean held =

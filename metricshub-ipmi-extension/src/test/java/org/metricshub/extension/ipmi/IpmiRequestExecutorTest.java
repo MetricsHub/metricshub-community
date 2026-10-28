@@ -274,6 +274,16 @@ class IpmiRequestExecutorTest {
 		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
 		verify(selRequest, times(1)).since(5);
 
+		// The record is gone: the whole log
+		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xCB, new byte[0]));
+		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
+		verify(selRequest, times(1)).since(5);
+
+		// A busy BMC is not a cleared log: the poll fails and the next one tries again
+		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xC0, new byte[0]));
+		final IpmiRequestExecutor executor = executor();
+		assertThrows(IpmiClientException.class, () -> executor.executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false));
+
 		// A cursor at an empty log: the whole log
 		assertSame(
 			entries,
