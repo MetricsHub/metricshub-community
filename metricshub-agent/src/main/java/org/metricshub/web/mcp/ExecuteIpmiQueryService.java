@@ -52,6 +52,8 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	 */
 	private static final int DEFAULT_IPMI_POOL_SIZE = 60;
 
+	private static final String RAW_QUERY = "raw";
+
 	/**
 	 * Holds contextual information about the current agent instance.
 	 */
@@ -83,7 +85,8 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		executes the query, and returns the provider result or an error.
 		Queries: 'sensors' (default) returns the chassis status, FRUs and sensors; 'sel' returns the System
 		Event Log as CSV with a header line, the whole log or only the entries of the last 'since' duration;
-		'raw' sends one raw command (netFn, command, data) and returns 'completionCode;data' in hex.
+		'raw' sends one raw command (netFn, command, data) and returns 'completionCode;data' in hex; raw
+		commands can change the BMC state and are disabled by default (JVM flag metricshub.mcp.tool.ipmi.raw.enabled).
 		Reading a large SEL takes several seconds per hundred entries: raise the timeout accordingly.
 		"""
 	)
@@ -112,6 +115,11 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 			required = false
 		) final String data
 	) {
+		// A raw command can change the BMC state: it needs the explicit opt-in of the administrator
+		if (RAW_QUERY.equalsIgnoreCase(query == null ? null : query.trim()) && !isIpmiRawEnabledForMCP()) {
+			return MultiHostToolResponse.buildError("The raw IPMI commands are disabled for MCP.");
+		}
+
 		final JsonNode queryNode = buildQueryNode(query, since, netFn, command, data);
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_IPMI_POOL_SIZE);
 		return agentContextHolder
@@ -177,6 +185,16 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 			queryNode.put("data", data);
 		}
 		return queryNode;
+	}
+
+	/**
+	 * Checks the JVM flag {@code metricshub.mcp.tool.ipmi.raw.enabled}: raw IPMI commands can power a server off,
+	 * clear its event log or change its settings, so they stay off unless the administrator turns them on.
+	 *
+	 * @return {@code true} if raw IPMI commands are enabled for MCP; otherwise {@code false}.
+	 */
+	static boolean isIpmiRawEnabledForMCP() {
+		return Boolean.getBoolean("metricshub.mcp.tool.ipmi.raw.enabled");
 	}
 
 	QueryResponse executeIpmiQueryWithExtensionSafe(

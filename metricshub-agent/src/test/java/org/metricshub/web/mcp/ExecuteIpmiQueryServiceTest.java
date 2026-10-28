@@ -225,7 +225,9 @@ class ExecuteIpmiQueryServiceTest {
 			)
 		).thenReturn("00;20 01");
 
-		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
+		// Raw commands are off by default
+		System.clearProperty("metricshub.mcp.tool.ipmi.raw.enabled");
+		final MultiHostToolResponse<QueryResponse> disabled = ipmiQueryService.executeQuery(
 			List.of(HOSTNAME),
 			null,
 			null,
@@ -235,8 +237,26 @@ class ExecuteIpmiQueryServiceTest {
 			"0x01",
 			null
 		);
+		assertEquals("The raw IPMI commands are disabled for MCP.", disabled.getErrorMessage());
+		assertTrue(disabled.getHosts().isEmpty());
 
-		assertEquals("00;20 01", result.getHosts().get(0).getResponse().getResponse());
+		System.setProperty("metricshub.mcp.tool.ipmi.raw.enabled", "true");
+		try {
+			final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(
+				List.of(HOSTNAME),
+				null,
+				null,
+				"RAW",
+				null,
+				"0x06",
+				"0x01",
+				null
+			);
+			assertEquals("00;20 01", result.getHosts().get(0).getResponse().getResponse());
+		} finally {
+			System.clearProperty("metricshub.mcp.tool.ipmi.raw.enabled");
+		}
+		assertFalse(ExecuteIpmiQueryService.isIpmiRawEnabledForMCP());
 
 		// The query node of each query type
 		assertNull(ExecuteIpmiQueryService.buildQueryNode(null, "1h", null, null, null));
