@@ -237,10 +237,8 @@ class ExecuteIpmiQueryServiceTest {
 		);
 
 		assertEquals("00;20 01", result.getHosts().get(0).getResponse().getResponse());
-	}
 
-	@Test
-	void testBuildQueryNode() {
+		// The query node of each query type
 		assertNull(ExecuteIpmiQueryService.buildQueryNode(null, "1h", null, null, null));
 		assertNull(ExecuteIpmiQueryService.buildQueryNode(" ", null, null, null, null));
 		final JsonNode sel = ExecuteIpmiQueryService.buildQueryNode("sel", "1h", null, null, null);
