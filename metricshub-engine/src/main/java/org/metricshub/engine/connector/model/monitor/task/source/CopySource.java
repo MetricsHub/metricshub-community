@@ -87,14 +87,16 @@ public class CopySource extends Source {
 	}
 
 	public CopySource copy() {
-		return CopySource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.from(from)
-			.build();
+		return copyFormatAs(
+			CopySource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.from(from)
+				.build()
+		);
 	}
 
 	@Override

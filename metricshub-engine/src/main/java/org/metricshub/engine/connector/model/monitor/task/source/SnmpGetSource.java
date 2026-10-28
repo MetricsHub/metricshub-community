@@ -73,14 +73,16 @@ public class SnmpGetSource extends SnmpSource {
 	 * @return new {@link SnmpGetSource} instance
 	 */
 	public SnmpGetSource copy() {
-		return SnmpGetSource.builder()
-			.type(type)
-			.key(key)
-			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.oid(oid)
-			.build();
+		return copyFormatAs(
+			SnmpGetSource.builder()
+				.type(type)
+				.key(key)
+				.forceSerialization(forceSerialization)
+				.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
+				.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+				.oid(oid)
+				.build()
+		);
 	}
 
 	@Override
