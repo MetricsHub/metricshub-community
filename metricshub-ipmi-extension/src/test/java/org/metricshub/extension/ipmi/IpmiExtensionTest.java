@@ -3,6 +3,7 @@ package org.metricshub.extension.ipmi;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
@@ -468,15 +469,16 @@ class IpmiExtensionTest {
 		final SelEntry entry7 = IpmiResultConverterTest.psuFailure(7);
 
 		// First poll: the end of the log is located, nothing is read nor returned
-		doReturn(5).when(ipmiRequestExecutorMock).executeIpmiSelLastId(HOST_NAME, configuration);
+		final SelCursor end = new SelCursor(null, 5, new byte[] { 0x05, 0x00, 0x02 });
+		doReturn(end).when(ipmiRequestExecutorMock).executeIpmiSelEnd(HOST_NAME, configuration);
 		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
-		assertEquals(new SelCursor(null, 5), namespace.getSourceCursor("sel"));
+		assertSame(end, namespace.getSourceCursor("sel"));
 		verify(ipmiRequestExecutorMock, never()).executeIpmiSel(any(), any(), any(), anyBoolean());
 
 		// Next poll: two new entries after record 5, one returned (maxEventsPerPoll), the cursor stops at it
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6, entry7), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, new SelCursor(null, 5), true);
+			.executeIpmiSel(HOST_NAME, configuration, end, true);
 		final SourceTable table = ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager);
 		assertEquals(1, table.getTable().size());
 		assertEquals("6", table.getTable().get(0).get(0));
@@ -507,14 +509,15 @@ class IpmiExtensionTest {
 		final SelEntry entry5 = IpmiResultConverterTest.psuFailure(5);
 
 		// An empty log on the first poll still marks the poll as done
-		doReturn(0).when(ipmiRequestExecutorMock).executeIpmiSelLastId(HOST_NAME, configuration);
+		final SelCursor empty = new SelCursor(null, 0, null);
+		doReturn(empty).when(ipmiRequestExecutorMock).executeIpmiSelEnd(HOST_NAME, configuration);
 		assertTrue(ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().isEmpty());
-		assertEquals(new SelCursor(null, 0), namespace.getSourceCursor("sel"));
+		assertSame(empty, namespace.getSourceCursor("sel"));
 
 		// So that the first entry logged is returned by the next poll, which reads the whole log
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
 			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, new SelCursor(null, 0), true);
+			.executeIpmiSel(HOST_NAME, configuration, empty, true);
 		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
 		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
 	}

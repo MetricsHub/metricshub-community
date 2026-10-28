@@ -121,7 +121,7 @@ Energy;$sensorId;$sensorName;$deviceUniqueId;$value
 
 ## System Event Log (`ipmiSel` source)
 
-The `ipmiSel` source returns the entries the BMC added to its System Event Log since the previous poll of the source, one row per entry, at most `maxEventsPerPoll` of them (50 by default, `-1` for no limit; the entries left out come with the next poll). The first poll locates the end of the log (Get SEL Entry of record FFFFh) without reading it and returns no row. The cursor is the last entry returned, kept in memory: a restart of the agent starts again with an empty first poll, and a log cleared by the administrator is read again from its first entry.
+The `ipmiSel` source returns the entries the BMC added to its System Event Log since the previous poll of the source, one row per entry, at most `maxEventsPerPoll` of them (50 by default, `-1` for no limit; the entries left out come with the next poll). The first poll locates the end of the log (Get SEL Entry of record FFFFh) without reading it and returns no row; it keeps the bytes of that last entry, so that the next poll tells a log cleared and filled again up to the same record ID. The cursor is the last entry returned, kept in memory: a restart of the agent starts again with an empty first poll, and a log cleared by the administrator is read again from its first entry.
 
 ```text
 recordId;timestamp;sensorType;sensorNumber;sensorName;entity;eventType;description;direction;generatorId;oem

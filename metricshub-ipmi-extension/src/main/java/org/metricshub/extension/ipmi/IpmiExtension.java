@@ -233,9 +233,14 @@ public class IpmiExtension implements IProtocolExtension {
 
 		if (cursor == null) {
 			// The first poll locates the end of the log without reading it, and reports no backlog
-			final int lastId = ipmiRequestExecutor.executeIpmiSelLastId(hostname, ipmiConfiguration);
-			namespace.setSourceCursor(sourceKey, new SelCursor(null, lastId));
-			log.info("Hostname {} - First IPMI SEL poll of source {}: cursor at record {}", hostname, sourceKey, lastId);
+			final SelCursor end = ipmiRequestExecutor.executeIpmiSelEnd(hostname, ipmiConfiguration);
+			namespace.setSourceCursor(sourceKey, end);
+			log.info(
+				"Hostname {} - First IPMI SEL poll of source {}: cursor at record {}",
+				hostname,
+				sourceKey,
+				end.recordId()
+			);
 			record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, "");
 			return SourceTable.empty();
 		}

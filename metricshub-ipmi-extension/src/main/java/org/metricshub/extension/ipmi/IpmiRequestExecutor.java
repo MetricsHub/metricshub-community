@@ -306,34 +306,35 @@ public class IpmiRequestExecutor {
 	}
 
 	/**
-	 * The cursor of an ipmiSel source: the last entry returned, or only the record ID of the last entry when the
-	 * first poll located the end of the log without reading it. With the entry, ipmi-java tells a log cleared and
-	 * filled again up to the same ID from a log that only grew.
+	 * The cursor of an ipmiSel source: the last entry returned, or the record ID and the bytes of the last entry when
+	 * the first poll located the end of the log without reading it. Either way the next poll tells a log cleared and
+	 * filled again up to the same ID from a log that only grew: ipmi-java compares the entry, the extension the bytes.
 	 *
 	 * @param entry    The last entry returned, or {@code null} before the first entry is returned
 	 * @param recordId The record ID of the last entry, 0 when the log was empty
+	 * @param record   The bytes of the last entry as the first poll read them, {@code null} with an entry or an
+	 *                 empty log
 	 */
-	public record SelCursor(SelEntry entry, int recordId) {
+	public record SelCursor(SelEntry entry, int recordId, byte[] record) {
 		/**
 		 * @param entry The last entry returned
 		 * @return the cursor at that entry
 		 */
 		public static SelCursor of(final SelEntry entry) {
-			return new SelCursor(entry, entry.id());
+			return new SelCursor(entry, entry.id(), null);
 		}
 	}
 
 	/**
-	 * Reads the record ID of the last entry of the System Event Log without reading the log: Get SEL Entry of record
-	 * FFFFh.
+	 * Locates the end of the System Event Log without reading the log: Get SEL Entry of record FFFFh, the last one.
 	 *
 	 * @param hostname          The host name or IP address of the BMC
 	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
-	 * @return the record ID of the last entry, 0 when the log is empty
+	 * @return the cursor at the last entry: its record ID and bytes, record ID 0 when the log is empty
 	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
 	 */
-	@WithSpan("IPMI SEL Last Record")
-	public int executeIpmiSelLastId(
+	@WithSpan("IPMI SEL End")
+	public SelCursor executeIpmiSelEnd(
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
 	) {
@@ -346,7 +347,7 @@ public class IpmiRequestExecutor {
 		final byte[] data = response.data();
 		if (response.rawCompletionCode() == RECORD_NOT_PRESENT || (response.rawCompletionCode() == 0 && data.length < 4)) {
 			log.debug("Hostname {} - The IPMI SEL has no last entry: {}", hostname, response);
-			return 0;
+			return new SelCursor(null, 0, null);
 		}
 		if (response.rawCompletionCode() != 0) {
 			// A busy BMC or a refused command is not an empty log: the next poll tries again
@@ -354,7 +355,38 @@ public class IpmiRequestExecutor {
 		}
 		final int lastId = (data[2] & 0xFF) | ((data[3] & 0xFF) << 8);
 		log.debug("Hostname {} - The last IPMI SEL entry is record {}", hostname, lastId);
-		return lastId;
+		return new SelCursor(null, lastId, Arrays.copyOfRange(data, 2, data.length));
+	}
+
+	/**
+	 * Whether the log still holds, byte for byte, the last entry a first poll located. ipmi-java makes the same
+	 * check for a cursor made of an entry: a log cleared and filled again up to the same ID is read from its first
+	 * entry.
+	 *
+	 * @param bmc   The client of the request
+	 * @param since The cursor of the first poll
+	 * @return whether the record of the cursor is still in the log, unchanged
+	 */
+	private static boolean holds(final IpmiClient bmc, final SelCursor since) {
+		final RawResponse response = bmc
+			.raw(STORAGE_NETFN, GET_SEL_ENTRY)
+			.data(0x00, 0x00, since.recordId() & 0xFF, since.recordId() >> 8, 0x00, 0xFF)
+			.execute();
+		final byte[] data = response.data();
+		final byte[] record = since.record();
+		final boolean held =
+			response.rawCompletionCode() == 0 &&
+			record != null &&
+			data.length >= 2 + record.length &&
+			Arrays.equals(data, 2, 2 + record.length, record, 0, record.length);
+		if (!held) {
+			log.debug(
+				"The IPMI SEL no longer holds record {} as first read, the whole log is read: {}",
+				since.recordId(),
+				response
+			);
+		}
+		return held;
 	}
 
 	/**
@@ -391,7 +423,7 @@ public class IpmiRequestExecutor {
 			final SelRequest request = bmc.sel();
 			if (since != null && since.entry() != null) {
 				request.since(since.entry());
-			} else if (since != null && since.recordId() > 0) {
+			} else if (since != null && since.recordId() > 0 && holds(bmc, since)) {
 				request.since(since.recordId());
 			}
 			final SelEntryList entries = request.execute();

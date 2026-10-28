@@ -1,5 +1,6 @@
 package org.metricshub.extension.ipmi;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -253,24 +255,36 @@ class IpmiRequestExecutorTest {
 		when(selRequest.execute()).thenReturn(entries);
 		when(bmc.sel()).thenReturn(selRequest);
 
-		// A cursor at a record ID only: the entries after that ID
-		assertSame(
-			entries,
-			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 5), false).entries()
+		final RawRequest rawRequest = mock(RawRequest.class, RETURNS_SELF);
+		when(bmc.raw(0x0A, 0x43)).thenReturn(rawRequest);
+		final SelCursor cursor = new SelCursor(null, 5, new byte[] { 0x05, 0x00, 0x02, 0x01 });
+
+		// A cursor at a record ID only, which the log still holds: the entries after that ID
+		when(rawRequest.execute()).thenReturn(
+			IpmiClientResults.rawResponse(0, new byte[] { (byte) 0xFF, (byte) 0xFF, 0x05, 0x00, 0x02, 0x01 })
 		);
+		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
+		verify(rawRequest).data(0x00, 0x00, 0x05, 0x00, 0x00, 0xFF);
 		verify(selRequest).since(5);
+
+		// The log was cleared and filled again up to record 5, another entry: the whole log
+		when(rawRequest.execute()).thenReturn(
+			IpmiClientResults.rawResponse(0, new byte[] { (byte) 0xFF, (byte) 0xFF, 0x05, 0x00, 0x02, 0x02 })
+		);
+		assertSame(entries, executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false).entries());
+		verify(selRequest, times(1)).since(5);
 
 		// A cursor at an empty log: the whole log
 		assertSame(
 			entries,
-			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 0), false).entries()
+			executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, new SelCursor(null, 0, null), false).entries()
 		);
 		verify(selRequest, never()).since(0);
 		verify(selRequest, never()).since(any(SelEntry.class));
 	}
 
 	@Test
-	void testExecuteIpmiSelLastId() {
+	void testExecuteIpmiSelEnd() {
 		final RawRequest rawRequest = mock(RawRequest.class, RETURNS_SELF);
 		when(bmc.raw(0x0A, 0x43)).thenReturn(rawRequest);
 
@@ -278,18 +292,20 @@ class IpmiRequestExecutorTest {
 		when(rawRequest.execute()).thenReturn(
 			IpmiClientResults.rawResponse(0, new byte[] { (byte) 0xFF, (byte) 0xFF, (byte) 0x83, 0x02, 0x02 })
 		);
-		assertEquals(0x283, executor().executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
+		final SelCursor end = executor().executeIpmiSelEnd(HOSTNAME, ipmiConfiguration);
+		assertEquals(0x283, end.recordId());
+		assertArrayEquals(new byte[] { (byte) 0x83, 0x02, 0x02 }, end.record());
 		verify(rawRequest).data(0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF);
 		verify(bmc).close();
 
 		// An empty log: requested record not present
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xCB, new byte[0]));
-		assertEquals(0, executor().executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
+		assertEquals(0, executor().executeIpmiSelEnd(HOSTNAME, ipmiConfiguration).recordId());
 
 		// A busy BMC is not an empty log
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xC0, new byte[0]));
 		final IpmiRequestExecutor executor = executor();
-		assertThrows(IpmiClientException.class, () -> executor.executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
+		assertThrows(IpmiClientException.class, () -> executor.executeIpmiSelEnd(HOSTNAME, ipmiConfiguration));
 	}
 
 	@Test
