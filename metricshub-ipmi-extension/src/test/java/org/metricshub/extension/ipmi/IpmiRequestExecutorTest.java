@@ -25,6 +25,7 @@ import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.BmcCapabilities;
 import org.metricshub.ipmi.client.FrusRequest;
 import org.metricshub.ipmi.client.IpmiClient;
+import org.metricshub.ipmi.client.IpmiClientException;
 import org.metricshub.ipmi.client.IpmiClientResults;
 import org.metricshub.ipmi.client.IpmiTimeoutException;
 import org.metricshub.ipmi.client.RawRequest;
@@ -57,6 +58,7 @@ class IpmiRequestExecutorTest {
 		final IpmiRequestExecutor executor = spy(new IpmiRequestExecutor());
 		doReturn(bmc).when(executor).newClient(HOSTNAME, ipmiConfiguration);
 		doReturn(bmc).when(executor).newClient(HOSTNAME, ipmiConfiguration, PrivilegeLevel.Operator);
+		doReturn(bmc).when(executor).newClient(HOSTNAME, ipmiConfiguration, PrivilegeLevel.MaximumAvailable);
 		return executor;
 	}
 
@@ -182,6 +184,23 @@ class IpmiRequestExecutorTest {
 	}
 
 	@Test
+	void testExecuteIpmiSelKeepsEntriesWhenSensorsFail() {
+		final SelEntryList entries = IpmiClientResults.selEntryList(List.of(IpmiResultConverterTest.psuFailure(6)), null);
+		final SelRequest selRequest = mock(SelRequest.class, RETURNS_SELF);
+		when(selRequest.execute()).thenReturn(entries);
+		when(bmc.sel()).thenReturn(selRequest);
+		final SensorsRequest sensorsRequest = mock(SensorsRequest.class);
+		when(sensorsRequest.execute()).thenThrow(new IpmiTimeoutException("No reply"));
+		when(bmc.sensors()).thenReturn(sensorsRequest);
+
+		final SelRead read = executor().executeIpmiSel(HOSTNAME, ipmiConfiguration, null, true);
+
+		assertSame(entries, read.entries());
+		assertNull(read.sensors());
+		verify(bmc).close();
+	}
+
+	@Test
 	void testExecuteIpmiSelWholeLogWithoutSensors() {
 		final SelEntryList entries = IpmiClientResults.selEntryList(List.of(IpmiResultConverterTest.psuFailure(6)), null);
 		final SelRequest selRequest = mock(SelRequest.class, RETURNS_SELF);
@@ -216,6 +235,11 @@ class IpmiRequestExecutorTest {
 			IpmiRequestExecutor.rawQuery(IpmiRawSource.builder().netFn("0x06").command("1").data("0x00 255").build())
 		);
 		assertEquals("06 01", IpmiRequestExecutor.rawQuery(IpmiRawSource.builder().netFn("6").command("0x01").build()));
+		// A leading zero is not octal
+		assertEquals(
+			"0A 08 10",
+			IpmiRequestExecutor.rawQuery(IpmiRawSource.builder().netFn("010").command("08").data("0X10").build())
+		);
 		final IpmiRawSource noNetFn = IpmiRawSource.builder().command("1").build();
 		assertThrows(IllegalArgumentException.class, () -> IpmiRequestExecutor.rawQuery(noNetFn));
 		final IpmiRawSource badData = IpmiRawSource.builder().netFn("6").command("1").data("0x00 zz").build();
@@ -261,6 +285,11 @@ class IpmiRequestExecutorTest {
 		// An empty log: requested record not present
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xCB, new byte[0]));
 		assertEquals(0, executor().executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
+
+		// A busy BMC is not an empty log
+		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xC0, new byte[0]));
+		final IpmiRequestExecutor executor = executor();
+		assertThrows(IpmiClientException.class, () -> executor.executeIpmiSelLastId(HOSTNAME, ipmiConfiguration));
 	}
 
 	@Test

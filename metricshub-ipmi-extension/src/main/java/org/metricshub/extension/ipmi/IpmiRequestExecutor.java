@@ -164,6 +164,28 @@ public class IpmiRequestExecutor {
 	}
 
 	/**
+	 * Reads the sensors to name those of the SEL entries without failing the request: the entries are worth
+	 * returning without their sensor names when the SDR repository cannot be walked.
+	 *
+	 * @param hostname The host name or IP address of the BMC
+	 * @param bmc      The client of the request
+	 * @return the sensors, or {@code null} when the BMC did not give them
+	 */
+	private static SensorList sensorsOrNull(final String hostname, final IpmiClient bmc) {
+		try {
+			return bmc.sensors().execute();
+		} catch (IpmiClientException e) {
+			log.warn(
+				"Hostname {} - IPMI sensors not read, the SEL entries are returned without sensor names: {}",
+				hostname,
+				e.getMessage()
+			);
+			log.debug("Hostname {} - IPMI sensors error:", hostname, e);
+			return null;
+		}
+	}
+
+	/**
 	 * Logs what ipmi-java skipped or could not read without failing the request: ipmi-java does not log.
 	 *
 	 * @param hostname The host name or IP address of the BMC
@@ -253,6 +275,11 @@ public class IpmiRequestExecutor {
 	private static final int[] LAST_SEL_ENTRY_REQUEST = { 0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF };
 
 	/**
+	 * Completion code CBh, "requested sensor, data, or record not present": the answer of an empty log
+	 */
+	private static final int RECORD_NOT_PRESENT = 0xCB;
+
+	/**
 	 * Probes the BMC without credentials: Get Channel Authentication Capabilities and Get Channel Cipher Suites,
 	 * outside any session.
 	 *
@@ -317,9 +344,13 @@ public class IpmiRequestExecutor {
 
 		// Next record ID (2 bytes), then the record, which starts with its ID
 		final byte[] data = response.data();
-		if (response.rawCompletionCode() != 0 || data.length < 4) {
+		if (response.rawCompletionCode() == RECORD_NOT_PRESENT || (response.rawCompletionCode() == 0 && data.length < 4)) {
 			log.debug("Hostname {} - The IPMI SEL has no last entry: {}", hostname, response);
 			return 0;
+		}
+		if (response.rawCompletionCode() != 0) {
+			// A busy BMC or a refused command is not an empty log: the next poll tries again
+			throw new IpmiClientException("Get SEL Entry of the last record failed: " + response);
 		}
 		final int lastId = (data[2] & 0xFF) | ((data[3] & 0xFF) << 8);
 		log.debug("Hostname {} - The last IPMI SEL entry is record {}", hostname, lastId);
@@ -368,7 +399,7 @@ public class IpmiRequestExecutor {
 			// records-only walk needs an ipmi-java API
 			final SensorList sensors =
 				withSensors && entries.stream().anyMatch(entry -> entry.type() == SelRecordType.System)
-					? bmc.sensors().execute()
+					? sensorsOrNull(hostname, bmc)
 					: null;
 			result = new SelRead(entries, sensors);
 		}
@@ -407,7 +438,8 @@ public class IpmiRequestExecutor {
 		final long startTime = System.currentTimeMillis();
 
 		final String result;
-		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+		// At the highest level of the account: a raw command may need Operator or Administrator
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration, PrivilegeLevel.MaximumAvailable)) {
 			result = IpmiResultConverter.convertResult(bmc.raw(netFn, command).data(data).execute());
 		}
 
@@ -439,7 +471,8 @@ public class IpmiRequestExecutor {
 	}
 
 	/**
-	 * Decodes a decimal or {@code 0x} hexadecimal number of an ipmiRaw source.
+	 * Decodes a decimal or {@code 0x} hexadecimal number of an ipmiRaw source. A leading zero does not make the
+	 * number octal: {@code 010} is 10.
 	 *
 	 * @param value The value
 	 * @return the number
@@ -449,7 +482,10 @@ public class IpmiRequestExecutor {
 		if (value == null || value.isBlank()) {
 			throw new IllegalArgumentException("An ipmiRaw source needs a netFn and a command");
 		}
-		return Integer.decode(value.trim());
+		final String number = value.trim();
+		return number.startsWith("0x") || number.startsWith("0X")
+			? Integer.parseInt(number.substring(2), 16)
+			: Integer.parseInt(number, 10);
 	}
 
 	/**
@@ -463,7 +499,7 @@ public class IpmiRequestExecutor {
 		if (data == null || data.isBlank()) {
 			return new int[0];
 		}
-		return Arrays.stream(data.trim().split(" +")).mapToInt(Integer::decode).toArray();
+		return Arrays.stream(data.trim().split(" +")).mapToInt(IpmiRequestExecutor::decode).toArray();
 	}
 
 	/**

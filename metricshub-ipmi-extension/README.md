@@ -145,7 +145,7 @@ Some BMCs run their SEL clock in local time and do not say so: their `timestamp`
 
 ## Raw commands (`ipmiRaw` source)
 
-The `ipmiRaw` source sends the command of its `netFn`, `command` and `data` properties (decimal, or hexadecimal with the `0x` prefix; `data` bytes separated with spaces) and returns one row:
+The `ipmiRaw` source sends the command of its `netFn`, `command` and `data` properties (decimal, or hexadecimal with the `0x` prefix, a leading zero is not octal; `data` bytes separated with spaces) and returns one row:
 
 ```text
 completionCode;data
