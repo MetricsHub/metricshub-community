@@ -24,8 +24,10 @@ package org.metricshub.extension.emulation.ipmi;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
@@ -40,7 +42,7 @@ import org.metricshub.extension.ipmi.IpmiRequestExecutor;
 @Slf4j
 public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 
-	record IpmiContext(String requestType) {}
+	record IpmiContext(String requestType, String query) {}
 
 	private final AbstractEmulationExecutor executorHelper;
 
@@ -70,7 +72,7 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 		final IpmiConfiguration ipmiConfiguration,
 		final EmulationConfiguration emulationConfiguration
 	) {
-		return replayFromEmulationFiles(hostname, emulationConfiguration, IpmiRecorder.IPMI_DETECTION_REQUEST);
+		return replayFromEmulationFiles(hostname, emulationConfiguration, IpmiRecorder.IPMI_DETECTION_REQUEST, null);
 	}
 
 	/**
@@ -86,7 +88,46 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 		final IpmiConfiguration ipmiConfiguration,
 		final EmulationConfiguration emulationConfiguration
 	) {
-		return replayFromEmulationFiles(hostname, emulationConfiguration, IpmiRecorder.GET_SENSORS_REQUEST);
+		return replayFromEmulationFiles(hostname, emulationConfiguration, IpmiRecorder.GET_SENSORS_REQUEST, null);
+	}
+
+	/**
+	 * Replays the recorded SEL entries of one poll, as the CSV table the recorder wrote.
+	 *
+	 * @param hostname              The host name
+	 * @param ipmiConfiguration     The IPMI configuration
+	 * @param emulationConfiguration The emulation configuration
+	 * @return the recorded CSV table, or {@code null} when none matches
+	 */
+	public String executeIpmiSel(
+		final String hostname,
+		final IpmiConfiguration ipmiConfiguration,
+		final EmulationConfiguration emulationConfiguration
+	) {
+		return replayFromEmulationFiles(hostname, emulationConfiguration, IpmiRecorder.GET_SEL_REQUEST, null);
+	}
+
+	/**
+	 * Replays the recorded response of a raw command, matched on its request bytes.
+	 *
+	 * @param hostname              The host name
+	 * @param ipmiConfiguration     The IPMI configuration
+	 * @param emulationConfiguration The emulation configuration
+	 * @param source                The ipmiRaw source
+	 * @return the recorded {@code completionCode;data} line, or {@code null} when none matches
+	 */
+	public String executeIpmiRaw(
+		final String hostname,
+		final IpmiConfiguration ipmiConfiguration,
+		final EmulationConfiguration emulationConfiguration,
+		final IpmiRawSource source
+	) {
+		return replayFromEmulationFiles(
+			hostname,
+			emulationConfiguration,
+			IpmiRecorder.RAW_REQUEST,
+			IpmiRequestExecutor.rawQuery(source)
+		);
 	}
 
 	/**
@@ -100,7 +141,8 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 	private String replayFromEmulationFiles(
 		final String hostname,
 		final EmulationConfiguration emulationConfiguration,
-		final String requestType
+		final String requestType,
+		final String query
 	) {
 		if (emulationConfiguration == null || emulationConfiguration.getIpmi() == null) {
 			log.warn("Hostname {} - IPMI emulation configuration is not set.", hostname);
@@ -117,7 +159,7 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 			hostname,
 			emulationInputDirectory,
 			IpmiEmulationImage.class,
-			new IpmiContext(requestType),
+			new IpmiContext(requestType, query),
 			new AbstractEmulationExecutor.ReplayOperations<IpmiEmulationImage, IpmiEmulationEntry, IpmiContext, String>() {
 				@Override
 				public String protocolName() {
@@ -126,7 +168,7 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 
 				@Override
 				public String describeRequest(final IpmiContext context) {
-					return "request '" + context.requestType() + "'";
+					return "request '" + context.requestType() + "'" + (context.query() == null ? "" : " " + context.query());
 				}
 
 				@Override
@@ -139,12 +181,12 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 					final List<IpmiEmulationEntry> entries,
 					final IpmiContext context
 				) {
-					return EmulationIpmiRequestExecutor.this.findMatchingEntries(entries, context.requestType());
+					return EmulationIpmiRequestExecutor.this.findMatchingEntries(entries, context.requestType(), context.query());
 				}
 
 				@Override
 				public String buildRequestKey(final IpmiContext context) {
-					return context.requestType();
+					return context.query() == null ? context.requestType() : context.requestType() + " " + context.query();
 				}
 
 				@Override
@@ -172,14 +214,20 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 	 * @param requestType the request type to match
 	 * @return a list of matching entries, or an empty list if none found
 	 */
-	List<IpmiEmulationEntry> findMatchingEntries(final List<IpmiEmulationEntry> entries, final String requestType) {
+	List<IpmiEmulationEntry> findMatchingEntries(
+		final List<IpmiEmulationEntry> entries,
+		final String requestType,
+		final String query
+	) {
 		if (entries == null || entries.isEmpty()) {
 			return List.of();
 		}
 
 		return entries
 			.stream()
-			.filter(entry -> entry != null && requestType.equals(entry.getRequest()))
+			.filter(
+				entry -> entry != null && requestType.equals(entry.getRequest()) && Objects.equals(query, entry.getQuery())
+			)
 			.collect(Collectors.toCollection(ArrayList::new));
 	}
 }

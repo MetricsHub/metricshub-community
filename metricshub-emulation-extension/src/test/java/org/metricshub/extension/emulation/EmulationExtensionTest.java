@@ -37,6 +37,8 @@ import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -389,6 +391,45 @@ class EmulationExtensionTest {
 
 		assertNotNull(result);
 		assertTrue(result.getTable().isEmpty());
+	}
+
+	@Test
+	void testProcessSourceWithIpmiRawAndSelSources(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request: Raw
+			    query: 06 01
+			    response: raw.txt
+			  - request: GetSel
+			    response: sel.txt
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("raw.txt"), "00;20 01", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("sel.txt"), "5;1593835520;PowerSupply;\n6;;;\n", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration.builder()
+					.hostname(HOSTNAME)
+					.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+
+		final IpmiRawSource rawSource = IpmiRawSource.builder().netFn("6").command("1").build();
+		assertEquals(
+			List.of(List.of("00", "20 01")),
+			emulationExtension.processSource(rawSource, "connector", tm).getTable()
+		);
+		final IpmiRawSource unknown = IpmiRawSource.builder().netFn("6").command("2").build();
+		assertTrue(emulationExtension.processSource(unknown, "connector", tm).getTable().isEmpty());
+
+		final SourceTable sel = emulationExtension.processSource(IpmiSelSource.builder().build(), "connector", tm);
+		assertEquals(List.of(List.of("5", "1593835520", "PowerSupply"), List.of("6", "", "")), sel.getTable());
 	}
 
 	// ---- processCriterion ----

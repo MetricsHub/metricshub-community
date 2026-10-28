@@ -28,17 +28,21 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.Fru;
+import org.metricshub.ipmi.client.RawResponse;
+import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.client.Sensor;
 import org.metricshub.ipmi.core.coding.commands.fru.record.BoardInfo;
 import org.metricshub.ipmi.core.coding.commands.fru.record.PiromInfo;
@@ -46,6 +50,7 @@ import org.metricshub.ipmi.core.coding.commands.fru.record.ProductInfo;
 import org.metricshub.ipmi.core.coding.commands.fru.record.SpdInfo;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.EntityId;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.FullSensorRecord;
+import org.metricshub.ipmi.core.coding.commands.sdr.record.SensorType;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.SensorUnit;
 
 /**
@@ -57,6 +62,8 @@ public final class IpmiResultConverter {
 	private static final int NO_READING = 255;
 
 	private static final String EMPTY = "";
+
+	private static final HexFormat HEX = HexFormat.ofDelimiter(" ").withUpperCase();
 
 	private static final Set<EntityId> PANELS = EnumSet.of(
 		EntityId.FrontPanelBoard,
@@ -511,5 +518,106 @@ public final class IpmiResultConverter {
 
 	private static String orEmpty(final String value) {
 		return isBlank(value) ? EMPTY : value;
+	}
+
+	/**
+	 * Formats the response of a raw command as {@code $completionCode;$data}: the completion code as two uppercase
+	 * hex digits, then the response bytes as uppercase hex separated with spaces.
+	 *
+	 * @param response The response of the BMC
+	 * @return the line
+	 */
+	public static String convertResult(final RawResponse response) {
+		return String.format("%02X;%s", response.rawCompletionCode(), HEX.formatHex(response.data()));
+	}
+
+	/**
+	 * Splits the result of {@link #convertResult(RawResponse)} back into its two columns.
+	 *
+	 * @param result The result line
+	 * @return the row: the completion code and the data
+	 */
+	public static List<String> rawRow(final String result) {
+		return Arrays.asList(result.split(";", 2));
+	}
+
+	/**
+	 * Formats a raw request as {@code $netFn $command[ $data]} in uppercase hex bytes.
+	 *
+	 * @param netFn   The network function
+	 * @param command The command
+	 * @param data    The request bytes
+	 * @return the request bytes
+	 */
+	public static String rawQuery(final int netFn, final int command, final int[] data) {
+		final StringBuilder query = new StringBuilder(String.format("%02X %02X", netFn, command));
+		for (final int dataByte : data) {
+			query.append(String.format(" %02X", dataByte));
+		}
+		return query.toString();
+	}
+
+	/**
+	 * Builds one row per SEL entry:
+	 * {@code recordId;timestamp;sensorType;sensorNumber;sensorName;entity;eventType;description;direction;generatorId;oem}.
+	 * The timestamp is in seconds since the epoch, UTC, and empty for the entries logged before the BMC had the
+	 * time. The sensor name and its entity come from the sensor of the SDR repository that logged the event.
+	 *
+	 * @param entries The entries to convert
+	 * @param sensors The sensors of the BMC, or {@code null} to leave the sensor names and entities empty
+	 * @return the rows, in the order of the entries
+	 */
+	public static List<List<String>> convertSel(final List<SelEntry> entries, final List<Sensor> sensors) {
+		return entries
+			.stream()
+			.map(entry -> selRow(entry, sensors))
+			.toList();
+	}
+
+	private static List<String> selRow(final SelEntry entry, final List<Sensor> sensors) {
+		final Sensor sensor = sensors == null ? null : sensors.stream().filter(entry::isFrom).findFirst().orElse(null);
+		final String deviceType = sensor == null ? null : DeviceDescription.getDeviceType(sensor.entity());
+		return List.of(
+			String.valueOf(entry.id()),
+			entry
+				.timestamp()
+				.map(time -> String.valueOf(time.getEpochSecond()))
+				.orElse(EMPTY),
+			entry
+				.sensorType()
+				.map(type -> sensorTypeName(type, entry.sensorTypeCode().orElse(0)))
+				.orElse(EMPTY),
+			hexByte(entry.sensorNumber()),
+			sensor == null || sensor.name() == null ? EMPTY : sensor.name(),
+			sensor == null || deviceType == null ? EMPTY : entityKey(deviceType, (byte) sensor.entityInstance()),
+			hexByte(entry.eventType()),
+			entry.description(),
+			entry.direction().map(Enum::name).orElse(EMPTY),
+			entry.generatorId().isPresent() ? String.format("%04X", entry.generatorId().getAsInt()) : EMPTY,
+			oem(entry)
+		);
+	}
+
+	/**
+	 * Names a sensor type as ipmi-java does: the constant, followed by the code for the OEM and reserved types.
+	 */
+	private static String sensorTypeName(final SensorType type, final int code) {
+		return type == SensorType.Oem || type == SensorType.Reserved ? String.format("%s %02Xh", type, code) : type.name();
+	}
+
+	private static String hexByte(final OptionalInt value) {
+		return value.isPresent() ? String.format("%02X", value.getAsInt()) : EMPTY;
+	}
+
+	/**
+	 * The OEM data of an OEM record: the manufacturer ID when the record carries one, then the bytes, in hex.
+	 */
+	private static String oem(final SelEntry entry) {
+		final byte[] data = entry.oemData();
+		if (data.length == 0) {
+			return EMPTY;
+		}
+		final OptionalInt manufacturer = entry.manufacturerId();
+		return ((manufacturer.isPresent() ? String.format("%06X ", manufacturer.getAsInt()) : EMPTY) + HEX.formatHex(data));
 	}
 }

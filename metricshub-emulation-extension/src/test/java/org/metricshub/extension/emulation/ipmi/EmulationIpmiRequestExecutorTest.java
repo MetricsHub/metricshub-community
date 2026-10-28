@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
@@ -237,7 +238,7 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testFindMatchingEntriesIgnoresNullEntries() {
-		final IpmiEmulationEntry matchingEntry = new IpmiEmulationEntry("GetSensors", "r1.txt");
+		final IpmiEmulationEntry matchingEntry = new IpmiEmulationEntry("GetSensors", null, "r1.txt");
 		final IpmiEmulationEntry nullRequestEntry = new IpmiEmulationEntry();
 
 		final List<IpmiEmulationEntry> entries = new ArrayList<>();
@@ -245,7 +246,7 @@ class EmulationIpmiRequestExecutorTest {
 		entries.add(nullRequestEntry);
 		entries.add(matchingEntry);
 
-		final List<IpmiEmulationEntry> result = executor.findMatchingEntries(entries, "GetSensors");
+		final List<IpmiEmulationEntry> result = executor.findMatchingEntries(entries, "GetSensors", null);
 
 		assertEquals(1, result.size());
 		assertEquals("r1.txt", result.get(0).getResponse());
@@ -253,11 +254,68 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testFindMatchingEntriesReturnsEmptyForNullEntries() {
-		assertTrue(executor.findMatchingEntries(null, "GetSensors").isEmpty());
+		assertTrue(executor.findMatchingEntries(null, "GetSensors", null).isEmpty());
 	}
 
 	@Test
 	void testFindMatchingEntriesReturnsEmptyForEmptyList() {
-		assertTrue(executor.findMatchingEntries(List.of(), "GetSensors").isEmpty());
+		assertTrue(executor.findMatchingEntries(List.of(), "GetSensors", null).isEmpty());
+	}
+
+	@Test
+	void testExecuteIpmiRawMatchesQuery(@TempDir final Path tempDir) throws Exception {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request: Raw
+			    query: 06 01
+			    response: deviceId.txt
+			  - request: Raw
+			    query: 0A 40
+			    response: selInfo.txt
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("deviceId.txt"), "00;20 01 03", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("selInfo.txt"), "00;51 10 00", StandardCharsets.UTF_8);
+
+		final EmulationConfiguration emulCfg = buildEmulationConfiguration(tempDir.toString());
+		final IpmiConfiguration ipmiCfg = IpmiConfiguration.builder().hostname(HOSTNAME).build();
+
+		assertEquals(
+			"00;51 10 00",
+			executor.executeIpmiRaw(HOSTNAME, ipmiCfg, emulCfg, IpmiRawSource.builder().netFn("0x0A").command("64").build())
+		);
+		assertEquals(
+			"00;20 01 03",
+			executor.executeIpmiRaw(HOSTNAME, ipmiCfg, emulCfg, IpmiRawSource.builder().netFn("6").command("1").build())
+		);
+		assertNull(
+			executor.executeIpmiRaw(HOSTNAME, ipmiCfg, emulCfg, IpmiRawSource.builder().netFn("6").command("2").build())
+		);
+	}
+
+	@Test
+	void testExecuteIpmiSel(@TempDir final Path tempDir) throws Exception {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request: GetSel
+			    response: sel.txt
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("sel.txt"), "5;1593835520;PowerSupply;", StandardCharsets.UTF_8);
+
+		assertEquals(
+			"5;1593835520;PowerSupply;",
+			executor.executeIpmiSel(
+				HOSTNAME,
+				IpmiConfiguration.builder().hostname(HOSTNAME).build(),
+				buildEmulationConfiguration(tempDir.toString())
+			)
+		);
 	}
 }

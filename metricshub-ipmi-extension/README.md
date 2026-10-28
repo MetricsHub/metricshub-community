@@ -1,6 +1,6 @@
 # MetricsHub IPMI Extension
 
-This module contains the MetricsHub IPMI extension. It reads the chassis status, the FRUs and the sensors of a BMC over IPMI 2.0 (RMCP+) with [ipmi-java](https://metricshub.org/ipmi-java), and `IpmiResultConverter` turns these results into the semicolon-separated text that the IPMI connectors parse.
+This module contains the MetricsHub IPMI extension. It reads the chassis status, the FRUs, the sensors and the System Event Log of a BMC over IPMI 2.0 (RMCP+) with [ipmi-java](https://metricshub.org/ipmi-java), sends raw commands, and `IpmiResultConverter` turns these results into the semicolon-separated text that the IPMI connectors parse.
 
 ## Chassis status
 
@@ -118,6 +118,43 @@ Energy;$sensorId;$sensorName;$deviceUniqueId;$value
 - `$sensorId` is the SDR record ID, as 4 lowercase hexadecimal digits.
 - `$deviceUniqueId` is the entity of the sensor, as in the device state lines.
 - Thresholds are rounded to integers, in the same unit as `$value`, and empty when the BMC does not define them.
+
+## System Event Log (`ipmiSel` source)
+
+The `ipmiSel` source returns the entries the BMC added to its System Event Log since the previous poll of the source, one row per entry, at most `maxEventsPerPoll` of them (50 by default, `-1` for no limit; the entries left out come with the next poll). The first poll reads the log to set the cursor and returns no row. The cursor is the last entry read, kept in memory: a restart of the agent starts again with an empty first poll, and a log cleared by the administrator is read again from its first entry.
+
+```text
+recordId;timestamp;sensorType;sensorNumber;sensorName;entity;eventType;description;direction;generatorId;oem
+```
+
+| Field          | Content                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `recordId`     | The SEL record ID, decimal                                                                                                                             |
+| `timestamp`    | Seconds since the epoch, UTC (the BMC UTC offset is applied when it reports one); empty for the entries logged before the BMC had the time             |
+| `sensorType`   | The sensor type of a system event: `Temperature`, `PowerSupply`, `Memory`, ... ; `Oem C0h` for an OEM sensor type; empty for an OEM record            |
+| `sensorNumber` | The sensor number, as 2 uppercase hexadecimal digits; empty for an OEM record                                                                          |
+| `sensorName`   | The name of the sensor of the SDR repository that logged the event (`PS1 Status`); empty when no sensor matches                                        |
+| `entity`       | The entity of that sensor, as in the device state lines (`Power Supply 1`); empty when no sensor matches                                               |
+| `eventType`    | The event/reading type code, as 2 uppercase hexadecimal digits (`01` threshold, `6F` sensor-specific); empty for an OEM record                        |
+| `description`  | The event in words (`Power Supply Failure detected`, `Upper Critical - going high`), or `OEM data ...` for an OEM record                                |
+| `direction`    | `Assertion` or `Deassertion`; empty for an OEM record                                                                                                  |
+| `generatorId`  | The generator ID of a system event, as 4 uppercase hexadecimal digits; empty for an OEM record                                                         |
+| `oem`          | For an OEM record: the manufacturer ID as 6 uppercase hexadecimal digits when the record carries one, then its data bytes in hexadecimal, space-separated |
+
+Some BMCs run their SEL clock in local time and do not say so: their `timestamp` is off by the time zone offset.
+
+## Raw commands (`ipmiRaw` source)
+
+The `ipmiRaw` source sends the command of its `netFn`, `command` and `data` properties (decimal, or hexadecimal with the `0x` prefix; `data` bytes separated with spaces) and returns one row:
+
+```text
+completionCode;data
+```
+
+- `completionCode` is the completion code as 2 uppercase hexadecimal digits: `00` for success, `C1` for an invalid command, `D4` for an insufficient privilege level, ...
+- `data` is the response bytes in uppercase hexadecimal, space-separated; empty when the response carries none.
+
+A non-zero completion code is returned, not an error: the connector decides what it means. For example, Get Device ID (`netFn: 0x06`, `command: 0x01`) returns `00;20 01 03 02 02 BF 57 01 00 00 00 00 00 00 00 00`.
 
 ## Problems that do not fail a request
 

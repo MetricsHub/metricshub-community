@@ -1,0 +1,7 @@
+connector:
+  detection:
+    appliesTo: [ oob ]
+
+beforeAll:
+  testIpmiSelSource:
+    type: ipmiSel

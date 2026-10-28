@@ -1,6 +1,7 @@
 package org.metricshub.extension.ipmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -108,5 +109,28 @@ class IpmiRecorderTest {
 		final String responseFileName = image.get("image").get(0).get("response");
 		final String responseContent = Files.readString(ipmiDir.resolve(responseFileName), StandardCharsets.UTF_8);
 		assertEquals("", responseContent);
+	}
+
+	@Test
+	void testRecordRawWithQuery(@TempDir final Path tempDir) throws Exception {
+		final IpmiRecorder recorder = IpmiRecorder.getInstance(tempDir.toString());
+
+		recorder.record(IpmiRecorder.RAW_REQUEST, "06 01", "00;20 01");
+		recorder.record(IpmiRecorder.GET_SEL_REQUEST, null, "5;1593835520;");
+		recorder.flush();
+
+		final Path ipmiDir = tempDir.resolve("ipmi");
+		final Map<String, List<Map<String, String>>> image = JsonHelper.buildYamlMapper().readValue(
+			ipmiDir.resolve("image.yaml").toFile(),
+			IMAGE_TYPE
+		);
+		assertEquals("Raw", image.get("image").get(0).get("request"));
+		assertEquals("06 01", image.get("image").get(0).get("query"));
+		assertEquals("GetSel", image.get("image").get(1).get("request"));
+		assertFalse(image.get("image").get(1).containsKey("query"));
+		assertEquals(
+			"00;20 01",
+			Files.readString(ipmiDir.resolve(image.get("image").get(0).get("response")), StandardCharsets.UTF_8)
+		);
 	}
 }

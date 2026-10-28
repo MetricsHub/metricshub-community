@@ -7,6 +7,9 @@ import org.metricshub.ipmi.core.coding.commands.fru.record.FruRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.GetSensorReadingResponseData;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.AbstractSensorRecord;
 import org.metricshub.ipmi.core.coding.commands.sdr.record.FruDeviceLocatorRecord;
+import org.metricshub.ipmi.core.coding.commands.sel.GetSelInfoResponseData;
+import org.metricshub.ipmi.core.coding.commands.sel.SelRecord;
+import org.metricshub.ipmi.core.coding.payload.CompletionCode;
 
 /**
  * Builds the ipmi-java results from raw records, for the tests of the IPMI extension: their constructors are
@@ -57,5 +60,17 @@ public final class IpmiClientResults {
 	 */
 	public static ChassisStatus chassisStatus(final GetChassisStatusResponseData data) {
 		return new ChassisStatus(data);
+	}
+
+	public static SelEntry selEntry(final byte[] record, final int utcOffsetMinutes) {
+		return new SelEntry(SelRecord.populateSelRecord(record), utcOffsetMinutes);
+	}
+
+	public static SelEntryList selEntryList(final List<SelEntry> entries, final GetSelInfoResponseData info) {
+		return new SelEntryList(entries, info, 0);
+	}
+
+	public static RawResponse rawResponse(final int completionCode, final byte[] data) {
+		return new RawResponse(CompletionCode.parseInt(completionCode), completionCode, data);
 	}
 }

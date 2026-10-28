@@ -24,16 +24,23 @@ package org.metricshub.extension.ipmi;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Objects;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ArrayHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.ipmi.client.ChassisStatus;
 import org.metricshub.ipmi.client.FruList;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientException;
+import org.metricshub.ipmi.client.RawResponse;
+import org.metricshub.ipmi.client.SelEntry;
+import org.metricshub.ipmi.client.SelEntryList;
+import org.metricshub.ipmi.client.SelRequest;
 import org.metricshub.ipmi.client.SensorList;
+import org.metricshub.ipmi.core.coding.commands.sel.SelRecordType;
 
 /**
  * The IpmiRequestExecutor class is responsible for executing IPMI (Intelligent Platform Management Interface) requests to retrieve information about the chassis power state and sensors of a host.
@@ -208,5 +215,143 @@ public class IpmiRequestExecutor {
 		);
 
 		return result;
+	}
+
+	/**
+	 * The entries of one SEL read, with the sensors of the SDR repository when the sensors of the entries were to be
+	 * named, {@code null} otherwise.
+	 *
+	 * @param entries The entries read
+	 * @param sensors The sensors of the BMC, or {@code null}
+	 */
+	public record SelRead(SelEntryList entries, SensorList sensors) {}
+
+	/**
+	 * Reads the System Event Log entries added after {@code since}: the whole log when {@code since} is
+	 * {@code null}, or when the log no longer holds it (it was cleared).
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
+	 * @param since             The last entry of the previous read, or {@code null} for the whole log
+	 * @param withSensors       Whether to read the sensors too, to name the sensors of the system events read
+	 * @return the entries, with the sensors when asked for and at least one system event was read
+	 * @throws IpmiClientException If the BMC refuses the login, does not reply in time or fails the request.
+	 */
+	@WithSpan("IPMI SEL")
+	public SelRead executeIpmiSel(
+		@SpanAttribute("host.hostname") String hostname,
+		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration,
+		SelEntry since,
+		boolean withSensors
+	) {
+		final long startTime = System.currentTimeMillis();
+
+		final SelRead result;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+			final SelRequest request = bmc.sel();
+			if (since != null) {
+				request.since(since);
+			}
+			final SelEntryList entries = request.execute();
+			// ponytail: naming the sensors of the new events walks the whole SDR and reads every sensor; a
+			// records-only walk needs an ipmi-java API
+			final SensorList sensors =
+				withSensors && entries.stream().anyMatch(entry -> entry.type() == SelRecordType.System)
+					? bmc.sensors().execute()
+					: null;
+			result = new SelRead(entries, sensors);
+		}
+
+		log.debug(
+			"Hostname {} - Read {} IPMI SEL entries{} in {} ms",
+			hostname,
+			result.entries().size(),
+			since == null ? "" : " after record " + since.id(),
+			System.currentTimeMillis() - startTime
+		);
+
+		return result;
+	}
+
+	/**
+	 * Sends the raw command of an ipmiRaw source.
+	 *
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The MetricsHub {@link IpmiConfiguration} instance with required fields for IPMI requests.
+	 * @param source            The source: its network function, command and data bytes
+	 * @return {@code $completionCode;$data}, see {@link IpmiResultConverter#convertResult(RawResponse)}
+	 * @throws IpmiClientException      If the BMC refuses the login, does not reply in time or fails the request.
+	 * @throws IllegalArgumentException If the source does not hold valid numbers
+	 */
+	@WithSpan("IPMI Raw")
+	public String executeIpmiRaw(
+		@SpanAttribute("host.hostname") String hostname,
+		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration,
+		@NonNull IpmiRawSource source
+	) {
+		final int netFn = decode(source.getNetFn());
+		final int command = decode(source.getCommand());
+		final int[] data = dataBytes(source.getData());
+
+		final long startTime = System.currentTimeMillis();
+
+		final String result;
+		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration)) {
+			result = IpmiResultConverter.convertResult(bmc.raw(netFn, command).data(data).execute());
+		}
+
+		log.debug(
+			"Hostname {} - IPMI raw request {} returned {} in {} ms",
+			hostname,
+			IpmiResultConverter.rawQuery(netFn, command, data),
+			result,
+			System.currentTimeMillis() - startTime
+		);
+
+		return result;
+	}
+
+	/**
+	 * The request of an ipmiRaw source as {@code $netFn $command[ $data]} in uppercase hex bytes: the key of its
+	 * recording.
+	 *
+	 * @param source The source
+	 * @return the request bytes
+	 * @throws IllegalArgumentException If the source does not hold valid numbers
+	 */
+	public static String rawQuery(@NonNull final IpmiRawSource source) {
+		return IpmiResultConverter.rawQuery(
+			decode(source.getNetFn()),
+			decode(source.getCommand()),
+			dataBytes(source.getData())
+		);
+	}
+
+	/**
+	 * Decodes a decimal or {@code 0x} hexadecimal number of an ipmiRaw source.
+	 *
+	 * @param value The value
+	 * @return the number
+	 * @throws IllegalArgumentException If the value is blank or not a number
+	 */
+	private static int decode(final String value) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException("An ipmiRaw source needs a netFn and a command");
+		}
+		return Integer.decode(value.trim());
+	}
+
+	/**
+	 * Splits the data bytes of an ipmiRaw source, separated with spaces.
+	 *
+	 * @param data The data bytes, possibly {@code null} or blank
+	 * @return the bytes, empty when there are none
+	 * @throws IllegalArgumentException If a byte is not a number
+	 */
+	private static int[] dataBytes(final String data) {
+		if (data == null || data.isBlank()) {
+			return new int[0];
+		}
+		return Arrays.stream(data.trim().split(" +")).mapToInt(Integer::decode).toArray();
 	}
 }

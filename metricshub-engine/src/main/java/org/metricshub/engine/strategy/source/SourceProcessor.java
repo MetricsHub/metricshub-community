@@ -46,6 +46,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
@@ -199,6 +201,18 @@ public class SourceProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") final IpmiSource ipmiSource) {
 		return processSourceThroughExtension(ipmiSource);
+	}
+
+	@WithSpan("Source IPMI SEL Exec")
+	@Override
+	public SourceTable process(@SpanAttribute("source.definition") final IpmiSelSource ipmiSelSource) {
+		return processSourceThroughExtension(ipmiSelSource);
+	}
+
+	@WithSpan("Source IPMI Raw Exec")
+	@Override
+	public SourceTable process(@SpanAttribute("source.definition") final IpmiRawSource ipmiRawSource) {
+		return processSourceThroughExtension(ipmiRawSource);
 	}
 
 	@WithSpan("Source OS Command Exec")

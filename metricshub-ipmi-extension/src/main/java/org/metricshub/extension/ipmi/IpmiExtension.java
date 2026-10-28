@@ -38,12 +38,18 @@ import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
+import org.metricshub.ipmi.client.SelEntry;
+import org.metricshub.ipmi.client.SelEntryList;
 
 /**
  * The IpmiExtension class implements the IProtocolExtension interface to provide support for the IPMI (Intelligent Platform Management Interface) protocol in the MetricsHub engine.
@@ -65,12 +71,12 @@ public class IpmiExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(IpmiSource.class);
+		return Set.of(IpmiSource.class, IpmiSelSource.class, IpmiRawSource.class);
 	}
 
 	@Override
 	public Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> getConfigurationToSourceMapping() {
-		return Map.of(IpmiConfiguration.class, Set.of(IpmiSource.class));
+		return Map.of(IpmiConfiguration.class, getSupportedSources());
 	}
 
 	@Override
@@ -132,13 +138,17 @@ public class IpmiExtension implements IProtocolExtension {
 		final String hostname = telemetryManager.getHostname(List.of(IpmiConfiguration.class));
 
 		try {
+			if (source instanceof IpmiRawSource rawSource) {
+				return processRawSource(rawSource, hostname, ipmiConfiguration, telemetryManager);
+			}
+			if (source instanceof IpmiSelSource selSource) {
+				return processSelSource(selSource, connectorId, hostname, ipmiConfiguration, telemetryManager);
+			}
+
 			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
 
 			if (result != null) {
-				final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-				if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
-					IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.GET_SENSORS_REQUEST, result);
-				}
+				record(telemetryManager, IpmiRecorder.GET_SENSORS_REQUEST, null, result);
 				return SourceTable.builder().rawData(result).build();
 			} else {
 				log.error("Hostname {} - IPMI-over-LAN request returned <null> result. Returning an empty table.", hostname);
@@ -148,6 +158,117 @@ public class IpmiExtension implements IProtocolExtension {
 		}
 
 		return SourceTable.empty();
+	}
+
+	/**
+	 * Sends the raw command of the source and returns its one-row table: {@code completionCode;data}.
+	 *
+	 * @param source            The ipmiRaw source
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The IPMI configuration of the host
+	 * @param telemetryManager  The telemetry manager, for the recording directory
+	 * @return the one-row table
+	 */
+	private SourceTable processRawSource(
+		final IpmiRawSource source,
+		final String hostname,
+		final IpmiConfiguration ipmiConfiguration,
+		final TelemetryManager telemetryManager
+	) {
+		final String result = ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiConfiguration, source);
+		record(telemetryManager, IpmiRecorder.RAW_REQUEST, IpmiRequestExecutor.rawQuery(source), result);
+		return SourceTable.builder().table(List.of(IpmiResultConverter.rawRow(result))).build();
+	}
+
+	/**
+	 * The cursor of an ipmiSel source: the last entry read, {@code null} while the log is empty. Its presence in the
+	 * connector namespace tells the first poll from the next ones.
+	 *
+	 * @param last The last entry read, or {@code null}
+	 */
+	record SelCursor(SelEntry last) {}
+
+	/**
+	 * Returns the SEL entries added since the previous poll of the source, at most {@code maxEventsPerPoll} of
+	 * them (the others wait for the next poll), and none on the first poll, which only sets the cursor.
+	 *
+	 * @param source            The ipmiSel source
+	 * @param connectorId       The connector, whose namespace keeps the cursor
+	 * @param hostname          The host name or IP address of the BMC
+	 * @param ipmiConfiguration The IPMI configuration of the host
+	 * @param telemetryManager  The telemetry manager, for the cursor and the recording directory
+	 * @return the table of new entries
+	 */
+	private SourceTable processSelSource(
+		final IpmiSelSource source,
+		final String connectorId,
+		final String hostname,
+		final IpmiConfiguration ipmiConfiguration,
+		final TelemetryManager telemetryManager
+	) {
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(connectorId);
+		final String sourceKey = source.getKey();
+		final SelCursor cursor = (SelCursor) namespace.getSourceCursor(sourceKey);
+		final SelEntry since = cursor == null ? null : cursor.last();
+
+		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, since, cursor != null);
+		final SelEntryList entries = read.entries();
+
+		if (since != null && !entries.isEmpty() && entries.get(0).id() <= since.id()) {
+			log.info(
+				"Hostname {} - The IPMI System Event Log was cleared since the previous poll of source {}: reading it from its first entry.",
+				hostname,
+				sourceKey
+			);
+		}
+
+		// The first poll sets the cursor and reports no backlog
+		List<SelEntry> kept = cursor == null ? List.of() : entries;
+		final int maxEventsPerPoll = source.getMaxEventsPerPoll();
+		if (maxEventsPerPoll > 0 && kept.size() > maxEventsPerPoll) {
+			kept = kept.subList(0, maxEventsPerPoll);
+		}
+
+		// The cursor stops at the last entry returned: the entries left out are read again by the next poll
+		final SelEntry last = !kept.isEmpty()
+			? kept.get(kept.size() - 1)
+			: !entries.isEmpty()
+				? entries.get(entries.size() - 1)
+				: since;
+		namespace.setSourceCursor(sourceKey, new SelCursor(last));
+
+		log.info(
+			"Hostname {} - IPMI SEL poll of source {}: {} entries read, {} returned, cursor at record {}",
+			hostname,
+			sourceKey,
+			entries.size(),
+			kept.size(),
+			last == null ? null : last.id()
+		);
+
+		final List<List<String>> rows = IpmiResultConverter.convertSel(kept, read.sensors());
+		record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, SourceTable.tableToCsv(rows, ";", true));
+		return SourceTable.builder().table(rows).build();
+	}
+
+	/**
+	 * Records a response when a recording session is on.
+	 *
+	 * @param telemetryManager The telemetry manager, for the recording directory
+	 * @param requestType      The request type
+	 * @param query            The request bytes of a raw command, {@code null} otherwise
+	 * @param response         The response
+	 */
+	private static void record(
+		final TelemetryManager telemetryManager,
+		final String requestType,
+		final String query,
+		final String response
+	) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			IpmiRecorder.getInstance(recordOutputDirectory).record(requestType, query, response);
+		}
 	}
 
 	@Override
@@ -183,10 +304,7 @@ public class IpmiExtension implements IProtocolExtension {
 					.build();
 			}
 
-			final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-			if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
-				IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.IPMI_DETECTION_REQUEST, result);
-			}
+			record(telemetryManager, IpmiRecorder.IPMI_DETECTION_REQUEST, null, result);
 
 			return CriterionTestResult.builder()
 				.result(result)
