@@ -106,7 +106,7 @@ const PasswordFieldWithEncrypt = ({
 				input: {
 					endAdornment: (
 						<InputAdornment position="end">
-							<Stack direction="row" alignItems="center" spacing={0.25}>
+							<Stack direction="row" spacing={0.25} sx={{ alignItems: "center" }}>
 								<IconButton
 									aria-label={showPassword ? "Hide password" : "Show password"}
 									onClick={() => setShowPassword((v) => !v)}

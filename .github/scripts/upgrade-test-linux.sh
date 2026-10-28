@@ -235,6 +235,8 @@ if [ "${RESULT}" != "INSTALL_FAILED exit=10 step=verify" ]; then
 	record "${SCENARIO}" "failed" "expected 'INSTALL_FAILED exit=10 step=verify', got '${RESULT}'"
 elif ! docker exec "${CONTAINER}" systemctl is-active --quiet "${SERVICE_UNIT}"; then
 	record "${SCENARIO}" "failed" "the service is no longer active after the corrupted-package attempt"
+elif ! docker exec "${CONTAINER}" systemctl is-enabled --quiet "${SERVICE_UNIT}"; then
+	record "${SCENARIO}" "failed" "the service is no longer enabled after the corrupted-package attempt"
 elif [ "$(baseline_version)" != "${INSTALLED_BEFORE}" ]; then
 	record "${SCENARIO}" "failed" "the installed version changed after the corrupted-package attempt"
 else
@@ -273,6 +275,9 @@ if [ "${RESULT}" != "INSTALL_OK" ]; then
 	record "${SCENARIO}" "failed" "expected 'INSTALL_OK', got '${RESULT}'"
 elif ! docker exec "${CONTAINER}" systemctl is-active --quiet "${SERVICE_UNIT}"; then
 	record "${SCENARIO}" "failed" "the ${SERVICE_UNIT} service is not active after the installation"
+elif ! docker exec "${CONTAINER}" systemctl is-enabled --quiet "${SERVICE_UNIT}"; then
+	# The previous package's scriptlets run last: they must not leave the service disabled at boot
+	record "${SCENARIO}" "failed" "the ${SERVICE_UNIT} service is not enabled after the installation (it would not start at boot)"
 elif [ "${INSTALLED_AFTER}" != "${EXPECTED_VERSION}" ]; then
 	record "${SCENARIO}" "failed" "installed version is '${INSTALLED_AFTER}', expected '${EXPECTED_VERSION}'"
 elif [ -n "${MISSING_LINKS}" ]; then

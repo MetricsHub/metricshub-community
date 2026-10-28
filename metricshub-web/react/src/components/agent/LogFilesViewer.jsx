@@ -86,7 +86,9 @@ const LogFilesViewer = memo(({ isReadOnly = false }) => {
 	const currentFileName = useAppSelector((s) => s.logFiles?.currentFileName);
 	const content = useAppSelector((s) => s.logFiles?.content || "");
 	const contentLoading = useAppSelector((s) => s.logFiles?.contentLoading);
+	const contentError = useAppSelector((s) => s.logFiles?.contentError);
 	const deleting = useAppSelector((s) => s.logFiles?.deleting);
+	const deleteError = useAppSelector((s) => s.logFiles?.deleteError);
 
 	// Dialog state
 	const [deleteTarget, setDeleteTarget] = useState(null);
@@ -162,6 +164,7 @@ const LogFilesViewer = memo(({ isReadOnly = false }) => {
 				<Tooltip title="Refresh logs">
 					<span>
 						<IconButton
+							aria-label="Refresh logs"
 							onClick={handleRefresh}
 							disabled={listLoading || contentLoading}
 							size="small"
@@ -197,7 +200,7 @@ const LogFilesViewer = memo(({ isReadOnly = false }) => {
 					>
 						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 							<DescriptionIcon fontSize="small" color="action" />
-							<Typography variant="body2" fontWeight="medium">
+							<Typography variant="body2" sx={{ fontWeight: "medium" }}>
 								{currentFileName || "No log file selected"}
 							</Typography>
 							{currentFileName && (
@@ -206,6 +209,7 @@ const LogFilesViewer = memo(({ isReadOnly = false }) => {
 						</Box>
 						{contentLoading && <CircularProgress size={16} />}
 					</Box>
+					{contentError && <Alert severity="error">{contentError}</Alert>}
 
 					{/* Log Content */}
 					<Box
@@ -230,7 +234,7 @@ const LogFilesViewer = memo(({ isReadOnly = false }) => {
 			</Card>
 
 			{/* Log Files Table Header */}
-			<Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+			<Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 1 }}>
 				<Typography variant="subtitle1">Available Log Files</Typography>
 				{!isReadOnly && files.length > 0 && (
 					<Button
@@ -245,6 +249,11 @@ const LogFilesViewer = memo(({ isReadOnly = false }) => {
 					</Button>
 				)}
 			</Stack>
+			{deleteError && (
+				<Alert severity="error" sx={{ mb: 2 }}>
+					{deleteError}
+				</Alert>
+			)}
 			<DataGrid
 				rows={sortedFiles.map((file) => ({ id: file.name, ...file }))}
 				columns={[

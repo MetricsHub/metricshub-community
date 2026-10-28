@@ -25,8 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,21 +32,22 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.dto.uiconfig.ProtocolCheckRequestDto;
+import tools.jackson.databind.InjectableValues;
+import tools.jackson.databind.json.JsonMapper;
 
 class ProtocolCheckRequestDtoDeserializerTest {
 
-	private ObjectMapper objectMapper;
+	private JsonMapper objectMapper;
 
 	@BeforeEach
 	void setUp() {
 		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(new OsCommandExtension()))
 			.build();
-		objectMapper = new ObjectMapper();
 		final InjectableValues.Std injectableValues = new InjectableValues.Std();
 		injectableValues.addValue(ExtensionManager.class, extensionManager);
 		injectableValues.addValue(ExtensionManager.class.getName(), extensionManager);
-		objectMapper.setInjectableValues(injectableValues);
+		objectMapper = JsonMapper.builder().injectableValues(injectableValues).build();
 	}
 
 	@Test

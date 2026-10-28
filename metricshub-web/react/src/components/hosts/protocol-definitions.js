@@ -39,6 +39,7 @@ import {
  * @property {string} [helpTooltip]
  * @property {(values: Record<string, unknown>) => boolean} [showIf]
  * @property {{ value: string | number | boolean; label: string; clears?: string[] }[]} [options]
+ * @property {(value: unknown) => { value: string; label: string } | null} [extraOption] select option added for the current value only (e.g. a YAML-only setting)
  * @property {AuthChoiceOption[]} [authOptions]
  */
 
@@ -453,6 +454,18 @@ export const WINRM_AUTH_KERBEROS = "KERBEROS";
 export const WINRM_AUTH_BOTH = "NTLM,KERBEROS";
 
 /**
+ * Basic is not offered by the form (insecure, disabled by default on the WinRM service),
+ * but a list containing it (set in YAML) is kept as-is so saving does not rewrite it.
+ * @param {unknown} value form select value
+ * @returns {boolean}
+ */
+export const isWinRmYamlOnlyAuthentications = (value) =>
+	String(value ?? "")
+		.toUpperCase()
+		.split(",")
+		.some((part) => part.trim() === "BASIC");
+
+/**
  * @param {unknown} value YAML array or comma-separated string
  * @returns {string}
  */
@@ -462,6 +475,9 @@ export const winRmAuthenticationsToForm = (value) => {
 		.filter(Boolean);
 	if (parts.length === 0) {
 		return WINRM_AUTH_NTLM;
+	}
+	if (parts.includes("BASIC")) {
+		return parts.join(",");
 	}
 	const hasNtlm = parts.includes("NTLM");
 	const hasKerberos = parts.includes("KERBEROS");
@@ -483,6 +499,9 @@ export const winRmAuthenticationsFromForm = (value) => {
 		.trim()
 		.toUpperCase()
 		.replace(/\s+/g, "");
+	if (isWinRmYamlOnlyAuthentications(normalized)) {
+		return normalized.split(",").filter(Boolean);
+	}
 	if (normalized === WINRM_AUTH_BOTH || normalized === "NTLM,KERBEROS") {
 		return ["NTLM", "KERBEROS"];
 	}
@@ -586,6 +605,17 @@ export const PROTOCOL_FIELDS = {
 				{ value: WINRM_AUTH_KERBEROS, label: "Kerberos" },
 				{ value: WINRM_AUTH_BOTH, label: "NTLM and Kerberos" },
 			],
+			// Only shown for a host whose YAML already uses Basic, never offered otherwise.
+			extraOption: (value) =>
+				isWinRmYamlOnlyAuthentications(value)
+					? {
+							value,
+							label: value
+								.split(",")
+								.map((auth) => ({ BASIC: "Basic", KERBEROS: "Kerberos" })[auth] || auth)
+								.join(" and "),
+						}
+					: null,
 		},
 		{
 			name: "trustAllCertificates",

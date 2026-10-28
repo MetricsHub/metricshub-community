@@ -127,7 +127,7 @@ const MonitorsView = ({
 	}
 
 	return (
-		<Box display="flex" flexDirection="column">
+		<Box sx={{ display: "flex", flexDirection: "column" }}>
 			<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
 			{safeFailedConnectors.length > 0 && showFailedConnectorsAlert && (
 				<FailedConnectorsAlert

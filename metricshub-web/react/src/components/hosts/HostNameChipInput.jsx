@@ -168,9 +168,9 @@ export const HostnamesChipField = ({
 			inputValue={isChipMode ? inputValue : String(value ?? "")}
 			onChange={handleAutocompleteChange}
 			onInputChange={handleInputChange}
-			renderTags={(tagValue, getTagProps) =>
-				tagValue.map((option, index) => {
-					const { key, ...tagProps } = getTagProps({ index });
+			renderValue={(items, getItemProps) =>
+				items.map((option, index) => {
+					const { key, ...itemProps } = getItemProps({ index });
 					return (
 						<Chip
 							key={key}
@@ -178,7 +178,7 @@ export const HostnamesChipField = ({
 							size="medium"
 							color={hasEnvironmentExpression(option) ? "warning" : "secondary"}
 							variant="filled"
-							{...tagProps}
+							{...itemProps}
 							sx={HOST_NAME_CHIP_SX}
 						/>
 					);
@@ -261,7 +261,7 @@ const HostNameChipInput = ({
 	return (
 		<Stack spacing={staticLabel ? 0 : 1}>
 			{staticLabel ? (
-				<Stack direction="row" alignItems="center" spacing={0.25} useFlexGap sx={{ mb: 0.75 }}>
+				<Stack direction="row" spacing={0.25} useFlexGap sx={{ mb: 0.75, alignItems: "center" }}>
 					<Typography component="label" htmlFor="host-name-input" sx={guidedConfigFieldLabelSx}>
 						{HOST_NAME_UI.fieldLabel}
 						<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
@@ -301,10 +301,9 @@ const HostNameChipInput = ({
 			{staticLabel && onResolveHostname ? (
 				<Stack
 					direction="row"
-					alignItems="center"
 					spacing={0.5}
 					useFlexGap
-					sx={{ pt: 0.5, flexWrap: "wrap", color: "text.secondary" }}
+					sx={{ pt: 0.5, flexWrap: "wrap", color: "text.secondary", alignItems: "center" }}
 				>
 					<Button
 						type="button"
@@ -317,7 +316,11 @@ const HostNameChipInput = ({
 							p: 0,
 							textTransform: "none",
 							textDecoration: "underline",
-							"&:hover": { bgcolor: "transparent", textDecoration: "underline" },
+							"&:hover:not(.Mui-disabled)": {
+								bgcolor: "transparent",
+								color: "inherit",
+								textDecoration: "underline",
+							},
 						}}
 						onClick={async () => {
 							const hostname = await onResolveHostname();

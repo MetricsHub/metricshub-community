@@ -21,6 +21,7 @@ package org.metricshub.extension.win;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
 import static org.metricshub.engine.strategy.utils.OsCommandHelper.replaceSudo;
 
@@ -109,7 +110,8 @@ public class WinCommandService {
 			commandLine,
 			null,
 			EmbeddedFileHelper.findEmbeddedFiles(commandLine, connectorEmbeddedFiles),
-			OsCommandHelper.TEMP_FILE_CREATOR
+			OsCommandHelper.TEMP_FILE_CREATOR,
+			WINDOWS_NEW_LINE
 		);
 
 		// Replace the macros by their corresponding values

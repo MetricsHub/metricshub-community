@@ -39,14 +39,31 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 		[attributes],
 	);
 
-	const titleSx = React.useMemo(() => ({ display: "flex", alignItems: "center", gap: 0.5 }), []);
+	const titleSx = React.useMemo(
+		() => ({
+			display: "flex",
+			alignItems: "center",
+			gap: 0.5,
+			minWidth: 0,
+			overflowWrap: "anywhere",
+		}),
+		[],
+	);
 
 	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 1 }), []);
 
 	return (
-		<Box display="flex" flexDirection="column" gap={3}>
-			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
-				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+		<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+			<Box
+				sx={{
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "flex-start",
+					flexWrap: "wrap",
+					gap: 1,
+				}}
+			>
+				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, minWidth: 0, flex: 1 }}>
 					<Typography variant="h4" gutterBottom sx={{ ...titleSx, transition: "color 0.4s ease" }}>
 						{icon ? (
 							<Box component="span" sx={{ display: "inline-flex", mr: 1 }}>

@@ -47,6 +47,7 @@ const logFilesSlice = createSlice({
 			.addCase(fetchLogFiles.pending, (state) => {
 				state.listLoading = true;
 				state.listError = null;
+				state.deleteError = null;
 			})
 			.addCase(fetchLogFiles.fulfilled, (state, action) => {
 				state.listLoading = false;
@@ -83,6 +84,7 @@ const logFilesSlice = createSlice({
 				if (state.currentFileName === action.payload.fileName) {
 					state.content = "";
 					state.currentFileName = null;
+					state.contentError = null;
 				}
 			})
 			.addCase(deleteLogFile.rejected, (state, action) => {
@@ -99,6 +101,7 @@ const logFilesSlice = createSlice({
 				state.list = [];
 				state.content = "";
 				state.currentFileName = null;
+				state.contentError = null;
 			})
 			.addCase(deleteAllLogFiles.rejected, (state, action) => {
 				state.deleting = false;

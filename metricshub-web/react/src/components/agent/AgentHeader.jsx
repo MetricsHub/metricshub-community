@@ -56,7 +56,7 @@ const AgentHeader = memo(
 							{title}
 						</Typography>
 						{version && (
-							<Typography variant="body1" color="text.secondary">
+							<Typography variant="body1" sx={{ color: "text.secondary" }}>
 								Version {version}
 							</Typography>
 						)}

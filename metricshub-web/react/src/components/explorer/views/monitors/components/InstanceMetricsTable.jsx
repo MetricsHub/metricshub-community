@@ -223,10 +223,10 @@ const InstanceMetricsTable = ({
 	);
 
 	return (
-		<Box mb={1}>
+		<Box sx={{ mb: 1 }}>
 			<Box
-				mb={1}
 				sx={{
+					mb: 1,
 					p: 0.5,
 					...(highlighted && { ...flashBlueAnimation, borderRadius: 1 }),
 				}}

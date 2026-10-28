@@ -214,8 +214,8 @@ export const LabeledSelect = ({
 	children,
 }) => (
 	<Box>
-		<Stack direction="row" alignItems="center" spacing={0.25} sx={{ mb: 0.75 }}>
-			<Typography component="label" htmlFor={id} sx={guidedConfigFieldLabelSx}>
+		<Stack direction="row" spacing={0.25} sx={{ mb: 0.75, alignItems: "center" }}>
+			<Typography component="label" id={`${id}-label`} htmlFor={id} sx={guidedConfigFieldLabelSx}>
 				{label}
 				{required ? (
 					<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
@@ -226,7 +226,13 @@ export const LabeledSelect = ({
 			{attributeName ? <FieldHelpTooltip title={`MetricsHub attribute: ${attributeName}`} /> : null}
 		</Stack>
 		<FormControl fullWidth size="small" error={error} required={required}>
-			<Select id={id} displayEmpty sx={filledInputNoLabelSx} {...selectProps}>
+			<Select
+				id={id}
+				labelId={`${id}-label`}
+				displayEmpty
+				sx={filledInputNoLabelSx}
+				{...selectProps}
+			>
 				{children}
 			</Select>
 			{helperText ? <FormHelperText>{helperText}</FormHelperText> : null}
@@ -296,16 +302,14 @@ export const FormSection = ({
 			<Box sx={{ minWidth: 0 }}>
 				<Typography
 					variant={emphasized ? "h6" : compact ? "subtitle2" : "subtitle1"}
-					fontWeight={700}
-					sx={{ lineHeight: 1.3 }}
+					sx={{ lineHeight: 1.3, fontWeight: 700 }}
 				>
 					{title}
 				</Typography>
 				{description ? (
 					<Typography
 						variant={compact ? "caption" : "body2"}
-						color="text.secondary"
-						sx={{ mt: compact ? 0.25 : 0.5, display: "block" }}
+						sx={{ mt: compact ? 0.25 : 0.5, display: "block", color: "text.secondary" }}
 					>
 						{description}
 					</Typography>
@@ -358,10 +362,10 @@ export const GuidedConfigFormHero = ({ icon, title, description }) => (
 				{icon}
 			</Box>
 			<Box sx={{ pt: 0.25, minWidth: 0 }}>
-				<Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.25 }}>
+				<Typography variant="h6" sx={{ lineHeight: 1.25, fontWeight: 700 }}>
 					{title}
 				</Typography>
-				<Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, maxWidth: 560 }}>
+				<Typography variant="body2" sx={{ mt: 0.75, maxWidth: 560, color: "text.secondary" }}>
 					{description}
 				</Typography>
 			</Box>

@@ -135,6 +135,22 @@ public class EmbeddedFile implements Serializable {
 	}
 
 	/**
+	 * Tells whether the given file content is text, whose line endings can be converted. Like Git, a content
+	 * that contains a NUL byte is considered binary (executables always do).
+	 *
+	 * @param content The file content.
+	 * @return {@code true} if the content contains no NUL byte.
+	 */
+	public static boolean isText(@NonNull final byte[] content) {
+		for (byte b : content) {
+			if (b == 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Retrieves the file extension from the filename of this object.
 	 * If the filename is not available an empty string is returned.
 	 *

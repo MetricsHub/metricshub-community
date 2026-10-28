@@ -86,14 +86,8 @@ export const scrollbarThumbSx = (t) => {
  * @param {*} param0  children - content to render
  * @returns JSX.Element
  */
-export const Left = ({ children, ...rest }) => (
-	<Box
-		{...rest}
-		sx={(t) => ({
-			...Scrollbar(t),
-			...rest.sx,
-		})}
-	>
+export const Left = ({ children, sx = [], ...rest }) => (
+	<Box {...rest} sx={[Scrollbar, ...(Array.isArray(sx) ? sx : [sx])]}>
 		{children}
 	</Box>
 );
@@ -104,11 +98,11 @@ export const Left = ({ children, ...rest }) => (
  * @param {*} param0 children - content to render
  * @returns JSX.Element
  */
-export const Right = ({ children, disableScroll = false, ...rest }) => (
+export const Right = ({ children, disableScroll = false, sx = [], ...rest }) => (
 	<Box
 		{...rest}
-		sx={(t) => ({
-			...(disableScroll
+		sx={[
+			disableScroll
 				? {
 						overflow: "hidden",
 						height: "100%",
@@ -117,15 +111,21 @@ export const Right = ({ children, disableScroll = false, ...rest }) => (
 						display: "flex",
 						flexDirection: "column",
 					}
-				: Scrollbar(t)),
-			...rest.sx,
-		})}
+				: Scrollbar,
+			...(Array.isArray(sx) ? sx : [sx]),
+		]}
 	>
 		{children}
 	</Box>
 );
 
-export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, ...rest }) => {
+export const SplitScreen = ({
+	children,
+	initialLeftPct = 40,
+	smallScreenHeader,
+	sx = [],
+	...rest
+}) => {
 	const isSmall = useMediaQuery("(max-width:900px)");
 
 	const leftChild = React.Children.toArray(children).find(
@@ -147,10 +147,12 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 
 	const wrapRef = useRef(null);
 	const draggingRef = useRef(false);
+	const previousCursorRef = useRef("");
 
 	const onPointerDown = useCallback(
 		(e) => {
-			if (isSmall) return;
+			if (isSmall || draggingRef.current) return;
+			previousCursorRef.current = document.body.style.cursor;
 			draggingRef.current = true;
 			e.currentTarget.setPointerCapture?.(e.pointerId);
 			document.body.style.cursor = "col-resize";
@@ -170,7 +172,14 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 	const endDrag = useCallback(() => {
 		if (!draggingRef.current) return;
 		draggingRef.current = false;
-		document.body.style.cursor = "";
+		document.body.style.cursor = previousCursorRef.current;
+	}, []);
+
+	const onKeyDown = useCallback((event) => {
+		const delta = event.key === "ArrowLeft" ? -5 : event.key === "ArrowRight" ? 5 : 0;
+		if (!delta) return;
+		event.preventDefault();
+		setLeftPct((current) => Math.max(MIN_PCT, Math.min(MAX_PCT, current + delta)));
 	}, []);
 
 	useEffect(() => {
@@ -185,6 +194,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 			window.removeEventListener("pointermove", move);
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("pointercancel", up);
+			endDrag();
 		};
 	}, [onPointerMove, endDrag]);
 
@@ -192,16 +202,18 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 		return (
 			<Box
 				{...rest}
-				sx={{
-					display: "flex",
-					flexDirection: "column",
-					gap: 1,
-					minHeight: 0,
-					height: "calc(100vh - 64px)",
-					overflow: "hidden",
-					pt: 1,
-					...rest.sx,
-				}}
+				sx={[
+					{
+						display: "flex",
+						flexDirection: "column",
+						gap: 1,
+						minHeight: 0,
+						height: "calc(100vh - 64px)",
+						overflow: "hidden",
+						pt: 1,
+					},
+					...(Array.isArray(sx) ? sx : [sx]),
+				]}
 			>
 				{smallScreenHeader && <Box sx={{ flexShrink: 0, px: 1 }}>{smallScreenHeader}</Box>}
 				<Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1 }}>{rightChild}</Box>
@@ -213,21 +225,23 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 		<Box
 			ref={wrapRef}
 			{...rest}
-			sx={{
-				position: "relative",
-				display: "grid",
-				// Use fr across to avoid overflow
-				gridTemplateColumns: `${leftPct}fr ${SASH_WIDTH}px ${100 - leftPct}fr`,
-				gridTemplateRows: "minmax(0, 1fr)",
-				alignItems: "stretch",
-				minHeight: 0,
-				height: "calc(100vh - 76px)",
-				border: 1,
-				borderColor: "divider",
-				overflow: "hidden",
-				transition: "border-color 0.4s ease",
-				...rest.sx,
-			}}
+			sx={[
+				{
+					position: "relative",
+					display: "grid",
+					// Use fr across to avoid overflow
+					gridTemplateColumns: `${leftPct}fr ${SASH_WIDTH}px ${100 - leftPct}fr`,
+					gridTemplateRows: "minmax(0, 1fr)",
+					alignItems: "stretch",
+					minHeight: 0,
+					height: "calc(100vh - 76px)",
+					border: 1,
+					borderColor: "divider",
+					overflow: "hidden",
+					transition: "border-color 0.4s ease",
+				},
+				...(Array.isArray(sx) ? sx : [sx]),
+			]}
 		>
 			{leftChild
 				? React.cloneElement(leftChild, {
@@ -245,9 +259,14 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 			{/* Sash */}
 			<Box
 				onPointerDown={onPointerDown}
+				onKeyDown={onKeyDown}
+				tabIndex={0}
 				role="separator"
 				aria-orientation="vertical"
 				aria-label="Resize panels"
+				aria-valuemin={MIN_PCT}
+				aria-valuemax={MAX_PCT}
+				aria-valuenow={Math.round(leftPct)}
 				sx={{
 					gridColumn: 2,
 					gridRow: 1,

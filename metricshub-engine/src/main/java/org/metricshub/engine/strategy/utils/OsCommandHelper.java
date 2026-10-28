@@ -23,10 +23,11 @@ package org.metricshub.engine.strategy.utils;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
 import static org.springframework.util.Assert.state;
 
-import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -64,6 +65,7 @@ public class OsCommandHelper {
 	 * @param sudoInformation          The Sudo Information of the Os Command configuration.
 	 * @param commandLineEmbeddedFiles A map of embedded files referenced in the command line.
 	 * @param tempFileCreator          The function that creates a temporary file.
+	 * @param lineSeparator            The line separator of the system that executes the command line.
 	 * @return A map with EmbeddedFile tags as keys and corresponding temporary File objects.
 	 * @throws IOException If an error occurs during temp file creation.
 	 */
@@ -71,7 +73,8 @@ public class OsCommandHelper {
 		@NonNull final String commandLine,
 		final SudoInformation sudoInformation,
 		@NonNull final Map<Integer, EmbeddedFile> commandLineEmbeddedFiles,
-		@NonNull final BiFunction<String, String, File> tempFileCreator
+		@NonNull final BiFunction<String, String, File> tempFileCreator,
+		@NonNull final String lineSeparator
 	) throws IOException {
 		final Map<String, File> embeddedTempFiles = new HashMap<>();
 		try {
@@ -95,7 +98,7 @@ public class OsCommandHelper {
 					state(content != null, () -> "EmbeddedFile content is null. File name: " + fileNumber);
 
 					try {
-						return createTempFileWithEmbeddedFileContent(embeddedFile, sudoInformation, tempFileCreator);
+						return createTempFileWithEmbeddedFileContent(embeddedFile, sudoInformation, tempFileCreator, lineSeparator);
 					} catch (final IOException e) {
 						throw new TempFileCreationException(e);
 					}
@@ -118,13 +121,15 @@ public class OsCommandHelper {
 	 * @param embeddedFile    {@link EmbeddedFile} instance used to write the file content (mandatory)
 	 * @param sudoInformation The Sudo Information of the Os Command configuration.
 	 * @param tempFileCreator The function that creates a temporary file.
+	 * @param lineSeparator   The line separator of the system that executes the file (e.g. CRLF on Windows).
 	 * @return The File.
 	 * @throws IOException
 	 */
 	public static File createTempFileWithEmbeddedFileContent(
 		final EmbeddedFile embeddedFile,
 		final SudoInformation sudoInformation,
-		final BiFunction<String, String, File> tempFileCreator
+		final BiFunction<String, String, File> tempFileCreator,
+		final String lineSeparator
 	) throws IOException {
 		final String extension = embeddedFile.getFileExtension();
 		final String baseName = embeddedFile.getBaseName();
@@ -134,15 +139,39 @@ public class OsCommandHelper {
 		final String contentAsString = embeddedFile.getContentAsString();
 
 		// Should we replace SUDO commands?
-		if (contentAsString.contains("%{SUDO:")) {
-			try (BufferedWriter bufferedWriter = Files.newBufferedWriter(tempFilePath, StandardCharsets.UTF_8)) {
-				bufferedWriter.write(replaceSudo(contentAsString, sudoInformation));
-			}
-		} else {
-			Files.write(tempFilePath, embeddedFile.getContent());
-		}
+		final byte[] content = contentAsString.contains("%{SUDO:")
+			? replaceSudo(contentAsString, sudoInformation).getBytes(StandardCharsets.UTF_8)
+			: embeddedFile.getContent();
+
+		Files.write(tempFilePath, convertLineEndings(content, lineSeparator));
 
 		return tempFile;
+	}
+
+	/**
+	 * Converts the LF line endings of a text file to the given line separator, so that the file is written
+	 * in the native format of the system that executes it (e.g. a batch file needs CRLF on Windows).
+	 * A binary file (see {@link EmbeddedFile#isText(byte[])}) is left untouched.
+	 *
+	 * @param content       The file content, with LF line endings if it is text.
+	 * @param lineSeparator The line separator to write.
+	 * @return The converted content, or the same array if there is nothing to convert.
+	 */
+	static byte[] convertLineEndings(final byte[] content, final String lineSeparator) {
+		if (NEW_LINE.equals(lineSeparator) || !EmbeddedFile.isText(content)) {
+			return content;
+		}
+		final byte[] separator = lineSeparator.getBytes(StandardCharsets.UTF_8);
+		final ByteArrayOutputStream out = new ByteArrayOutputStream(content.length + content.length / 16);
+		for (int i = 0; i < content.length; i++) {
+			// A line that already ends with CR (e.g. inline content) is not converted twice
+			if (content[i] == '\n' && (i == 0 || content[i - 1] != '\r')) {
+				out.writeBytes(separator);
+			} else {
+				out.write(content[i]);
+			}
+		}
+		return out.toByteArray();
 	}
 
 	/**

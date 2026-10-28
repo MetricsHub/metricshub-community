@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,10 +18,12 @@ import org.metricshub.web.dto.mcp.MonitorsVo;
 import org.metricshub.web.dto.mcp.TelemetryResult;
 import org.metricshub.web.mcp.HostToolResponse;
 import org.metricshub.web.mcp.MultiHostToolResponse;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 class TelemetryResultTruncatorTest {
 
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static final JsonMapper OBJECT_MAPPER = new JsonMapper();
 
 	/**
 	 * Builds a single monitor type list with the given count of MonitorVo items
@@ -130,7 +130,7 @@ class TelemetryResultTruncatorTest {
 	// ---- Under size limit ----
 
 	@Test
-	void testUnderSizeLimitReturnsOriginal() throws JsonProcessingException {
+	void testUnderSizeLimitReturnsOriginal() throws JacksonException {
 		final var response = buildSingleHostResponse("host1", Map.of("disk", 5, "cpu", 3));
 		final String serialized = OBJECT_MAPPER.writeValueAsString(response);
 
@@ -301,7 +301,7 @@ class TelemetryResultTruncatorTest {
 	// ---- Multiple hosts ----
 
 	@Test
-	void testMultipleHostsIndependentTruncation() throws JsonProcessingException {
+	void testMultipleHostsIndependentTruncation() throws JacksonException {
 		// server1: disk=60, server2: disk=30
 		final var hostToTypeCounts = new LinkedHashMap<String, Map<String, Integer>>();
 		hostToTypeCounts.put("server1", Map.of("disk", 60));
@@ -330,7 +330,7 @@ class TelemetryResultTruncatorTest {
 	}
 
 	@Test
-	void testSameTypeDifferentHostsDifferentTruncationLevels() throws JsonProcessingException {
+	void testSameTypeDifferentHostsDifferentTruncationLevels() throws JacksonException {
 		// server1: disk=100, server2: disk=10
 		final var hostToTypeCounts = new LinkedHashMap<String, Map<String, Integer>>();
 		hostToTypeCounts.put("server1", Map.of("disk", 100));
@@ -425,7 +425,7 @@ class TelemetryResultTruncatorTest {
 	// ---- Truncation stops early ----
 
 	@Test
-	void testTruncationStopsAsSoonAsResponseFits() throws JsonProcessingException {
+	void testTruncationStopsAsSoonAsResponseFits() throws JacksonException {
 		// disk=100, fan=2 — a limit that allows ~50 disk monitors should stop early
 		final var typeCounts = new LinkedHashMap<String, Integer>();
 		typeCounts.put("disk", 100);
@@ -453,7 +453,7 @@ class TelemetryResultTruncatorTest {
 	// ---- Summary format ----
 
 	@Test
-	void testSummaryContainsCorrectCountsAndTruncationIndicators() throws JsonProcessingException {
+	void testSummaryContainsCorrectCountsAndTruncationIndicators() throws JacksonException {
 		final var typeCounts = new LinkedHashMap<String, Integer>();
 		typeCounts.put("disk", 50);
 		typeCounts.put("fan", 3);

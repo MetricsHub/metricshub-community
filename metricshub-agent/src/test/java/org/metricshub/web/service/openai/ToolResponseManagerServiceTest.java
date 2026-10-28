@@ -12,8 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,16 +32,18 @@ import org.metricshub.web.dto.openai.UploadedToolOutputManifest;
 import org.metricshub.web.mcp.HostToolResponse;
 import org.metricshub.web.mcp.MultiHostToolResponse;
 import org.metricshub.web.mcp.TroubleshootHostService;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 class ToolResponseManagerServiceTest {
 
-	private ObjectMapper objectMapper;
+	private JsonMapper objectMapper;
 	private ToolOutputFilePersistService persistService;
 	private ToolOutputFileUploadService uploadService;
 
 	@BeforeEach
 	void setUp() {
-		objectMapper = new ObjectMapper();
+		objectMapper = new JsonMapper();
 		persistService = mock(ToolOutputFilePersistService.class);
 		uploadService = mock(ToolOutputFileUploadService.class);
 	}

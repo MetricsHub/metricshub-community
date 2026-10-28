@@ -8,6 +8,7 @@ const entityTitleSx = {
 	alignItems: "center",
 	gap: 0.5,
 	minWidth: 0,
+	overflowWrap: "anywhere",
 	transition: "color 0.4s ease",
 };
 

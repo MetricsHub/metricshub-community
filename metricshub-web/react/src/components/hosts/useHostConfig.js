@@ -1044,6 +1044,8 @@ export const useHostConfig = ({
 		allowPasswordReveal: mode === "create",
 		deferEncryptUntilSave: true,
 		state,
+		/** Last loaded/saved state; refreshed on re-render after {@link commitSavedBaseline}. */
+		baselineState: baselineStateRef.current,
 		errors,
 		submitError,
 		setSubmitError,

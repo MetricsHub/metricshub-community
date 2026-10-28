@@ -109,14 +109,17 @@ const ExplorerSearch = () => {
 					{...params}
 					label="Search..."
 					size="small"
-					InputProps={{
-						...params.InputProps,
-						endAdornment: (
-							<React.Fragment>
-								{loading ? <CircularProgress color="inherit" size={20} /> : null}
-								{params.InputProps.endAdornment}
-							</React.Fragment>
-						),
+					slotProps={{
+						...params.slotProps,
+						input: {
+							...(params.slotProps?.input ?? {}),
+							endAdornment: (
+								<React.Fragment>
+									{loading ? <CircularProgress color="inherit" size={20} /> : null}
+									{params.slotProps?.input?.endAdornment}
+								</React.Fragment>
+							),
+						},
 					}}
 				/>
 			)}
@@ -132,7 +135,11 @@ const ExplorerSearch = () => {
 								<Typography variant="body1" noWrap>
 									{option.name}
 								</Typography>
-								<Typography variant="caption" color="text.secondary" noWrap display="block">
+								<Typography
+									variant="caption"
+									noWrap
+									sx={{ color: "text.secondary", display: "block" }}
+								>
 									{option.type} {breadcrumbText ? `• ${breadcrumbText}` : ""}
 								</Typography>
 							</Box>

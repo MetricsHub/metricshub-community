@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.metricshub.ipmi.client.FrusRequest;
 import org.metricshub.ipmi.client.IpmiClient;
@@ -70,13 +71,35 @@ class IpmiRequestExecutorTest {
 			IpmiClientResults.sensorList(IpmiResultConverterTest.buildSensors(), "OEM record")
 		);
 		when(bmc.sensors()).thenReturn(sensorsRequest);
+		when(bmc.chassisStatus()).thenReturn(
+			IpmiClientResults.chassisStatus(IpmiResultConverterTest.buildChassisStatusResponseData(1))
+		);
 
 		assertEquals(
-			"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
-				"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected\n" +
-				"Battery;1;Battery 1;;;;Battery 1=Transition to OK\n" +
-				"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present\n" +
+			"Chassis;1;0;0;0;0;0;0;0;0;PoweredOff;;\n" +
+				"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
+				"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected;;;;\n" +
+				"Battery;1;Battery 1;;;;Battery 1=Transition to OK;;;;\n" +
+				"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present;;;;\n" +
 				"Temperature;0001;Ambient Temp;Front Panel Board 1;22.0;38;41",
+			executor().executeIpmiGetSensors(HOSTNAME, ipmiConfiguration)
+		);
+		verify(bmc).close();
+	}
+
+	@Test
+	void testExecuteIpmiGetSensorsWithoutChassisStatus() {
+		final FrusRequest frusRequest = mock(FrusRequest.class);
+		when(frusRequest.execute()).thenReturn(IpmiClientResults.fruList(IpmiResultConverterTest.buildSystemBoardFrus()));
+		when(bmc.frus()).thenReturn(frusRequest);
+		final SensorsRequest sensorsRequest = mock(SensorsRequest.class);
+		when(sensorsRequest.execute()).thenReturn(IpmiClientResults.sensorList(Collections.emptyList(), "OEM record"));
+		when(bmc.sensors()).thenReturn(sensorsRequest);
+		when(bmc.chassisStatus()).thenThrow(new IpmiTimeoutException("No reply"));
+
+		// The FRUs and the sensors are still collected, without the Chassis line
+		assertEquals(
+			"FRU;IBM;System x3650 M2;KD9098C - 794722G",
 			executor().executeIpmiGetSensors(HOSTNAME, ipmiConfiguration)
 		);
 		verify(bmc).close();

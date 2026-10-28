@@ -29,9 +29,10 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -54,7 +55,10 @@ final class McpTransportTestSupport {
 	@Configuration
 	@EnableAutoConfiguration(
 		exclude = {
-			SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class
+			SecurityAutoConfiguration.class,
+			SecurityFilterAutoConfiguration.class,
+			UserDetailsServiceAutoConfiguration.class,
+			ServletWebSecurityAutoConfiguration.class
 		}
 	)
 	@Import(LegacySseMcpServerConfiguration.class)
@@ -94,7 +98,12 @@ final class McpTransportTestSupport {
 
 			// The argument name comes from the advertised schema: it depends on whether the test classes were
 			// compiled with parameter names
-			final String argumentName = echoTool.inputSchema().properties().keySet().iterator().next();
+			@SuppressWarnings("unchecked")
+			final Map<String, Object> inputSchema = (Map<String, Object>) echoTool.inputSchema();
+			@SuppressWarnings("unchecked")
+			final Map<String, Object> properties = (Map<String, Object>) inputSchema.get("properties");
+			assertNotNull(properties, "The echo tool must declare an input schema with properties");
+			final String argumentName = properties.keySet().iterator().next();
 			final CallToolResult result = client.callTool(new CallToolRequest(ECHO_TOOL, Map.of(argumentName, "hello")));
 			assertFalse(Boolean.TRUE.equals(result.isError()), "The tool call must succeed: " + result);
 			assertTrue(

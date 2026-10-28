@@ -9,7 +9,7 @@ import {
 	Stack,
 	Typography,
 } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import {
 	createDefaultAdditionalConnectorEntry,
 	isAdditionalConnectorIdTaken,
@@ -140,7 +140,7 @@ const ConnectorConfigurationDialog = ({
 			<DialogTitle>
 				{isEdit ? "Edit configuration" : "Add configuration"}
 				{template ? (
-					<Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontWeight: 400 }}>
+					<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.25, fontWeight: 400 }}>
 						{getTemplateTitle(template)}
 					</Typography>
 				) : null}
@@ -182,7 +182,7 @@ const ConnectorConfigurationDialog = ({
 							})}
 						</Stack>
 					) : (
-						<Typography variant="body2" color="text.secondary">
+						<Typography variant="body2" sx={{ color: "text.secondary" }}>
 							No variables for this connector.
 						</Typography>
 					)}

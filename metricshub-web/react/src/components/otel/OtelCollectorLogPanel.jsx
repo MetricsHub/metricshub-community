@@ -67,7 +67,7 @@ export default function OtelCollectorLogPanel({
 					>
 						<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
 							<DescriptionIcon fontSize="small" color="action" />
-							<Typography variant="body2" fontWeight="medium">
+							<Typography variant="body2" sx={{ fontWeight: "medium" }}>
 								OTel Collector log
 							</Typography>
 							<Chip
@@ -77,8 +77,9 @@ export default function OtelCollectorLogPanel({
 								sx={{ ml: 1 }}
 							/>
 							<FormControl size="small" sx={{ minWidth: 90, ml: 1 }}>
-								<InputLabel>Lines</InputLabel>
+								<InputLabel id="otel-log-lines-label">Lines</InputLabel>
 								<Select
+									labelId="otel-log-lines-label"
 									value={tailLines}
 									label="Lines"
 									onChange={(e) => onTailLinesChange(Number(e.target.value))}

@@ -27,6 +27,7 @@ import ConnectorDocumentationLink from "./ConnectorDocumentationLink";
 import FieldHelpTooltip from "./FieldHelpTooltip";
 import HostConnectorsCatalogDialog from "./HostConnectorsCatalogDialog";
 import {
+	filledInputNoLabelSx,
 	guidedConfigChoiceToggleButtonSx,
 	guidedConfigFieldLabelSx,
 	guidedConfigPlaceholderSx,
@@ -435,17 +436,16 @@ const ConnectorTableRowLabel = ({
 			...(indentPx ? { pl: `${indentPx}px` } : {}),
 		}}
 	>
-		<Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+		<Stack direction="row" spacing={1.25} sx={{ minWidth: 0, alignItems: "center" }}>
 			<Box sx={CONNECTOR_ROW_ICON_BOX_SX}>{icon}</Box>
 			<Stack sx={{ minWidth: 0, flex: 1 }}>
 				<Stack
 					direction="row"
 					spacing={0.75}
-					alignItems="center"
-					sx={{ minWidth: 0, flexWrap: "wrap" }}
+					sx={{ minWidth: 0, flexWrap: "wrap", alignItems: "center" }}
 					useFlexGap
 				>
-					<Typography variant="body2" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
+					<Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 700 }}>
 						{title}
 					</Typography>
 					{titleAdornment}
@@ -453,8 +453,7 @@ const ConnectorTableRowLabel = ({
 				{description !== undefined ? (
 					<Typography
 						variant="caption"
-						color="text.secondary"
-						sx={{ ...CONNECTOR_ROW_DESCRIPTION_SX, pt: 0.25 }}
+						sx={{ ...CONNECTOR_ROW_DESCRIPTION_SX, pt: 0.25, color: "text.secondary" }}
 					>
 						{description}
 					</Typography>
@@ -631,16 +630,13 @@ const ActiveDirectivesPanel = ({
 		<Box>
 			<Stack
 				direction="row"
-				alignItems="center"
-				justifyContent="space-between"
 				spacing={1}
-				sx={{ mb: 0.75 }}
+				sx={{ mb: 0.75, alignItems: "center", justifyContent: "space-between" }}
 			>
 				<Stack
 					direction="row"
-					alignItems="center"
 					spacing={0.25}
-					sx={{ minWidth: 0, flexWrap: "wrap" }}
+					sx={{ minWidth: 0, flexWrap: "wrap", alignItems: "center" }}
 				>
 					<Typography component="span" sx={guidedConfigFieldLabelSx}>
 						Connectors Directives
@@ -687,7 +683,7 @@ const ActiveDirectivesPanel = ({
 			<Box sx={directivesContentBoxSx(showDirectiveError)}>
 				{panelTab === "directives" ? (
 					hasSelections ? (
-						<Stack direction="row" gap={0.75} flexWrap="wrap">
+						<Stack direction="row" sx={{ gap: 0.75, flexWrap: "wrap" }}>
 							{directives.map((directive) => {
 								const parsed = parseConnectorDirective(directive);
 								return (
@@ -743,7 +739,7 @@ const ActiveDirectivesPanel = ({
 							{connectorError}
 						</Typography>
 					) : (
-						<Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
+						<Typography variant="body2" sx={{ lineHeight: 1.45, color: "text.secondary" }}>
 							No directives yet. Pick connectors below, add configurations, or switch detection
 							mode.
 						</Typography>
@@ -760,9 +756,9 @@ const ActiveDirectivesPanel = ({
 							size="small"
 							error={showDirectiveError}
 							sx={DIRECTIVES_CODE_FIELD_SX}
-							inputProps={{ spellCheck: false }}
+							slotProps={{ htmlInput: { spellCheck: false } }}
 						/>
-						<Typography variant="caption" color="text.secondary">
+						<Typography variant="caption" sx={{ color: "text.secondary" }}>
 							comma separated connectors directives : +Windows, !Solaris, #HPE
 						</Typography>
 					</Stack>
@@ -1279,7 +1275,7 @@ const HostConfigConnectorsSection = ({
 				sortable: false,
 				disableColumnMenu: true,
 				renderCell: (params) => (
-					<Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+					<Stack direction="row" spacing={1.25} sx={{ minWidth: 0, alignItems: "center" }}>
 						<Box sx={CONNECTOR_ROW_ICON_BOX_SX}>
 							<Typography
 								component="span"
@@ -1288,7 +1284,7 @@ const HostConfigConnectorsSection = ({
 								#
 							</Typography>
 						</Box>
-						<Typography variant="body2" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
+						<Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 700 }}>
 							{params.row.tag}
 						</Typography>
 					</Stack>
@@ -1302,7 +1298,7 @@ const HostConfigConnectorsSection = ({
 				sortable: false,
 				disableColumnMenu: true,
 				renderCell: (params) => (
-					<Typography variant="body2" color="text.secondary">
+					<Typography variant="body2" sx={{ color: "text.secondary" }}>
 						{params.row.connectorCount}
 					</Typography>
 				),
@@ -1427,7 +1423,7 @@ const HostConfigConnectorsSection = ({
 						</Alert>
 					) : null}
 					{catalogLoading ? (
-						<Stack alignItems="center" py={3}>
+						<Stack sx={{ alignItems: "center", py: 3 }}>
 							<CircularProgress size={32} />
 						</Stack>
 					) : (
@@ -1451,10 +1447,12 @@ const HostConfigConnectorsSection = ({
 								</Box>
 								<Stack
 									direction="row"
-									alignItems="center"
-									gap={1}
-									flexWrap={{ xs: "wrap", md: "nowrap" }}
-									sx={{ minHeight: 40 }}
+									sx={{
+										alignItems: "center",
+										gap: 1,
+										flexWrap: { xs: "wrap", md: "nowrap" },
+										minHeight: 40,
+									}}
 								>
 									{listView === "connectors" ? (
 										<ToggleButtonGroup
@@ -1473,23 +1471,26 @@ const HostConfigConnectorsSection = ({
 									) : null}
 									<TextField
 										size="small"
+										hiddenLabel
 										placeholder={listView === "tags" ? "Search tags" : "Search by name or ID"}
 										value={searchQuery}
 										onChange={(event) => setSearchQuery(event.target.value)}
 										sx={{
-											...guidedConfigPlaceholderSx,
+											...filledInputNoLabelSx,
 											// Fixed-size, right-anchored: switching Connectors / Tags or hiding
 											// category tabs never moves or resizes it.
 											flex: "0 1 400px",
 											ml: { xs: 0, md: "auto" },
 											minWidth: { xs: "100%", md: 180 },
 										}}
-										InputProps={{
-											startAdornment: (
-												<InputAdornment position="start">
-													<SearchIcon fontSize="small" />
-												</InputAdornment>
-											),
+										slotProps={{
+											input: {
+												startAdornment: (
+													<InputAdornment position="start">
+														<SearchIcon fontSize="small" />
+													</InputAdornment>
+												),
+											},
 										}}
 									/>
 									<Button
@@ -1529,7 +1530,10 @@ const HostConfigConnectorsSection = ({
 												px: 2,
 											}}
 										>
-											<Typography variant="body2" color="text.secondary" textAlign="center">
+											<Typography
+												variant="body2"
+												sx={{ color: "text.secondary", textAlign: "center" }}
+											>
 												{searchQuery.trim()
 													? "No tags match your search."
 													: "No tags available for the compatible connectors."}
@@ -1560,7 +1564,10 @@ const HostConfigConnectorsSection = ({
 											px: 2,
 										}}
 									>
-										<Typography variant="body2" color="text.secondary" textAlign="center">
+										<Typography
+											variant="body2"
+											sx={{ color: "text.secondary", textAlign: "center" }}
+										>
 											{searchQuery.trim() || categoryTab !== "all"
 												? "No connectors match your filters."
 												: "No compatible connectors."}

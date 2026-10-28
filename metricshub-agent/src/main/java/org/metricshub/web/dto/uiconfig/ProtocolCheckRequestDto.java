@@ -21,13 +21,13 @@ package org.metricshub.web.dto.uiconfig;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.NotBlank;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Data;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.web.deserialization.ProtocolCheckRequestDtoDeserializer;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * Request body for an on-demand protocol health check from the guided configuration UI.

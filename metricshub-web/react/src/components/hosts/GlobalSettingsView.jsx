@@ -5,6 +5,7 @@ import {
 	AccordionDetails,
 	AccordionSummary,
 	Box,
+	ButtonBase,
 	Divider,
 	Paper,
 	Step,
@@ -103,11 +104,11 @@ const SECTIONS = [
 
 const SettingsSection = ({ id, label, registerRef, last = false, children }) => (
 	<Box id={id} ref={registerRef(id)} sx={{ scrollMarginTop: 88 }}>
-		<Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+		<Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
 			{label}
 		</Typography>
 		{children ?? (
-			<Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+			<Typography variant="body2" sx={{ color: "text.secondary", fontStyle: "italic" }}>
 				Not configured
 			</Typography>
 		)}
@@ -145,7 +146,7 @@ const ConfigGridSection = ({ title, rows, emptyLabel }) => {
 	if (rows.length > 0) {
 		return (
 			<Box>
-				<Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+				<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
 					{title}
 				</Typography>
 				<DataGrid
@@ -161,7 +162,7 @@ const ConfigGridSection = ({ title, rows, emptyLabel }) => {
 		);
 	}
 	return (
-		<Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+		<Typography variant="body2" sx={{ color: "text.secondary", fontStyle: "italic" }}>
 			{emptyLabel}
 		</Typography>
 	);
@@ -180,6 +181,7 @@ const ResourceGroupAccordion = ({ name, node, onConfigure }) => {
 			disableGutters
 			elevation={0}
 			square
+			slots={{ heading: "div" }}
 			sx={{
 				bgcolor: "transparent",
 				borderTop: "1px solid",
@@ -188,46 +190,38 @@ const ResourceGroupAccordion = ({ name, node, onConfigure }) => {
 				"& .MuiAccordionDetails-root": { bgcolor: "transparent" },
 			}}
 		>
-			<AccordionSummary
-				expandIcon={<ExpandMoreIcon />}
-				sx={{
-					minHeight: 40,
-					bgcolor: "transparent",
-					pl: 1,
-					transition: "background-color 0.4s ease",
-					"&:hover": { bgcolor: "action.hover" },
-					"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
-				}}
-			>
-				<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+			<Box sx={{ display: "flex", alignItems: "center" }}>
+				<ButtonBase
+					onClick={() => onConfigure(name)}
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						gap: 1,
+						ml: 1,
+						minHeight: 40,
+						color: "primary.main",
+						"&:hover": { textDecoration: "underline" },
+					}}
+				>
 					<DomainIcon color="primary" sx={{ fontSize: 18 }} />
-					<Typography
-						variant="subtitle1"
-						component="span"
-						onClick={(e) => {
-							e.stopPropagation();
-							onConfigure(name);
-						}}
-						onKeyDown={(e) => {
-							if (e.key === "Enter" || e.key === " ") {
-								e.stopPropagation();
-								e.preventDefault();
-								onConfigure(name);
-							}
-						}}
-						role="button"
-						tabIndex={0}
-						sx={{
-							fontWeight: 500,
-							cursor: "pointer",
-							color: "primary.main",
-							"&:hover": { textDecoration: "underline" },
-						}}
-					>
+					<Typography variant="subtitle1" component="span" sx={{ fontWeight: 500 }}>
 						{name}
 					</Typography>
-				</Box>
-			</AccordionSummary>
+				</ButtonBase>
+				<AccordionSummary
+					aria-label={`Expand ${name}`}
+					expandIcon={<ExpandMoreIcon />}
+					sx={{
+						flex: 1,
+						minHeight: 40,
+						bgcolor: "transparent",
+						pl: 1,
+						transition: "background-color 0.4s ease",
+						"&:hover": { bgcolor: "action.hover" },
+						"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
+					}}
+				/>
+			</Box>
 			<AccordionDetails
 				sx={{ pl: 4, pr: 1.5, py: 1, display: "flex", flexDirection: "column", gap: 2 }}
 			>
@@ -382,13 +376,13 @@ const GlobalSettingsView = ({ snapshot, onConfigureGroup, onOpenStandaloneHost }
 					}}
 				>
 					<Box sx={{ position: "sticky", top: 80, p: 2.5 }}>
-						<Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>
+						<Typography variant="h6" sx={{ fontWeight: 700, mb: 2.5 }}>
 							Agent configuration
 						</Typography>
 						<Stepper nonLinear orientation="vertical" activeStep={activeIndex}>
 							{SECTIONS.map((section) => (
 								<Step key={section.id} completed={false}>
-									<StepButton color="inherit" onClick={() => scrollToSection(section.id)}>
+									<StepButton onClick={() => scrollToSection(section.id)}>
 										{section.label}
 									</StepButton>
 								</Step>

@@ -86,18 +86,13 @@ COMMON_SCRIPTS
 LAUNCHER_AS_SERVICE_SCRIPTS
 if [ "$1" -gt 1 ]; then
   :; LAUNCHER_AS_SERVICE_COMMANDS_UNINSTALL
+  # Both editions ship as the "metricshub" package: when this upgrade replaces the other edition,
+  # stop its service now so the two agents never run side by side (its own %preun disables it).
+  # Never fail here: systemd refuses to disable the linked unit that JDK 21 builds created
+  systemctl stop 'metricshub-*-service.service' || :
 fi
 
 %preun
-
-if [ -L /etc/systemd/system/multi-user.target.wants/metricshub-enterprise-service.service ]; then
-  rm -f /etc/systemd/system/multi-user.target.wants/metricshub-enterprise-service.service
-fi
-
-if [ -L /etc/systemd/system/metricshub-enterprise-service.service ]; then
-  rm -f /etc/systemd/system/metricshub-enterprise-service.service
-fi
-
 package_type=rpm
 COMMON_SCRIPTS
 DESKTOP_SCRIPTS
@@ -144,6 +139,11 @@ fi
 %clean
 
 %posttrans
+package_type=rpm
+LAUNCHER_AS_SERVICE_SCRIPTS
+# On upgrade the previous package's %preun runs after this package's %post, and older packages
+# deleted the service's multi-user.target.wants link there: enable the service again
+LAUNCHER_AS_SERVICE_COMMANDS_INSTALL
 
 if [ -d APPLICATION_DIRECTORY ]; then
   if [ ! -e  APPLICATION_DIRECTORY/config ]; then

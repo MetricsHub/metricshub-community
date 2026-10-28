@@ -184,7 +184,7 @@ const ExplorerTree = ({ selectedNodeId, onResourceGroupFocus, onAgentFocus, onRe
 		if (!treeRoot) {
 			return (
 				<Box sx={{ p: 1 }}>
-					<Typography variant="body2" color="text.secondary">
+					<Typography variant="body2" sx={{ color: "text.secondary" }}>
 						No hierarchy data.
 					</Typography>
 				</Box>

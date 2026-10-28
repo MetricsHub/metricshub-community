@@ -291,7 +291,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			{tabValue === TAB_METRICS && (
 				<Box sx={{ display: "flex", flexDirection: "column" }}>
 					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
-						<IconButton onClick={() => setIsSettingsOpen(true)}>
+						<IconButton aria-label="Configure metrics" onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
 						</IconButton>
 						<Typography variant="h6">Configure Metrics</Typography>

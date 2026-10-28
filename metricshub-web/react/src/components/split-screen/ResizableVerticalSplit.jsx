@@ -31,19 +31,19 @@ const Scrollbar = (t) => {
 	};
 };
 
-export const Top = ({ children, ...rest }) => (
-	<Box {...rest} sx={(t) => ({ ...Scrollbar(t), ...rest.sx })}>
+export const Top = ({ children, sx = [], ...rest }) => (
+	<Box {...rest} sx={[Scrollbar, ...(Array.isArray(sx) ? sx : [sx])]}>
 		{children}
 	</Box>
 );
 
-export const Bottom = ({ children, disableScroll = false, ...rest }) => (
+export const Bottom = ({ children, disableScroll = false, sx = [], ...rest }) => (
 	<Box
 		{...rest}
-		sx={(t) => ({
-			...(disableScroll ? { overflow: "hidden", width: "100%", minHeight: 0 } : Scrollbar(t)),
-			...rest.sx,
-		})}
+		sx={[
+			disableScroll ? { overflow: "hidden", width: "100%", minHeight: 0 } : Scrollbar,
+			...(Array.isArray(sx) ? sx : [sx]),
+		]}
 	>
 		{children}
 	</Box>
@@ -60,6 +60,7 @@ export function ResizableVerticalSplit({
 	children,
 	initialTopPct = 60,
 	bottomVisible = true,
+	sx = [],
 	...rest
 }) {
 	const topChild = React.Children.toArray(children).find(
@@ -81,8 +82,11 @@ export function ResizableVerticalSplit({
 
 	const wrapRef = useRef(null);
 	const draggingRef = useRef(false);
+	const previousCursorRef = useRef("");
 
 	const onPointerDown = useCallback((e) => {
+		if (draggingRef.current) return;
+		previousCursorRef.current = document.body.style.cursor;
 		draggingRef.current = true;
 		e.currentTarget.setPointerCapture?.(e.pointerId);
 		document.body.style.cursor = "row-resize";
@@ -100,8 +104,19 @@ export function ResizableVerticalSplit({
 	const endDrag = useCallback(() => {
 		if (!draggingRef.current) return;
 		draggingRef.current = false;
-		document.body.style.cursor = "";
+		document.body.style.cursor = previousCursorRef.current;
 	}, []);
+
+	const onKeyDown = useCallback(
+		(event) => {
+			if (!bottomVisible) return;
+			const delta = event.key === "ArrowUp" ? -5 : event.key === "ArrowDown" ? 5 : 0;
+			if (!delta) return;
+			event.preventDefault();
+			setTopPct((current) => Math.max(MIN_PCT, Math.min(MAX_PCT, current + delta)));
+		},
+		[bottomVisible],
+	);
 
 	useEffect(() => {
 		const move = (ev) => onPointerMove(ev);
@@ -113,6 +128,7 @@ export function ResizableVerticalSplit({
 			window.removeEventListener("pointermove", move);
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("pointercancel", up);
+			endDrag();
 		};
 	}, [onPointerMove, endDrag]);
 
@@ -122,24 +138,43 @@ export function ResizableVerticalSplit({
 		<Box
 			ref={wrapRef}
 			{...rest}
-			sx={{
-				position: "relative",
-				display: "grid",
-				gridTemplateRows: gridRows,
-				gridTemplateColumns: "minmax(0, 1fr)",
-				alignItems: "stretch",
-				minHeight: 0,
-				flex: 1,
-				overflow: "hidden",
-				...rest.sx,
-			}}
+			sx={[
+				{
+					position: "relative",
+					display: "grid",
+					gridTemplateRows: gridRows,
+					gridTemplateColumns: "minmax(0, 1fr)",
+					alignItems: "stretch",
+					minHeight: 0,
+					flex: 1,
+					overflow: "hidden",
+				},
+				...(Array.isArray(sx) ? sx : [sx]),
+			]}
 		>
-			<Top sx={{ gridRow: 1, gridColumn: 1 }}>{topChild?.props.children}</Top>
+			{topChild
+				? React.cloneElement(topChild, {
+						sx: [
+							{ gridRow: 1, gridColumn: 1 },
+							...(Array.isArray(topChild.props.sx)
+								? topChild.props.sx
+								: topChild.props.sx
+									? [topChild.props.sx]
+									: []),
+						],
+					})
+				: null}
 			<Box
 				onPointerDown={onPointerDown}
+				onKeyDown={onKeyDown}
+				tabIndex={bottomVisible ? 0 : -1}
 				role="separator"
+				aria-hidden={!bottomVisible}
 				aria-orientation="horizontal"
 				aria-label="Resize editor and logs"
+				aria-valuemin={MIN_PCT}
+				aria-valuemax={MAX_PCT}
+				aria-valuenow={Math.round(topPct)}
 				sx={{
 					gridRow: 2,
 					gridColumn: 1,
@@ -157,7 +192,18 @@ export function ResizableVerticalSplit({
 					},
 				}}
 			/>
-			<Bottom sx={{ gridRow: 3, gridColumn: 1 }}>{bottomChild?.props.children}</Bottom>
+			{bottomChild
+				? React.cloneElement(bottomChild, {
+						sx: [
+							{ gridRow: 3, gridColumn: 1 },
+							...(Array.isArray(bottomChild.props.sx)
+								? bottomChild.props.sx
+								: bottomChild.props.sx
+									? [bottomChild.props.sx]
+									: []),
+						],
+					})
+				: null}
 		</Box>
 	);
 }

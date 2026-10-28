@@ -11,9 +11,8 @@ function FileMeta({ file, sx }) {
 	return (
 		<Stack
 			direction="row"
-			alignItems="center"
 			spacing={1}
-			sx={{ opacity: 0.65, fontSize: "0.8rem", fontWeight: 400, ...sx }}
+			sx={{ alignItems: "center", opacity: 0.65, fontSize: "0.8rem", fontWeight: 400, ...sx }}
 		>
 			<Box component="span">
 				{`${formatBytes(file.size ?? 0)} • ${formatRelativeTime(

@@ -21,9 +21,6 @@ package org.metricshub.web.service.openai;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
@@ -36,6 +33,9 @@ import org.metricshub.web.dto.openai.UploadedToolOutputManifest;
 import org.metricshub.web.mcp.MultiHostToolResponse;
 import org.metricshub.web.mcp.TroubleshootHostService;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Adapts tool outputs before they are sent to OpenAI.
@@ -59,7 +59,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ToolResponseManagerService {
 
-	private final ObjectMapper objectMapper;
+	private final JsonMapper objectMapper;
 	private final OpenAiToolOutputProperties properties;
 	private final ToolOutputFilePersistService persistService;
 	private final ToolOutputFileUploadService uploadService;

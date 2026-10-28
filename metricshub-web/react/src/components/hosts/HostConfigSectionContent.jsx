@@ -47,6 +47,7 @@ const HostConfigSectionContent = ({
 				<HostProtocolConfigStep
 					protocol={step.protocolId}
 					values={form.state.protocols?.[step.protocolId] || {}}
+					savedValues={form.baselineState?.protocols?.[step.protocolId]}
 					onChange={(name, value) => form.patchProtocolField(step.protocolId, name, value)}
 					errors={form.errors}
 					hostName={form.state.hostName}

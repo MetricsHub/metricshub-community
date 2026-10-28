@@ -21,8 +21,6 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.core.JsonField;
 import com.openai.core.http.StreamResponse;
@@ -80,6 +78,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Chat controller handling chat requests with OpenAI integration.
@@ -166,7 +166,7 @@ public class ChatController {
 	 */
 	private final ToolResponseManagerService toolResponseManagerService;
 
-	private final ObjectMapper objectMapper;
+	private final JsonMapper objectMapper;
 
 	/**
 	 * Handles streaming chat requests.
