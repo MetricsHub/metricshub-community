@@ -56,6 +56,7 @@ import {
  * @param {string} props.protocol
  * @param {Array<import("./protocol-definitions").ProtocolField>} props.fields
  * @param {Record<string, unknown>} props.values
+ * @param {Record<string, unknown>} [props.savedValues] values as last loaded/saved; keeps a field's extraOption until the next save
  * @param {(name: string, value: unknown) => void} props.onChange
  * @param {Record<string, string>} props.errors
  * @param {boolean} [props.allowPasswordReveal]
@@ -66,6 +67,7 @@ const ProtocolConfigForm = ({
 	protocol,
 	fields,
 	values,
+	savedValues,
 	onChange,
 	errors,
 	allowPasswordReveal = false,
@@ -267,6 +269,9 @@ const ProtocolConfigForm = ({
 		const description = fieldDescription(field);
 		const isTransportField = transportLinkedPort && field.name === "protocol";
 		const startAdornment = renderStartAdornment(field.name);
+		const extraOption =
+			field.extraOption?.(value) || field.extraOption?.(savedValues?.[field.name]);
+		const options = extraOption ? [...(field.options || []), extraOption] : field.options || [];
 
 		return (
 			<Box key={field.name}>
@@ -285,13 +290,13 @@ const ProtocolConfigForm = ({
 								? handleTransportChange(e.target.value)
 								: onChange(field.name, e.target.value)
 						}
-						displayEmpty={Boolean(field.options?.some((opt) => opt.value === ""))}
+						displayEmpty={options.some((opt) => opt.value === "")}
 						sx={filledInputNoLabelSx}
 						slotProps={{
 							input: startAdornment ? { startAdornment } : undefined,
 						}}
 					>
-						{(field.options || []).map((opt) => (
+						{options.map((opt) => (
 							<MenuItem key={String(opt.value)} value={opt.value}>
 								{opt.label}
 							</MenuItem>

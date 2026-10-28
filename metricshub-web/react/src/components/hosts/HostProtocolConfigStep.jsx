@@ -12,6 +12,7 @@ import { PROTOCOL_FIELDS, PROTOCOL_OPTIONS } from "./protocol-definitions";
  * @param {object} props
  * @param {string} props.protocol
  * @param {Record<string, unknown>} props.values
+ * @param {Record<string, unknown>} [props.savedValues] values as last loaded/saved
  * @param {(name: string, value: unknown) => void} props.onChange
  * @param {Record<string, string>} [props.errors]
  * @param {string} [props.hostName]
@@ -23,6 +24,7 @@ import { PROTOCOL_FIELDS, PROTOCOL_OPTIONS } from "./protocol-definitions";
 const HostProtocolConfigStep = ({
 	protocol,
 	values,
+	savedValues,
 	onChange,
 	errors = {},
 	hostName,
@@ -53,6 +55,7 @@ const HostProtocolConfigStep = ({
 				protocol={protocol}
 				fields={fields}
 				values={values}
+				savedValues={savedValues}
 				onChange={onChange}
 				errors={errors}
 				allowPasswordReveal={allowPasswordReveal}

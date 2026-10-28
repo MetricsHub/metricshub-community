@@ -39,3 +39,33 @@ describe("protocol credential errors", () => {
 		},
 	);
 });
+
+describe("WinRM Basic set in YAML", () => {
+	const renderWinRm = (authentications, savedAuthentications) =>
+		render(
+			<HostProtocolConfigStep
+				protocol="winrm"
+				hostName="localhost"
+				values={{ ...PROTOCOL_DEFAULTS.winrm, authentications }}
+				savedValues={{ ...PROTOCOL_DEFAULTS.winrm, authentications: savedAuthentications }}
+				onChange={vi.fn()}
+			/>,
+		);
+
+	const openAuthentications = () => {
+		fireEvent.click(screen.getByRole("button", { name: /Advanced options/ }));
+		fireEvent.mouseDown(document.getElementById("winrm-authentications"));
+	};
+
+	it("keeps Basic selectable after switching away, until saved", () => {
+		renderWinRm("NTLM", "BASIC");
+		openAuthentications();
+		expect(screen.getByRole("option", { name: "Basic" })).toBeInTheDocument();
+	});
+
+	it("does not offer Basic once a non-Basic value is saved", () => {
+		renderWinRm("NTLM", "NTLM");
+		openAuthentications();
+		expect(screen.queryByRole("option", { name: "Basic" })).not.toBeInTheDocument();
+	});
+});
