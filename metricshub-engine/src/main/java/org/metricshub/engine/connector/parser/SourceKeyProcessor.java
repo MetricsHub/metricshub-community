@@ -114,14 +114,17 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 		// Tool nodes: ${source::tools.<tool>.sources.<source>}
 		final JsonNode toolsNode = node.get("tools");
 		if (toolsNode != null && !toolsNode.isNull()) {
-			toolsNode
-				.properties()
-				.forEach((Entry<String, JsonNode> toolEntry) ->
-					setSourceKeys(
-						toolEntry.getValue().get("sources"),
-						String.format("${source::tools.%s.sources.%%s}", toolEntry.getKey())
-					)
-				);
+			for (final Entry<String, JsonNode> toolEntry : toolsNode.properties()) {
+				final String toolName = toolEntry.getKey();
+				if (toolName.contains(".")) {
+					// The dot separates the segments of a source reference: a dotted tool name cannot be told
+					// apart from the "sources" or "result" segment that follows it
+					throw new IOException(
+						String.format("Tool name '%s' contains a dot, which source references reserve as a separator", toolName)
+					);
+				}
+				setSourceKeys(toolEntry.getValue().get("sources"), String.format("${source::tools.%s.sources.%%s}", toolName));
+			}
 		}
 		return node;
 	}

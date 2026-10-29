@@ -111,12 +111,13 @@ public class ToolStrategy extends AbstractStrategy {
 		// Defaults applied, required arguments checked
 		final Map<String, String> resolvedArguments = tool.toDefinition(toolName).resolveArguments(arguments);
 
+		// The names only: a value may be a token or a password
 		log.debug(
-			"Hostname {} - Running tool {} of connector {} with {}.",
+			"Hostname {} - Running tool {} of connector {} with argument(s) {}.",
 			hostname,
 			toolName,
 			connectorId,
-			resolvedArguments
+			resolvedArguments.keySet()
 		);
 
 		// The tool's sources may reference the connector's beforeAll sources, like a monitor job's

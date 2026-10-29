@@ -21,6 +21,7 @@ package org.metricshub.web.mcp.tool;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
@@ -77,7 +78,7 @@ public final class ProtocolToolCallbacks {
 						HostTools.perHost(
 							HostTools.toolName(extension.getIdentifier(), definition.name()),
 							withTimeout(definition),
-							(hostname, arguments) -> execute(extension, definition.name(), hostname, arguments, agentContext)
+							(hostname, arguments) -> execute(extension, definition, hostname, arguments, agentContext)
 						)
 					);
 				} catch (IllegalArgumentException e) {
@@ -123,20 +124,21 @@ public final class ProtocolToolCallbacks {
 	/**
 	 * Runs a tool on one host with the first of the host's configurations the extension accepts.
 	 *
-	 * @param extension          the extension declaring the tool
-	 * @param toolName           the tool name within the extension
-	 * @param hostname           the host
-	 * @param arguments          the resolved arguments, the {@code timeout} among them
+	 * @param extension    the extension declaring the tool
+	 * @param definition   the tool as the extension declares it, whose parameter types the arguments take
+	 * @param hostname     the host
+	 * @param arguments    the resolved arguments, the {@code timeout} among them
 	 * @param agentContext the agent context the tool was built from, where the host's configurations are
 	 * @return the extension's result, or an error
 	 */
 	static QueryResponse execute(
 		final IProtocolExtension extension,
-		final String toolName,
+		final ToolDefinition definition,
 		final String hostname,
 		final Map<String, String> arguments,
 		final AgentContext agentContext
 	) {
+		final String toolName = definition.name();
 		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper.resolveAllHostConfigurationCopies(
 			hostname,
 			agentContext
@@ -168,9 +170,32 @@ public final class ProtocolToolCallbacks {
 			configuration.setTimeout(seconds);
 		}
 
+		// Typed as declared: an extension reading an integer or a boolean gets one, not its text
 		final ObjectNode argumentsNode = JsonNodeFactory.instance.objectNode();
-		toolArguments.forEach(argumentsNode::put);
+		toolArguments.forEach((name, value) ->
+			argumentsNode.set(name, typedValue(definition.parameters().get(name), value))
+		);
 		return runSafe(extension, toolName, configuration, argumentsNode);
+	}
+
+	/**
+	 * @param parameter the declared parameter, {@code null} when the argument is not declared
+	 * @param value     the argument as text
+	 * @return the argument as a JSON value of the declared type, as text when it does not parse as one
+	 */
+	static JsonNode typedValue(final ToolParameter parameter, final String value) {
+		final JsonNodeFactory nodes = JsonNodeFactory.instance;
+		final String type = parameter == null ? ToolParameter.STRING : parameter.type();
+		try {
+			return switch (type) {
+				case "integer" -> nodes.numberNode(Long.parseLong(value.trim()));
+				case "number" -> nodes.numberNode(Double.parseDouble(value.trim()));
+				case "boolean" -> nodes.booleanNode(Boolean.parseBoolean(value.trim()));
+				default -> nodes.textNode(value);
+			};
+		} catch (NumberFormatException e) {
+			return nodes.textNode(value);
+		}
 	}
 
 	private static QueryResponse invalidTimeout(final String timeout) {

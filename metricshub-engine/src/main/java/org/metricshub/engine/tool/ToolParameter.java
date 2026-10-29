@@ -24,6 +24,7 @@ package org.metricshub.engine.tool;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * One argument of a {@link ToolDefinition}, as declared by a connector or a protocol extension.
@@ -62,7 +63,7 @@ public record ToolParameter(
 		if (type == null || type.isBlank()) {
 			type = STRING;
 		}
-		type = type.trim().toLowerCase();
+		type = type.trim().toLowerCase(Locale.ROOT);
 		if (!TYPES.contains(type)) {
 			// Copied verbatim into the advertised JSON schema, where an unknown type would fail the whole tool list
 			throw new IllegalArgumentException("Unknown tool parameter type '%s': expected one of %s".formatted(type, TYPES));

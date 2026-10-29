@@ -47,7 +47,12 @@ class ProtocolToolCallbacksTest {
 				new ToolDefinition(
 					"sel",
 					"Reads the System Event Log.",
-					Map.of("since", new ToolParameter("string", "A duration", false, null)),
+					Map.of(
+						"since",
+						new ToolParameter("string", "A duration", false, null),
+						"limit",
+						new ToolParameter("integer", "How many entries", false, null)
+					),
 					false
 				),
 				new ToolDefinition("chassis", "Powers the chassis.", Map.of(), true)
@@ -93,13 +98,16 @@ class ProtocolToolCallbacksTest {
 		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn("header\nrow");
 		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder).get(0);
 
-		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"since\":\"1h\"}"));
+		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"since\":\"1h\",\"limit\":5}"));
 
 		assertEquals("header\nrow", result.get("hosts").get(0).get("response").get("response").asText());
 		verify(configuration).setHostname(HOSTNAME);
 		final ArgumentCaptor<JsonNode> arguments = ArgumentCaptor.forClass(JsonNode.class);
 		verify(extension).executeTool(eq("sel"), eq(configuration), arguments.capture());
 		assertEquals("1h", arguments.getValue().get("since").asText());
+		// Declared as an integer, forwarded as one
+		assertTrue(arguments.getValue().get("limit").isIntegralNumber());
+		assertEquals(5, arguments.getValue().get("limit").asInt());
 	}
 
 	@Test
