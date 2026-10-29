@@ -75,7 +75,7 @@ class HttpExtensionToolsTest {
 				.put("method", "POST")
 				.put("path", "/redfish/v1/Systems/1/Actions/ComputerSystem.Reset")
 				.put("body", "{\"ResetType\":\"GracefulRestart\"}")
-				.put("resultContent", "httpStatus")
+				.put("resultContent", "http_status")
 		);
 
 		assertEquals("POST", request.getValue().getMethod());

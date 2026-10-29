@@ -278,7 +278,7 @@ public class HttpExtension implements IProtocolExtension {
 				.parameter("path", ToolParameter.STRING, "The path on the host, e.g. /redfish/v1/Systems", false, "/")
 				.parameter("url", "A full URL instead of the path, e.g. https://host:8443/api/v1/status")
 				.parameter("header", "Headers as newline-separated key: value pairs")
-				.parameter("resultContent", "What to return: body (default), header, httpStatus or all")
+				.parameter("resultContent", "What to return: body (default), header, http_status or all")
 				.build(),
 			ToolDefinition.builder(
 				"request",
@@ -295,7 +295,7 @@ public class HttpExtension implements IProtocolExtension {
 				.parameter("url", "A full URL instead of the path")
 				.parameter("header", "Headers as newline-separated key: value pairs")
 				.parameter("body", "The request body")
-				.parameter("resultContent", "What to return: body (default), header, httpStatus or all")
+				.parameter("resultContent", "What to return: body (default), header, http_status or all")
 				.destructive()
 				.build()
 		);
