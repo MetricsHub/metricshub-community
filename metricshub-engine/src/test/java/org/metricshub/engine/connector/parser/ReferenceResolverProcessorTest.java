@@ -84,6 +84,19 @@ class ReferenceResolverProcessorTest {
 			  source2:
 			    type: tableJoin
 			    rightTable: ${source::source1} # ${source::afterAll.source1}
+			tools:
+			  listDisks:
+			    sources:
+			      disks:
+			        type: http
+			        executeForEachEntryOf:
+			          source: ${source::beforeAll.systemId} # unchanged
+			      joined:
+			        type: tableJoin
+			        leftTable: ${source::disks} # ${source::tools.listDisks.sources.disks}
+			        rightTable: ${source::tools.listDisks.sources.disks} # unchanged
+			    result:
+			      source: ${source::joined} # ${source::tools.listDisks.sources.joined}
 			""";
 
 		final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
@@ -226,5 +239,21 @@ class ReferenceResolverProcessorTest {
 			"${source::monitors.disk.discovery.sources.httpSource2}",
 			processedNode.get("monitors").get("disk").get("discovery").get("mapping").get("source1").asText()
 		);
+
+		// Check the relative source references under a tool: its sources and its result point at its own sources
+		final JsonNode listDisks = processedNode.get("tools").get("listDisks");
+		assertEquals(
+			"${source::beforeAll.systemId}",
+			listDisks.get("sources").get("disks").get("executeForEachEntryOf").get("source").asText()
+		);
+		assertEquals(
+			"${source::tools.listDisks.sources.disks}",
+			listDisks.get("sources").get("joined").get("leftTable").asText()
+		);
+		assertEquals(
+			"${source::tools.listDisks.sources.disks}",
+			listDisks.get("sources").get("joined").get("rightTable").asText()
+		);
+		assertEquals("${source::tools.listDisks.sources.joined}", listDisks.get("result").get("source").asText());
 	}
 }

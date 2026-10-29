@@ -45,6 +45,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.oscommand.file.FileSourceProcessor;
 
 /**
@@ -424,6 +425,16 @@ public class OsCommandExtension implements IProtocolExtension {
 			null,
 			commandLine,
 			null
+		);
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder("runCommand", "Runs a shell command on a host through SSH and returns its output.")
+				.requiredParameter("commandLine", "The command line to run, e.g. df -h")
+				.destructive()
+				.build()
 		);
 	}
 }

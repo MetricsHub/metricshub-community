@@ -56,6 +56,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.jdbc.driver.DriverResolutionException;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -550,5 +551,18 @@ public class JdbcExtension implements IProtocolExtension {
 			}
 		}
 		return null;
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"query",
+				"Runs an SQL statement on a database host with the host's configured JDBC settings and returns the result as a text table."
+			)
+				.requiredParameter("query", "The SQL statement, e.g. SELECT name, state FROM pg_stat_activity")
+				.destructive()
+				.build()
+		);
 	}
 }

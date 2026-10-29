@@ -1,0 +1,100 @@
+package org.metricshub.web.mcp.tool;
+
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Agent
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
+import org.metricshub.web.AgentContextHolder;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
+
+/**
+ * Every tool the agent exposes: the product tools, which are annotated methods fixed for the JVM, followed by the
+ * protocol and connector tools, which depend on the loaded extensions and connectors and are rebuilt whenever a
+ * configuration reload swaps the agent context.
+ */
+@Slf4j
+public final class MetricsHubToolCallbackProvider implements ToolCallbackProvider {
+
+	private final ToolCallback[] staticCallbacks;
+	private final AgentContextHolder agentContextHolder;
+	private final List<Function<AgentContextHolder, List<ToolCallback>>> dynamicFactories;
+
+	/**
+	 * The callbacks built for one generation of the agent context.
+	 *
+	 * @param generation the generation they were built for
+	 * @param callbacks  the callbacks
+	 */
+	private record Built(long generation, ToolCallback[] callbacks) {}
+
+	private volatile Built built;
+
+	/**
+	 * @param staticCallbacks    the product tools, fixed for the JVM
+	 * @param agentContextHolder the running agent context
+	 */
+	public MetricsHubToolCallbackProvider(
+		final ToolCallback[] staticCallbacks,
+		final AgentContextHolder agentContextHolder
+	) {
+		this(staticCallbacks, agentContextHolder, List.of(ProtocolToolCallbacks::from, ConnectorToolCallbacks::from));
+	}
+
+	MetricsHubToolCallbackProvider(
+		final ToolCallback[] staticCallbacks,
+		final AgentContextHolder agentContextHolder,
+		final List<Function<AgentContextHolder, List<ToolCallback>>> dynamicFactories
+	) {
+		this.staticCallbacks = staticCallbacks.clone();
+		this.agentContextHolder = agentContextHolder;
+		this.dynamicFactories = dynamicFactories;
+	}
+
+	@Override
+	public ToolCallback[] getToolCallbacks() {
+		final long generation = agentContextHolder.getGeneration();
+		Built current = built;
+		if (current == null || current.generation() != generation) {
+			// Two threads may build the same generation at once: both results are equivalent
+			current = new Built(generation, build());
+			built = current;
+		}
+		return current.callbacks().clone();
+	}
+
+	private ToolCallback[] build() {
+		final List<ToolCallback> callbacks = new ArrayList<>(List.of(staticCallbacks));
+		for (final Function<AgentContextHolder, List<ToolCallback>> factory : dynamicFactories) {
+			try {
+				callbacks.addAll(factory.apply(agentContextHolder));
+			} catch (Exception e) {
+				// The product tools must stay available whatever an extension or connector declares
+				log.error("Failed to build the dynamic MCP tools: {}", e.getMessage());
+				log.debug("Failed to build the dynamic MCP tools:", e);
+			}
+		}
+		return callbacks.toArray(ToolCallback[]::new);
+	}
+}

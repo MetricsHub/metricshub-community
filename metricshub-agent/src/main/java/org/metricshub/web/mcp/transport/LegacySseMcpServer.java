@@ -23,6 +23,7 @@ package org.metricshub.web.mcp.transport;
 
 import io.modelcontextprotocol.server.McpSyncServer;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationListener;
@@ -47,7 +48,13 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class LegacySseMcpServer implements ApplicationListener<ContextClosedEvent>, DisposableBean {
 
 	private final LegacySseServerTransportProvider transportProvider;
+
+	/**
+	 * The MCP server bound to the legacy transport, exposed so that its tool list can be refreshed.
+	 */
+	@Getter
 	private final McpSyncServer server;
+
 	private final AtomicBoolean closed = new AtomicBoolean();
 
 	/**

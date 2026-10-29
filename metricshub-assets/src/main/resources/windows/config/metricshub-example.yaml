@@ -43,7 +43,7 @@ otel:
 #     # path: /ws/agent
 #     # heartbeatInterval: 30s
 #     # Tools never advertised to (nor invokable by) Central
-#     # excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
+#     # excludedTools: [ ssh_runCommand, winrm_runCommand ]
 #
 #   # What an accepted package offer may do. Beside the channels rather than under opamp:
 #   # the offer arrives over OpAMP, but the download speaks to a repository -- its own hosts,

@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
 import org.metricshub.extension.win.WmiRecorder;
@@ -339,5 +342,45 @@ public class WmiExtension implements IProtocolExtension {
 				String.format("Query type %s is not supported over WMI (supported: wql, command).", queryType)
 			);
 		};
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"wql",
+				"Runs a WQL query on a Windows host through WMI and returns the result as a text table."
+			)
+				.requiredParameter("query", "The WQL query, e.g. SELECT Name, State FROM Win32_Service")
+				.parameter(
+					"namespace",
+					"The WMI namespace. Defaults to the host's configured namespace, root\\CIMv2 unless set."
+				)
+				.build(),
+			ToolDefinition.builder(
+				"runCommand",
+				"Runs a Windows command (CMD) on a Windows host through WMI and returns its output."
+			)
+				.requiredParameter("commandLine", "The command line to run")
+				.destructive()
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		switch (toolName) {
+			case "wql" -> {
+				if (arguments.hasNonNull("namespace")) {
+					((WmiConfiguration) configuration).setNamespace(arguments.get("namespace").asText());
+				}
+				query.put("queryType", "wql").set("query", arguments.get("query"));
+			}
+			case "runCommand" -> query.put("queryType", "command").set("query", arguments.get("commandLine"));
+			default -> throw new IllegalArgumentException("Unknown WMI tool: " + toolName);
+		}
+		return executeQuery(configuration, query);
 	}
 }

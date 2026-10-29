@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
 import org.metricshub.extension.win.WmiRecorder;
@@ -340,5 +343,53 @@ public class WinRmExtension implements IProtocolExtension {
 				String.format("Query type %s is not supported over WinRM (supported: wql, command, file, ls).", queryType)
 			);
 		};
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"wql",
+				"Runs a WQL query on a Windows host through WinRM and returns the result as a text table."
+			)
+				.requiredParameter("query", "The WQL query, e.g. SELECT Name, State FROM Win32_Service")
+				.parameter(
+					"namespace",
+					"The WMI namespace. Defaults to the host's configured namespace, root\\CIMv2 unless set."
+				)
+				.build(),
+			ToolDefinition.builder(
+				"runCommand",
+				"Runs a Windows command (CMD) on a Windows host through WinRM and returns its output."
+			)
+				.requiredParameter("commandLine", "The command line to run")
+				.destructive()
+				.build(),
+			ToolDefinition.builder("readFile", "Reads a file on a Windows host through WinRM and returns its content.")
+				.requiredParameter("path", "The path of the file, e.g. C:\\Windows\\System32\\drivers\\etc\\hosts")
+				.build(),
+			ToolDefinition.builder("listFiles", "Lists the files matching a path pattern on a Windows host through WinRM.")
+				.requiredParameter("pattern", "The path pattern, e.g. C:\\inetpub\\logs\\LogFiles\\*\\*.log")
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		switch (toolName) {
+			case "wql" -> {
+				if (arguments.hasNonNull("namespace")) {
+					((WinRmConfiguration) configuration).setNamespace(arguments.get("namespace").asText());
+				}
+				query.put("queryType", "wql").set("query", arguments.get("query"));
+			}
+			case "runCommand" -> query.put("queryType", "command").set("query", arguments.get("commandLine"));
+			case "readFile" -> query.put("queryType", "file").set("query", arguments.get("path"));
+			case "listFiles" -> query.put("queryType", "ls").set("query", arguments.get("pattern"));
+			default -> throw new IllegalArgumentException("Unknown WinRM tool: " + toolName);
+		}
+		return executeQuery(configuration, query);
 	}
 }

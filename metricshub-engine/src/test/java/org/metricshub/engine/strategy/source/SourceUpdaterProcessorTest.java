@@ -476,6 +476,12 @@ class SourceUpdaterProcessorTest {
 			"show disk 1",
 			SourceUpdaterProcessor.replaceAttributeReferences(command, Map.of("id", "1", "type", "disk"))
 		);
+		// Tool arguments ride on the same map
+		command = "ps -ef | grep ${param::name}";
+		assertEquals(
+			"ps -ef | grep java",
+			SourceUpdaterProcessor.replaceAttributeReferences(command, Map.of("name", "java"))
+		);
 	}
 
 	@Test

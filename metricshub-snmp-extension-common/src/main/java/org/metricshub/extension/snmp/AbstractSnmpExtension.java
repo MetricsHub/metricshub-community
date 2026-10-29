@@ -27,12 +27,16 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -46,6 +50,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.snmp.detection.SnmpGetCriterionProcessor;
 import org.metricshub.extension.snmp.detection.SnmpGetNextCriterionProcessor;
 import org.metricshub.extension.snmp.source.SnmpGetSourceProcessor;
@@ -259,5 +264,44 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 			.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false)
 			.build();
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder("get", "Reads one SNMP OID on a host (SNMP GET).")
+				.requiredParameter("oid", "The OID, e.g. 1.3.6.1.2.1.1.1.0")
+				.build(),
+			ToolDefinition.builder("getNext", "Reads the OID following the given one on a host (SNMP GETNEXT).")
+				.requiredParameter("oid", "The OID, e.g. 1.3.6.1.2.1.1")
+				.build(),
+			ToolDefinition.builder("walk", "Walks an SNMP subtree on a host and returns every OID and value under it.")
+				.requiredParameter("oid", "The root OID of the subtree, e.g. 1.3.6.1.2.1.2.2")
+				.build(),
+			ToolDefinition.builder("table", "Reads an SNMP table on a host and returns the selected columns as a text table.")
+				.requiredParameter("oid", "The OID of the table, e.g. 1.3.6.1.2.1.2.2.1")
+				.requiredParameter("columns", "Comma-separated column numbers to select, ID for the row index, e.g. ID,2,8")
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		switch (toolName) {
+			case GET, WALK, TABLE -> query.put("action", toolName);
+			case "getNext" -> query.put("action", GET_NEXT);
+			default -> throw new IllegalArgumentException("Unknown SNMP tool: " + toolName);
+		}
+		query.set("oid", arguments.get("oid"));
+		if (arguments.hasNonNull("columns")) {
+			final ArrayNode columns = query.putArray("columns");
+			Stream.of(arguments.get("columns").asText().split(","))
+				.map(String::trim)
+				.filter(s -> !s.isEmpty())
+				.forEach(columns::add);
+		}
+		return executeQuery(configuration, query);
 	}
 }

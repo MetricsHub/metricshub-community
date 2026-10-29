@@ -27,5 +27,7 @@ class SourceKeyProcessorTest {
 		final Map<String, Source> collectSources = monitorJob.getCollect().getSources();
 		assertEquals("${source::monitors.system.collect.sources.source_1}", collectSources.get("source_1").getKey());
 		assertEquals("${source::monitors.system.collect.sources.source_2}", collectSources.get("source_2").getKey());
+		final Map<String, Source> toolSources = connector.getTools().get("listSystems").getSources();
+		assertEquals("${source::tools.listSystems.sources.systems}", toolSources.get("systems").getKey());
 	}
 }

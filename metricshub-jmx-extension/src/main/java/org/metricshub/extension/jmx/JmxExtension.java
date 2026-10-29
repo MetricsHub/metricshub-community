@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.TextTableHelper;
@@ -44,6 +47,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 
 /**
  * This class implements the {@link IProtocolExtension} contract for JMX protocol
@@ -257,5 +261,45 @@ public class JmxExtension implements IProtocolExtension {
 		columns.addAll(attributes);
 
 		return TextTableHelper.generateTextTable(columns, result);
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"fetchMBean",
+				"Reads attributes of the MBeans matching an object name pattern on a JMX host and returns them as a text table."
+			)
+				.requiredParameter("objectName", "The MBean object name pattern, e.g. java.lang:type=MemoryPool,name=*")
+				.parameter("attributes", "Comma-separated attributes to read, e.g. Usage,PeakUsage")
+				.parameter(
+					"keyProperties",
+					"Comma-separated key properties of the object name to include as columns, e.g. name"
+				)
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		if (!"fetchMBean".equals(toolName)) {
+			throw new IllegalArgumentException("Unknown JMX tool: " + toolName);
+		}
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		query.set("objectName", arguments.get("objectName"));
+		splitList(arguments, "attributes").forEach(query.putArray("attributes")::add);
+		splitList(arguments, "keyProperties").forEach(query.putArray("keyProperties")::add);
+		return executeQuery(configuration, query);
+	}
+
+	private static List<String> splitList(final JsonNode arguments, final String field) {
+		if (!arguments.hasNonNull(field)) {
+			return List.of();
+		}
+		return Stream.of(arguments.get(field).asText().split(","))
+			.map(String::trim)
+			.filter(s -> !s.isEmpty())
+			.toList();
 	}
 }

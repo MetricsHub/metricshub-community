@@ -1,0 +1,65 @@
+package org.metricshub.web.mcp.tool;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
+import org.metricshub.agent.context.AgentContext;
+import org.metricshub.web.AgentContextHolder;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
+
+class MetricsHubToolCallbackProviderTest {
+
+	private static ToolCallback callback(final String name) {
+		return new DynamicToolCallback(
+			ToolDefinition.builder().name(name).description(name).inputSchema("{\"type\":\"object\"}").build(),
+			arguments -> Map.of()
+		);
+	}
+
+	private static List<String> names(final ToolCallback[] callbacks) {
+		return List.of(callbacks)
+			.stream()
+			.map(callback -> callback.getToolDefinition().name())
+			.toList();
+	}
+
+	@Test
+	void testDynamicToolsFollowTheContextGeneration() {
+		final AgentContextHolder holder = new AgentContextHolder(mock(AgentContext.class));
+		final AtomicInteger builds = new AtomicInteger();
+		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(
+			new ToolCallback[] { callback("ListHosts") },
+			holder,
+			List.of(ignored -> List.of(callback("ipmi_sel_" + builds.incrementAndGet())))
+		);
+
+		assertEquals(List.of("ListHosts", "ipmi_sel_1"), names(provider.getToolCallbacks()));
+		// Same generation: built once
+		assertEquals(List.of("ListHosts", "ipmi_sel_1"), names(provider.getToolCallbacks()));
+
+		holder.setAgentContext(mock(AgentContext.class));
+		assertEquals(List.of("ListHosts", "ipmi_sel_2"), names(provider.getToolCallbacks()));
+	}
+
+	@Test
+	void testAFailingFactoryLeavesTheStaticTools() {
+		final AgentContextHolder holder = new AgentContextHolder(mock(AgentContext.class));
+		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(
+			new ToolCallback[] { callback("ListHosts") },
+			holder,
+			List.of(
+				ignored -> {
+					throw new IllegalStateException("broken connector");
+				},
+				ignored -> List.of(callback("Windows_listProcesses"))
+			)
+		);
+
+		assertEquals(List.of("ListHosts", "Windows_listProcesses"), names(provider.getToolCallbacks()));
+	}
+}

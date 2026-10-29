@@ -32,11 +32,13 @@ import com.openai.client.OpenAIClient;
 import com.openai.core.http.StreamResponse;
 import com.openai.models.responses.ResponseCreateParams;
 import com.openai.models.responses.ResponseStreamEvent;
-import com.openai.models.responses.Tool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.config.ToolCallbackConfiguration;
 import org.metricshub.web.dto.chat.ChatRequest;
@@ -71,7 +73,6 @@ class ChatControllerTest {
 		final ChatController controller = new ChatController(
 			Optional.of(client),
 			chatConfig,
-			List.of(),
 			toolCallbackProvider,
 			toolResponseManagerService,
 			objectMapper
@@ -107,14 +108,12 @@ class ChatControllerTest {
 		when(client.responses().createStreaming(any(ResponseCreateParams.class))).thenReturn(streamResponse);
 
 		// Controller under test
-		final List<Tool> tools = List.of();
 		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
 		final JsonMapper objectMapper = new JsonMapper();
 		when(toolResponseManagerService.adaptToolOutput(any(), any())).thenAnswer(inv -> inv.getArgument(1));
 		final ChatController controller = new ChatController(
 			Optional.of(client),
 			chatConfig,
-			tools,
 			toolCallbackProvider,
 			toolResponseManagerService,
 			objectMapper
@@ -142,6 +141,13 @@ class ChatControllerTest {
 		@Bean
 		public PingToolService pingToolService() {
 			return mock(PingToolService.class);
+		}
+
+		@Bean
+		public AgentContextHolder agentContextHolder() {
+			final AgentContext agentContext = mock(AgentContext.class);
+			when(agentContext.getExtensionManager()).thenReturn(ExtensionManager.empty());
+			return new AgentContextHolder(agentContext);
 		}
 	}
 }

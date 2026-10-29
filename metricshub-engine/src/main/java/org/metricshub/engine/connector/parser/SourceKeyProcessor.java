@@ -102,28 +102,48 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 							final String monitorJobType = monitorJobEntry.getKey();
 							// Make sure the node is a monitor job node (discovery, collect, simple)
 							if (MONITOR_JOB_TYPES.contains(monitorJobType)) {
-								final JsonNode monitorJobNode = monitorJobEntry.getValue();
-								final JsonNode sourcesNode = monitorJobNode.get("sources");
-								if (sourcesNode != null && !sourcesNode.isNull()) {
-									sourcesNode
-										.properties()
-										.forEach((Entry<String, JsonNode> sourceEntry) -> {
-											final String sourceName = sourceEntry.getKey();
-											final JsonNode sourceNode = sourceEntry.getValue();
-											final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;
-											sourceObjectNode.set(
-												SOURCE_KEY_PROPERTY,
-												new TextNode(
-													String.format("${source::monitors.%s.%s.sources.%s}", monitorName, monitorJobType, sourceName)
-												)
-											);
-										});
-								}
+								setSourceKeys(
+									monitorJobEntry.getValue().get("sources"),
+									String.format("${source::monitors.%s.%s.sources.%%s}", monitorName, monitorJobType)
+								);
 							}
 						});
 				});
 		}
+
+		// Tool nodes: ${source::tools.<tool>.sources.<source>}
+		final JsonNode toolsNode = node.get("tools");
+		if (toolsNode != null && !toolsNode.isNull()) {
+			toolsNode
+				.properties()
+				.forEach((Entry<String, JsonNode> toolEntry) ->
+					setSourceKeys(
+						toolEntry.getValue().get("sources"),
+						String.format("${source::tools.%s.sources.%%s}", toolEntry.getKey())
+					)
+				);
+		}
 		return node;
+	}
+
+	/**
+	 * Sets the "key" property of each source node under the given sources node.
+	 *
+	 * @param sourcesNode The node holding the sources by name, possibly {@code null}
+	 * @param keyFormat   The format of the key, with one {@code %s} for the source name
+	 */
+	private static void setSourceKeys(final JsonNode sourcesNode, final String keyFormat) {
+		if (sourcesNode == null || sourcesNode.isNull()) {
+			return;
+		}
+		sourcesNode
+			.properties()
+			.forEach((Entry<String, JsonNode> sourceEntry) ->
+				((ObjectNode) sourceEntry.getValue()).set(
+					SOURCE_KEY_PROPERTY,
+					new TextNode(String.format(keyFormat, sourceEntry.getKey()))
+				)
+			);
 	}
 
 	/**

@@ -69,6 +69,7 @@ import org.metricshub.web.dto.chat.ChatMessage;
 import org.metricshub.web.dto.chat.ChatRequest;
 import org.metricshub.web.service.openai.ContextBudgetHolder;
 import org.metricshub.web.service.openai.ContextBudgetManager;
+import org.metricshub.web.service.openai.SpringToolsToOpenAiTools;
 import org.metricshub.web.service.openai.ToolResponseManagerService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -152,12 +153,8 @@ public class ChatController {
 	private final ChatOpenAiConfigurationProperties chatConfig;
 
 	/**
-	 * List of tools available for the chat model.
-	 */
-	private final List<Tool> tools;
-
-	/**
-	 * Tool callback provider for executing tool functions.
+	 * Tool callback provider for listing and executing tool functions. The tools are read from it on every
+	 * request: the connector and protocol tools change with the configuration.
 	 */
 	private final ToolCallbackProvider toolCallbackProvider;
 
@@ -249,6 +246,9 @@ public class ChatController {
 
 		final String model = chatConfig.getModel();
 
+		// The tools as the agent exposes them now, kept for the whole conversation turn
+		final List<Tool> tools = SpringToolsToOpenAiTools.buildOpenAiTools(toolCallbackProvider.getToolCallbacks());
+
 		// Build initial response parameters using
 		// - OpenAI model from config
 		// - Input items (history + user message)
@@ -280,7 +280,7 @@ public class ChatController {
 
 		try {
 			// Run the tool execution loop
-			streamResponses(emitter, terminated, streamRef, initialParams);
+			streamResponses(emitter, terminated, streamRef, initialParams, tools);
 
 			// If not already terminated, send done event and terminate stream safely
 			if (!terminated.get()) {
@@ -311,12 +311,14 @@ public class ChatController {
 	 * @param terminated    AtomicBoolean indicating if the stream has been terminated.
 	 * @param streamRef     AtomicReference to hold the current StreamResponse for cleanup.
 	 * @param initialParams The initial response creation parameters.
+	 * @param tools         The tools exposed to the model for the follow-up calls.
 	 */
 	private void streamResponses(
 		final SseEmitter emitter,
 		final AtomicBoolean terminated,
 		final AtomicReference<StreamResponse<ResponseStreamEvent>> streamRef,
-		final ResponseCreateParams initialParams
+		final ResponseCreateParams initialParams,
+		final List<Tool> tools
 	) {
 		// Current response creation parameters
 		ResponseCreateParams currentParams = initialParams;

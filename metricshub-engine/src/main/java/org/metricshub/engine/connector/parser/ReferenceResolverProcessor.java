@@ -40,7 +40,12 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 	private static final String SOURCE_REF_FORMAT = "${source::%s}";
 
 	private static final Pattern REGEX_SOURCE_REF_MONITORS = Pattern.compile(
-		"\\$\\{source::(?!((?i)monitors\\.([\\w()\\.-]+)\\.(discovery|collect|simple)\\.sources\\.([\\w()\\.-]+)\\}|(?i)(beforeAll|afterAll)\\.([\\w()\\.-]+)\\}))([\\w()\\.-]+)\\}"
+		// A relative reference: ${source::name}, where name is not an absolute monitor, surrounding or tool reference
+		"\\$\\{source::(?!(" +
+			"(?i)monitors\\.([\\w()\\.-]+)\\.(discovery|collect|simple)\\.sources\\.([\\w()\\.-]+)\\}" +
+			"|(?i)(beforeAll|afterAll)\\.([\\w()\\.-]+)\\}" +
+			"|(?i)tools\\.(?:[\\w()\\.-]+)\\.sources\\.(?:[\\w()\\.-]+)\\}" +
+			"))([\\w()\\.-]+)\\}"
 	);
 
 	@Builder
@@ -52,7 +57,7 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 
 	/**
 	 * Updates the source references in the given value based on the context provided.<br>
-	 * This method handles the source references in the monitors, beforeAll, and afterAll sections.
+	 * This method handles the source references in the monitors, tools, beforeAll, and afterAll sections.
 	 *
 	 * @param valueToUpdate The string value that contains the source references to be updated.
 	 * @param context The context used for updating the source references, providing additional
@@ -79,6 +84,17 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 					String.format(
 						SOURCE_REF_FORMAT,
 						Stream.of(parts[0], parts[1], parts[2], "sources", match.group(7)).collect(Collectors.joining("."))
+					)
+				);
+			} else if (
+				// CHECKSTYLE:OFF
+				parts.length >= 3 && "tools".equals(parts[0]) && ("sources".equals(parts[2]) || "result".equals(parts[2])) // CHECKSTYLE:ON
+			) {
+				// A tool's sources and result refer to the tool's own sources: ${source::tools.<tool>.sources.<name>}
+				return Matcher.quoteReplacement(
+					String.format(
+						SOURCE_REF_FORMAT,
+						Stream.of(parts[0], parts[1], "sources", match.group(7)).collect(Collectors.joining("."))
 					)
 				);
 			} else if (parts.length >= 2 && ("beforeAll".equals(parts[0]) || "afterAll".equals(parts[0]))) {
