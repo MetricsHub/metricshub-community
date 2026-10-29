@@ -16,12 +16,12 @@
 		<!-- OpenTelemetry Javaagent location -->
 		<otelJavaAgentUrl>https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${openTelemetryVersion}/opentelemetry-javaagent.jar</otelJavaAgentUrl>
 		<jjwt.version>0.13.0</jjwt.version>
-		<spring.boot.version>4.1.1</spring.boot.version>
-		<spring.ai.version>2.0.1</spring.ai.version>
-		<springdoc.version>3.1.1</springdoc.version>
-		<openai-java.version>4.34.0</openai-java.version>
+		<spring.boot.version>4.1.2</spring.boot.version>
+		<spring.ai.version>2.0.2</spring.ai.version>
+		<springdoc.version>3.2.0</springdoc.version>
+		<openai-java.version>4.91.0</openai-java.version>
 		<victools.version>5.0.0</victools.version>
-		<jackson3.version>3.1.8</jackson3.version>
+		<jackson3.version>3.2.4</jackson3.version>
 	</properties>
 
 	<dependencyManagement>
@@ -558,7 +558,7 @@
 						-->
 						<groupId>org.apache.logging.log4j</groupId>
 						<artifactId>log4j-transform-maven-shade-plugin-extensions</artifactId>
-						<version>0.1.0</version>
+						<version>0.2.0</version>
 					</dependency>
 				</dependencies>
 				<executions>
