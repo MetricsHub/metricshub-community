@@ -37,7 +37,6 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
-import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.MCPConfigHelper;
 import org.metricshub.web.mcp.QueryResponse;
 import org.springframework.ai.tool.ToolCallback;
@@ -58,12 +57,11 @@ public final class ProtocolToolCallbacks {
 	public static final String TIMEOUT = "timeout";
 
 	/**
-	 * @param agentContextHolder the running agent context
+	 * @param agentContext the agent context to build the tools from, the one every callback stays on
 	 * @return the tools of every loaded protocol extension, destructive ones only when allowed
 	 */
-	public static List<ToolCallback> from(final AgentContextHolder agentContextHolder) {
+	public static List<ToolCallback> from(final AgentContext agentContext) {
 		final List<ToolCallback> callbacks = new ArrayList<>();
-		final AgentContext agentContext = agentContextHolder.getAgentContext();
 		if (agentContext == null || agentContext.getExtensionManager() == null) {
 			return callbacks;
 		}
@@ -144,7 +142,7 @@ public final class ProtocolToolCallbacks {
 			agentContext
 		)
 			.stream()
-			.filter(extension::isValidConfiguration)
+			.filter(extension::isToolConfiguration)
 			.findFirst();
 		if (maybeConfiguration.isEmpty()) {
 			return QueryResponse.builder()

@@ -437,4 +437,10 @@ public class OsCommandExtension implements IProtocolExtension {
 				.build()
 		);
 	}
+
+	@Override
+	public boolean isToolConfiguration(final IConfiguration configuration) {
+		// The command tool runs over SSH only: the local OS command configuration is not a remote host
+		return configuration instanceof SshConfiguration;
+	}
 }

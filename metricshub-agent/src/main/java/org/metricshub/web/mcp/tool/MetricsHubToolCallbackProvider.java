@@ -28,6 +28,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.context.AgentContext;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -42,7 +43,7 @@ public final class MetricsHubToolCallbackProvider implements ToolCallbackProvide
 
 	private final ToolCallback[] staticCallbacks;
 	private final AgentContextHolder agentContextHolder;
-	private final List<Function<AgentContextHolder, List<ToolCallback>>> dynamicFactories;
+	private final List<Function<AgentContext, List<ToolCallback>>> dynamicFactories;
 
 	/**
 	 * The callbacks built for one generation of the agent context.
@@ -68,7 +69,7 @@ public final class MetricsHubToolCallbackProvider implements ToolCallbackProvide
 	MetricsHubToolCallbackProvider(
 		final ToolCallback[] staticCallbacks,
 		final AgentContextHolder agentContextHolder,
-		final List<Function<AgentContextHolder, List<ToolCallback>>> dynamicFactories
+		final List<Function<AgentContext, List<ToolCallback>>> dynamicFactories
 	) {
 		this.staticCallbacks = staticCallbacks.clone();
 		this.agentContextHolder = agentContextHolder;
@@ -77,21 +78,28 @@ public final class MetricsHubToolCallbackProvider implements ToolCallbackProvide
 
 	@Override
 	public ToolCallback[] getToolCallbacks() {
-		final long generation = agentContextHolder.getGeneration();
 		Built current = built;
+		long generation = agentContextHolder.getGeneration();
 		if (current == null || current.generation() != generation) {
+			// One context for every factory: the generation is read before and after taking the context, so
+			// that a reload in between is noticed and the snapshot is never half old, half new
+			AgentContext agentContext = agentContextHolder.getAgentContext();
+			if (generation != agentContextHolder.getGeneration()) {
+				generation = agentContextHolder.getGeneration();
+				agentContext = agentContextHolder.getAgentContext();
+			}
 			// Two threads may build the same generation at once: both results are equivalent
-			current = new Built(generation, build());
+			current = new Built(generation, build(agentContext));
 			built = current;
 		}
 		return current.callbacks().clone();
 	}
 
-	private ToolCallback[] build() {
+	private ToolCallback[] build(final AgentContext agentContext) {
 		final List<ToolCallback> callbacks = new ArrayList<>(List.of(staticCallbacks));
-		for (final Function<AgentContextHolder, List<ToolCallback>> factory : dynamicFactories) {
+		for (final Function<AgentContext, List<ToolCallback>> factory : dynamicFactories) {
 			try {
-				callbacks.addAll(factory.apply(agentContextHolder));
+				callbacks.addAll(factory.apply(agentContext));
 			} catch (Exception e) {
 				// The product tools must stay available whatever an extension or connector declares
 				log.error("Failed to build the dynamic MCP tools: {}", e.getMessage());

@@ -217,6 +217,18 @@ public interface IProtocolExtension {
 	}
 
 	/**
+	 * Tells whether a host configuration is one the tools of this extension can run with. The default is
+	 * {@link #isValidConfiguration(IConfiguration)}; an extension that accepts several configuration types for
+	 * monitoring but runs its tools over one of them only (SSH, not the local OS command) narrows it.
+	 *
+	 * @param configuration a configuration of the host
+	 * @return whether {@link #executeTool(String, IConfiguration, JsonNode)} accepts it
+	 */
+	default boolean isToolConfiguration(IConfiguration configuration) {
+		return isValidConfiguration(configuration);
+	}
+
+	/**
 	 * Invoked when a recording session ends for a host.
 	 *
 	 * <p>Extensions that buffer recording data in memory can override this hook

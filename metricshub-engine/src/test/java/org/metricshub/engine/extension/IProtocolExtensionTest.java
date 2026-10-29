@@ -29,5 +29,10 @@ class IProtocolExtensionTest {
 		when(extension.executeQuery(configuration, arguments)).thenReturn("Linux");
 
 		assertEquals("Linux", extension.executeTool("runCommand", configuration, arguments));
+
+		// A tool runs with any configuration the extension accepts, unless it says otherwise
+		when(extension.isToolConfiguration(configuration)).thenCallRealMethod();
+		when(extension.isValidConfiguration(configuration)).thenReturn(true);
+		assertEquals(true, extension.isToolConfiguration(configuration));
 	}
 }

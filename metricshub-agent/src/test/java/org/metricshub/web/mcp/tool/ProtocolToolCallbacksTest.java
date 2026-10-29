@@ -61,7 +61,7 @@ class ProtocolToolCallbacksTest {
 
 		configuration = mock(IConfiguration.class);
 		when(configuration.copy()).thenReturn(configuration);
-		when(extension.isValidConfiguration(configuration)).thenReturn(true);
+		when(extension.isToolConfiguration(configuration)).thenReturn(true);
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
@@ -87,16 +87,19 @@ class ProtocolToolCallbacksTest {
 
 	@Test
 	void testDestructiveToolsNeedTheFlag() {
-		assertEquals(List.of("ipmi_sel"), names(ProtocolToolCallbacks.from(agentContextHolder)));
+		assertEquals(List.of("ipmi_sel"), names(ProtocolToolCallbacks.from(agentContextHolder.getAgentContext())));
 
 		System.setProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG, "true");
-		assertEquals(List.of("ipmi_sel", "ipmi_chassis"), names(ProtocolToolCallbacks.from(agentContextHolder)));
+		assertEquals(
+			List.of("ipmi_sel", "ipmi_chassis"),
+			names(ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()))
+		);
 	}
 
 	@Test
 	void testToolRunsThroughTheExtensionWithTheHostConfiguration() throws Exception {
 		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn("header\nrow");
-		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder).get(0);
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"since\":\"1h\",\"limit\":5}"));
 
@@ -113,7 +116,7 @@ class ProtocolToolCallbacksTest {
 	@Test
 	void testTimeoutIsAppliedToTheConfigurationNotPassedToTheExtension() throws Exception {
 		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn("ok");
-		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder).get(0);
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 		assertTrue(callback.getToolDefinition().inputSchema().contains("\"timeout\""));
 
 		MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"timeout\":45}"));
@@ -138,7 +141,7 @@ class ProtocolToolCallbacksTest {
 
 	@Test
 	void testUnknownHostIsReported() throws Exception {
-		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder).get(0);
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"nope\"]}"));
 
@@ -151,7 +154,7 @@ class ProtocolToolCallbacksTest {
 	@Test
 	void testExtensionFailureIsReported() throws Exception {
 		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenThrow(new IllegalStateException("timeout"));
-		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder).get(0);
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"]}"));
 

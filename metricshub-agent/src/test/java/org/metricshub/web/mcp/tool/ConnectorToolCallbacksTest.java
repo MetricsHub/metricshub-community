@@ -53,18 +53,21 @@ class ConnectorToolCallbacksTest {
 
 	@Test
 	void testDestructiveToolsNeedTheFlag() {
-		assertEquals(List.of("TestConnectorWithTool_listThings"), names(ConnectorToolCallbacks.from(agentContextHolder)));
+		assertEquals(
+			List.of("TestConnectorWithTool_listThings"),
+			names(ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()))
+		);
 
 		System.setProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG, "true");
 		assertEquals(
 			List.of("TestConnectorWithTool_listThings", "TestConnectorWithTool_reboot"),
-			names(ConnectorToolCallbacks.from(agentContextHolder))
+			names(ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()))
 		);
 	}
 
 	@Test
 	void testToolRunsTheConnectorSourcesOnTheHost() throws Exception {
-		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder).get(0);
+		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 		assertEquals("Lists the things whose name matches a pattern.", callback.getToolDefinition().description());
 
 		final JsonNode result = MAPPER.readTree(
@@ -81,7 +84,7 @@ class ConnectorToolCallbacksTest {
 
 	@Test
 	void testUnknownHostIsReported() throws Exception {
-		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder).get(0);
+		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"nope\"],\"owner\":\"me\"}"));
 

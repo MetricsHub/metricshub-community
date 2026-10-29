@@ -1,6 +1,7 @@
 package org.metricshub.extension.oscommand;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,5 +38,12 @@ class OsCommandExtensionToolsTest {
 				JsonNodeFactory.instance.objectNode().put("commandLine", "df -h")
 			)
 		);
+	}
+
+	@Test
+	void testToolsRunOverSshOnly() {
+		final OsCommandExtension extension = new OsCommandExtension(new OsCommandService());
+		assertTrue(extension.isToolConfiguration(SshConfiguration.sshConfigurationBuilder().build()));
+		assertFalse(extension.isToolConfiguration(OsCommandConfiguration.builder().build()));
 	}
 }

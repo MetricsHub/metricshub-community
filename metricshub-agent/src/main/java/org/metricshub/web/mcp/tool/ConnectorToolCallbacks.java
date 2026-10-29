@@ -39,7 +39,6 @@ import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
-import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.MCPConfigHelper;
 import org.metricshub.web.mcp.QueryResponse;
 import org.springframework.ai.tool.ToolCallback;
@@ -62,12 +61,11 @@ public final class ConnectorToolCallbacks {
 	public record ToolTable(List<String> columns, List<List<String>> rows) {}
 
 	/**
-	 * @param agentContextHolder the running agent context
+	 * @param agentContext the agent context to build the tools from, the one every callback stays on
 	 * @return the tools of every connector in the store, destructive ones only when allowed
 	 */
-	public static List<ToolCallback> from(final AgentContextHolder agentContextHolder) {
+	public static List<ToolCallback> from(final AgentContext agentContext) {
 		final List<ToolCallback> callbacks = new ArrayList<>();
-		final AgentContext agentContext = agentContextHolder.getAgentContext();
 		final ConnectorStore connectorStore = agentContext == null ? null : agentContext.getConnectorStore();
 		if (connectorStore == null || connectorStore.getStore() == null) {
 			return callbacks;
