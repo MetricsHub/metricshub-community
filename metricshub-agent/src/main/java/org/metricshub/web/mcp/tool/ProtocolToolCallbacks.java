@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -46,6 +47,7 @@ import org.springframework.ai.tool.ToolCallback;
  * through {@link IProtocolExtension#executeTool(String, IConfiguration, com.fasterxml.jackson.databind.JsonNode)}.
  * Every tool gains a {@code timeout} parameter, applied to the host's configuration before the extension runs.
  */
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ProtocolToolCallbacks {
 
@@ -70,13 +72,23 @@ public final class ProtocolToolCallbacks {
 				if (definition.destructive() && !destructiveEnabled) {
 					continue;
 				}
-				callbacks.add(
-					HostTools.perHost(
-						HostTools.toolName(extension.getIdentifier(), definition.name()),
-						withTimeout(definition),
-						(hostname, arguments) -> execute(extension, definition.name(), hostname, arguments, agentContextHolder)
-					)
-				);
+				try {
+					callbacks.add(
+						HostTools.perHost(
+							HostTools.toolName(extension.getIdentifier(), definition.name()),
+							withTimeout(definition),
+							(hostname, arguments) -> execute(extension, definition.name(), hostname, arguments, agentContextHolder)
+						)
+					);
+				} catch (IllegalArgumentException e) {
+					// One bad declaration must not take the extension's other tools down
+					log.warn(
+						"Extension {}: tool {} is not exposed: {}",
+						extension.getIdentifier(),
+						definition.name(),
+						e.getMessage()
+					);
+				}
 			}
 		}
 		return callbacks;
@@ -87,6 +99,14 @@ public final class ProtocolToolCallbacks {
 	 * @return the same tool with the {@code timeout} parameter the agent handles
 	 */
 	static ToolDefinition withTimeout(final ToolDefinition definition) {
+		if (definition.parameters().containsKey(TIMEOUT)) {
+			throw new IllegalArgumentException(
+				"Tool %s declares the parameter %s, which the agent reserves for the host's timeout".formatted(
+					definition.name(),
+					TIMEOUT
+				)
+			);
+		}
 		final Map<String, ToolParameter> parameters = new LinkedHashMap<>(definition.parameters());
 		parameters.put(
 			TIMEOUT,

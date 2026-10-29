@@ -67,6 +67,11 @@ public final class HostTools {
 
 	static final int DEFAULT_POOL_SIZE = 60;
 
+	/**
+	 * The parameter names the agent adds to every tool, which a tool may not declare itself.
+	 */
+	static final List<String> RESERVED_PARAMETERS = List.of(HOSTNAME, POOL_SIZE);
+
 	private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 
 	/**
@@ -102,6 +107,13 @@ public final class HostTools {
 		final ToolDefinition definition,
 		final BiFunction<String, Map<String, String>, Object> perHost
 	) {
+		for (final String reserved : RESERVED_PARAMETERS) {
+			if (definition.parameters().containsKey(reserved)) {
+				throw new IllegalArgumentException(
+					"Tool %s declares the parameter %s, which the agent reserves for the host selection".formatted(name, reserved)
+				);
+			}
+		}
 		final org.springframework.ai.tool.definition.ToolDefinition springDefinition =
 			org.springframework.ai.tool.definition.ToolDefinition.builder()
 				.name(name)

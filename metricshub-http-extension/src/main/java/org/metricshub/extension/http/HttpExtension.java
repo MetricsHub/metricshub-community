@@ -276,7 +276,6 @@ public class HttpExtension implements IProtocolExtension {
 				"Sends an HTTP GET request to a host with the host's configured HTTP settings and credentials."
 			)
 				.parameter("path", ToolParameter.STRING, "The path on the host, e.g. /redfish/v1/Systems", false, "/")
-				.parameter("url", "A full URL instead of the path, e.g. https://host:8443/api/v1/status")
 				.parameter("header", "Headers as newline-separated key: value pairs")
 				.parameter("resultContent", "What to return: body (default), header, http_status or all")
 				.build(),
@@ -292,7 +291,6 @@ public class HttpExtension implements IProtocolExtension {
 					false,
 					"/"
 				)
-				.parameter("url", "A full URL instead of the path")
 				.parameter("header", "Headers as newline-separated key: value pairs")
 				.parameter("body", "The request body")
 				.parameter("resultContent", "What to return: body (default), header, http_status or all")

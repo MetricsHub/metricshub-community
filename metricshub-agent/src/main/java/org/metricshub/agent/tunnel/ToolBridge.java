@@ -88,7 +88,12 @@ public class ToolBridge {
 	 */
 	static final int MAX_WORKER_THREADS = 32;
 
-	private final ToolRegistrySnapshot snapshot;
+	/**
+	 * The advertised tools and their callbacks. Replaced on a configuration reload that keeps the advertised
+	 * set but rebuilds the callbacks: a connector or protocol tool's body belongs to the context it was built
+	 * from, which the reload replaces and later closes.
+	 */
+	private volatile ToolRegistrySnapshot snapshot;
 	private final ObjLongConsumer<TunnelMessage> sender;
 	private final ExecutorService workers;
 	private final ScheduledThreadPoolExecutor timer;
@@ -161,6 +166,16 @@ public class ToolBridge {
 			new SynchronousQueue<>(),
 			daemonThreads("metricshub-tunnel-tool")
 		);
+	}
+
+	/**
+	 * Replaces the callbacks the invocations run, for a reload that rebuilt them under the same advertised
+	 * names. Invocations already running keep the callback they started with.
+	 *
+	 * @param snapshot the rebuilt tools and callbacks, advertising the same set as the current one
+	 */
+	public void update(final ToolRegistrySnapshot snapshot) {
+		this.snapshot = snapshot;
 	}
 
 	/**

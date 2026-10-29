@@ -22,7 +22,9 @@ package org.metricshub.web.mcp.tool;
  */
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.web.AgentContextHolder;
@@ -95,6 +97,15 @@ public final class MetricsHubToolCallbackProvider implements ToolCallbackProvide
 				log.debug("Failed to build the dynamic MCP tools:", e);
 			}
 		}
-		return callbacks.toArray(ToolCallback[]::new);
+		// One callback per advertised name: the MCP and tunnel registries key on it, and a second
+		// definition would silently replace the first in one place and not the other
+		final Map<String, ToolCallback> byName = new LinkedHashMap<>();
+		for (final ToolCallback callback : callbacks) {
+			final String name = callback.getToolDefinition().name();
+			if (byName.putIfAbsent(name, callback) != null) {
+				log.error("Tool {} is declared twice; the second declaration is ignored.", name);
+			}
+		}
+		return byName.values().toArray(ToolCallback[]::new);
 	}
 }

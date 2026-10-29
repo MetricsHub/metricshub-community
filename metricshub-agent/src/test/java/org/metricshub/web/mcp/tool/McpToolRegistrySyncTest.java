@@ -25,19 +25,45 @@ class McpToolRegistrySyncTest {
 		);
 	}
 
+	/**
+	 * A product tool: an annotated method, not rebuilt on reload.
+	 */
+	private static ToolCallback staticCallback(final String name, final String description) {
+		final ToolDefinition definition = ToolDefinition.builder()
+			.name(name)
+			.description(description)
+			.inputSchema("{\"type\":\"object\"}")
+			.build();
+		// Not a Mockito mock: its definition is read while another stubbing is in progress
+		return new ToolCallback() {
+			@Override
+			public ToolDefinition getToolDefinition() {
+				return definition;
+			}
+
+			@Override
+			public String call(final String toolInput) {
+				return "{}";
+			}
+		};
+	}
+
 	@Test
 	void testRefreshAddsRemovesAndReplaces() {
-		final ToolCallback kept = callback("ListHosts", "Lists the hosts.");
+		final ToolCallback kept = staticCallback("ListHosts", "Lists the hosts.");
 		final ToolCallback changed = callback("Windows_listProcesses", "Lists the processes, now with I/O.");
+		// Same schema as before, but a dynamic tool's body belongs to the new context
+		final ToolCallback rebuilt = callback("ipmi_sensors", "Reads the sensors.");
 		final ToolCallback added = callback("ipmi_sel", "Reads the SEL.");
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
-		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { kept, changed, added });
+		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { kept, changed, rebuilt, added });
 
 		final McpSyncServer server = mock(McpSyncServer.class);
 		when(server.listTools()).thenReturn(
 			List.of(
 				McpToolUtils.toSyncToolSpecification(kept).tool(),
 				McpToolUtils.toSyncToolSpecification(callback("Windows_listProcesses", "Lists the processes.")).tool(),
+				McpToolUtils.toSyncToolSpecification(callback("ipmi_sensors", "Reads the sensors.")).tool(),
 				McpToolUtils.toSyncToolSpecification(callback("Gone_tool", "Was removed by the reload.")).tool()
 			)
 		);
@@ -46,8 +72,10 @@ class McpToolRegistrySyncTest {
 
 		verify(server).removeTool("Gone_tool");
 		verify(server).removeTool("Windows_listProcesses");
+		verify(server).removeTool("ipmi_sensors");
 		verify(server, never()).removeTool("ListHosts");
 		verify(server).addTool(argThat(specification -> "Windows_listProcesses".equals(specification.tool().name())));
+		verify(server).addTool(argThat(specification -> "ipmi_sensors".equals(specification.tool().name())));
 		verify(server).addTool(argThat(specification -> "ipmi_sel".equals(specification.tool().name())));
 		verify(server, never()).addTool(argThat(specification -> "ListHosts".equals(specification.tool().name())));
 	}

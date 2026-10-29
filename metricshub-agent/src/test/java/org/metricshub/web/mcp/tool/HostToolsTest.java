@@ -1,6 +1,7 @@
 package org.metricshub.web.mcp.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,6 +25,22 @@ class HostToolsTest {
 		parameters.put("pattern", new ToolParameter("string", "Regex on the name", false, ".*"));
 		parameters.put("owner", new ToolParameter(null, "The owner", true, null));
 		return new ToolDefinition("listThings", "Lists the things.", parameters, destructive);
+	}
+
+	@Test
+	void testPerHostRejectsReservedParameterNames() {
+		final ToolDefinition definition = new ToolDefinition(
+			"bad",
+			"Declares the host selection itself.",
+			Map.of(HostTools.HOSTNAME, new ToolParameter("string", "The host", true, null)),
+			false
+		);
+
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			HostTools.perHost("Test_bad", definition, (hostname, arguments) -> Map.of())
+		);
+
+		assertTrue(exception.getMessage().contains(HostTools.HOSTNAME), exception.getMessage());
 	}
 
 	@Test

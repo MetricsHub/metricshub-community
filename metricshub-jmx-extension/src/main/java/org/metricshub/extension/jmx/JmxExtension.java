@@ -271,7 +271,7 @@ public class JmxExtension implements IProtocolExtension {
 				"Reads attributes of the MBeans matching an object name pattern on a JMX host and returns them as a text table."
 			)
 				.requiredParameter("objectName", "The MBean object name pattern, e.g. java.lang:type=MemoryPool,name=*")
-				.parameter("attributes", "Comma-separated attributes to read, e.g. Usage,PeakUsage")
+				.requiredParameter("attributes", "Comma-separated attributes to read, e.g. Usage,PeakUsage")
 				.parameter(
 					"keyProperties",
 					"Comma-separated key properties of the object name to include as columns, e.g. name"

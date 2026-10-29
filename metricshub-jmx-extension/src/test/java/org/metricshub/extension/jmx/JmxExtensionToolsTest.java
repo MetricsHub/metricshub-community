@@ -28,6 +28,7 @@ class JmxExtensionToolsTest {
 		final List<ToolDefinition> tools = jmxExtension.getTools();
 		assertEquals(List.of("fetchMBean"), tools.stream().map(ToolDefinition::name).toList());
 		assertTrue(tools.get(0).parameters().get("objectName").required());
+		assertTrue(tools.get(0).parameters().get("attributes").required());
 	}
 
 	@Test

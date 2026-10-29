@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
@@ -48,6 +49,7 @@ import org.springframework.ai.tool.ToolCallback;
  * {@code <connector>_<tool>}. On each host the tool runs through {@link ToolStrategy} on a telemetry manager of
  * its own, built from the host's configuration, so that the collected monitors are left untouched.
  */
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConnectorToolCallbacks {
 
@@ -81,11 +83,16 @@ public final class ConnectorToolCallbacks {
 						if (definition.destructive() && !destructiveEnabled) {
 							return;
 						}
-						callbacks.add(
-							HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
-								run(agentContextHolder, connectorId, connector, toolName, tool, hostname, arguments)
-							)
-						);
+						try {
+							callbacks.add(
+								HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
+									run(agentContextHolder, connectorId, connector, toolName, tool, hostname, arguments)
+								)
+							);
+						} catch (IllegalArgumentException e) {
+							// One bad declaration must not take the connector's other tools down
+							log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
+						}
 					})
 			);
 		return callbacks;

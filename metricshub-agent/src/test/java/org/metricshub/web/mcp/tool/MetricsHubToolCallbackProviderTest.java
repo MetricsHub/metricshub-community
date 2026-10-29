@@ -47,6 +47,22 @@ class MetricsHubToolCallbackProviderTest {
 	}
 
 	@Test
+	void testADuplicateNameKeepsTheFirstDeclaration() {
+		final AgentContextHolder holder = new AgentContextHolder(mock(AgentContext.class));
+		final ToolCallback product = callback("http_get");
+		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(
+			new ToolCallback[] { product },
+			holder,
+			List.of(ignored -> List.of(callback("http_get"), callback("http_request")))
+		);
+
+		final ToolCallback[] callbacks = provider.getToolCallbacks();
+
+		assertEquals(List.of("http_get", "http_request"), names(callbacks));
+		assertEquals(product, callbacks[0]);
+	}
+
+	@Test
 	void testAFailingFactoryLeavesTheStaticTools() {
 		final AgentContextHolder holder = new AgentContextHolder(mock(AgentContext.class));
 		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(

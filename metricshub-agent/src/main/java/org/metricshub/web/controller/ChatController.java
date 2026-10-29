@@ -246,8 +246,10 @@ public class ChatController {
 
 		final String model = chatConfig.getModel();
 
-		// The tools as the agent exposes them now, kept for the whole conversation turn
-		final List<Tool> tools = SpringToolsToOpenAiTools.buildOpenAiTools(toolCallbackProvider.getToolCallbacks());
+		// The tools as the agent exposes them now, advertised and run from this one snapshot for the whole
+		// turn: a reload in the middle must not pair a call for the old schema with a new implementation
+		final ToolCallback[] callbacks = toolCallbackProvider.getToolCallbacks();
+		final List<Tool> tools = SpringToolsToOpenAiTools.buildOpenAiTools(callbacks);
 
 		// Build initial response parameters using
 		// - OpenAI model from config
@@ -280,7 +282,7 @@ public class ChatController {
 
 		try {
 			// Run the tool execution loop
-			streamResponses(emitter, terminated, streamRef, initialParams, tools);
+			streamResponses(emitter, terminated, streamRef, initialParams, tools, callbacks);
 
 			// If not already terminated, send done event and terminate stream safely
 			if (!terminated.get()) {
@@ -312,13 +314,15 @@ public class ChatController {
 	 * @param streamRef     AtomicReference to hold the current StreamResponse for cleanup.
 	 * @param initialParams The initial response creation parameters.
 	 * @param tools         The tools exposed to the model for the follow-up calls.
+	 * @param callbacks     The callbacks those tools were built from, run for the model's calls.
 	 */
 	private void streamResponses(
 		final SseEmitter emitter,
 		final AtomicBoolean terminated,
 		final AtomicReference<StreamResponse<ResponseStreamEvent>> streamRef,
 		final ResponseCreateParams initialParams,
-		final List<Tool> tools
+		final List<Tool> tools,
+		final ToolCallback[] callbacks
 	) {
 		// Current response creation parameters
 		ResponseCreateParams currentParams = initialParams;
@@ -382,7 +386,7 @@ public class ChatController {
 
 			final FunctionCallResponse functionCallResponse;
 			try {
-				functionCallResponse = callFunctions(emitter, terminated, toolCalls);
+				functionCallResponse = callFunctions(emitter, terminated, toolCalls, callbacks);
 			} catch (Exception ex) {
 				log.error("Error during tool function calls", ex);
 				return;
@@ -430,19 +434,21 @@ public class ChatController {
 	 * @param emitter    SseEmitter to send events to the client
 	 * @param terminated AtomicBoolean indicating if the stream has been terminated
 	 * @param toolCalls  List of ToolCallData representing the tool calls to execute
+	 * @param callbacks  The callbacks advertised for this turn
 	 * @return List of ResponseInputItem representing the function call outputs and the uploaded file IDs
 	 */
 	private FunctionCallResponse callFunctions(
 		final SseEmitter emitter,
 		final AtomicBoolean terminated,
-		final List<ToolCallData> toolCalls
+		final List<ToolCallData> toolCalls,
+		final ToolCallback[] callbacks
 	) {
 		final List<ResponseInputItem> followUpInputs = new ArrayList<>();
 		final List<String> fileIds = new ArrayList<>();
 
 		for (ToolCallData tc : toolCalls) {
 			final var toolName = tc.getToolName();
-			final var callback = findToolCallback(toolName);
+			final var callback = findToolCallback(toolName, callbacks);
 			if (callback == null) {
 				sendEventSafely(
 					emitter,
@@ -756,11 +762,12 @@ public class ChatController {
 
 	/**
 	 * Find the ToolCallback by tool name.
-	 * @param toolName the name of the tool
+	 * @param toolName  the name of the tool
+	 * @param callbacks the callbacks advertised for the current turn
 	 * @return the ToolCallback if found, null otherwise
 	 */
-	private ToolCallback findToolCallback(String toolName) {
-		for (ToolCallback cb : toolCallbackProvider.getToolCallbacks()) {
+	private static ToolCallback findToolCallback(final String toolName, final ToolCallback[] callbacks) {
+		for (ToolCallback cb : callbacks) {
 			var def = cb.getToolDefinition();
 			if (toolName.equalsIgnoreCase(def.name())) {
 				return cb;

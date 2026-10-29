@@ -1,6 +1,7 @@
 package org.metricshub.extension.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -37,6 +38,7 @@ class HttpExtensionToolsTest {
 			tools.stream().filter(ToolDefinition::destructive).map(ToolDefinition::name).toList()
 		);
 		assertEquals("/", tools.get(0).parameters().get("path").defaultValue());
+		assertFalse(tools.get(0).parameters().containsKey("url"));
 	}
 
 	@Test

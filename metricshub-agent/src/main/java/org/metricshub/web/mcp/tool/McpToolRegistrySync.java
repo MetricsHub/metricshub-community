@@ -79,9 +79,9 @@ public class McpToolRegistrySync {
 	 * Brings every server's tool list to what the provider exposes now.
 	 */
 	public void refresh() {
-		final Map<String, SyncToolSpecification> current = new LinkedHashMap<>();
+		final Map<String, ToolCallback> current = new LinkedHashMap<>();
 		for (final ToolCallback callback : toolCallbackProvider.getToolCallbacks()) {
-			current.put(callback.getToolDefinition().name(), McpToolUtils.toSyncToolSpecification(callback));
+			current.put(callback.getToolDefinition().name(), callback);
 		}
 		for (final McpSyncServer server : servers) {
 			try {
@@ -93,28 +93,48 @@ public class McpToolRegistrySync {
 		}
 	}
 
-	private static void sync(final McpSyncServer server, final Map<String, SyncToolSpecification> current) {
+	private static void sync(final McpSyncServer server, final Map<String, ToolCallback> current) {
 		final Map<String, McpSchema.Tool> advertised = new LinkedHashMap<>();
 		server.listTools().forEach(tool -> advertised.put(tool.name(), tool));
+		final Map<String, SyncToolSpecification> specifications = new LinkedHashMap<>();
+		current.forEach((name, callback) -> specifications.put(name, McpToolUtils.toSyncToolSpecification(callback)));
 
 		int removed = 0;
 		int added = 0;
 		for (final Map.Entry<String, McpSchema.Tool> entry : advertised.entrySet()) {
-			final SyncToolSpecification specification = current.get(entry.getKey());
-			if (specification == null || !specification.tool().equals(entry.getValue())) {
+			final ToolCallback callback = current.get(entry.getKey());
+			if (callback == null || mustReplace(callback, specifications.get(entry.getKey()), entry.getValue())) {
 				server.removeTool(entry.getKey());
 				removed++;
 			}
 		}
-		for (final Map.Entry<String, SyncToolSpecification> entry : current.entrySet()) {
+		for (final Map.Entry<String, ToolCallback> entry : current.entrySet()) {
 			final McpSchema.Tool tool = advertised.get(entry.getKey());
-			if (tool == null || !entry.getValue().tool().equals(tool)) {
-				server.addTool(entry.getValue());
+			if (tool == null || mustReplace(entry.getValue(), specifications.get(entry.getKey()), tool)) {
+				server.addTool(specifications.get(entry.getKey()));
 				added++;
 			}
 		}
 		if (removed > 0 || added > 0) {
 			log.info("MCP tools refreshed: {} removed, {} added, {} advertised.", removed, added, current.size());
 		}
+	}
+
+	/**
+	 * A dynamic tool is always re-registered: its body captures the connector or extension of the context it was
+	 * built from, which a reload replaces even when the advertised schema stays the same. A static tool is
+	 * re-registered only when its schema changed.
+	 *
+	 * @param callback      the tool as the provider exposes it now
+	 * @param specification its MCP specification
+	 * @param advertised    what the server advertises under that name
+	 * @return whether the server's registration must be replaced
+	 */
+	private static boolean mustReplace(
+		final ToolCallback callback,
+		final SyncToolSpecification specification,
+		final McpSchema.Tool advertised
+	) {
+		return callback instanceof DynamicToolCallback || !specification.tool().equals(advertised);
 	}
 }

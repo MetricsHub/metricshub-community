@@ -182,6 +182,11 @@ public class TunnelService {
 				reconfigure(config);
 				return;
 			}
+			// Same advertised set, rebuilt callbacks: the ones the bridge holds belong to the replaced
+			// context, whose extensions the lifecycle service is about to close
+			snapshot = current;
+			bridge.update(current);
+			log.debug("Central tunnel: tool callbacks refreshed for context generation {}.", snapshotGeneration);
 		}
 		if (client != null && client.isConnected() && agentContextHolder.getGeneration() != advertisedGeneration) {
 			// A configuration reload swapped the agent context: re-advertise what actually changed
