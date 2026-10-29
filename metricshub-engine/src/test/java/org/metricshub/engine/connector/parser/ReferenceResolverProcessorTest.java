@@ -97,6 +97,15 @@ class ReferenceResolverProcessorTest {
 			        rightTable: ${source::tools.listDisks.sources.disks} # unchanged
 			    result:
 			      source: ${source::joined} # ${source::tools.listDisks.sources.joined}
+			  disk.list:
+			    sources:
+			      rows:
+			        type: http
+			      joined:
+			        type: tableJoin
+			        leftTable: ${source::rows} # ${source::tools.disk.list.sources.rows}
+			    result:
+			      source: ${source::joined} # ${source::tools.disk.list.sources.joined}
 			""";
 
 		final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
@@ -255,5 +264,13 @@ class ReferenceResolverProcessorTest {
 			listDisks.get("sources").get("joined").get("rightTable").asText()
 		);
 		assertEquals("${source::tools.listDisks.sources.joined}", listDisks.get("result").get("source").asText());
+
+		// A dotted tool name is resolved as a whole
+		final JsonNode diskList = processedNode.get("tools").get("disk.list");
+		assertEquals(
+			"${source::tools.disk.list.sources.rows}",
+			diskList.get("sources").get("joined").get("leftTable").asText()
+		);
+		assertEquals("${source::tools.disk.list.sources.joined}", diskList.get("result").get("source").asText());
 	}
 }

@@ -39,6 +39,12 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 
 	private static final String SOURCE_REF_FORMAT = "${source::%s}";
 
+	/**
+	 * The context of a value under a tool: {@code tools.<tool>.sources.<source>...} or {@code tools.<tool>.result...},
+	 * the tool name possibly holding dots.
+	 */
+	private static final Pattern TOOL_CONTEXT = Pattern.compile("^tools\\.(.+?)\\.(?:sources|result)(?:\\.|$)");
+
 	private static final Pattern REGEX_SOURCE_REF_MONITORS = Pattern.compile(
 		// A relative reference: ${source::name}, where name is not an absolute monitor, surrounding or tool reference
 		"\\$\\{source::(?!(" +
@@ -71,6 +77,10 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 
 		final var parts = context.split("\\.");
 
+		// A tool name may hold dots: it is what lies between "tools." and the ".sources" or ".result" segment
+		final Matcher toolContext = TOOL_CONTEXT.matcher(context);
+		final String toolName = toolContext.find() ? toolContext.group(1) : null;
+
 		return REGEX_SOURCE_REF_MONITORS.matcher(valueToUpdate).replaceAll(match -> {
 			// If the context starts with the string "monitors", perform the corresponding replacement
 			if (
@@ -86,16 +96,10 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 						Stream.of(parts[0], parts[1], parts[2], "sources", match.group(7)).collect(Collectors.joining("."))
 					)
 				);
-			} else if (
-				// CHECKSTYLE:OFF
-				parts.length >= 3 && "tools".equals(parts[0]) && ("sources".equals(parts[2]) || "result".equals(parts[2])) // CHECKSTYLE:ON
-			) {
+			} else if (toolName != null) {
 				// A tool's sources and result refer to the tool's own sources: ${source::tools.<tool>.sources.<name>}
 				return Matcher.quoteReplacement(
-					String.format(
-						SOURCE_REF_FORMAT,
-						Stream.of(parts[0], parts[1], "sources", match.group(7)).collect(Collectors.joining("."))
-					)
+					String.format(SOURCE_REF_FORMAT, "tools." + toolName + ".sources." + match.group(7))
 				);
 			} else if (parts.length >= 2 && ("beforeAll".equals(parts[0]) || "afterAll".equals(parts[0]))) {
 				// If the context starts with the string "beforeAll" or "afterAll", perform the corresponding replacement

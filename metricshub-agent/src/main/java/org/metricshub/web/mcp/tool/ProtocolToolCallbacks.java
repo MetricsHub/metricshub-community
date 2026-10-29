@@ -77,7 +77,7 @@ public final class ProtocolToolCallbacks {
 						HostTools.perHost(
 							HostTools.toolName(extension.getIdentifier(), definition.name()),
 							withTimeout(definition),
-							(hostname, arguments) -> execute(extension, definition.name(), hostname, arguments, agentContextHolder)
+							(hostname, arguments) -> execute(extension, definition.name(), hostname, arguments, agentContext)
 						)
 					);
 				} catch (IllegalArgumentException e) {
@@ -127,7 +127,7 @@ public final class ProtocolToolCallbacks {
 	 * @param toolName           the tool name within the extension
 	 * @param hostname           the host
 	 * @param arguments          the resolved arguments, the {@code timeout} among them
-	 * @param agentContextHolder the running agent context, where the host's configurations are
+	 * @param agentContext the agent context the tool was built from, where the host's configurations are
 	 * @return the extension's result, or an error
 	 */
 	static QueryResponse execute(
@@ -135,11 +135,11 @@ public final class ProtocolToolCallbacks {
 		final String toolName,
 		final String hostname,
 		final Map<String, String> arguments,
-		final AgentContextHolder agentContextHolder
+		final AgentContext agentContext
 	) {
-		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(
+		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper.resolveAllHostConfigurationCopies(
 			hostname,
-			agentContextHolder
+			agentContext
 		)
 			.stream()
 			.filter(extension::isValidConfiguration)

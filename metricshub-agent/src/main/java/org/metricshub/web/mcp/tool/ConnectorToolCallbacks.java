@@ -86,7 +86,7 @@ public final class ConnectorToolCallbacks {
 						try {
 							callbacks.add(
 								HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
-									run(agentContextHolder, connectorId, connector, toolName, tool, hostname, arguments)
+									run(agentContext, connectorId, connector, toolName, tool, hostname, arguments)
 								)
 							);
 						} catch (IllegalArgumentException e) {
@@ -101,7 +101,7 @@ public final class ConnectorToolCallbacks {
 	/**
 	 * Runs a connector tool on one host.
 	 *
-	 * @param agentContextHolder the running agent context, where the host's configuration is
+	 * @param agentContext the agent context the tool was built from, where the host's configuration is
 	 * @param connectorId        the connector identifier in the store
 	 * @param connector          the connector declaring the tool
 	 * @param toolName           the tool name within the connector
@@ -111,7 +111,7 @@ public final class ConnectorToolCallbacks {
 	 * @return the table of the tool's result source, or an error when the host is not configured
 	 */
 	static Object run(
-		final AgentContextHolder agentContextHolder,
+		final AgentContext agentContext,
 		final String connectorId,
 		final Connector connector,
 		final String toolName,
@@ -121,7 +121,7 @@ public final class ConnectorToolCallbacks {
 	) {
 		final List<TelemetryManager> telemetryManagers = MCPConfigHelper.findTelemetryManagerByHostname(
 			hostname,
-			agentContextHolder
+			agentContext
 		);
 		if (telemetryManagers.isEmpty()) {
 			return QueryResponse.builder().error("Host %s is not configured.".formatted(hostname)).build();
@@ -142,7 +142,7 @@ public final class ConnectorToolCallbacks {
 			.telemetryManager(telemetryManager)
 			.strategyTime(strategyTime)
 			.clientsExecutor(new ClientsExecutor(telemetryManager))
-			.extensionManager(agentContextHolder.getAgentContext().getExtensionManager())
+			.extensionManager(agentContext.getExtensionManager())
 			.connector(connector)
 			.toolName(toolName)
 			.arguments(arguments)

@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -64,10 +65,23 @@ public class MCPConfigHelper {
 		final String hostname,
 		final AgentContextHolder contextHolder
 	) {
+		return resolveAllHostConfigurationCopies(hostname, contextHolder.getAgentContext());
+	}
+
+	/**
+	 * Retrieves a deep copy of all configurations associated with the given hostname from one agent context,
+	 * for callers that must stay on the context they were built from across a reload.
+	 *
+	 * @param hostname     the target host
+	 * @param agentContext the agent context containing telemetry managers
+	 * @return a set of all {@link IConfiguration} instances associated with the host
+	 */
+	public static Set<IConfiguration> resolveAllHostConfigurationCopies(
+		final String hostname,
+		final AgentContext agentContext
+	) {
 		// Retrieve all telemetry managers grouped by agent from the context
-		final Map<String, Map<String, TelemetryManager>> telemetryManagersByAgent = contextHolder
-			.getAgentContext()
-			.getTelemetryManagers();
+		final Map<String, Map<String, TelemetryManager>> telemetryManagersByAgent = agentContext.getTelemetryManagers();
 
 		return telemetryManagersByAgent
 			.values()
@@ -114,8 +128,21 @@ public class MCPConfigHelper {
 		final String hostname,
 		final AgentContextHolder contextHolder
 	) {
-		return contextHolder
-			.getAgentContext()
+		return findTelemetryManagerByHostname(hostname, contextHolder.getAgentContext());
+	}
+
+	/**
+	 * Finds the {@link TelemetryManager}(s) of a hostname within one agent context, for callers that must stay
+	 * on the context they were built from across a reload.
+	 * @param hostname     the hostname to search for
+	 * @param agentContext the agent context containing telemetry managers
+	 * @return a {@link List} containing the found {@link TelemetryManager}(s)
+	 */
+	public static List<TelemetryManager> findTelemetryManagerByHostname(
+		final String hostname,
+		final AgentContext agentContext
+	) {
+		return agentContext
 			.getTelemetryManagers()
 			.values()
 			.stream()
