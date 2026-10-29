@@ -3,6 +3,7 @@ package org.metricshub.extension.http;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -82,6 +83,21 @@ class HttpExtensionToolsTest {
 
 		assertEquals("POST", request.getValue().getMethod());
 		assertEquals(ResultContent.HTTP_STATUS, request.getValue().getResultContent());
+	}
+
+	@Test
+	void testExecuteToolRequestRejectsAMethodOutsideTheAllowlist() {
+		final HttpConfiguration configuration = HttpConfiguration.builder().hostname("host").build();
+
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			httpExtension.executeTool(
+				"request",
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("method", "TRACE").put("path", "/")
+			)
+		);
+
+		assertTrue(exception.getMessage().contains("TRACE"), exception.getMessage());
 	}
 
 	@Test

@@ -23,6 +23,7 @@ package org.metricshub.engine.tool;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * One argument of a {@link ToolDefinition}, as declared by a connector or a protocol extension.
@@ -45,6 +46,11 @@ public record ToolParameter(
 	public static final String STRING = "string";
 
 	/**
+	 * The JSON schema types a parameter may declare.
+	 */
+	public static final List<String> TYPES = List.of(STRING, "integer", "number", "boolean");
+
+	/**
 	 * Normalizes the type: a missing or blank type is {@value #STRING}.
 	 *
 	 * @param type         the JSON schema type of the value
@@ -55,6 +61,11 @@ public record ToolParameter(
 	public ToolParameter {
 		if (type == null || type.isBlank()) {
 			type = STRING;
+		}
+		type = type.trim().toLowerCase();
+		if (!TYPES.contains(type)) {
+			// Copied verbatim into the advertised JSON schema, where an unknown type would fail the whole tool list
+			throw new IllegalArgumentException("Unknown tool parameter type '%s': expected one of %s".formatted(type, TYPES));
 		}
 	}
 }

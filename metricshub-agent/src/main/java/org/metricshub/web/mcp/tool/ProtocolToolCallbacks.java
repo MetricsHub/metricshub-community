@@ -110,7 +110,12 @@ public final class ProtocolToolCallbacks {
 		final Map<String, ToolParameter> parameters = new LinkedHashMap<>(definition.parameters());
 		parameters.put(
 			TIMEOUT,
-			new ToolParameter("integer", "Timeout in seconds. Defaults to the host's configured timeout.", false, null)
+			new ToolParameter(
+				"integer",
+				"Timeout in seconds, at least 1. Defaults to the host's configured timeout.",
+				false,
+				null
+			)
 		);
 		return new ToolDefinition(definition.name(), definition.description(), parameters, definition.destructive());
 	}
@@ -150,16 +155,36 @@ public final class ProtocolToolCallbacks {
 		final Map<String, String> toolArguments = new LinkedHashMap<>(arguments);
 		final String timeout = toolArguments.remove(TIMEOUT);
 		if (timeout != null) {
+			final long seconds;
 			try {
-				configuration.setTimeout(Long.parseLong(timeout.trim()));
+				seconds = Long.parseLong(timeout.trim());
 			} catch (NumberFormatException e) {
-				return QueryResponse.builder().error("The timeout must be a number of seconds: %s".formatted(timeout)).build();
+				return invalidTimeout(timeout);
 			}
+			if (seconds <= 0) {
+				// Zero is "no timeout" to some clients and "invalid" to some extensions: neither is wanted here
+				return invalidTimeout(timeout);
+			}
+			configuration.setTimeout(seconds);
 		}
 
 		final ObjectNode argumentsNode = JsonNodeFactory.instance.objectNode();
 		toolArguments.forEach(argumentsNode::put);
+		return runSafe(extension, toolName, configuration, argumentsNode);
+	}
 
+	private static QueryResponse invalidTimeout(final String timeout) {
+		return QueryResponse.builder()
+			.error("The timeout must be a positive number of seconds: %s".formatted(timeout))
+			.build();
+	}
+
+	private static QueryResponse runSafe(
+		final IProtocolExtension extension,
+		final String toolName,
+		final IConfiguration configuration,
+		final ObjectNode argumentsNode
+	) {
 		try {
 			return QueryResponse.builder().response(extension.executeTool(toolName, configuration, argumentsNode)).build();
 		} catch (Exception e) {

@@ -268,6 +268,11 @@ public class HttpExtension implements IProtocolExtension {
 		return httpRequestExecutor.executeHttp(httpRequest, false, telemetryManager);
 	}
 
+	/**
+	 * The HTTP methods the request tool accepts, in the order they are advertised.
+	 */
+	private static final List<String> TOOL_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE");
+
 	@Override
 	public List<ToolDefinition> getTools() {
 		return List.of(
@@ -309,7 +314,16 @@ public class HttpExtension implements IProtocolExtension {
 		switch (toolName) {
 			case "get" -> query.put("method", "GET");
 			case "request" -> {
-				// The method is the argument
+				// Only the advertised methods: a free string would reach the host, with its credentials, as is
+				final String method = arguments.hasNonNull("method")
+					? arguments.get("method").asText().trim().toUpperCase()
+					: "";
+				if (!TOOL_METHODS.contains(method)) {
+					throw new IllegalArgumentException(
+						"Unsupported HTTP method '" + method + "': expected one of " + TOOL_METHODS
+					);
+				}
+				query.put("method", method);
 			}
 			default -> throw new IllegalArgumentException("Unknown HTTP tool: " + toolName);
 		}

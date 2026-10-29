@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -116,9 +117,15 @@ class ProtocolToolCallbacksTest {
 
 		final JsonNode bad = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"timeout\":\"soon\"}"));
 		assertEquals(
-			"The timeout must be a number of seconds: soon",
+			"The timeout must be a positive number of seconds: soon",
 			bad.get("hosts").get(0).get("response").get("error").asText()
 		);
+		final JsonNode zero = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"timeout\":0}"));
+		assertEquals(
+			"The timeout must be a positive number of seconds: 0",
+			zero.get("hosts").get(0).get("response").get("error").asText()
+		);
+		verify(configuration, never()).setTimeout(0L);
 	}
 
 	@Test
