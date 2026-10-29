@@ -68,6 +68,11 @@ public final class HostTools {
 	static final int DEFAULT_POOL_SIZE = 60;
 
 	/**
+	 * The longest name a function may have for the OpenAI API, which the chat sends every tool to.
+	 */
+	static final int MAX_NAME_LENGTH = 64;
+
+	/**
 	 * The parameter names the agent adds to every tool, which a tool may not declare itself.
 	 */
 	static final List<String> RESERVED_PARAMETERS = List.of(HOSTNAME, POOL_SIZE);
@@ -107,6 +112,11 @@ public final class HostTools {
 		final ToolDefinition definition,
 		final BiFunction<String, Map<String, String>, Object> perHost
 	) {
+		if (name.length() > MAX_NAME_LENGTH) {
+			throw new IllegalArgumentException(
+				"Tool name %s is longer than the %d characters a function name may have".formatted(name, MAX_NAME_LENGTH)
+			);
+		}
 		for (final String reserved : RESERVED_PARAMETERS) {
 			if (definition.parameters().containsKey(reserved)) {
 				throw new IllegalArgumentException(

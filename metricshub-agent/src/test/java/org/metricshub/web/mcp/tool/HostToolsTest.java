@@ -44,6 +44,17 @@ class HostToolsTest {
 	}
 
 	@Test
+	void testPerHostRejectsANameLongerThanAFunctionNameMayBe() {
+		final String name = HostTools.toolName("a".repeat(50), "listTheThingsOfTheHost");
+
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			HostTools.perHost(name, definition(false), (hostname, arguments) -> Map.of())
+		);
+
+		assertTrue(exception.getMessage().contains("64"), exception.getMessage());
+	}
+
+	@Test
 	void testToolNameKeepsToMcpCharacters() {
 		assertEquals("ipmi_sel", HostTools.toolName("ipmi", "sel"));
 		assertEquals("My_Connector_v2_listThings", HostTools.toolName("My Connector.v2", "listThings"));

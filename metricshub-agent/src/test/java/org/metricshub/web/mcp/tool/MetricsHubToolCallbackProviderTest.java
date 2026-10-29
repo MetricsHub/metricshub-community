@@ -53,7 +53,8 @@ class MetricsHubToolCallbackProviderTest {
 		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(
 			new ToolCallback[] { product },
 			holder,
-			List.of(ignored -> List.of(callback("http_get"), callback("http_request")))
+			// A duplicate differing only by case is one too: the chat resolves names ignoring case
+			List.of(ignored -> List.of(callback("http_get"), callback("HTTP_Get"), callback("http_request")))
 		);
 
 		final ToolCallback[] callbacks = provider.getToolCallbacks();
