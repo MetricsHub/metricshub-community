@@ -75,7 +75,7 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 
 	@Override
 	public void process(final ArrayTranslate arrayTranslate) {
-		arrayTranslate.accept(computeProcessor);
+		processCompute(arrayTranslate);
 	}
 
 	@Override

@@ -118,7 +118,7 @@ public class ArrayTranslate extends Compute {
 		return ArrayTranslate.builder()
 			.type(type)
 			.column(column)
-			.translationTable(translationTable)
+			.translationTable(translationTable == null ? null : translationTable.copy())
 			.arraySeparator(arraySeparator)
 			.resultSeparator(resultSeparator)
 			.build();
