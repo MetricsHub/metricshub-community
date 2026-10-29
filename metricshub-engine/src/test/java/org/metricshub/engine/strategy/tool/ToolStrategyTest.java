@@ -6,15 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 class ToolStrategyTest {
@@ -32,6 +37,13 @@ class ToolStrategyTest {
 				HostConfiguration.builder().hostId("host-01").hostname("host-01").hostType(DeviceKind.LINUX).build()
 			)
 			.build();
+		// The agent creates the endpoint host monitor the surrounding jobs record their duration on
+		MonitorFactory.builder()
+			.telemetryManager(telemetryManager)
+			.discoveryTime(System.currentTimeMillis())
+			.keys(new HashSet<>(Set.of(MetricsHubConstants.HOST_NAME)))
+			.build()
+			.createEndpointHostMonitor();
 		return ToolStrategy.builder()
 			.telemetryManager(telemetryManager)
 			.strategyTime(System.currentTimeMillis())
@@ -41,6 +53,23 @@ class ToolStrategyTest {
 			.toolName(toolName)
 			.arguments(arguments)
 			.build();
+	}
+
+	@Test
+	void testRunUsesBeforeAllAndClosesWithAfterAll() {
+		final ToolStrategy strategy = newStrategy("withSession", Map.of());
+		final TelemetryManager telemetryManager = strategy.getTelemetryManager();
+
+		strategy.run();
+
+		// The session token fetched in beforeAll reached the tool's source
+		assertEquals(List.of(List.of("token-123-used")), strategy.getResult().getTable());
+		// And afterAll ran once the tool was done
+		final SourceTable logout = telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(CONNECTOR_ID)
+			.getSourceTable("${source::afterAll.logout}");
+		assertEquals(List.of(List.of("bye")), logout.getTable());
 	}
 
 	@Test

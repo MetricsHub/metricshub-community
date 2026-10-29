@@ -37,6 +37,7 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -120,7 +121,8 @@ public class ToolStrategy extends AbstractStrategy {
 			resolvedArguments.keySet()
 		);
 
-		// The tool's sources may reference the connector's beforeAll sources, like a monitor job's
+		// The tool's sources may reference the connector's beforeAll sources, like a monitor job's: a session
+		// token fetched there is what a REST tool authenticates with
 		BeforeAllStrategy.builder()
 			.clientsExecutor(clientsExecutor)
 			.strategyTime(strategyTime)
@@ -130,23 +132,36 @@ public class ToolStrategy extends AbstractStrategy {
 			.build()
 			.run();
 
-		final JobInfo jobInfo = JobInfo.builder()
-			.hostname(hostname)
-			.connectorId(connectorId)
-			.jobName(JOB_NAME)
-			.monitorType(toolName)
-			.build();
+		try {
+			final JobInfo jobInfo = JobInfo.builder()
+				.hostname(hostname)
+				.connectorId(connectorId)
+				.jobName(JOB_NAME)
+				.monitorType(toolName)
+				.build();
 
-		final OrderedSources orderedSources = OrderedSources.builder()
-			.sources(tool.getSources(), new ArrayList<>(tool.getExecutionOrder()), tool.getSourceDep(), jobInfo)
-			.build();
+			final OrderedSources orderedSources = OrderedSources.builder()
+				.sources(tool.getSources(), new ArrayList<>(tool.getExecutionOrder()), tool.getSourceDep(), jobInfo)
+				.build();
 
-		// The arguments ride on the attribute map: ${param::name} is replaced in sources and computes
-		// exactly where ${attribute::name} is
-		processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo);
+			// The arguments ride on the attribute map: ${param::name} is replaced in sources and computes
+			// exactly where ${attribute::name} is
+			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo);
 
-		result = SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager).orElseGet(
-			SourceTable::empty
-		);
+			result = SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager).orElseGet(
+				SourceTable::empty
+			);
+		} finally {
+			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that
+			// counts them, whether or not its sources succeeded
+			AfterAllStrategy.builder()
+				.clientsExecutor(clientsExecutor)
+				.strategyTime(strategyTime)
+				.telemetryManager(telemetryManager)
+				.connector(connector)
+				.extensionManager(extensionManager)
+				.build()
+				.run();
+		}
 	}
 }

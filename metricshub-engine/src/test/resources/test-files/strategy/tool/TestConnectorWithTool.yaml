@@ -41,3 +41,23 @@ tools:
     result:
       source: ${source::owned}
       columns: [ name, value ]
+  withSession:
+    description: Uses the session token the connector fetched in beforeAll.
+    sources:
+      authenticated:
+        type: static
+        value: ${source::beforeAll.session}
+        computes:
+        - type: append
+          column: 1
+          value: -used
+    result:
+      source: ${source::authenticated}
+beforeAll:
+  session:
+    type: static
+    value: token-123
+afterAll:
+  logout:
+    type: static
+    value: bye
