@@ -1,12 +1,15 @@
 package org.metricshub.engine.connector.model.tool;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -14,9 +17,13 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
 
 class ConnectorToolTest {
+
+	private static final Set<DeviceKind> LINUX = Set.of(DeviceKind.LINUX, DeviceKind.AIX);
+	private static final Set<DeviceKind> WINDOWS = Set.of(DeviceKind.WINDOWS);
 
 	private static final Map<String, ToolParameter> PARAMETERS = Map.of(
 		"service",
@@ -24,9 +31,7 @@ class ConnectorToolTest {
 		"lines",
 		new ToolParameter("integer", "How many lines", false, "100"),
 		"unit",
-		new ToolParameter(null, "A constrained unit", false, null, "[\\w@.-]+", null),
-		"loose",
-		new ToolParameter(null, "A loosely constrained value", false, null, ".*", null)
+		new ToolParameter(null, "A constrained unit", false, null, "[a-z$()]{5}", null)
 	);
 
 	private static ConnectorTool tool(final Source source) {
@@ -37,12 +42,14 @@ class ConnectorToolTest {
 			.build();
 	}
 
-	private static void assertAccepted(final Source source) {
-		assertDoesNotThrow(() -> tool(source).toDefinition("logs"));
+	private static ToolDefinition assertAccepted(final Source source, final Set<DeviceKind> appliesTo) {
+		return assertDoesNotThrow(() -> tool(source).toDefinition("logs", appliesTo));
 	}
 
-	private static String assertRefused(final Source source) {
-		return assertThrows(IllegalArgumentException.class, () -> tool(source).toDefinition("logs")).getMessage();
+	private static String assertRefused(final Source source, final Set<DeviceKind> appliesTo) {
+		return assertThrows(IllegalArgumentException.class, () ->
+			tool(source).toDefinition("logs", appliesTo)
+		).getMessage();
 	}
 
 	private static CommandLineSource commandLine(final String commandLine) {
@@ -51,67 +58,113 @@ class ConnectorToolTest {
 
 	@Test
 	void testEscapedOrConstrainedParametersAreAccepted() {
-		assertAccepted(commandLine("journalctl -n ${param::lines} -u '${esc(bash)::param::service}' ${param::unit}"));
-		assertAccepted(commandLine("echo 'unit: ${esc(bash)::param::service}' \"$HOME\""));
-		assertAccepted(commandLine("Get-Service -Name '${esc(powershell)::param::service}'"));
+		// esc(bash) is assigned to a variable: quotes and comments around the reference do not matter
 		assertAccepted(
-			SqlSource.builder().query("SELECT * FROM t WHERE name LIKE '%${esc(sql)::param::service}%'").build()
+			commandLine("echo ok # it's\njournalctl -n ${param::lines} -u ${esc(bash)::param::service} ${param::unit}"),
+			LINUX
 		);
 		assertAccepted(
-			WmiSource.builder().query("SELECT Name FROM Win32_Service WHERE Name=\"${esc(wql)::param::service}\"").build()
+			SqlSource.builder().query("SELECT * FROM t WHERE name LIKE '%${esc(sql)::param::service}%'").build(),
+			WINDOWS
 		);
-		assertAccepted(HttpSource.builder().body("{\"name\": \"${esc(json)::param::service}\"}").build());
+		assertAccepted(
+			WmiSource.builder().query("SELECT Name FROM Win32_Service WHERE Name=\"${esc(wql)::param::service}\"").build(),
+			WINDOWS
+		);
+		assertAccepted(HttpSource.builder().body("{\"name\": \"${esc(json)::param::service}\"}").build(), LINUX);
 	}
 
 	@Test
-	void testUnescapedParameterIsRefused() {
-		final String message = assertRefused(commandLine("journalctl -u ${param::service}"));
-		assertTrue(message.contains("${esc(TYPE)::param::service}"), message);
-		// A pattern that lets the shell metacharacters through is no constraint
-		assertRefused(commandLine("journalctl -u ${param::loose}"));
+	void testAStringInsertedUnescapedRefusesTheMetacharacters() {
+		final ToolDefinition definition = assertAccepted(commandLine("journalctl -u ${param::unit}"), LINUX);
+
+		// The pattern lets $(id) through, the definition does not
+		final ToolParameter unit = definition.parameters().get("unit");
+		assertThrows(IllegalArgumentException.class, () -> unit.validate("unit", "$(id)"));
+		assertDoesNotThrow(() -> unit.validate("unit", "sshda"));
+		// Not inserted unescaped: unchanged
+		assertEquals(PARAMETERS.get("service"), definition.parameters().get("service"));
 	}
 
 	@Test
-	void testUnescapedParameterInAnAwkScriptIsRefused() {
+	void testUnconstrainedParameterInsertedUnescapedIsRefused() {
+		final String message = assertRefused(commandLine("journalctl -u ${param::service}"), LINUX);
+		assertTrue(message.contains("${param::service}"), message);
+	}
+
+	@Test
+	void testUnconstrainedParameterInAnAwkScriptIsRefused() {
 		final CommandLineSource source = commandLine("journalctl -n 10");
 		source.setComputes(List.of(Awk.builder().script("/${param::service}/ { print }").build()));
+		assertRefused(source, LINUX);
 
-		assertRefused(source);
+		// No escape is safe in an awk script
+		source.setComputes(List.of(Awk.builder().script("{ print \"${esc(json)::param::service}\" }").build()));
+		assertRefused(source, LINUX);
 	}
 
 	@Test
-	void testUnescapedParameterInADataComputeIsAccepted() {
+	void testUnconstrainedParameterInADataComputeIsAccepted() {
 		final CommandLineSource source = commandLine("journalctl -n 10");
 		source.setComputes(List.of(KeepOnlyMatchingLines.builder().column(1).regExp("${param::service}").build()));
 
-		assertAccepted(source);
+		assertAccepted(source, LINUX);
 	}
 
 	@Test
-	void testEscapeOutsideItsQuotesIsRefused() {
-		final String message = assertRefused(commandLine("echo ${esc(bash)::param::service}"));
-		assertTrue(message.contains("between ' quotes"), message);
-		// Single quotes inside double quotes are just characters
-		assertRefused(commandLine("sh -c \"journalctl -u '${esc(bash)::param::service}'\""));
-		// A quote escaped outside of any string does not open one
-		assertRefused(commandLine("echo \\'${esc(bash)::param::service}'"));
-		assertRefused(SqlSource.builder().query("SELECT * FROM t WHERE id = ${esc(sql)::param::service}").build());
-		assertRefused(HttpSource.builder().body("{\"name\": ${esc(json)::param::service}}").build());
+	void testEscapesOfACommandLineDependOnItsShell() {
+		// cmd and PowerShell escapes protect nothing reliably: refused even on Windows
+		assertRefused(commandLine("sc query ${esc(cmd)::param::service}"), WINDOWS);
+		assertRefused(commandLine("powershell -Command Get-Service '${esc(powershell)::param::service}'"), WINDOWS);
+		// A POSIX escape in a command line that may run in cmd.exe
+		assertRefused(commandLine("echo ${esc(bash)::param::service}"), WINDOWS);
+		assertRefused(commandLine("echo ${esc(bash)::param::service}"), Set.of(DeviceKind.LINUX, DeviceKind.WINDOWS));
+		assertRefused(commandLine("echo ${esc(bash)::param::service}"), Set.of());
+		// cmd in a POSIX shell
+		assertRefused(commandLine("echo ${esc(cmd)::param::service}"), LINUX);
+	}
+
+	@Test
+	void testEscapeOutsideItsStringIsRefused() {
+		assertRefused(SqlSource.builder().query("SELECT * FROM t WHERE id = ${esc(sql)::param::service}").build(), LINUX);
+		assertRefused(HttpSource.builder().body("{\"name\": ${esc(json)::param::service}}").build(), LINUX);
+		// A comment or a backslash may hide a quote from one SQL dialect and not another
+		assertRefused(
+			SqlSource.builder().query("SELECT a -- it's\nFROM t WHERE n = '${esc(sql)::param::service}'").build(),
+			LINUX
+		);
+		assertRefused(
+			SqlSource.builder().query("SELECT a # 'x\nFROM t WHERE n = '${esc(sql)::param::service}'").build(),
+			LINUX
+		);
+		assertRefused(
+			SqlSource.builder().query("SELECT 'a\\' FROM t WHERE n = '${esc(sql)::param::service}'").build(),
+			LINUX
+		);
 	}
 
 	@Test
 	void testEscapeOfAnotherLanguageIsRefused() {
-		final String message = assertRefused(commandLine("echo \"${esc(json)::param::service}\""));
-		assertTrue(message.contains("BASH"), message);
-		assertRefused(SqlSource.builder().query("SELECT * FROM t WHERE name = '${esc(bash)::param::service}'").build());
+		assertRefused(commandLine("echo \"${esc(json)::param::service}\""), LINUX);
 		assertRefused(
-			WmiSource.builder().query("SELECT * FROM Win32_Service WHERE Name = '${esc(sql)::param::service}'").build()
+			SqlSource.builder().query("SELECT * FROM t WHERE name = '${esc(bash)::param::service}'").build(),
+			LINUX
 		);
+		assertRefused(
+			WmiSource.builder().query("SELECT * FROM Win32_Service WHERE Name = '${esc(sql)::param::service}'").build(),
+			WINDOWS
+		);
+		assertRefused(HttpSource.builder().body("x=${esc(bash)::param::service}").build(), LINUX);
 	}
 
 	@Test
-	void testUnknownEscapeTypeIsRefused() {
-		final String message = assertRefused(commandLine("journalctl -n '${esc(bsh)::param::lines}'"));
+	void testUnknownEscapeTypeOrParameterIsRefused() {
+		final String message = assertRefused(commandLine("journalctl -n ${esc(bsh)::param::lines}"), LINUX);
 		assertTrue(message.contains("bsh"), message);
+		assertRefused(commandLine("journalctl -n ${param::line}"), LINUX);
+		// Even in a compute that is data
+		final CommandLineSource source = commandLine("journalctl -n 10");
+		source.setComputes(List.of(KeepOnlyMatchingLines.builder().column(1).regExp("${param::servce}").build()));
+		assertRefused(source, LINUX);
 	}
 }

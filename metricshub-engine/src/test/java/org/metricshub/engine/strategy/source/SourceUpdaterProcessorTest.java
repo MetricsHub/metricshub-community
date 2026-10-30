@@ -27,6 +27,7 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL2;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -602,6 +603,65 @@ class SourceUpdaterProcessorTest {
 				CommandLineSource.builder().commandLine("/usr/sbin/pvdisplay /dev/dsk/%PhysicalDisk.Collect.DeviceID%").build()
 			)
 		);
+	}
+
+	@Test
+	void testProcessCommandLineSourceAssignsShellArgumentsToVariables() {
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
+
+		new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of("service", "x'; reboot #", "lines", "10"),
+			extensionManager
+		).process(
+			CommandLineSource.builder()
+				.commandLine("echo ok # it's\njournalctl -n ${param::lines} -u ${esc(bash)::param::service}")
+				.build()
+		);
+
+		// Whatever surrounds the reference, the shell expands the variable without parsing the value
+		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
+		verify(sourceProcessor).process(captor.capture());
+		assertEquals(
+			"__mh_arg1='x'\\''; reboot #'; echo ok # it's\njournalctl -n 10 -u \"$__mh_arg1\"",
+			captor.getValue().getCommandLine()
+		);
+	}
+
+	@Test
+	void testProcessSourceFormingAMacroIsNotRun() {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
+		final String sourceRef = "${source::monitors.cpu.discovery.sources.suffix}";
+		telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+			.addSourceTable(sourceRef, SourceTable.builder().rawData("{PASSWORD}").build());
+		final SourceUpdaterProcessor processor = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of("prefix", "$", "name", "${PASSWORD}"),
+			extensionManager
+		);
+
+		// $ from an argument, {PASSWORD} from a source: ${PASSWORD} would be expanded by the extension
+		assertEquals(
+			SourceTable.empty(),
+			processor.process(CommandLineSource.builder().commandLine("echo ${param::prefix}" + sourceRef).build())
+		);
+		// A value assigned to a shell variable is checked as well
+		assertEquals(
+			SourceTable.empty(),
+			processor.process(CommandLineSource.builder().commandLine("echo ${esc(bash)::attribute::name}").build())
+		);
+		verify(sourceProcessor, never()).process(any(CommandLineSource.class));
 	}
 
 	@Test

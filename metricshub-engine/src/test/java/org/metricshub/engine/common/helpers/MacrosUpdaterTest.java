@@ -126,6 +126,17 @@ class MacrosUpdaterTest {
 	 * Tests the escaping of special characters in JSON strings.
 	 */
 	@Test
+	void testEscapeJsonControlCharacters() {
+		assertEquals("a\\bb\\fc\\u0001d\\u001fe", MacrosUpdater.escapeJsonSpecialCharacters("a\bb\fc\u0001d\u001fe"));
+	}
+
+	@Test
+	void testCountMacros() {
+		assertEquals(2, MacrosUpdater.countMacros("%{USERNAME}:${esc(json)::PASSWORD} ${param::x} $HOME"));
+		assertEquals(0, MacrosUpdater.countMacros(null));
+	}
+
+	@Test
 	void testEscapeJsonSpecialCharacters() {
 		assertEquals("test\\\"test", MacrosUpdater.escapeJsonSpecialCharacters("test\"test"));
 		assertEquals("test\\ttest", MacrosUpdater.escapeJsonSpecialCharacters("test\ttest"));

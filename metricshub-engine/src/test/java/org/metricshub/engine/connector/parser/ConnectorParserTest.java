@@ -141,7 +141,7 @@ class ConnectorParserTest {
 
 		assertEquals(
 			new ToolDefinition("reboot", "Reboots the server.", reboot.getParameters(), true),
-			reboot.toDefinition("reboot")
+			reboot.toDefinition("reboot", connector)
 		);
 	}
 

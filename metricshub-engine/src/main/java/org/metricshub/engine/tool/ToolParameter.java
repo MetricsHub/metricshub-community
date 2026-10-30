@@ -24,9 +24,11 @@ package org.metricshub.engine.tool;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * One argument of a {@link ToolDefinition}, as declared by a connector or a protocol extension.
@@ -62,9 +64,17 @@ public record ToolParameter(
 
 	/**
 	 * The characters that quote, expand, chain, redirect, glob or comment in a shell (POSIX, PowerShell, cmd) or
-	 * a query: a pattern refusing all of them lets a value be inserted unescaped.
+	 * a query: a value inserted unescaped may contain none of them.
 	 */
 	private static final String METACHARACTERS = " \t\r\n'\"`$;|&<>(){}[]*?!#~%^\\";
+
+	/**
+	 * Matches a value holding none of the {@link #METACHARACTERS}, each written {@code \x{hex}}, as a lookahead:
+	 * {@code \z} rather than {@code $}, which would also match before a final line break.
+	 */
+	private static final String WITHOUT_METACHARACTERS = METACHARACTERS.chars()
+		.mapToObj("\\x{%x}"::formatted)
+		.collect(Collectors.joining("", "(?=[^", "]*\\z)"));
 
 	/**
 	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
@@ -115,21 +125,27 @@ public record ToolParameter(
 	}
 
 	/**
-	 * @return whether a source may insert the value without escaping it: a number or a boolean, one of an enum
-	 *         chosen by the connector, or a string whose pattern refuses every shell and query metacharacter
+	 * @return whether the connector constrained the value: a number or a boolean, one of an enum, or a string
+	 *         matching a pattern
 	 */
 	@JsonIgnore
-	public boolean isSafeUnescaped() {
+	public boolean isConstrained() {
+		return !STRING.equals(type) || enumValues != null || pattern != null;
+	}
+
+	/**
+	 * A string parameter inserted unescaped is only safe without the shell and query metacharacters: whether its
+	 * pattern lets them through cannot be told in general, so they are refused on top of it.
+	 *
+	 * @return this parameter, whose pattern also refuses the {@link #METACHARACTERS} if it is a string without enum
+	 * @throws IllegalArgumentException if the default value holds a metacharacter
+	 */
+	public ToolParameter withoutMetacharacters() {
 		if (!STRING.equals(type) || enumValues != null) {
-			return true;
+			return this;
 		}
-		if (pattern == null) {
-			return false;
-		}
-		final Pattern compiled = Pattern.compile(pattern);
-		return METACHARACTERS.chars()
-			.mapToObj(c -> String.valueOf((char) c))
-			.noneMatch(c -> compiled.matcher(c).matches() || compiled.matcher("a" + c + "a").matches());
+		final String constrained = WITHOUT_METACHARACTERS + (pattern == null ? "" : "(?:" + pattern + ")");
+		return new ToolParameter(type, description, required, defaultValue, constrained, null);
 	}
 
 	/**
@@ -166,11 +182,25 @@ public record ToolParameter(
 		if (!typed) {
 			throw new IllegalArgumentException("The argument %s must be of type %s".formatted(name, type));
 		}
-		if (enumValues != null && !enumValues.contains(value)) {
+		if (enumValues != null && enumValues.stream().noneMatch(entry -> sameValue(type, entry, value))) {
 			throw new IllegalArgumentException("The argument %s must be one of %s".formatted(name, enumValues));
 		}
 		if (pattern != null && !Pattern.compile(pattern).matcher(value).matches()) {
 			throw new IllegalArgumentException("The argument %s must match the pattern %s".formatted(name, pattern));
 		}
+	}
+
+	/**
+	 * @param type  the parameter type
+	 * @param entry an enum entry
+	 * @param value a value already valid for the type
+	 * @return whether they are the same value: numbers by value ({@code 01} is {@code 1}), booleans ignoring case
+	 */
+	private static boolean sameValue(final String type, final String entry, final String value) {
+		return switch (type) {
+			case "integer", "number" -> new BigDecimal(entry).compareTo(new BigDecimal(value)) == 0;
+			case "boolean" -> entry.equalsIgnoreCase(value);
+			default -> entry.equals(value);
+		};
 	}
 }

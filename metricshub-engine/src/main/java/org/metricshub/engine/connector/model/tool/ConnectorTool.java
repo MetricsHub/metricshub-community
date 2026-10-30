@@ -25,8 +25,10 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +38,11 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.metricshub.engine.common.helpers.EscapeType;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -43,6 +50,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
 
@@ -68,14 +76,29 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
-	 * The escapes a command line takes.
+	 * The device kinds whose commands run in a POSIX shell.
 	 */
-	private static final Set<EscapeType> SHELL_ESCAPES = EnumSet.of(
-		EscapeType.BASH,
-		EscapeType.LINUX,
-		EscapeType.POWERSHELL,
-		EscapeType.CMD,
-		EscapeType.WINDOWS
+	private static final Set<DeviceKind> POSIX_KINDS = EnumSet.of(
+		DeviceKind.LINUX,
+		DeviceKind.AIX,
+		DeviceKind.HPUX,
+		DeviceKind.SOLARIS
+	);
+
+	/**
+	 * The escapes of a command line run by a POSIX shell, where the value is assigned to a variable rather than
+	 * inserted (see {@code SourceUpdaterProcessor}).
+	 */
+	private static final Set<EscapeType> POSIX_SHELL_ESCAPES = EnumSet.of(EscapeType.BASH, EscapeType.LINUX);
+
+	/**
+	 * The escapes of the source fields that are neither a command line nor a query: a URL, a header, a body.
+	 */
+	private static final Set<EscapeType> REQUEST_ESCAPES = EnumSet.of(
+		EscapeType.JSON,
+		EscapeType.XML,
+		EscapeType.URL,
+		EscapeType.REGEX
 	);
 
 	/**
@@ -128,88 +151,149 @@ public class ConnectorTool extends AbstractMonitorTask {
 	/**
 	 * Describes this tool for the LLM, once its sources are checked to insert every parameter safely.
 	 *
-	 * @param name the name the connector declares the tool under
-	 * @return the definition of the tool
+	 * @param name     the name the connector declares the tool under
+	 * @param appliesTo the device kinds the connector applies to, which tell the shell its command lines run in
+	 * @return the definition of the tool, whose string parameters inserted unescaped refuse the shell and query
+	 *         metacharacters (see {@link ToolParameter#withoutMetacharacters()})
 	 * @throws IllegalArgumentException if a source or an awk script inserts a parameter unsafely (see
 	 *                                  {@link #checkReferences})
 	 */
-	public ToolDefinition toDefinition(final String name) {
+	public ToolDefinition toDefinition(final String name, final Set<DeviceKind> appliesTo) {
+		final Set<String> unescaped = new HashSet<>();
 		for (final Source source : sources.values()) {
-			// Copies: update() is the visitor of every field a reference is replaced in
-			source.copy().update(value -> checkReferences(name, value, null));
-			// A command or a query only takes the escapes of its language
-			if (source instanceof CommandLineSource commandLineSource) {
-				checkReferences(name, commandLineSource.getCommandLine(), SHELL_ESCAPES);
-			} else if (source instanceof SqlSource sqlSource) {
-				checkReferences(name, sqlSource.getQuery(), EnumSet.of(EscapeType.SQL));
-			} else if (source instanceof WmiSource wmiSource) {
-				checkReferences(name, wmiSource.getQuery(), EnumSet.of(EscapeType.WQL));
-			} else if (source instanceof WbemSource wbemSource) {
-				checkReferences(name, wbemSource.getQuery(), EnumSet.of(EscapeType.WQL));
+			// The command or the query takes the escapes of its language only: it is checked apart, then blanked
+			final Source others = source.copy();
+			if (others instanceof CommandLineSource commandLineSource) {
+				final Set<EscapeType> escapes = runsInPosixShell(commandLineSource, appliesTo)
+					? POSIX_SHELL_ESCAPES
+					: EnumSet.noneOf(EscapeType.class);
+				checkReferences(name, commandLineSource.getCommandLine(), escapes, unescaped);
+				commandLineSource.setCommandLine("");
+			} else if (others instanceof SqlSource sqlSource) {
+				checkReferences(name, sqlSource.getQuery(), EnumSet.of(EscapeType.SQL), unescaped);
+				sqlSource.setQuery("");
+			} else if (others instanceof WmiSource wmiSource) {
+				checkReferences(name, wmiSource.getQuery(), EnumSet.of(EscapeType.WQL), unescaped);
+				wmiSource.setQuery("");
+			} else if (others instanceof WbemSource wbemSource) {
+				checkReferences(name, wbemSource.getQuery(), EnumSet.of(EscapeType.WQL), unescaped);
+				wbemSource.setQuery("");
 			}
-			// An awk script is code; the other computes only transform the table the source returned
-			source
-				.getComputes()
-				.stream()
-				.filter(Awk.class::isInstance)
-				.forEach(compute -> compute.copy().update(value -> checkReferences(name, value, null)));
+			// update() is the visitor of every field a reference is replaced in
+			others.update(field -> checkReferences(name, field, REQUEST_ESCAPES, unescaped));
+			for (final Compute compute : source.getComputes()) {
+				// An awk script is code, where no escape is safe; the other computes only transform the table
+				compute
+					.copy()
+					.update(field ->
+						checkReferences(name, field, compute instanceof Awk ? EnumSet.noneOf(EscapeType.class) : null, unescaped)
+					);
+			}
 		}
-		return new ToolDefinition(name, description, parameters, destructive);
+		final Map<String, ToolParameter> checked = new LinkedHashMap<>(parameters);
+		unescaped.forEach(parameterName ->
+			checked.put(parameterName, parameters.get(parameterName).withoutMetacharacters())
+		);
+		return new ToolDefinition(name, description, checked, destructive);
 	}
 
 	/**
-	 * Checks the {@code ${param::name}} references of a field that is code (a command, a query, a request, a
-	 * script):
+	 * Describes this tool for the LLM (see {@link #toDefinition(String, Set)}).
+	 *
+	 * @param name      the name the connector declares the tool under
+	 * @param connector the connector declaring the tool
+	 * @return the definition of the tool
+	 */
+	public ToolDefinition toDefinition(final String name, final Connector connector) {
+		return toDefinition(
+			name,
+			Optional.ofNullable(connector.getConnectorIdentity())
+				.map(ConnectorIdentity::getDetection)
+				.map(Detection::getAppliesTo)
+				.orElse(Set.of())
+		);
+	}
+
+	/**
+	 * @param source    a command line source
+	 * @param appliesTo the device kinds the connector applies to
+	 * @return whether the command runs in a POSIX shell, on the agent's own system when it runs locally
+	 */
+	private static boolean runsInPosixShell(final CommandLineSource source, final Set<DeviceKind> appliesTo) {
+		if (Boolean.TRUE.equals(source.getExecuteLocally())) {
+			return !LocalOsHandler.isWindows();
+		}
+		return appliesTo != null && !appliesTo.isEmpty() && POSIX_KINDS.containsAll(appliesTo);
+	}
+
+	/**
+	 * Checks the {@code ${param::name}} references of a field. Every reference must name a declared parameter and
+	 * a known escape type. In a field that is code ({@code escapes} given):
 	 * <ul>
-	 * <li>a parameter that is not safe as is (see {@link ToolParameter#isSafeUnescaped()}) must be escaped with
-	 * {@code ${esc(TYPE)::param::name}},</li>
-	 * <li>the escape type must exist, and be one of {@code allowed} when given,</li>
-	 * <li>an escape that only covers the inside of a string (see {@link #quoteRule}) must be inside such a string.</li>
+	 * <li>a parameter inserted unescaped must be constrained (see {@link ToolParameter#isConstrained()}), and is
+	 * added to {@code unescaped},</li>
+	 * <li>the escape type must be one of {@code escapes},</li>
+	 * <li>the {@code sql}, {@code wql} and {@code json} escapes, which only cover the inside of a string, must be
+	 * inside such a string (see {@link #insideString}).</li>
 	 * </ul>
 	 *
-	 * @param toolName the tool name, for the error message
-	 * @param field    the field of a source or an awk script
-	 * @param allowed  the only escape types the field takes, {@code null} for any
+	 * @param toolName  the tool name, for the error message
+	 * @param field     the field of a source or a compute
+	 * @param escapes   the escape types the field takes, {@code null} for a field that is data
+	 * @param unescaped the names of the parameters inserted unescaped into code, completed here
 	 * @return the field, unchanged
 	 */
-	private String checkReferences(final String toolName, final String field, final Set<EscapeType> allowed) {
+	private String checkReferences(
+		final String toolName,
+		final String field,
+		final Set<EscapeType> escapes,
+		final Set<String> unescaped
+	) {
 		if (field == null) {
 			return null;
 		}
 		final Matcher matcher = PARAMETER_REFERENCE.matcher(field);
 		while (matcher.find()) {
 			final String reference = matcher.group();
-			final String escape = matcher.group("esc");
-			if (escape == null) {
-				final ToolParameter parameter = parameters.get(matcher.group("name").trim());
-				if (parameter != null && !parameter.isSafeUnescaped()) {
-					throw new IllegalArgumentException(
-						"Tool %s inserts %s unescaped: write ${esc(TYPE)::param::%s}, ".formatted(
-								toolName,
-								reference,
-								matcher.group("name")
-							) +
-							"or declare an enum, a non-string type or a pattern refusing the shell and query metacharacters"
-					);
-				}
-				continue;
-			}
-			final EscapeType escapeType = EscapeType.fromString(escape);
-			if (escapeType == null) {
-				throw new IllegalArgumentException("Tool %s uses an unknown escape type in %s".formatted(toolName, reference));
-			}
-			if (allowed != null && !allowed.contains(escapeType)) {
+			final String parameterName = matcher.group("name").trim();
+			final ToolParameter parameter = parameters.get(parameterName);
+			if (parameter == null) {
 				throw new IllegalArgumentException(
-					"Tool %s uses %s in a field that takes %s".formatted(toolName, reference, allowed)
+					"Tool %s references %s, which it does not declare".formatted(toolName, reference)
 				);
 			}
-			final QuoteRule rule = quoteRule(escapeType);
-			if (rule != null && rule.quotes().indexOf(quoteAt(field, matcher.start(), rule)) < 0) {
+			final String escape = matcher.group("esc");
+			final EscapeType escapeType = escape == null ? null : EscapeType.fromString(escape);
+			if (escape != null && escapeType == null) {
+				throw new IllegalArgumentException("Tool %s uses an unknown escape type in %s".formatted(toolName, reference));
+			}
+			if (escapes == null) {
+				continue;
+			}
+			if (escapeType == null) {
+				if (!parameter.isConstrained()) {
+					throw new IllegalArgumentException(
+						"Tool %s inserts %s unescaped: escape it, or declare an enum, a pattern or a non-string type".formatted(
+							toolName,
+							reference
+						)
+					);
+				}
+				unescaped.add(parameterName);
+			} else if (!escapes.contains(escapeType)) {
 				throw new IllegalArgumentException(
-					"Tool %s must write %s between %s quotes, the only place its escape protects".formatted(
+					"Tool %s uses %s where only the escapes %s are safe: %s".formatted(
 						toolName,
 						reference,
-						rule.quotes()
+						escapes,
+						"in a Windows command line or an awk script, constrain the parameter instead"
+					)
+				);
+			} else if (!insideString(field, matcher.start(), escapeType)) {
+				throw new IllegalArgumentException(
+					"Tool %s must write %s inside a string of its language, the only place its escape protects".formatted(
+						toolName,
+						reference
 					)
 				);
 			}
@@ -218,47 +302,45 @@ public class ConnectorTool extends AbstractMonitorTask {
 	}
 
 	/**
-	 * How the strings of a language are quoted.
+	 * Tells whether a position of a query or a request is inside a string that the escape type covers: a
+	 * single-quoted SQL string, a single- or double-quoted WQL string, a double-quoted JSON string. Where it cannot
+	 * tell, a SQL comment or a backslash (an escape in MySQL, a character in standard SQL), the answer is no.
 	 *
-	 * @param quotes               the quotes an escaped value must be inside
-	 * @param escape               the character that makes the next one literal
-	 * @param escapeInSingleQuotes whether {@code escape} also works inside single quotes
+	 * @param field    a query or a request
+	 * @param position a position in the field
+	 * @param type     the escape type
+	 * @return whether the position is inside such a string; always {@code true} for an escape that protects a value
+	 *         anywhere ({@code bash}, assigned to a variable; {@code url}, {@code xml}, {@code regex})
 	 */
-	private record QuoteRule(String quotes, char escape, boolean escapeInSingleQuotes) {}
-
-	/**
-	 * @param escapeType an escape type
-	 * @return the strings the escape type covers the inside of, {@code null} if it protects a value anywhere
-	 */
-	private static QuoteRule quoteRule(final EscapeType escapeType) {
-		return switch (escapeType) {
-			case BASH, LINUX -> new QuoteRule("'", '\\', false);
-			case POWERSHELL -> new QuoteRule("'", '`', false);
-			case SQL -> new QuoteRule("'", '\0', false);
-			case WQL -> new QuoteRule("'\"", '\\', true);
-			case JSON -> new QuoteRule("\"", '\\', true);
+	static boolean insideString(final String field, final int position, final EscapeType type) {
+		final String quotes = switch (type) {
+			case SQL -> "'";
+			case WQL -> "'\"";
+			case JSON -> "\"";
 			default -> null;
 		};
-	}
-
-	/**
-	 * @param field    a command, a query or a request
-	 * @param position a position in the field
-	 * @param rule     how the language quotes its strings
-	 * @return the quote the position is inside of, {@code '\0'} outside any quote
-	 */
-	private static char quoteAt(final String field, final int position, final QuoteRule rule) {
+		if (quotes == null) {
+			return true;
+		}
+		final boolean sql = type == EscapeType.SQL;
 		char quote = '\0';
 		for (int i = 0; i < position; i++) {
 			final char c = field.charAt(i);
-			if (c == rule.escape() && (quote != '\'' || rule.escapeInSingleQuotes())) {
+			if (
+				sql && (c == '\\' || (quote == '\0' && (c == '#' || field.startsWith("--", i) || field.startsWith("/*", i))))
+			) {
+				return false;
+			}
+			if (quote == '\0') {
+				if (c == '"' || (c == '\'' && type != EscapeType.JSON)) {
+					quote = c;
+				}
+			} else if (c == '\\') {
 				i++;
-			} else if (quote == '\0' && (c == '\'' || c == '"')) {
-				quote = c;
 			} else if (c == quote) {
 				quote = '\0';
 			}
 		}
-		return quote;
+		return quotes.indexOf(quote) >= 0;
 	}
 }

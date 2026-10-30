@@ -284,20 +284,37 @@ public class MacrosUpdater {
 	}
 
 	/**
-	 * Escape special characters in a JSON string value (\ " \n \r \t).
+	 * Escape special characters in a JSON string value: {@code \}, {@code "} and every control character
+	 * (U+0000 to U+001F), with its short form when JSON has one ({@code \n}, {@code \t}...).
 	 *
 	 * @param value The value to escape.
 	 * @return The escaped value
 	 */
 	static String escapeJsonSpecialCharacters(final String value) {
-		// Escape common characters
-		return value
-			// Escape characters (\ " \n \r \t)
-			.replace("\\", "\\\\")
-			.replace("\"", "\\\"")
-			.replace("\n", "\\n")
-			.replace("\r", "\\r")
-			.replace("\t", "\\t");
+		final StringBuilder escaped = new StringBuilder(value.length());
+		for (final char c : value.toCharArray()) {
+			switch (c) {
+				case '\\' -> escaped.append("\\\\");
+				case '"' -> escaped.append("\\\"");
+				case '\n' -> escaped.append("\\n");
+				case '\r' -> escaped.append("\\r");
+				case '\t' -> escaped.append("\\t");
+				case '\b' -> escaped.append("\\b");
+				case '\f' -> escaped.append("\\f");
+				default -> escaped.append(c < 0x20 ? "\\u%04x".formatted((int) c) : String.valueOf(c));
+			}
+		}
+		return escaped.toString();
+	}
+
+	/**
+	 * Counts the macros of a text, as {@link #update} would find them.
+	 *
+	 * @param text a text, {@code null} for none
+	 * @return the number of {@code %{...}} and {@code ${...}} macros
+	 */
+	public static int countMacros(final String text) {
+		return text == null ? 0 : (int) MACRO_PATTERN.matcher(text).results().count();
 	}
 
 	/**

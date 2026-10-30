@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,15 +48,39 @@ class ToolParameterTest {
 	}
 
 	@Test
-	void testIsSafeUnescaped() {
-		assertFalse(new ToolParameter(null, null, false, null).isSafeUnescaped());
-		assertTrue(new ToolParameter("integer", null, false, null).isSafeUnescaped());
-		assertTrue(new ToolParameter(null, null, false, null, null, List.of("a")).isSafeUnescaped());
-		assertTrue(new ToolParameter(null, null, false, null, "[\\w@.-]+", null).isSafeUnescaped());
-		// Broad patterns let $(reboot), a quote or a space through
-		assertFalse(new ToolParameter(null, null, false, null, ".*", null).isSafeUnescaped());
-		assertFalse(new ToolParameter(null, null, false, null, "[^;]*", null).isSafeUnescaped());
-		assertFalse(new ToolParameter(null, null, false, null, "[\\w ]+", null).isSafeUnescaped());
+	void testIsConstrained() {
+		assertFalse(new ToolParameter(null, null, false, null).isConstrained());
+		assertTrue(new ToolParameter("integer", null, false, null).isConstrained());
+		assertTrue(new ToolParameter(null, null, false, null, null, List.of("a")).isConstrained());
+		assertTrue(new ToolParameter(null, null, false, null, ".*", null).isConstrained());
+	}
+
+	@Test
+	void testWithoutMetacharacters() {
+		// Whatever the pattern lets through, no metacharacter, line break included
+		final ToolParameter loose = new ToolParameter(null, null, false, null, "[\\s\\S]*", null).withoutMetacharacters();
+		for (final String value : List.of("$(id)", "a b", "a\n", "x'y", "a;b", "`id`", "a\\b", "%PATH%", "a^&b")) {
+			assertThrows(IllegalArgumentException.class, () -> loose.validate("x", value), value);
+		}
+		assertDoesNotThrow(() -> loose.validate("x", "sshd.service"));
+		// The pattern still applies
+		final ToolParameter unit = new ToolParameter(null, null, false, null, "[a-z]+", null).withoutMetacharacters();
+		assertThrows(IllegalArgumentException.class, () -> unit.validate("unit", "sshd.service"));
+		// A default holding a metacharacter makes the parameter unusable unescaped
+		final ToolParameter spaced = new ToolParameter(null, null, false, "a b", ".*", null);
+		assertThrows(IllegalArgumentException.class, spaced::withoutMetacharacters);
+		// Enums and other types are left as they are
+		final ToolParameter integer = new ToolParameter("integer", null, false, null);
+		assertSame(integer, integer.withoutMetacharacters());
+	}
+
+	@Test
+	void testNumericEnumComparesValues() {
+		final ToolParameter level = new ToolParameter("integer", null, false, null, null, List.of("01", "2"));
+		assertDoesNotThrow(() -> level.validate("level", "1"));
+		assertThrows(IllegalArgumentException.class, () -> level.validate("level", "3"));
+		final ToolParameter ratio = new ToolParameter("number", null, false, null, null, List.of("0.5"));
+		assertDoesNotThrow(() -> ratio.validate("ratio", "0.50"));
 	}
 
 	@Test

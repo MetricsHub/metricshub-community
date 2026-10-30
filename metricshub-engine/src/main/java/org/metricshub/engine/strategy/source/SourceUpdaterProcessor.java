@@ -43,6 +43,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.EscapeType;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
@@ -104,6 +105,19 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	);
 
 	private static final Pattern PROTOCOL_PATTERN = Pattern.compile("\\$\\{protocol::(.*?)\\}", Pattern.CASE_INSENSITIVE);
+
+	/**
+	 * A reference escaped for a POSIX shell, whose value is assigned to a variable in a command line.
+	 */
+	private static final Pattern SHELL_ARGUMENT_PATTERN = Pattern.compile(
+		"\\$\\{esc\\((?:bash|linux)\\)::(?:attribute|param)::(?<key>[^}]+)\\}",
+		Pattern.CASE_INSENSITIVE
+	);
+
+	/**
+	 * The prefix of the shell variables holding the values of {@link #SHELL_ARGUMENT_PATTERN}.
+	 */
+	private static final String SHELL_VARIABLE = "__mh_arg";
 
 	private ISourceProcessor sourceProcessor;
 	private TelemetryManager telemetryManager;
@@ -235,6 +249,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return runExecuteForEachEntryOf(copy);
 		}
 
+		final List<Integer> macros = countMacros(copy);
+
+		hoistShellArguments(copy);
+
 		copy.update(value ->
 			replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
 		);
@@ -246,7 +264,84 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		copy.update(value -> value == null ? value : value.replace("$$", "$"));
 
+		if (addsMacros(macros, copy)) {
+			return SourceTable.empty();
+		}
+
 		return copy.accept(sourceProcessor);
+	}
+
+	/**
+	 * @param source a source
+	 * @return the number of credential macros of each field of the source, in the order {@code update()} visits them
+	 */
+	private static List<Integer> countMacros(final Source source) {
+		final List<Integer> counts = new ArrayList<>();
+		source
+			.copy()
+			.update(value -> {
+				counts.add(MacrosUpdater.countMacros(value));
+				return value;
+			});
+		return counts;
+	}
+
+	/**
+	 * The macros (credentials) are expanded once the source reaches its extension, after every reference is
+	 * replaced: a field holding more macros than its template got them from a value (an argument, an attribute, a
+	 * source), which would reveal them, whether the value holds a whole macro or completes one of the template.
+	 *
+	 * @param template the macro counts of the template, see {@link #countMacros}
+	 * @param copy     the source, its references replaced
+	 * @return whether a field holds more macros than its template, in which case the source must not run
+	 */
+	private boolean addsMacros(final List<Integer> template, final Source copy) {
+		final List<Integer> counts = countMacros(copy);
+		for (int i = 0; i < counts.size() && i < template.size(); i++) {
+			if (counts.get(i) > template.get(i)) {
+				log.error(
+					"Hostname {} - A value inserted in source {} forms a credential macro: the source is not run.",
+					telemetryManager.getHostname(),
+					copy.getKey()
+				);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Assigns the value of each {@code ${esc(bash)::param::name}} or {@code ${esc(bash)::attribute::name}} (or
+	 * {@code linux}) of a command line to a shell variable at the start of the command, and replaces the reference
+	 * with {@code "$variable"}: the shell expands the variable without parsing its value, whatever quotes,
+	 * comments or here-documents surround the reference.
+	 *
+	 * @param copy the source, a command line source or left as is
+	 */
+	private void hoistShellArguments(final Source copy) {
+		if (!(copy instanceof CommandLineSource commandLineSource) || attributes == null) {
+			return;
+		}
+		final Matcher matcher = SHELL_ARGUMENT_PATTERN.matcher(commandLineSource.getCommandLine());
+		final StringBuilder assignments = new StringBuilder();
+		final StringBuilder commandLine = new StringBuilder();
+		int count = 0;
+		while (matcher.find()) {
+			final String value = attributes.get(matcher.group("key").trim());
+			if (value != null) {
+				count++;
+				// At the start of the command line, outside of any quote: the single-quoted value is a literal
+				assignments
+					.append(SHELL_VARIABLE)
+					.append(count)
+					.append("='")
+					.append(EscapeType.BASH.escape(value))
+					.append("'; ");
+				matcher.appendReplacement(commandLine, Matcher.quoteReplacement("\"$" + SHELL_VARIABLE + count + "\""));
+			}
+		}
+		matcher.appendTail(commandLine);
+		commandLineSource.setCommandLine(assignments.toString() + commandLine);
 	}
 
 	/**
@@ -643,6 +738,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		final Integer sleep = source.getSleepExecuteForEachEntryOf();
 
+		final List<Integer> macros = countMacros(source);
+
 		for (List<String> row : maybeSourceTable.get().getTable()) {
 			if (row == null) {
 				continue;
@@ -657,6 +754,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				continue;
 			}
 
+			hoistShellArguments(copy);
+
 			copy.update(value ->
 				replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
 			);
@@ -665,6 +764,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			copy.update(value -> replaceProtocolPropertyReferences(value));
 
 			copy.update(value -> replaceSourceReference(value, copy));
+
+			if (addsMacros(macros, copy)) {
+				continue;
+			}
 
 			concatEntryResult(source, result, row, copy.accept(sourceProcessor));
 			if (sleep != null && sleep != 0) {

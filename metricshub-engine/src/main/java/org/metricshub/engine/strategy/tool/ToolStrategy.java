@@ -110,7 +110,7 @@ public class ToolStrategy extends AbstractStrategy {
 		}
 
 		// Defaults applied, required arguments checked
-		final Map<String, String> resolvedArguments = tool.toDefinition(toolName).resolveArguments(arguments);
+		final Map<String, String> resolvedArguments = tool.toDefinition(toolName, connector).resolveArguments(arguments);
 
 		// The names only: a value may be a token or a password
 		log.debug(
