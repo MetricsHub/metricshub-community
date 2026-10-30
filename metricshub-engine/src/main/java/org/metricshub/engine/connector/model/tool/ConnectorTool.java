@@ -24,6 +24,7 @@ package org.metricshub.engine.connector.model.tool;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -45,6 +46,7 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
@@ -86,19 +88,55 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
-	 * The escapes of a command line run by a POSIX shell, where the value is assigned to a variable rather than
-	 * inserted (see {@code SourceUpdaterProcessor}).
+	 * What a field that is code takes.
+	 *
+	 * @param escapes         the escape types that protect a value there
+	 * @param patternedStrings whether a string constrained by a pattern only may be inserted unescaped, refusing the
+	 *                        shell metacharacters: not in a query or a request, whose comments ({@code --}), paths
+	 *                        ({@code ../}) or lines need no metacharacter
 	 */
-	private static final Set<EscapeType> POSIX_SHELL_ESCAPES = EnumSet.of(EscapeType.BASH, EscapeType.LINUX);
+	private record FieldRule(Set<EscapeType> escapes, boolean patternedStrings) {}
 
 	/**
-	 * The escapes of the source fields that are neither a command line nor a query: a URL, a header, a body.
+	 * A command line run by a POSIX shell, where an escaped value is assigned to a variable rather than inserted
+	 * (see {@code SourceUpdaterProcessor}).
 	 */
-	private static final Set<EscapeType> REQUEST_ESCAPES = EnumSet.of(
-		EscapeType.JSON,
-		EscapeType.XML,
-		EscapeType.URL,
-		EscapeType.REGEX
+	private static final FieldRule POSIX_COMMAND_LINE = new FieldRule(
+		EnumSet.of(EscapeType.BASH, EscapeType.LINUX),
+		true
+	);
+
+	/**
+	 * Any other command line, Windows in particular, where no escape is reliable.
+	 */
+	private static final FieldRule COMMAND_LINE = new FieldRule(EnumSet.noneOf(EscapeType.class), true);
+
+	/**
+	 * An awk script, where no escape is reliable.
+	 */
+	private static final FieldRule AWK_SCRIPT = COMMAND_LINE;
+
+	private static final FieldRule SQL_QUERY = new FieldRule(EnumSet.of(EscapeType.SQL), false);
+
+	private static final FieldRule WQL_QUERY = new FieldRule(EnumSet.of(EscapeType.WQL), false);
+
+	/**
+	 * The URL, path, headers or token of an HTTP request: percent-encoding is what keeps a value from adding a path
+	 * segment, a parameter or a header line.
+	 */
+	private static final FieldRule HTTP_URL_OR_HEADER = new FieldRule(EnumSet.of(EscapeType.URL), false);
+
+	private static final FieldRule HTTP_BODY = new FieldRule(
+		EnumSet.of(EscapeType.JSON, EscapeType.XML, EscapeType.URL),
+		false
+	);
+
+	/**
+	 * The other source fields: an OID, an object name, a static value, the line filters of a command.
+	 */
+	private static final FieldRule OTHER_FIELD = new FieldRule(
+		EnumSet.of(EscapeType.JSON, EscapeType.XML, EscapeType.URL, EscapeType.REGEX),
+		true
 	);
 
 	/**
@@ -161,33 +199,44 @@ public class ConnectorTool extends AbstractMonitorTask {
 	public ToolDefinition toDefinition(final String name, final Set<DeviceKind> appliesTo) {
 		final Set<String> unescaped = new HashSet<>();
 		for (final Source source : sources.values()) {
-			// The command or the query takes the escapes of its language only: it is checked apart, then blanked
+			// A command, a query or a request takes the rules of its language: checked apart, then blanked
 			final Source others = source.copy();
 			if (others instanceof CommandLineSource commandLineSource) {
-				final Set<EscapeType> escapes = runsInPosixShell(commandLineSource, appliesTo)
-					? POSIX_SHELL_ESCAPES
-					: EnumSet.noneOf(EscapeType.class);
-				checkReferences(name, commandLineSource.getCommandLine(), escapes, unescaped);
+				final FieldRule rule = runsInPosixShell(commandLineSource, appliesTo) ? POSIX_COMMAND_LINE : COMMAND_LINE;
+				checkReferences(name, commandLineSource.getCommandLine(), rule, unescaped);
 				commandLineSource.setCommandLine("");
 			} else if (others instanceof SqlSource sqlSource) {
-				checkReferences(name, sqlSource.getQuery(), EnumSet.of(EscapeType.SQL), unescaped);
+				checkReferences(name, sqlSource.getQuery(), SQL_QUERY, unescaped);
 				sqlSource.setQuery("");
 			} else if (others instanceof WmiSource wmiSource) {
-				checkReferences(name, wmiSource.getQuery(), EnumSet.of(EscapeType.WQL), unescaped);
+				checkReferences(name, wmiSource.getQuery(), WQL_QUERY, unescaped);
 				wmiSource.setQuery("");
 			} else if (others instanceof WbemSource wbemSource) {
-				checkReferences(name, wbemSource.getQuery(), EnumSet.of(EscapeType.WQL), unescaped);
+				checkReferences(name, wbemSource.getQuery(), WQL_QUERY, unescaped);
 				wbemSource.setQuery("");
+			} else if (others instanceof HttpSource httpSource) {
+				for (final String field : Arrays.asList(
+					httpSource.getUrl(),
+					httpSource.getPath(),
+					httpSource.getHeader(),
+					httpSource.getAuthenticationToken()
+				)) {
+					checkReferences(name, field, HTTP_URL_OR_HEADER, unescaped);
+				}
+				checkReferences(name, httpSource.getBody(), HTTP_BODY, unescaped);
+				httpSource.setUrl(null);
+				httpSource.setPath(null);
+				httpSource.setHeader(null);
+				httpSource.setAuthenticationToken(null);
+				httpSource.setBody(null);
 			}
 			// update() is the visitor of every field a reference is replaced in
-			others.update(field -> checkReferences(name, field, REQUEST_ESCAPES, unescaped));
+			others.update(field -> checkReferences(name, field, OTHER_FIELD, unescaped));
 			for (final Compute compute : source.getComputes()) {
-				// An awk script is code, where no escape is safe; the other computes only transform the table
+				// An awk script is code; the other computes only transform the table
 				compute
 					.copy()
-					.update(field ->
-						checkReferences(name, field, compute instanceof Awk ? EnumSet.noneOf(EscapeType.class) : null, unescaped)
-					);
+					.update(field -> checkReferences(name, field, compute instanceof Awk ? AWK_SCRIPT : null, unescaped));
 			}
 		}
 		final Map<String, ToolParameter> checked = new LinkedHashMap<>(parameters);
@@ -228,25 +277,26 @@ public class ConnectorTool extends AbstractMonitorTask {
 
 	/**
 	 * Checks the {@code ${param::name}} references of a field. Every reference must name a declared parameter and
-	 * a known escape type. In a field that is code ({@code escapes} given):
+	 * a known escape type. In a field that is code ({@code rule} given):
 	 * <ul>
-	 * <li>a parameter inserted unescaped must be constrained (see {@link ToolParameter#isConstrained()}), and is
-	 * added to {@code unescaped},</li>
-	 * <li>the escape type must be one of {@code escapes},</li>
+	 * <li>a parameter inserted unescaped must be constrained (see {@link ToolParameter#isConstrained()}), by an enum
+	 * or a non-string type where the rule takes no {@link FieldRule#patternedStrings()}, and is added to
+	 * {@code unescaped},</li>
+	 * <li>the escape type must be one of the rule's,</li>
 	 * <li>the {@code sql}, {@code wql} and {@code json} escapes, which only cover the inside of a string, must be
 	 * inside such a string (see {@link #insideString}).</li>
 	 * </ul>
 	 *
 	 * @param toolName  the tool name, for the error message
 	 * @param field     the field of a source or a compute
-	 * @param escapes   the escape types the field takes, {@code null} for a field that is data
+	 * @param rule      what the field takes, {@code null} for a field that is data
 	 * @param unescaped the names of the parameters inserted unescaped into code, completed here
 	 * @return the field, unchanged
 	 */
 	private String checkReferences(
 		final String toolName,
 		final String field,
-		final Set<EscapeType> escapes,
+		final FieldRule rule,
 		final Set<String> unescaped
 	) {
 		if (field == null) {
@@ -267,7 +317,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 			if (escape != null && escapeType == null) {
 				throw new IllegalArgumentException("Tool %s uses an unknown escape type in %s".formatted(toolName, reference));
 			}
-			if (escapes == null) {
+			if (rule == null) {
 				continue;
 			}
 			if (escapeType == null) {
@@ -279,13 +329,24 @@ public class ConnectorTool extends AbstractMonitorTask {
 						)
 					);
 				}
+				if (
+					!rule.patternedStrings() && ToolParameter.STRING.equals(parameter.type()) && parameter.enumValues() == null
+				) {
+					// Refusing the metacharacters does not cover a query or a request: --, ../, a header line
+					throw new IllegalArgumentException(
+						"Tool %s inserts the string %s unescaped in a query or a request: escape it or declare an enum".formatted(
+							toolName,
+							reference
+						)
+					);
+				}
 				unescaped.add(parameterName);
-			} else if (!escapes.contains(escapeType)) {
+			} else if (!rule.escapes().contains(escapeType)) {
 				throw new IllegalArgumentException(
 					"Tool %s uses %s where only the escapes %s are safe: %s".formatted(
 						toolName,
 						reference,
-						escapes,
+						rule.escapes(),
 						"in a Windows command line or an awk script, constrain the parameter instead"
 					)
 				);

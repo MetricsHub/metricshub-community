@@ -72,6 +72,37 @@ class ConnectorToolTest {
 			WINDOWS
 		);
 		assertAccepted(HttpSource.builder().body("{\"name\": \"${esc(json)::param::service}\"}").build(), LINUX);
+		assertAccepted(
+			HttpSource.builder()
+				.path("/api/units/${esc(url)::param::service}")
+				.header("X-Unit: ${esc(url)::param::service}")
+				.build(),
+			LINUX
+		);
+		// Numbers and enums go anywhere as they are
+		assertAccepted(SqlSource.builder().query("SELECT * FROM t LIMIT ${param::lines}").build(), LINUX);
+	}
+
+	@Test
+	void testAPatternedStringIsRefusedUnescapedInAQueryOrARequest() {
+		// 1-- passes [a-z0-9-]+ and comments out the rest of the query
+		assertRefused(
+			SqlSource.builder().query("SELECT * FROM t WHERE id = ${param::unit} AND tenant = 42").build(),
+			LINUX
+		);
+		assertRefused(
+			WmiSource.builder().query("SELECT * FROM Win32_Service WHERE Name = ${param::unit}").build(),
+			WINDOWS
+		);
+		assertRefused(HttpSource.builder().path("/api/${param::unit}").build(), LINUX);
+	}
+
+	@Test
+	void testAnHttpFieldTakesItsOwnEscapes() {
+		// xml and regex keep line breaks: a header could gain a line
+		assertRefused(HttpSource.builder().header("X-Unit: ${esc(xml)::param::service}").build(), LINUX);
+		assertRefused(HttpSource.builder().header("X-Unit: ${esc(regex)::param::service}").build(), LINUX);
+		assertRefused(HttpSource.builder().path("/api/${esc(json)::param::service}").build(), LINUX);
 	}
 
 	@Test

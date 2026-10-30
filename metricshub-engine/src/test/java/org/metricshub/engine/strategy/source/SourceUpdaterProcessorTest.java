@@ -609,7 +609,7 @@ class SourceUpdaterProcessorTest {
 	void testProcessCommandLineSourceAssignsShellArgumentsToVariables() {
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).attributes(Map.of("site", "$(id)")).build())
 			.build();
 
 		new SourceUpdaterProcessor(
@@ -620,15 +620,18 @@ class SourceUpdaterProcessorTest {
 			extensionManager
 		).process(
 			CommandLineSource.builder()
-				.commandLine("echo ok # it's\njournalctl -n ${param::lines} -u ${esc(bash)::param::service}")
+				.commandLine(
+					"echo ok # it's\njournalctl -n ${param::lines} -u ${esc(bash)::param::service} -g '${esc(bash)::resource.attribute::site}'"
+				)
 				.build()
 		);
 
-		// Whatever surrounds the reference, the shell expands the variable without parsing the value
+		// Whatever surrounds the reference, the shell expands the variable without parsing the value, and the quotes
+		// right around a reference go with it
 		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
 		verify(sourceProcessor).process(captor.capture());
 		assertEquals(
-			"__mh_arg1='x'\\''; reboot #'; echo ok # it's\njournalctl -n 10 -u \"$__mh_arg1\"",
+			"__mh_arg1='x'\\''; reboot #'; __mh_arg2='$(id)'; echo ok # it's\njournalctl -n 10 -u \"$__mh_arg1\" -g \"$__mh_arg2\"",
 			captor.getValue().getCommandLine()
 		);
 	}

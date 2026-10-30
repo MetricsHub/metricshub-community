@@ -110,7 +110,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * A reference escaped for a POSIX shell, whose value is assigned to a variable in a command line.
 	 */
 	private static final Pattern SHELL_ARGUMENT_PATTERN = Pattern.compile(
-		"\\$\\{esc\\((?:bash|linux)\\)::(?:attribute|param)::(?<key>[^}]+)\\}",
+		"\\$\\{esc\\((?:bash|linux)\\)::(?<kind>attribute|param|resource\\.attribute)::(?<key>[^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -311,37 +311,54 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Assigns the value of each {@code ${esc(bash)::param::name}} or {@code ${esc(bash)::attribute::name}} (or
-	 * {@code linux}) of a command line to a shell variable at the start of the command, and replaces the reference
-	 * with {@code "$variable"}: the shell expands the variable without parsing its value, whatever quotes,
-	 * comments or here-documents surround the reference.
+	 * Assigns the value of each {@code ${esc(bash)::param::name}}, {@code ${esc(bash)::attribute::name}} or
+	 * {@code ${esc(bash)::resource.attribute::name}} (or {@code linux}) of a command line to a shell variable at
+	 * the start of the command, and replaces the reference with {@code "$variable"}: the shell expands the variable
+	 * without parsing its value, whatever quotes, comments or here-documents surround the reference. The single
+	 * quotes right around a reference, {@code '${esc(bash)::param::name}'}, are replaced with it, or they would
+	 * keep {@code "$variable"} as is.
 	 *
 	 * @param copy the source, a command line source or left as is
 	 */
 	private void hoistShellArguments(final Source copy) {
-		if (!(copy instanceof CommandLineSource commandLineSource) || attributes == null) {
+		if (!(copy instanceof CommandLineSource commandLineSource)) {
 			return;
 		}
-		final Matcher matcher = SHELL_ARGUMENT_PATTERN.matcher(commandLineSource.getCommandLine());
+		final String template = commandLineSource.getCommandLine();
+		final Matcher matcher = SHELL_ARGUMENT_PATTERN.matcher(template);
 		final StringBuilder assignments = new StringBuilder();
 		final StringBuilder commandLine = new StringBuilder();
 		int count = 0;
+		int copied = 0;
 		while (matcher.find()) {
-			final String value = attributes.get(matcher.group("key").trim());
-			if (value != null) {
-				count++;
-				// At the start of the command line, outside of any quote: the single-quoted value is a literal
-				assignments
-					.append(SHELL_VARIABLE)
-					.append(count)
-					.append("='")
-					.append(EscapeType.BASH.escape(value))
-					.append("'; ");
-				matcher.appendReplacement(commandLine, Matcher.quoteReplacement("\"$" + SHELL_VARIABLE + count + "\""));
+			final Map<String, String> values = "resource.attribute".equalsIgnoreCase(matcher.group("kind"))
+				? telemetryManager.getHostConfiguration().getAttributes()
+				: attributes;
+			final String value = values == null ? null : values.get(matcher.group("key").trim());
+			if (value == null) {
+				continue;
 			}
+			count++;
+			// At the start of the command line, outside of any quote: the single-quoted value is a literal
+			assignments.append(SHELL_VARIABLE).append(count).append("='").append(EscapeType.BASH.escape(value)).append("'; ");
+			// The single quotes right around the reference go with it, unless the previous reference took one
+			final boolean quoted = matcher.start() > copied && isQuotedAround(template, matcher.start(), matcher.end());
+			final int start = quoted ? matcher.start() - 1 : matcher.start();
+			commandLine.append(template, copied, start).append("\"$").append(SHELL_VARIABLE).append(count).append('"');
+			copied = quoted ? matcher.end() + 1 : matcher.end();
 		}
-		matcher.appendTail(commandLine);
+		commandLine.append(template, copied, template.length());
 		commandLineSource.setCommandLine(assignments.toString() + commandLine);
+	}
+
+	/**
+	 * @param text  a text
+	 * @param start the start of a part of the text
+	 * @param end   the end of the part, excluded
+	 * @return whether the part is right between two single quotes
+	 */
+	private static boolean isQuotedAround(final String text, final int start, final int end) {
+		return start > 0 && end < text.length() && text.charAt(start - 1) == '\'' && text.charAt(end) == '\'';
 	}
 
 	/**
