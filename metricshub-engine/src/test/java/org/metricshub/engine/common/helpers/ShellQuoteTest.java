@@ -92,6 +92,8 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl -- X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("service sshd X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ip link X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("git remote X origin"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("docker container X web"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl $(echo) X"));
 		// Once written, what it acts on
 		assertEquals(ShellQuote.NONE, quoteOfX("systemctl status X"));
@@ -99,6 +101,7 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.NONE, quoteOfX("systemctl status --unit=X"));
 		assertEquals(ShellQuote.NONE, quoteOfX("service sshd status; echo X"));
 		assertEquals(ShellQuote.NONE, quoteOfX("ip addr show X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("docker container logs X"));
 	}
 
 	@Test

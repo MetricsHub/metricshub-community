@@ -60,6 +60,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractConcat;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTranslate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
@@ -146,10 +147,16 @@ public class ConnectorTool extends AbstractMonitorTask {
 
 	/**
 	 * The regular expressions of a command line source ({@code keep}, {@code exclude}) and of the matching-lines
-	 * computes ({@code regExp}): escaped to match literally, or an enum or a number. A value used as a regular
+	 * computes ({@code regExp}): escaped to match literally, or an enum or an integer. A value used as a regular
 	 * expression could backtrack without end, a {@code +} needing no metacharacter.
 	 */
 	private static final FieldRule LINE_FILTER = new FieldRule(EnumSet.of(EscapeType.REGEX), false);
+
+	/**
+	 * The regular expressions no escape fits, Java's for the {@code arraySeparator} of {@code arrayTranslate}, awk's
+	 * for the {@code separators} of {@code awk}: only an enum or an integer.
+	 */
+	private static final FieldRule SEPARATOR_REGEX = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	/**
 	 * The paths of a file source, where no escape keeps a value from climbing with {@code ../} or starting at
@@ -440,9 +447,14 @@ public class ConnectorTool extends AbstractMonitorTask {
 					.values()
 					.forEach(value -> checkReferences(name, value, null, usages));
 			}
+			checkReferences(name, awk.getSeparators(), SEPARATOR_REGEX, usages);
 			awk.setScript("");
 			awk.setKeep(null);
 			awk.setExclude(null);
+			awk.setSeparators(null);
+		} else if (copy instanceof ArrayTranslate arrayTranslate) {
+			checkReferences(name, arrayTranslate.getArraySeparator(), SEPARATOR_REGEX, usages);
+			arrayTranslate.setArraySeparator(null);
 		}
 		copy.update(field -> checkReferences(name, field, OTHER_FIELD, usages));
 	}
@@ -620,7 +632,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 						)
 					);
 				}
-				if (rule == LINE_FILTER && "number".equals(parameter.type()) && parameter.enumValues() == null) {
+				final boolean regex = rule == LINE_FILTER || rule == SEPARATOR_REGEX;
+				if (regex && "number".equals(parameter.type()) && parameter.enumValues() == null) {
 					// The dot of 1.5, the + of 1e+5 are regex syntax
 					throw new IllegalArgumentException(
 						"Tool %s inserts the number %s unescaped in a regular expression: escape it with regex".formatted(

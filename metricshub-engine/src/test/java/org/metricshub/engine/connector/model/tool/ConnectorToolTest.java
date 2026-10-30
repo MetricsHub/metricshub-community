@@ -466,6 +466,21 @@ class ConnectorToolTest {
 			)
 		);
 		assertRefused(source, LINUX);
+		// A number either: the dot of 1.5 would be any character
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(Map.of("logs", source))
+			.parameters(Map.of("ratio", new ToolParameter("number", "A ratio", true, null)))
+			.build();
+		source.setComputes(
+			List.of(
+				ArrayTranslate.builder()
+					.column(1)
+					.translationTable(new TranslationTable())
+					.arraySeparator("${param::ratio}")
+					.build()
+			)
+		);
+		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("logs", LINUX));
 		// Values appended or replaced are data
 		source.setComputes(
 			List.of(

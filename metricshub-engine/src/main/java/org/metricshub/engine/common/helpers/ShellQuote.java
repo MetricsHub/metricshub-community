@@ -123,8 +123,9 @@ public enum ShellQuote {
 
 	/**
 	 * The commands whose first operands choose what they do rather than what they act on, with how many:
-	 * {@code systemctl stop sshd}, {@code service sshd stop}. Until the connector has written that many, an operand
-	 * is {@link #UNKNOWN}. A word right after an option is taken for its value, not for one of them.
+	 * {@code systemctl stop sshd}, {@code service sshd stop}, and two where subcommands nest ({@code git remote
+	 * remove}, {@code docker container rm}). Until the connector has written that many, an operand is
+	 * {@link #UNKNOWN}. A word right after an option is taken for its value, not for one of them.
 	 */
 	private static final Map<String, Integer> ACTION_OPERANDS = Map.ofEntries(
 		Map.entry("systemctl", 1),
@@ -139,14 +140,14 @@ public enum ShellQuote {
 		Map.entry("loginctl", 1),
 		Map.entry("timedatectl", 1),
 		Map.entry("hostnamectl", 1),
-		Map.entry("docker", 1),
-		Map.entry("podman", 1),
-		Map.entry("kubectl", 1),
+		Map.entry("docker", 2),
+		Map.entry("podman", 2),
+		Map.entry("kubectl", 2),
 		Map.entry("crictl", 1),
 		Map.entry("virsh", 1),
 		Map.entry("ip", 2),
 		Map.entry("nmcli", 2),
-		Map.entry("ufw", 1),
+		Map.entry("ufw", 2),
 		Map.entry("zfs", 1),
 		Map.entry("zpool", 1),
 		Map.entry("lvm", 1),
@@ -156,7 +157,7 @@ public enum ShellQuote {
 		Map.entry("dnf", 1),
 		Map.entry("zypper", 1),
 		Map.entry("snap", 1),
-		Map.entry("git", 1)
+		Map.entry("git", 2)
 	);
 
 	/**

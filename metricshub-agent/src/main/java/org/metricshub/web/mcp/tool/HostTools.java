@@ -333,7 +333,8 @@ public final class HostTools {
 		}
 		// A double has at most 309 integer digits; only a decimal may hold many more
 		final BigDecimal decimal = value.isBigDecimal() ? value.decimalValue() : null;
-		return decimal == null || decimal.precision() - decimal.scale() <= MAX_INTEGER_DIGITS;
+		// In long: 1e2147483647 has a scale of -2147483647, whose int subtraction overflows
+		return decimal == null || (long) decimal.precision() - decimal.scale() <= MAX_INTEGER_DIGITS;
 	}
 
 	/**
