@@ -89,6 +89,7 @@ Each step **depends** on the previous one.
 
    * Update `README.md` and content under `metricshub-doc/` if any end-user behavior changes.
    * Verify examples, CLI options, and environment variables are current.
+   * A tool declared by a protocol extension (`IProtocolExtension.getTools()`) is documented in `metricshub-doc/docs/integrations/ai-agent-integration.md`, section "Protocol tools": its advertised name `<extension>_<tool>`, parameters and a one-line description; a destructive tool is marked as such there.
 
 7. 🧰 **Web App (React Frontend)**
 
