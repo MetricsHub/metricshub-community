@@ -88,6 +88,11 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
+	 * A {@code LIKE} operator right before a string.
+	 */
+	private static final Pattern LIKE_BEFORE = Pattern.compile("\\bLIKE\\s*$", Pattern.CASE_INSENSITIVE);
+
+	/**
 	 * The device kinds whose commands run in a POSIX shell.
 	 */
 	private static final Set<DeviceKind> POSIX_KINDS = EnumSet.of(
@@ -534,7 +539,33 @@ public class ConnectorTool extends AbstractMonitorTask {
 		if (type == EscapeType.XML) {
 			return insideXmlValue(field, position);
 		}
+		if (type == EscapeType.WQL) {
+			return !insideWqlLike(field, position);
+		}
 		return type != EscapeType.REGEX || !insideCharacterClass(field, position);
+	}
+
+	/**
+	 * @param query    a WQL query
+	 * @param position a position inside one of its strings
+	 * @return whether the string is the pattern of a {@code LIKE}, where WQL does not read {@code \} as an escape:
+	 *         the {@code wql} escape would not keep a quote from closing it
+	 */
+	static boolean insideWqlLike(final String query, final int position) {
+		int open = -1;
+		char quote = '\0';
+		for (int i = 0; i < position; i++) {
+			final char c = query.charAt(i);
+			if (quote == '\0') {
+				if (c == '"' || c == '\'') {
+					quote = c;
+					open = i;
+				}
+			} else if (c == quote) {
+				quote = '\0';
+			}
+		}
+		return quote != '\0' && LIKE_BEFORE.matcher(query.substring(0, open)).find();
 	}
 
 	/**

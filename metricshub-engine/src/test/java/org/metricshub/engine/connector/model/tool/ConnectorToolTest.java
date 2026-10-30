@@ -358,6 +358,21 @@ class ConnectorToolTest {
 	}
 
 	@Test
+	void testWqlEscapeInALikePatternIsRefused() {
+		// WQL does not read \ as an escape in a LIKE pattern: O\'Brien would close the string
+		assertRefused(
+			WmiSource.builder().query("SELECT * FROM Win32_Service WHERE Name LIKE '%${esc(wql)::param::service}%'").build(),
+			WINDOWS
+		);
+		assertAccepted(
+			WmiSource.builder()
+				.query("SELECT * FROM Win32_Service WHERE Caption LIKE '%x%' AND Name = '${esc(wql)::param::service}'")
+				.build(),
+			WINDOWS
+		);
+	}
+
+	@Test
 	void testEscapeOfAnotherLanguageIsRefused() {
 		assertRefused(commandLine("echo \"${esc(json)::param::service}\""), LINUX);
 		assertRefused(
