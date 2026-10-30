@@ -249,7 +249,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 *                                  {@link #checkReferences})
 	 */
 	public ToolDefinition toDefinition(final String name, final Set<DeviceKind> appliesTo) {
-		final Usages usages = new Usages(new HashSet<>(), new HashSet<>(), new HashSet<>());
+		final Usages usages = new Usages(new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
 		for (final Source source : sources.values()) {
 			// A command, a query or a request takes the rules of its language: checked apart, then blanked
 			final Source others = source.copy();
@@ -277,7 +277,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 				fileSource.setPaths(new LinkedHashSet<>());
 			} else if (others instanceof HttpSource httpSource) {
 				checkCode(name, httpSource.getUrl(), HTTP_URL, usages, forEach);
-				checkUrlAuthority(name, httpSource.getUrl());
+				checkUrlAuthority(name, joinUrl(httpSource.getUrl(), httpSource.getPath()));
 				checkCode(name, httpSource.getPath(), HTTP_URL, usages, forEach);
 				checkCode(name, httpSource.getHeader(), HTTP_HEADER, usages, forEach);
 				// The token names the source holding it, looked up before any parameter is replaced
@@ -321,6 +321,11 @@ public class ConnectorTool extends AbstractMonitorTask {
 				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutTableSyntax())
 			);
 		usages
+			.sqlStrings()
+			.forEach(parameterName ->
+				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutSqlDialectCharacters())
+			);
+		usages
 			.unescaped()
 			.forEach(parameterName ->
 				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutMetacharacters())
@@ -329,6 +334,12 @@ public class ConnectorTool extends AbstractMonitorTask {
 		if (result != null && (countReferences(result.source()) > 0 || countReferences(result.columns().toString()) > 0)) {
 			throw new IllegalArgumentException(
 				"Tool %s references a parameter in its result, where it is not replaced".formatted(name)
+			);
+		}
+		// The execution order names sources, as they are
+		if (getExecutionOrder() != null && countReferences(getExecutionOrder().toString()) > 0) {
+			throw new IllegalArgumentException(
+				"Tool %s references a parameter in its execution order, where it is not replaced".formatted(name)
 			);
 		}
 		return new ToolDefinition(name, description, checked, destructive);
@@ -343,8 +354,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * @param tableValues    the parameters inserted into the values of a compute, whose strings refuse the syntax of
 	 *                       a table: {@code ;} would add a column, {@code ,} an entry, {@code $n} refer to a column, a
 	 *                       line break add a row
+	 * @param sqlStrings     the parameters escaped into a SQL string, whose strings refuse what dialects read
+	 *                       differently: {@code \}, {@code "}, line breaks and tabs
 	 */
-	private record Usages(Set<String> unescaped, Set<String> shellArguments, Set<String> tableValues) {}
+	private record Usages(
+		Set<String> unescaped,
+		Set<String> shellArguments,
+		Set<String> tableValues,
+		Set<String> sqlStrings
+	) {}
 
 	/**
 	 * A tool controlling where a request goes could reach any service the agent can, the configured credentials
@@ -373,6 +391,22 @@ public class ConnectorTool extends AbstractMonitorTask {
 				);
 			}
 		}
+	}
+
+	/**
+	 * @param url  the URL of an HTTP source
+	 * @param path its path
+	 * @return the URL the HTTP extension requests: the URL alone, or the URL and the path joined with one slash
+	 *         between ({@code url: "http:"} and {@code path: "//host/x"} make {@code http://host/x})
+	 */
+	private static String joinUrl(final String url, final String path) {
+		if (url == null || url.isBlank() || path == null || path.isBlank()) {
+			return url;
+		}
+		if (url.endsWith("/") && path.startsWith("/")) {
+			return url + path.substring(1);
+		}
+		return url.endsWith("/") || path.startsWith("/") ? url + path : url + "/" + path;
 	}
 
 	/**
@@ -431,15 +465,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 			replace.setExistingValue(null);
 			replace.setNewValue(null);
 		} else if (copy instanceof AbstractMatchingLines matchingLines) {
-			checkReferences(name, matchingLines.getRegExp(), LINE_FILTER, usages);
+			checkCode(name, matchingLines.getRegExp(), LINE_FILTER, usages, false);
 			checkReferences(name, matchingLines.getValueList(), null, usages);
 			markTableValues(matchingLines.getValueList(), usages);
 			matchingLines.setRegExp(null);
 			matchingLines.setValueList(null);
 		} else if (copy instanceof Awk awk) {
-			checkReferences(name, awk.getScript(), AWK_SCRIPT, usages);
-			checkReferences(name, awk.getKeep(), LINE_FILTER, usages);
-			checkReferences(name, awk.getExclude(), LINE_FILTER, usages);
+			checkCode(name, awk.getScript(), AWK_SCRIPT, usages, false);
+			checkCode(name, awk.getKeep(), LINE_FILTER, usages, false);
+			checkCode(name, awk.getExclude(), LINE_FILTER, usages, false);
 			if (awk.getVariables() != null) {
 				// Left out of update(), replaced apart as awk variables: data, but declared ones
 				awk
@@ -447,13 +481,13 @@ public class ConnectorTool extends AbstractMonitorTask {
 					.values()
 					.forEach(value -> checkReferences(name, value, null, usages));
 			}
-			checkReferences(name, awk.getSeparators(), SEPARATOR_REGEX, usages);
+			checkCode(name, awk.getSeparators(), SEPARATOR_REGEX, usages, false);
 			awk.setScript("");
 			awk.setKeep(null);
 			awk.setExclude(null);
 			awk.setSeparators(null);
 		} else if (copy instanceof ArrayTranslate arrayTranslate) {
-			checkReferences(name, arrayTranslate.getArraySeparator(), SEPARATOR_REGEX, usages);
+			checkCode(name, arrayTranslate.getArraySeparator(), SEPARATOR_REGEX, usages, false);
 			arrayTranslate.setArraySeparator(null);
 		}
 		copy.update(field -> checkReferences(name, field, OTHER_FIELD, usages));
@@ -669,6 +703,9 @@ public class ConnectorTool extends AbstractMonitorTask {
 				checkShellArgument(toolName, field, matcher.start(), reference);
 				// One word, but -delete would still be an option to the command
 				usages.shellArguments().add(parameterName);
+			} else if (escapeType == EscapeType.SQL) {
+				// Doubling ' holds in every dialect; what the escape does to \ " and line breaks does not
+				usages.sqlStrings().add(parameterName);
 			}
 		}
 		return field;

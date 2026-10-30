@@ -60,10 +60,11 @@ public class MacrosUpdater {
 	);
 
 	/**
-	 * A simple macro escaped for a POSIX shell, quoted for where it lands (see {@link #shellQuoted}).
+	 * A simple macro escaped for a POSIX shell, quoted for where it lands (see {@link #shellQuoted}), with or without
+	 * the {@code ::} {@link #MACRO_PATTERN} takes.
 	 */
 	private static final Pattern SHELL_MACRO_PATTERN = Pattern.compile(
-		"[$%]\\{esc\\((?i:bash|linux)\\)::(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
+		"[$%]\\{esc\\((?i:bash|linux)\\)(?:::)?(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
 	);
 
 	/**
@@ -73,7 +74,7 @@ public class MacrosUpdater {
 	 * {@code $(Start-Process calc)} would not run.
 	 */
 	private static final Pattern POWERSHELL_MACRO_PATTERN = Pattern.compile(
-		"[$%]\\{esc\\((?i:powershell)\\)::(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
+		"[$%]\\{esc\\((?i:powershell)\\)(?:::)?(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
 	);
 
 	/**

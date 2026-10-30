@@ -158,6 +158,16 @@ class MacrosUpdaterTest {
 			"echo $((  ))",
 			MacrosUpdater.update("echo $(( %{esc(bash)::PASSWORD} ))", "u", "x[$(id)]".toCharArray(), null, "h", false)
 		);
+		// Without the ::, quoted all the same
+		assertEquals(
+			"mytool -p '$(id)'",
+			MacrosUpdater.update("mytool -p %{esc(bash)PASSWORD}", "u", "$(id)".toCharArray(), null, "h", false)
+		);
+		// After a backslash, which would escape the backslash written before $: nothing
+		assertEquals(
+			"echo \"\\\"",
+			MacrosUpdater.update("echo \"\\${esc(bash)::PASSWORD}\"", "u", "$(id)".toCharArray(), null, "h", false)
+		);
 		// The command name replaced with nothing, the next macro takes its place: nothing either
 		assertEquals(
 			" ",

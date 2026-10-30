@@ -67,6 +67,8 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.NONE, quoteOfX("MODE=x ls X"));
 		// An array subscript is arithmetic
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("a[X]=1 ls"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("a[b[0]]=x X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("a[b[0]+X]=1 ls"));
 		// A command substitution's output is split and globbed again
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("find . -name $(printf %s X)"));
 		// A command name from an expansion is not known
@@ -75,6 +77,14 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("sh X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("bash -o pipefail -c X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("sh -ec 'X'"));
+		// After -- or an option's value, still the script
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("bash -- X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("bash -O extglob X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("bash -x script.sh X"));
+		// A backslash escapes the first character of the value: its quote or its $
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo \"\\X\""));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo \\X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("echo \\\\X"));
 		assertEquals(ShellQuote.NONE, quoteOfX("/bin/sh ${file::detail.sh} X"));
 		assertEquals(ShellQuote.NONE, quoteOfX("${file::check.sh} X"));
 		// Arguments again after the command ends

@@ -167,18 +167,23 @@ public enum ShellQuote {
 	private static final Set<String> SHELLS = Set.of("sh", "bash", "ksh", "zsh", "dash", "ash", "csh", "tcsh");
 
 	/**
+	 * The options of a shell whose value is the next word, not the script.
+	 */
+	private static final Set<String> SHELL_OPTIONS_WITH_VALUE = Set.of("-o", "+o", "-O", "+O", "--rcfile", "--init-file");
+
+	/**
 	 * An assignment word, which keeps the next word the command name ({@code MODE=x cmd}, {@code PATH+=:/x cmd},
-	 * {@code a[0]=x cmd}).
+	 * {@code a[0]=x cmd}, {@code a[b[0]]=x cmd}).
 	 */
 	private static final Pattern ASSIGNMENT = Pattern.compile(
-		"[A-Za-z_][A-Za-z0-9_]*(?:\\[[^\\]]*\\])?\\+?=.*",
+		"[A-Za-z_][A-Za-z0-9_]*(?:\\[.*\\])?\\+?=.*",
 		Pattern.DOTALL
 	);
 
 	/**
-	 * The start of an assignment to an array element, {@code a[...}, whose subscript is arithmetic.
+	 * The start of an assignment to an array element, {@code a[}, whose subscript is arithmetic.
 	 */
-	private static final Pattern SUBSCRIPT = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*\\[[^\\]]*", Pattern.DOTALL);
+	private static final Pattern SUBSCRIPT_START = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*\\[");
 
 	/**
 	 * The options whose next word is a command, whatever the command they are given to ({@code find -exec}).
@@ -243,6 +248,7 @@ public enum ShellQuote {
 		private boolean wordIsCommandName;
 		private boolean evaluating;
 		private boolean shellSeen;
+		private boolean shellOptionValue;
 		private int actionsLeft;
 		private boolean afterOption;
 		private final Deque<Frame> frames = new ArrayDeque<>();
@@ -258,7 +264,8 @@ public enum ShellQuote {
 		private ShellQuote quoteAt(final int position) {
 			for (int i = 0; i < position; i++) {
 				i = read(i, position);
-				if (i < 0) {
+				// A backslash before the position escapes the first character of the value: \"${v}" opens nothing
+				if (i < 0 || i >= position) {
 					return UNKNOWN;
 				}
 			}
@@ -266,7 +273,7 @@ public enum ShellQuote {
 			// An action operand, unless in an option word (--unit=...)
 			final boolean action = actionsLeft > 0 && !(inWord && word.length() > 0 && word.charAt(0) == '-');
 			// In the subscript of an array assignment, a[...]=, which is arithmetic
-			final boolean subscript = inWord && wordIsCommandName && SUBSCRIPT.matcher(word).matches();
+			final boolean subscript = inWord && wordIsCommandName && inSubscript();
 			// In a command substitution, whose output the shell splits and globs again
 			final boolean substituted = frames.stream().anyMatch(Frame::substitution);
 			return nameOrTarget || evaluating || action || subscript || substituted ? UNKNOWN : quote;
@@ -395,11 +402,31 @@ public enum ShellQuote {
 			return i;
 		}
 
+		/**
+		 * @return whether the word read so far is the start of an array element assignment whose subscript is not
+		 *         closed yet: {@code a[}, {@code a[b[0]}
+		 */
+		private boolean inSubscript() {
+			if (!SUBSCRIPT_START.matcher(word).lookingAt()) {
+				return false;
+			}
+			int depth = 0;
+			for (int i = 0; i < word.length(); i++) {
+				if (word.charAt(i) == '[') {
+					depth++;
+				} else if (word.charAt(i) == ']') {
+					depth--;
+				}
+			}
+			return depth > 0;
+		}
+
 		private void breakCommand() {
 			commandNext = true;
 			targetNext = false;
 			evaluating = false;
 			shellSeen = false;
+			shellOptionValue = false;
 			actionsLeft = 0;
 			afterOption = false;
 		}
@@ -475,12 +502,16 @@ public enum ShellQuote {
 			if (SHELLS.contains(name)) {
 				shellSeen = true;
 				commandNext = commandNext || wordIsCommandName;
-			} else if (shellSeen && !text.startsWith("--") && (text.startsWith("-") || text.startsWith("+"))) {
-				if (text.startsWith("-") && text.indexOf('c') > 0) {
+			} else if (shellSeen && (text.startsWith("-") || text.startsWith("+"))) {
+				if (text.startsWith("-") && !text.startsWith("--") && text.indexOf('c') > 0) {
 					evaluating = true;
 				}
-				// An option: the script is still to come
+				// An option, -- included: the script is still to come, after the value of -o pipefail or --rcfile f
 				commandNext = commandNext || wordIsCommandName;
+				shellOptionValue = commandNext && SHELL_OPTIONS_WITH_VALUE.contains(text);
+			} else if (shellOptionValue) {
+				shellOptionValue = false;
+				commandNext = true;
 			}
 		}
 

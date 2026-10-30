@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -384,6 +385,22 @@ class ConnectorToolTest {
 	}
 
 	@Test
+	void testSqlStringRefusesWhatDialectsReadDifferently() {
+		final ToolParameter service = assertAccepted(
+			SqlSource.builder().query("SELECT * FROM t WHERE name = '${esc(sql)::param::service}'").build(),
+			WINDOWS
+		)
+			.parameters()
+			.get("service");
+		// MySQL reads \ as an escape, standard SQL as a character
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "C:\\Windows"));
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "a\"b"));
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "a\tb"));
+		// A doubled ' reads back the same everywhere
+		assertDoesNotThrow(() -> service.validate("service", "O'Brien"));
+	}
+
+	@Test
 	void testActionOfAServiceManagerIsRefused() {
 		// One word, but it chooses what systemctl does: stop, mask...
 		assertRefused(commandLine("systemctl ${esc(bash)::param::service} sshd"), LINUX);
@@ -411,6 +428,9 @@ class ConnectorToolTest {
 		// The assistant would choose where the request, credentials included, goes
 		assertRefused(HttpSource.builder().url("http://${esc(url)::param::service}/status").build(), LINUX);
 		assertRefused(HttpSource.builder().url("http://host:${param::lines}/status").build(), LINUX);
+		// The path joined to the URL may write the authority too
+		assertRefused(HttpSource.builder().url("http:").path("//${esc(url)::param::service}/admin").build(), LINUX);
+		assertAccepted(HttpSource.builder().url("http://host").path("${esc(url)::param::service}/status").build(), LINUX);
 	}
 
 	@Test
@@ -426,6 +446,22 @@ class ConnectorToolTest {
 		assertRefused(forEach, LINUX);
 		// Without executeForEachEntryOf, $1 is the shell's or awk's
 		assertAccepted(commandLine("ps -ef | awk '{print $1}'"), LINUX);
+		// An awk script is code too, run in the agent
+		final CommandLineSource awk = commandLine("ps -ef");
+		awk.setComputes(List.of(Awk.builder().script("${source::probe}").build()));
+		assertRefused(awk, LINUX);
+	}
+
+	@Test
+	void testParameterInTheExecutionOrderIsRefused() {
+		// It names sources, as they are
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(Map.of("logs", commandLine("ls")))
+			.executionOrder(new LinkedHashSet<>(List.of("${param::unit}")))
+			.parameters(PARAMETERS)
+			.result(new ToolResult("${source::logs}", null))
+			.build();
+		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("logs", LINUX));
 	}
 
 	@Test

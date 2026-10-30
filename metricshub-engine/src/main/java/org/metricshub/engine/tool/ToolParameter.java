@@ -172,6 +172,24 @@ public record ToolParameter(
 	}
 
 	/**
+	 * A string parameter escaped into a SQL string has its {@code '} doubled, which every dialect reads back, but
+	 * MySQL reads {@code \} as an escape where standard SQL (SQL Server, Oracle, PostgreSQL by default) reads a
+	 * character: {@code \}, {@code "}, line breaks and tabs, which the escape writes the MySQL way, are refused on
+	 * top of the pattern.
+	 *
+	 * @return this parameter, whose pattern also refuses {@code \ "}, line breaks and tabs if it is a string without
+	 *         enum
+	 * @throws IllegalArgumentException if the default value holds one of them
+	 */
+	public ToolParameter withoutSqlDialectCharacters() {
+		if (!STRING.equals(type) || enumValues != null) {
+			return this;
+		}
+		final String constrained = "(?=[^\\\\\"\\r\\n\\t]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
+		return new ToolParameter(type, description, required, defaultValue, constrained, null);
+	}
+
+	/**
 	 * A string parameter inserted unescaped is only safe without the shell and query metacharacters: whether its
 	 * pattern lets them through cannot be told in general, so they are refused on top of it.
 	 *
