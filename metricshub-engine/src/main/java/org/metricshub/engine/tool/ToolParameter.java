@@ -156,6 +156,22 @@ public record ToolParameter(
 	}
 
 	/**
+	 * A string parameter in the values of a compute ({@code append}, {@code replace}, a {@code valueList}) is data,
+	 * but the table around reads {@code ;} as a column separator, {@code ,} as an entry separator and {@code $n} as
+	 * a column: such characters are refused on top of the pattern.
+	 *
+	 * @return this parameter, whose pattern also refuses {@code ; , $} if it is a string without enum
+	 * @throws IllegalArgumentException if the default value holds one of them
+	 */
+	public ToolParameter withoutTableSyntax() {
+		if (!STRING.equals(type) || enumValues != null) {
+			return this;
+		}
+		final String constrained = "(?=[^;,$]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
+		return new ToolParameter(type, description, required, defaultValue, constrained, null);
+	}
+
+	/**
 	 * A string parameter inserted unescaped is only safe without the shell and query metacharacters: whether its
 	 * pattern lets them through cannot be told in general, so they are refused on top of it.
 	 *

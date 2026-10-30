@@ -236,7 +236,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 *                                  {@link #checkReferences})
 	 */
 	public ToolDefinition toDefinition(final String name, final Set<DeviceKind> appliesTo) {
-		final Usages usages = new Usages(new HashSet<>(), new HashSet<>());
+		final Usages usages = new Usages(new HashSet<>(), new HashSet<>(), new HashSet<>());
 		for (final Source source : sources.values()) {
 			// A command, a query or a request takes the rules of its language: checked apart, then blanked
 			final Source others = source.copy();
@@ -263,6 +263,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 				fileSource.setPaths(new LinkedHashSet<>());
 			} else if (others instanceof HttpSource httpSource) {
 				checkReferences(name, httpSource.getUrl(), HTTP_URL, usages);
+				checkUrlAuthority(name, httpSource.getUrl());
 				checkReferences(name, httpSource.getPath(), HTTP_URL, usages);
 				checkReferences(name, httpSource.getHeader(), HTTP_HEADER, usages);
 				// The token names the source holding it, looked up before any parameter is replaced
@@ -303,13 +304,23 @@ public class ConnectorTool extends AbstractMonitorTask {
 				checkCompute(name, compute.copy(), usages);
 			}
 		}
+		// Each use adds its restriction to the parameter's, whatever the order
 		final Map<String, ToolParameter> checked = new LinkedHashMap<>(parameters);
 		usages
 			.shellArguments()
-			.forEach(parameterName -> checked.put(parameterName, parameters.get(parameterName).withoutLeadingDash()));
+			.forEach(parameterName ->
+				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutLeadingDash())
+			);
+		usages
+			.tableValues()
+			.forEach(parameterName ->
+				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutTableSyntax())
+			);
 		usages
 			.unescaped()
-			.forEach(parameterName -> checked.put(parameterName, parameters.get(parameterName).withoutMetacharacters()));
+			.forEach(parameterName ->
+				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutMetacharacters())
+			);
 		return new ToolDefinition(name, description, checked, destructive);
 	}
 
@@ -319,8 +330,54 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * @param unescaped      the parameters inserted unescaped into code, whose strings refuse the metacharacters
 	 * @param shellArguments the parameters escaped into a POSIX command line, whose strings may not start with
 	 *                       {@code -}: one word still, but an option to the command
+	 * @param tableValues    the parameters inserted into the values of a compute, whose strings refuse the syntax of
+	 *                       a table: {@code ;} would add a column, {@code ,} an entry, {@code $n} refer to a column
 	 */
-	private record Usages(Set<String> unescaped, Set<String> shellArguments) {}
+	private record Usages(Set<String> unescaped, Set<String> shellArguments, Set<String> tableValues) {}
+
+	/**
+	 * A tool controlling where a request goes could reach any service the agent can, the configured credentials
+	 * sent along: a reference in the scheme or the authority of an absolute URL must be an enum the connector chose.
+	 *
+	 * @param toolName the tool name, for the error message
+	 * @param url      the URL of an HTTP source
+	 * @throws IllegalArgumentException if a reference before the path of an absolute URL is not an enum
+	 */
+	private void checkUrlAuthority(final String toolName, final String url) {
+		if (url == null) {
+			return;
+		}
+		final int scheme = url.indexOf("://");
+		final int pathStart = scheme < 0 ? -1 : indexOfAny(url, "/?#", scheme + 3);
+		final Matcher matcher = PARAMETER_REFERENCE.matcher(url);
+		while (matcher.find()) {
+			final boolean inAuthority = scheme < 0 ? matcher.start() == 0 : pathStart < 0 || matcher.start() < pathStart;
+			final ToolParameter parameter = parameters.get(matcher.group("name").trim());
+			if (inAuthority && (parameter == null || parameter.enumValues() == null)) {
+				throw new IllegalArgumentException(
+					"Tool %s writes %s in the scheme or the host of its URL: only an enum may go there".formatted(
+						toolName,
+						matcher.group()
+					)
+				);
+			}
+		}
+	}
+
+	/**
+	 * @param text  a text
+	 * @param chars characters to look for
+	 * @param from  the position to look from
+	 * @return the position of the first of the characters, {@code -1} if there is none
+	 */
+	private static int indexOfAny(final String text, final String chars, final int from) {
+		for (int i = from; i < text.length(); i++) {
+			if (chars.indexOf(text.charAt(i)) >= 0) {
+				return i;
+			}
+		}
+		return -1;
+	}
 
 	/**
 	 * Describes this tool for the LLM (see {@link #toDefinition(String, Set)}).
@@ -352,11 +409,14 @@ public class ConnectorTool extends AbstractMonitorTask {
 	private void checkCompute(final String name, final Compute copy, final Usages usages) {
 		if (copy instanceof AbstractConcat concat) {
 			checkReferences(name, concat.getValue(), null, usages);
+			markTableValues(concat.getValue(), usages);
 			concat.setValue("");
 		} else if (copy instanceof Replace replace) {
 			// A literal replacement
 			checkReferences(name, replace.getExistingValue(), null, usages);
 			checkReferences(name, replace.getNewValue(), null, usages);
+			markTableValues(replace.getExistingValue(), usages);
+			markTableValues(replace.getNewValue(), usages);
 			replace.setExistingValue(null);
 			replace.setNewValue(null);
 		} else if (copy instanceof Encode || copy instanceof Decode) {
@@ -372,6 +432,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 		} else if (copy instanceof AbstractMatchingLines matchingLines) {
 			checkReferences(name, matchingLines.getRegExp(), LINE_FILTER, usages);
 			checkReferences(name, matchingLines.getValueList(), null, usages);
+			markTableValues(matchingLines.getValueList(), usages);
 			matchingLines.setRegExp(null);
 			matchingLines.setValueList(null);
 		} else if (copy instanceof Awk awk) {
@@ -390,6 +451,18 @@ public class ConnectorTool extends AbstractMonitorTask {
 			awk.setExclude(null);
 		}
 		copy.update(field -> checkReferences(name, field, OTHER_FIELD, usages));
+	}
+
+	/**
+	 * @param field  a value of a compute, already checked
+	 * @param usages where the parameters it references are recorded as table values
+	 */
+	private static void markTableValues(final String field, final Usages usages) {
+		if (field != null) {
+			PARAMETER_REFERENCE.matcher(field)
+				.results()
+				.forEach(match -> usages.tableValues().add(match.group(2).trim()));
+		}
 	}
 
 	/**

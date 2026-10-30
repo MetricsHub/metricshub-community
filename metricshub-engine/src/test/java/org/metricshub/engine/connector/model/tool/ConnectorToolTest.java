@@ -322,6 +322,42 @@ class ConnectorToolTest {
 	}
 
 	@Test
+	void testRestrictionsOfEachUseAddUp() {
+		final CommandLineSource source = commandLine("find /srv -name ${esc(bash)::param::service}");
+		source.setComputes(List.of(Append.builder().column(1).value("-${param::service}").build()));
+		final ToolParameter service = assertAccepted(source, LINUX).parameters().get("service");
+
+		// Data in an append, but ; would add a column; and a shell argument, where - would be an option
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "a;b"));
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "$2"));
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "-delete"));
+		assertDoesNotThrow(() -> service.validate("service", "sshd service"));
+	}
+
+	@Test
+	void testUrlAuthorityTakesOnlyEnums() {
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(
+				Map.of("status", HttpSource.builder().url("https://${param::host}/status/${esc(url)::param::service}").build())
+			)
+			.parameters(
+				Map.of(
+					"host",
+					new ToolParameter(null, "A host", true, null, null, List.of("ilo1.local", "ilo2.local")),
+					"service",
+					new ToolParameter(null, "A service", true, null)
+				)
+			)
+			.result(new ToolResult("${source::status}", null))
+			.build();
+		assertDoesNotThrow(() -> tool.toDefinition("status", LINUX));
+
+		// The assistant would choose where the request, credentials included, goes
+		assertRefused(HttpSource.builder().url("http://${esc(url)::param::service}/status").build(), LINUX);
+		assertRefused(HttpSource.builder().url("http://host:${param::lines}/status").build(), LINUX);
+	}
+
+	@Test
 	void testParameterInAnEncodingIsRefused() {
 		final CommandLineSource source = commandLine("cat f");
 		source.setComputes(List.of(Encode.builder().column(1).encoding("${param::service}").build()));
