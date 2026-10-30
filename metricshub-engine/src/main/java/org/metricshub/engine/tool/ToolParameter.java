@@ -21,7 +21,6 @@ package org.metricshub.engine.tool;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -29,7 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * One argument of a {@link ToolDefinition}, as declared by a connector or a protocol extension.
@@ -60,6 +58,15 @@ public record ToolParameter(
 	 */
 	public static final List<String> TYPES = List.of(STRING, "integer", "number", "boolean");
 
+	/**
+	 * The pattern of a connector tool's string parameter that declares neither an enum nor a pattern: letters, digits
+	 * and {@code _ . @ : -}, starting with a letter, a digit or {@code _} ({@code sshd.service},
+	 * {@code getty@tty1.service}, {@code db-01.example.com}, {@code 10.0.0.1}), or nothing. Such a value cannot leave
+	 * a string or a word, in a shell, a query or a URL, be read as an option, or climb a path. Where the connector
+	 * inserts it, and what the command does with it, is for the review of the connector.
+	 */
+	public static final String DEFAULT_PATTERN = "(?:[A-Za-z0-9_][A-Za-z0-9_.@:-]*)?";
+
 	private static final Pattern INTEGER = Pattern.compile("-?\\d+");
 	private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?");
 
@@ -67,21 +74,6 @@ public record ToolParameter(
 	 * How long a value may take to match its pattern.
 	 */
 	private static final long MATCH_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(200);
-
-	/**
-	 * The characters that quote, expand, chain, redirect, glob or comment in a shell (POSIX, PowerShell, cmd) or
-	 * a query: a value inserted unescaped may contain none of them.
-	 */
-	private static final String METACHARACTERS = " \t\r\n'\"`$;|&<>(){}[]*?!#~%^\\";
-
-	/**
-	 * Matches a value holding none of the {@link #METACHARACTERS}, each written {@code \x{hex}}, and not starting with
-	 * {@code -}, which a command would read as an option, as lookaheads: {@code \z} rather than {@code $}, which would
-	 * also match before a final line break.
-	 */
-	private static final String WITHOUT_METACHARACTERS = METACHARACTERS.chars()
-		.mapToObj("\\x{%x}"::formatted)
-		.collect(Collectors.joining("", "(?!-)(?=[^", "]*\\z)"));
 
 	/**
 	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
@@ -132,86 +124,14 @@ public record ToolParameter(
 	}
 
 	/**
-	 * @return whether the connector constrained the value: a number or a boolean, one of an enum, or a string
-	 *         matching a pattern
+	 * @return this parameter, or a string declaring neither an enum nor a pattern constrained by the
+	 *         {@link #DEFAULT_PATTERN}
 	 */
-	@JsonIgnore
-	public boolean isConstrained() {
-		return !STRING.equals(type) || enumValues != null || pattern != null;
-	}
-
-	/**
-	 * A string parameter escaped into a command line stays one word, but a command would still read a value starting
-	 * with {@code -} as an option ({@code find ... -delete}): such a value is refused on top of the pattern.
-	 *
-	 * @return this parameter, whose pattern also refuses a leading {@code -} if it is a string without enum
-	 * @throws IllegalArgumentException if the default value starts with {@code -}
-	 */
-	public ToolParameter withoutLeadingDash() {
-		if (!STRING.equals(type) || enumValues != null) {
+	public ToolParameter withDefaultPattern() {
+		if (!STRING.equals(type) || enumValues != null || pattern != null) {
 			return this;
 		}
-		final String constrained = "(?!-)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
-		return new ToolParameter(type, description, required, defaultValue, constrained, null);
-	}
-
-	/**
-	 * A string parameter in the values of a compute ({@code append}, {@code replace}, a {@code valueList}) is data,
-	 * but the table around reads {@code ;} as a column separator, {@code ,} as an entry separator, {@code $n} as
-	 * a column and a line break as a row separator: such characters are refused on top of the pattern.
-	 *
-	 * @return this parameter, whose pattern also refuses {@code ; , $} and line breaks if it is a string without enum
-	 * @throws IllegalArgumentException if the default value holds one of them
-	 */
-	public ToolParameter withoutTableSyntax() {
-		if (!STRING.equals(type) || enumValues != null) {
-			return this;
-		}
-		final String constrained = "(?=[^;,$\\r\\n]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
-		return new ToolParameter(type, description, required, defaultValue, constrained, null);
-	}
-
-	/**
-	 * A string parameter escaped into a SQL string has its {@code '} doubled, which every dialect reads back, but
-	 * MySQL reads {@code \} as an escape where standard SQL (SQL Server, Oracle, PostgreSQL by default) reads a
-	 * character: {@code \}, {@code "}, line breaks and tabs, which the escape writes the MySQL way, are refused on
-	 * top of the pattern.
-	 *
-	 * @return this parameter, whose pattern also refuses {@code \ "}, line breaks and tabs if it is a string without
-	 *         enum
-	 * @throws IllegalArgumentException if the default value or an enum value holds one of them
-	 */
-	public ToolParameter withoutSqlDialectCharacters() {
-		if (!STRING.equals(type)) {
-			return this;
-		}
-		if (enumValues != null) {
-			if (enumValues.stream().anyMatch(value -> value.chars().anyMatch(c -> "\\\"\r\n\t".indexOf(c) >= 0))) {
-				throw new IllegalArgumentException(
-					"An enum value escaped into a SQL string holds \\, \", a line break or a tab, which dialects read differently: %s".formatted(
-						enumValues
-					)
-				);
-			}
-			return this;
-		}
-		final String constrained = "(?=[^\\\\\"\\r\\n\\t]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
-		return new ToolParameter(type, description, required, defaultValue, constrained, null);
-	}
-
-	/**
-	 * A string parameter inserted unescaped is only safe without the shell and query metacharacters: whether its
-	 * pattern lets them through cannot be told in general, so they are refused on top of it.
-	 *
-	 * @return this parameter, whose pattern also refuses the {@link #METACHARACTERS} if it is a string without enum
-	 * @throws IllegalArgumentException if the default value holds a metacharacter
-	 */
-	public ToolParameter withoutMetacharacters() {
-		if (!STRING.equals(type) || enumValues != null) {
-			return this;
-		}
-		final String constrained = WITHOUT_METACHARACTERS + (pattern == null ? "" : "(?:" + pattern + ")");
-		return new ToolParameter(type, description, required, defaultValue, constrained, null);
+		return new ToolParameter(type, description, required, defaultValue, DEFAULT_PATTERN, null);
 	}
 
 	/**

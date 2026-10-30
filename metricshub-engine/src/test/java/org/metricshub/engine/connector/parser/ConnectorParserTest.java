@@ -139,10 +139,11 @@ class ConnectorParserTest {
 			((HttpSource) reboot.getSources().get("reset")).getBody()
 		);
 
-		assertEquals(
-			new ToolDefinition("reboot", "Reboots the server.", reboot.getParameters(), true),
-			reboot.toDefinition("reboot", connector)
-		);
+		// The plain string parameters take the default pattern
+		final ToolDefinition definition = reboot.toDefinition("reboot");
+		assertEquals(new ToolDefinition("reboot", "Reboots the server.", definition.parameters(), true), definition);
+		assertEquals(reboot.getParameters().get("mode"), definition.parameters().get("mode"));
+		assertEquals(ToolParameter.DEFAULT_PATTERN, definition.parameters().get("comment").pattern());
 	}
 
 	@Test

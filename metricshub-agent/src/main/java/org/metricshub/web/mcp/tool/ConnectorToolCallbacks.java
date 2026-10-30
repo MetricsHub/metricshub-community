@@ -78,7 +78,7 @@ public final class ConnectorToolCallbacks {
 					.forEach((toolName, tool) -> {
 						// Destructive tools included: the interfaces decide what they expose
 						try {
-							final ToolDefinition definition = tool.toDefinition(toolName, connector);
+							final ToolDefinition definition = tool.toDefinition(toolName);
 							callbacks.add(
 								HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
 									run(agentContext, connectorId, connector, toolName, tool, hostname, arguments)

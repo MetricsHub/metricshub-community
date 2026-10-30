@@ -508,12 +508,11 @@ class SourceUpdaterProcessorTest {
 				Map.of("token", "a/b")
 			)
 		);
-		// No escape protects a value in PowerShell code: nothing is inserted
 		assertEquals(
-			"Get-Service -Name ",
+			"Get-Service -Name 'a''b'",
 			SourceUpdaterProcessor.replaceAttributeReferences(
-				"Get-Service -Name ${esc(powershell)::attribute::name}",
-				Map.of("name", "$(Start-Process calc)")
+				"Get-Service -Name '${esc(powershell)::attribute::name}'",
+				Map.of("name", "a'b")
 			)
 		);
 		// A value forming a macro, by itself or with its neighbors, is not inserted
@@ -611,146 +610,6 @@ class SourceUpdaterProcessorTest {
 				CommandLineSource.builder().commandLine("/usr/sbin/pvdisplay /dev/dsk/%PhysicalDisk.Collect.DeviceID%").build()
 			)
 		);
-	}
-
-	@Test
-	void testProcessCommandLineSourceAssignsShellArgumentsToVariables() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).attributes(Map.of("site", "$(id)")).build())
-			.build();
-
-		new SourceUpdaterProcessor(
-			sourceProcessor,
-			telemetryManager,
-			MY_CONNECTOR_1_NAME,
-			Map.of("service", "x'; reboot #", "lines", "10", "since", "1 hour *"),
-			extensionManager
-		).process(
-			CommandLineSource.builder()
-				.commandLine(
-					"journalctl -n ${param::lines} -u ${esc(bash)::param::service} -g '${esc(bash)::resource.attribute::site}'" +
-						" -S \"${esc(bash)::param::since}\""
-				)
-				.build()
-		);
-
-		// The shell expands each variable as one word without parsing its value: quoted outside of any quote,
-		// closing and reopening single quotes, as is inside double quotes
-		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
-		verify(sourceProcessor).process(captor.capture());
-		assertEquals(
-			"__mh_arg1='x'\\''; reboot #'; __mh_arg2='$(id)'; __mh_arg3='1 hour *'; " +
-				"journalctl -n 10 -u \"${__mh_arg1}\" -g ''\"${__mh_arg2}\"'' -S \"${__mh_arg3}\"",
-			captor.getValue().getCommandLine()
-		);
-	}
-
-	@Test
-	void testProcessCommandLineSourceAvoidsTheTemplateVariables() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-			.build();
-
-		new SourceUpdaterProcessor(
-			sourceProcessor,
-			telemetryManager,
-			MY_CONNECTOR_1_NAME,
-			Map.of("v", "x"),
-			extensionManager
-		).process(
-			CommandLineSource.builder().commandLine("__mh_arg1=fixed; echo ${esc(bash)::param::v} $__mh_arg1").build()
-		);
-
-		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
-		verify(sourceProcessor).process(captor.capture());
-		assertEquals(
-			"__mh_arg_1='x'; __mh_arg1=fixed; echo \"${__mh_arg_1}\" $__mh_arg1",
-			captor.getValue().getCommandLine()
-		);
-	}
-
-	@Test
-	void testProcessCommandLineSourceKeepsTheDollarsOfShellArguments() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-			.build();
-
-		new SourceUpdaterProcessor(
-			sourceProcessor,
-			telemetryManager,
-			MY_CONNECTOR_1_NAME,
-			Map.of("v", "price$$5"),
-			extensionManager
-		).process(CommandLineSource.builder().commandLine("echo $$ ${esc(bash)::param::v}").build());
-
-		// The template's $$ is halved, the value is not
-		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
-		verify(sourceProcessor).process(captor.capture());
-		assertEquals("__mh_arg1='price$$5'; echo $ \"${__mh_arg1}\"", captor.getValue().getCommandLine());
-	}
-
-	@Test
-	void testProcessCommandLineSourceDropsShellArgumentsEvaluatedAgain() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(
-				HostConfiguration.builder().hostname(LOCALHOST).attributes(Map.of("tag", "touch /tmp/pwned")).build()
-			)
-			.build();
-
-		new SourceUpdaterProcessor(
-			sourceProcessor,
-			telemetryManager,
-			MY_CONNECTOR_1_NAME,
-			Map.of("v", "touch /tmp/pwned", "w", "x"),
-			extensionManager
-		).process(
-			CommandLineSource.builder()
-				.commandLine(
-					"eval ${esc(bash)::attribute::v}; eval ${esc(bash)::resource.attribute::tag}; ls ${esc(bash)::attribute::w}; ${esc(bash)::attribute::v} ${esc(bash)::attribute::w}"
-				)
-				.build()
-		);
-
-		// eval would parse the value again, one word or not: replaced with nothing, whatever the kind of reference.
-		// A command name replaced with nothing, the next word takes its place: nothing either
-		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
-		verify(sourceProcessor).process(captor.capture());
-		assertEquals("__mh_arg1='x'; eval ; eval ; ls \"${__mh_arg1}\";  ", captor.getValue().getCommandLine());
-	}
-
-	@Test
-	void testProcessSourceFormingAMacroIsNotRun() {
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-			.build();
-		final String sourceRef = "${source::monitors.cpu.discovery.sources.suffix}";
-		telemetryManager
-			.getHostProperties()
-			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(sourceRef, SourceTable.builder().rawData("{PASSWORD}").build());
-		final SourceUpdaterProcessor processor = new SourceUpdaterProcessor(
-			sourceProcessor,
-			telemetryManager,
-			MY_CONNECTOR_1_NAME,
-			Map.of("prefix", "$", "name", "${PASSWORD}"),
-			extensionManager
-		);
-
-		// $ from an argument, {PASSWORD} from a source: ${PASSWORD} would be expanded by the extension
-		assertEquals(
-			SourceTable.empty(),
-			processor.process(CommandLineSource.builder().commandLine("echo ${param::prefix}" + sourceRef).build())
-		);
-		// A value assigned to a shell variable is checked as well
-		assertEquals(
-			SourceTable.empty(),
-			processor.process(CommandLineSource.builder().commandLine("echo ${esc(bash)::attribute::name}").build())
-		);
-		verify(sourceProcessor, never()).process(any(CommandLineSource.class));
 	}
 
 	@Test

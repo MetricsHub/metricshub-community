@@ -42,7 +42,6 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Utility class for updating and replacing HTTP macros in a text string.
@@ -50,31 +49,12 @@ import lombok.extern.slf4j.Slf4j;
  * and supports different encoding formats (e.g., base64, SHA256).
  * Macros are case-insensitive and can be escaped using different types such as JSON, XML, URL, etc.
  */
-@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class MacrosUpdater {
 
 	// Set the macros regex
 	private static final Pattern MACRO_PATTERN = Pattern.compile(
 		"[$%]\\{(esc\\(([a-zA-Z0-9]+)\\))?(::)?([A-Z0-9_-]+)\\}"
-	);
-
-	/**
-	 * A simple macro escaped for a POSIX shell, quoted for where it lands (see {@link #shellQuoted}), with or without
-	 * the {@code ::} {@link #MACRO_PATTERN} takes.
-	 */
-	private static final Pattern SHELL_MACRO_PATTERN = Pattern.compile(
-		"[$%]\\{esc\\((?i:bash|linux)\\)(?:::)?(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
-	);
-
-	/**
-	 * A simple macro escaped for PowerShell, always replaced with nothing, the error logged. A PowerShell command
-	 * reaches PowerShell through {@code cmd.exe}, which reads its quotes first, and its comments, double-quoted strings
-	 * and here-strings make the single quotes the escape relies on uncertain: nothing tells that a credential such as
-	 * {@code $(Start-Process calc)} would not run.
-	 */
-	private static final Pattern POWERSHELL_MACRO_PATTERN = Pattern.compile(
-		"[$%]\\{esc\\((?i:powershell)\\)(?:::)?(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
 	);
 
 	/**
@@ -126,48 +106,13 @@ public class MacrosUpdater {
 			while (matcher.find()) {
 				final String macro = matcher.group();
 				matcher.appendReplacement(replaced, "");
-				final Matcher shell = SHELL_MACRO_PATTERN.matcher(macro);
-				if (shell.matches()) {
-					// Read with the macros before replaced: one replaced with nothing leaves its place to the next
-					final String value = simpleMacroNameToField.getOrDefault(shell.group("name"), EMPTY);
-					replaced.append(shellQuoted(macro, value, replaced + text.substring(matcher.start()), replaced.length()));
-				} else if (POWERSHELL_MACRO_PATTERN.matcher(macro).matches()) {
-					log.error("{}: no escape protects a credential in a PowerShell command, replaced with nothing.", macro);
-				} else {
-					replaced.append(processMacro(macro, macro, matcher.group(4), matcher.group(2), simpleMacroNameToField));
-				}
+				replaced.append(processMacro(macro, macro, matcher.group(4), matcher.group(2), simpleMacroNameToField));
 			}
 			matcher.appendTail(replaced);
 			updatedContent = replaced.toString();
 		}
 
 		return updatedContent;
-	}
-
-	/**
-	 * Quotes a simple macro escaped for a POSIX shell for the quoting around it (see {@link ShellQuote}): escaped for
-	 * single quotes inside single quotes, for double quotes inside double quotes, and a whole single-quoted word
-	 * anywhere else, so that a credential such as {@code $(cmd)} is never run, whether the connector quoted the macro
-	 * or not. Where the value would not be a mere argument, nothing, the error logged.
-	 *
-	 * @param macro    the macro, for the log
-	 * @param value    its value
-	 * @param line     the command line, the macros before already replaced
-	 * @param position the position of the macro in the line
-	 * @return the value quoted
-	 */
-	private static String shellQuoted(final String macro, final String value, final String line, final int position) {
-		final ShellQuote quote = ShellQuote.at(line, position);
-		if (quote == ShellQuote.UNKNOWN) {
-			// In arithmetic, after eval or sh -c, as a command name...: no quoting would protect it
-			log.error("{} is not a mere argument of its command: replaced with nothing.", macro);
-		}
-		return switch (quote) {
-			case SINGLE -> escapeBashSpecialCharacters(value);
-			case DOUBLE -> value.replaceAll("([\\\\\"$`])", "\\\\$1");
-			case NONE -> "'" + escapeBashSpecialCharacters(value) + "'";
-			default -> EMPTY;
-		};
 	}
 
 	/**
@@ -363,16 +308,6 @@ public class MacrosUpdater {
 			}
 		}
 		return escaped.toString();
-	}
-
-	/**
-	 * Counts the macros of a text, as {@link #update} would find them.
-	 *
-	 * @param text a text, {@code null} for none
-	 * @return the number of {@code %{...}} and {@code ${...}} macros
-	 */
-	public static int countMacros(final String text) {
-		return text == null ? 0 : (int) MACRO_PATTERN.matcher(text).results().count();
 	}
 
 	/**

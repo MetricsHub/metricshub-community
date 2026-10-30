@@ -136,52 +136,23 @@ class MacrosUpdaterTest {
 	}
 
 	@Test
-	void testBashMacroQuotedForWhereItLands() {
-		final char[] password = "a'b\"c$(id)`d`\\".toCharArray();
-		// Between single quotes: escaped for them
+	void testShellMacrosEscapedForSingleQuotes() {
+		// The connector writes the quotes: nothing is expanded between them
 		assertEquals(
 			"mytool -p 'a'\\''b\"c$(id)`d`\\'",
-			MacrosUpdater.update("mytool -p '%{esc(bash)::PASSWORD}'", "u", password, null, "h", false)
-		);
-		// Between double quotes: \ " $ ` escaped
-		assertEquals(
-			"mytool -p \"a'b\\\"c\\$(id)\\`d\\`\\\\\"",
-			MacrosUpdater.update("mytool -p \"%{esc(bash)::PASSWORD}\"", "u", password, null, "h", false)
-		);
-		// Unquoted: a whole single-quoted word, $(id) never run
-		assertEquals(
-			"mytool -p 'a'\\''b\"c$(id)`d`\\'",
-			MacrosUpdater.update("mytool -p %{esc(bash)::PASSWORD}", "u", password, null, "h", false)
-		);
-		// In arithmetic, x[$(id)] would run whatever its quotes: nothing
-		assertEquals(
-			"echo $((  ))",
-			MacrosUpdater.update("echo $(( %{esc(bash)::PASSWORD} ))", "u", "x[$(id)]".toCharArray(), null, "h", false)
-		);
-		// Without the ::, quoted all the same
-		assertEquals(
-			"mytool -p '$(id)'",
-			MacrosUpdater.update("mytool -p %{esc(bash)PASSWORD}", "u", "$(id)".toCharArray(), null, "h", false)
-		);
-		// After a backslash, which would escape the backslash written before $: nothing
-		assertEquals(
-			"echo \"\\\"",
-			MacrosUpdater.update("echo \"\\${esc(bash)::PASSWORD}\"", "u", "$(id)".toCharArray(), null, "h", false)
-		);
-		// The command name replaced with nothing, the next macro takes its place: nothing either
-		assertEquals(
-			" ",
-			MacrosUpdater.update(USERNAME_ESC_BASH + " " + PASSWORD_ESC_BASH, "u", "reboot".toCharArray(), null, "h", false)
-		);
-	}
-
-	@Test
-	void testPowershellMacroIsNeverReplaced() {
-		// Through cmd.exe, with comments and double-quoted strings, no single quote can be trusted
-		assertEquals(
-			"powershell -Command \"Connect -P ''\"",
 			MacrosUpdater.update(
-				"powershell -Command \"Connect -P '%{esc(powershell)::PASSWORD}'\"",
+				"mytool -p '%{esc(bash)::PASSWORD}'",
+				"u",
+				"a'b\"c$(id)`d`\\".toCharArray(),
+				null,
+				"h",
+				false
+			)
+		);
+		assertEquals(
+			"Connect -P 'a''b$(calc)'",
+			MacrosUpdater.update(
+				"Connect -P '%{esc(powershell)::PASSWORD}'",
 				"u",
 				"a'b$(calc)".toCharArray(),
 				null,
@@ -208,7 +179,7 @@ class MacrosUpdaterTest {
 		assertEquals(
 			"mytool -p '%{PASSWORD}'\\'' ; reboot #'",
 			MacrosUpdater.update(
-				"mytool -p " + PASSWORD_ESC_BASH,
+				"mytool -p '" + PASSWORD_ESC_BASH + "'",
 				"u",
 				"%{PASSWORD}' ; reboot #".toCharArray(),
 				null,
@@ -216,12 +187,6 @@ class MacrosUpdaterTest {
 				false
 			)
 		);
-	}
-
-	@Test
-	void testCountMacros() {
-		assertEquals(2, MacrosUpdater.countMacros("%{USERNAME}:${esc(json)::PASSWORD} ${param::x} $HOME"));
-		assertEquals(0, MacrosUpdater.countMacros(null));
 	}
 
 	@Test
@@ -352,7 +317,7 @@ class MacrosUpdaterTest {
 		final String expectedUrl = "auth%40token%23123%24%25%5E%26*%28%29_%2B%7C%7E%60"; // URL-encoded
 		final String expectedRegex = "auth@token#123\\$%\\^&\\*()_\\+|~`"; // PSL regex escape
 		final String expectedWindowsCmd = "auth@token#123$^%^^^&*^(^)_+^|~`"; // Windows CMD escape
-		final String expectedPowershell = ""; // PowerShell escape: never replaced
+		final String expectedPowershell = authToken; // No single quote to double
 		final String expectedBash = "echo '" + authToken + "'"; // Bash escape: a whole single-quoted argument
 
 		// Test JSON escape
@@ -408,7 +373,7 @@ class MacrosUpdaterTest {
 
 		// Test Bash escape
 		{
-			final String text = "echo " + AUTHENTICATION_TOKEN_BASH;
+			final String text = "echo '" + AUTHENTICATION_TOKEN_BASH + "'";
 			assertEquals(expectedBash, MacrosUpdater.update(text, "user", "pwd".toCharArray(), authToken, "hostname", false));
 		}
 	}
@@ -467,14 +432,14 @@ class MacrosUpdaterTest {
 		{
 			final String text = "'" + USERNAME_ESC_POWERSHELL + "'";
 			final String username = "user'name$var";
-			final String expected = "''";
+			final String expected = "'user''name$var'";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
 
 		// Test Bash escape
 		{
-			final String text = "echo " + USERNAME_ESC_BASH;
+			final String text = "echo '" + USERNAME_ESC_BASH + "'";
 			final String username = "user'name$var";
 			final String expected = "echo 'user'\\''name$var'";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
@@ -527,14 +492,14 @@ class MacrosUpdaterTest {
 		{
 			final String text = "'" + PASSWORD_ESC_POWERSHELL + "'";
 			final String password = "p@ss'word$";
-			final String expected = "''";
+			final String expected = "'p@ss''word$'";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
 
 		// Test Bash escape
 		{
-			final String text = "echo " + PASSWORD_ESC_BASH;
+			final String text = "echo '" + PASSWORD_ESC_BASH + "'";
 			final String password = "p$ss'word&";
 			final String expected = "echo 'p$ss'\\''word&'";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);

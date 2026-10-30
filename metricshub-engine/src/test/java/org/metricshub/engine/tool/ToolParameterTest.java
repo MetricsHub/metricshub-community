@@ -2,7 +2,6 @@ package org.metricshub.engine.tool;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,42 +50,44 @@ class ToolParameterTest {
 	}
 
 	@Test
-	void testIsConstrained() {
-		assertFalse(new ToolParameter(null, null, false, null).isConstrained());
-		assertTrue(new ToolParameter("integer", null, false, null).isConstrained());
-		assertTrue(new ToolParameter(null, null, false, null, null, List.of("a")).isConstrained());
-		assertTrue(new ToolParameter(null, null, false, null, ".*", null).isConstrained());
-	}
-
-	@Test
-	void testWithoutMetacharacters() {
-		// Whatever the pattern lets through, no metacharacter, line break included
-		final ToolParameter loose = new ToolParameter(null, null, false, null, "[\\s\\S]*", null).withoutMetacharacters();
-		for (final String value : List.of(
-			"$(id)",
-			"a b",
-			"a\n",
-			"x'y",
-			"a;b",
-			"`id`",
-			"a\\b",
-			"%PATH%",
-			"a^&b",
-			"-rf",
-			"--all"
-		)) {
-			assertThrows(IllegalArgumentException.class, () -> loose.validate("x", value), value);
-		}
-		assertDoesNotThrow(() -> loose.validate("x", "sshd.service"));
-		// The pattern still applies
-		final ToolParameter unit = new ToolParameter(null, null, false, null, "[a-z]+", null).withoutMetacharacters();
-		assertThrows(IllegalArgumentException.class, () -> unit.validate("unit", "sshd.service"));
-		// A default holding a metacharacter makes the parameter unusable unescaped
-		final ToolParameter spaced = new ToolParameter(null, null, false, "a b", ".*", null);
-		assertThrows(IllegalArgumentException.class, spaced::withoutMetacharacters);
-		// Enums and other types are left as they are
+	void testDefaultPattern() {
+		// A plain string takes it, an enum, a pattern or another type is left as is
+		final ToolParameter unit = new ToolParameter(null, null, false, null).withDefaultPattern();
+		assertEquals(ToolParameter.DEFAULT_PATTERN, unit.pattern());
 		final ToolParameter integer = new ToolParameter("integer", null, false, null);
-		assertSame(integer, integer.withoutMetacharacters());
+		assertSame(integer, integer.withDefaultPattern());
+		final ToolParameter signal = new ToolParameter(null, null, false, null, null, List.of("TERM", "KILL"));
+		assertSame(signal, signal.withDefaultPattern());
+		final ToolParameter path = new ToolParameter(null, null, false, null, "/var/log/[a-z]+", null);
+		assertSame(path, path.withDefaultPattern());
+
+		// Unit, host and user names, addresses, versions, nothing
+		for (final String value : List.of(
+			"sshd.service",
+			"getty@tty1.service",
+			"db-01.example.com",
+			"10.0.0.1",
+			"fe80::1",
+			""
+		)) {
+			assertDoesNotThrow(() -> unit.validate("unit", value), value);
+		}
+		// Nothing that leaves a string or a word, reads as an option or climbs a path
+		for (final String value : List.of(
+			"a b",
+			"$(id)",
+			"x;reboot",
+			"x'y",
+			"a\"b",
+			"-delete",
+			"--all",
+			"../etc",
+			".x",
+			"a/b",
+			"%PATH%"
+		)) {
+			assertThrows(IllegalArgumentException.class, () -> unit.validate("unit", value), value);
+		}
 	}
 
 	@Test
