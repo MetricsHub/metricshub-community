@@ -239,6 +239,9 @@ class ConnectorToolTest {
 			.result(new ToolResult("${source::${param::unit}}", null))
 			.build();
 		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("logs", LINUX));
+		// Its columns are returned as they are
+		tool.setResult(new ToolResult("${source::logs}", List.of("${param::unit}")));
+		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("logs", LINUX));
 	}
 
 	@Test
@@ -359,8 +362,16 @@ class ConnectorToolTest {
 		// Data in an append, but ; would add a column; and a shell argument, where - would be an option
 		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "a;b"));
 		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "$2"));
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "x\ny"));
 		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "-delete"));
 		assertDoesNotThrow(() -> service.validate("service", "sshd service"));
+	}
+
+	@Test
+	void testActionOfAServiceManagerIsRefused() {
+		// One word, but it chooses what systemctl does: stop, mask...
+		assertRefused(commandLine("systemctl ${esc(bash)::param::service} sshd"), LINUX);
+		assertAccepted(commandLine("systemctl status ${esc(bash)::param::service}"), LINUX);
 	}
 
 	@Test
@@ -390,6 +401,7 @@ class ConnectorToolTest {
 	void testHostDataInCodeIsRefused() {
 		// An earlier source could echo an argument: its table would reach the code unchecked
 		assertRefused(commandLine("kill ${source::pids}"), LINUX);
+		assertRefused(commandLine("echo ${protocol::ssh.username}"), LINUX);
 		assertRefused(HttpSource.builder().body("{\"id\": \"${source::ids}\"}").build(), LINUX);
 		final CommandLineSource forEach = CommandLineSource.builder()
 			.commandLine("inspect $1")

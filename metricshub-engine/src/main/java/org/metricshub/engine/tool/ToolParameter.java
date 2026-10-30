@@ -157,17 +157,17 @@ public record ToolParameter(
 
 	/**
 	 * A string parameter in the values of a compute ({@code append}, {@code replace}, a {@code valueList}) is data,
-	 * but the table around reads {@code ;} as a column separator, {@code ,} as an entry separator and {@code $n} as
-	 * a column: such characters are refused on top of the pattern.
+	 * but the table around reads {@code ;} as a column separator, {@code ,} as an entry separator, {@code $n} as
+	 * a column and a line break as a row separator: such characters are refused on top of the pattern.
 	 *
-	 * @return this parameter, whose pattern also refuses {@code ; , $} if it is a string without enum
+	 * @return this parameter, whose pattern also refuses {@code ; , $} and line breaks if it is a string without enum
 	 * @throws IllegalArgumentException if the default value holds one of them
 	 */
 	public ToolParameter withoutTableSyntax() {
 		if (!STRING.equals(type) || enumValues != null) {
 			return this;
 		}
-		final String constrained = "(?=[^;,$]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
+		final String constrained = "(?=[^;,$\\r\\n]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
 		return new ToolParameter(type, description, required, defaultValue, constrained, null);
 	}
 

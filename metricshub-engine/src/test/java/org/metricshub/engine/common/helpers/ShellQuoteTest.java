@@ -77,6 +77,24 @@ class ShellQuoteTest {
 	}
 
 	@Test
+	void testActionOperands() {
+		// The operands choosing what the command does, before the connector writes them
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl X sshd"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("/usr/bin/systemctl --no-pager X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl -H host X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl -- X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("service sshd X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ip link X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl $(echo) X"));
+		// Once written, what it acts on
+		assertEquals(ShellQuote.NONE, quoteOfX("systemctl status X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("systemctl --no-pager=1 status --lines=5 X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("systemctl status --unit=X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("service sshd status; echo X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("ip addr show X"));
+	}
+
+	@Test
 	void testLineContinuation() {
 		// The shell removes a backslash-newline: ev<newline>al is eval
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ev\\\nal X"));

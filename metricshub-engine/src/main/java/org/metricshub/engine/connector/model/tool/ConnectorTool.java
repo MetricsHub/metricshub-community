@@ -23,7 +23,6 @@ package org.metricshub.engine.connector.model.tool;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -87,6 +86,14 @@ public class ConnectorTool extends AbstractMonitorTask {
 		// ${attribute::name} too: a tool's arguments are its attributes, replaced from the same map
 		// Any escape name, so that a malformed one (power-shell) is refused rather than left unseen
 		"\\$\\{(?:esc\\((?<esc>[^)]*)\\)::)?(?:param|attribute)::(?<name>[^}]+)\\}",
+		Pattern.CASE_INSENSITIVE
+	);
+
+	/**
+	 * A reference replaced as is with host data or configuration: a source's table, a protocol property.
+	 */
+	private static final Pattern HOST_DATA_REFERENCE = Pattern.compile(
+		"\\$\\{(?:source|protocol)::",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -311,8 +318,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 			.forEach(parameterName ->
 				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutMetacharacters())
 			);
-		// The result names a source, looked up as is
-		if (result != null && countReferences(result.source()) > 0) {
+		// The result names a source, looked up as is, and columns returned as they are
+		if (result != null && (countReferences(result.source()) > 0 || countReferences(result.columns().toString()) > 0)) {
 			throw new IllegalArgumentException(
 				"Tool %s references a parameter in its result, where it is not replaced".formatted(name)
 			);
@@ -327,7 +334,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * @param shellArguments the parameters escaped into a POSIX command line, whose strings may not start with
 	 *                       {@code -}: one word still, but an option to the command
 	 * @param tableValues    the parameters inserted into the values of a compute, whose strings refuse the syntax of
-	 *                       a table: {@code ;} would add a column, {@code ,} an entry, {@code $n} refer to a column
+	 *                       a table: {@code ;} would add a column, {@code ,} an entry, {@code $n} refer to a column, a
+	 *                       line break add a row
 	 */
 	private record Usages(Set<String> unescaped, Set<String> shellArguments, Set<String> tableValues) {}
 
@@ -517,8 +525,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 
 	/**
 	 * Checks a field that is code: its parameter references (see {@link #checkReferences}), and no host data
-	 * inserted as is. A source reference, or a column of the entry of {@code executeForEachEntryOf}, inserts a value
-	 * no rule checks, which an argument could steer through an earlier source.
+	 * inserted as is. A source or protocol reference, or a column of the entry of {@code executeForEachEntryOf},
+	 * inserts a value no rule checks, which an argument could steer through an earlier source.
 	 *
 	 * @param toolName the tool name, for the error message
 	 * @param field    the field
@@ -534,9 +542,11 @@ public class ConnectorTool extends AbstractMonitorTask {
 		final boolean forEach
 	) {
 		final boolean column = forEach && field != null && COLUMN_REFERENCE_PATTERN.matcher(field).find();
-		if (column || (field != null && SOURCE_REF_PATTERN.matcher(field).find())) {
+		if (column || (field != null && HOST_DATA_REFERENCE.matcher(field).find())) {
 			throw new IllegalArgumentException(
-				"Tool %s inserts host data as is into code: a source reference or a column of the entry".formatted(toolName)
+				"Tool %s inserts host data as is into code: a source or protocol reference, or a column of the entry".formatted(
+					toolName
+				)
 			);
 		}
 		checkReferences(toolName, field, rule, usages);

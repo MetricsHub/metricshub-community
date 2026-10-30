@@ -23,6 +23,7 @@ package org.metricshub.engine.common.helpers;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -31,7 +32,8 @@ import java.util.regex.Pattern;
  * an argument. The answer is {@link #UNKNOWN} where the reading depends on constructs this class does not follow (a
  * comment, a here-document, {@code $'...'}, a command substitution inside double quotes, backquotes), and where
  * the value would not be a mere argument: the name of a command, the target of a redirection, or an argument of a
- * command that evaluates its arguments again ({@code eval}, a shell, an interpreter, arithmetic).
+ * command that evaluates its arguments again ({@code eval}, a shell, an interpreter, arithmetic), or an operand
+ * choosing what a command does ({@code systemctl stop}).
  */
 public enum ShellQuote {
 	/**
@@ -120,6 +122,44 @@ public enum ShellQuote {
 	);
 
 	/**
+	 * The commands whose first operands choose what they do rather than what they act on, with how many:
+	 * {@code systemctl stop sshd}, {@code service sshd stop}. Until the connector has written that many, an operand
+	 * is {@link #UNKNOWN}. A word right after an option is taken for its value, not for one of them.
+	 */
+	private static final Map<String, Integer> ACTION_OPERANDS = Map.ofEntries(
+		Map.entry("systemctl", 1),
+		Map.entry("service", 2),
+		Map.entry("rc-service", 2),
+		Map.entry("update-rc.d", 2),
+		Map.entry("chkconfig", 2),
+		Map.entry("initctl", 1),
+		Map.entry("svcadm", 1),
+		Map.entry("launchctl", 1),
+		Map.entry("supervisorctl", 1),
+		Map.entry("loginctl", 1),
+		Map.entry("timedatectl", 1),
+		Map.entry("hostnamectl", 1),
+		Map.entry("docker", 1),
+		Map.entry("podman", 1),
+		Map.entry("kubectl", 1),
+		Map.entry("crictl", 1),
+		Map.entry("virsh", 1),
+		Map.entry("ip", 2),
+		Map.entry("nmcli", 2),
+		Map.entry("ufw", 1),
+		Map.entry("zfs", 1),
+		Map.entry("zpool", 1),
+		Map.entry("lvm", 1),
+		Map.entry("apt", 1),
+		Map.entry("apt-get", 1),
+		Map.entry("yum", 1),
+		Map.entry("dnf", 1),
+		Map.entry("zypper", 1),
+		Map.entry("snap", 1),
+		Map.entry("git", 1)
+	);
+
+	/**
 	 * The shells, which run their arguments as code after a {@code -c} option ({@code -c}, {@code -ec}...), and
 	 * only pass them to their script otherwise.
 	 */
@@ -166,8 +206,15 @@ public enum ShellQuote {
 	 * @param evaluating   whether the command around evaluates its arguments again
 	 * @param nameOrTarget whether the word holding the substitution is a command name or a redirection target
 	 * @param shellSeen    whether the command around runs a shell
+	 * @param actionsLeft  the action operands the command around still expects (see {@link #ACTION_OPERANDS})
 	 */
-	private record Frame(boolean substitution, boolean evaluating, boolean nameOrTarget, boolean shellSeen) {}
+	private record Frame(
+		boolean substitution,
+		boolean evaluating,
+		boolean nameOrTarget,
+		boolean shellSeen,
+		int actionsLeft
+	) {}
 
 	/**
 	 * Reads a command line up to a position, following its quotes, words and commands.
@@ -184,6 +231,8 @@ public enum ShellQuote {
 		private boolean wordIsCommandName;
 		private boolean evaluating;
 		private boolean shellSeen;
+		private int actionsLeft;
+		private boolean afterOption;
 		private final Deque<Frame> frames = new ArrayDeque<>();
 
 		private Reader(final String commandLine) {
@@ -202,7 +251,9 @@ public enum ShellQuote {
 				}
 			}
 			final boolean nameOrTarget = inWord ? wordIsNameOrTarget : commandNext || targetNext;
-			return nameOrTarget || evaluating ? UNKNOWN : quote;
+			// An action operand, unless in an option word (--unit=...)
+			final boolean action = actionsLeft > 0 && !(inWord && word.length() > 0 && word.charAt(0) == '-');
+			return nameOrTarget || evaluating || action ? UNKNOWN : quote;
 		}
 
 		/**
@@ -242,7 +293,7 @@ public enum ShellQuote {
 				endWord();
 			} else if (c == '(' && inWord && commandLine.charAt(i - 1) == '$') {
 				// A command substitution: commands of their own, then part of the word around it
-				frames.push(new Frame(true, evaluating, wordIsNameOrTarget, shellSeen));
+				frames.push(new Frame(true, evaluating, wordIsNameOrTarget, shellSeen, actionsLeft));
 				inWord = false;
 				breakCommand();
 			} else if (c == ')' && !frames.isEmpty() && frames.peek().substitution()) {
@@ -251,6 +302,7 @@ public enum ShellQuote {
 				// A command whose name is computed is not known
 				evaluating = frame.evaluating() || frame.nameOrTarget();
 				shellSeen = frame.shellSeen();
+				actionsLeft = frame.actionsLeft();
 				// Back in the word holding the substitution, whose value is not known
 				inWord = true;
 				word.setLength(0);
@@ -264,7 +316,7 @@ public enum ShellQuote {
 				endWord();
 			} else if (COMMAND_BREAKS.indexOf(c) >= 0) {
 				if (c == '(') {
-					frames.push(new Frame(false, false, false, false));
+					frames.push(new Frame(false, false, false, false, 0));
 				} else if (c == ')' && !frames.isEmpty()) {
 					frames.pop();
 				}
@@ -332,6 +384,8 @@ public enum ShellQuote {
 			targetNext = false;
 			evaluating = false;
 			shellSeen = false;
+			actionsLeft = 0;
+			afterOption = false;
 		}
 
 		private void startWord() {
@@ -366,9 +420,31 @@ public enum ShellQuote {
 			if (EVALUATING_COMMANDS.contains(name)) {
 				evaluating = true;
 			}
+			readActionWord(text, name);
 			readShellWord(text, name);
 			if ((wordIsCommandName && COMMAND_PREFIXES.contains(text)) || COMMAND_OPTIONS.contains(text)) {
 				commandNext = true;
+			}
+		}
+
+		/**
+		 * Counts the action operands the connector writes (see {@link #ACTION_OPERANDS}): literal words, neither an
+		 * option nor the value of one, nor computed.
+		 *
+		 * @param text the word
+		 * @param name its last path segment
+		 */
+		private void readActionWord(final String text, final String name) {
+			if (wordIsCommandName) {
+				actionsLeft = ACTION_OPERANDS.getOrDefault(name, 0);
+				afterOption = false;
+			} else if (actionsLeft > 0 && !wordIsNameOrTarget) {
+				final boolean option = text.startsWith("-");
+				if (!option && !afterOption && text.indexOf('$') < 0) {
+					actionsLeft--;
+				}
+				// -H host: the next word is the option's value; --host=x or -- carries none
+				afterOption = option && !text.contains("=") && !"--".equals(text);
 			}
 		}
 
