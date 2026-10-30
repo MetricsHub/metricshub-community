@@ -49,6 +49,8 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ls | X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("if X; then echo; fi"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("coproc X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("function run { X; }; run"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("prlimit --nofile=1024 X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("$(which ls) X"));
 		// A redirection target
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo ok >X"));

@@ -132,7 +132,33 @@ public enum ShellQuote {
 		"more",
 		"vi",
 		"vim",
-		"gdb"
+		"gdb",
+		// Wrappers running their operand as a command, with limits, a scheduling class, a sandbox...
+		"prlimit",
+		"chrt",
+		"numactl",
+		"cgexec",
+		"setpriv",
+		"capsh",
+		"runcon",
+		"sg",
+		"setarch",
+		"linux32",
+		"linux64",
+		"fakeroot",
+		"faketime",
+		"firejail",
+		"bwrap",
+		"valgrind",
+		"perf",
+		"torsocks",
+		"proxychains",
+		"chpst",
+		"softlimit",
+		"start-stop-daemon",
+		"xvfb-run",
+		"catchsegv",
+		"rlwrap"
 	);
 
 	/**
@@ -520,7 +546,10 @@ public enum ShellQuote {
 			}
 			readActionWord(text, name);
 			readShellWord(text, name);
-			if ((wordIsCommandName && COMMAND_PREFIXES.contains(text)) || COMMAND_OPTIONS.contains(text)) {
+			// A { opens commands wherever it comes: the body of function name { ...; }
+			if (
+				(wordIsCommandName && COMMAND_PREFIXES.contains(text)) || COMMAND_OPTIONS.contains(text) || "{".equals(text)
+			) {
 				commandNext = true;
 			}
 		}

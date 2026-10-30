@@ -91,8 +91,16 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
-	 * A reference replaced as is with host data or configuration: a source's table, a protocol property, a resource
-	 * attribute (escaped, {@code ${esc(bash)::resource.attribute::x}}, it is checked like a parameter).
+	 * An escaped resource attribute, {@code ${esc(bash)::resource.attribute::x}}, checked like a parameter.
+	 */
+	private static final Pattern ESCAPED_RESOURCE_ATTRIBUTE = Pattern.compile(
+		"\\$\\{esc\\((?<esc>[^)]*)\\)::resource\\.attribute::[^}]+\\}",
+		Pattern.CASE_INSENSITIVE
+	);
+
+	/**
+	 * A reference replaced as is with host data or configuration: a source's table, a protocol property, an unescaped
+	 * resource attribute.
 	 */
 	private static final Pattern HOST_DATA_REFERENCE = Pattern.compile(
 		"\\$\\{(?:source|protocol|resource\\.attribute)::",
@@ -596,7 +604,36 @@ public class ConnectorTool extends AbstractMonitorTask {
 				)
 			);
 		}
+		checkEscapedResourceAttributes(toolName, field, rule);
 		checkReferences(toolName, field, rule, usages);
+	}
+
+	/**
+	 * An escaped resource attribute takes the escapes of the field and their placement, as a parameter does: its value
+	 * comes from the configuration, not from the assistant, but {@code esc(sql)} in a command line protects nothing.
+	 *
+	 * @param toolName the tool name, for the error message
+	 * @param field    a field that is code
+	 * @param rule     what the field takes
+	 * @throws IllegalArgumentException if an escaped resource attribute does not protect its value there
+	 */
+	private static void checkEscapedResourceAttributes(final String toolName, final String field, final FieldRule rule) {
+		if (field == null) {
+			return;
+		}
+		final Matcher matcher = ESCAPED_RESOURCE_ATTRIBUTE.matcher(field);
+		while (matcher.find()) {
+			final EscapeType escapeType = EscapeType.fromString(matcher.group("esc"));
+			final boolean allowed = escapeType != null && rule.escapes().contains(escapeType);
+			if (!allowed || !escapeProtects(field, matcher.start(), escapeType)) {
+				throw new IllegalArgumentException(
+					"Tool %s writes %s where its escape does not protect the value".formatted(toolName, matcher.group())
+				);
+			}
+			if (rule == POSIX_COMMAND_LINE) {
+				checkShellArgument(toolName, field, matcher.start(), matcher.group());
+			}
+		}
 	}
 
 	/**

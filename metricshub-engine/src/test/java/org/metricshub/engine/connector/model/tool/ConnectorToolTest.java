@@ -463,6 +463,9 @@ class ConnectorToolTest {
 		// A resource attribute inserted as is; escaped, it is hoisted like a parameter
 		assertRefused(commandLine("echo ${resource.attribute::tag}"), LINUX);
 		assertAccepted(commandLine("echo ${esc(bash)::resource.attribute::tag}"), LINUX);
+		// With the escapes of the field, where they protect: not sql in a command line, not bash after eval
+		assertRefused(commandLine("echo ${esc(sql)::resource.attribute::tag}"), LINUX);
+		assertRefused(commandLine("eval ${esc(bash)::resource.attribute::tag}"), LINUX);
 	}
 
 	@Test
