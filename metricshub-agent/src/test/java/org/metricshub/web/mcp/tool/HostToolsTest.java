@@ -79,6 +79,44 @@ class HostToolsTest {
 	}
 
 	@Test
+	void testInputSchemaAdvertisesPatternAndEnum() {
+		final ToolDefinition definition = new ToolDefinition(
+			"kill",
+			"Kills a process.",
+			Map.of(
+				"pid",
+				new ToolParameter("string", "The process", true, null, "\\d+", null),
+				"signal",
+				new ToolParameter("string", "The signal", false, "TERM", null, List.of("TERM", "KILL"))
+			),
+			true
+		);
+
+		final JsonNode properties = HostTools.inputSchema(definition).get("properties");
+
+		assertEquals("^(?:\\d+)$", properties.get("pid").get("pattern").asText());
+		assertEquals("[\"TERM\",\"KILL\"]", properties.get("signal").get("enum").toString());
+		assertTrue(properties.get("signal").get("pattern") == null);
+	}
+
+	@Test
+	void testPerHostRejectsAnInvalidArgumentBeforeRunning() throws Exception {
+		final ToolDefinition definition = new ToolDefinition(
+			"ping",
+			"Pings a target.",
+			Map.of("count", new ToolParameter("integer", "How many pings", true, null)),
+			false
+		);
+		final ToolCallback callback = HostTools.perHost("Test_ping", definition, (hostname, arguments) -> {
+			throw new IllegalStateException("Must not run");
+		});
+
+		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"count\":\"4; reboot\"}"));
+
+		assertEquals("The argument count must be of type integer", result.get("errorMessage").asText());
+	}
+
+	@Test
 	void testDescriptionFlagsDestructiveTools() {
 		assertEquals("Lists the things.", HostTools.description(definition(false)));
 		assertEquals("DESTRUCTIVE: Lists the things.", HostTools.description(definition(true)));

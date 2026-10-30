@@ -359,76 +359,58 @@ public class MacrosUpdater {
 	}
 
 	/**
-	 * Escape special characters in a PowerShell string value (", $, {, }, (, ), [, ], #, \n, \t, \r, \0).
+	 * Escapes a value for the inside of a single-quoted PowerShell string ({@code '...'}), where nothing is
+	 * expanded and the only special characters are the single quotes. PowerShell takes the typographic quotes
+	 * (‘ ’ ‚ ‛) for single quotes too, and doubling any of them makes it literal.
 	 *
 	 * @param value The value to escape.
 	 * @return The escaped value
 	 */
 	static String escapePowershellSpecialCharacters(final String value) {
-		// Escape special characters for Windows PowerShell
 		return value
-			.replace("0", "`0") // Escape null character first
-			.replace("`n", "``n") // Escape new line
-			.replace("`t", "``t") // Escape tab
-			.replace("`r", "``r") // Escape carriage return
-			.replace("#", "`#") // Escape comment indicator
-			.replace("[", "`[") // Escape opening bracket
-			.replace("]", "`]") // Escape closing bracket
-			.replace("(", "`(") // Escape opening parenthesis
-			.replace(")", "`)") // Escape closing parenthesis
-			.replace("{", "`{") // Escape opening curly brace
-			.replace("}", "`}") // Escape closing curly brace
-			.replace("$", "`$") // Escape variable indicator
-			.replace("'", "''") // Escape single quote
-			.replace("\"", "`\"") // Escape double quote
-			.replace(".", "`."); // Escape dot at the end
+			.replace("'", "''")
+			.replace("\u2018", "\u2018\u2018")
+			.replace("\u2019", "\u2019\u2019")
+			.replace("\u201A", "\u201A\u201A")
+			.replace("\u201B", "\u201B\u201B");
 	}
 
 	/**
-	 * Escapes special Bash characters by prepending a backslash.
+	 * Escapes a value for the inside of a single-quoted POSIX shell string ({@code '...'}), where nothing is
+	 * expanded: a single quote closes the string, is written escaped, and the string reopens.
 	 *
-	 * @param value the input string that may contain special Bash characters
-	 * @return a string where special Bash characters have been escaped
+	 * @param value the input string that may contain special shell characters
+	 * @return a string to place between single quotes
 	 */
 	static String escapeBashSpecialCharacters(final String value) {
-		// Escape special Bash characters
-		return value
-			.replace("'", "\\'") // Escape single quote
-			.replace("\"", "\\\"") // Escape double quote
-			.replace("\\", "\\\\") // Escape backslash
-			.replace("$", "\\$") // Escape variable indicator
-			.replace("!", "\\!") // Escape history expansion
-			.replace("*", "\\*") // Escape wildcard
-			.replace("?", "\\?") // Escape wildcard
-			.replace("[", "\\[") // Escape opening bracket
-			.replace("]", "\\]") // Escape closing bracket
-			.replace("(", "\\(") // Escape opening parenthesis
-			.replace(")", "\\)") // Escape closing parenthesis
-			.replace("{", "\\{") // Escape opening brace
-			.replace("}", "\\}") // Escape closing brace
-			.replace("|", "\\|") // Escape pipe
-			.replace("&", "\\&") // Escape background process indicator
-			.replace("<", "\\<") // Escape input redirection
-			.replace(">", "\\>") // Escape output redirection
-			.replace("~", "\\~") // Escape tilde
-			.replace(";", "\\;") // Escape semicolon
-			.replace("\n", "\\n"); // Escape newline
+		return value.replace("'", "'\\''");
 	}
 
 	/**
-	 * Escapes special SQL characters such as single quotes and optionally backslashes or double quotes, depending on the SQL dialect.
+	 * Escapes a value for the inside of a single-quoted SQL string ({@code '...'}). Backslashes are doubled
+	 * first, as MySQL and MariaDB read them as escapes by default.
 	 *
 	 * @param value the input string that may contain special SQL characters
 	 * @return a string where special SQL characters have been escaped
 	 */
 	static String escapeSqlSpecialCharacters(final String value) {
-		// Escape special SQL characters
 		return value
+			.replace("\\", "\\\\") // First, or it would double the backslashes added below
 			.replace("'", "''")
 			.replace("\"", "\\\"") // Only if applicable for the specific SQL dialect
-			.replace("\\", "\\\\") // Only if applicable for the specific SQL dialect
 			.replace("\n", "\\n")
 			.replace("\r", "\\r")
 			.replace("\t", "\\t");
+	}
+
+	/**
+	 * Escapes a value for the inside of a WQL string, single- or double-quoted, where the backslash is the
+	 * escape character.
+	 *
+	 * @param value the input string that may contain special WQL characters
+	 * @return a string where special WQL characters have been escaped
+	 */
+	static String escapeWqlSpecialCharacters(final String value) {
+		return value.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"");
 	}
 }

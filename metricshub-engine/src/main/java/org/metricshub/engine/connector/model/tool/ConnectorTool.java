@@ -27,11 +27,14 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.metricshub.engine.common.helpers.EscapeType;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.tool.ToolDefinition;
@@ -49,6 +52,14 @@ import org.metricshub.engine.tool.ToolParameter;
 public class ConnectorTool extends AbstractMonitorTask {
 
 	private static final long serialVersionUID = 1L;
+
+	/**
+	 * A {@code ${param::name}} reference, with its optional {@code esc(TYPE)::} prefix.
+	 */
+	private static final Pattern PARAMETER_REFERENCE = Pattern.compile(
+		"\\$\\{(?:esc\\((?<esc>[a-z0-9]+)\\)::)?param::(?<name>[^}]+)\\}",
+		Pattern.CASE_INSENSITIVE
+	);
 
 	/**
 	 * What the tool does, as read by the LLM.
@@ -98,12 +109,54 @@ public class ConnectorTool extends AbstractMonitorTask {
 	}
 
 	/**
-	 * Describes this tool for the LLM.
+	 * Describes this tool for the LLM, once its sources are checked to insert every free-text parameter escaped.
 	 *
 	 * @param name the name the connector declares the tool under
 	 * @return the definition of the tool
+	 * @throws IllegalArgumentException if a source inserts a free-text parameter unescaped, or with an unknown
+	 *                                  escape type
 	 */
 	public ToolDefinition toDefinition(final String name) {
+		for (final Source source : sources.values()) {
+			// Copies: update() is the visitor of every field a reference is replaced in
+			source.copy().update(value -> checkParameterReferences(name, value));
+			source.getComputes().forEach(compute -> compute.copy().update(value -> checkParameterReferences(name, value)));
+		}
 		return new ToolDefinition(name, description, parameters, destructive);
+	}
+
+	/**
+	 * Checks the {@code ${param::name}} references of a source field: a free-text parameter (see
+	 * {@link ToolParameter#isFreeText()}) may only be inserted through {@code ${esc(TYPE)::param::name}}, as it could
+	 * otherwise close a quote and run a command or a query of its own.
+	 *
+	 * @param toolName the tool name, for the error message
+	 * @param value    the field of a source or a compute
+	 * @return the field, unchanged
+	 */
+	private String checkParameterReferences(final String toolName, final String value) {
+		if (value == null) {
+			return null;
+		}
+		final Matcher matcher = PARAMETER_REFERENCE.matcher(value);
+		while (matcher.find()) {
+			final String escape = matcher.group("esc");
+			final ToolParameter parameter = parameters.get(matcher.group("name").trim());
+			if (escape != null && EscapeType.fromString(escape) == null) {
+				throw new IllegalArgumentException(
+					"Tool %s uses the unknown escape type %s in %s".formatted(toolName, escape, matcher.group())
+				);
+			}
+			if (escape == null && parameter != null && parameter.isFreeText()) {
+				throw new IllegalArgumentException(
+					"Tool %s inserts the free-text parameter %s unescaped: write ${esc(TYPE)::param::%s}, or give the parameter a pattern, an enum or a non-string type".formatted(
+						toolName,
+						matcher.group("name"),
+						matcher.group("name")
+					)
+				);
+			}
+		}
+		return value;
 	}
 }

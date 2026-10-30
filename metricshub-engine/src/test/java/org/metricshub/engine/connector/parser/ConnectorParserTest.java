@@ -113,7 +113,14 @@ class ConnectorParserTest {
 		assertEquals("Reboots the server.", reboot.getDescription());
 		assertTrue(reboot.isDestructive());
 		assertEquals(
-			new ToolParameter("string", "GracefulRestart or ForceRestart", false, "GracefulRestart"),
+			new ToolParameter(
+				"string",
+				"GracefulRestart or ForceRestart",
+				false,
+				"GracefulRestart",
+				null,
+				List.of("GracefulRestart", "ForceRestart")
+			),
 			reboot.getParameters().get("mode")
 		);
 
@@ -126,8 +133,11 @@ class ConnectorParserTest {
 		assertEquals(new ToolResult("${source::tools.reboot.sources.status}", List.of("status")), reboot.getResult());
 		assertEquals(List.of(Set.of("reset"), Set.of("status")), reboot.getSourceDep());
 
-		// The argument placeholder is left for the invocation
-		assertEquals("{\"ResetType\": \"${param::mode}\"}", ((HttpSource) reboot.getSources().get("reset")).getBody());
+		// The argument placeholders are left for the invocation, the escaped one included
+		assertEquals(
+			"{\"ResetType\": \"${param::mode}\", \"Comment\": \"${esc(json)::param::comment}\"}",
+			((HttpSource) reboot.getSources().get("reset")).getBody()
+		);
 
 		assertEquals(
 			new ToolDefinition("reboot", "Reboots the server.", reboot.getParameters(), true),

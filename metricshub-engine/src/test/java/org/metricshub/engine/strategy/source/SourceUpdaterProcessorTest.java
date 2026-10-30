@@ -485,6 +485,34 @@ class SourceUpdaterProcessorTest {
 	}
 
 	@Test
+	void testReplaceEscapedReferences() {
+		assertEquals(
+			"journalctl -u 'x'\\''; reboot; '\\'''",
+			SourceUpdaterProcessor.replaceAttributeReferences(
+				"journalctl -u '${esc(bash)::param::service}'",
+				Map.of("service", "x'; reboot; '")
+			)
+		);
+		assertEquals(
+			"{\"mode\": \"a\\\"b\"}",
+			SourceUpdaterProcessor.replaceAttributeReferences(
+				"{\"mode\": \"${ESC(JSON)::attribute::mode}\"}",
+				Map.of("mode", "a\"b")
+			)
+		);
+		assertEquals(
+			"Bearer a%2Fb",
+			SourceUpdaterProcessor.replaceResourceAttributeReferences(
+				"Bearer ${esc(url)::resource.attribute::token}",
+				Map.of("token", "a/b")
+			)
+		);
+		// An unknown escape type leaves the reference rather than inserting the value unescaped
+		final String unknown = "ping '${esc(bsh)::param::target}'";
+		assertEquals(unknown, SourceUpdaterProcessor.replaceAttributeReferences(unknown, Map.of("target", "$(id)")));
+	}
+
+	@Test
 	void testReplaceResourceAttributeReferences() {
 		String header = "Authorization: Bearer ${resource.attribute::api.token}";
 		assertEquals(

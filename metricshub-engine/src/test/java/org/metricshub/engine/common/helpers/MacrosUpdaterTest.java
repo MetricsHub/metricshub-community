@@ -208,17 +208,15 @@ class MacrosUpdaterTest {
 	 */
 	@Test
 	void testEscapePowershellSpecialCharacters() {
+		// Nothing but the single quotes is special in '...': $variables, `n and 0 stay as they are
 		assertEquals(
-			"This is a test with `\"double quotes`\" and `$variables`.",
-			MacrosUpdater.escapePowershellSpecialCharacters("This is a test with \"double quotes\" and $variables.")
+			"$var \"double\" `n 100 #(x)",
+			MacrosUpdater.escapePowershellSpecialCharacters("$var \"double\" `n 100 #(x)")
 		);
+		assertEquals("O''Reilly", MacrosUpdater.escapePowershellSpecialCharacters("O'Reilly"));
 		assertEquals(
-			"Escaped characters: ``n, ``t, ``r, `$, `{, `}, `[, `], `#, and ``0`.",
-			MacrosUpdater.escapePowershellSpecialCharacters("Escaped characters: `n, `t, `r, $, {, }, [, ], #, and `0.")
-		);
-		assertEquals(
-			"No special characters here",
-			MacrosUpdater.escapePowershellSpecialCharacters("No special characters here")
+			"a\u2018\u2018b\u2019\u2019c\u201A\u201Ad\u201B\u201B",
+			MacrosUpdater.escapePowershellSpecialCharacters("a\u2018b\u2019c\u201Ad\u201B")
 		);
 	}
 
@@ -227,10 +225,9 @@ class MacrosUpdaterTest {
 	 */
 	@Test
 	void testEscapeBashSpecialCharacters() {
-		assertEquals("\\$\\!\\*", MacrosUpdater.escapeBashSpecialCharacters("$!*"));
-		assertEquals("\\&\\|\\<\\>", MacrosUpdater.escapeBashSpecialCharacters("&|<>"));
-		assertEquals("\\\\'Hello\\\\'", MacrosUpdater.escapeBashSpecialCharacters("'Hello'"));
-		assertEquals("\\\\\"Hello\\\\\"", MacrosUpdater.escapeBashSpecialCharacters("\"Hello\""));
+		// Nothing but the single quote is special in '...'
+		assertEquals("$(id) `id` ; | & \\ \"", MacrosUpdater.escapeBashSpecialCharacters("$(id) `id` ; | & \\ \""));
+		assertEquals("'\\''; rm -rf / #'\\''", MacrosUpdater.escapeBashSpecialCharacters("'; rm -rf / #'"));
 	}
 
 	/**
@@ -241,7 +238,19 @@ class MacrosUpdaterTest {
 		assertEquals("O''Reilly", MacrosUpdater.escapeSqlSpecialCharacters("O'Reilly"));
 		assertEquals("Line\\nBreak", MacrosUpdater.escapeSqlSpecialCharacters("Line\nBreak"));
 		assertEquals("Column\\tTab", MacrosUpdater.escapeSqlSpecialCharacters("Column\tTab"));
-		assertEquals("\\\\\"Quote\\\\\"", MacrosUpdater.escapeSqlSpecialCharacters("\"Quote\""));
+		assertEquals("\\\"Quote\\\"", MacrosUpdater.escapeSqlSpecialCharacters("\"Quote\""));
+		// A backslash cannot escape the doubled quote that follows it in MySQL
+		assertEquals("\\\\'' OR 1=1 --", MacrosUpdater.escapeSqlSpecialCharacters("\\' OR 1=1 --"));
+	}
+
+	/**
+	 * Tests the escaping of special characters in WQL strings.
+	 */
+	@Test
+	void testEscapeWqlSpecialCharacters() {
+		assertEquals("C:\\\\Windows", MacrosUpdater.escapeWqlSpecialCharacters("C:\\Windows"));
+		assertEquals("x\\' OR Name<>\\'", MacrosUpdater.escapeWqlSpecialCharacters("x' OR Name<>'"));
+		assertEquals("say \\\"hi\\\"", MacrosUpdater.escapeWqlSpecialCharacters("say \"hi\""));
 	}
 
 	/**
@@ -259,8 +268,8 @@ class MacrosUpdaterTest {
 		final String expectedUrl = "auth%40token%23123%24%25%5E%26*%28%29_%2B%7C%7E%60"; // URL-encoded
 		final String expectedRegex = "\\Qauth@token#123$%^&*()_+|~`\\E"; // Regex escape
 		final String expectedWindowsCmd = "auth@token#123$^%^^^&*^(^)_+^|~`"; // Windows CMD escape
-		final String expectedPowershell = "auth@token`#123`$%^&*`(`)_+|~`"; // PowerShell escape
-		final String expectedBash = "auth@token#123\\$%^\\&\\*\\(\\)_+\\|\\~`"; // Bash escape
+		final String expectedPowershell = authToken; // PowerShell escape (no single quote)
+		final String expectedBash = authToken; // Bash escape (no single quote)
 
 		// Test JSON escape
 		{
@@ -373,8 +382,8 @@ class MacrosUpdaterTest {
 		// Test PowerShell escape
 		{
 			final String text = USERNAME_ESC_POWERSHELL;
-			final String username = "user\"name$var";
-			final String expected = "user`\"name`$var";
+			final String username = "user'name$var";
+			final String expected = "user''name$var";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
@@ -383,7 +392,7 @@ class MacrosUpdaterTest {
 		{
 			final String text = USERNAME_ESC_BASH;
 			final String username = "user'name$var";
-			final String expected = "user\\\\'name\\$var";
+			final String expected = "user'\\''name$var";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
@@ -433,8 +442,8 @@ class MacrosUpdaterTest {
 		// Test PowerShell escape
 		{
 			final String text = PASSWORD_ESC_POWERSHELL;
-			final String password = "p@ss$word$";
-			final String expected = "p@ss`$word`$";
+			final String password = "p@ss'word$";
+			final String expected = "p@ss''word$";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
@@ -442,8 +451,8 @@ class MacrosUpdaterTest {
 		// Test Bash escape
 		{
 			final String text = PASSWORD_ESC_BASH;
-			final String password = "p$ss[]word&";
-			final String expected = "p\\$ss\\[\\]word\\&";
+			final String password = "p$ss'word&";
+			final String expected = "p$ss'\\''word&";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
@@ -641,7 +650,7 @@ class MacrosUpdaterTest {
 		final String expectedHashUrl = "92e01c2bb93fd79ca9f9896385c5424649d72ac8e41c471b75bee4030803cf8f";
 		final String expectedHashRegex = "\\Q75cfb6ae1cc1b638813786a573f09fbebe509917e9d5fb35e7fb1e022ce57bbc\\E";
 		final String expectedHashWindowsCmd = "449903eccd092b2295e06f904e7ca4c451d9874af9602f77773390316ba86a86";
-		final String expectedHashPowershell = "2b46bf`08`0e1e518659bad5ae7b9cbc`0f61e3`0ee45aeebf8f1c`0e5132fcf3b213";
+		final String expectedHashPowershell = "2b46bf080e1e518659bad5ae7b9cbc0f61e30ee45aeebf8f1c0e5132fcf3b213";
 		final String expectedHashBash = "8f38b1a5f493c82e329273b32483c15a79738bb221bfb47c83b6639e55bc41dc";
 
 		// Test JSON escape

@@ -17,12 +17,15 @@ tools:
         type: string
         description: GracefulRestart or ForceRestart
         default: GracefulRestart
+        enum: [ GracefulRestart, ForceRestart ]
+      comment:
+        description: Why the server is rebooted
     sources:
       reset:
         type: http
         method: post
         path: /redfish/v1/Systems/1/Actions/ComputerSystem.Reset
-        body: '{"ResetType": "${param::mode}"}'
+        body: '{"ResetType": "${param::mode}", "Comment": "${esc(json)::param::comment}"}'
       status:
         type: tableUnion
         tables:

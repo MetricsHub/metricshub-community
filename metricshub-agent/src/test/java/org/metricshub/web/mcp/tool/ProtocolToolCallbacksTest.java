@@ -125,11 +125,9 @@ class ProtocolToolCallbacksTest {
 		verify(extension).executeTool(eq("sel"), eq(configuration), arguments.capture());
 		assertFalse(arguments.getValue().has("timeout"));
 
+		// Not an integer: refused before any host is contacted
 		final JsonNode bad = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"timeout\":\"soon\"}"));
-		assertEquals(
-			"The timeout must be a positive number of seconds: soon",
-			bad.get("hosts").get(0).get("response").get("error").asText()
-		);
+		assertEquals("The argument timeout must be of type integer", bad.get("errorMessage").asText());
 		final JsonNode zero = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"timeout\":0}"));
 		assertEquals(
 			"The timeout must be a positive number of seconds: 0",

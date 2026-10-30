@@ -21,10 +21,12 @@ package org.metricshub.engine.tool;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * One argument of a {@link ToolDefinition}, as declared by a connector or a protocol extension.
@@ -34,12 +36,16 @@ import java.util.Locale;
  * @param description  what the value is for, as read by the LLM
  * @param required     whether an invocation must supply the value
  * @param defaultValue the value used when an invocation does not supply one
+ * @param pattern      a regular expression the whole value must match, {@code null} for any value
+ * @param enumValues   the only values accepted, {@code null} or empty for any value
  */
 public record ToolParameter(
 	String type,
 	String description,
 	boolean required,
-	@JsonProperty("default") String defaultValue
+	@JsonProperty("default") String defaultValue,
+	String pattern,
+	@JsonProperty("enum") List<String> enumValues
 ) implements Serializable {
 	/**
 	 * The type used when a parameter declares none.
@@ -51,13 +57,19 @@ public record ToolParameter(
 	 */
 	public static final List<String> TYPES = List.of(STRING, "integer", "number", "boolean");
 
+	private static final Pattern INTEGER = Pattern.compile("-?\\d+");
+	private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?");
+
 	/**
-	 * Normalizes the type: a missing or blank type is {@value #STRING}.
+	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
+	 * default value is valid.
 	 *
 	 * @param type         the JSON schema type of the value
 	 * @param description  what the value is for
 	 * @param required     whether an invocation must supply the value
 	 * @param defaultValue the value used when an invocation does not supply one
+	 * @param pattern      a regular expression the whole value must match
+	 * @param enumValues   the only values accepted
 	 */
 	public ToolParameter {
 		if (type == null || type.isBlank()) {
@@ -67,6 +79,77 @@ public record ToolParameter(
 		if (!TYPES.contains(type)) {
 			// Copied verbatim into the advertised JSON schema, where an unknown type would fail the whole tool list
 			throw new IllegalArgumentException("Unknown tool parameter type '%s': expected one of %s".formatted(type, TYPES));
+		}
+		if (pattern != null) {
+			// A PatternSyntaxException is an IllegalArgumentException
+			Pattern.compile(pattern);
+		}
+		enumValues = enumValues == null || enumValues.isEmpty() ? null : List.copyOf(enumValues);
+		if (defaultValue != null) {
+			check("default", defaultValue, type, pattern, enumValues);
+		}
+	}
+
+	/**
+	 * A parameter of the given type taking any value.
+	 *
+	 * @param type         the JSON schema type of the value
+	 * @param description  what the value is for
+	 * @param required     whether an invocation must supply the value
+	 * @param defaultValue the value used when an invocation does not supply one
+	 */
+	public ToolParameter(final String type, final String description, final boolean required, final String defaultValue) {
+		this(type, description, required, defaultValue, null, null);
+	}
+
+	/**
+	 * @return whether the parameter takes any text: a string with neither a pattern nor an enum, which a source
+	 *         may then only insert escaped
+	 */
+	@JsonIgnore
+	public boolean isFreeText() {
+		return STRING.equals(type) && pattern == null && enumValues == null;
+	}
+
+	/**
+	 * Checks an argument against the type, the enum and the pattern of the parameter. Whatever the parameter, the
+	 * value may not contain {@code %{} or {@code ${}: the macros (credentials, sources, files) are expanded after
+	 * the arguments are inserted, and would be expanded inside them.
+	 *
+	 * @param name  the parameter name, for the error message
+	 * @param value the argument
+	 * @throws IllegalArgumentException if the argument is not valid, the value itself not being repeated
+	 */
+	public void validate(final String name, final String value) {
+		check(name, value, type, pattern, enumValues);
+	}
+
+	private static void check(
+		final String name,
+		final String value,
+		final String type,
+		final String pattern,
+		final List<String> enumValues
+	) {
+		if (value.contains("%{") || value.contains("${")) {
+			throw new IllegalArgumentException(
+				"The argument %s may not contain %%{ or ${ (write $VAR rather than ${VAR})".formatted(name)
+			);
+		}
+		final boolean typed = switch (type) {
+			case "integer" -> INTEGER.matcher(value).matches();
+			case "number" -> NUMBER.matcher(value).matches();
+			case "boolean" -> "true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value);
+			default -> true;
+		};
+		if (!typed) {
+			throw new IllegalArgumentException("The argument %s must be of type %s".formatted(name, type));
+		}
+		if (enumValues != null && !enumValues.contains(value)) {
+			throw new IllegalArgumentException("The argument %s must be one of %s".formatted(name, enumValues));
+		}
+		if (pattern != null && !Pattern.compile(pattern).matcher(value).matches()) {
+			throw new IllegalArgumentException("The argument %s must match the pattern %s".formatted(name, pattern));
 		}
 	}
 }

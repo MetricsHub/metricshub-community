@@ -175,6 +175,13 @@ public final class HostTools {
 				if (!description.isEmpty()) {
 					property.put("description", description.toString());
 				}
+				if (parameter.pattern() != null) {
+					// Anchored: JSON schema searches the value, the tool matches all of it
+					property.put("pattern", "^(?:%s)$".formatted(parameter.pattern()));
+				}
+				if (parameter.enumValues() != null) {
+					parameter.enumValues().forEach(property.putArray("enum")::add);
+				}
 				if (parameter.required() && parameter.defaultValue() == null) {
 					required.add(parameterName);
 				}
