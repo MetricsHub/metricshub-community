@@ -24,7 +24,6 @@ package org.metricshub.engine.connector.model.tool;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -59,6 +58,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.tool.ToolDefinition;
@@ -82,7 +82,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 */
 	private static final Pattern PARAMETER_REFERENCE = Pattern.compile(
 		// ${attribute::name} too: a tool's arguments are its attributes, replaced from the same map
-		"\\$\\{(?:esc\\((?<esc>[a-z0-9]+)\\)::)?(?:param|attribute)::(?<name>[^}]+)\\}",
+		// Any escape name, so that a malformed one (power-shell) is refused rather than left unseen
+		"\\$\\{(?:esc\\((?<esc>[^)]*)\\)::)?(?:param|attribute)::(?<name>[^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -122,14 +123,17 @@ public class ConnectorTool extends AbstractMonitorTask {
 	private static final FieldRule COMMAND_LINE = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	/**
-	 * An awk script, where no escape is reliable.
+	 * An awk script, where no escape is reliable and the characters a pattern lets through ({@code / + - =}) are
+	 * operators: only an enum or a number.
 	 */
-	private static final FieldRule AWK_SCRIPT = new FieldRule(EnumSet.noneOf(EscapeType.class), true);
+	private static final FieldRule AWK_SCRIPT = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	/**
-	 * The line filters of a command line source ({@code keep}, {@code exclude}...), regular expressions.
+	 * The regular expressions of a command line source ({@code keep}, {@code exclude}) and of the matching-lines
+	 * computes ({@code regExp}): escaped to match literally, or an enum or a number. A value used as a regular
+	 * expression could backtrack without end, a {@code +} needing no metacharacter.
 	 */
-	private static final FieldRule LINE_FILTER = new FieldRule(EnumSet.of(EscapeType.REGEX), true);
+	private static final FieldRule LINE_FILTER = new FieldRule(EnumSet.of(EscapeType.REGEX), false);
 
 	/**
 	 * The paths of a file source, where no escape keeps a value from climbing with {@code ../} or starting at
@@ -142,10 +146,16 @@ public class ConnectorTool extends AbstractMonitorTask {
 	private static final FieldRule WQL_QUERY = new FieldRule(EnumSet.of(EscapeType.WQL), false);
 
 	/**
-	 * The URL, path, headers or token of an HTTP request: percent-encoding is what keeps a value from adding a path
-	 * segment, a parameter or a header line.
+	 * The URL or path of an HTTP request: percent-encoding is what keeps a value from adding a path segment or a
+	 * parameter.
 	 */
-	private static final FieldRule HTTP_URL_OR_HEADER = new FieldRule(EnumSet.of(EscapeType.URL), false);
+	private static final FieldRule HTTP_URL = new FieldRule(EnumSet.of(EscapeType.URL), false);
+
+	/**
+	 * The headers of an HTTP request, whose values are not URL-decoded: percent-encoding would change them, and no
+	 * other escape keeps a line out. Only an enum or a number.
+	 */
+	private static final FieldRule HTTP_HEADER = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	private static final FieldRule HTTP_BODY = new FieldRule(
 		EnumSet.of(EscapeType.JSON, EscapeType.XML, EscapeType.URL),
@@ -242,9 +252,9 @@ public class ConnectorTool extends AbstractMonitorTask {
 				fileSource.getPaths().forEach(path -> checkReferences(name, path, FILE_PATH, unescaped));
 				fileSource.setPaths(new LinkedHashSet<>());
 			} else if (others instanceof HttpSource httpSource) {
-				for (final String field : Arrays.asList(httpSource.getUrl(), httpSource.getPath(), httpSource.getHeader())) {
-					checkReferences(name, field, HTTP_URL_OR_HEADER, unescaped);
-				}
+				checkReferences(name, httpSource.getUrl(), HTTP_URL, unescaped);
+				checkReferences(name, httpSource.getPath(), HTTP_URL, unescaped);
+				checkReferences(name, httpSource.getHeader(), HTTP_HEADER, unescaped);
 				// The token names the source holding it, looked up before any parameter is replaced
 				final String token = httpSource.getAuthenticationToken();
 				if (token != null && PARAMETER_REFERENCE.matcher(token).find()) {
@@ -277,6 +287,10 @@ public class ConnectorTool extends AbstractMonitorTask {
 				compute
 					.copy()
 					.update(field -> checkReferences(name, field, compute instanceof Awk ? AWK_SCRIPT : null, unescaped));
+				if (compute instanceof AbstractMatchingLines matchingLines) {
+					// Visited above as data; its regular expression is not
+					checkReferences(name, matchingLines.getRegExp(), LINE_FILTER, unescaped);
+				}
 			}
 		}
 		final Map<String, ToolParameter> checked = new LinkedHashMap<>(parameters);
@@ -374,6 +388,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 			final EscapeType escapeType = escape == null ? null : EscapeType.fromString(escape);
 			if (escape != null && escapeType == null) {
 				throw new IllegalArgumentException("Tool %s uses an unknown escape type in %s".formatted(toolName, reference));
+			}
+			if (!parameter.required() && parameter.defaultValue() == null) {
+				// Absent from an invocation, it would leave the reference in the source
+				throw new IllegalArgumentException(
+					"Tool %s references %s, optional without a default: declare a default (even '') or make it required".formatted(
+						toolName,
+						reference
+					)
+				);
 			}
 			if (rule == null) {
 				continue;

@@ -108,9 +108,9 @@ public record ToolParameter(
 		}
 		enumValues = enumValues == null || enumValues.isEmpty() ? null : List.copyOf(enumValues);
 		if (enumValues != null) {
-			// Advertised as values of the type
+			// Advertised as values of the type, each valid for the pattern too, or the assistant could pick one refused
 			for (final String value : enumValues) {
-				check("enum", value, type, null, null);
+				check("enum", value, type, pattern, null);
 			}
 		}
 		if (defaultValue != null) {

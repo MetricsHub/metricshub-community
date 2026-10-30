@@ -58,6 +58,13 @@ public class MacrosUpdater {
 	);
 
 	/**
+	 * A simple macro escaped for a POSIX shell, quoted for where it lands (see {@link #replaceShellMacros}).
+	 */
+	private static final Pattern SHELL_MACRO_PATTERN = Pattern.compile(
+		"[$%]\\{esc\\((?i:bash|linux)\\)::(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
+	);
+
+	/**
 	 * Replaces each known macro in the given text with the corresponding values.
 	 * Supported macros: %{USERNAME}, %{PASSWORD}, %{HOSTNAME}, %{AUTHENTICATIONTOKEN},
 	 * %{PASSWORD_BASE64}, %{BASIC_AUTH}, %{SHA256}, along with various escape formats like JSON, XML, URL, etc.
@@ -100,7 +107,9 @@ public class MacrosUpdater {
 				authenticationToken
 			);
 
-			final Matcher matcher = MACRO_PATTERN.matcher(text);
+			updatedContent = replaceShellMacros(updatedContent, simpleMacroNameToField);
+
+			final Matcher matcher = MACRO_PATTERN.matcher(updatedContent);
 
 			while (matcher.find()) {
 				final String escapeType = matcher.group(2);
@@ -122,6 +131,32 @@ public class MacrosUpdater {
 	 * @param macroNameField A map of macro names and their corresponding values.
 	 * @return The content with the macro replaced by the corresponding value.
 	 */
+	/**
+	 * Replaces the {@code %{esc(bash)::MACRO}} (or {@code linux}) of the simple macros, each quoted for the shell
+	 * quoting around it (see {@link ShellQuote}): escaped for single quotes inside single quotes, for double quotes
+	 * inside double quotes, and a whole single-quoted word anywhere else, so that a credential such as
+	 * {@code $(cmd)} is never run, whether the connector quoted the macro or not.
+	 *
+	 * @param text   the text with macros
+	 * @param values the values of the simple macros, by name
+	 * @return the text, its shell-escaped simple macros replaced
+	 */
+	private static String replaceShellMacros(final String text, final Map<String, String> values) {
+		final Matcher matcher = SHELL_MACRO_PATTERN.matcher(text);
+		final StringBuilder replaced = new StringBuilder();
+		while (matcher.find()) {
+			final String value = values.getOrDefault(matcher.group("name"), EMPTY);
+			final String quoted = switch (ShellQuote.at(text, matcher.start())) {
+				case SINGLE -> escapeBashSpecialCharacters(value);
+				case DOUBLE -> value.replaceAll("([\\\\\"$`])", "\\\\$1");
+				default -> "'" + escapeBashSpecialCharacters(value) + "'";
+			};
+			matcher.appendReplacement(replaced, Matcher.quoteReplacement(quoted));
+		}
+		matcher.appendTail(replaced);
+		return replaced.toString();
+	}
+
 	private static String processMacro(
 		final String content,
 		final String matchedMacro,

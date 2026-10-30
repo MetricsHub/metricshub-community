@@ -41,9 +41,12 @@ class ToolParameterTest {
 		);
 		// An empty enum accepts anything
 		assertNull(new ToolParameter(null, null, false, null, null, List.of()).enumValues());
-		// Enum entries of another type than the parameter's
+		// Enum entries of another type than the parameter's, or refused by its pattern
 		assertThrows(IllegalArgumentException.class, () ->
 			new ToolParameter("integer", null, false, null, null, List.of("1", "two"))
+		);
+		assertThrows(IllegalArgumentException.class, () ->
+			new ToolParameter(null, null, false, null, "[a-z]+", List.of("prod", "123"))
 		);
 	}
 

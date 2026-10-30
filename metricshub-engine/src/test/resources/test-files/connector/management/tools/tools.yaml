@@ -20,6 +20,7 @@ tools:
         enum: [ GracefulRestart, ForceRestart ]
       comment:
         description: Why the server is rebooted
+        default: ''
     sources:
       reset:
         type: http

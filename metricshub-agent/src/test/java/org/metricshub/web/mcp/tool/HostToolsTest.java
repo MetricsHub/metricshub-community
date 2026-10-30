@@ -127,6 +127,9 @@ class HostToolsTest {
 			final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":%s}".formatted(lines)));
 			assertEquals("1000", result.get("hosts").get(0).get("response").get("value").asText(), lines);
 		}
+		// Beyond a long too, as long as it is bounded
+		final JsonNode big = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1e19}"));
+		assertEquals("10000000000000000000", big.get("hosts").get(0).get("response").get("value").asText());
 		final JsonNode fraction = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1.5}"));
 		assertEquals("The argument lines must be of type integer", fraction.get("errorMessage").asText());
 		// Refused without materializing a hundred million digits

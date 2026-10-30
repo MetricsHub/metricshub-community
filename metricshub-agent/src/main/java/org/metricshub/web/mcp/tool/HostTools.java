@@ -84,6 +84,11 @@ public final class HostTools {
 	private static final String INTEGER = "integer";
 
 	/**
+	 * The most digits of an integer argument written with an exponent.
+	 */
+	private static final int MAX_INTEGER_DIGITS = 1000;
+
+	/**
 	 * @return whether destructive tools may be advertised, i.e. {@value #DESTRUCTIVE_TOOLS_FLAG} is set
 	 */
 	public static boolean isDestructiveEnabled() {
@@ -289,9 +294,9 @@ public final class HostTools {
 			if (value == null || value.isNull()) {
 				continue;
 			}
-			if (INTEGER.equals(parameter.getValue().type()) && isLongIntegral(value)) {
+			if (INTEGER.equals(parameter.getValue().type()) && isBoundedIntegral(value)) {
 				// 1.0 and 1e3 are integers to JSON schema
-				values.put(parameter.getKey(), String.valueOf(value.longValue()));
+				values.put(parameter.getKey(), value.bigIntegerValue().toString());
 			} else {
 				values.put(parameter.getKey(), value.isValueNode() ? value.asText() : value.toString());
 			}
@@ -301,11 +306,16 @@ public final class HostTools {
 
 	/**
 	 * @param value an argument
-	 * @return whether it is a number with an integral value fitting a long, checked before any conversion: a
-	 *         {@code 1e100000000} would otherwise be materialized with all its digits
+	 * @return whether it is a number with an integral value of at most {@value #MAX_INTEGER_DIGITS} digits, checked
+	 *         before any conversion: a {@code 1e100000000} would otherwise be materialized with all its digits
 	 */
-	private static boolean isLongIntegral(final JsonNode value) {
-		return value.isNumber() && value.canConvertToLong() && value.canConvertToExactIntegral();
+	private static boolean isBoundedIntegral(final JsonNode value) {
+		if (!value.isNumber() || !value.canConvertToExactIntegral()) {
+			return false;
+		}
+		// A double has at most 309 integer digits; only a decimal may hold many more
+		final BigDecimal decimal = value.isBigDecimal() ? value.decimalValue() : null;
+		return decimal == null || decimal.precision() - decimal.scale() <= MAX_INTEGER_DIGITS;
 	}
 
 	/**

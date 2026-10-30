@@ -37,7 +37,7 @@ class ConnectorToolTest {
 		"lines",
 		new ToolParameter("integer", "How many lines", false, "100"),
 		"unit",
-		new ToolParameter(null, "A constrained unit", false, null, "[a-z$()]{5}", null)
+		new ToolParameter(null, "A constrained unit", true, null, "[a-z$()]{5}", null)
 	);
 
 	private static ConnectorTool tool(final Source source) {
@@ -81,10 +81,7 @@ class ConnectorToolTest {
 		);
 		assertAccepted(HttpSource.builder().body("{\"name\": \"${esc(json)::param::service}\"}").build(), LINUX);
 		assertAccepted(
-			HttpSource.builder()
-				.path("/api/units/${esc(url)::param::service}")
-				.header("X-Unit: ${esc(url)::param::service}")
-				.build(),
+			HttpSource.builder().path("/api/units/${esc(url)::param::service}").header("X-Limit: ${param::lines}").build(),
 			LINUX
 		);
 		// Numbers and enums go anywhere as they are
@@ -252,9 +249,11 @@ class ConnectorToolTest {
 
 	@Test
 	void testAnHttpFieldTakesItsOwnEscapes() {
-		// xml and regex keep line breaks: a header could gain a line
+		// No escape fits a header: xml and regex keep line breaks, url changes the value (not URL-decoded there)
 		assertRefused(HttpSource.builder().header("X-Unit: ${esc(xml)::param::service}").build(), LINUX);
 		assertRefused(HttpSource.builder().header("X-Unit: ${esc(regex)::param::service}").build(), LINUX);
+		assertRefused(HttpSource.builder().header("X-Unit: ${esc(url)::param::service}").build(), LINUX);
+		assertRefused(HttpSource.builder().header("X-Unit: ${param::unit}").build(), LINUX);
 		assertRefused(HttpSource.builder().path("/api/${esc(json)::param::service}").build(), LINUX);
 	}
 
@@ -285,14 +284,45 @@ class ConnectorToolTest {
 		// No escape is safe in an awk script
 		source.setComputes(List.of(Awk.builder().script("{ print \"${esc(json)::param::service}\" }").build()));
 		assertRefused(source, LINUX);
+
+		// Nor a pattern: / + - = are awk operators. A number goes there as is
+		source.setComputes(List.of(Awk.builder().script("NR > ${param::unit} { print }").build()));
+		assertRefused(source, LINUX);
+		source.setComputes(List.of(Awk.builder().script("NR > ${param::lines} { print }").build()));
+		assertAccepted(source, LINUX);
 	}
 
 	@Test
 	void testUnconstrainedParameterInADataComputeIsAccepted() {
 		final CommandLineSource source = commandLine("journalctl -n 10");
-		source.setComputes(List.of(KeepOnlyMatchingLines.builder().column(1).regExp("${param::service}").build()));
-
+		source.setComputes(List.of(KeepOnlyMatchingLines.builder().column(1).valueList("${param::service}").build()));
 		assertAccepted(source, LINUX);
+
+		// Its regular expression is not data: a value there could backtrack without end
+		source.setComputes(List.of(KeepOnlyMatchingLines.builder().column(1).regExp("${param::service}").build()));
+		assertRefused(source, LINUX);
+		source.setComputes(List.of(KeepOnlyMatchingLines.builder().column(1).regExp("${param::unit}").build()));
+		assertRefused(source, LINUX);
+		source.setComputes(
+			List.of(KeepOnlyMatchingLines.builder().column(1).regExp("${esc(regex)::param::service}").build())
+		);
+		assertAccepted(source, LINUX);
+	}
+
+	@Test
+	void testOptionalParameterWithoutDefaultOrMalformedEscapeIsRefused() {
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(Map.of("logs", commandLine("journalctl -u ${esc(bash)::param::since}")))
+			.parameters(Map.of("since", new ToolParameter(null, "Optional, no default", false, null)))
+			.result(new ToolResult("${source::logs}", null))
+			.build();
+		final String message = assertThrows(IllegalArgumentException.class, () ->
+			tool.toDefinition("logs", LINUX)
+		).getMessage();
+		assertTrue(message.contains("default"), message);
+
+		assertRefused(commandLine("journalctl -u ${esc(power-shell)::param::service}"), LINUX);
+		assertRefused(HttpSource.builder().body("{\"x\": \"${esc(json_value)::param::service}\"}").build(), LINUX);
 	}
 
 	@Test
