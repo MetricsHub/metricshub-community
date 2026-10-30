@@ -91,10 +91,11 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
-	 * A reference replaced as is with host data or configuration: a source's table, a protocol property.
+	 * A reference replaced as is with host data or configuration: a source's table, a protocol property, a resource
+	 * attribute (escaped, {@code ${esc(bash)::resource.attribute::x}}, it is checked like a parameter).
 	 */
 	private static final Pattern HOST_DATA_REFERENCE = Pattern.compile(
-		"\\$\\{(?:source|protocol)::",
+		"\\$\\{(?:source|protocol|resource\\.attribute)::",
 		Pattern.CASE_INSENSITIVE
 	);
 

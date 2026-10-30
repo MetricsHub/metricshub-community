@@ -179,10 +179,20 @@ public record ToolParameter(
 	 *
 	 * @return this parameter, whose pattern also refuses {@code \ "}, line breaks and tabs if it is a string without
 	 *         enum
-	 * @throws IllegalArgumentException if the default value holds one of them
+	 * @throws IllegalArgumentException if the default value or an enum value holds one of them
 	 */
 	public ToolParameter withoutSqlDialectCharacters() {
-		if (!STRING.equals(type) || enumValues != null) {
+		if (!STRING.equals(type)) {
+			return this;
+		}
+		if (enumValues != null) {
+			if (enumValues.stream().anyMatch(value -> value.chars().anyMatch(c -> "\\\"\r\n\t".indexOf(c) >= 0))) {
+				throw new IllegalArgumentException(
+					"An enum value escaped into a SQL string holds \\, \", a line break or a tab, which dialects read differently: %s".formatted(
+						enumValues
+					)
+				);
+			}
 			return this;
 		}
 		final String constrained = "(?=[^\\\\\"\\r\\n\\t]*\\z)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");

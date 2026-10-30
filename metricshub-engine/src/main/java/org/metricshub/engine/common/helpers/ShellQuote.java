@@ -118,8 +118,41 @@ public enum ShellQuote {
 		"let",
 		"declare",
 		"typeset",
-		"local"
+		"local",
+		// Their options run programs: tar -I, --to-command, --checkpoint-action=exec; rsync -e; man -P; a pager's !
+		"tar",
+		"rsync",
+		"scp",
+		"sftp",
+		"zip",
+		"git",
+		"make",
+		"man",
+		"less",
+		"more",
+		"vi",
+		"vim",
+		"gdb"
 	);
+
+	/**
+	 * An option naming a program to run, whose value is code: {@code --checkpoint-action=exec=},
+	 * {@code --rsh-command}, {@code --use-compress-program}, {@code -o ProxyCommand=}.
+	 */
+	private static final Pattern PROGRAM_OPTION = Pattern.compile(
+		"exec|command|cmd|program|script|pager|editor|shell|rsh|ssh|proxy|hook|pack",
+		Pattern.CASE_INSENSITIVE
+	);
+
+	/**
+	 * A descriptor before a redirection operator, which is not a word: {@code 2>}, {@code {fd}>}.
+	 */
+	private static final Pattern DESCRIPTOR = Pattern.compile("\\d*|\\{[A-Za-z_][A-Za-z0-9_]*\\}");
+
+	/**
+	 * The {@code %{SUDO:...}} macro before a command name, replaced with {@code sudo} or nothing.
+	 */
+	private static final Pattern SUDO_MACRO = Pattern.compile("^%\\{SUDO:[^}]*\\}");
 
 	/**
 	 * The commands whose first operands choose what they do rather than what they act on, with how many:
@@ -251,6 +284,7 @@ public enum ShellQuote {
 		private boolean shellOptionValue;
 		private int actionsLeft;
 		private boolean afterOption;
+		private boolean programNext;
 		private final Deque<Frame> frames = new ArrayDeque<>();
 
 		private Reader(final String commandLine) {
@@ -276,7 +310,10 @@ public enum ShellQuote {
 			final boolean subscript = inWord && wordIsCommandName && inSubscript();
 			// In a command substitution, whose output the shell splits and globs again
 			final boolean substituted = frames.stream().anyMatch(Frame::substitution);
-			return nameOrTarget || evaluating || action || subscript || substituted ? UNKNOWN : quote;
+			// The value of an option naming a program: --checkpoint-action=exec=..., --rsh-command ...
+			final boolean program =
+				programNext || (inWord && word.length() > 0 && word.charAt(0) == '-' && PROGRAM_OPTION.matcher(word).find());
+			return nameOrTarget || evaluating || action || subscript || substituted || program ? UNKNOWN : quote;
 		}
 
 		/**
@@ -346,8 +383,8 @@ public enum ShellQuote {
 				endWord();
 				breakCommand();
 			} else if (c == '<' || c == '>') {
-				if (inWord && wordIsCommandName && word.chars().allMatch(Character::isDigit)) {
-					// A descriptor, 2>, is not the command name
+				if (inWord && wordIsCommandName && DESCRIPTOR.matcher(word).matches()) {
+					// A descriptor, 2> or {fd}>, is not the command name
 					inWord = false;
 					commandNext = true;
 				}
@@ -429,6 +466,7 @@ public enum ShellQuote {
 			shellOptionValue = false;
 			actionsLeft = 0;
 			afterOption = false;
+			programNext = false;
 		}
 
 		private void startWord() {
@@ -443,6 +481,21 @@ public enum ShellQuote {
 			}
 		}
 
+		/**
+		 * @param text a command name, as the shell reads it
+		 * @return whether the shell expands it into a name not known here: a parameter, a command substitution, a
+		 *         brace expansion ({@code e{v,v}al}) or a pattern ({@code /bin/b?sh}), after a {@code %{SUDO:...}}
+		 *         macro too; an embedded file, the connector's own script, and the {@code {} and {@code [} commands
+		 *         are known
+		 */
+		private static boolean isExpanded(final String text) {
+			if (text.startsWith("${file::") || "{".equals(text) || "[".equals(text)) {
+				return false;
+			}
+			final String name = SUDO_MACRO.matcher(text).replaceFirst("");
+			return name.chars().anyMatch(c -> "$`{*?[".indexOf(c) >= 0);
+		}
+
 		private void endWord() {
 			if (!inWord) {
 				return;
@@ -454,10 +507,12 @@ public enum ShellQuote {
 				commandNext = true;
 				return;
 			}
-			if (wordIsCommandName && !text.startsWith("${file::") && (text.indexOf('$') >= 0 || text.indexOf('`') >= 0)) {
+			if (wordIsCommandName && isExpanded(text)) {
 				// A command whose name is expanded is not known; an embedded file is the connector's own script
 				evaluating = true;
 			}
+			// --rsh-command prog, -I prog: the next word is a program
+			programNext = text.startsWith("-") && !text.contains("=") && PROGRAM_OPTION.matcher(text).find();
 			// The last path segment, after a %{SUDO:...} macro too
 			final String name = text.substring(Math.max(text.lastIndexOf('/'), text.lastIndexOf('}')) + 1);
 			if (EVALUATING_COMMANDS.contains(name)) {

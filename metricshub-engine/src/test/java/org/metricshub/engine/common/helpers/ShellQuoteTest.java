@@ -71,8 +71,16 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("a[b[0]+X]=1 ls"));
 		// A command substitution's output is split and globbed again
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("find . -name $(printf %s X)"));
-		// A command name from an expansion is not known
+		// A command name from an expansion is not known: a parameter, braces, a pattern
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("$CMD X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("e{v,v}al X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("/bin/b?sh X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("%{SUDO:/usr/sbin/raidctl}/usr/sbin/raidctl -l X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("[ -f X ]"));
+		// The value of an option naming a program is code
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("tar --checkpoint-action=exec=X -cf a.tar ."));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("curl --proxy-command X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ls --pager=X"));
 		// A shell runs its first operand as a script, its -c argument as code; the arguments of a script are passed
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("sh X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("bash -o pipefail -c X"));
@@ -104,6 +112,8 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ip link X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("git remote X origin"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("docker container X web"));
+		// exec runs its operands as a command, wherever it comes
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("docker container exec web X /data"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("systemctl $(echo) X"));
 		// Once written, what it acts on
 		assertEquals(ShellQuote.NONE, quoteOfX("systemctl status X"));
@@ -129,6 +139,7 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("2>/dev/null <&0 X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX(">|out X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("&>log X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("{fd}>/tmp/log X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX(">sh X"));
 		// After the command name, an argument
 		assertEquals(ShellQuote.NONE, quoteOfX("ls 2>&1 X"));

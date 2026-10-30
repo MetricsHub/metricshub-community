@@ -398,6 +398,16 @@ class ConnectorToolTest {
 		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "a\tb"));
 		// A doubled ' reads back the same everywhere
 		assertDoesNotThrow(() -> service.validate("service", "O'Brien"));
+		// An enum value too: the tool is refused
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(
+				Map.of("q", SqlSource.builder().query("SELECT * FROM t WHERE path = '${esc(sql)::param::path}'").build())
+			)
+			.parameters(
+				Map.of("path", new ToolParameter(null, "A path", true, null, null, List.of("C:\\Windows", "C:\\Temp")))
+			)
+			.build();
+		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("q", WINDOWS));
 	}
 
 	@Test
@@ -450,6 +460,9 @@ class ConnectorToolTest {
 		final CommandLineSource awk = commandLine("ps -ef");
 		awk.setComputes(List.of(Awk.builder().script("${source::probe}").build()));
 		assertRefused(awk, LINUX);
+		// A resource attribute inserted as is; escaped, it is hoisted like a parameter
+		assertRefused(commandLine("echo ${resource.attribute::tag}"), LINUX);
+		assertAccepted(commandLine("echo ${esc(bash)::resource.attribute::tag}"), LINUX);
 	}
 
 	@Test
