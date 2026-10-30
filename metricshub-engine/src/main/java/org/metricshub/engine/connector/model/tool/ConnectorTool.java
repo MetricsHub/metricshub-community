@@ -24,15 +24,15 @@ package org.metricshub.engine.connector.model.tool;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
-import java.util.ArrayList;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Builder;
@@ -41,6 +41,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.metricshub.engine.common.helpers.EscapeType;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.ShellQuote;
 import org.metricshub.engine.connector.model.Connector;
@@ -51,19 +52,15 @@ import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
-import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractConcat;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
@@ -280,17 +277,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 				httpSource.setAuthenticationToken(null);
 				httpSource.setBody(null);
 			}
-			// The fields no reference is ever replaced in would run with the reference left in
-			for (final String field : unsubstitutedFields(source)) {
-				if (field != null && PARAMETER_REFERENCE.matcher(field).find()) {
-					throw new IllegalArgumentException(
-						"Tool %s references a parameter in a field of a %s source, where it is not replaced".formatted(
-							name,
-							source.getType()
-						)
-					);
-				}
-			}
+			checkReplaced(name, source);
 			// update() is the visitor of every field a reference is replaced in
 			others.update(field -> checkReferences(name, field, OTHER_FIELD, usages));
 			if (source instanceof JawkSource jawkSource && jawkSource.getVariables() != null) {
@@ -321,6 +308,12 @@ public class ConnectorTool extends AbstractMonitorTask {
 			.forEach(parameterName ->
 				checked.computeIfPresent(parameterName, (key, parameter) -> parameter.withoutMetacharacters())
 			);
+		// The result names a source, looked up as is
+		if (result != null && countReferences(result.source()) > 0) {
+			throw new IllegalArgumentException(
+				"Tool %s references a parameter in its result, where it is not replaced".formatted(name)
+			);
+		}
 		return new ToolDefinition(name, description, checked, destructive);
 	}
 
@@ -419,16 +412,6 @@ public class ConnectorTool extends AbstractMonitorTask {
 			markTableValues(replace.getNewValue(), usages);
 			replace.setExistingValue(null);
 			replace.setNewValue(null);
-		} else if (copy instanceof Encode || copy instanceof Decode) {
-			// Their update() is a no-op: a reference in their encoding is never replaced
-			final String encoding = copy instanceof Encode encode ? encode.getEncoding() : ((Decode) copy).getEncoding();
-			if (encoding != null && PARAMETER_REFERENCE.matcher(encoding).find()) {
-				throw new IllegalArgumentException(
-					"Tool %s references a parameter in the encoding of an encode or decode compute, where it is not replaced".formatted(
-						name
-					)
-				);
-			}
 		} else if (copy instanceof AbstractMatchingLines matchingLines) {
 			checkReferences(name, matchingLines.getRegExp(), LINE_FILTER, usages);
 			checkReferences(name, matchingLines.getValueList(), null, usages);
@@ -466,22 +449,55 @@ public class ConnectorTool extends AbstractMonitorTask {
 	}
 
 	/**
-	 * @param source a source
-	 * @return the string fields of the source that its {@code update()} leaves out, so that no reference is ever
-	 *         replaced in them
+	 * Refuses a source holding a reference in a field no reference is ever replaced in, which would run with the
+	 * reference left in: references are replaced only in the fields {@code update()} visits, of the source and of its
+	 * computes, and in the awk variables. Whatever field holds the others, the source, serialized, counts more.
+	 *
+	 * @param name   the tool name
+	 * @param source the source
+	 * @throws IllegalArgumentException if a reference is in a field where it is not replaced
 	 */
-	private static List<String> unsubstitutedFields(final Source source) {
-		final List<String> fields = new ArrayList<>();
-		if (source instanceof InternalDbQuerySource internalDbQuerySource) {
-			fields.add(internalDbQuerySource.getQuery());
-		} else if (source instanceof JawkSource jawkSource) {
-			fields.add(jawkSource.getScript());
-		} else if (source instanceof TableUnionSource tableUnionSource) {
-			fields.addAll(tableUnionSource.getTables());
+	private static void checkReplaced(final String name, final Source source) {
+		final int[] replaced = { 0 };
+		final UnaryOperator<String> counter = field -> {
+			replaced[0] += countReferences(field);
+			return field;
+		};
+		source.copy().update(counter);
+		if (source instanceof JawkSource jawkSource && jawkSource.getVariables() != null) {
+			jawkSource.getVariables().values().forEach(counter::apply);
 		}
-		// The source to run for each entry of is looked up before any parameter is replaced
-		fields.add(source.getExecuteForEachEntryOf());
-		return fields;
+		for (final Compute compute : source.getComputes()) {
+			compute.copy().update(counter);
+			if (compute instanceof Awk awk && awk.getVariables() != null) {
+				awk.getVariables().values().forEach(counter::apply);
+			}
+		}
+		final String serialized;
+		try {
+			serialized = JsonHelper.buildObjectMapper().writeValueAsString(source);
+		} catch (JsonProcessingException e) {
+			throw new IllegalArgumentException(
+				"Tool %s has a %s source that cannot be checked".formatted(name, source.getType()),
+				e
+			);
+		}
+		if (countReferences(serialized) > replaced[0]) {
+			throw new IllegalArgumentException(
+				"Tool %s references a parameter in a field of a %s source, where it is not replaced".formatted(
+					name,
+					source.getType()
+				)
+			);
+		}
+	}
+
+	/**
+	 * @param text a text, or {@code null}
+	 * @return the number of parameter references in the text
+	 */
+	private static int countReferences(final String text) {
+		return text == null ? 0 : (int) PARAMETER_REFERENCE.matcher(text).results().count();
 	}
 
 	/**

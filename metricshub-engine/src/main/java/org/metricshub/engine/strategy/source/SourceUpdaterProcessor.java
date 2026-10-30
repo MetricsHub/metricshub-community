@@ -252,7 +252,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		final List<Integer> macros = countMacros(copy);
 
-		hoistShellArguments(copy);
+		hoistShellArguments(copy, true);
 
 		copy.update(value ->
 			replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
@@ -318,9 +318,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * {@link #variableIn}): the shell expands the variable without parsing its value, whatever quotes, comments or
 	 * here-documents surround the reference.
 	 *
-	 * @param copy the source, a command line source or left as is
+	 * @param copy        the source, a command line source or left as is
+	 * @param halvedLater whether the $$ of the command line are halved into $ after the hoisting
 	 */
-	private void hoistShellArguments(final Source copy) {
+	private void hoistShellArguments(final Source copy, final boolean halvedLater) {
 		if (!(copy instanceof CommandLineSource commandLineSource)) {
 			return;
 		}
@@ -344,8 +345,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				continue;
 			}
 			count++;
-			// At the start of the command line, outside of any quote: the single-quoted value is a literal
-			assignments.append(variable).append(count).append("='").append(EscapeType.BASH.escape(value)).append("'; ");
+			// At the start of the command line, outside of any quote: the single-quoted value is a literal. Its $ are
+			// doubled where the template's $$ are halved later
+			final String escaped = EscapeType.BASH.escape(value);
+			final String literal = halvedLater ? escaped.replace("$", "$$") : escaped;
+			assignments.append(variable).append(count).append("='").append(literal).append("'; ");
 			commandLine
 				.append(template, copied, matcher.start())
 				.append(variableIn(ShellQuote.at(template, matcher.start()), variable + count));
@@ -522,8 +526,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Whether a value inserted between the text already built and the rest of the template forms a {@code %{} or
-	 * {@code ${}, by itself or with a neighbor: {@code %} then {@code {PASSWORD}} is {@code %{PASSWORD}}.
+	 * Whether a value inserted between the text already built and the rest of the template forms a <code>%{</code> or
+	 * <code>${</code>, by itself or with a neighbor: {@code %} then {@code {PASSWORD}} is {@code %{PASSWORD}}.
 	 *
 	 * @param before   the text built so far
 	 * @param value    the value to insert
@@ -782,7 +786,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				continue;
 			}
 
-			hoistShellArguments(copy);
+			// The $$ of the entry are already halved
+			hoistShellArguments(copy, false);
 
 			copy.update(value ->
 				replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())

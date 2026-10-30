@@ -188,7 +188,7 @@ public record ToolParameter(
 
 	/**
 	 * Checks an argument against the type, the enum and the pattern of the parameter. Whatever the parameter, the
-	 * value may not contain {@code %{} or {@code ${}: the macros (credentials, sources, files) are expanded after
+	 * value may not contain <code>%{</code> or <code>${</code>: the macros (credentials, sources, files) are expanded after
 	 * the arguments are inserted, and would be expanded inside them.
 	 *
 	 * @param name  the parameter name, for the error message
@@ -227,8 +227,24 @@ public record ToolParameter(
 		if (enumValues != null && enumValues.stream().noneMatch(entry -> sameValue(type, entry, value))) {
 			throw new IllegalArgumentException("The argument %s must be one of %s".formatted(name, enumValues));
 		}
-		if (pattern != null && !Pattern.compile(pattern).matcher(TimedValue.of(value, name)).matches()) {
+		if (pattern != null && !matches(pattern, value, name)) {
 			throw new IllegalArgumentException("The argument %s must match the pattern %s".formatted(name, pattern));
+		}
+	}
+
+	/**
+	 * @param pattern a regular expression
+	 * @param value   the argument
+	 * @param name    the parameter name
+	 * @return whether the argument matches the whole pattern
+	 * @throws IllegalArgumentException if the match takes too long or too deep a recursion
+	 */
+	private static boolean matches(final String pattern, final String value, final String name) {
+		try {
+			return Pattern.compile(pattern).matcher(TimedValue.of(value, name)).matches();
+		} catch (StackOverflowError e) {
+			// A repeated group, (x|y)*, recurses once per repetition: a long value exhausts the stack
+			throw new IllegalArgumentException("The argument %s is too long to match its pattern".formatted(name));
 		}
 	}
 

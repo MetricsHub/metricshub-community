@@ -111,6 +111,17 @@ class ToolParameterTest {
 	}
 
 	@Test
+	void testValidateBoundsThePatternRecursion() {
+		// Each repetition of the group is a recursion: a long value overflows the stack before the timeout
+		final ToolParameter recursive = new ToolParameter(null, null, false, null, "(x|y)*", null);
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			recursive.validate("x", "x".repeat(1_000_000))
+		);
+		assertEquals("The argument x is too long to match its pattern", exception.getMessage());
+		assertDoesNotThrow(() -> recursive.validate("x", "xyxy"));
+	}
+
+	@Test
 	void testNumericEnumComparesValues() {
 		final ToolParameter level = new ToolParameter("integer", null, false, null, null, List.of("01", "2"));
 		assertDoesNotThrow(() -> level.validate("level", "1"));

@@ -664,6 +664,27 @@ class SourceUpdaterProcessorTest {
 	}
 
 	@Test
+	void testProcessCommandLineSourceKeepsTheDollarsOfShellArguments() {
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
+
+		new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of("v", "price$$5"),
+			extensionManager
+		).process(CommandLineSource.builder().commandLine("echo $$ ${esc(bash)::param::v}").build());
+
+		// The template's $$ is halved, the value is not
+		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
+		verify(sourceProcessor).process(captor.capture());
+		assertEquals("__mh_arg1='price$$5'; echo $ \"${__mh_arg1}\"", captor.getValue().getCommandLine());
+	}
+
+	@Test
 	void testProcessSourceFormingAMacroIsNotRun() {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())

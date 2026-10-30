@@ -28,6 +28,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTr
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.PerBitTranslation;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.tool.ToolDefinition;
@@ -211,6 +212,29 @@ class ConnectorToolTest {
 			LINUX
 		);
 		assertRefused(TableUnionSource.builder().tables(List.of("${source::${param::unit}}")).build(), LINUX);
+		assertRefused(SqlSource.builder().query("SELECT 1").database("${param::unit}").build(), WINDOWS);
+		final CommandLineSource bits = commandLine("cat f");
+		bits.setComputes(
+			List.of(
+				PerBitTranslation.builder()
+					.column(1)
+					.bitList("${param::lines}")
+					.translationTable(new TranslationTable())
+					.build()
+			)
+		);
+		assertRefused(bits, LINUX);
+	}
+
+	@Test
+	void testParameterInTheResultIsRefused() {
+		// The result names a source, looked up as is
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(Map.of("logs", commandLine("ls")))
+			.parameters(PARAMETERS)
+			.result(new ToolResult("${source::${param::unit}}", null))
+			.build();
+		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("logs", LINUX));
 	}
 
 	@Test
