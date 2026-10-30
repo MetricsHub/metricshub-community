@@ -61,6 +61,12 @@ public record ToolParameter(
 	private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?");
 
 	/**
+	 * The characters that quote, expand, chain, redirect, glob or comment in a shell (POSIX, PowerShell, cmd) or
+	 * a query: a pattern refusing all of them lets a value be inserted unescaped.
+	 */
+	private static final String METACHARACTERS = " \t\r\n'\"`$;|&<>(){}[]*?!#~%^\\";
+
+	/**
 	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
 	 * default value is valid.
 	 *
@@ -85,6 +91,12 @@ public record ToolParameter(
 			Pattern.compile(pattern);
 		}
 		enumValues = enumValues == null || enumValues.isEmpty() ? null : List.copyOf(enumValues);
+		if (enumValues != null) {
+			// Advertised as values of the type
+			for (final String value : enumValues) {
+				check("enum", value, type, null, null);
+			}
+		}
 		if (defaultValue != null) {
 			check("default", defaultValue, type, pattern, enumValues);
 		}
@@ -103,12 +115,21 @@ public record ToolParameter(
 	}
 
 	/**
-	 * @return whether the parameter takes any text: a string with neither a pattern nor an enum, which a source
-	 *         may then only insert escaped
+	 * @return whether a source may insert the value without escaping it: a number or a boolean, one of an enum
+	 *         chosen by the connector, or a string whose pattern refuses every shell and query metacharacter
 	 */
 	@JsonIgnore
-	public boolean isFreeText() {
-		return STRING.equals(type) && pattern == null && enumValues == null;
+	public boolean isSafeUnescaped() {
+		if (!STRING.equals(type) || enumValues != null) {
+			return true;
+		}
+		if (pattern == null) {
+			return false;
+		}
+		final Pattern compiled = Pattern.compile(pattern);
+		return METACHARACTERS.chars()
+			.mapToObj(c -> String.valueOf((char) c))
+			.noneMatch(c -> compiled.matcher(c).matches() || compiled.matcher("a" + c + "a").matches());
 	}
 
 	/**

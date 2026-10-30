@@ -507,6 +507,22 @@ class SourceUpdaterProcessorTest {
 				Map.of("token", "a/b")
 			)
 		);
+		// A value forming a macro, by itself or with its neighbors, is not inserted
+		final String percent = "echo '%${esc(bash)::param::suffix}'";
+		assertEquals(percent, SourceUpdaterProcessor.replaceAttributeReferences(percent, Map.of("suffix", "{PASSWORD}")));
+		final String twoParts = "echo ${param::a}${param::b}";
+		assertEquals(
+			"echo %${param::b}",
+			SourceUpdaterProcessor.replaceAttributeReferences(twoParts, Map.of("a", "%", "b", "{PASSWORD}"))
+		);
+		assertEquals(
+			"show ${attribute::id}",
+			SourceUpdaterProcessor.replaceAttributeReferences("show ${attribute::id}", Map.of("id", "%{PASSWORD}"))
+		);
+		assertEquals(
+			"100% {ok}",
+			SourceUpdaterProcessor.replaceAttributeReferences("${param::a} {ok}", Map.of("a", "100%"))
+		);
 		// An unknown escape type leaves the reference rather than inserting the value unescaped
 		final String unknown = "ping '${esc(bsh)::param::target}'";
 		assertEquals(unknown, SourceUpdaterProcessor.replaceAttributeReferences(unknown, Map.of("target", "$(id)")));

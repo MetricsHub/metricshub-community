@@ -1,6 +1,7 @@
 package org.metricshub.web.mcp.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,18 +86,49 @@ class HostToolsTest {
 			"Kills a process.",
 			Map.of(
 				"pid",
-				new ToolParameter("string", "The process", true, null, "\\d+", null),
+				new ToolParameter("string", "The process", true, null, "(?i)\\d+", null),
 				"signal",
-				new ToolParameter("string", "The signal", false, "TERM", null, List.of("TERM", "KILL"))
+				new ToolParameter("string", "The signal", false, "TERM", null, List.of("TERM", "KILL")),
+				"level",
+				new ToolParameter("integer", "The level", false, null, null, List.of("1", "2")),
+				"force",
+				new ToolParameter("boolean", "Whether to force", false, null, null, List.of("true"))
 			),
 			true
 		);
 
 		final JsonNode properties = HostTools.inputSchema(definition).get("properties");
 
-		assertEquals("^(?:\\d+)$", properties.get("pid").get("pattern").asText());
+		// A Java regular expression is described, not handed to the schema's ECMA-262 pattern
+		assertEquals(
+			"The process Must match the regular expression: (?i)\\d+",
+			properties.get("pid").get("description").asText()
+		);
+		assertNull(properties.get("pid").get("pattern"));
+		// Enum entries of the parameter's type
 		assertEquals("[\"TERM\",\"KILL\"]", properties.get("signal").get("enum").toString());
-		assertTrue(properties.get("signal").get("pattern") == null);
+		assertEquals("[1,2]", properties.get("level").get("enum").toString());
+		assertEquals("[true]", properties.get("force").get("enum").toString());
+	}
+
+	@Test
+	void testPerHostAcceptsEveryJsonIntegerRepresentation() throws Exception {
+		final ToolDefinition definition = new ToolDefinition(
+			"tail",
+			"Tails a log.",
+			Map.of("lines", new ToolParameter("integer", "How many lines", true, null)),
+			false
+		);
+		final ToolCallback callback = HostTools.perHost("Test_tail", definition, (hostname, arguments) ->
+			Map.of("value", arguments.get("lines"))
+		);
+
+		for (final String lines : List.of("1000", "1000.0", "1e3")) {
+			final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":%s}".formatted(lines)));
+			assertEquals("1000", result.get("hosts").get(0).get("response").get("value").asText(), lines);
+		}
+		final JsonNode fraction = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1.5}"));
+		assertEquals("The argument lines must be of type integer", fraction.get("errorMessage").asText());
 	}
 
 	@Test

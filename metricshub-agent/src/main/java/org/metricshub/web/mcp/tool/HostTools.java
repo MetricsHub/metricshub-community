@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,6 +80,8 @@ public final class HostTools {
 	static final List<String> RESERVED_PARAMETERS = List.of(HOSTNAME, POOL_SIZE);
 
 	private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
+
+	private static final String INTEGER = "integer";
 
 	/**
 	 * @return whether destructive tools may be advertised, i.e. {@value #DESTRUCTIVE_TOOLS_FLAG} is set
@@ -172,15 +176,20 @@ public final class HostTools {
 				if (parameter.defaultValue() != null) {
 					description.append(description.isEmpty() ? "" : " ").append("Default: ").append(parameter.defaultValue());
 				}
+				if (parameter.pattern() != null) {
+					// In the description rather than the schema's pattern: a Java regular expression is not always a
+					// valid ECMA-262 one, and a client could then refuse the whole tool list
+					description
+						.append(description.isEmpty() ? "" : " ")
+						.append("Must match the regular expression: ")
+						.append(parameter.pattern());
+				}
 				if (!description.isEmpty()) {
 					property.put("description", description.toString());
 				}
-				if (parameter.pattern() != null) {
-					// Anchored: JSON schema searches the value, the tool matches all of it
-					property.put("pattern", "^(?:%s)$".formatted(parameter.pattern()));
-				}
 				if (parameter.enumValues() != null) {
-					parameter.enumValues().forEach(property.putArray("enum")::add);
+					final ArrayNode values = property.putArray("enum");
+					parameter.enumValues().forEach(value -> values.add(typed(parameter.type(), value)));
 				}
 				if (parameter.required() && parameter.defaultValue() == null) {
 					required.add(parameterName);
@@ -277,10 +286,30 @@ public final class HostTools {
 		final Map<String, String> values = new LinkedHashMap<>();
 		for (final Map.Entry<String, ToolParameter> parameter : definition.parameters().entrySet()) {
 			final JsonNode value = arguments.get(parameter.getKey());
-			if (value != null && !value.isNull()) {
+			if (value == null || value.isNull()) {
+				continue;
+			}
+			if (INTEGER.equals(parameter.getValue().type()) && value.isNumber() && value.canConvertToExactIntegral()) {
+				// 1.0 and 1e3 are integers to JSON schema
+				values.put(parameter.getKey(), value.bigIntegerValue().toString());
+			} else {
 				values.put(parameter.getKey(), value.isValueNode() ? value.asText() : value.toString());
 			}
 		}
 		return values;
+	}
+
+	/**
+	 * @param type  the JSON schema type of a parameter
+	 * @param value a value of the parameter, as text, valid for the type
+	 * @return the value as a JSON node of the type
+	 */
+	private static JsonNode typed(final String type, final String value) {
+		return switch (type) {
+			case INTEGER -> NODES.numberNode(new BigInteger(value));
+			case "number" -> NODES.numberNode(new BigDecimal(value));
+			case "boolean" -> NODES.booleanNode(Boolean.parseBoolean(value));
+			default -> NODES.textNode(value);
+		};
 	}
 }

@@ -40,14 +40,22 @@ class ToolParameterTest {
 		);
 		// An empty enum accepts anything
 		assertNull(new ToolParameter(null, null, false, null, null, List.of()).enumValues());
+		// Enum entries of another type than the parameter's
+		assertThrows(IllegalArgumentException.class, () ->
+			new ToolParameter("integer", null, false, null, null, List.of("1", "two"))
+		);
 	}
 
 	@Test
-	void testIsFreeText() {
-		assertTrue(new ToolParameter(null, null, false, null).isFreeText());
-		assertFalse(new ToolParameter("integer", null, false, null).isFreeText());
-		assertFalse(new ToolParameter(null, null, false, null, "\\w+", null).isFreeText());
-		assertFalse(new ToolParameter(null, null, false, null, null, List.of("a")).isFreeText());
+	void testIsSafeUnescaped() {
+		assertFalse(new ToolParameter(null, null, false, null).isSafeUnescaped());
+		assertTrue(new ToolParameter("integer", null, false, null).isSafeUnescaped());
+		assertTrue(new ToolParameter(null, null, false, null, null, List.of("a")).isSafeUnescaped());
+		assertTrue(new ToolParameter(null, null, false, null, "[\\w@.-]+", null).isSafeUnescaped());
+		// Broad patterns let $(reboot), a quote or a space through
+		assertFalse(new ToolParameter(null, null, false, null, ".*", null).isSafeUnescaped());
+		assertFalse(new ToolParameter(null, null, false, null, "[^;]*", null).isSafeUnescaped());
+		assertFalse(new ToolParameter(null, null, false, null, "[\\w ]+", null).isSafeUnescaped());
 	}
 
 	@Test

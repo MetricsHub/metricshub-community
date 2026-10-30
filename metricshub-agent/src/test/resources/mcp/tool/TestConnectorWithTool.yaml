@@ -17,12 +17,9 @@ tools:
       pattern:
         description: Regular expression on the thing name
         default: .*
-        # Inserted as is, a regular expression: anything but the column separator
-        pattern: '[^;]*'
       owner:
         description: Who the things belong to
         required: true
-        pattern: \w+
     sources:
       things:
         type: static

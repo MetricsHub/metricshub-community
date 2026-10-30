@@ -385,12 +385,40 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					attributesValue = escapeType.escape(attributesValue);
 				}
 			}
-			if (attributesValue != null) {
-				matcher.appendReplacement(sb, Matcher.quoteReplacement(attributesValue));
+			// The text before the reference, so that the inserted value can be checked against its neighbors
+			matcher.appendReplacement(sb, "");
+			if (attributesValue != null && formsMacro(sb, attributesValue, key, matcher.end())) {
+				// The macros are expanded after the references: a value must not reveal a credential or a source
+				log.warn("The value of {} would form a macro (%{...} or ${...}): not inserted.", matcher.group());
+				attributesValue = null;
 			}
+			sb.append(attributesValue != null ? attributesValue : matcher.group());
 		}
 		matcher.appendTail(sb);
 		return sb.toString();
+	}
+
+	/**
+	 * Whether a value inserted between the text already built and the rest of the template forms a {@code %{} or
+	 * {@code ${}, by itself or with a neighbor: {@code %} then {@code {PASSWORD}} is {@code %{PASSWORD}}.
+	 *
+	 * @param before   the text built so far
+	 * @param value    the value to insert
+	 * @param template the template
+	 * @param end      the position in the template right after the reference
+	 * @return {@code true} if the value must not be inserted
+	 */
+	private static boolean formsMacro(
+		final StringBuffer before,
+		final String value,
+		final String template,
+		final int end
+	) {
+		final String joined =
+			(before.isEmpty() ? "" : before.substring(before.length() - 1)) +
+			value +
+			(end < template.length() ? template.substring(end, end + 1) : "");
+		return joined.contains("%{") || joined.contains("${");
 	}
 
 	/**
