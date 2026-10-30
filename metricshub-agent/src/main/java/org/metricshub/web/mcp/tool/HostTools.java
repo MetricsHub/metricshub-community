@@ -130,7 +130,11 @@ public final class HostTools {
 				.description(description(definition))
 				.inputSchema(inputSchema(definition).toString())
 				.build();
-		return new DynamicToolCallback(springDefinition, arguments -> call(definition, perHost, arguments));
+		return new DynamicToolCallback(
+			springDefinition,
+			arguments -> call(definition, perHost, arguments),
+			definition.destructive()
+		);
 	}
 
 	static String description(final ToolDefinition definition) {

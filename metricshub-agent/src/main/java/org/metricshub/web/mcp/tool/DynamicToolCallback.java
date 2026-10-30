@@ -41,15 +41,39 @@ public final class DynamicToolCallback implements ToolCallback {
 	@Getter
 	private final ToolDefinition toolDefinition;
 
+	/**
+	 * Whether the tool changes the state of a host. The agent's own MCP server and chat expose such a tool only
+	 * when allowed by {@link HostTools#DESTRUCTIVE_TOOLS_FLAG}; MetricsHub Central receives it whatever the flag
+	 * and applies its own policy.
+	 */
+	@Getter
+	private final boolean destructive;
+
 	private final Function<JsonNode, Object> function;
 
 	/**
+	 * A tool that does not change the state of a host.
+	 *
 	 * @param toolDefinition the name, description and input schema advertised to the LLM
 	 * @param function       the function run on the parsed arguments, whose result is serialized to JSON
 	 */
 	public DynamicToolCallback(final ToolDefinition toolDefinition, final Function<JsonNode, Object> function) {
+		this(toolDefinition, function, false);
+	}
+
+	/**
+	 * @param toolDefinition the name, description and input schema advertised to the LLM
+	 * @param function       the function run on the parsed arguments, whose result is serialized to JSON
+	 * @param destructive    whether the tool changes the state of a host
+	 */
+	public DynamicToolCallback(
+		final ToolDefinition toolDefinition,
+		final Function<JsonNode, Object> function,
+		final boolean destructive
+	) {
 		this.toolDefinition = toolDefinition;
 		this.function = function;
+		this.destructive = destructive;
 	}
 
 	@Override

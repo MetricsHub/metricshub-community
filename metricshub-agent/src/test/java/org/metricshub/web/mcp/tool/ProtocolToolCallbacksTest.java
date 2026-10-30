@@ -86,14 +86,13 @@ class ProtocolToolCallbacksTest {
 	}
 
 	@Test
-	void testDestructiveToolsNeedTheFlag() {
-		assertEquals(List.of("ipmi_sel"), names(ProtocolToolCallbacks.from(agentContextHolder.getAgentContext())));
+	void testDestructiveToolsAreBuiltWhateverTheFlag() {
+		// The flag applies where the tools are exposed, not where they are built: Central gets them all
+		final List<ToolCallback> callbacks = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext());
 
-		System.setProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG, "true");
-		assertEquals(
-			List.of("ipmi_sel", "ipmi_chassis"),
-			names(ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()))
-		);
+		assertEquals(List.of("ipmi_sel", "ipmi_chassis"), names(callbacks));
+		assertFalse(((DynamicToolCallback) callbacks.get(0)).isDestructive());
+		assertTrue(((DynamicToolCallback) callbacks.get(1)).isDestructive());
 	}
 
 	@Test

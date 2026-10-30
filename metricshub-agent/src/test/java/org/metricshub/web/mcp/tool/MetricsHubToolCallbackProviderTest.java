@@ -79,4 +79,29 @@ class MetricsHubToolCallbackProviderTest {
 
 		assertEquals(List.of("ListHosts", "Windows_listProcesses"), names(provider.getToolCallbacks()));
 	}
+
+	@Test
+	void testDestructiveToolsAreExposedOnlyWithTheFlagButAlwaysAdvertisedToCentral() {
+		final AgentContextHolder holder = new AgentContextHolder(mock(AgentContext.class));
+		final ToolCallback reboot = new DynamicToolCallback(
+			ToolDefinition.builder().name("ilo_reboot").description("Reboots.").inputSchema("{\"type\":\"object\"}").build(),
+			arguments -> Map.of(),
+			true
+		);
+		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(
+			new ToolCallback[] { callback("ListHosts") },
+			holder,
+			List.of(ignored -> List.of(callback("ipmi_sel"), reboot))
+		);
+		try {
+			System.clearProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG);
+			assertEquals(List.of("ListHosts", "ipmi_sel"), names(provider.getToolCallbacks()));
+			assertEquals(List.of("ListHosts", "ipmi_sel", "ilo_reboot"), names(provider.getAllToolCallbacks()));
+
+			System.setProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG, "true");
+			assertEquals(List.of("ListHosts", "ipmi_sel", "ilo_reboot"), names(provider.getToolCallbacks()));
+		} finally {
+			System.clearProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG);
+		}
+	}
 }

@@ -45,10 +45,10 @@ public class ToolCallbackConfiguration {
 	 *
 	 * @param context            the Spring {@link ApplicationContext} to retrieve beans from
 	 * @param agentContextHolder the running agent context
-	 * @return the provider of every tool the agent exposes
+	 * @return the provider of every tool the agent exposes, filtered for its own MCP server and chat, whole for Central
 	 */
 	@Bean
-	public ToolCallbackProvider metricshubTools(
+	public MetricsHubToolCallbackProvider metricshubTools(
 		final ApplicationContext context,
 		final AgentContextHolder agentContextHolder
 	) {

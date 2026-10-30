@@ -65,12 +65,8 @@ public final class ProtocolToolCallbacks {
 		if (agentContext == null || agentContext.getExtensionManager() == null) {
 			return callbacks;
 		}
-		final boolean destructiveEnabled = HostTools.isDestructiveEnabled();
 		for (final IProtocolExtension extension : agentContext.getExtensionManager().getProtocolExtensions()) {
 			for (final ToolDefinition definition : extension.getTools()) {
-				if (definition.destructive() && !destructiveEnabled) {
-					continue;
-				}
 				try {
 					callbacks.add(
 						HostTools.perHost(

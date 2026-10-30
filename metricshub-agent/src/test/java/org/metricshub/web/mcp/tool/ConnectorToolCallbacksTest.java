@@ -1,6 +1,7 @@
 package org.metricshub.web.mcp.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,17 +53,12 @@ class ConnectorToolCallbacksTest {
 	}
 
 	@Test
-	void testDestructiveToolsNeedTheFlag() {
-		assertEquals(
-			List.of("TestConnectorWithTool_listThings"),
-			names(ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()))
-		);
+	void testDestructiveToolsAreBuiltWhateverTheFlag() {
+		// The flag applies where the tools are exposed, not where they are built: Central gets them all
+		final List<ToolCallback> callbacks = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext());
 
-		System.setProperty(HostTools.DESTRUCTIVE_TOOLS_FLAG, "true");
-		assertEquals(
-			List.of("TestConnectorWithTool_listThings", "TestConnectorWithTool_reboot"),
-			names(ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()))
-		);
+		assertEquals(List.of("TestConnectorWithTool_listThings", "TestConnectorWithTool_reboot"), names(callbacks));
+		assertTrue(((DynamicToolCallback) callbacks.get(1)).isDestructive());
 	}
 
 	@Test

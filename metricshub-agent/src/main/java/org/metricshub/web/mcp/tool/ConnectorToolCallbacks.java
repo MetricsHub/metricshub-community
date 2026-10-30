@@ -70,17 +70,14 @@ public final class ConnectorToolCallbacks {
 		if (connectorStore == null || connectorStore.getStore() == null) {
 			return callbacks;
 		}
-		final boolean destructiveEnabled = HostTools.isDestructiveEnabled();
 		connectorStore
 			.getStore()
 			.forEach((connectorId, connector) ->
 				connector
 					.getTools()
 					.forEach((toolName, tool) -> {
+						// Destructive tools included: the interfaces decide what they expose
 						final ToolDefinition definition = tool.toDefinition(toolName);
-						if (definition.destructive() && !destructiveEnabled) {
-							return;
-						}
 						try {
 							callbacks.add(
 								HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
