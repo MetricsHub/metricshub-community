@@ -158,6 +158,11 @@ class MacrosUpdaterTest {
 			"echo $((  ))",
 			MacrosUpdater.update("echo $(( %{esc(bash)::PASSWORD} ))", "u", "x[$(id)]".toCharArray(), null, "h", false)
 		);
+		// The command name replaced with nothing, the next macro takes its place: nothing either
+		assertEquals(
+			" ",
+			MacrosUpdater.update(USERNAME_ESC_BASH + " " + PASSWORD_ESC_BASH, "u", "reboot".toCharArray(), null, "h", false)
+		);
 	}
 
 	@Test

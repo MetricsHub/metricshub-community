@@ -620,6 +620,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 						)
 					);
 				}
+				if (rule == LINE_FILTER && "number".equals(parameter.type()) && parameter.enumValues() == null) {
+					// The dot of 1.5, the + of 1e+5 are regex syntax
+					throw new IllegalArgumentException(
+						"Tool %s inserts the number %s unescaped in a regular expression: escape it with regex".formatted(
+							toolName,
+							reference
+						)
+					);
+				}
 				if (string && rule == POSIX_COMMAND_LINE) {
 					// Without any metacharacter, a word is still a command to eval or in a command's place
 					checkShellArgument(toolName, field, matcher.start(), reference);
@@ -848,13 +857,16 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 */
 	static boolean insideCharacterClass(final String regex, final int position) {
 		int depth = 0;
+		int first = -1;
 		for (int i = 0; i < position; i++) {
 			final char c = regex.charAt(i);
 			if (c == '\\') {
 				i++;
 			} else if (c == '[') {
 				depth++;
-			} else if (c == ']' && depth > 0) {
+				// A ] first in the class, after the ^ too, is a member: []a] and [^]a]
+				first = regex.startsWith("^", i + 1) ? i + 2 : i + 1;
+			} else if (c == ']' && depth > 0 && i != first) {
 				depth--;
 			}
 		}

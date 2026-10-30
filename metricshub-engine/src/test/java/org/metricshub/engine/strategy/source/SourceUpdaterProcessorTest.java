@@ -710,15 +710,16 @@ class SourceUpdaterProcessorTest {
 		).process(
 			CommandLineSource.builder()
 				.commandLine(
-					"eval ${esc(bash)::attribute::v}; eval ${esc(bash)::resource.attribute::tag}; ls ${esc(bash)::attribute::w}"
+					"eval ${esc(bash)::attribute::v}; eval ${esc(bash)::resource.attribute::tag}; ls ${esc(bash)::attribute::w}; ${esc(bash)::attribute::v} ${esc(bash)::attribute::w}"
 				)
 				.build()
 		);
 
-		// eval would parse the value again, one word or not: replaced with nothing, whatever the kind of reference
+		// eval would parse the value again, one word or not: replaced with nothing, whatever the kind of reference.
+		// A command name replaced with nothing, the next word takes its place: nothing either
 		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
 		verify(sourceProcessor).process(captor.capture());
-		assertEquals("__mh_arg1='x'; eval ; eval ; ls \"${__mh_arg1}\"", captor.getValue().getCommandLine());
+		assertEquals("__mh_arg1='x'; eval ; eval ; ls \"${__mh_arg1}\";  ", captor.getValue().getCommandLine());
 	}
 
 	@Test

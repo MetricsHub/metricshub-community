@@ -157,7 +157,9 @@ public class MacrosUpdater {
 		final StringBuilder replaced = new StringBuilder();
 		while (matcher.find()) {
 			final String value = values.getOrDefault(matcher.group("name"), EMPTY);
-			final ShellQuote quote = ShellQuote.at(text, matcher.start());
+			// Read with the macros before replaced: one replaced with nothing leaves its place to the next
+			matcher.appendReplacement(replaced, "");
+			final ShellQuote quote = ShellQuote.at(replaced + text.substring(matcher.start()), replaced.length());
 			if (quote == ShellQuote.UNKNOWN) {
 				// In arithmetic, after eval or sh -c, as a command name...: no quoting would protect it
 				log.error("{} is not a mere argument of its command: replaced with nothing.", matcher.group());
@@ -168,7 +170,7 @@ public class MacrosUpdater {
 				case NONE -> "'" + escapeBashSpecialCharacters(value) + "'";
 				default -> EMPTY;
 			};
-			matcher.appendReplacement(replaced, Matcher.quoteReplacement(quoted));
+			replaced.append(quoted);
 		}
 		matcher.appendTail(replaced);
 		return replaced.toString();

@@ -169,6 +169,22 @@ class ConnectorToolTest {
 			CommandLineSource.builder().commandLine("ls").keep("[[a]${esc(regex)::param::service}]").build(),
 			LINUX
 		);
+		// A ] first in a class is a member
+		assertRefused(
+			CommandLineSource.builder().commandLine("ls").keep("[]${esc(regex)::param::service}]").build(),
+			LINUX
+		);
+		assertRefused(
+			CommandLineSource.builder().commandLine("ls").keep("[^]${esc(regex)::param::service}]").build(),
+			LINUX
+		);
+		// The dot of a number is any character there
+		final ToolParameter ratio = new ToolParameter("number", "A ratio", true, null);
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(Map.of("logs", CommandLineSource.builder().commandLine("ls").keep("^${param::ratio}$").build()))
+			.parameters(Map.of("ratio", ratio))
+			.build();
+		assertThrows(IllegalArgumentException.class, () -> tool.toDefinition("logs", LINUX));
 		assertRefused(
 			CommandLineSource.builder().commandLine("ls").separators("${esc(regex)::param::service}").build(),
 			LINUX

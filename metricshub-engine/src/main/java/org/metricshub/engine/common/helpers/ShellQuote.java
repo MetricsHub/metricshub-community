@@ -166,9 +166,18 @@ public enum ShellQuote {
 	private static final Set<String> SHELLS = Set.of("sh", "bash", "ksh", "zsh", "dash", "ash", "csh", "tcsh");
 
 	/**
-	 * An assignment word, which keeps the next word the command name ({@code MODE=x cmd}).
+	 * An assignment word, which keeps the next word the command name ({@code MODE=x cmd}, {@code PATH+=:/x cmd},
+	 * {@code a[0]=x cmd}).
 	 */
-	private static final Pattern ASSIGNMENT = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*=.*", Pattern.DOTALL);
+	private static final Pattern ASSIGNMENT = Pattern.compile(
+		"[A-Za-z_][A-Za-z0-9_]*(?:\\[[^\\]]*\\])?\\+?=.*",
+		Pattern.DOTALL
+	);
+
+	/**
+	 * The start of an assignment to an array element, {@code a[...}, whose subscript is arithmetic.
+	 */
+	private static final Pattern SUBSCRIPT = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*\\[[^\\]]*", Pattern.DOTALL);
 
 	/**
 	 * The options whose next word is a command, whatever the command they are given to ({@code find -exec}).
@@ -253,7 +262,11 @@ public enum ShellQuote {
 			final boolean nameOrTarget = inWord ? wordIsNameOrTarget : commandNext || targetNext;
 			// An action operand, unless in an option word (--unit=...)
 			final boolean action = actionsLeft > 0 && !(inWord && word.length() > 0 && word.charAt(0) == '-');
-			return nameOrTarget || evaluating || action ? UNKNOWN : quote;
+			// In the subscript of an array assignment, a[...]=, which is arithmetic
+			final boolean subscript = inWord && wordIsCommandName && SUBSCRIPT.matcher(word).matches();
+			// In a command substitution, whose output the shell splits and globs again
+			final boolean substituted = frames.stream().anyMatch(Frame::substitution);
+			return nameOrTarget || evaluating || action || subscript || substituted ? UNKNOWN : quote;
 		}
 
 		/**

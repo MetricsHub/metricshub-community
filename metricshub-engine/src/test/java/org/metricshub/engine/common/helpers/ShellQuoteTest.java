@@ -61,7 +61,13 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("\"ev\"al X"));
 		// An assignment keeps the next word the command name
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("MODE=x X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("PATH+=:/tmp X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("a[0]=x X"));
 		assertEquals(ShellQuote.NONE, quoteOfX("MODE=x ls X"));
+		// An array subscript is arithmetic
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("a[X]=1 ls"));
+		// A command substitution's output is split and globbed again
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("find . -name $(printf %s X)"));
 		// A command name from an expansion is not known
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("$CMD X"));
 		// A shell runs its first operand as a script, its -c argument as code; the arguments of a script are passed

@@ -22,8 +22,10 @@ package org.metricshub.web.mcp.tool;
  */
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.util.function.Function;
 import lombok.Getter;
 import org.springframework.ai.tool.ToolCallback;
@@ -36,7 +38,13 @@ import org.springframework.ai.tool.definition.ToolDefinition;
  */
 public final class DynamicToolCallback implements ToolCallback {
 
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	/**
+	 * Reads a number with a fraction or an exponent as a decimal, exactly: as a double, 9007199254740993.0 would
+	 * already be 9007199254740992.
+	 */
+	private static final ObjectMapper MAPPER = JsonMapper.builder()
+		.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+		.build();
 
 	@Getter
 	private final ToolDefinition toolDefinition;

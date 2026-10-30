@@ -346,7 +346,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			if (value == null) {
 				continue;
 			}
-			final ShellQuote quote = ShellQuote.at(template, matcher.start());
+			// Read with the references before replaced: one replaced with nothing leaves its place to the next
+			commandLine.append(template, copied, matcher.start());
+			copied = matcher.end();
+			final ShellQuote quote = ShellQuote.at(commandLine + template.substring(matcher.start()), commandLine.length());
 			if (quote == ShellQuote.UNKNOWN) {
 				log.error(
 					"Hostname {} - In source {}, {} is not a mere argument of a command: replaced with nothing.",
@@ -354,8 +357,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					copy.getKey(),
 					matcher.group()
 				);
-				commandLine.append(template, copied, matcher.start());
-				copied = matcher.end();
 				continue;
 			}
 			count++;
@@ -364,8 +365,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			final String escaped = EscapeType.BASH.escape(value);
 			final String literal = halvedLater ? escaped.replace("$", "$$") : escaped;
 			assignments.append(variable).append(count).append("='").append(literal).append("'; ");
-			commandLine.append(template, copied, matcher.start()).append(variableIn(quote, variable + count));
-			copied = matcher.end();
+			commandLine.append(variableIn(quote, variable + count));
 		}
 		commandLine.append(template, copied, template.length());
 		commandLineSource.setCommandLine(assignments.toString() + commandLine);
