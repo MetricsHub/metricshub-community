@@ -325,7 +325,9 @@ public class MacrosUpdater {
 	 */
 	static String escapeUrlSpecialCharacters(final String value) {
 		// Escape common URL characters
-		return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+		final String encoded = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+		// A path segment of dots only would climb the path once normalized: . and .. are percent-encoded too
+		return encoded.matches("\\.+") ? encoded.replace(".", "%2E") : encoded;
 	}
 
 	/**

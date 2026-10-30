@@ -81,7 +81,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * A {@code ${param::name}} reference, with its optional {@code esc(TYPE)::} prefix.
 	 */
 	private static final Pattern PARAMETER_REFERENCE = Pattern.compile(
-		"\\$\\{(?:esc\\((?<esc>[a-z0-9]+)\\)::)?param::(?<name>[^}]+)\\}",
+		// ${attribute::name} too: a tool's arguments are its attributes, replaced from the same map
+		"\\$\\{(?:esc\\((?<esc>[a-z0-9]+)\\)::)?(?:param|attribute)::(?<name>[^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -222,7 +223,12 @@ public class ConnectorTool extends AbstractMonitorTask {
 			if (others instanceof CommandLineSource commandLineSource) {
 				final FieldRule rule = runsInPosixShell(commandLineSource, appliesTo) ? POSIX_COMMAND_LINE : COMMAND_LINE;
 				checkReferences(name, commandLineSource.getCommandLine(), rule, unescaped);
+				// keep and exclude are regular expressions; separators and selectColumns are not
+				checkReferences(name, commandLineSource.getKeep(), LINE_FILTER, unescaped);
+				checkReferences(name, commandLineSource.getExclude(), LINE_FILTER, unescaped);
 				commandLineSource.setCommandLine("");
+				commandLineSource.setKeep(null);
+				commandLineSource.setExclude(null);
 			} else if (others instanceof SqlSource sqlSource) {
 				checkReferences(name, sqlSource.getQuery(), SQL_QUERY, unescaped);
 				sqlSource.setQuery("");
@@ -265,8 +271,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 				}
 			}
 			// update() is the visitor of every field a reference is replaced in
-			final FieldRule rest = others instanceof CommandLineSource ? LINE_FILTER : OTHER_FIELD;
-			others.update(field -> checkReferences(name, field, rest, unescaped));
+			others.update(field -> checkReferences(name, field, OTHER_FIELD, unescaped));
 			for (final Compute compute : source.getComputes()) {
 				// An awk script is code; the other computes only transform the table
 				compute
@@ -406,11 +411,12 @@ public class ConnectorTool extends AbstractMonitorTask {
 						"in a Windows command line, an awk script or a file path, constrain the parameter instead"
 					)
 				);
-			} else if (!insideString(field, matcher.start(), escapeType)) {
+			} else if (!escapeProtects(field, matcher.start(), escapeType)) {
 				throw new IllegalArgumentException(
-					"Tool %s must write %s inside a string of its language, the only place its escape protects".formatted(
+					"Tool %s writes %s where its escape does not protect the value: %s".formatted(
 						toolName,
-						reference
+						reference,
+						"after a backslash, outside of a string of its language, in XML markup or in a regex character class"
 					)
 				);
 			} else if (rule == POSIX_COMMAND_LINE) {
@@ -488,5 +494,116 @@ public class ConnectorTool extends AbstractMonitorTask {
 			}
 		}
 		return quotes.indexOf(quote) >= 0;
+	}
+
+	/**
+	 * @param field    a field
+	 * @param position the position of an escaped reference
+	 * @param type     its escape type
+	 * @return whether the escape protects the value there: not after a backslash, inside a string of its language
+	 *         ({@link #insideString}), in XML character data or a quoted attribute value, outside of a regex
+	 *         character class
+	 */
+	private static boolean escapeProtects(final String field, final int position, final EscapeType type) {
+		if (followsBackslash(field, position) || !insideString(field, position, type)) {
+			return false;
+		}
+		if (type == EscapeType.XML) {
+			return insideXmlValue(field, position);
+		}
+		return type != EscapeType.REGEX || !insideCharacterClass(field, position);
+	}
+
+	/**
+	 * @param field    a field
+	 * @param position a position in the field
+	 * @return whether an odd run of backslashes precedes the position, which would escape the first character of the
+	 *         value inserted there, an escaped quote first of all
+	 */
+	static boolean followsBackslash(final String field, final int position) {
+		int count = 0;
+		while (position - count > 0 && field.charAt(position - count - 1) == '\\') {
+			count++;
+		}
+		return count % 2 == 1;
+	}
+
+	/**
+	 * Tells whether a position of an XML document is in character data or in a quoted attribute value, the only
+	 * places the {@code xml} escape protects: not in a tag name, a comment, a CDATA section or a declaration.
+	 *
+	 * @param body     an XML document
+	 * @param position a position in the document
+	 * @return whether the position is in character data or a quoted attribute value
+	 */
+	static boolean insideXmlValue(final String body, final int position) {
+		char quote = '\0';
+		boolean inTag = false;
+		for (int i = 0; i < position; i++) {
+			final char c = body.charAt(i);
+			if (quote != '\0') {
+				if (c == quote) {
+					quote = '\0';
+				}
+			} else if (inTag) {
+				if (c == '"' || c == '\'') {
+					quote = c;
+				} else if (c == '>') {
+					inTag = false;
+				}
+			} else if (c == '<') {
+				final String end = markupEnd(body, i);
+				if (end == null) {
+					inTag = true;
+				} else {
+					final int close = body.indexOf(end, i);
+					if (close < 0 || close + end.length() > position) {
+						return false;
+					}
+					i = close + end.length() - 1;
+				}
+			}
+		}
+		return !inTag || quote != '\0';
+	}
+
+	/**
+	 * @param body an XML document
+	 * @param i    the position of a {@code <}
+	 * @return the end of the comment, CDATA section, processing instruction or declaration starting there,
+	 *         {@code null} for an element tag
+	 */
+	private static String markupEnd(final String body, final int i) {
+		if (body.startsWith("<!--", i)) {
+			return "-->";
+		}
+		if (body.startsWith("<![CDATA[", i)) {
+			return "]]>";
+		}
+		if (body.startsWith("<?", i)) {
+			return "?>";
+		}
+		return body.startsWith("<!", i) ? ">" : null;
+	}
+
+	/**
+	 * @param regex    a PSL regular expression
+	 * @param position a position in the regular expression
+	 * @return whether the position is inside a {@code [...]} character class, where an escaped value still forms
+	 *         ranges ({@code a-z})
+	 */
+	static boolean insideCharacterClass(final String regex, final int position) {
+		boolean inClass = false;
+		for (int i = 0; i < position; i++) {
+			final char c = regex.charAt(i);
+			if (c == '\\') {
+				i++;
+			} else if (c == '[') {
+				inClass = true;
+			} else if (c == ']') {
+				inClass = false;
+			}
+		}
+		return inClass;
 	}
 }

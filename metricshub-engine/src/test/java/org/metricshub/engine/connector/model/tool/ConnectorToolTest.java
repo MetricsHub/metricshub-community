@@ -139,6 +139,50 @@ class ConnectorToolTest {
 	}
 
 	@Test
+	void testAttributeReferencesAreParameters() {
+		// A tool's arguments are its attributes: ${attribute::x} is checked as ${param::x}
+		assertRefused(commandLine("echo ${attribute::service}"), LINUX);
+		assertRefused(commandLine("echo ${attribute::nope}"), LINUX);
+		assertAccepted(commandLine("echo ${esc(bash)::attribute::service}"), LINUX);
+	}
+
+	@Test
+	void testFindExecOperandIsACommand() {
+		assertRefused(commandLine("find /tmp -exec ${esc(bash)::param::service} {} +"), LINUX);
+		assertAccepted(commandLine("find /var/log -name ${esc(bash)::param::service}"), LINUX);
+	}
+
+	@Test
+	void testLineFiltersAreRegexesButNotSeparators() {
+		assertAccepted(
+			CommandLineSource.builder().commandLine("ls").keep("^${esc(regex)::param::service}$").build(),
+			LINUX
+		);
+		// Inside a character class, an escaped a-z is still a range
+		assertRefused(CommandLineSource.builder().commandLine("ls").keep("[${esc(regex)::param::service}]").build(), LINUX);
+		assertRefused(
+			CommandLineSource.builder().commandLine("ls").separators("${esc(regex)::param::service}").build(),
+			LINUX
+		);
+	}
+
+	@Test
+	void testEscapeAfterABackslashOrInXmlMarkupIsRefused() {
+		// The backslash would escape the backslash the escape puts before a quote
+		assertRefused(HttpSource.builder().body("{\"x\": \"\\${esc(json)::param::service}\"}").build(), LINUX);
+		assertAccepted(HttpSource.builder().body("{\"x\": \"\\\\${esc(json)::param::service}\"}").build(), LINUX);
+		// XML escaping protects character data and quoted attribute values, not names
+		assertRefused(HttpSource.builder().body("<${esc(xml)::param::service}>v</x>").build(), LINUX);
+		assertRefused(HttpSource.builder().body("<!-- ${esc(xml)::param::service} --><a/>").build(), LINUX);
+		assertAccepted(
+			HttpSource.builder()
+				.body("<?xml version=\"1.0\"?><a b=\"${esc(xml)::param::service}\">${esc(xml)::param::service}</a>")
+				.build(),
+			LINUX
+		);
+	}
+
+	@Test
 	void testAFieldWithoutARuleTakesOnlyEnumsAndNumbers() {
 		// No escape covers the * of a JMX object name pattern
 		assertRefused(

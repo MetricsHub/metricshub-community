@@ -136,6 +136,15 @@ class MacrosUpdaterTest {
 	}
 
 	@Test
+	void testEscapeUrlDotSegments() {
+		// A segment of dots only would climb the path once normalized
+		assertEquals("%2E%2E", MacrosUpdater.escapeUrlSpecialCharacters(".."));
+		assertEquals("%2E", MacrosUpdater.escapeUrlSpecialCharacters("."));
+		assertEquals("a.b", MacrosUpdater.escapeUrlSpecialCharacters("a.b"));
+		assertEquals("..%2Fetc", MacrosUpdater.escapeUrlSpecialCharacters("../etc"));
+	}
+
+	@Test
 	void testCountMacros() {
 		assertEquals(2, MacrosUpdater.countMacros("%{USERNAME}:${esc(json)::PASSWORD} ${param::x} $HOME"));
 		assertEquals(0, MacrosUpdater.countMacros(null));

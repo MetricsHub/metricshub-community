@@ -289,14 +289,23 @@ public final class HostTools {
 			if (value == null || value.isNull()) {
 				continue;
 			}
-			if (INTEGER.equals(parameter.getValue().type()) && value.isNumber() && value.canConvertToExactIntegral()) {
+			if (INTEGER.equals(parameter.getValue().type()) && isLongIntegral(value)) {
 				// 1.0 and 1e3 are integers to JSON schema
-				values.put(parameter.getKey(), value.bigIntegerValue().toString());
+				values.put(parameter.getKey(), String.valueOf(value.longValue()));
 			} else {
 				values.put(parameter.getKey(), value.isValueNode() ? value.asText() : value.toString());
 			}
 		}
 		return values;
+	}
+
+	/**
+	 * @param value an argument
+	 * @return whether it is a number with an integral value fitting a long, checked before any conversion: a
+	 *         {@code 1e100000000} would otherwise be materialized with all its digits
+	 */
+	private static boolean isLongIntegral(final JsonNode value) {
+		return value.isNumber() && value.canConvertToLong() && value.canConvertToExactIntegral();
 	}
 
 	/**

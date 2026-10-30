@@ -85,6 +85,27 @@ public enum ShellQuote {
 		"nice",
 		"time",
 		"watch",
+		"chroot",
+		"setsid",
+		"stdbuf",
+		"ionice",
+		"taskset",
+		"runuser",
+		"doas",
+		"pkexec",
+		"flock",
+		"strace",
+		"ltrace",
+		"unbuffer",
+		"expect",
+		"parallel",
+		"at",
+		"batch",
+		"script",
+		"busybox",
+		"nsenter",
+		"unshare",
+		"systemd-run",
 		"awk",
 		"gawk",
 		"nawk",
@@ -101,6 +122,11 @@ public enum ShellQuote {
 		"typeset",
 		"local"
 	);
+
+	/**
+	 * The options whose next word is a command, whatever the command they are given to ({@code find -exec}).
+	 */
+	private static final Set<String> COMMAND_OPTIONS = Set.of("-exec", "-execdir", "-ok", "-okdir");
 
 	/**
 	 * The words after which the next word starts a command again.
@@ -288,7 +314,7 @@ public enum ShellQuote {
 			if (EVALUATING_COMMANDS.contains(name)) {
 				evaluating = true;
 			}
-			if (wordIsNameOrTarget && COMMAND_PREFIXES.contains(text)) {
+			if ((wordIsNameOrTarget && COMMAND_PREFIXES.contains(text)) || COMMAND_OPTIONS.contains(text)) {
 				commandNext = true;
 			}
 		}
