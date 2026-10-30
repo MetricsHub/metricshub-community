@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.process.runtime.ProcessControl;
 import org.metricshub.agent.tunnel.TunnelService;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.tool.MetricsHubToolCallbackProvider;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,9 +52,14 @@ public class TunnelStartupHook implements StartupHook {
 	@Autowired
 	public TunnelStartupHook(
 		final AgentContextHolder agentContextHolder,
-		final ToolCallbackProvider toolCallbackProvider
+		final MetricsHubToolCallbackProvider toolCallbackProvider
 	) {
-		this(agentContextHolder, toolCallbackProvider, TunnelService::new, ProcessControl::addShutdownHook);
+		this(
+			agentContextHolder,
+			toolCallbackProvider::getAllToolCallbacks,
+			TunnelService::new,
+			ProcessControl::addShutdownHook
+		);
 	}
 
 	TunnelStartupHook(

@@ -56,8 +56,9 @@ import org.springframework.ai.tool.ToolCallbackProvider;
  * tunnel client when it changes, retries a failed startup on the next tick, and pushes
  * {@code hosts.updated} when a configuration reload changed the monitored hosts.
  * <p>
- * The tool set is static for the JVM, so the registry snapshot is built once per configuration and
- * re-advertised on every (re)connection.
+ * The registry snapshot is built per configuration and re-advertised on every (re)connection. The connector and
+ * protocol tools follow the agent context, so a reload that changes the tool set restarts the tunnel: the
+ * protocol advertises tools at registration only.
  * </p>
  */
 @Slf4j
@@ -83,6 +84,10 @@ public class TunnelService {
 	private TunnelClient client;
 	private ToolBridge bridge;
 	private ToolRegistrySnapshot snapshot;
+	/**
+	 * The context generation the snapshot was built for: the tool set is re-read once per reload, not per tick.
+	 */
+	private long snapshotGeneration;
 	private TunnelConfig activeConfig;
 	// Written by the supervisor and by the tunnel thread building a registration. Volatile rather
 	// than guarded: the tunnel thread must never wait on this service's monitor, which the
@@ -163,6 +168,26 @@ public class TunnelService {
 			reconfigure(config);
 			return;
 		}
+		if (client != null && agentContextHolder.getGeneration() != snapshotGeneration) {
+			// A configuration reload may have changed the connector and protocol tools. The bridge answers
+			// from the snapshot it was built with and Central learns the tools at registration, so a
+			// changed set means a new bridge and a new registration: the same as a configuration change.
+			snapshotGeneration = agentContextHolder.getGeneration();
+			final ToolRegistrySnapshot current = ToolRegistrySnapshot.from(toolCallbackProvider, config.getExcludedTools());
+			if (!current.revision().equals(snapshot.revision())) {
+				log.info(
+					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
+					current.tools().size()
+				);
+				reconfigure(config);
+				return;
+			}
+			// Same advertised set, rebuilt callbacks: the ones the bridge holds belong to the replaced
+			// context, whose extensions the lifecycle service is about to close
+			snapshot = current;
+			bridge.update(current);
+			log.debug("Central tunnel: tool callbacks refreshed for context generation {}.", snapshotGeneration);
+		}
 		if (client != null && client.isConnected() && agentContextHolder.getGeneration() != advertisedGeneration) {
 			// A configuration reload swapped the agent context: re-advertise what actually changed
 			final ContextSnapshot current = readContextSnapshot();
@@ -241,6 +266,7 @@ public class TunnelService {
 
 		TunnelClient newClient = null;
 		try {
+			snapshotGeneration = agentContextHolder.getGeneration();
 			snapshot = ToolRegistrySnapshot.from(toolCallbackProvider, newConfig.getExcludedTools());
 			final TunnelSettings settings = new TunnelSettings(
 				URI.create(endpoint.trim()),

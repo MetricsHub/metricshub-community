@@ -51,6 +51,7 @@ import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
 
 /**
  * Represents a connector with its configuration, metrics, monitors, and other settings.
@@ -127,6 +128,14 @@ public class Connector implements Serializable {
 	 */
 	@Default
 	private Map<String, MonitorJob> monitors = new LinkedHashMap<>();
+
+	/**
+	 * Map of tools, where each key is the tool name and the value is the tool: the sources to run on the host and
+	 * the source whose table to return.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private Map<String, ConnectorTool> tools = new LinkedHashMap<>();
 
 	/**
 	 * Map of translation tables, where each key is the name of the translation table and the value is its definition.

@@ -1,5 +1,7 @@
 package org.metricshub.engine.strategy.source.compute;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.metricshub.engine.constants.Constants.EMPTY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -37,6 +39,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtrac
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -117,7 +120,10 @@ class ComputeUpdaterProcessorTest {
 		);
 
 		computeUpdaterProcessor.process(
-			ArrayTranslate.builder().column(1).translationTable(new ReferenceTranslationTable()).build()
+			ArrayTranslate.builder()
+				.column(1)
+				.translationTable(new ReferenceTranslationTable("${translation::status}"))
+				.build()
 		);
 
 		verify(computeProcessor, times(2)).process(any(ArrayTranslate.class));
@@ -243,5 +249,28 @@ class ComputeUpdaterProcessorTest {
 		doNothing().when(computeProcessor).process(any(PerBitTranslation.class));
 		computeUpdaterProcessor.process(perBitTranslation);
 		verify(computeProcessor, times(1)).process(any(PerBitTranslation.class));
+	}
+
+	@Test
+	void testProcessArrayTranslateReplacesParameters() {
+		final ComputeUpdaterProcessor updater = ComputeUpdaterProcessor.builder()
+			.computeProcessor(computeProcessor)
+			.attributes(Map.of("sep", "|"))
+			.telemetryManager(TelemetryManager.builder().hostConfiguration(HostConfiguration.builder().build()).build())
+			.build();
+		final ArrayTranslate original = ArrayTranslate.builder()
+			.column(1)
+			.arraySeparator("${param::sep}")
+			.translationTable(new TranslationTable())
+			.build();
+
+		updater.process(original);
+
+		final ArgumentCaptor<ArrayTranslate> processed = ArgumentCaptor.forClass(ArrayTranslate.class);
+		verify(computeProcessor).process(processed.capture());
+		assertEquals("|", processed.getValue().getArraySeparator());
+		// The connector's own compute is left as declared, its translation table included
+		assertEquals("${param::sep}", original.getArraySeparator());
+		assertNotSame(original.getTranslationTable(), processed.getValue().getTranslationTable());
 	}
 }

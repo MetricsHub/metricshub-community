@@ -31,14 +31,35 @@ import org.metricshub.engine.connector.model.monitor.task.AbstractCollect;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
 
 /**
- * Implementation of {@link SourceConnectorUpdateChain} for updating monitor task source dependencies in the connector.
+ * Implementation of {@link SourceConnectorUpdateChain} for updating monitor task and tool source dependencies in the
+ * connector.
  */
 public class MonitorTaskSourceDepUpdate extends SourceConnectorUpdateChain {
 
 	@Override
 	void doUpdate(Connector connector) {
+		for (Map.Entry<String, ConnectorTool> entry : connector.getTools().entrySet()) {
+			final ConnectorTool tool = entry.getValue();
+			final Map<String, Source> toolSources = tool.getSources();
+			tool.setSourceDep(
+				updateSourceDependency(
+					toolSources,
+					Pattern.compile(
+						String.format(
+							"\\s*(\\$\\{source::((?i)tools)\\.%s\\.((?i)sources)\\.(%s)\\})\\s*",
+							Pattern.quote(entry.getKey()),
+							getSourceIdentifiersRegex(toolSources)
+						),
+						Pattern.MULTILINE
+					),
+					4
+				)
+			);
+		}
+
 		for (Map.Entry<String, MonitorJob> entry : connector.getMonitors().entrySet()) {
 			final String jobName = entry.getKey();
 			final MonitorJob job = entry.getValue();

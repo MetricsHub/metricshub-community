@@ -98,7 +98,11 @@ public class Translate extends Compute {
 
 	@Override
 	public Translate copy() {
-		return Translate.builder().type(type).column(column).translationTable(translationTable).build();
+		return Translate.builder()
+			.type(type)
+			.column(column)
+			.translationTable(translationTable == null ? null : translationTable.copy())
+			.build();
 	}
 
 	@Override

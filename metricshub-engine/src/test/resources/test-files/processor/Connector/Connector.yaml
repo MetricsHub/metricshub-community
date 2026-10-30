@@ -110,3 +110,14 @@ monitors:
           id: $1
         metrics:
           up_time: $12
+tools:
+  listSystems:
+    description: Lists the storage systems.
+    sources:
+      systems:
+        type: http
+        path: /api/v1/systems
+        method: get
+        resultContent: body
+    result:
+      source: ${source::systems}

@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -227,6 +229,21 @@ class ToolBridgeTest {
 	 * A callback that does not observe its interruption, the way a blocking socket read does not.
 	 * Its thread cannot be taken back; what the bridge does about that is what these tests are for.
 	 */
+	@Test
+	void shouldRunTheRebuiltCallbackAfterAnUpdate() throws Exception {
+		final ToolCallback rebuilt = callback("ListHosts");
+		when(rebuilt.call(anyString())).thenReturn("\"rebuilt\"");
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { rebuilt, slow });
+
+		bridge.update(ToolRegistrySnapshot.from(provider, Set.of()));
+		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
+
+		final ToolResult result = assertInstanceOf(ToolResult.class, answer());
+		assertEquals("rebuilt", result.result().asText());
+		verify(listHosts, never()).call(anyString());
+	}
+
 	private static void blockIgnoringInterruption(final CountDownLatch until) {
 		boolean released = false;
 		while (!released) {

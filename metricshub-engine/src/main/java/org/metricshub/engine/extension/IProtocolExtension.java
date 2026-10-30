@@ -22,6 +22,7 @@ package org.metricshub.engine.extension;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -33,6 +34,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 
 /**
  * Defines the contract for protocol extensions within the system. Protocol extensions are responsible for
@@ -185,6 +187,46 @@ public interface IProtocolExtension {
 	 * @throws Exception if the query execution fails due to an error or unexpected condition.
 	 */
 	String executeQuery(IConfiguration configuration, JsonNode queryNode) throws Exception;
+
+	/**
+	 * Returns the tools this extension offers to an LLM: the ad-hoc operations its protocol supports on a host,
+	 * such as running a command, listing files or reading a log. Each is executed through
+	 * {@link #executeTool(String, IConfiguration, JsonNode)}. The default implementation offers none.
+	 *
+	 * @return the tool definitions, empty when the extension offers no tool
+	 */
+	default List<ToolDefinition> getTools() {
+		return List.of();
+	}
+
+	/**
+	 * Executes one of the tools returned by {@link #getTools()} on a host.
+	 * <p>
+	 * The default implementation hands the arguments to {@link #executeQuery(IConfiguration, JsonNode)} as they
+	 * are. An extension whose {@code executeQuery} dispatches on a field of the node, such as {@code query} or
+	 * {@code queryType}, overrides this method to set that field from the tool name.
+	 *
+	 * @param toolName      the name of the tool, as declared by {@link #getTools()}
+	 * @param configuration the configuration of the host, hostname and timeout set
+	 * @param arguments     the arguments of the invocation, by parameter name
+	 * @return the result text
+	 * @throws Exception if the tool fails
+	 */
+	default String executeTool(String toolName, IConfiguration configuration, JsonNode arguments) throws Exception {
+		return executeQuery(configuration, arguments);
+	}
+
+	/**
+	 * Tells whether a host configuration is one the tools of this extension can run with. The default is
+	 * {@link #isValidConfiguration(IConfiguration)}; an extension that accepts several configuration types for
+	 * monitoring but runs its tools over one of them only (SSH, not the local OS command) narrows it.
+	 *
+	 * @param configuration a configuration of the host
+	 * @return whether {@link #executeTool(String, IConfiguration, JsonNode)} accepts it
+	 */
+	default boolean isToolConfiguration(IConfiguration configuration) {
+		return isValidConfiguration(configuration);
+	}
 
 	/**
 	 * Invoked when a recording session ends for a host.

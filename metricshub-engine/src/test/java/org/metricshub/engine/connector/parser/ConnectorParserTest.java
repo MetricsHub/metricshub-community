@@ -18,10 +18,15 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
+import org.metricshub.engine.connector.model.tool.ToolResult;
+import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolParameter;
 
 class ConnectorParserTest {
 
@@ -97,6 +102,37 @@ class ConnectorParserTest {
 		assertEquals(expected, monitorJob.getDiscovery().getSourceDep());
 
 		assertEquals(List.of(Set.of("source(1)")), monitorJob.getCollect().getSourceDep());
+	}
+
+	@Test
+	void testToolsParsing() throws IOException {
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/tools").parse("tools");
+
+		final ConnectorTool reboot = connector.getTools().get("reboot");
+		assertNotNull(reboot);
+		assertEquals("Reboots the server.", reboot.getDescription());
+		assertTrue(reboot.isDestructive());
+		assertEquals(
+			new ToolParameter("string", "GracefulRestart or ForceRestart", false, "GracefulRestart"),
+			reboot.getParameters().get("mode")
+		);
+
+		// Source keys, relative references and dependencies are resolved like a monitor job's
+		assertEquals("${source::tools.reboot.sources.reset}", reboot.getSources().get("reset").getKey());
+		assertEquals(
+			List.of("${source::tools.reboot.sources.reset}"),
+			((TableUnionSource) reboot.getSources().get("status")).getTables()
+		);
+		assertEquals(new ToolResult("${source::tools.reboot.sources.status}", List.of("status")), reboot.getResult());
+		assertEquals(List.of(Set.of("reset"), Set.of("status")), reboot.getSourceDep());
+
+		// The argument placeholder is left for the invocation
+		assertEquals("{\"ResetType\": \"${param::mode}\"}", ((HttpSource) reboot.getSources().get("reset")).getBody());
+
+		assertEquals(
+			new ToolDefinition("reboot", "Reboots the server.", reboot.getParameters(), true),
+			reboot.toDefinition("reboot")
+		);
 	}
 
 	@Test

@@ -81,8 +81,12 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Slf4j
 public class SourceUpdaterProcessor implements ISourceProcessor {
 
+	/**
+	 * {@code ${attribute::name}}: a monitor attribute on a mono-instance collect. {@code ${param::name}}: an
+	 * argument of a tool invocation. Both are served by the attribute map the strategy passes down.
+	 */
 	private static final Pattern MONO_INSTANCE_REPLACEMENT_PATTERN = Pattern.compile(
-		"\\$\\{attribute::([^}]+)\\}",
+		"\\$\\{(?:attribute|param)::([^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 

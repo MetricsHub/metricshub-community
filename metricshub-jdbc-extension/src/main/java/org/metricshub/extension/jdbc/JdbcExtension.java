@@ -56,6 +56,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.jdbc.driver.DriverResolutionException;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -376,16 +377,7 @@ public class JdbcExtension implements IProtocolExtension {
 		final String hostname = configuration.getHostname();
 		final String sqlQuery = queryNode.get("query").asText();
 		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) configuration;
-		final DriverInfo configurationDriver = jdbcConfiguration.getDriver();
-		JdbcDriverSelection selection = null;
-		if (configurationDriver != null) {
-			selection = JdbcDriverRegistryHolder.resolveSelection(configurationDriver);
-		}
-
-		if (selection == null) {
-			final char[] url = jdbcConfiguration.getUrl();
-			selection = url == null ? null : JdbcDriverRegistryHolder.findSelectionForUrl(String.valueOf(url));
-		}
+		final JdbcDriverSelection selection = resolveSelection(jdbcConfiguration);
 
 		final List<List<String>> resultList = sqlRequestExecutor.executeSql(
 			hostname,
@@ -550,5 +542,54 @@ public class JdbcExtension implements IProtocolExtension {
 			}
 		}
 		return null;
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"query",
+				"Runs an SQL statement on a database host with the host's configured JDBC settings and returns the result as a text table."
+			)
+				.requiredParameter("query", "The SQL statement, e.g. SELECT name, state FROM pg_stat_activity")
+				.destructive()
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		if (!"query".equals(toolName)) {
+			throw new IllegalArgumentException("Unknown JDBC tool: " + toolName);
+		}
+		// A protocol tool knows no connector: the driver must come from the host's configuration or its URL
+		if (resolveSelection((JdbcConfiguration) configuration) == null) {
+			throw new IllegalArgumentException(
+				"No JDBC driver found for " +
+					configuration.getHostname() +
+					": set the driver in the host's JDBC configuration, or a URL of a known database"
+			);
+		}
+		return executeQuery(configuration, arguments);
+	}
+
+	/**
+	 * Resolves the driver to use for a configuration, without the connector-declared drivers monitoring may use.
+	 *
+	 * @param jdbcConfiguration the host's JDBC configuration
+	 * @return the driver selected from the configuration's driver, then from its URL; {@code null} when none
+	 */
+	private static JdbcDriverSelection resolveSelection(final JdbcConfiguration jdbcConfiguration) {
+		final DriverInfo configurationDriver = jdbcConfiguration.getDriver();
+		JdbcDriverSelection selection = null;
+		if (configurationDriver != null) {
+			selection = JdbcDriverRegistryHolder.resolveSelection(configurationDriver);
+		}
+		if (selection == null) {
+			final char[] url = jdbcConfiguration.getUrl();
+			selection = url == null ? null : JdbcDriverRegistryHolder.findSelectionForUrl(String.valueOf(url));
+		}
+		return selection;
 	}
 }

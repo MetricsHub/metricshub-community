@@ -45,6 +45,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 
 /**
  * The {@code WbemExtension} class implements the {@link IProtocolExtension} interface to provide
@@ -280,5 +281,33 @@ public class WbemExtension implements IProtocolExtension {
 		} else {
 			return TextTableHelper.generateTextTable(columns, result);
 		}
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"wql",
+				"Runs a WQL query on a WBEM host (SMI-S, CIM) and returns the result as a text table."
+			)
+				.requiredParameter("query", "The WQL query, e.g. SELECT Name, OperationalStatus FROM CIM_ComputerSystem")
+				.parameter(
+					"namespace",
+					"The CIM namespace. Defaults to the host's configured namespace, root/cimv2 unless set."
+				)
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		if (!"wql".equals(toolName)) {
+			throw new IllegalArgumentException("Unknown WBEM tool: " + toolName);
+		}
+		if (arguments.hasNonNull("namespace")) {
+			((WbemConfiguration) configuration).setNamespace(arguments.get("namespace").asText());
+		}
+		return executeQuery(configuration, arguments);
 	}
 }

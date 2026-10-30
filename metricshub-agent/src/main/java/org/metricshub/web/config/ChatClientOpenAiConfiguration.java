@@ -23,12 +23,8 @@ package org.metricshub.web.config;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.responses.Tool;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.metricshub.engine.common.helpers.ResourceHelper;
-import org.metricshub.web.service.openai.SpringToolsToOpenAiTools;
-import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -57,15 +53,5 @@ public class ChatClientOpenAiConfiguration {
 	@ConditionalOnProperty(prefix = "ai.openai", name = "api-key")
 	public OpenAIClient openAIClient(ChatOpenAiConfigurationProperties chatConfig) {
 		return OpenAIOkHttpClient.builder().apiKey(chatConfig.getApiKey()).build();
-	}
-
-	/**
-	 * Creates a list of OpenAI tools from the provided ToolCallbackProvider.
-	 * @param toolCallbackProvider the provider of tool callbacks
-	 * @return the list of OpenAI tools
-	 */
-	@Bean
-	public List<Tool> openAiTools(final ToolCallbackProvider toolCallbackProvider) {
-		return SpringToolsToOpenAiTools.buildOpenAiTools(toolCallbackProvider.getToolCallbacks());
 	}
 }

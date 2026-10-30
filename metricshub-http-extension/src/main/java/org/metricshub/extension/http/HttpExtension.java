@@ -28,6 +28,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,8 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolParameter;
 import org.metricshub.extension.http.utils.HttpRequest;
 
 /**
@@ -238,6 +242,7 @@ public class HttpExtension implements IProtocolExtension {
 		final String hostname = configuration.getHostname();
 		final String method = query.get("method").asText();
 		final JsonNode url = query.get("url");
+		final JsonNode path = query.get("path");
 		final JsonNode header = query.get("header");
 		final JsonNode body = query.get("body");
 		final JsonNode resultContent = query.get("resultContent");
@@ -252,6 +257,7 @@ public class HttpExtension implements IProtocolExtension {
 			.httpConfiguration((HttpConfiguration) configuration)
 			.method(method)
 			.url(isNotNull(url) ? url.asText() : null)
+			.path(isNotNull(path) ? path.asText() : null)
 			.header(isNotNull(header) ? header.asText() : null, Map.of(), "", hostname)
 			.body(isNotNull(body) ? body.asText() : null, Map.of(), "", hostname)
 			.resultContent(
@@ -260,5 +266,70 @@ public class HttpExtension implements IProtocolExtension {
 			.build();
 
 		return httpRequestExecutor.executeHttp(httpRequest, false, telemetryManager);
+	}
+
+	/**
+	 * The HTTP methods the request tool accepts, in the order they are advertised.
+	 */
+	private static final List<String> TOOL_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE");
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"get",
+				"Sends an HTTP GET request to a host with the host's configured HTTP settings and credentials."
+			)
+				.parameter("path", ToolParameter.STRING, "The path on the host, e.g. /redfish/v1/Systems", false, "/")
+				.parameter("header", "Headers as newline-separated key: value pairs")
+				.parameter("resultContent", "What to return: body (default), header, http_status or all")
+				.build(),
+			ToolDefinition.builder(
+				"request",
+				"Sends an HTTP request of any method (POST, PUT, PATCH, DELETE, GET) to a host with the host's configured HTTP settings and credentials."
+			)
+				.requiredParameter("method", "The HTTP method: GET, POST, PUT, PATCH or DELETE")
+				.parameter(
+					"path",
+					ToolParameter.STRING,
+					"The path on the host, e.g. /redfish/v1/Systems/1/Actions/ComputerSystem.Reset",
+					false,
+					"/"
+				)
+				.parameter("header", "Headers as newline-separated key: value pairs")
+				.parameter("body", "The request body")
+				.parameter("resultContent", "What to return: body (default), header, http_status or all")
+				.destructive()
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		if (arguments instanceof ObjectNode argumentsNode) {
+			query.setAll(argumentsNode);
+		}
+		switch (toolName) {
+			case "get" -> query.put("method", "GET");
+			case "request" -> {
+				// Only the advertised methods: a free string would reach the host, with its credentials, as is
+				final String method = arguments.hasNonNull("method")
+					? arguments.get("method").asText().trim().toUpperCase()
+					: "";
+				if (!TOOL_METHODS.contains(method)) {
+					throw new IllegalArgumentException(
+						"Unsupported HTTP method '" + method + "': expected one of " + TOOL_METHODS
+					);
+				}
+				query.put("method", method);
+			}
+			default -> throw new IllegalArgumentException("Unknown HTTP tool: " + toolName);
+		}
+		if (!query.hasNonNull("resultContent")) {
+			query.put("resultContent", "body");
+		}
+		return executeQuery(configuration, query);
 	}
 }

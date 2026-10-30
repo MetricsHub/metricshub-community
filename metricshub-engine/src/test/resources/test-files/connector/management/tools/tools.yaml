@@ -1,0 +1,32 @@
+---
+connector:
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: wbem
+      query: testQuery
+      namespace: testNamespace
+      expectedResult: testExpectedResult
+
+tools:
+  reboot:
+    description: Reboots the server.
+    destructive: true
+    parameters:
+      mode:
+        type: string
+        description: GracefulRestart or ForceRestart
+        default: GracefulRestart
+    sources:
+      reset:
+        type: http
+        method: post
+        path: /redfish/v1/Systems/1/Actions/ComputerSystem.Reset
+        body: '{"ResetType": "${param::mode}"}'
+      status:
+        type: tableUnion
+        tables:
+        - ${source::reset}
+    result:
+      source: ${source::status}
+      columns: [ status ]

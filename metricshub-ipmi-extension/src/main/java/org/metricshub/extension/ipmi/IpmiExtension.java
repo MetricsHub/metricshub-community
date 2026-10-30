@@ -29,6 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.time.Instant;
 import java.util.List;
@@ -52,6 +54,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.SelEntry;
@@ -523,5 +526,63 @@ public class IpmiExtension implements IProtocolExtension {
 	 */
 	private static String text(final JsonNode query, final String field) {
 		return query != null && query.hasNonNull(field) ? query.get(field).asText() : null;
+	}
+
+	@Override
+	public List<ToolDefinition> getTools() {
+		return List.of(
+			ToolDefinition.builder(
+				"sensors",
+				"Reads the chassis status, the FRUs and the sensors of a server through IPMI."
+			).build(),
+			ToolDefinition.builder(
+				"sel",
+				"Reads the System Event Log of a server through IPMI, as CSV with a header line. Reading a large log takes" +
+					" several seconds per hundred entries: raise the timeout accordingly."
+			)
+				.parameter(
+					"since",
+					"Only the entries of the last duration, e.g. 30m, 1h, 2d, or seconds. Default: the whole log."
+				)
+				.build(),
+			ToolDefinition.builder("chassisStatus", "Reads the power state of a server's chassis through IPMI.").build(),
+			ToolDefinition.builder(
+				"chassisAction",
+				"Acts on a server's chassis through IPMI: powers it on, off, cycles or resets it, requests a soft shutdown" +
+					" or a diagnostic interrupt, or lights the identify LED."
+			)
+				.requiredParameter("action", "One of on, off, cycle, reset, soft, diag or identify")
+				.parameter(
+					"seconds",
+					"For identify: how long the LED stays on in seconds (default 15), 0 to turn it off, or forever"
+				)
+				.destructive()
+				.build(),
+			ToolDefinition.builder(
+				"raw",
+				"Sends one raw IPMI command to a server's BMC and returns completionCode;data in hex."
+			)
+				.requiredParameter("netFn", "The network function, decimal or 0x hex, e.g. 0x06")
+				.requiredParameter("command", "The command byte, e.g. 0x01")
+				.parameter("data", "The request bytes separated with spaces, e.g. 0x00 0x01")
+				.destructive()
+				.build()
+		);
+	}
+
+	@Override
+	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		if (arguments instanceof ObjectNode argumentsNode) {
+			query.setAll(argumentsNode);
+		}
+		switch (toolName) {
+			case "sensors", "sel", "raw" -> query.put("query", toolName);
+			case "chassisStatus" -> query.put("query", "chassis").put("action", "status");
+			case "chassisAction" -> query.put("query", "chassis");
+			default -> throw new IllegalArgumentException("Unknown IPMI tool: " + toolName);
+		}
+		return executeQuery(configuration, query);
 	}
 }

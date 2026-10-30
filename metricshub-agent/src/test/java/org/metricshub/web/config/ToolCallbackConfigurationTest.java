@@ -3,8 +3,12 @@ package org.metricshub.web.config;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.PingToolService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -27,13 +31,20 @@ class ToolCallbackConfigurationTest {
 		assertTrue(toolCallbacks.length > 0, "Tool callbacks should not be empty");
 	}
 
-	// Define a mock PingToolService for the context
+	// Define a mock PingToolService and an agent context without extensions nor connectors
 	@Configuration
 	static class TestConfig {
 
 		@Bean
 		public PingToolService pingToolService() {
 			return mock(PingToolService.class);
+		}
+
+		@Bean
+		public AgentContextHolder agentContextHolder() {
+			final AgentContext agentContext = mock(AgentContext.class);
+			when(agentContext.getExtensionManager()).thenReturn(ExtensionManager.empty());
+			return new AgentContextHolder(agentContext);
 		}
 	}
 }

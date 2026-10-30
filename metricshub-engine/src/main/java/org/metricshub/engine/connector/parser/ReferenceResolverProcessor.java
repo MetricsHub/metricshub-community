@@ -39,8 +39,19 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 
 	private static final String SOURCE_REF_FORMAT = "${source::%s}";
 
+	/**
+	 * The context of a value under a tool: {@code tools.<tool>.sources.<source>...} or {@code tools.<tool>.result...},
+	 * the tool name possibly holding dots.
+	 */
+	private static final Pattern TOOL_CONTEXT = Pattern.compile("^tools\\.(.+?)\\.(?:sources|result)(?:\\.|$)");
+
 	private static final Pattern REGEX_SOURCE_REF_MONITORS = Pattern.compile(
-		"\\$\\{source::(?!((?i)monitors\\.([\\w()\\.-]+)\\.(discovery|collect|simple)\\.sources\\.([\\w()\\.-]+)\\}|(?i)(beforeAll|afterAll)\\.([\\w()\\.-]+)\\}))([\\w()\\.-]+)\\}"
+		// A relative reference: ${source::name}, where name is not an absolute monitor, surrounding or tool reference
+		"\\$\\{source::(?!(" +
+			"(?i)monitors\\.([\\w()\\.-]+)\\.(discovery|collect|simple)\\.sources\\.([\\w()\\.-]+)\\}" +
+			"|(?i)(beforeAll|afterAll)\\.([\\w()\\.-]+)\\}" +
+			"|(?i)tools\\.(?:[\\w()\\.-]+)\\.sources\\.(?:[\\w()\\.-]+)\\}" +
+			"))([\\w()\\.-]+)\\}"
 	);
 
 	@Builder
@@ -52,7 +63,7 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 
 	/**
 	 * Updates the source references in the given value based on the context provided.<br>
-	 * This method handles the source references in the monitors, beforeAll, and afterAll sections.
+	 * This method handles the source references in the monitors, tools, beforeAll, and afterAll sections.
 	 *
 	 * @param valueToUpdate The string value that contains the source references to be updated.
 	 * @param context The context used for updating the source references, providing additional
@@ -65,6 +76,10 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 		}
 
 		final var parts = context.split("\\.");
+
+		// A tool name may hold dots: it is what lies between "tools." and the ".sources" or ".result" segment
+		final Matcher toolContext = TOOL_CONTEXT.matcher(context);
+		final String toolName = toolContext.find() ? toolContext.group(1) : null;
 
 		return REGEX_SOURCE_REF_MONITORS.matcher(valueToUpdate).replaceAll(match -> {
 			// If the context starts with the string "monitors", perform the corresponding replacement
@@ -80,6 +95,11 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 						SOURCE_REF_FORMAT,
 						Stream.of(parts[0], parts[1], parts[2], "sources", match.group(7)).collect(Collectors.joining("."))
 					)
+				);
+			} else if (toolName != null) {
+				// A tool's sources and result refer to the tool's own sources: ${source::tools.<tool>.sources.<name>}
+				return Matcher.quoteReplacement(
+					String.format(SOURCE_REF_FORMAT, "tools." + toolName + ".sources." + match.group(7))
 				);
 			} else if (parts.length >= 2 && ("beforeAll".equals(parts[0]) || "afterAll".equals(parts[0]))) {
 				// If the context starts with the string "beforeAll" or "afterAll", perform the corresponding replacement

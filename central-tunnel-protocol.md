@@ -137,7 +137,7 @@ No payload. Sent by the agent every `heartbeatIntervalSeconds`; the server answe
 { "type": "hosts.updated", "hosts": [ … ] }
 ```
 
-Full replacement of the inventory, same element shape as `agent.register.hosts`. Sent when the agent configuration changed and the resulting inventory differs. Tools cannot change while the agent runs; the tool registry is refreshed on reconnection only (`tools.updated` is reserved for a future version).
+Full replacement of the inventory, same element shape as `agent.register.hosts`. Sent when the agent configuration changed and the resulting inventory differs. The tool registry is refreshed on reconnection only: an agent whose tool set changed on a configuration reload (connector and protocol tools follow the loaded connectors and extensions) reconnects to re-register (`tools.updated` is reserved for a future version).
 
 ### 3.5 `tool.invoke` (Central → agent)
 
@@ -234,7 +234,7 @@ Both sides bound the invocation with the same `timeoutMs`; there is no cancel me
 |---|---|
 | The agent always dials out; the server never connects to the agent | No inbound firewall rule on monitored sites |
 | Only advertised tools are invokable, and `excludedTools` removes a tool from the advertisement itself | The tool registry is the security boundary; an operator can withdraw a capability without touching Central |
-| Existing tool kill switches (`metricshub.mcp.tool.ssh.enabled`, `metricshub.mcp.tool.win.remote.enabled`, `metricshub.mcp.tool.ipmi.raw.enabled`, `metricshub.mcp.tool.ipmi.chassis.enabled`) still apply inside the tools | A remotely invoked tool never has more rights than a locally invoked one |
+| The local flag `metricshub.mcp.tool.destructive.enabled` gates only the agent's own MCP server and chat: every tool, the destructive ones included, is advertised to Central, which decides itself (enabled in the UI, authorized user, manual approval) before invoking one | A remotely invoked tool never has more rights than a locally invoked one |
 | Limits (`timeoutMs`, `maxPayloadBytes`, `maxInFlight`) are enforced on both sides | A misbehaving peer cannot exhaust the other |
 | Credentials travel only in the handshake headers, over TLS, to the configured endpoint | Same convention as `central.headers`; values may be keystore-encrypted |
 | Approvals for sensitive tools are decided in Central, between Central and its users | The agent cannot tell an approved call from any other; the policy lives where the users are |

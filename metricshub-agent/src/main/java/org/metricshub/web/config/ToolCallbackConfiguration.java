@@ -22,7 +22,9 @@ package org.metricshub.web.config;
  */
 
 import java.util.Map;
+import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.IMCPToolService;
+import org.metricshub.web.mcp.tool.MetricsHubToolCallbackProvider;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -37,16 +39,26 @@ import org.springframework.context.annotation.Configuration;
 public class ToolCallbackConfiguration {
 
 	/**
-	 * Registers a {@link ToolCallbackProvider} that exposes all beans implementing {@link IMCPToolService} as tools.
+	 * Registers the {@link ToolCallbackProvider} exposing every tool: the beans implementing
+	 * {@link IMCPToolService}, then the tools the loaded protocol extensions and connectors declare, which follow
+	 * the agent context across configuration reloads.
 	 *
-	 * @param context the Spring {@link ApplicationContext} to retrieve beans from
-	 * @return a {@link ToolCallbackProvider} exposing all registered protocol services as tools
+	 * @param context            the Spring {@link ApplicationContext} to retrieve beans from
+	 * @param agentContextHolder the running agent context
+	 * @return the provider of every tool the agent exposes, filtered for its own MCP server and chat, whole for Central
 	 */
 	@Bean
-	public ToolCallbackProvider metricshubTools(final ApplicationContext context) {
+	public MetricsHubToolCallbackProvider metricshubTools(
+		final ApplicationContext context,
+		final AgentContextHolder agentContextHolder
+	) {
 		// Automatically get all beans of type IMCPToolService
 		final Map<String, IMCPToolService> toolMap = context.getBeansOfType(IMCPToolService.class);
 		final var tools = toolMap.values();
-		return MethodToolCallbackProvider.builder().toolObjects(tools.toArray(new Object[tools.size()])).build();
+		final ToolCallback[] staticCallbacks = MethodToolCallbackProvider.builder()
+			.toolObjects(tools.toArray(new Object[tools.size()]))
+			.build()
+			.getToolCallbacks();
+		return new MetricsHubToolCallbackProvider(staticCallbacks, agentContextHolder);
 	}
 }

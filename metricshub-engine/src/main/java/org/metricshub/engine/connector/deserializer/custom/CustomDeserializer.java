@@ -43,10 +43,10 @@ public class CustomDeserializer extends DelegatingDeserializer {
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	/**
-	 * Source reference pattern
+	 * Source reference pattern: a monitor job, surrounding or tool source
 	 */
 	private static final Pattern REFERENCE_PATTERN = Pattern.compile(
-		"\\s*(\\$\\{source::((monitors)\\.(.*)\\.(.*)\\.sources\\.(.*))|((beforeAll|afterAll)\\.(.*))\\})\\s*",
+		"\\s*(\\$\\{source::((monitors)\\.(.*)\\.(.*)\\.sources\\.(.*))|((beforeAll|afterAll)\\.(.*))|((tools)\\.(.*)\\.sources\\.(.*))\\})\\s*",
 		Pattern.MULTILINE | Pattern.CASE_INSENSITIVE
 	);
 

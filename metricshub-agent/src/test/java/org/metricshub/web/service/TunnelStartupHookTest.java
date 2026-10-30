@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.tunnel.TunnelService;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.tool.MetricsHubToolCallbackProvider;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -47,7 +48,8 @@ class TunnelStartupHookTest {
 		// only guard against that regression.
 		try (var context = new AnnotationConfigApplicationContext()) {
 			context.getBeanFactory().registerSingleton("agentContextHolder", agentContextHolder);
-			context.getBeanFactory().registerSingleton("metricshubTools", toolCallbackProvider);
+			// The hook takes the agent's own provider, whose full tool list the tunnel advertises
+			context.getBeanFactory().registerSingleton("metricshubTools", mock(MetricsHubToolCallbackProvider.class));
 			context.register(TunnelStartupHook.class);
 			context.refresh();
 
