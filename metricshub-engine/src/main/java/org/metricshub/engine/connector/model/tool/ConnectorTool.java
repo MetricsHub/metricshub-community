@@ -22,6 +22,8 @@ package org.metricshub.engine.connector.model.tool;
  */
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -237,32 +239,33 @@ public class ConnectorTool extends AbstractMonitorTask {
 		for (final Source source : sources.values()) {
 			// A command, a query or a request takes the rules of its language: checked apart, then blanked
 			final Source others = source.copy();
+			final boolean forEach = source.isExecuteForEachEntryOf();
 			if (others instanceof CommandLineSource commandLineSource) {
 				final FieldRule rule = runsInPosixShell(commandLineSource, appliesTo) ? POSIX_COMMAND_LINE : COMMAND_LINE;
-				checkReferences(name, commandLineSource.getCommandLine(), rule, usages);
+				checkCode(name, commandLineSource.getCommandLine(), rule, usages, forEach);
 				// keep and exclude are regular expressions; separators and selectColumns are not
-				checkReferences(name, commandLineSource.getKeep(), LINE_FILTER, usages);
-				checkReferences(name, commandLineSource.getExclude(), LINE_FILTER, usages);
+				checkCode(name, commandLineSource.getKeep(), LINE_FILTER, usages, forEach);
+				checkCode(name, commandLineSource.getExclude(), LINE_FILTER, usages, forEach);
 				commandLineSource.setCommandLine("");
 				commandLineSource.setKeep(null);
 				commandLineSource.setExclude(null);
 			} else if (others instanceof SqlSource sqlSource) {
-				checkReferences(name, sqlSource.getQuery(), SQL_QUERY, usages);
+				checkCode(name, sqlSource.getQuery(), SQL_QUERY, usages, forEach);
 				sqlSource.setQuery("");
 			} else if (others instanceof WmiSource wmiSource) {
-				checkReferences(name, wmiSource.getQuery(), WQL_QUERY, usages);
+				checkCode(name, wmiSource.getQuery(), WQL_QUERY, usages, forEach);
 				wmiSource.setQuery("");
 			} else if (others instanceof WbemSource wbemSource) {
-				checkReferences(name, wbemSource.getQuery(), WQL_QUERY, usages);
+				checkCode(name, wbemSource.getQuery(), WQL_QUERY, usages, forEach);
 				wbemSource.setQuery("");
 			} else if (others instanceof FileSource fileSource) {
-				fileSource.getPaths().forEach(path -> checkReferences(name, path, FILE_PATH, usages));
+				fileSource.getPaths().forEach(path -> checkCode(name, path, FILE_PATH, usages, forEach));
 				fileSource.setPaths(new LinkedHashSet<>());
 			} else if (others instanceof HttpSource httpSource) {
-				checkReferences(name, httpSource.getUrl(), HTTP_URL, usages);
+				checkCode(name, httpSource.getUrl(), HTTP_URL, usages, forEach);
 				checkUrlAuthority(name, httpSource.getUrl());
-				checkReferences(name, httpSource.getPath(), HTTP_URL, usages);
-				checkReferences(name, httpSource.getHeader(), HTTP_HEADER, usages);
+				checkCode(name, httpSource.getPath(), HTTP_URL, usages, forEach);
+				checkCode(name, httpSource.getHeader(), HTTP_HEADER, usages, forEach);
 				// The token names the source holding it, looked up before any parameter is replaced
 				final String token = httpSource.getAuthenticationToken();
 				if (token != null && PARAMETER_REFERENCE.matcher(token).find()) {
@@ -270,7 +273,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 						"Tool %s references a parameter in authenticationToken, which names a source".formatted(name)
 					);
 				}
-				checkReferences(name, httpSource.getBody(), HTTP_BODY, usages);
+				checkCode(name, httpSource.getBody(), HTTP_BODY, usages, forEach);
 				httpSource.setUrl(null);
 				httpSource.setPath(null);
 				httpSource.setHeader(null);
@@ -510,6 +513,33 @@ public class ConnectorTool extends AbstractMonitorTask {
 			return !LocalOsHandler.isWindows();
 		}
 		return appliesTo != null && !appliesTo.isEmpty() && POSIX_KINDS.containsAll(appliesTo);
+	}
+
+	/**
+	 * Checks a field that is code: its parameter references (see {@link #checkReferences}), and no host data
+	 * inserted as is. A source reference, or a column of the entry of {@code executeForEachEntryOf}, inserts a value
+	 * no rule checks, which an argument could steer through an earlier source.
+	 *
+	 * @param toolName the tool name, for the error message
+	 * @param field    the field
+	 * @param rule     what the field takes
+	 * @param usages   the parameters inserted unescaped into code or escaped into a POSIX command line
+	 * @param forEach  whether the source runs for each entry of another, its columns replacing {@code $1}, {@code $2}...
+	 */
+	private void checkCode(
+		final String toolName,
+		final String field,
+		final FieldRule rule,
+		final Usages usages,
+		final boolean forEach
+	) {
+		final boolean column = forEach && field != null && COLUMN_REFERENCE_PATTERN.matcher(field).find();
+		if (column || (field != null && SOURCE_REF_PATTERN.matcher(field).find())) {
+			throw new IllegalArgumentException(
+				"Tool %s inserts host data as is into code: a source reference or a column of the entry".formatted(toolName)
+			);
+		}
+		checkReferences(toolName, field, rule, usages);
 	}
 
 	/**

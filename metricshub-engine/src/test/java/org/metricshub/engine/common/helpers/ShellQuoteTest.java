@@ -75,4 +75,26 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.NONE, quoteOfX("echo $(eval date) X"));
 		assertEquals(ShellQuote.DOUBLE, quoteOfX("if true; then grep \"X\" f; fi"));
 	}
+
+	@Test
+	void testLineContinuation() {
+		// The shell removes a backslash-newline: ev<newline>al is eval
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ev\\\nal X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("echo \\\n X"));
+	}
+
+	@Test
+	void testRedirectionsBeforeTheCommand() {
+		// A redirection, its descriptor and its target leave the command name to come
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("2>&1 X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX(">/dev/null X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("2>/dev/null <&0 X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX(">|out X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("&>log X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX(">sh X"));
+		// After the command name, an argument
+		assertEquals(ShellQuote.NONE, quoteOfX("ls 2>&1 X"));
+		assertEquals(ShellQuote.NONE, quoteOfX(">/dev/null ls X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("ls >|out X"));
+	}
 }

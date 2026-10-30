@@ -222,6 +222,10 @@ public enum ShellQuote {
 				return i;
 			}
 			if (c == '\\') {
+				if (commandLine.startsWith("\n", i + 1)) {
+					// A line continuation adds no character: ev\<newline>al is eval
+					return i + 1;
+				}
 				startWord();
 				if (i + 1 < commandLine.length()) {
 					word.append(commandLine.charAt(i + 1));
@@ -255,6 +259,9 @@ public enum ShellQuote {
 				wordIsCommandName = false;
 				commandNext = false;
 				targetNext = false;
+			} else if (commandLine.startsWith("&>", i)) {
+				// Redirects both outputs: the > that follows starts the target
+				endWord();
 			} else if (COMMAND_BREAKS.indexOf(c) >= 0) {
 				if (c == '(') {
 					frames.push(new Frame(false, false, false, false));
@@ -264,8 +271,17 @@ public enum ShellQuote {
 				endWord();
 				breakCommand();
 			} else if (c == '<' || c == '>') {
+				if (inWord && wordIsCommandName && word.chars().allMatch(Character::isDigit)) {
+					// A descriptor, 2>, is not the command name
+					inWord = false;
+					commandNext = true;
+				}
 				endWord();
 				targetNext = true;
+				// >&, <& and >| are one operator: the descriptor or the file after them is the target
+				if (i + 1 < commandLine.length() && "&|".indexOf(commandLine.charAt(i + 1)) >= 0) {
+					return i + 1;
+				}
 			} else {
 				startWord();
 				if (c == '\'') {
@@ -322,8 +338,9 @@ public enum ShellQuote {
 			if (!inWord) {
 				inWord = true;
 				wordIsNameOrTarget = commandNext || targetNext;
-				wordIsCommandName = commandNext;
-				commandNext = false;
+				wordIsCommandName = commandNext && !targetNext;
+				// A redirection target leaves the command name to come: >/dev/null cmd
+				commandNext = commandNext && targetNext;
 				targetNext = false;
 				word.setLength(0);
 			}
@@ -365,7 +382,7 @@ public enum ShellQuote {
 		private void readShellWord(final String text, final String name) {
 			if (SHELLS.contains(name)) {
 				shellSeen = true;
-				commandNext = wordIsCommandName;
+				commandNext = commandNext || wordIsCommandName;
 			} else if (shellSeen && !text.startsWith("--") && (text.startsWith("-") || text.startsWith("+"))) {
 				if (text.startsWith("-") && text.indexOf('c') > 0) {
 					evaluating = true;

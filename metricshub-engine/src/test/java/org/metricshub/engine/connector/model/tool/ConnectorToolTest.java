@@ -383,6 +383,20 @@ class ConnectorToolTest {
 	}
 
 	@Test
+	void testHostDataInCodeIsRefused() {
+		// An earlier source could echo an argument: its table would reach the code unchecked
+		assertRefused(commandLine("kill ${source::pids}"), LINUX);
+		assertRefused(HttpSource.builder().body("{\"id\": \"${source::ids}\"}").build(), LINUX);
+		final CommandLineSource forEach = CommandLineSource.builder()
+			.commandLine("inspect $1")
+			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source("${source::units}").build())
+			.build();
+		assertRefused(forEach, LINUX);
+		// Without executeForEachEntryOf, $1 is the shell's or awk's
+		assertAccepted(commandLine("ps -ef | awk '{print $1}'"), LINUX);
+	}
+
+	@Test
 	void testParameterInTheSourceToRunForEachEntryOfIsRefused() {
 		// Looked up before the parameters are replaced
 		final CommandLineSource source = CommandLineSource.builder()

@@ -315,8 +315,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * Assigns the value of each {@code ${esc(bash)::param::name}}, {@code ${esc(bash)::attribute::name}} or
 	 * {@code ${esc(bash)::resource.attribute::name}} (or {@code linux}) of a command line to a shell variable at
 	 * the start of the command, and replaces the reference with the variable, quoted for where it lands (see
-	 * {@link #variableIn}): the shell expands the variable without parsing its value, whatever quotes, comments or
-	 * here-documents surround the reference.
+	 * {@link #variableIn}): the shell expands the variable without parsing its value. Where the value would not be a
+	 * mere argument, or its quoting cannot be told ({@link ShellQuote#UNKNOWN}: after {@code eval} or {@code sh -c},
+	 * as a command name, in a here-document...), one word would not protect it: the reference is replaced with nothing
+	 * and an error is logged.
 	 *
 	 * @param copy        the source, a command line source or left as is
 	 * @param halvedLater whether the $$ of the command line are halved into $ after the hoisting
@@ -344,15 +346,25 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			if (value == null) {
 				continue;
 			}
+			final ShellQuote quote = ShellQuote.at(template, matcher.start());
+			if (quote == ShellQuote.UNKNOWN) {
+				log.error(
+					"Hostname {} - In source {}, {} is not a mere argument of a command: replaced with nothing.",
+					telemetryManager.getHostname(),
+					copy.getKey(),
+					matcher.group()
+				);
+				commandLine.append(template, copied, matcher.start());
+				copied = matcher.end();
+				continue;
+			}
 			count++;
 			// At the start of the command line, outside of any quote: the single-quoted value is a literal. Its $ are
 			// doubled where the template's $$ are halved later
 			final String escaped = EscapeType.BASH.escape(value);
 			final String literal = halvedLater ? escaped.replace("$", "$$") : escaped;
 			assignments.append(variable).append(count).append("='").append(literal).append("'; ");
-			commandLine
-				.append(template, copied, matcher.start())
-				.append(variableIn(ShellQuote.at(template, matcher.start()), variable + count));
+			commandLine.append(template, copied, matcher.start()).append(variableIn(quote, variable + count));
 			copied = matcher.end();
 		}
 		commandLine.append(template, copied, template.length());
@@ -361,8 +373,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	/**
 	 * Expands a variable as one word, neither split nor globbed, wherever it lands: {@code "${v}"} outside of any
-	 * quote (or where the quoting cannot be told), {@code ${v}} inside double quotes, {@code '"${v}"'} inside single
-	 * quotes, which it closes and reopens.
+	 * quote, {@code ${v}} inside double quotes, {@code '"${v}"'} inside single quotes, which it closes and reopens.
 	 *
 	 * @param quote    the quoting where the variable lands
 	 * @param variable the variable name
@@ -508,6 +519,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 						Arrays.toString(EscapeType.values())
 					);
 					attributesValue = null;
+				} else if (escapeType == EscapeType.POWERSHELL) {
+					// As for the credential macros: no escape holds through cmd.exe, then PowerShell, wherever it lands
+					log.error("{}: no escape protects a value in PowerShell code, replaced with nothing.", matcher.group());
+					attributesValue = EMPTY;
 				} else {
 					attributesValue = escapeType.escape(attributesValue);
 				}

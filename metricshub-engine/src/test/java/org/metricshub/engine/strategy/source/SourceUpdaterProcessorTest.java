@@ -508,6 +508,14 @@ class SourceUpdaterProcessorTest {
 				Map.of("token", "a/b")
 			)
 		);
+		// No escape protects a value in PowerShell code: nothing is inserted
+		assertEquals(
+			"Get-Service -Name ",
+			SourceUpdaterProcessor.replaceAttributeReferences(
+				"Get-Service -Name ${esc(powershell)::attribute::name}",
+				Map.of("name", "$(Start-Process calc)")
+			)
+		);
 		// A value forming a macro, by itself or with its neighbors, is not inserted
 		final String percent = "echo '%${esc(bash)::param::suffix}'";
 		assertEquals(percent, SourceUpdaterProcessor.replaceAttributeReferences(percent, Map.of("suffix", "{PASSWORD}")));
@@ -682,6 +690,29 @@ class SourceUpdaterProcessorTest {
 		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
 		verify(sourceProcessor).process(captor.capture());
 		assertEquals("__mh_arg1='price$$5'; echo $ \"${__mh_arg1}\"", captor.getValue().getCommandLine());
+	}
+
+	@Test
+	void testProcessCommandLineSourceDropsShellArgumentsEvaluatedAgain() {
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
+
+		new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of("v", "touch /tmp/pwned", "w", "x"),
+			extensionManager
+		).process(
+			CommandLineSource.builder().commandLine("eval ${esc(bash)::attribute::v}; ls ${esc(bash)::attribute::w}").build()
+		);
+
+		// eval would parse the value again, one word or not: replaced with nothing
+		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
+		verify(sourceProcessor).process(captor.capture());
+		assertEquals("__mh_arg1='x'; eval ; ls \"${__mh_arg1}\"", captor.getValue().getCommandLine());
 	}
 
 	@Test
