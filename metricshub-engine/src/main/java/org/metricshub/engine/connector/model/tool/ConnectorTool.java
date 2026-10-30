@@ -58,9 +58,13 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractConcat;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
 
@@ -99,7 +103,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 		DeviceKind.LINUX,
 		DeviceKind.AIX,
 		DeviceKind.HPUX,
-		DeviceKind.SOLARIS
+		DeviceKind.SOLARIS,
+		DeviceKind.TRU64
 	);
 
 	/**
@@ -231,35 +236,35 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 *                                  {@link #checkReferences})
 	 */
 	public ToolDefinition toDefinition(final String name, final Set<DeviceKind> appliesTo) {
-		final Set<String> unescaped = new HashSet<>();
+		final Usages usages = new Usages(new HashSet<>(), new HashSet<>());
 		for (final Source source : sources.values()) {
 			// A command, a query or a request takes the rules of its language: checked apart, then blanked
 			final Source others = source.copy();
 			if (others instanceof CommandLineSource commandLineSource) {
 				final FieldRule rule = runsInPosixShell(commandLineSource, appliesTo) ? POSIX_COMMAND_LINE : COMMAND_LINE;
-				checkReferences(name, commandLineSource.getCommandLine(), rule, unescaped);
+				checkReferences(name, commandLineSource.getCommandLine(), rule, usages);
 				// keep and exclude are regular expressions; separators and selectColumns are not
-				checkReferences(name, commandLineSource.getKeep(), LINE_FILTER, unescaped);
-				checkReferences(name, commandLineSource.getExclude(), LINE_FILTER, unescaped);
+				checkReferences(name, commandLineSource.getKeep(), LINE_FILTER, usages);
+				checkReferences(name, commandLineSource.getExclude(), LINE_FILTER, usages);
 				commandLineSource.setCommandLine("");
 				commandLineSource.setKeep(null);
 				commandLineSource.setExclude(null);
 			} else if (others instanceof SqlSource sqlSource) {
-				checkReferences(name, sqlSource.getQuery(), SQL_QUERY, unescaped);
+				checkReferences(name, sqlSource.getQuery(), SQL_QUERY, usages);
 				sqlSource.setQuery("");
 			} else if (others instanceof WmiSource wmiSource) {
-				checkReferences(name, wmiSource.getQuery(), WQL_QUERY, unescaped);
+				checkReferences(name, wmiSource.getQuery(), WQL_QUERY, usages);
 				wmiSource.setQuery("");
 			} else if (others instanceof WbemSource wbemSource) {
-				checkReferences(name, wbemSource.getQuery(), WQL_QUERY, unescaped);
+				checkReferences(name, wbemSource.getQuery(), WQL_QUERY, usages);
 				wbemSource.setQuery("");
 			} else if (others instanceof FileSource fileSource) {
-				fileSource.getPaths().forEach(path -> checkReferences(name, path, FILE_PATH, unescaped));
+				fileSource.getPaths().forEach(path -> checkReferences(name, path, FILE_PATH, usages));
 				fileSource.setPaths(new LinkedHashSet<>());
 			} else if (others instanceof HttpSource httpSource) {
-				checkReferences(name, httpSource.getUrl(), HTTP_URL, unescaped);
-				checkReferences(name, httpSource.getPath(), HTTP_URL, unescaped);
-				checkReferences(name, httpSource.getHeader(), HTTP_HEADER, unescaped);
+				checkReferences(name, httpSource.getUrl(), HTTP_URL, usages);
+				checkReferences(name, httpSource.getPath(), HTTP_URL, usages);
+				checkReferences(name, httpSource.getHeader(), HTTP_HEADER, usages);
 				// The token names the source holding it, looked up before any parameter is replaced
 				final String token = httpSource.getAuthenticationToken();
 				if (token != null && PARAMETER_REFERENCE.matcher(token).find()) {
@@ -267,7 +272,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 						"Tool %s references a parameter in authenticationToken, which names a source".formatted(name)
 					);
 				}
-				checkReferences(name, httpSource.getBody(), HTTP_BODY, unescaped);
+				checkReferences(name, httpSource.getBody(), HTTP_BODY, usages);
 				httpSource.setUrl(null);
 				httpSource.setPath(null);
 				httpSource.setHeader(null);
@@ -286,24 +291,36 @@ public class ConnectorTool extends AbstractMonitorTask {
 				}
 			}
 			// update() is the visitor of every field a reference is replaced in
-			others.update(field -> checkReferences(name, field, OTHER_FIELD, unescaped));
+			others.update(field -> checkReferences(name, field, OTHER_FIELD, usages));
+			if (source instanceof JawkSource jawkSource && jawkSource.getVariables() != null) {
+				// Left out of update(), replaced apart as awk variables: data, but declared ones
+				jawkSource
+					.getVariables()
+					.values()
+					.forEach(value -> checkReferences(name, value, null, usages));
+			}
 			for (final Compute compute : source.getComputes()) {
-				// An awk script is code; the other computes only transform the table
-				compute
-					.copy()
-					.update(field -> checkReferences(name, field, compute instanceof Awk ? AWK_SCRIPT : null, unescaped));
-				if (compute instanceof AbstractMatchingLines matchingLines) {
-					// Visited above as data; its regular expression is not
-					checkReferences(name, matchingLines.getRegExp(), LINE_FILTER, unescaped);
-				}
+				checkCompute(name, compute.copy(), usages);
 			}
 		}
 		final Map<String, ToolParameter> checked = new LinkedHashMap<>(parameters);
-		unescaped.forEach(parameterName ->
-			checked.put(parameterName, parameters.get(parameterName).withoutMetacharacters())
-		);
+		usages
+			.shellArguments()
+			.forEach(parameterName -> checked.put(parameterName, parameters.get(parameterName).withoutLeadingDash()));
+		usages
+			.unescaped()
+			.forEach(parameterName -> checked.put(parameterName, parameters.get(parameterName).withoutMetacharacters()));
 		return new ToolDefinition(name, description, checked, destructive);
 	}
+
+	/**
+	 * The parameters whose values the tool's sources take with extra restrictions.
+	 *
+	 * @param unescaped      the parameters inserted unescaped into code, whose strings refuse the metacharacters
+	 * @param shellArguments the parameters escaped into a POSIX command line, whose strings may not start with
+	 *                       {@code -}: one word still, but an option to the command
+	 */
+	private record Usages(Set<String> unescaped, Set<String> shellArguments) {}
 
 	/**
 	 * Describes this tool for the LLM (see {@link #toDefinition(String, Set)}).
@@ -320,6 +337,59 @@ public class ConnectorTool extends AbstractMonitorTask {
 				.map(Detection::getAppliesTo)
 				.orElse(Set.of())
 		);
+	}
+
+	/**
+	 * Checks the references of a compute, field by field, like a source's: the fields known to be data (a value
+	 * appended or replaced, a list of values, the variables of an awk script) take any declared parameter, the
+	 * regular expressions take {@code esc(regex)}, an awk script takes enums and numbers, and every other field (a
+	 * separator that is a regular expression, a JSON or XML path...) only enums and numbers.
+	 *
+	 * @param name      the tool name
+	 * @param copy      a copy of the compute, blanked as its fields are checked
+	 * @param usages    the parameters inserted unescaped into code or escaped into a POSIX command line, completed here
+	 */
+	private void checkCompute(final String name, final Compute copy, final Usages usages) {
+		if (copy instanceof AbstractConcat concat) {
+			checkReferences(name, concat.getValue(), null, usages);
+			concat.setValue("");
+		} else if (copy instanceof Replace replace) {
+			// A literal replacement
+			checkReferences(name, replace.getExistingValue(), null, usages);
+			checkReferences(name, replace.getNewValue(), null, usages);
+			replace.setExistingValue(null);
+			replace.setNewValue(null);
+		} else if (copy instanceof Encode || copy instanceof Decode) {
+			// Their update() is a no-op: a reference in their encoding is never replaced
+			final String encoding = copy instanceof Encode encode ? encode.getEncoding() : ((Decode) copy).getEncoding();
+			if (encoding != null && PARAMETER_REFERENCE.matcher(encoding).find()) {
+				throw new IllegalArgumentException(
+					"Tool %s references a parameter in the encoding of an encode or decode compute, where it is not replaced".formatted(
+						name
+					)
+				);
+			}
+		} else if (copy instanceof AbstractMatchingLines matchingLines) {
+			checkReferences(name, matchingLines.getRegExp(), LINE_FILTER, usages);
+			checkReferences(name, matchingLines.getValueList(), null, usages);
+			matchingLines.setRegExp(null);
+			matchingLines.setValueList(null);
+		} else if (copy instanceof Awk awk) {
+			checkReferences(name, awk.getScript(), AWK_SCRIPT, usages);
+			checkReferences(name, awk.getKeep(), LINE_FILTER, usages);
+			checkReferences(name, awk.getExclude(), LINE_FILTER, usages);
+			if (awk.getVariables() != null) {
+				// Left out of update(), replaced apart as awk variables: data, but declared ones
+				awk
+					.getVariables()
+					.values()
+					.forEach(value -> checkReferences(name, value, null, usages));
+			}
+			awk.setScript("");
+			awk.setKeep(null);
+			awk.setExclude(null);
+		}
+		copy.update(field -> checkReferences(name, field, OTHER_FIELD, usages));
 	}
 
 	/**
@@ -367,15 +437,10 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * @param toolName  the tool name, for the error message
 	 * @param field     the field of a source or a compute
 	 * @param rule      what the field takes, {@code null} for a field that is data
-	 * @param unescaped the names of the parameters inserted unescaped into code, completed here
+	 * @param usages    the parameters inserted unescaped into code or escaped into a POSIX command line, completed here
 	 * @return the field, unchanged
 	 */
-	private String checkReferences(
-		final String toolName,
-		final String field,
-		final FieldRule rule,
-		final Set<String> unescaped
-	) {
+	private String checkReferences(final String toolName, final String field, final FieldRule rule, final Usages usages) {
 		if (field == null) {
 			return null;
 		}
@@ -429,7 +494,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 					// Without any metacharacter, a word is still a command to eval or in a command's place
 					checkShellArgument(toolName, field, matcher.start(), reference);
 				}
-				unescaped.add(parameterName);
+				usages.unescaped().add(parameterName);
 			} else if (!rule.escapes().contains(escapeType)) {
 				throw new IllegalArgumentException(
 					"Tool %s uses %s where only the escapes %s are safe: %s".formatted(
@@ -450,6 +515,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 			} else if (rule == POSIX_COMMAND_LINE) {
 				// The variable replacing the reference is quoted for where it lands, which must be known
 				checkShellArgument(toolName, field, matcher.start(), reference);
+				// One word, but -delete would still be an option to the command
+				usages.shellArguments().add(parameterName);
 			}
 		}
 		return field;

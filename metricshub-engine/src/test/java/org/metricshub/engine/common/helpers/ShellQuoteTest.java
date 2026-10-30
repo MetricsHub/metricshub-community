@@ -55,6 +55,21 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("eval X"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("/usr/bin/sudo /bin/sh -c 'X'"));
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("eval $(date) X"));
+		// Quotes and backslashes removed from a command name, as the shell reads it
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("e\\val X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("'eval' X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("\"ev\"al X"));
+		// An assignment keeps the next word the command name
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("MODE=x X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("MODE=x ls X"));
+		// A command name from an expansion is not known
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("$CMD X"));
+		// A shell runs its first operand as a script, its -c argument as code; the arguments of a script are passed
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("sh X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("bash -o pipefail -c X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("sh -ec 'X'"));
+		assertEquals(ShellQuote.NONE, quoteOfX("/bin/sh ${file::detail.sh} X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("${file::check.sh} X"));
 		// Arguments again after the command ends
 		assertEquals(ShellQuote.NONE, quoteOfX("eval date; echo X"));
 		assertEquals(ShellQuote.NONE, quoteOfX("echo $(eval date) X"));

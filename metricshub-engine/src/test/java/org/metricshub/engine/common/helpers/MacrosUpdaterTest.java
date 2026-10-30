@@ -156,6 +156,46 @@ class MacrosUpdaterTest {
 	}
 
 	@Test
+	void testPowershellMacroOnlyInsideSingleQuotes() {
+		final char[] password = "a'b$(calc)".toCharArray();
+		assertEquals(
+			"powershell -Command \"Connect -P 'a''b$(calc)'\"",
+			MacrosUpdater.update(
+				"powershell -Command \"Connect -P '%{esc(powershell)::PASSWORD}'\"",
+				"u",
+				password,
+				null,
+				"h",
+				false
+			)
+		);
+		// Unquoted, $(calc) would run: nothing
+		assertEquals(
+			"powershell -Command Write-Host ",
+			MacrosUpdater.update(
+				"powershell -Command Write-Host %{esc(powershell)::PASSWORD}",
+				"u",
+				password,
+				null,
+				"h",
+				false
+			)
+		);
+		// A " would end the cmd.exe string around: nothing
+		assertEquals(
+			"powershell -Command \"Connect -P ''\"",
+			MacrosUpdater.update(
+				"powershell -Command \"Connect -P '%{esc(powershell)::PASSWORD}'\"",
+				"u",
+				"a\" & calc & \"".toCharArray(),
+				null,
+				"h",
+				false
+			)
+		);
+	}
+
+	@Test
 	void testEscapeUrlDotSegments() {
 		// A segment of dots only would climb the path once normalized
 		assertEquals("%2E%2E", MacrosUpdater.escapeUrlSpecialCharacters(".."));
@@ -298,7 +338,7 @@ class MacrosUpdaterTest {
 		final String expectedUrl = "auth%40token%23123%24%25%5E%26*%28%29_%2B%7C%7E%60"; // URL-encoded
 		final String expectedRegex = "auth@token#123\\$%\\^&\\*()_\\+|~`"; // PSL regex escape
 		final String expectedWindowsCmd = "auth@token#123$^%^^^&*^(^)_+^|~`"; // Windows CMD escape
-		final String expectedPowershell = authToken; // PowerShell escape (no single quote)
+		final String expectedPowershell = ""; // PowerShell escape: outside of single quotes, nothing
 		final String expectedBash = "'" + authToken + "'"; // Bash escape: a whole single-quoted word on its own
 
 		// Test JSON escape
@@ -411,9 +451,9 @@ class MacrosUpdaterTest {
 
 		// Test PowerShell escape
 		{
-			final String text = USERNAME_ESC_POWERSHELL;
+			final String text = "'" + USERNAME_ESC_POWERSHELL + "'";
 			final String username = "user'name$var";
-			final String expected = "user''name$var";
+			final String expected = "'user''name$var'";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
@@ -471,9 +511,9 @@ class MacrosUpdaterTest {
 
 		// Test PowerShell escape
 		{
-			final String text = PASSWORD_ESC_POWERSHELL;
+			final String text = "'" + PASSWORD_ESC_POWERSHELL + "'";
 			final String password = "p@ss'word$";
-			final String expected = "p@ss''word$";
+			final String expected = "'p@ss''word$'";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}

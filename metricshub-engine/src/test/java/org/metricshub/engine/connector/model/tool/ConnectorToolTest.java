@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -21,14 +22,19 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTranslate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
 
 class ConnectorToolTest {
 
-	private static final Set<DeviceKind> LINUX = Set.of(DeviceKind.LINUX, DeviceKind.AIX);
+	private static final Set<DeviceKind> LINUX = Set.of(DeviceKind.LINUX, DeviceKind.AIX, DeviceKind.TRU64);
 	private static final Set<DeviceKind> WINDOWS = Set.of(DeviceKind.WINDOWS);
 
 	private static final Map<String, ToolParameter> PARAMETERS = Map.of(
@@ -281,6 +287,16 @@ class ConnectorToolTest {
 		source.setComputes(List.of(Awk.builder().script("/${param::service}/ { print }").build()));
 		assertRefused(source, LINUX);
 
+		// Its variables are data, passed as such, but must name declared parameters
+		source.setComputes(
+			List.of(Awk.builder().script("{ print limit }").variables(Map.of("limit", "${param::service}")).build())
+		);
+		assertAccepted(source, LINUX);
+		source.setComputes(
+			List.of(Awk.builder().script("{ print limit }").variables(Map.of("limit", "${param::limt}")).build())
+		);
+		assertRefused(source, LINUX);
+
 		// No escape is safe in an awk script
 		source.setComputes(List.of(Awk.builder().script("{ print \"${esc(json)::param::service}\" }").build()));
 		assertRefused(source, LINUX);
@@ -289,6 +305,53 @@ class ConnectorToolTest {
 		source.setComputes(List.of(Awk.builder().script("NR > ${param::unit} { print }").build()));
 		assertRefused(source, LINUX);
 		source.setComputes(List.of(Awk.builder().script("NR > ${param::lines} { print }").build()));
+		assertAccepted(source, LINUX);
+	}
+
+	@Test
+	void testAnEscapedShellArgumentRefusesALeadingDash() {
+		final ToolDefinition definition = assertAccepted(
+			commandLine("find /srv -name ${esc(bash)::param::service}"),
+			LINUX
+		);
+
+		// One quoted word, but find would read -delete as an action
+		final ToolParameter service = definition.parameters().get("service");
+		assertThrows(IllegalArgumentException.class, () -> service.validate("service", "-delete"));
+		assertDoesNotThrow(() -> service.validate("service", "a b; $(c)"));
+	}
+
+	@Test
+	void testParameterInAnEncodingIsRefused() {
+		final CommandLineSource source = commandLine("cat f");
+		source.setComputes(List.of(Encode.builder().column(1).encoding("${param::service}").build()));
+		assertRefused(source, LINUX);
+	}
+
+	@Test
+	void testComputeFieldsWithoutARuleTakeOnlyEnumsAndNumbers() {
+		final CommandLineSource source = commandLine("journalctl -n 10");
+		// The separator of arrayTranslate is a regular expression
+		source.setComputes(
+			List.of(
+				ArrayTranslate.builder()
+					.column(1)
+					.translationTable(new TranslationTable())
+					.arraySeparator("${param::service}")
+					.build()
+			)
+		);
+		assertRefused(source, LINUX);
+		// Values appended or replaced are data
+		source.setComputes(
+			List.of(
+				Append.builder().column(1).value("-${param::service}").build(),
+				Replace.builder().column(1).existingValue("${param::service}").newValue("x").build()
+			)
+		);
+		assertAccepted(source, LINUX);
+		// A number goes anywhere
+		source.setComputes(List.of(Substring.builder().column(1).start("1").length("${param::lines}").build()));
 		assertAccepted(source, LINUX);
 	}
 

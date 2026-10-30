@@ -24,6 +24,7 @@ package org.metricshub.engine.common.helpers;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * The quoting at a position of a POSIX shell command line, as {@code sh} reads it, for a value expanded there as
@@ -67,14 +68,6 @@ public enum ShellQuote {
 		"source",
 		".",
 		"trap",
-		"sh",
-		"bash",
-		"ksh",
-		"zsh",
-		"dash",
-		"ash",
-		"csh",
-		"tcsh",
 		"su",
 		"sudo",
 		"ssh",
@@ -124,6 +117,17 @@ public enum ShellQuote {
 	);
 
 	/**
+	 * The shells, which run their arguments as code after a {@code -c} option ({@code -c}, {@code -ec}...), and
+	 * only pass them to their script otherwise.
+	 */
+	private static final Set<String> SHELLS = Set.of("sh", "bash", "ksh", "zsh", "dash", "ash", "csh", "tcsh");
+
+	/**
+	 * An assignment word, which keeps the next word the command name ({@code MODE=x cmd}).
+	 */
+	private static final Pattern ASSIGNMENT = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*=.*", Pattern.DOTALL);
+
+	/**
 	 * The options whose next word is a command, whatever the command they are given to ({@code find -exec}).
 	 */
 	private static final Set<String> COMMAND_OPTIONS = Set.of("-exec", "-execdir", "-ok", "-okdir");
@@ -158,8 +162,9 @@ public enum ShellQuote {
 	 * @param substitution whether the parenthesis opens a command substitution, {@code $(}, rather than a subshell
 	 * @param evaluating   whether the command around evaluates its arguments again
 	 * @param nameOrTarget whether the word holding the substitution is a command name or a redirection target
+	 * @param shellSeen    whether the command around runs a shell
 	 */
-	private record Frame(boolean substitution, boolean evaluating, boolean nameOrTarget) {}
+	private record Frame(boolean substitution, boolean evaluating, boolean nameOrTarget, boolean shellSeen) {}
 
 	/**
 	 * Reads a command line up to a position, following its quotes, words and commands.
@@ -173,7 +178,9 @@ public enum ShellQuote {
 		private boolean commandNext = true;
 		private boolean targetNext;
 		private boolean wordIsNameOrTarget;
+		private boolean wordIsCommandName;
 		private boolean evaluating;
+		private boolean shellSeen;
 		private final Deque<Frame> frames = new ArrayDeque<>();
 
 		private Reader(final String commandLine) {
@@ -202,14 +209,20 @@ public enum ShellQuote {
 		 */
 		private int read(final int i, final int position) {
 			final char c = commandLine.charAt(i);
+			// The word keeps the characters as the shell reads them, quotes and backslashes removed: e\val is eval
 			if (quote == SINGLE) {
 				if (c == '\'') {
 					quote = NONE;
+				} else {
+					word.append(c);
 				}
 				return i;
 			}
 			if (c == '\\') {
 				startWord();
+				if (i + 1 < commandLine.length()) {
+					word.append(commandLine.charAt(i + 1));
+				}
 				return i + 1;
 			}
 			if (quote == DOUBLE) {
@@ -222,7 +235,7 @@ public enum ShellQuote {
 				endWord();
 			} else if (c == '(' && inWord && commandLine.charAt(i - 1) == '$') {
 				// A command substitution: commands of their own, then part of the word around it
-				frames.push(new Frame(true, evaluating, wordIsNameOrTarget));
+				frames.push(new Frame(true, evaluating, wordIsNameOrTarget, shellSeen));
 				inWord = false;
 				breakCommand();
 			} else if (c == ')' && !frames.isEmpty() && frames.peek().substitution()) {
@@ -230,13 +243,18 @@ public enum ShellQuote {
 				final Frame frame = frames.pop();
 				// A command whose name is computed is not known
 				evaluating = frame.evaluating() || frame.nameOrTarget();
+				shellSeen = frame.shellSeen();
+				// Back in the word holding the substitution, whose value is not known
 				inWord = true;
+				word.setLength(0);
+				word.append('$');
 				wordIsNameOrTarget = frame.nameOrTarget();
+				wordIsCommandName = false;
 				commandNext = false;
 				targetNext = false;
 			} else if (COMMAND_BREAKS.indexOf(c) >= 0) {
 				if (c == '(') {
-					frames.push(new Frame(false, false, false));
+					frames.push(new Frame(false, false, false, false));
 				} else if (c == ')' && !frames.isEmpty()) {
 					frames.pop();
 				}
@@ -282,8 +300,11 @@ public enum ShellQuote {
 					.substring(i, close)
 					.chars()
 					.anyMatch(ch -> "'\"`\\".indexOf(ch) >= 0);
+				// An expansion: its value is not known
+				word.append('$');
 				return quoted ? -1 : close;
 			}
+			word.append(c);
 			return i;
 		}
 
@@ -291,12 +312,14 @@ public enum ShellQuote {
 			commandNext = true;
 			targetNext = false;
 			evaluating = false;
+			shellSeen = false;
 		}
 
 		private void startWord() {
 			if (!inWord) {
 				inWord = true;
 				wordIsNameOrTarget = commandNext || targetNext;
+				wordIsCommandName = commandNext;
 				commandNext = false;
 				targetNext = false;
 				word.setLength(0);
@@ -309,13 +332,43 @@ public enum ShellQuote {
 			}
 			inWord = false;
 			final String text = word.toString();
+			if (wordIsCommandName && ASSIGNMENT.matcher(text).matches()) {
+				// MODE=x cmd: the next word is still the command
+				commandNext = true;
+				return;
+			}
+			if (wordIsCommandName && !text.startsWith("${file::") && (text.indexOf('$') >= 0 || text.indexOf('`') >= 0)) {
+				// A command whose name is expanded is not known; an embedded file is the connector's own script
+				evaluating = true;
+			}
 			// The last path segment, after a %{SUDO:...} macro too
 			final String name = text.substring(Math.max(text.lastIndexOf('/'), text.lastIndexOf('}')) + 1);
 			if (EVALUATING_COMMANDS.contains(name)) {
 				evaluating = true;
 			}
-			if ((wordIsNameOrTarget && COMMAND_PREFIXES.contains(text)) || COMMAND_OPTIONS.contains(text)) {
+			readShellWord(text, name);
+			if ((wordIsCommandName && COMMAND_PREFIXES.contains(text)) || COMMAND_OPTIONS.contains(text)) {
 				commandNext = true;
+			}
+		}
+
+		/**
+		 * Follows a shell and its options: its first operand is a script to run, like a command name, and after a
+		 * {@code -c} (or {@code -ec}...) its arguments are code.
+		 *
+		 * @param text the word
+		 * @param name its last path segment
+		 */
+		private void readShellWord(final String text, final String name) {
+			if (SHELLS.contains(name)) {
+				shellSeen = true;
+				commandNext = wordIsCommandName;
+			} else if (shellSeen && !text.startsWith("--") && (text.startsWith("-") || text.startsWith("+"))) {
+				if (text.startsWith("-") && text.indexOf('c') > 0) {
+					evaluating = true;
+				}
+				// An option: the script is still to come
+				commandNext = commandNext || wordIsCommandName;
 			}
 		}
 

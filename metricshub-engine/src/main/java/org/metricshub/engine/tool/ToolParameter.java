@@ -75,12 +75,13 @@ public record ToolParameter(
 	private static final String METACHARACTERS = " \t\r\n'\"`$;|&<>(){}[]*?!#~%^\\";
 
 	/**
-	 * Matches a value holding none of the {@link #METACHARACTERS}, each written {@code \x{hex}}, as a lookahead:
-	 * {@code \z} rather than {@code $}, which would also match before a final line break.
+	 * Matches a value holding none of the {@link #METACHARACTERS}, each written {@code \x{hex}}, and not starting with
+	 * {@code -}, which a command would read as an option, as lookaheads: {@code \z} rather than {@code $}, which would
+	 * also match before a final line break.
 	 */
 	private static final String WITHOUT_METACHARACTERS = METACHARACTERS.chars()
 		.mapToObj("\\x{%x}"::formatted)
-		.collect(Collectors.joining("", "(?=[^", "]*\\z)"));
+		.collect(Collectors.joining("", "(?!-)(?=[^", "]*\\z)"));
 
 	/**
 	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
@@ -137,6 +138,21 @@ public record ToolParameter(
 	@JsonIgnore
 	public boolean isConstrained() {
 		return !STRING.equals(type) || enumValues != null || pattern != null;
+	}
+
+	/**
+	 * A string parameter escaped into a command line stays one word, but a command would still read a value starting
+	 * with {@code -} as an option ({@code find ... -delete}): such a value is refused on top of the pattern.
+	 *
+	 * @return this parameter, whose pattern also refuses a leading {@code -} if it is a string without enum
+	 * @throws IllegalArgumentException if the default value starts with {@code -}
+	 */
+	public ToolParameter withoutLeadingDash() {
+		if (!STRING.equals(type) || enumValues != null) {
+			return this;
+		}
+		final String constrained = "(?!-)" + (pattern == null ? "[\\s\\S]*" : "(?:" + pattern + ")");
+		return new ToolParameter(type, description, required, defaultValue, constrained, null);
 	}
 
 	/**

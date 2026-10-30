@@ -328,6 +328,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final Matcher matcher = SHELL_ARGUMENT_PATTERN.matcher(template);
 		final StringBuilder assignments = new StringBuilder();
 		final StringBuilder commandLine = new StringBuilder();
+		// A prefix the template does not use, so that its variables and ours never mix
+		String variable = SHELL_VARIABLE;
+		while (template.contains(variable)) {
+			variable += "_";
+		}
 		int count = 0;
 		int copied = 0;
 		while (matcher.find()) {
@@ -340,10 +345,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			}
 			count++;
 			// At the start of the command line, outside of any quote: the single-quoted value is a literal
-			assignments.append(SHELL_VARIABLE).append(count).append("='").append(EscapeType.BASH.escape(value)).append("'; ");
+			assignments.append(variable).append(count).append("='").append(EscapeType.BASH.escape(value)).append("'; ");
 			commandLine
 				.append(template, copied, matcher.start())
-				.append(variableIn(ShellQuote.at(template, matcher.start()), SHELL_VARIABLE + count));
+				.append(variableIn(ShellQuote.at(template, matcher.start()), variable + count));
 			copied = matcher.end();
 		}
 		commandLine.append(template, copied, template.length());

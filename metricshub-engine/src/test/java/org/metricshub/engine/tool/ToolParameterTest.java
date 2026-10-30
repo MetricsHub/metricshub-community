@@ -62,7 +62,19 @@ class ToolParameterTest {
 	void testWithoutMetacharacters() {
 		// Whatever the pattern lets through, no metacharacter, line break included
 		final ToolParameter loose = new ToolParameter(null, null, false, null, "[\\s\\S]*", null).withoutMetacharacters();
-		for (final String value : List.of("$(id)", "a b", "a\n", "x'y", "a;b", "`id`", "a\\b", "%PATH%", "a^&b")) {
+		for (final String value : List.of(
+			"$(id)",
+			"a b",
+			"a\n",
+			"x'y",
+			"a;b",
+			"`id`",
+			"a\\b",
+			"%PATH%",
+			"a^&b",
+			"-rf",
+			"--all"
+		)) {
 			assertThrows(IllegalArgumentException.class, () -> loose.validate("x", value), value);
 		}
 		assertDoesNotThrow(() -> loose.validate("x", "sshd.service"));

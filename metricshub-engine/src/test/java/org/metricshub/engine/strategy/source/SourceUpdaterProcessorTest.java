@@ -639,6 +639,31 @@ class SourceUpdaterProcessorTest {
 	}
 
 	@Test
+	void testProcessCommandLineSourceAvoidsTheTemplateVariables() {
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
+
+		new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of("v", "x"),
+			extensionManager
+		).process(
+			CommandLineSource.builder().commandLine("__mh_arg1=fixed; echo ${esc(bash)::param::v} $__mh_arg1").build()
+		);
+
+		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
+		verify(sourceProcessor).process(captor.capture());
+		assertEquals(
+			"__mh_arg_1='x'; __mh_arg1=fixed; echo \"${__mh_arg_1}\" $__mh_arg1",
+			captor.getValue().getCommandLine()
+		);
+	}
+
+	@Test
 	void testProcessSourceFormingAMacroIsNotRun() {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
