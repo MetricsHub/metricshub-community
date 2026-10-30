@@ -95,6 +95,9 @@ class ToolParameterTest {
 		assertDoesNotThrow(() -> text.validate("text", "a\tb\r\nc"));
 		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a\u0000b"));
 		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a\u001bb"));
+		// An unpaired surrogate is no character: XML refuses it; a pair is one
+		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a\uD800b"));
+		assertDoesNotThrow(() -> text.validate("text", "a😀b"));
 		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a￿b"));
 	}
 

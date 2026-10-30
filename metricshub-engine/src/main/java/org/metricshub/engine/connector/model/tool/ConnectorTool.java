@@ -748,6 +748,9 @@ public class ConnectorTool extends AbstractMonitorTask {
 					quote = c;
 					open = i;
 				}
+			} else if (c == '\\') {
+				// As insideString reads it: an escaped quote does not close the string
+				i++;
 			} else if (c == quote) {
 				quote = '\0';
 			}
@@ -830,21 +833,21 @@ public class ConnectorTool extends AbstractMonitorTask {
 	/**
 	 * @param regex    a PSL regular expression
 	 * @param position a position in the regular expression
-	 * @return whether the position is inside a {@code [...]} character class, where an escaped value still forms
-	 *         ranges ({@code a-z})
+	 * @return whether the position is inside a {@code [...]} character class, nested ones included ({@code [a[b]X]}),
+	 *         where an escaped value still forms ranges ({@code a-z})
 	 */
 	static boolean insideCharacterClass(final String regex, final int position) {
-		boolean inClass = false;
+		int depth = 0;
 		for (int i = 0; i < position; i++) {
 			final char c = regex.charAt(i);
 			if (c == '\\') {
 				i++;
 			} else if (c == '[') {
-				inClass = true;
-			} else if (c == ']') {
-				inClass = false;
+				depth++;
+			} else if (c == ']' && depth > 0) {
+				depth--;
 			}
 		}
-		return inClass;
+		return depth > 0;
 	}
 }

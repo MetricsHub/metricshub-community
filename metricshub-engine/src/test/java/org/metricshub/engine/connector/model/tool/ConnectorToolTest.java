@@ -166,6 +166,10 @@ class ConnectorToolTest {
 		// Inside a character class, an escaped a-z is still a range
 		assertRefused(CommandLineSource.builder().commandLine("ls").keep("[${esc(regex)::param::service}]").build(), LINUX);
 		assertRefused(
+			CommandLineSource.builder().commandLine("ls").keep("[[a]${esc(regex)::param::service}]").build(),
+			LINUX
+		);
+		assertRefused(
 			CommandLineSource.builder().commandLine("ls").separators("${esc(regex)::param::service}").build(),
 			LINUX
 		);
@@ -517,6 +521,13 @@ class ConnectorToolTest {
 		// WQL does not read \ as an escape in a LIKE pattern: O\'Brien would close the string
 		assertRefused(
 			WmiSource.builder().query("SELECT * FROM Win32_Service WHERE Name LIKE '%${esc(wql)::param::service}%'").build(),
+			WINDOWS
+		);
+		// An escaped quote does not close the string before
+		assertRefused(
+			WmiSource.builder()
+				.query("SELECT * FROM Win32_Service WHERE Caption='O\\'Brien' AND Name LIKE '${esc(wql)::param::service}'")
+				.build(),
 			WINDOWS
 		);
 		assertAccepted(

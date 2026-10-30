@@ -211,9 +211,11 @@ public record ToolParameter(
 				"The argument %s may not contain %%{ or ${ (write $VAR rather than ${VAR})".formatted(name)
 			);
 		}
-		// No source takes them, and XML 1.0 forbids them even escaped
-		if (value.chars().anyMatch(ToolParameter::isForbiddenCharacter)) {
-			throw new IllegalArgumentException("The argument %s may not contain control characters".formatted(name));
+		// No source takes them, and XML 1.0 forbids them even escaped. An unpaired surrogate reads as one code point
+		if (value.codePoints().anyMatch(ToolParameter::isForbiddenCharacter)) {
+			throw new IllegalArgumentException(
+				"The argument %s may not contain control characters or unpaired surrogates".formatted(name)
+			);
 		}
 		final boolean typed = switch (type) {
 			case "integer" -> INTEGER.matcher(value).matches();
@@ -249,11 +251,13 @@ public record ToolParameter(
 	}
 
 	/**
-	 * @param c a character
-	 * @return whether it is a control character other than a tab or a line break, or a noncharacter
+	 * @param c a code point
+	 * @return whether it is a control character other than a tab or a line break, a noncharacter, or a surrogate,
+	 *         which a code point is only when unpaired
 	 */
 	private static boolean isForbiddenCharacter(final int c) {
-		return (c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == 0xFFFE || c == 0xFFFF;
+		final boolean surrogate = c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE;
+		return (c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == 0xFFFE || c == 0xFFFF || surrogate;
 	}
 
 	/**

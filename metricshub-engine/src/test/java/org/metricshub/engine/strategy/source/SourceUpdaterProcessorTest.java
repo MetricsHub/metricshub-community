@@ -696,7 +696,9 @@ class SourceUpdaterProcessorTest {
 	void testProcessCommandLineSourceDropsShellArgumentsEvaluatedAgain() {
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.hostConfiguration(
+				HostConfiguration.builder().hostname(LOCALHOST).attributes(Map.of("tag", "touch /tmp/pwned")).build()
+			)
 			.build();
 
 		new SourceUpdaterProcessor(
@@ -706,13 +708,17 @@ class SourceUpdaterProcessorTest {
 			Map.of("v", "touch /tmp/pwned", "w", "x"),
 			extensionManager
 		).process(
-			CommandLineSource.builder().commandLine("eval ${esc(bash)::attribute::v}; ls ${esc(bash)::attribute::w}").build()
+			CommandLineSource.builder()
+				.commandLine(
+					"eval ${esc(bash)::attribute::v}; eval ${esc(bash)::resource.attribute::tag}; ls ${esc(bash)::attribute::w}"
+				)
+				.build()
 		);
 
-		// eval would parse the value again, one word or not: replaced with nothing
+		// eval would parse the value again, one word or not: replaced with nothing, whatever the kind of reference
 		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
 		verify(sourceProcessor).process(captor.capture());
-		assertEquals("__mh_arg1='x'; eval ; ls \"${__mh_arg1}\"", captor.getValue().getCommandLine());
+		assertEquals("__mh_arg1='x'; eval ; eval ; ls \"${__mh_arg1}\"", captor.getValue().getCommandLine());
 	}
 
 	@Test
