@@ -21,10 +21,13 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
+
 /**
  * The quoting at a position of a POSIX shell command line, as {@code sh} reads it. Where the reading depends on
  * constructs this class does not follow (a comment, a here-document, {@code $'...'}, a command substitution inside
- * double quotes, backquotes), the answer is {@link #UNKNOWN}.
+ * double quotes, backquotes), or where the shell evaluates an expanded value again whatever its quotes (arithmetic),
+ * the answer is {@link #UNKNOWN}.
  */
 public enum ShellQuote {
 	/**
@@ -48,6 +51,11 @@ public enum ShellQuote {
 	 * The characters after which a {@code #} starts a comment.
 	 */
 	private static final String WORD_BREAKS = " \t\r\n;&|()<>";
+
+	/**
+	 * The commands that evaluate their arguments, or the variables they declare, as arithmetic.
+	 */
+	private static final List<String> ARITHMETIC_COMMANDS = List.of("let", "declare", "typeset", "local");
 
 	/**
 	 * @param commandLine a POSIX shell command line
@@ -110,13 +118,41 @@ public enum ShellQuote {
 	 * @param commandLine a command line
 	 * @param i           a position outside of any quote
 	 * @return whether a construct this class does not follow starts there: backquotes, {@code $'...'}, a
-	 *         here-document or a comment
+	 *         here-document, a comment, or an arithmetic evaluation ({@code $((...))}, {@code ((...))},
+	 *         {@code [[...]]}, {@code let}, the integer variables of {@code declare}, {@code typeset} or
+	 *         {@code local}), where bash evaluates an expanded value again, quotes or not
 	 */
 	private static boolean isUnfollowed(final String commandLine, final int i) {
 		final char c = commandLine.charAt(i);
 		if (c == '`' || commandLine.startsWith("$'", i) || commandLine.startsWith("<<", i)) {
 			return true;
 		}
-		return c == '#' && (i == 0 || WORD_BREAKS.indexOf(commandLine.charAt(i - 1)) >= 0);
+		if (commandLine.startsWith("$((", i)) {
+			return true;
+		}
+		if (i > 0 && WORD_BREAKS.indexOf(commandLine.charAt(i - 1)) < 0) {
+			return false;
+		}
+		if (c == '#' || commandLine.startsWith("((", i) || commandLine.startsWith("[[", i)) {
+			return true;
+		}
+		return startsArithmeticCommand(commandLine, i);
+	}
+
+	/**
+	 * @param commandLine a command line
+	 * @param i           the start of a word
+	 * @return whether the word is a command evaluating arithmetic
+	 */
+	private static boolean startsArithmeticCommand(final String commandLine, final int i) {
+		for (final String word : ARITHMETIC_COMMANDS) {
+			if (commandLine.startsWith(word, i)) {
+				final int end = i + word.length();
+				if (end == commandLine.length() || Character.isWhitespace(commandLine.charAt(end))) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

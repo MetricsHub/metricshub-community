@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -47,6 +48,7 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -116,6 +118,12 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * An awk script, where no escape is reliable.
 	 */
 	private static final FieldRule AWK_SCRIPT = COMMAND_LINE;
+
+	/**
+	 * The paths of a file source, where no escape keeps a value from climbing with {@code ../} or starting at
+	 * {@code /}: only an enum or a number.
+	 */
+	private static final FieldRule FILE_PATH = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	private static final FieldRule SQL_QUERY = new FieldRule(EnumSet.of(EscapeType.SQL), false);
 
@@ -215,6 +223,9 @@ public class ConnectorTool extends AbstractMonitorTask {
 			} else if (others instanceof WbemSource wbemSource) {
 				checkReferences(name, wbemSource.getQuery(), WQL_QUERY, unescaped);
 				wbemSource.setQuery("");
+			} else if (others instanceof FileSource fileSource) {
+				fileSource.getPaths().forEach(path -> checkReferences(name, path, FILE_PATH, unescaped));
+				fileSource.setPaths(new LinkedHashSet<>());
 			} else if (others instanceof HttpSource httpSource) {
 				for (final String field : Arrays.asList(httpSource.getUrl(), httpSource.getPath(), httpSource.getHeader())) {
 					checkReferences(name, field, HTTP_URL_OR_HEADER, unescaped);
@@ -335,9 +346,9 @@ public class ConnectorTool extends AbstractMonitorTask {
 				if (
 					!rule.patternedStrings() && ToolParameter.STRING.equals(parameter.type()) && parameter.enumValues() == null
 				) {
-					// Refusing the metacharacters does not cover a query or a request: --, ../, a header line
+					// Refusing the metacharacters does not cover a query, a request or a path: --, ../, a header line
 					throw new IllegalArgumentException(
-						"Tool %s inserts the string %s unescaped in a query or a request: escape it or declare an enum".formatted(
+						"Tool %s inserts the string %s unescaped in a query, a request or a path: escape it or declare an enum".formatted(
 							toolName,
 							reference
 						)
@@ -350,7 +361,7 @@ public class ConnectorTool extends AbstractMonitorTask {
 						toolName,
 						reference,
 						rule.escapes(),
-						"in a Windows command line or an awk script, constrain the parameter instead"
+						"in a Windows command line, an awk script or a file path, constrain the parameter instead"
 					)
 				);
 			} else if (!insideString(field, matcher.start(), escapeType)) {

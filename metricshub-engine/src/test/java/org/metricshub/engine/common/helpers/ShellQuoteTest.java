@@ -32,5 +32,13 @@ class ShellQuoteTest {
 		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo \"${x:-\"'\"}\" X"));
 		// Not a comment: # inside a word
 		assertEquals(ShellQuote.NONE, quoteOfX("echo a#b ${#x} X"));
+		// Arithmetic evaluates an expanded value again, quotes or not
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo $(( X + 1 ))"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("(( X > 1 ))"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("[[ X -eq 1 ]]"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("let n=X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("declare -i n; n=X"));
+		// Not arithmetic: a command substitution, a word starting like a command
+		assertEquals(ShellQuote.NONE, quoteOfX("echo $(ls) letter localhost X"));
 	}
 }

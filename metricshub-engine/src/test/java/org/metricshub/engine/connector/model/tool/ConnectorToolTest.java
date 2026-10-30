@@ -8,9 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -107,6 +109,41 @@ class ConnectorToolTest {
 		);
 		assertTrue(message.contains("cannot be told"), message);
 		assertRefused(commandLine("cat <<EOF\n${esc(bash)::param::service}\nEOF"), LINUX);
+	}
+
+	@Test
+	void testShellEscapeInArithmeticIsRefused() {
+		// bash evaluates x[$(cmd)] in arithmetic, quoted or not
+		assertRefused(commandLine("echo $(( ${esc(bash)::param::service} + 1 ))"), LINUX);
+		assertRefused(commandLine("[[ ${esc(bash)::param::service} -eq 1 ]] && echo one"), LINUX);
+		assertRefused(commandLine("let n=${esc(bash)::param::service}"), LINUX);
+		// A number goes there as is
+		assertAccepted(commandLine("echo $(( ${param::lines} + 1 ))"), LINUX);
+	}
+
+	@Test
+	void testAFilePathTakesOnlyEnumsAndNumbers() {
+		final Map<String, ToolParameter> parameters = Map.of(
+			"log",
+			new ToolParameter(null, "A log", true, null, null, List.of("syslog", "messages")),
+			"unit",
+			new ToolParameter(null, "A unit", true, null, "[./a-z]+", null)
+		);
+		final Function<String, ConnectorTool> fileTool = path ->
+			ConnectorTool.builder()
+				.sources(Map.of("file", FileSource.builder().paths(Set.of(path)).build()))
+				.parameters(parameters)
+				.result(new ToolResult("${source::file}", null))
+				.build();
+
+		assertDoesNotThrow(() -> fileTool.apply("/var/log/${param::log}").toDefinition("tail", LINUX));
+		// ../../etc/passwd passes [./a-z]+, and no escape keeps it in the directory
+		assertThrows(IllegalArgumentException.class, () ->
+			fileTool.apply("/var/log/${param::unit}").toDefinition("tail", LINUX)
+		);
+		assertThrows(IllegalArgumentException.class, () ->
+			fileTool.apply("/var/log/${esc(url)::param::unit}").toDefinition("tail", LINUX)
+		);
 	}
 
 	@Test

@@ -75,6 +75,27 @@ class ToolParameterTest {
 	}
 
 	@Test
+	void testValidateRejectsControlCharacters() {
+		final ToolParameter text = new ToolParameter(null, null, false, null);
+		assertDoesNotThrow(() -> text.validate("text", "a\tb\r\nc"));
+		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a\u0000b"));
+		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a\u001bb"));
+		assertThrows(IllegalArgumentException.class, () -> text.validate("text", "a￿b"));
+	}
+
+	@Test
+	void testValidateBoundsThePatternMatchingTime() {
+		// Catastrophic backtracking: fails after the timeout instead of holding the request
+		// (about 20 s for this value without the timeout)
+		final ToolParameter nested = new ToolParameter(null, null, false, null, "(.*a){16}", null);
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			nested.validate("x", "a".repeat(30) + "!")
+		);
+		assertEquals("The argument x takes too long to match its pattern", exception.getMessage());
+		assertDoesNotThrow(() -> nested.validate("x", "a".repeat(16)));
+	}
+
+	@Test
 	void testNumericEnumComparesValues() {
 		final ToolParameter level = new ToolParameter("integer", null, false, null, null, List.of("01", "2"));
 		assertDoesNotThrow(() -> level.validate("level", "1"));
