@@ -60,15 +60,17 @@ public class MacrosUpdater {
 	);
 
 	/**
-	 * A simple macro escaped for a POSIX shell, quoted for where it lands (see {@link #replaceShellMacros}).
+	 * A simple macro escaped for a POSIX shell, quoted for where it lands (see {@link #shellQuoted}).
 	 */
 	private static final Pattern SHELL_MACRO_PATTERN = Pattern.compile(
 		"[$%]\\{esc\\((?i:bash|linux)\\)::(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
 	);
 
 	/**
-	 * A simple macro escaped for PowerShell, replaced only where the escape protects it (see
-	 * {@link #replacePowershellMacros}).
+	 * A simple macro escaped for PowerShell, always replaced with nothing, the error logged. A PowerShell command
+	 * reaches PowerShell through {@code cmd.exe}, which reads its quotes first, and its comments, double-quoted strings
+	 * and here-strings make the single quotes the escape relies on uncertain: nothing tells that a credential such as
+	 * {@code $(Start-Process calc)} would not run.
 	 */
 	private static final Pattern POWERSHELL_MACRO_PATTERN = Pattern.compile(
 		"[$%]\\{esc\\((?i:powershell)\\)::(?<name>USERNAME|PASSWORD|HOSTNAME|AUTHENTICATIONTOKEN)\\}"
@@ -117,19 +119,54 @@ public class MacrosUpdater {
 				authenticationToken
 			);
 
-			updatedContent = replaceShellMacros(updatedContent, simpleMacroNameToField);
-			updatedContent = replacePowershellMacros(updatedContent);
-
-			final Matcher matcher = MACRO_PATTERN.matcher(updatedContent);
-
+			// One pass over the template: a value inserted is never read again as a macro
+			final Matcher matcher = MACRO_PATTERN.matcher(text);
+			final StringBuilder replaced = new StringBuilder();
 			while (matcher.find()) {
-				final String escapeType = matcher.group(2);
-				final String macroName = matcher.group(4);
-				updatedContent = processMacro(updatedContent, matcher.group(0), macroName, escapeType, simpleMacroNameToField);
+				final String macro = matcher.group();
+				matcher.appendReplacement(replaced, "");
+				final Matcher shell = SHELL_MACRO_PATTERN.matcher(macro);
+				if (shell.matches()) {
+					// Read with the macros before replaced: one replaced with nothing leaves its place to the next
+					final String value = simpleMacroNameToField.getOrDefault(shell.group("name"), EMPTY);
+					replaced.append(shellQuoted(macro, value, replaced + text.substring(matcher.start()), replaced.length()));
+				} else if (POWERSHELL_MACRO_PATTERN.matcher(macro).matches()) {
+					log.error("{}: no escape protects a credential in a PowerShell command, replaced with nothing.", macro);
+				} else {
+					replaced.append(processMacro(macro, macro, matcher.group(4), matcher.group(2), simpleMacroNameToField));
+				}
 			}
+			matcher.appendTail(replaced);
+			updatedContent = replaced.toString();
 		}
 
 		return updatedContent;
+	}
+
+	/**
+	 * Quotes a simple macro escaped for a POSIX shell for the quoting around it (see {@link ShellQuote}): escaped for
+	 * single quotes inside single quotes, for double quotes inside double quotes, and a whole single-quoted word
+	 * anywhere else, so that a credential such as {@code $(cmd)} is never run, whether the connector quoted the macro
+	 * or not. Where the value would not be a mere argument, nothing, the error logged.
+	 *
+	 * @param macro    the macro, for the log
+	 * @param value    its value
+	 * @param line     the command line, the macros before already replaced
+	 * @param position the position of the macro in the line
+	 * @return the value quoted
+	 */
+	private static String shellQuoted(final String macro, final String value, final String line, final int position) {
+		final ShellQuote quote = ShellQuote.at(line, position);
+		if (quote == ShellQuote.UNKNOWN) {
+			// In arithmetic, after eval or sh -c, as a command name...: no quoting would protect it
+			log.error("{} is not a mere argument of its command: replaced with nothing.", macro);
+		}
+		return switch (quote) {
+			case SINGLE -> escapeBashSpecialCharacters(value);
+			case DOUBLE -> value.replaceAll("([\\\\\"$`])", "\\\\$1");
+			case NONE -> "'" + escapeBashSpecialCharacters(value) + "'";
+			default -> EMPTY;
+		};
 	}
 
 	/**
@@ -142,60 +179,6 @@ public class MacrosUpdater {
 	 * @param macroNameField A map of macro names and their corresponding values.
 	 * @return The content with the macro replaced by the corresponding value.
 	 */
-	/**
-	 * Replaces the {@code %{esc(bash)::MACRO}} (or {@code linux}) of the simple macros, each quoted for the shell
-	 * quoting around it (see {@link ShellQuote}): escaped for single quotes inside single quotes, for double quotes
-	 * inside double quotes, and a whole single-quoted word anywhere else, so that a credential such as
-	 * {@code $(cmd)} is never run, whether the connector quoted the macro or not.
-	 *
-	 * @param text   the text with macros
-	 * @param values the values of the simple macros, by name
-	 * @return the text, its shell-escaped simple macros replaced
-	 */
-	private static String replaceShellMacros(final String text, final Map<String, String> values) {
-		final Matcher matcher = SHELL_MACRO_PATTERN.matcher(text);
-		final StringBuilder replaced = new StringBuilder();
-		while (matcher.find()) {
-			final String value = values.getOrDefault(matcher.group("name"), EMPTY);
-			// Read with the macros before replaced: one replaced with nothing leaves its place to the next
-			matcher.appendReplacement(replaced, "");
-			final ShellQuote quote = ShellQuote.at(replaced + text.substring(matcher.start()), replaced.length());
-			if (quote == ShellQuote.UNKNOWN) {
-				// In arithmetic, after eval or sh -c, as a command name...: no quoting would protect it
-				log.error("{} is not a mere argument of its command: replaced with nothing.", matcher.group());
-			}
-			final String quoted = switch (quote) {
-				case SINGLE -> escapeBashSpecialCharacters(value);
-				case DOUBLE -> value.replaceAll("([\\\\\"$`])", "\\\\$1");
-				case NONE -> "'" + escapeBashSpecialCharacters(value) + "'";
-				default -> EMPTY;
-			};
-			replaced.append(quoted);
-		}
-		matcher.appendTail(replaced);
-		return replaced.toString();
-	}
-
-	/**
-	 * Replaces the {@code %{esc(powershell)::MACRO}} of the simple macros with nothing, the error logged. A
-	 * PowerShell command reaches PowerShell through {@code cmd.exe}, which reads its quotes first, and its comments,
-	 * double-quoted strings and here-strings make the single quotes the escape relies on uncertain: nothing tells
-	 * that a credential such as {@code $(Start-Process calc)} would not run.
-	 *
-	 * @param text the text with macros
-	 * @return the text, its PowerShell-escaped simple macros removed
-	 */
-	private static String replacePowershellMacros(final String text) {
-		final Matcher matcher = POWERSHELL_MACRO_PATTERN.matcher(text);
-		final StringBuilder replaced = new StringBuilder();
-		while (matcher.find()) {
-			log.error("{}: no escape protects a credential in a PowerShell command, replaced with nothing.", matcher.group());
-			matcher.appendReplacement(replaced, EMPTY);
-		}
-		matcher.appendTail(replaced);
-		return replaced.toString();
-	}
-
 	private static String processMacro(
 		final String content,
 		final String matchedMacro,
@@ -400,9 +383,15 @@ public class MacrosUpdater {
 	static String escapeUrlSpecialCharacters(final String value) {
 		// Escape common URL characters
 		final String encoded = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
-		// A path segment of dots only would climb the path once normalized: . and .. are percent-encoded too
-		return encoded.matches("\\.+") ? encoded.replace(".", "%2E") : encoded;
+		// A segment of dots only would climb the path once normalized, where a server decodes %2F (or %5C) first too:
+		// the dots of ., .., ../admin are percent-encoded
+		return DOT_SEGMENT.matcher(encoded).replaceAll(segment -> segment.group().replace(".", "%2E"));
 	}
+
+	/**
+	 * A segment of dots only in a URL-encoded value, between its start or end and an encoded {@code /} or {@code \}.
+	 */
+	private static final Pattern DOT_SEGMENT = Pattern.compile("(?<=^|%2F|%5C)\\.+(?=%2F|%5C|$)");
 
 	/**
 	 * Escapes a value for a regular expression as the connectors write them, in the PSL syntax converted by

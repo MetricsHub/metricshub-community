@@ -294,7 +294,12 @@ public final class HostTools {
 			if (value == null || value.isNull()) {
 				continue;
 			}
-			if (INTEGER.equals(parameter.getValue().type()) && isBoundedIntegral(value)) {
+			final String type = parameter.getValue().type();
+			if (!hasJsonType(value, type)) {
+				// The schema is only advertised: a caller may send "1" for an integer, an object for a string
+				throw new IllegalArgumentException("The argument %s must be of type %s".formatted(parameter.getKey(), type));
+			}
+			if (INTEGER.equals(type) && isBoundedIntegral(value)) {
 				// 1.0 and 1e3 are integers to JSON schema
 				values.put(parameter.getKey(), value.bigIntegerValue().toString());
 			} else {
@@ -302,6 +307,19 @@ public final class HostTools {
 			}
 		}
 		return values;
+	}
+
+	/**
+	 * @param value an argument
+	 * @param type  the type of its parameter
+	 * @return whether the JSON value is of the kind the schema advertises for the type
+	 */
+	private static boolean hasJsonType(final JsonNode value, final String type) {
+		return switch (type) {
+			case INTEGER, "number" -> value.isNumber();
+			case "boolean" -> value.isBoolean();
+			default -> value.isTextual();
+		};
 	}
 
 	/**

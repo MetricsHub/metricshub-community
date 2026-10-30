@@ -138,6 +138,9 @@ class HostToolsTest {
 		// Refused without materializing a hundred million digits
 		final JsonNode huge = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1e100000000}"));
 		assertEquals("The argument lines must be of type integer", huge.get("errorMessage").asText());
+		// The JSON kind of the argument must be the advertised one
+		final JsonNode text = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":\"1000\"}"));
+		assertEquals("The argument lines must be of type integer", text.get("errorMessage").asText());
 	}
 
 	@Test

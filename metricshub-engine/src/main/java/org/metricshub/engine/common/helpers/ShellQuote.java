@@ -195,6 +195,8 @@ public enum ShellQuote {
 		"do",
 		"while",
 		"until",
+		// coproc cmd runs cmd: its name, or the coprocess's, comes next
+		"coproc",
 		"!",
 		"{"
 	);

@@ -187,7 +187,25 @@ class MacrosUpdaterTest {
 		assertEquals("%2E%2E", MacrosUpdater.escapeUrlSpecialCharacters(".."));
 		assertEquals("%2E", MacrosUpdater.escapeUrlSpecialCharacters("."));
 		assertEquals("a.b", MacrosUpdater.escapeUrlSpecialCharacters("a.b"));
-		assertEquals("..%2Fetc", MacrosUpdater.escapeUrlSpecialCharacters("../etc"));
+		// Also where a server decodes %2F, or %5C, before normalizing
+		assertEquals("%2E%2E%2Fadmin", MacrosUpdater.escapeUrlSpecialCharacters("../admin"));
+		assertEquals("a%2F%2E%2E%5Cb%2F.c", MacrosUpdater.escapeUrlSpecialCharacters("a/..\\b/.c"));
+	}
+
+	@Test
+	void testMacroValueIsNotReadAgainAsAMacro() {
+		// A password holding %{PASSWORD} is inserted once, quoted, not expanded again unescaped
+		assertEquals(
+			"mytool -p '%{PASSWORD}'\\'' ; reboot #'",
+			MacrosUpdater.update(
+				"mytool -p " + PASSWORD_ESC_BASH,
+				"u",
+				"%{PASSWORD}' ; reboot #".toCharArray(),
+				null,
+				"h",
+				false
+			)
+		);
 	}
 
 	@Test
