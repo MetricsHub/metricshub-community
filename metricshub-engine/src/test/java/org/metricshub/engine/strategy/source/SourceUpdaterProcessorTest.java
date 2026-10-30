@@ -616,22 +616,24 @@ class SourceUpdaterProcessorTest {
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			Map.of("service", "x'; reboot #", "lines", "10"),
+			Map.of("service", "x'; reboot #", "lines", "10", "since", "1 hour *"),
 			extensionManager
 		).process(
 			CommandLineSource.builder()
 				.commandLine(
-					"echo ok # it's\njournalctl -n ${param::lines} -u ${esc(bash)::param::service} -g '${esc(bash)::resource.attribute::site}'"
+					"journalctl -n ${param::lines} -u ${esc(bash)::param::service} -g '${esc(bash)::resource.attribute::site}'" +
+						" -S \"${esc(bash)::param::since}\""
 				)
 				.build()
 		);
 
-		// Whatever surrounds the reference, the shell expands the variable without parsing the value, and the quotes
-		// right around a reference go with it
+		// The shell expands each variable as one word without parsing its value: quoted outside of any quote,
+		// closing and reopening single quotes, as is inside double quotes
 		final ArgumentCaptor<CommandLineSource> captor = ArgumentCaptor.forClass(CommandLineSource.class);
 		verify(sourceProcessor).process(captor.capture());
 		assertEquals(
-			"__mh_arg1='x'\\''; reboot #'; __mh_arg2='$(id)'; echo ok # it's\njournalctl -n 10 -u \"$__mh_arg1\" -g \"$__mh_arg2\"",
+			"__mh_arg1='x'\\''; reboot #'; __mh_arg2='$(id)'; __mh_arg3='1 hour *'; " +
+				"journalctl -n 10 -u \"${__mh_arg1}\" -g ''\"${__mh_arg2}\"'' -S \"${__mh_arg3}\"",
 			captor.getValue().getCommandLine()
 		);
 	}

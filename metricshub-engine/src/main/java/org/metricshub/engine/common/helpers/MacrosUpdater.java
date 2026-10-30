@@ -329,14 +329,22 @@ public class MacrosUpdater {
 	}
 
 	/**
-	 * Escapes special characters used in regular expressions by prepending a backslash.
+	 * Escapes a value for a regular expression as the connectors write them, in the PSL syntax converted by
+	 * {@code PslUtils.psl2JavaRegex} (keepOnlyMatchingLines, keep, exclude...): a backslash before
+	 * {@code ^ $ . * + ? [ ] \}, while {@code ( ) | { }} are literal in PSL already.
 	 *
 	 * @param value the input string that may contain special regex characters
-	 * @return a string where special regex characters have been escaped
+	 * @return a PSL regular expression matching the value literally
 	 */
 	static String escapeRegexSpecialCharacters(final String value) {
-		// Escape special regex characters
-		return Pattern.quote(value);
+		final StringBuilder escaped = new StringBuilder(value.length());
+		for (final char c : value.toCharArray()) {
+			if ("^$.*+?[]\\".indexOf(c) >= 0) {
+				escaped.append('\\');
+			}
+			escaped.append(c);
+		}
+		return escaped.toString();
 	}
 
 	/**

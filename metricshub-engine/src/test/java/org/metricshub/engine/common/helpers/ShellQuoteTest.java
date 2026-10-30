@@ -1,0 +1,36 @@
+package org.metricshub.engine.common.helpers;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
+
+class ShellQuoteTest {
+
+	private static ShellQuote quoteOfX(final String commandLine) {
+		return ShellQuote.at(commandLine, commandLine.indexOf('X'));
+	}
+
+	@Test
+	void testQuotes() {
+		assertEquals(ShellQuote.NONE, quoteOfX("rm -- X"));
+		assertEquals(ShellQuote.SINGLE, quoteOfX("echo 'a X b'"));
+		assertEquals(ShellQuote.DOUBLE, quoteOfX("echo \"a X b\""));
+		assertEquals(ShellQuote.NONE, quoteOfX("echo 'a' \"b\" X"));
+		// Quotes that do not count: escaped, or inside the other kind
+		assertEquals(ShellQuote.NONE, quoteOfX("echo \\' X"));
+		assertEquals(ShellQuote.DOUBLE, quoteOfX("echo \"it's X\""));
+		assertEquals(ShellQuote.SINGLE, quoteOfX("echo 'say \"X'"));
+		assertEquals(ShellQuote.DOUBLE, quoteOfX("echo \"a \\\" X\""));
+		// A reference without quotes inside double quotes is skipped
+		assertEquals(ShellQuote.DOUBLE, quoteOfX("echo \"${esc(bash)::param::a} X\""));
+		// A comment, a here-document, $'...' or backquotes: cannot tell
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo ok # it's\necho X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("cat <<EOF\nit's\nEOF\necho X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo $'\\'' X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo `echo '` X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo \"$(echo \"'\")\" X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo \"${x:-\"'\"}\" X"));
+		// Not a comment: # inside a word
+		assertEquals(ShellQuote.NONE, quoteOfX("echo a#b ${#x} X"));
+	}
+}

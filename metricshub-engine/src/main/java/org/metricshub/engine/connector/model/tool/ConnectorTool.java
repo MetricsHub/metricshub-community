@@ -40,6 +40,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.metricshub.engine.common.helpers.EscapeType;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
+import org.metricshub.engine.common.helpers.ShellQuote;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
@@ -215,13 +216,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 				checkReferences(name, wbemSource.getQuery(), WQL_QUERY, unescaped);
 				wbemSource.setQuery("");
 			} else if (others instanceof HttpSource httpSource) {
-				for (final String field : Arrays.asList(
-					httpSource.getUrl(),
-					httpSource.getPath(),
-					httpSource.getHeader(),
-					httpSource.getAuthenticationToken()
-				)) {
+				for (final String field : Arrays.asList(httpSource.getUrl(), httpSource.getPath(), httpSource.getHeader())) {
 					checkReferences(name, field, HTTP_URL_OR_HEADER, unescaped);
+				}
+				// The token names the source holding it, looked up before any parameter is replaced
+				final String token = httpSource.getAuthenticationToken();
+				if (token != null && PARAMETER_REFERENCE.matcher(token).find()) {
+					throw new IllegalArgumentException(
+						"Tool %s references a parameter in authenticationToken, which names a source".formatted(name)
+					);
 				}
 				checkReferences(name, httpSource.getBody(), HTTP_BODY, unescaped);
 				httpSource.setUrl(null);
@@ -353,6 +356,14 @@ public class ConnectorTool extends AbstractMonitorTask {
 			} else if (!insideString(field, matcher.start(), escapeType)) {
 				throw new IllegalArgumentException(
 					"Tool %s must write %s inside a string of its language, the only place its escape protects".formatted(
+						toolName,
+						reference
+					)
+				);
+			} else if (rule == POSIX_COMMAND_LINE && ShellQuote.at(field, matcher.start()) == ShellQuote.UNKNOWN) {
+				// The variable replacing the reference is quoted for where it lands, which must be known
+				throw new IllegalArgumentException(
+					"Tool %s writes %s after a comment, a here-document or backquotes, whose quoting cannot be told".formatted(
 						toolName,
 						reference
 					)

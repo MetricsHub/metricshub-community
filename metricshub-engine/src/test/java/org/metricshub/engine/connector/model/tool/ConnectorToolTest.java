@@ -58,9 +58,11 @@ class ConnectorToolTest {
 
 	@Test
 	void testEscapedOrConstrainedParametersAreAccepted() {
-		// esc(bash) is assigned to a variable: quotes and comments around the reference do not matter
+		// esc(bash) is assigned to a variable, expanded as one word in or out of quotes
 		assertAccepted(
-			commandLine("echo ok # it's\njournalctl -n ${param::lines} -u ${esc(bash)::param::service} ${param::unit}"),
+			commandLine(
+				"journalctl -n ${param::lines} -u ${esc(bash)::param::service} ${param::unit} -g \"${esc(bash)::param::service}\""
+			),
 			LINUX
 		);
 		assertAccepted(
@@ -95,6 +97,22 @@ class ConnectorToolTest {
 			WINDOWS
 		);
 		assertRefused(HttpSource.builder().path("/api/${param::unit}").build(), LINUX);
+	}
+
+	@Test
+	void testShellEscapeWhoseQuotingCannotBeToldIsRefused() {
+		final String message = assertRefused(
+			commandLine("echo ok # it's\njournalctl -u ${esc(bash)::param::service}"),
+			LINUX
+		);
+		assertTrue(message.contains("cannot be told"), message);
+		assertRefused(commandLine("cat <<EOF\n${esc(bash)::param::service}\nEOF"), LINUX);
+	}
+
+	@Test
+	void testParameterInAnAuthenticationTokenIsRefused() {
+		// The token names a source, looked up before the parameters are replaced
+		assertRefused(HttpSource.builder().authenticationToken("${source::${param::lines}}").build(), LINUX);
 	}
 
 	@Test

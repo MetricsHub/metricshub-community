@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.EscapeType;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
+import org.metricshub.engine.common.helpers.ShellQuote;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -313,10 +314,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	/**
 	 * Assigns the value of each {@code ${esc(bash)::param::name}}, {@code ${esc(bash)::attribute::name}} or
 	 * {@code ${esc(bash)::resource.attribute::name}} (or {@code linux}) of a command line to a shell variable at
-	 * the start of the command, and replaces the reference with {@code "$variable"}: the shell expands the variable
-	 * without parsing its value, whatever quotes, comments or here-documents surround the reference. The single
-	 * quotes right around a reference, {@code '${esc(bash)::param::name}'}, are replaced with it, or they would
-	 * keep {@code "$variable"} as is.
+	 * the start of the command, and replaces the reference with the variable, quoted for where it lands (see
+	 * {@link #variableIn}): the shell expands the variable without parsing its value, whatever quotes, comments or
+	 * here-documents surround the reference.
 	 *
 	 * @param copy the source, a command line source or left as is
 	 */
@@ -341,24 +341,30 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			count++;
 			// At the start of the command line, outside of any quote: the single-quoted value is a literal
 			assignments.append(SHELL_VARIABLE).append(count).append("='").append(EscapeType.BASH.escape(value)).append("'; ");
-			// The single quotes right around the reference go with it, unless the previous reference took one
-			final boolean quoted = matcher.start() > copied && isQuotedAround(template, matcher.start(), matcher.end());
-			final int start = quoted ? matcher.start() - 1 : matcher.start();
-			commandLine.append(template, copied, start).append("\"$").append(SHELL_VARIABLE).append(count).append('"');
-			copied = quoted ? matcher.end() + 1 : matcher.end();
+			commandLine
+				.append(template, copied, matcher.start())
+				.append(variableIn(ShellQuote.at(template, matcher.start()), SHELL_VARIABLE + count));
+			copied = matcher.end();
 		}
 		commandLine.append(template, copied, template.length());
 		commandLineSource.setCommandLine(assignments.toString() + commandLine);
 	}
 
 	/**
-	 * @param text  a text
-	 * @param start the start of a part of the text
-	 * @param end   the end of the part, excluded
-	 * @return whether the part is right between two single quotes
+	 * Expands a variable as one word, neither split nor globbed, wherever it lands: {@code "${v}"} outside of any
+	 * quote (or where the quoting cannot be told), {@code ${v}} inside double quotes, {@code '"${v}"'} inside single
+	 * quotes, which it closes and reopens.
+	 *
+	 * @param quote    the quoting where the variable lands
+	 * @param variable the variable name
+	 * @return the expansion of the variable
 	 */
-	private static boolean isQuotedAround(final String text, final int start, final int end) {
-		return start > 0 && end < text.length() && text.charAt(start - 1) == '\'' && text.charAt(end) == '\'';
+	private static String variableIn(final ShellQuote quote, final String variable) {
+		final String expansion = "${" + variable + "}";
+		if (quote == ShellQuote.DOUBLE) {
+			return expansion;
+		}
+		return quote == ShellQuote.SINGLE ? "'\"" + expansion + "\"'" : "\"" + expansion + "\"";
 	}
 
 	/**
