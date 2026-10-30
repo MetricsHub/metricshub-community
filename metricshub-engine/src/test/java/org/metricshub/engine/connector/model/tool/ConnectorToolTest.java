@@ -14,8 +14,12 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
+import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -107,8 +111,58 @@ class ConnectorToolTest {
 			commandLine("echo ok # it's\njournalctl -u ${esc(bash)::param::service}"),
 			LINUX
 		);
-		assertTrue(message.contains("cannot be told"), message);
+		assertTrue(message.contains("mere argument"), message);
 		assertRefused(commandLine("cat <<EOF\n${esc(bash)::param::service}\nEOF"), LINUX);
+	}
+
+	@Test
+	void testShellValueThatWouldNotBeAMereArgumentIsRefused() {
+		// Commands that parse their argument again, the name of a command, a redirection
+		for (final String commandLine : List.of(
+			"eval ${esc(bash)::param::service}",
+			"sh -c ${esc(bash)::param::service}",
+			"%{SUDO:/bin/sh}/bin/sh -c \"${esc(bash)::param::service}\"",
+			"sudo bash -c '${esc(bash)::param::service}'",
+			"${esc(bash)::param::service} --version",
+			"ls; ${esc(bash)::param::service}",
+			"cat < ${esc(bash)::param::service}",
+			"$(which ls) ${esc(bash)::param::service}"
+		)) {
+			assertRefused(commandLine(commandLine), LINUX);
+		}
+		// A string constrained by a pattern only is no safer there: reboot needs no metacharacter
+		assertRefused(commandLine("eval ${param::unit}"), LINUX);
+		assertRefused(commandLine("${param::unit} --help"), LINUX);
+		// An argument, even after a substitution evaluating its own
+		assertAccepted(commandLine("echo $(eval date) ${esc(bash)::param::service} | sort"), LINUX);
+		assertAccepted(commandLine("if true; then journalctl -u ${esc(bash)::param::service}; fi"), LINUX);
+	}
+
+	@Test
+	void testAFieldWithoutARuleTakesOnlyEnumsAndNumbers() {
+		// No escape covers the * of a JMX object name pattern
+		assertRefused(
+			JmxSource.builder().objectName("domain:type=${esc(json)::param::service}").attributes(List.of("Name")).build(),
+			LINUX
+		);
+		assertRefused(StaticSource.builder().value("${param::unit}").build(), LINUX);
+		assertAccepted(StaticSource.builder().value("${param::lines}").build(), LINUX);
+	}
+
+	@Test
+	void testAStringInAWindowsCommandLineIsRefused() {
+		// Nothing tells whether a word is a command in cmd.exe: only enums and numbers
+		assertRefused(commandLine("sc query ${param::unit}"), WINDOWS);
+		assertAccepted(commandLine("ping -n ${param::lines} localhost"), WINDOWS);
+	}
+
+	@Test
+	void testParameterInAFieldNeverSubstitutedIsRefused() {
+		assertRefused(
+			InternalDbQuerySource.builder().tables(List.of()).query("SELECT * FROM t WHERE id = ${param::lines}").build(),
+			LINUX
+		);
+		assertRefused(TableUnionSource.builder().tables(List.of("${source::${param::unit}}")).build(), LINUX);
 	}
 
 	@Test

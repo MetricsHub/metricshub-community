@@ -25,10 +25,12 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -50,8 +52,11 @@ import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
@@ -110,14 +115,20 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
-	 * Any other command line, Windows in particular, where no escape is reliable.
+	 * Any other command line, Windows in particular, where no escape is reliable and nothing tells whether a word is
+	 * a command: only an enum or a number.
 	 */
-	private static final FieldRule COMMAND_LINE = new FieldRule(EnumSet.noneOf(EscapeType.class), true);
+	private static final FieldRule COMMAND_LINE = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	/**
 	 * An awk script, where no escape is reliable.
 	 */
-	private static final FieldRule AWK_SCRIPT = COMMAND_LINE;
+	private static final FieldRule AWK_SCRIPT = new FieldRule(EnumSet.noneOf(EscapeType.class), true);
+
+	/**
+	 * The line filters of a command line source ({@code keep}, {@code exclude}...), regular expressions.
+	 */
+	private static final FieldRule LINE_FILTER = new FieldRule(EnumSet.of(EscapeType.REGEX), true);
 
 	/**
 	 * The paths of a file source, where no escape keeps a value from climbing with {@code ../} or starting at
@@ -141,12 +152,10 @@ public class ConnectorTool extends AbstractMonitorTask {
 	);
 
 	/**
-	 * The other source fields: an OID, an object name, a static value, the line filters of a command.
+	 * The fields without a rule of their own (an OID, a JMX object name, a static value...), whose syntax no escape
+	 * covers: only an enum or a number.
 	 */
-	private static final FieldRule OTHER_FIELD = new FieldRule(
-		EnumSet.of(EscapeType.JSON, EscapeType.XML, EscapeType.URL, EscapeType.REGEX),
-		true
-	);
+	private static final FieldRule OTHER_FIELD = new FieldRule(EnumSet.noneOf(EscapeType.class), false);
 
 	/**
 	 * What the tool does, as read by the LLM.
@@ -244,8 +253,20 @@ public class ConnectorTool extends AbstractMonitorTask {
 				httpSource.setAuthenticationToken(null);
 				httpSource.setBody(null);
 			}
+			// The fields no reference is ever replaced in would run with the reference left in
+			for (final String field : unsubstitutedFields(source)) {
+				if (field != null && PARAMETER_REFERENCE.matcher(field).find()) {
+					throw new IllegalArgumentException(
+						"Tool %s references a parameter in a field of a %s source, where it is not replaced".formatted(
+							name,
+							source.getType()
+						)
+					);
+				}
+			}
 			// update() is the visitor of every field a reference is replaced in
-			others.update(field -> checkReferences(name, field, OTHER_FIELD, unescaped));
+			final FieldRule rest = others instanceof CommandLineSource ? LINE_FILTER : OTHER_FIELD;
+			others.update(field -> checkReferences(name, field, rest, unescaped));
 			for (final Compute compute : source.getComputes()) {
 				// An awk script is code; the other computes only transform the table
 				compute
@@ -275,6 +296,24 @@ public class ConnectorTool extends AbstractMonitorTask {
 				.map(Detection::getAppliesTo)
 				.orElse(Set.of())
 		);
+	}
+
+	/**
+	 * @param source a source
+	 * @return the string fields of the source that its {@code update()} leaves out, so that no reference is ever
+	 *         replaced in them
+	 */
+	private static List<String> unsubstitutedFields(final Source source) {
+		if (source instanceof InternalDbQuerySource internalDbQuerySource) {
+			return Collections.singletonList(internalDbQuerySource.getQuery());
+		}
+		if (source instanceof JawkSource jawkSource) {
+			return Collections.singletonList(jawkSource.getScript());
+		}
+		if (source instanceof TableUnionSource tableUnionSource) {
+			return tableUnionSource.getTables();
+		}
+		return List.of();
 	}
 
 	/**
@@ -343,9 +382,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 						)
 					);
 				}
-				if (
-					!rule.patternedStrings() && ToolParameter.STRING.equals(parameter.type()) && parameter.enumValues() == null
-				) {
+				final boolean string = ToolParameter.STRING.equals(parameter.type()) && parameter.enumValues() == null;
+				if (string && !rule.patternedStrings()) {
 					// Refusing the metacharacters does not cover a query, a request or a path: --, ../, a header line
 					throw new IllegalArgumentException(
 						"Tool %s inserts the string %s unescaped in a query, a request or a path: escape it or declare an enum".formatted(
@@ -353,6 +391,10 @@ public class ConnectorTool extends AbstractMonitorTask {
 							reference
 						)
 					);
+				}
+				if (string && rule == POSIX_COMMAND_LINE) {
+					// Without any metacharacter, a word is still a command to eval or in a command's place
+					checkShellArgument(toolName, field, matcher.start(), reference);
 				}
 				unescaped.add(parameterName);
 			} else if (!rule.escapes().contains(escapeType)) {
@@ -371,17 +413,38 @@ public class ConnectorTool extends AbstractMonitorTask {
 						reference
 					)
 				);
-			} else if (rule == POSIX_COMMAND_LINE && ShellQuote.at(field, matcher.start()) == ShellQuote.UNKNOWN) {
+			} else if (rule == POSIX_COMMAND_LINE) {
 				// The variable replacing the reference is quoted for where it lands, which must be known
-				throw new IllegalArgumentException(
-					"Tool %s writes %s after a comment, a here-document or backquotes, whose quoting cannot be told".formatted(
-						toolName,
-						reference
-					)
-				);
+				checkShellArgument(toolName, field, matcher.start(), reference);
 			}
 		}
 		return field;
+	}
+
+	/**
+	 * Checks a value lands as a mere argument of a POSIX command line (see {@link ShellQuote}).
+	 *
+	 * @param toolName    the tool name, for the error message
+	 * @param commandLine the command line
+	 * @param position    the position of the reference
+	 * @param reference   the reference, for the error message
+	 * @throws IllegalArgumentException if the value would be a command name, a redirection target, an argument
+	 *                                  evaluated again, or follows a construct whose quoting cannot be told
+	 */
+	private static void checkShellArgument(
+		final String toolName,
+		final String commandLine,
+		final int position,
+		final String reference
+	) {
+		if (ShellQuote.at(commandLine, position) == ShellQuote.UNKNOWN) {
+			throw new IllegalArgumentException(
+				(
+					"Tool %s writes %s where it would not be a mere argument (a command name, a redirection, an argument of " +
+					"eval, a shell, an interpreter or arithmetic), or after a comment, a here-document or backquotes"
+				).formatted(toolName, reference)
+			);
+		}
 	}
 
 	/**

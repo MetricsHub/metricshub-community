@@ -41,4 +41,23 @@ class ShellQuoteTest {
 		// Not arithmetic: a command substitution, a word starting like a command
 		assertEquals(ShellQuote.NONE, quoteOfX("echo $(ls) letter localhost X"));
 	}
+
+	@Test
+	void testNotAMereArgument() {
+		// A command name, after a keyword or an operator too
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("X --version"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("ls | X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("if X; then echo; fi"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("$(which ls) X"));
+		// A redirection target
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("echo ok >X"));
+		// An argument of a command evaluating it again, wherever that command comes in the command
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("eval X"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("/usr/bin/sudo /bin/sh -c 'X'"));
+		assertEquals(ShellQuote.UNKNOWN, quoteOfX("eval $(date) X"));
+		// Arguments again after the command ends
+		assertEquals(ShellQuote.NONE, quoteOfX("eval date; echo X"));
+		assertEquals(ShellQuote.NONE, quoteOfX("echo $(eval date) X"));
+		assertEquals(ShellQuote.DOUBLE, quoteOfX("if true; then grep \"X\" f; fi"));
+	}
 }
