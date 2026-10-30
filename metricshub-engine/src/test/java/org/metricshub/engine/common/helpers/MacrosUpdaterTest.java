@@ -153,41 +153,22 @@ class MacrosUpdaterTest {
 			"mytool -p 'a'\\''b\"c$(id)`d`\\'",
 			MacrosUpdater.update("mytool -p %{esc(bash)::PASSWORD}", "u", password, null, "h", false)
 		);
+		// In arithmetic, x[$(id)] would run whatever its quotes: nothing
+		assertEquals(
+			"echo $((  ))",
+			MacrosUpdater.update("echo $(( %{esc(bash)::PASSWORD} ))", "u", "x[$(id)]".toCharArray(), null, "h", false)
+		);
 	}
 
 	@Test
-	void testPowershellMacroOnlyInsideSingleQuotes() {
-		final char[] password = "a'b$(calc)".toCharArray();
-		assertEquals(
-			"powershell -Command \"Connect -P 'a''b$(calc)'\"",
-			MacrosUpdater.update(
-				"powershell -Command \"Connect -P '%{esc(powershell)::PASSWORD}'\"",
-				"u",
-				password,
-				null,
-				"h",
-				false
-			)
-		);
-		// Unquoted, $(calc) would run: nothing
-		assertEquals(
-			"powershell -Command Write-Host ",
-			MacrosUpdater.update(
-				"powershell -Command Write-Host %{esc(powershell)::PASSWORD}",
-				"u",
-				password,
-				null,
-				"h",
-				false
-			)
-		);
-		// A " would end the cmd.exe string around: nothing
+	void testPowershellMacroIsNeverReplaced() {
+		// Through cmd.exe, with comments and double-quoted strings, no single quote can be trusted
 		assertEquals(
 			"powershell -Command \"Connect -P ''\"",
 			MacrosUpdater.update(
 				"powershell -Command \"Connect -P '%{esc(powershell)::PASSWORD}'\"",
 				"u",
-				"a\" & calc & \"".toCharArray(),
+				"a'b$(calc)".toCharArray(),
 				null,
 				"h",
 				false
@@ -338,8 +319,8 @@ class MacrosUpdaterTest {
 		final String expectedUrl = "auth%40token%23123%24%25%5E%26*%28%29_%2B%7C%7E%60"; // URL-encoded
 		final String expectedRegex = "auth@token#123\\$%\\^&\\*()_\\+|~`"; // PSL regex escape
 		final String expectedWindowsCmd = "auth@token#123$^%^^^&*^(^)_+^|~`"; // Windows CMD escape
-		final String expectedPowershell = ""; // PowerShell escape: outside of single quotes, nothing
-		final String expectedBash = "'" + authToken + "'"; // Bash escape: a whole single-quoted word on its own
+		final String expectedPowershell = ""; // PowerShell escape: never replaced
+		final String expectedBash = "echo '" + authToken + "'"; // Bash escape: a whole single-quoted argument
 
 		// Test JSON escape
 		{
@@ -394,7 +375,7 @@ class MacrosUpdaterTest {
 
 		// Test Bash escape
 		{
-			final String text = AUTHENTICATION_TOKEN_BASH;
+			final String text = "echo " + AUTHENTICATION_TOKEN_BASH;
 			assertEquals(expectedBash, MacrosUpdater.update(text, "user", "pwd".toCharArray(), authToken, "hostname", false));
 		}
 	}
@@ -453,16 +434,16 @@ class MacrosUpdaterTest {
 		{
 			final String text = "'" + USERNAME_ESC_POWERSHELL + "'";
 			final String username = "user'name$var";
-			final String expected = "'user''name$var'";
+			final String expected = "''";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
 
 		// Test Bash escape
 		{
-			final String text = USERNAME_ESC_BASH;
+			final String text = "echo " + USERNAME_ESC_BASH;
 			final String username = "user'name$var";
-			final String expected = "'user'\\''name$var'";
+			final String expected = "echo 'user'\\''name$var'";
 			final String result = MacrosUpdater.update(text, username, "pwd".toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
@@ -513,16 +494,16 @@ class MacrosUpdaterTest {
 		{
 			final String text = "'" + PASSWORD_ESC_POWERSHELL + "'";
 			final String password = "p@ss'word$";
-			final String expected = "'p@ss''word$'";
+			final String expected = "''";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}
 
 		// Test Bash escape
 		{
-			final String text = PASSWORD_ESC_BASH;
+			final String text = "echo " + PASSWORD_ESC_BASH;
 			final String password = "p$ss'word&";
-			final String expected = "'p$ss'\\''word&'";
+			final String expected = "echo 'p$ss'\\''word&'";
 			final String result = MacrosUpdater.update(text, "user", password.toCharArray(), "token", "hostname", false);
 			assertEquals(expected, result);
 		}

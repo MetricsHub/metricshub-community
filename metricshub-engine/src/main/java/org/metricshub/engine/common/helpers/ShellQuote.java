@@ -99,6 +99,9 @@ public enum ShellQuote {
 		"nsenter",
 		"unshare",
 		"systemd-run",
+		// Their operands are programs or assignments: of=/dev/sda, a sed script running e or writing w
+		"dd",
+		"sed",
 		"awk",
 		"gawk",
 		"nawk",

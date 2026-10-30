@@ -118,7 +118,7 @@ public class MacrosUpdater {
 			);
 
 			updatedContent = replaceShellMacros(updatedContent, simpleMacroNameToField);
-			updatedContent = replacePowershellMacros(updatedContent, simpleMacroNameToField);
+			updatedContent = replacePowershellMacros(updatedContent);
 
 			final Matcher matcher = MACRO_PATTERN.matcher(updatedContent);
 
@@ -157,10 +157,16 @@ public class MacrosUpdater {
 		final StringBuilder replaced = new StringBuilder();
 		while (matcher.find()) {
 			final String value = values.getOrDefault(matcher.group("name"), EMPTY);
-			final String quoted = switch (ShellQuote.at(text, matcher.start())) {
+			final ShellQuote quote = ShellQuote.at(text, matcher.start());
+			if (quote == ShellQuote.UNKNOWN) {
+				// In arithmetic, after eval or sh -c, as a command name...: no quoting would protect it
+				log.error("{} is not a mere argument of its command: replaced with nothing.", matcher.group());
+			}
+			final String quoted = switch (quote) {
 				case SINGLE -> escapeBashSpecialCharacters(value);
 				case DOUBLE -> value.replaceAll("([\\\\\"$`])", "\\\\$1");
-				default -> "'" + escapeBashSpecialCharacters(value) + "'";
+				case NONE -> "'" + escapeBashSpecialCharacters(value) + "'";
+				default -> EMPTY;
 			};
 			matcher.appendReplacement(replaced, Matcher.quoteReplacement(quoted));
 		}
@@ -169,51 +175,23 @@ public class MacrosUpdater {
 	}
 
 	/**
-	 * Replaces the {@code %{esc(powershell)::MACRO}} of the simple macros only where the escape protects them: inside
-	 * a PowerShell single-quoted string, for a value without {@code "} or {@code %}, which {@code cmd.exe} would act
-	 * on before PowerShell reads the command. Anywhere else, a credential such as {@code $(Start-Process calc)}
-	 * could run, so the macro is replaced with nothing and the error logged.
+	 * Replaces the {@code %{esc(powershell)::MACRO}} of the simple macros with nothing, the error logged. A
+	 * PowerShell command reaches PowerShell through {@code cmd.exe}, which reads its quotes first, and its comments,
+	 * double-quoted strings and here-strings make the single quotes the escape relies on uncertain: nothing tells
+	 * that a credential such as {@code $(Start-Process calc)} would not run.
 	 *
-	 * @param text   the text with macros
-	 * @param values the values of the simple macros, by name
-	 * @return the text, its PowerShell-escaped simple macros replaced
+	 * @param text the text with macros
+	 * @return the text, its PowerShell-escaped simple macros removed
 	 */
-	private static String replacePowershellMacros(final String text, final Map<String, String> values) {
+	private static String replacePowershellMacros(final String text) {
 		final Matcher matcher = POWERSHELL_MACRO_PATTERN.matcher(text);
 		final StringBuilder replaced = new StringBuilder();
 		while (matcher.find()) {
-			final String value = values.getOrDefault(matcher.group("name"), EMPTY);
-			String escaped = EMPTY;
-			if (!insidePowershellSingleQuotes(text, matcher.start())) {
-				log.error(
-					"{} is only replaced inside a PowerShell single-quoted string: replaced with nothing.",
-					matcher.group()
-				);
-			} else if (value.indexOf('"') >= 0 || value.indexOf('%') >= 0) {
-				log.error("The value of {} holds \" or %, which cmd.exe would act on: replaced with nothing.", matcher.group());
-			} else {
-				escaped = escapePowershellSpecialCharacters(value);
-			}
-			matcher.appendReplacement(replaced, Matcher.quoteReplacement(escaped));
+			log.error("{}: no escape protects a credential in a PowerShell command, replaced with nothing.", matcher.group());
+			matcher.appendReplacement(replaced, EMPTY);
 		}
 		matcher.appendTail(replaced);
 		return replaced.toString();
-	}
-
-	/**
-	 * @param text     a PowerShell command
-	 * @param position a position in it
-	 * @return whether the position is inside a single-quoted string, the typographic single quotes counting as
-	 *         quotes and a doubled quote toggling twice
-	 */
-	static boolean insidePowershellSingleQuotes(final String text, final int position) {
-		boolean inside = false;
-		for (int i = 0; i < position; i++) {
-			if ("'‘’‚‛".indexOf(text.charAt(i)) >= 0) {
-				inside = !inside;
-			}
-		}
-		return inside;
 	}
 
 	private static String processMacro(

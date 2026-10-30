@@ -24,7 +24,7 @@ package org.metricshub.engine.connector.model.tool;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -471,16 +471,17 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 *         replaced in them
 	 */
 	private static List<String> unsubstitutedFields(final Source source) {
+		final List<String> fields = new ArrayList<>();
 		if (source instanceof InternalDbQuerySource internalDbQuerySource) {
-			return Collections.singletonList(internalDbQuerySource.getQuery());
+			fields.add(internalDbQuerySource.getQuery());
+		} else if (source instanceof JawkSource jawkSource) {
+			fields.add(jawkSource.getScript());
+		} else if (source instanceof TableUnionSource tableUnionSource) {
+			fields.addAll(tableUnionSource.getTables());
 		}
-		if (source instanceof JawkSource jawkSource) {
-			return Collections.singletonList(jawkSource.getScript());
-		}
-		if (source instanceof TableUnionSource tableUnionSource) {
-			return tableUnionSource.getTables();
-		}
-		return List.of();
+		// The source to run for each entry of is looked up before any parameter is replaced
+		fields.add(source.getExecuteForEachEntryOf());
+		return fields;
 	}
 
 	/**

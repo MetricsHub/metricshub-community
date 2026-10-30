@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
@@ -355,6 +356,23 @@ class ConnectorToolTest {
 		// The assistant would choose where the request, credentials included, goes
 		assertRefused(HttpSource.builder().url("http://${esc(url)::param::service}/status").build(), LINUX);
 		assertRefused(HttpSource.builder().url("http://host:${param::lines}/status").build(), LINUX);
+	}
+
+	@Test
+	void testParameterInTheSourceToRunForEachEntryOfIsRefused() {
+		// Looked up before the parameters are replaced
+		final CommandLineSource source = CommandLineSource.builder()
+			.commandLine("ls")
+			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source("${source::${param::unit}}").build())
+			.build();
+		assertRefused(source, LINUX);
+	}
+
+	@Test
+	void testDdAndSedOperandsAreRefused() {
+		// of=/dev/sda needs no -, a sed script runs e or writes w
+		assertRefused(commandLine("dd if=/dev/zero ${esc(bash)::param::service}"), LINUX);
+		assertRefused(commandLine("sed ${esc(bash)::param::service} file"), LINUX);
 	}
 
 	@Test
