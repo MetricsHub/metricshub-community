@@ -103,29 +103,6 @@ class ToolParameterTest {
 	}
 
 	@Test
-	void testValidateBoundsThePatternMatchingTime() {
-		// Catastrophic backtracking: fails after the timeout instead of holding the request
-		// (about 20 s for this value without the timeout)
-		final ToolParameter nested = new ToolParameter(null, null, false, null, "(.*a){16}", null);
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			nested.validate("x", "a".repeat(30) + "!")
-		);
-		assertEquals("The argument x takes too long to match its pattern", exception.getMessage());
-		assertDoesNotThrow(() -> nested.validate("x", "a".repeat(16)));
-	}
-
-	@Test
-	void testValidateBoundsThePatternRecursion() {
-		// Each repetition of the group is a recursion: a long value overflows the stack before the timeout
-		final ToolParameter recursive = new ToolParameter(null, null, false, null, "(x|y)*", null);
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			recursive.validate("x", "x".repeat(1_000_000))
-		);
-		assertEquals("The argument x is too long to match its pattern", exception.getMessage());
-		assertDoesNotThrow(() -> recursive.validate("x", "xyxy"));
-	}
-
-	@Test
 	void testNumericEnumComparesValues() {
 		final ToolParameter level = new ToolParameter("integer", null, false, null, null, List.of("01", "2"));
 		assertDoesNotThrow(() -> level.validate("level", "1"));

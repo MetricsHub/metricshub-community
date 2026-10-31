@@ -26,7 +26,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -69,11 +68,6 @@ public record ToolParameter(
 
 	private static final Pattern INTEGER = Pattern.compile("-?\\d+");
 	private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?");
-
-	/**
-	 * How long a value may take to match its pattern.
-	 */
-	private static final long MATCH_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(200);
 
 	/**
 	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
@@ -177,24 +171,8 @@ public record ToolParameter(
 		if (enumValues != null && enumValues.stream().noneMatch(entry -> sameValue(type, entry, value))) {
 			throw new IllegalArgumentException("The argument %s must be one of %s".formatted(name, enumValues));
 		}
-		if (pattern != null && !matches(pattern, value, name)) {
+		if (pattern != null && !Pattern.matches(pattern, value)) {
 			throw new IllegalArgumentException("The argument %s must match the pattern %s".formatted(name, pattern));
-		}
-	}
-
-	/**
-	 * @param pattern a regular expression
-	 * @param value   the argument
-	 * @param name    the parameter name
-	 * @return whether the argument matches the whole pattern
-	 * @throws IllegalArgumentException if the match takes too long or too deep a recursion
-	 */
-	private static boolean matches(final String pattern, final String value, final String name) {
-		try {
-			return Pattern.compile(pattern).matcher(TimedValue.of(value, name)).matches();
-		} catch (StackOverflowError e) {
-			// A repeated group, (x|y)*, recurses once per repetition: a long value exhausts the stack
-			throw new IllegalArgumentException("The argument %s is too long to match its pattern".formatted(name));
 		}
 	}
 
@@ -206,48 +184,6 @@ public record ToolParameter(
 	private static boolean isForbiddenCharacter(final int c) {
 		final boolean surrogate = c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE;
 		return (c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == 0xFFFE || c == 0xFFFF || surrogate;
-	}
-
-	/**
-	 * A value a regular expression may only read until a deadline: a pattern backtracking without end on a crafted
-	 * value fails instead of holding the request.
-	 *
-	 * @param value    the value
-	 * @param deadline the {@link System#nanoTime()} past which reading fails
-	 * @param name     the parameter name, for the error message
-	 */
-	private record TimedValue(String value, long deadline, String name) implements CharSequence {
-		/**
-		 * @param value the value
-		 * @param name  the parameter name
-		 * @return the value, readable for {@link #MATCH_TIMEOUT_NANOS} from now
-		 */
-		static TimedValue of(final String value, final String name) {
-			return new TimedValue(value, System.nanoTime() + MATCH_TIMEOUT_NANOS, name);
-		}
-
-		@Override
-		public char charAt(final int index) {
-			if (System.nanoTime() > deadline) {
-				throw new IllegalArgumentException("The argument %s takes too long to match its pattern".formatted(name));
-			}
-			return value.charAt(index);
-		}
-
-		@Override
-		public int length() {
-			return value.length();
-		}
-
-		@Override
-		public CharSequence subSequence(final int start, final int end) {
-			return new TimedValue(value.substring(start, end), deadline, name);
-		}
-
-		@Override
-		public String toString() {
-			return value;
-		}
 	}
 
 	/**
