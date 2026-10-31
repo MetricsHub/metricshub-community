@@ -41,7 +41,8 @@ public enum EscapeType {
 	POWERSHELL(MacrosUpdater::escapePowershellSpecialCharacters),
 	LINUX(MacrosUpdater::escapeBashSpecialCharacters),
 	BASH(MacrosUpdater::escapeBashSpecialCharacters),
-	SQL(MacrosUpdater::escapeSqlSpecialCharacters);
+	SQL(MacrosUpdater::escapeSqlSpecialCharacters),
+	WQL(MacrosUpdater::escapeWqlSpecialCharacters);
 
 	private final UnaryOperator<String> escapeFunction;
 
@@ -59,8 +60,7 @@ public enum EscapeType {
 	 * Retrieves the corresponding EscapeType from a string representation.
 	 *
 	 * @param escapeType the string representation of the escape type
-	 * @return the corresponding EscapeType
-	 * @throws IllegalStateException if the provided string does not match any escape type
+	 * @return the corresponding EscapeType, {@code null} if the provided string does not match any escape type
 	 */
 	public static EscapeType fromString(String escapeType) {
 		for (EscapeType type : values()) {

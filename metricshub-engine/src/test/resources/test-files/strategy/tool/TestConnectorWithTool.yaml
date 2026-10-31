@@ -17,6 +17,8 @@ tools:
       pattern:
         description: Regular expression on the thing name
         default: .*
+        # A regular expression inserted as is: the connector's own choices only
+        enum: [ '.*', '^b' ]
       owner:
         description: Who the things belong to
         required: true

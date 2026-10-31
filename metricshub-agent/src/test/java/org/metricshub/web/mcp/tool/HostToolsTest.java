@@ -1,6 +1,7 @@
 package org.metricshub.web.mcp.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -76,6 +77,89 @@ class HostToolsTest {
 		final List<String> required = new ArrayList<>();
 		schema.get("required").forEach(node -> required.add(node.asText()));
 		assertEquals(List.of(HostTools.HOSTNAME, "owner"), required);
+	}
+
+	@Test
+	void testInputSchemaAdvertisesPatternAndEnum() {
+		final ToolDefinition definition = new ToolDefinition(
+			"kill",
+			"Kills a process.",
+			Map.of(
+				"pid",
+				new ToolParameter("string", "The process", true, null, "(?i)\\d+", null),
+				"signal",
+				new ToolParameter("string", "The signal", false, "TERM", null, List.of("TERM", "KILL")),
+				"level",
+				new ToolParameter("integer", "The level", false, null, null, List.of("1", "2")),
+				"force",
+				new ToolParameter("boolean", "Whether to force", false, null, null, List.of("true"))
+			),
+			true
+		);
+
+		final JsonNode properties = HostTools.inputSchema(definition).get("properties");
+
+		// A Java regular expression is described, not handed to the schema's ECMA-262 pattern
+		assertEquals(
+			"The process Must match the regular expression: (?i)\\d+",
+			properties.get("pid").get("description").asText()
+		);
+		assertNull(properties.get("pid").get("pattern"));
+		// Enum entries of the parameter's type
+		assertEquals("[\"TERM\",\"KILL\"]", properties.get("signal").get("enum").toString());
+		assertEquals("[1,2]", properties.get("level").get("enum").toString());
+		assertEquals("[true]", properties.get("force").get("enum").toString());
+	}
+
+	@Test
+	void testPerHostAcceptsEveryJsonIntegerRepresentation() throws Exception {
+		final ToolDefinition definition = new ToolDefinition(
+			"tail",
+			"Tails a log.",
+			Map.of("lines", new ToolParameter("integer", "How many lines", true, null)),
+			false
+		);
+		final ToolCallback callback = HostTools.perHost("Test_tail", definition, (hostname, arguments) ->
+			Map.of("value", arguments.get("lines"))
+		);
+
+		for (final String lines : List.of("1000", "1000.0", "1e3")) {
+			final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":%s}".formatted(lines)));
+			assertEquals("1000", result.get("hosts").get(0).get("response").get("value").asText(), lines);
+		}
+		// Beyond a long too, as long as it is bounded
+		final JsonNode big = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1e19}"));
+		assertEquals("10000000000000000000", big.get("hosts").get(0).get("response").get("value").asText());
+		// Beyond the integers a double holds exactly, read as written
+		final JsonNode exact = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":9007199254740993.0}"));
+		assertEquals("9007199254740993", exact.get("hosts").get(0).get("response").get("value").asText());
+		final JsonNode fraction = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1.5}"));
+		assertEquals("The argument lines must be of type integer", fraction.get("errorMessage").asText());
+		// Refused without materializing a hundred million digits
+		final JsonNode huge = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1e100000000}"));
+		assertEquals("The argument lines must be of type integer", huge.get("errorMessage").asText());
+		final JsonNode overflow = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":1e2147483647}"));
+		assertEquals("The argument lines must be of type integer", overflow.get("errorMessage").asText());
+		// The JSON kind of the argument must be the advertised one
+		final JsonNode text = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"lines\":\"1000\"}"));
+		assertEquals("The argument lines must be of type integer", text.get("errorMessage").asText());
+	}
+
+	@Test
+	void testPerHostRejectsAnInvalidArgumentBeforeRunning() throws Exception {
+		final ToolDefinition definition = new ToolDefinition(
+			"ping",
+			"Pings a target.",
+			Map.of("count", new ToolParameter("integer", "How many pings", true, null)),
+			false
+		);
+		final ToolCallback callback = HostTools.perHost("Test_ping", definition, (hostname, arguments) -> {
+			throw new IllegalStateException("Must not run");
+		});
+
+		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"count\":\"4; reboot\"}"));
+
+		assertEquals("The argument count must be of type integer", result.get("errorMessage").asText());
 	}
 
 	@Test

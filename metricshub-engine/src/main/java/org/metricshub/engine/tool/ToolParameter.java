@@ -23,8 +23,10 @@ package org.metricshub.engine.tool;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * One argument of a {@link ToolDefinition}, as declared by a connector or a protocol extension.
@@ -34,12 +36,16 @@ import java.util.Locale;
  * @param description  what the value is for, as read by the LLM
  * @param required     whether an invocation must supply the value
  * @param defaultValue the value used when an invocation does not supply one
+ * @param pattern      a regular expression the whole value must match, {@code null} for any value
+ * @param enumValues   the only values accepted, {@code null} or empty for any value
  */
 public record ToolParameter(
 	String type,
 	String description,
 	boolean required,
-	@JsonProperty("default") String defaultValue
+	@JsonProperty("default") String defaultValue,
+	String pattern,
+	@JsonProperty("enum") List<String> enumValues
 ) implements Serializable {
 	/**
 	 * The type used when a parameter declares none.
@@ -52,12 +58,27 @@ public record ToolParameter(
 	public static final List<String> TYPES = List.of(STRING, "integer", "number", "boolean");
 
 	/**
-	 * Normalizes the type: a missing or blank type is {@value #STRING}.
+	 * The pattern of a connector tool's string parameter that declares neither an enum nor a pattern: letters, digits
+	 * and {@code _ . @ : -}, starting with a letter, a digit or {@code _} ({@code sshd.service},
+	 * {@code getty@tty1.service}, {@code db-01.example.com}, {@code 10.0.0.1}), or nothing. Such a value cannot leave
+	 * a string or a word, in a shell, a query or a URL, be read as an option, or climb a path. Where the connector
+	 * inserts it, and what the command does with it, is for the review of the connector.
+	 */
+	public static final String DEFAULT_PATTERN = "(?:[A-Za-z0-9_][A-Za-z0-9_.@:-]*)?";
+
+	private static final Pattern INTEGER = Pattern.compile("-?\\d+");
+	private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?");
+
+	/**
+	 * Normalizes the type, a missing or blank type being {@value #STRING}, and checks the pattern compiles and the
+	 * default value is valid.
 	 *
 	 * @param type         the JSON schema type of the value
 	 * @param description  what the value is for
 	 * @param required     whether an invocation must supply the value
 	 * @param defaultValue the value used when an invocation does not supply one
+	 * @param pattern      a regular expression the whole value must match
+	 * @param enumValues   the only values accepted
 	 */
 	public ToolParameter {
 		if (type == null || type.isBlank()) {
@@ -68,5 +89,114 @@ public record ToolParameter(
 			// Copied verbatim into the advertised JSON schema, where an unknown type would fail the whole tool list
 			throw new IllegalArgumentException("Unknown tool parameter type '%s': expected one of %s".formatted(type, TYPES));
 		}
+		if (pattern != null) {
+			// A PatternSyntaxException is an IllegalArgumentException
+			Pattern.compile(pattern);
+		}
+		enumValues = enumValues == null || enumValues.isEmpty() ? null : List.copyOf(enumValues);
+		if (enumValues != null) {
+			// Advertised as values of the type, each valid for the pattern too, or the assistant could pick one refused
+			for (final String value : enumValues) {
+				check("enum", value, type, pattern, null);
+			}
+		}
+		if (defaultValue != null) {
+			check("default", defaultValue, type, pattern, enumValues);
+		}
+	}
+
+	/**
+	 * A parameter of the given type taking any value.
+	 *
+	 * @param type         the JSON schema type of the value
+	 * @param description  what the value is for
+	 * @param required     whether an invocation must supply the value
+	 * @param defaultValue the value used when an invocation does not supply one
+	 */
+	public ToolParameter(final String type, final String description, final boolean required, final String defaultValue) {
+		this(type, description, required, defaultValue, null, null);
+	}
+
+	/**
+	 * @return this parameter, or a string declaring neither an enum nor a pattern constrained by the
+	 *         {@link #DEFAULT_PATTERN}
+	 */
+	public ToolParameter withDefaultPattern() {
+		if (!STRING.equals(type) || enumValues != null || pattern != null) {
+			return this;
+		}
+		return new ToolParameter(type, description, required, defaultValue, DEFAULT_PATTERN, null);
+	}
+
+	/**
+	 * Checks an argument against the type, the enum and the pattern of the parameter. Whatever the parameter, the
+	 * value may not contain <code>%{</code> or <code>${</code>: the macros (credentials, sources, files) are expanded after
+	 * the arguments are inserted, and would be expanded inside them.
+	 *
+	 * @param name  the parameter name, for the error message
+	 * @param value the argument
+	 * @throws IllegalArgumentException if the argument is not valid, the value itself not being repeated
+	 */
+	public void validate(final String name, final String value) {
+		check(name, value, type, pattern, enumValues);
+	}
+
+	private static void check(
+		final String name,
+		final String value,
+		final String type,
+		final String pattern,
+		final List<String> enumValues
+	) {
+		if (value.contains("%{") || value.contains("${")) {
+			throw new IllegalArgumentException(
+				"The argument %s may not contain %%{ or ${ (write $VAR rather than ${VAR})".formatted(name)
+			);
+		}
+		// No source takes them, and XML 1.0 forbids them even escaped. An unpaired surrogate reads as one code point
+		if (value.codePoints().anyMatch(ToolParameter::isForbiddenCharacter)) {
+			throw new IllegalArgumentException(
+				"The argument %s may not contain control characters or unpaired surrogates".formatted(name)
+			);
+		}
+		final boolean typed = switch (type) {
+			case "integer" -> INTEGER.matcher(value).matches();
+			case "number" -> NUMBER.matcher(value).matches();
+			case "boolean" -> "true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value);
+			default -> true;
+		};
+		if (!typed) {
+			throw new IllegalArgumentException("The argument %s must be of type %s".formatted(name, type));
+		}
+		if (enumValues != null && enumValues.stream().noneMatch(entry -> sameValue(type, entry, value))) {
+			throw new IllegalArgumentException("The argument %s must be one of %s".formatted(name, enumValues));
+		}
+		if (pattern != null && !Pattern.matches(pattern, value)) {
+			throw new IllegalArgumentException("The argument %s must match the pattern %s".formatted(name, pattern));
+		}
+	}
+
+	/**
+	 * @param c a code point
+	 * @return whether it is a control character other than a tab or a line break, a noncharacter, or a surrogate,
+	 *         which a code point is only when unpaired
+	 */
+	private static boolean isForbiddenCharacter(final int c) {
+		final boolean surrogate = c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE;
+		return (c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == 0xFFFE || c == 0xFFFF || surrogate;
+	}
+
+	/**
+	 * @param type  the parameter type
+	 * @param entry an enum entry
+	 * @param value a value already valid for the type
+	 * @return whether they are the same value: numbers by value ({@code 01} is {@code 1}), booleans ignoring case
+	 */
+	private static boolean sameValue(final String type, final String entry, final String value) {
+		return switch (type) {
+			case "integer", "number" -> new BigDecimal(entry).compareTo(new BigDecimal(value)) == 0;
+			case "boolean" -> entry.equalsIgnoreCase(value);
+			default -> entry.equals(value);
+		};
 	}
 }

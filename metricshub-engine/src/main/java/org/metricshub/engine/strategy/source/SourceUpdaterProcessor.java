@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +42,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.EscapeType;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
@@ -82,16 +84,22 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	/**
+	 * The optional {@code esc(TYPE)::} prefix of a reference, as on the credential macros: the value is escaped
+	 * with the {@link EscapeType} of that name before it is inserted.
+	 */
+	private static final String ESCAPE_PREFIX = "(?:esc\\((?<esc>[a-z0-9]+)\\)::)?";
+
+	/**
 	 * {@code ${attribute::name}}: a monitor attribute on a mono-instance collect. {@code ${param::name}}: an
 	 * argument of a tool invocation. Both are served by the attribute map the strategy passes down.
 	 */
 	private static final Pattern MONO_INSTANCE_REPLACEMENT_PATTERN = Pattern.compile(
-		"\\$\\{(?:attribute|param)::([^}]+)\\}",
+		"\\$\\{" + ESCAPE_PREFIX + "(?:attribute|param)::(?<key>[^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 
 	private static final Pattern RESOURCE_ATTRIBUTE_REFERENCE_PATTERN = Pattern.compile(
-		"\\$\\{resource\\.attribute::([^}]+)\\}",
+		"\\$\\{" + ESCAPE_PREFIX + "resource\\.attribute::(?<key>[^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -344,7 +352,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 *
 	 * @param key        the input string where replacements occur
 	 * @param attributes attribute map
-	 * @param pattern    regex with group 1 capturing the key
+	 * @param pattern    regex with the groups {@code key} and {@code esc}, the escape type
 	 * @return String value
 	 */
 	private static String replaceReferencesWithPattern(
@@ -360,14 +368,57 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		final StringBuffer sb = new StringBuffer();
 		while (matcher.find()) {
-			final String attrKey = matcher.group(1).trim();
-			final String attributesValue = attributes.get(attrKey);
-			if (attributesValue != null) {
-				matcher.appendReplacement(sb, Matcher.quoteReplacement(attributesValue));
+			final String attrKey = matcher.group("key").trim();
+			String attributesValue = attributes.get(attrKey);
+			final String escapeName = matcher.group("esc");
+			if (attributesValue != null && escapeName != null) {
+				final EscapeType escapeType = EscapeType.fromString(escapeName);
+				if (escapeType == null) {
+					// Left as is rather than inserted unescaped
+					log.warn(
+						"Unknown escape type in {}: expected one of {}.",
+						matcher.group(),
+						Arrays.toString(EscapeType.values())
+					);
+					attributesValue = null;
+				} else {
+					attributesValue = escapeType.escape(attributesValue);
+				}
 			}
+			// The text before the reference, so that the inserted value can be checked against its neighbors
+			matcher.appendReplacement(sb, "");
+			if (attributesValue != null && formsMacro(sb, attributesValue, key, matcher.end())) {
+				// The macros are expanded after the references: a value must not reveal a credential or a source
+				log.warn("The value of {} would form a macro (%{...} or ${...}): not inserted.", matcher.group());
+				attributesValue = null;
+			}
+			sb.append(attributesValue != null ? attributesValue : matcher.group());
 		}
 		matcher.appendTail(sb);
 		return sb.toString();
+	}
+
+	/**
+	 * Whether a value inserted between the text already built and the rest of the template forms a <code>%{</code> or
+	 * <code>${</code>, by itself or with a neighbor: {@code %} then {@code {PASSWORD}} is {@code %{PASSWORD}}.
+	 *
+	 * @param before   the text built so far
+	 * @param value    the value to insert
+	 * @param template the template
+	 * @param end      the position in the template right after the reference
+	 * @return {@code true} if the value must not be inserted
+	 */
+	private static boolean formsMacro(
+		final StringBuffer before,
+		final String value,
+		final String template,
+		final int end
+	) {
+		final String joined =
+			(before.isEmpty() ? "" : before.substring(before.length() - 1)) +
+			value +
+			(end < template.length() ? template.substring(end, end + 1) : "");
+		return joined.contains("%{") || joined.contains("${");
 	}
 
 	/**

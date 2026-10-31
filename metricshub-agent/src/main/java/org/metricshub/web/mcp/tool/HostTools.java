@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,6 +80,13 @@ public final class HostTools {
 	static final List<String> RESERVED_PARAMETERS = List.of(HOSTNAME, POOL_SIZE);
 
 	private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
+
+	private static final String INTEGER = "integer";
+
+	/**
+	 * The most digits of an integer argument written with an exponent.
+	 */
+	private static final int MAX_INTEGER_DIGITS = 1000;
 
 	/**
 	 * @return whether destructive tools may be advertised, i.e. {@value #DESTRUCTIVE_TOOLS_FLAG} is set
@@ -172,8 +181,20 @@ public final class HostTools {
 				if (parameter.defaultValue() != null) {
 					description.append(description.isEmpty() ? "" : " ").append("Default: ").append(parameter.defaultValue());
 				}
+				if (parameter.pattern() != null) {
+					// In the description rather than the schema's pattern: a Java regular expression is not always a
+					// valid ECMA-262 one, and a client could then refuse the whole tool list
+					description
+						.append(description.isEmpty() ? "" : " ")
+						.append("Must match the regular expression: ")
+						.append(parameter.pattern());
+				}
 				if (!description.isEmpty()) {
 					property.put("description", description.toString());
+				}
+				if (parameter.enumValues() != null) {
+					final ArrayNode values = property.putArray("enum");
+					parameter.enumValues().forEach(value -> values.add(typed(parameter.type(), value)));
 				}
 				if (parameter.required() && parameter.defaultValue() == null) {
 					required.add(parameterName);
@@ -270,10 +291,63 @@ public final class HostTools {
 		final Map<String, String> values = new LinkedHashMap<>();
 		for (final Map.Entry<String, ToolParameter> parameter : definition.parameters().entrySet()) {
 			final JsonNode value = arguments.get(parameter.getKey());
-			if (value != null && !value.isNull()) {
+			if (value == null || value.isNull()) {
+				continue;
+			}
+			final String type = parameter.getValue().type();
+			if (!hasJsonType(value, type)) {
+				// The schema is only advertised: a caller may send "1" for an integer, an object for a string
+				throw new IllegalArgumentException("The argument %s must be of type %s".formatted(parameter.getKey(), type));
+			}
+			if (INTEGER.equals(type) && isBoundedIntegral(value)) {
+				// 1.0 and 1e3 are integers to JSON schema
+				values.put(parameter.getKey(), value.bigIntegerValue().toString());
+			} else {
 				values.put(parameter.getKey(), value.isValueNode() ? value.asText() : value.toString());
 			}
 		}
 		return values;
+	}
+
+	/**
+	 * @param value an argument
+	 * @param type  the type of its parameter
+	 * @return whether the JSON value is of the kind the schema advertises for the type
+	 */
+	private static boolean hasJsonType(final JsonNode value, final String type) {
+		return switch (type) {
+			case INTEGER, "number" -> value.isNumber();
+			case "boolean" -> value.isBoolean();
+			default -> value.isTextual();
+		};
+	}
+
+	/**
+	 * @param value an argument
+	 * @return whether it is a number with an integral value of at most {@value #MAX_INTEGER_DIGITS} digits, checked
+	 *         before any conversion: a {@code 1e100000000} would otherwise be materialized with all its digits
+	 */
+	private static boolean isBoundedIntegral(final JsonNode value) {
+		if (!value.isNumber() || !value.canConvertToExactIntegral()) {
+			return false;
+		}
+		// A double has at most 309 integer digits; only a decimal may hold many more
+		final BigDecimal decimal = value.isBigDecimal() ? value.decimalValue() : null;
+		// In long: 1e2147483647 has a scale of -2147483647, whose int subtraction overflows
+		return decimal == null || (long) decimal.precision() - decimal.scale() <= MAX_INTEGER_DIGITS;
+	}
+
+	/**
+	 * @param type  the JSON schema type of a parameter
+	 * @param value a value of the parameter, as text, valid for the type
+	 * @return the value as a JSON node of the type
+	 */
+	private static JsonNode typed(final String type, final String value) {
+		return switch (type) {
+			case INTEGER -> NODES.numberNode(new BigInteger(value));
+			case "number" -> NODES.numberNode(new BigDecimal(value));
+			case "boolean" -> NODES.booleanNode(Boolean.parseBoolean(value));
+			default -> NODES.textNode(value);
+		};
 	}
 }

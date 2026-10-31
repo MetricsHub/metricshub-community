@@ -27,6 +27,7 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL2;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -482,6 +483,57 @@ class SourceUpdaterProcessorTest {
 			"ps -ef | grep java",
 			SourceUpdaterProcessor.replaceAttributeReferences(command, Map.of("name", "java"))
 		);
+	}
+
+	@Test
+	void testReplaceEscapedReferences() {
+		assertEquals(
+			"journalctl -u 'x'\\''; reboot; '\\'''",
+			SourceUpdaterProcessor.replaceAttributeReferences(
+				"journalctl -u '${esc(bash)::param::service}'",
+				Map.of("service", "x'; reboot; '")
+			)
+		);
+		assertEquals(
+			"{\"mode\": \"a\\\"b\"}",
+			SourceUpdaterProcessor.replaceAttributeReferences(
+				"{\"mode\": \"${ESC(JSON)::attribute::mode}\"}",
+				Map.of("mode", "a\"b")
+			)
+		);
+		assertEquals(
+			"Bearer a%2Fb",
+			SourceUpdaterProcessor.replaceResourceAttributeReferences(
+				"Bearer ${esc(url)::resource.attribute::token}",
+				Map.of("token", "a/b")
+			)
+		);
+		assertEquals(
+			"Get-Service -Name 'a''b'",
+			SourceUpdaterProcessor.replaceAttributeReferences(
+				"Get-Service -Name '${esc(powershell)::attribute::name}'",
+				Map.of("name", "a'b")
+			)
+		);
+		// A value forming a macro, by itself or with its neighbors, is not inserted
+		final String percent = "echo '%${esc(bash)::param::suffix}'";
+		assertEquals(percent, SourceUpdaterProcessor.replaceAttributeReferences(percent, Map.of("suffix", "{PASSWORD}")));
+		final String twoParts = "echo ${param::a}${param::b}";
+		assertEquals(
+			"echo %${param::b}",
+			SourceUpdaterProcessor.replaceAttributeReferences(twoParts, Map.of("a", "%", "b", "{PASSWORD}"))
+		);
+		assertEquals(
+			"show ${attribute::id}",
+			SourceUpdaterProcessor.replaceAttributeReferences("show ${attribute::id}", Map.of("id", "%{PASSWORD}"))
+		);
+		assertEquals(
+			"100% {ok}",
+			SourceUpdaterProcessor.replaceAttributeReferences("${param::a} {ok}", Map.of("a", "100%"))
+		);
+		// An unknown escape type leaves the reference rather than inserting the value unescaped
+		final String unknown = "ping '${esc(bsh)::param::target}'";
+		assertEquals(unknown, SourceUpdaterProcessor.replaceAttributeReferences(unknown, Map.of("target", "$(id)")));
 	}
 
 	@Test

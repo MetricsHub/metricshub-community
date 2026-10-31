@@ -100,13 +100,16 @@ public class MacrosUpdater {
 				authenticationToken
 			);
 
+			// One pass over the template: a value inserted is never read again as a macro
 			final Matcher matcher = MACRO_PATTERN.matcher(text);
-
+			final StringBuilder replaced = new StringBuilder();
 			while (matcher.find()) {
-				final String escapeType = matcher.group(2);
-				final String macroName = matcher.group(4);
-				updatedContent = processMacro(updatedContent, matcher.group(0), macroName, escapeType, simpleMacroNameToField);
+				final String macro = matcher.group();
+				matcher.appendReplacement(replaced, "");
+				replaced.append(processMacro(macro, macro, matcher.group(4), matcher.group(2), simpleMacroNameToField));
 			}
+			matcher.appendTail(replaced);
+			updatedContent = replaced.toString();
 		}
 
 		return updatedContent;
@@ -284,20 +287,27 @@ public class MacrosUpdater {
 	}
 
 	/**
-	 * Escape special characters in a JSON string value (\ " \n \r \t).
+	 * Escape special characters in a JSON string value: {@code \}, {@code "} and every control character
+	 * (U+0000 to U+001F), with its short form when JSON has one ({@code \n}, {@code \t}...).
 	 *
 	 * @param value The value to escape.
 	 * @return The escaped value
 	 */
 	static String escapeJsonSpecialCharacters(final String value) {
-		// Escape common characters
-		return value
-			// Escape characters (\ " \n \r \t)
-			.replace("\\", "\\\\")
-			.replace("\"", "\\\"")
-			.replace("\n", "\\n")
-			.replace("\r", "\\r")
-			.replace("\t", "\\t");
+		final StringBuilder escaped = new StringBuilder(value.length());
+		for (final char c : value.toCharArray()) {
+			switch (c) {
+				case '\\' -> escaped.append("\\\\");
+				case '"' -> escaped.append("\\\"");
+				case '\n' -> escaped.append("\\n");
+				case '\r' -> escaped.append("\\r");
+				case '\t' -> escaped.append("\\t");
+				case '\b' -> escaped.append("\\b");
+				case '\f' -> escaped.append("\\f");
+				default -> escaped.append(c < 0x20 ? "\\u%04x".formatted((int) c) : String.valueOf(c));
+			}
+		}
+		return escaped.toString();
 	}
 
 	/**
@@ -308,18 +318,34 @@ public class MacrosUpdater {
 	 */
 	static String escapeUrlSpecialCharacters(final String value) {
 		// Escape common URL characters
-		return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+		final String encoded = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+		// A segment of dots only would climb the path once normalized, where a server decodes %2F (or %5C) first too:
+		// the dots of ., .., ../admin are percent-encoded
+		return DOT_SEGMENT.matcher(encoded).replaceAll(segment -> segment.group().replace(".", "%2E"));
 	}
 
 	/**
-	 * Escapes special characters used in regular expressions by prepending a backslash.
+	 * A segment of dots only in a URL-encoded value, between its start or end and an encoded {@code /} or {@code \}.
+	 */
+	private static final Pattern DOT_SEGMENT = Pattern.compile("(?<=^|%2F|%5C)\\.+(?=%2F|%5C|$)");
+
+	/**
+	 * Escapes a value for a regular expression as the connectors write them, in the PSL syntax converted by
+	 * {@code PslUtils.psl2JavaRegex} (keepOnlyMatchingLines, keep, exclude...): a backslash before
+	 * {@code ^ $ . * + ? [ ] \}, while {@code ( ) | { }} are literal in PSL already.
 	 *
 	 * @param value the input string that may contain special regex characters
-	 * @return a string where special regex characters have been escaped
+	 * @return a PSL regular expression matching the value literally
 	 */
 	static String escapeRegexSpecialCharacters(final String value) {
-		// Escape special regex characters
-		return Pattern.quote(value);
+		final StringBuilder escaped = new StringBuilder(value.length());
+		for (final char c : value.toCharArray()) {
+			if ("^$.*+?[]\\".indexOf(c) >= 0) {
+				escaped.append('\\');
+			}
+			escaped.append(c);
+		}
+		return escaped.toString();
 	}
 
 	/**
@@ -359,76 +385,58 @@ public class MacrosUpdater {
 	}
 
 	/**
-	 * Escape special characters in a PowerShell string value (", $, {, }, (, ), [, ], #, \n, \t, \r, \0).
+	 * Escapes a value for the inside of a single-quoted PowerShell string ({@code '...'}), where nothing is
+	 * expanded and the only special characters are the single quotes. PowerShell takes the typographic quotes
+	 * (‘ ’ ‚ ‛) for single quotes too, and doubling any of them makes it literal.
 	 *
 	 * @param value The value to escape.
 	 * @return The escaped value
 	 */
 	static String escapePowershellSpecialCharacters(final String value) {
-		// Escape special characters for Windows PowerShell
 		return value
-			.replace("0", "`0") // Escape null character first
-			.replace("`n", "``n") // Escape new line
-			.replace("`t", "``t") // Escape tab
-			.replace("`r", "``r") // Escape carriage return
-			.replace("#", "`#") // Escape comment indicator
-			.replace("[", "`[") // Escape opening bracket
-			.replace("]", "`]") // Escape closing bracket
-			.replace("(", "`(") // Escape opening parenthesis
-			.replace(")", "`)") // Escape closing parenthesis
-			.replace("{", "`{") // Escape opening curly brace
-			.replace("}", "`}") // Escape closing curly brace
-			.replace("$", "`$") // Escape variable indicator
-			.replace("'", "''") // Escape single quote
-			.replace("\"", "`\"") // Escape double quote
-			.replace(".", "`."); // Escape dot at the end
+			.replace("'", "''")
+			.replace("\u2018", "\u2018\u2018")
+			.replace("\u2019", "\u2019\u2019")
+			.replace("\u201A", "\u201A\u201A")
+			.replace("\u201B", "\u201B\u201B");
 	}
 
 	/**
-	 * Escapes special Bash characters by prepending a backslash.
+	 * Escapes a value for the inside of a single-quoted POSIX shell string ({@code '...'}), where nothing is
+	 * expanded: a single quote closes the string, is written escaped, and the string reopens.
 	 *
-	 * @param value the input string that may contain special Bash characters
-	 * @return a string where special Bash characters have been escaped
+	 * @param value the input string that may contain special shell characters
+	 * @return a string to place between single quotes
 	 */
 	static String escapeBashSpecialCharacters(final String value) {
-		// Escape special Bash characters
-		return value
-			.replace("'", "\\'") // Escape single quote
-			.replace("\"", "\\\"") // Escape double quote
-			.replace("\\", "\\\\") // Escape backslash
-			.replace("$", "\\$") // Escape variable indicator
-			.replace("!", "\\!") // Escape history expansion
-			.replace("*", "\\*") // Escape wildcard
-			.replace("?", "\\?") // Escape wildcard
-			.replace("[", "\\[") // Escape opening bracket
-			.replace("]", "\\]") // Escape closing bracket
-			.replace("(", "\\(") // Escape opening parenthesis
-			.replace(")", "\\)") // Escape closing parenthesis
-			.replace("{", "\\{") // Escape opening brace
-			.replace("}", "\\}") // Escape closing brace
-			.replace("|", "\\|") // Escape pipe
-			.replace("&", "\\&") // Escape background process indicator
-			.replace("<", "\\<") // Escape input redirection
-			.replace(">", "\\>") // Escape output redirection
-			.replace("~", "\\~") // Escape tilde
-			.replace(";", "\\;") // Escape semicolon
-			.replace("\n", "\\n"); // Escape newline
+		return value.replace("'", "'\\''");
 	}
 
 	/**
-	 * Escapes special SQL characters such as single quotes and optionally backslashes or double quotes, depending on the SQL dialect.
+	 * Escapes a value for the inside of a single-quoted SQL string ({@code '...'}). Backslashes are doubled
+	 * first, as MySQL and MariaDB read them as escapes by default.
 	 *
 	 * @param value the input string that may contain special SQL characters
 	 * @return a string where special SQL characters have been escaped
 	 */
 	static String escapeSqlSpecialCharacters(final String value) {
-		// Escape special SQL characters
 		return value
+			.replace("\\", "\\\\") // First, or it would double the backslashes added below
 			.replace("'", "''")
 			.replace("\"", "\\\"") // Only if applicable for the specific SQL dialect
-			.replace("\\", "\\\\") // Only if applicable for the specific SQL dialect
 			.replace("\n", "\\n")
 			.replace("\r", "\\r")
 			.replace("\t", "\\t");
+	}
+
+	/**
+	 * Escapes a value for the inside of a WQL string, single- or double-quoted, where the backslash is the
+	 * escape character.
+	 *
+	 * @param value the input string that may contain special WQL characters
+	 * @return a string where special WQL characters have been escaped
+	 */
+	static String escapeWqlSpecialCharacters(final String value) {
+		return value.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"");
 	}
 }

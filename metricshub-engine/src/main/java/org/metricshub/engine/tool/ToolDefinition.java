@@ -146,28 +146,24 @@ public record ToolDefinition(
 	}
 
 	/**
-	 * Completes the arguments of an invocation: a parameter that is not supplied takes its default value, and a
-	 * required parameter without one is reported.
+	 * Completes and checks the arguments of an invocation: an argument the tool does not declare is dropped, a
+	 * supplied one is validated against its parameter, a parameter that is not supplied takes its default value, and
+	 * a required parameter without one is reported.
 	 *
 	 * @param arguments the arguments supplied by the invocation, by parameter name, {@code null} for none
 	 * @return the arguments to run the tool with, defaults applied
-	 * @throws IllegalArgumentException if a required parameter is neither supplied nor defaulted
+	 * @throws IllegalArgumentException if an argument is not valid (see {@link ToolParameter#validate}), or a
+	 *                                  required parameter is neither supplied nor defaulted
 	 */
 	public Map<String, String> resolveArguments(final Map<String, String> arguments) {
 		final Map<String, String> resolved = new LinkedHashMap<>();
-		if (arguments != null) {
-			arguments.forEach((key, value) -> {
-				if (value != null) {
-					resolved.put(key, value);
-				}
-			});
-		}
 		final List<String> missing = new ArrayList<>();
 		parameters.forEach((parameterName, parameter) -> {
-			if (resolved.containsKey(parameterName)) {
-				return;
-			}
-			if (parameter.defaultValue() != null) {
+			final String value = arguments == null ? null : arguments.get(parameterName);
+			if (value != null) {
+				parameter.validate(parameterName, value);
+				resolved.put(parameterName, value);
+			} else if (parameter.defaultValue() != null) {
 				resolved.put(parameterName, parameter.defaultValue());
 			} else if (parameter.required()) {
 				missing.add(parameterName);
