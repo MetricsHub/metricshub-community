@@ -56,7 +56,7 @@ import org.springframework.ai.tool.ToolCallback;
 public final class ConnectorToolCallbacks {
 
 	private static final String OTHER_DECLARATION_ERROR =
-		"Connector %s declares tool %s on host %s with other parameters or another destructive flag, through its variables.";
+		"Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
 
 	/**
 	 * What a connector tool returns for one host.
@@ -134,8 +134,7 @@ public final class ConnectorToolCallbacks {
 	 * @param hostname     the host
 	 * @param arguments    the resolved arguments
 	 * @return the table of the tool's result source, or an error when the host is not configured, when none of its
-	 *         resources has the tool, or when its own tool takes other parameters or is destructive where the
-	 *         advertised one is not, or the reverse
+	 *         resources has the tool, or when none declares it as advertised
 	 */
 	static Object run(
 		final AgentContext agentContext,
@@ -153,26 +152,24 @@ public final class ConnectorToolCallbacks {
 			return QueryResponse.builder().error("Host %s is not configured.".formatted(hostname)).build();
 		}
 
-		// A host may belong to several resources: the first one whose connector store has the tool
-		final TelemetryManager hostTelemetryManager = telemetryManagers
-			.stream()
-			.filter(candidate -> toolOf(candidate, connectorId, toolName) != null)
-			.findFirst()
-			.orElse(null);
-		if (hostTelemetryManager == null) {
+		if (telemetryManagers.stream().noneMatch(candidate -> toolOf(candidate, connectorId, toolName) != null)) {
 			return QueryResponse.builder()
 				.error("Connector %s has no tool %s on host %s.".formatted(connectorId, toolName, hostname))
 				.build();
 		}
-		final Connector connector = hostTelemetryManager.getConnectorStore().getStore().get(connectorId);
-		final ConnectorTool tool = connector.getTools().get(toolName);
 
-		// Variables that change the parameters (the arguments were completed with other defaults) or the
-		// destructive flag (the tool would be advertised for what it is not)
-		final ToolDefinition own = tool.toDefinition(toolName);
-		if (own.destructive() != definition.destructive() || !own.parameters().equals(definition.parameters())) {
+		// A host may belong to several resources: the first one whose variables leave the tool as advertised, since
+		// the arguments were completed with its defaults and the assistant chose it for its description
+		final TelemetryManager hostTelemetryManager = telemetryManagers
+			.stream()
+			.filter(candidate -> declaresAsAdvertised(candidate, connectorId, toolName, definition))
+			.findFirst()
+			.orElse(null);
+		if (hostTelemetryManager == null) {
 			return QueryResponse.builder().error(OTHER_DECLARATION_ERROR.formatted(connectorId, toolName, hostname)).build();
 		}
+		final Connector connector = hostTelemetryManager.getConnectorStore().getStore().get(connectorId);
+		final ConnectorTool tool = connector.getTools().get(toolName);
 
 		// A telemetry manager of its own: the tool's source tables must not land in the collected one
 		final TelemetryManager telemetryManager = MCPConfigHelper.newFrom(hostTelemetryManager, connectorId);
@@ -206,5 +203,20 @@ public final class ConnectorToolCallbacks {
 	) {
 		final Connector connector = telemetryManager.getConnectorStore().getStore().get(connectorId);
 		return connector == null ? null : connector.getTools().get(toolName);
+	}
+
+	private static boolean declaresAsAdvertised(
+		final TelemetryManager telemetryManager,
+		final String connectorId,
+		final String toolName,
+		final ToolDefinition definition
+	) {
+		final ConnectorTool tool = toolOf(telemetryManager, connectorId, toolName);
+		try {
+			return tool != null && definition.equals(tool.toDefinition(toolName));
+		} catch (IllegalArgumentException e) {
+			// Variables that make the declaration invalid
+			return false;
+		}
 	}
 }

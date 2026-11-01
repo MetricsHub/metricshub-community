@@ -125,21 +125,25 @@ class ConnectorToolCallbacksTest {
 	}
 
 	@Test
-	void testToolDeclaredOtherwiseByTheVariablesOfTheHostIsRefused() throws Exception {
+	void testToolRunsOnlyWhereTheVariablesLeaveItAsAdvertised() throws Exception {
 		final ConnectorStore connectorStore = telemetryManager.getConnectorStore();
+		// host-02 is in two resources, the second one as host-01's
 		resources(
 			telemetryManager(HOSTNAME, resolved(connectorStore, "omega")),
-			telemetryManager("host-02", resolved(connectorStore, "delta"))
+			telemetryManager("host-02", resolved(connectorStore, "delta")),
+			telemetryManager("host-02", resolved(connectorStore, "omega")),
+			telemetryManager("host-03", resolved(connectorStore, "delta"))
 		);
 
 		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
-		// The arguments were completed with the default of host-01's connector
-		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\",\"host-02\"]}"));
+		// The arguments were completed with the default of host-01's connector, the advertised one
+		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\",\"host-02\",\"host-03\"]}"));
 		assertEquals(List.of(List.of("omega")), MAPPER.convertValue(response(result, HOSTNAME).get("rows"), List.class));
+		assertEquals(List.of(List.of("omega")), MAPPER.convertValue(response(result, "host-02").get("rows"), List.class));
 		assertEquals(
-			"Connector myThing declares tool showThing on host host-02 with other parameters or another destructive flag, through its variables.",
-			response(result, "host-02").get("error").asText()
+			"Connector myThing declares tool showThing otherwise on host host-03, through its variables: another description, other parameters or another destructive flag.",
+			response(result, "host-03").get("error").asText()
 		);
 	}
 
