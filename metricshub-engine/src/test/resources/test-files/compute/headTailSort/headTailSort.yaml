@@ -1,0 +1,18 @@
+connector:
+  detection:
+    appliesTo: [ Linux ]
+
+beforeAll:
+  testCompute:
+    type: http
+    url: /testUrl/
+
+    computes:
+      - type: sort
+        column: 2
+        numeric: true
+        descending: true
+      - type: head
+        lines: 20
+      - type: tail
+        lines: "5"

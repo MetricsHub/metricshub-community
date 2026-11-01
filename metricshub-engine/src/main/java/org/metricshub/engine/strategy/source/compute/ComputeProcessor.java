@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -92,6 +93,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -99,8 +101,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Multipl
 import org.metricshub.engine.connector.model.monitor.task.source.compute.PerBitTranslation;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -981,6 +985,44 @@ public class ComputeProcessor implements IComputeProcessor {
 		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
+	@Override
+	@WithSpan("Compute Head Exec")
+	public void process(@SpanAttribute("compute.definition") final Head head) {
+		if (head == null) {
+			log.warn("Hostname {} - Head object is null, the table remains unchanged.", hostname);
+			return;
+		}
+
+		keepLines(head.getLines(), "Head", false);
+	}
+
+	/**
+	 * Keeps the given number of lines of the table, the first ones or the last ones.
+	 *
+	 * @param lines       The number of lines to keep, as set in the compute.
+	 * @param computeName The name of the compute, for the logs.
+	 * @param last        Whether the last lines are kept rather than the first ones.
+	 */
+	private void keepLines(final String lines, final String computeName, final boolean last) {
+		final Integer count = NumberHelper.parseInt(lines, null);
+		if (count == null || count < 0) {
+			log.warn(
+				"Hostname {} - The number of lines in {} must be an integer, 0 or more, not {}. The table remains unchanged.",
+				hostname,
+				computeName,
+				lines
+			);
+			return;
+		}
+
+		final List<List<String>> table = sourceTable.getTable();
+		final int kept = Math.min(count, table.size());
+		sourceTable.setTable(
+			new ArrayList<>(last ? table.subList(table.size() - kept, table.size()) : table.subList(0, kept))
+		);
+		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+	}
+
 	/**
 	 * This method processes Json2Csv compute
 	 * @param json2csv {@link Json2Csv} instance
@@ -1371,6 +1413,54 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	@Override
+	@WithSpan("Compute Sort Exec")
+	public void process(@SpanAttribute("compute.definition") final Sort sort) {
+		if (sort == null) {
+			log.warn("Hostname {} - Sort object is null, the table remains unchanged.", hostname);
+			return;
+		}
+
+		if (sort.getColumn() == null || sort.getColumn() < 1) {
+			log.warn("Hostname {} - The column index in Sort must be 1 or more, the table remains unchanged.", hostname);
+			return;
+		}
+
+		final int columnIndex = sort.getColumn() - 1;
+
+		// The lines without the column, or without a number in a numeric sort, go last in their order, whatever the
+		// direction
+		final List<List<String>> sorted = new ArrayList<>();
+		final List<List<String>> others = new ArrayList<>();
+		for (final List<String> line : sourceTable.getTable()) {
+			final String value = columnIndex < line.size() ? line.get(columnIndex) : null;
+			if (sort.isNumeric() ? NumberHelper.isNumeric(value) : value != null) {
+				sorted.add(line);
+			} else {
+				others.add(line);
+			}
+		}
+
+		Comparator<String> comparator;
+		if (sort.isNumeric()) {
+			comparator = Comparator.comparingDouble(Double::parseDouble);
+		} else if (sort.isIgnoreCase()) {
+			comparator = String.CASE_INSENSITIVE_ORDER;
+		} else {
+			comparator = Comparator.naturalOrder();
+		}
+		if (sort.isDescending()) {
+			comparator = comparator.reversed();
+		}
+
+		// List.sort is stable: the lines with equal values keep their order
+		sorted.sort(Comparator.comparing(line -> line.get(columnIndex), comparator));
+		sorted.addAll(others);
+
+		sourceTable.setTable(sorted);
+		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+	}
+
+	@Override
 	@WithSpan("Compute Append Exec")
 	public void process(@SpanAttribute("compute.definition") final Append append) {
 		processAbstractConcat(append);
@@ -1405,6 +1495,17 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		performMathematicalOperation(subtract, columnIndex, operand2);
+	}
+
+	@Override
+	@WithSpan("Compute Tail Exec")
+	public void process(@SpanAttribute("compute.definition") final Tail tail) {
+		if (tail == null) {
+			log.warn("Hostname {} - Tail object is null, the table remains unchanged.", hostname);
+			return;
+		}
+
+		keepLines(tail.getLines(), "Tail", true);
 	}
 
 	@Override

@@ -51,6 +51,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -58,8 +59,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Multipl
 import org.metricshub.engine.connector.model.monitor.task.source.compute.PerBitTranslation;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -3357,5 +3360,86 @@ class ComputeProcessorTest {
 
 		// Verify the converted table matches the base table.
 		assertEquals(baseTable, sourceTable.getTable());
+	}
+
+	@Test
+	void testHeadAndTail() {
+		final List<List<String>> table = List.of(List.of("a", "1"), List.of("b", "2"), List.of("c", "3"));
+
+		sourceTable.setTable(table);
+		computeProcessor.process(Head.builder().lines("2").build());
+		final List<List<String>> head = List.of(List.of("a", "1"), List.of("b", "2"));
+		assertEquals(head, sourceTable.getTable());
+		assertEquals(SourceTable.tableToCsv(head, TABLE_SEP, false), sourceTable.getRawData());
+
+		sourceTable.setTable(table);
+		computeProcessor.process(Tail.builder().lines("2").build());
+		assertEquals(List.of(List.of("b", "2"), List.of("c", "3")), sourceTable.getTable());
+
+		// More lines than the table holds: the whole table
+		sourceTable.setTable(table);
+		computeProcessor.process(Head.builder().lines("10").build());
+		assertEquals(table, sourceTable.getTable());
+		computeProcessor.process(Tail.builder().lines("10").build());
+		assertEquals(table, sourceTable.getTable());
+
+		// No line
+		computeProcessor.process(Tail.builder().lines("0").build());
+		assertEquals(List.of(), sourceTable.getTable());
+
+		// Not a number of lines, e.g. a macro left as is: the table remains unchanged
+		sourceTable.setTable(table);
+		computeProcessor.process(Head.builder().lines("${param::lines}").build());
+		assertEquals(table, sourceTable.getTable());
+		computeProcessor.process(Tail.builder().lines("-1").build());
+		assertEquals(table, sourceTable.getTable());
+		computeProcessor.process((Head) null);
+		assertEquals(table, sourceTable.getTable());
+	}
+
+	@Test
+	void testSort() {
+		final List<String> zeta = List.of("zeta", "10");
+		final List<String> error = List.of("error: no second column");
+		final List<String> alpha = List.of("alpha", "9.5");
+		final List<String> gamma = List.of("gamma", "n/a");
+		final List<String> beta = List.of("Beta", "10");
+		final List<List<String>> table = List.of(zeta, error, alpha, gamma, beta);
+
+		// Numeric: equal values keep their order, the lines without a number go last in their order
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(2).numeric(true).build());
+		assertEquals(List.of(alpha, zeta, beta, error, gamma), sourceTable.getTable());
+		assertEquals(
+			SourceTable.tableToCsv(List.of(alpha, zeta, beta, error, gamma), TABLE_SEP, false),
+			sourceTable.getRawData()
+		);
+
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(2).numeric(true).descending(true).build());
+		assertEquals(List.of(zeta, beta, alpha, error, gamma), sourceTable.getTable());
+
+		// Alphabetical, uppercase first
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(1).build());
+		assertEquals(List.of(beta, alpha, error, gamma, zeta), sourceTable.getTable());
+
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(1).ignoreCase(true).build());
+		assertEquals(List.of(alpha, beta, error, gamma, zeta), sourceTable.getTable());
+
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(1).ignoreCase(true).descending(true).build());
+		assertEquals(List.of(zeta, gamma, error, beta, alpha), sourceTable.getTable());
+
+		// Alphabetical: the lines without the column go last, "10" comes before "9.5"
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(2).build());
+		assertEquals(List.of(zeta, beta, alpha, gamma, error), sourceTable.getTable());
+
+		// No such column: the table remains unchanged
+		sourceTable.setTable(table);
+		computeProcessor.process(Sort.builder().column(0).build());
+		assertEquals(table, sourceTable.getTable());
 	}
 }
