@@ -432,12 +432,19 @@ public class OsCommandService {
 			.getConfigurations()
 			.get(OsCommandConfiguration.class);
 
+		// A command run over SSH takes the sudo settings of ssh when they enable sudo, otherwise those of osCommand,
+		// which used to apply to every command
+		final OsCommandConfiguration sudoConfiguration =
+			!isLocalhost && !isExecuteLocally && sshConfiguration instanceof SshConfiguration ssh && ssh.isUseSudo()
+				? ssh
+				: osCommandConfiguration;
+
 		SudoInformation sudoInformation = null;
-		if (osCommandConfiguration != null) {
+		if (sudoConfiguration != null) {
 			sudoInformation = new SudoInformation(
-				osCommandConfiguration.isUseSudo(),
-				osCommandConfiguration.getUseSudoCommands(),
-				osCommandConfiguration.getSudoCommand()
+				sudoConfiguration.isUseSudo(),
+				sudoConfiguration.getUseSudoCommands(),
+				sudoConfiguration.getSudoCommand()
 			);
 		}
 

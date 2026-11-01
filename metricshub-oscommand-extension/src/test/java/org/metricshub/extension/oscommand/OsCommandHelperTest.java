@@ -1044,6 +1044,43 @@ class OsCommandHelperTest {
 	}
 
 	@Test
+	void testRunOsCommandRemoteLinuxWithSshSudoReplaced() throws Exception {
+		// The sudo settings under ssh only, without osCommand
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+			.username(USERNAME)
+			.password(PWD_COMMAND.toCharArray())
+			.useSudo(true)
+			.useSudoCommands(Set.of(NAVISECCLI_CAMEL_CASE.toLowerCase()))
+			.build();
+
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostId(ID)
+			.hostname(HOST)
+			.hostType(DeviceKind.LINUX)
+			.configurations(Map.of(sshConfiguration.getClass(), sshConfiguration))
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
+
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(AGENT_REV_RESULT)
+			.when(spyService)
+			.runSshCommand(
+				SUDO_KEYWORD + CLEAR_PASSWORD_COMMAND,
+				HOST,
+				sshConfiguration,
+				120,
+				Collections.emptyList(),
+				SUDO_KEYWORD + NO_PASSWORD_COMMAND,
+				DeviceKind.LINUX
+			);
+
+		assertEquals(
+			new OsCommandResult(AGENT_REV_RESULT, SUDO_KEYWORD + NO_PASSWORD_COMMAND),
+			spyService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
+		);
+	}
+
+	@Test
 	void testRunOsCommandRemoteLinuxWithEmbeddedFilesReplaced() throws Exception {
 		commandLineEmbeddedFiles.put(
 			EMBEDDED_FILE_1_REF,
