@@ -16,10 +16,14 @@ connector:
       defaultValue: alpha
 tools:
   showThing:
-    description: Shows the configured thing.
+    description: Shows a thing, the configured one by default.
+    parameters:
+      thing:
+        description: The thing to show
+        default: ${var::thing}
     sources:
       thing:
         type: static
-        value: ${var::thing}
+        value: ${param::thing}
     result:
       source: ${source::thing}

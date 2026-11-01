@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -82,28 +83,16 @@ class ConnectorToolCallbacksTest {
 	}
 
 	@Test
-	void testToolsOfConnectorsWithVariablesRunWithTheVariablesOfTheHost() throws Exception {
-		// What the agent does for each resource: the connectors with variables resolved in a store of its own
-		final ConnectorStore resourceConnectorStore = telemetryManager.getConnectorStore().newConnectorStore();
-		resourceConnectorStore.setConnectorsWithVariables(List.of(TEMPLATE));
-		resourceConnectorStore.addMany(
-			ConfigHelper.buildAdditionalConnectors(
-				resourceConnectorStore,
-				Map.of("myThing", AdditionalConnector.builder().uses(TEMPLATE).variables(Map.of("thing", "omega")).build()),
-				resourceConnectorStore.getRawConnectorStore()
-			).getCustomConnectorsMap()
-		);
-		telemetryManager.setConnectorStore(resourceConnectorStore);
-
-		// A host without the template, under another resource
-		final TelemetryManager otherTelemetryManager = TelemetryManager.builder()
-			.connectorStore(new ConnectorStore(Paths.get("src", "test", "resources", "mcp", "tool")))
-			.hostConfiguration(
-				HostConfiguration.builder().hostId("host-02").hostname("host-02").hostType(DeviceKind.LINUX).build()
-			)
-			.build();
-		when(agentContextHolder.getAgentContext().getTelemetryManagers()).thenReturn(
-			Map.of("group", Map.of(HOSTNAME, telemetryManager, "host-02", otherTelemetryManager))
+	void testToolsOfEveryResourceStoreRunOnTheResourceWithTheTool() throws Exception {
+		final ConnectorStore connectorStore = telemetryManager.getConnectorStore();
+		// host-01 is in two resources, the second one with an additional connector; on host-02, another connector
+		// has the same identifier
+		final ConnectorStore otherConnectorStore = connectorStore.newConnectorStore();
+		otherConnectorStore.addOne("myThing", connectorStore.getStore().get("TestConnectorWithTool"));
+		resources(
+			telemetryManager,
+			telemetryManager(HOSTNAME, resolved(connectorStore, "omega")),
+			telemetryManager("host-02", otherConnectorStore)
 		);
 
 		final List<ToolCallback> callbacks = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext());
@@ -111,6 +100,8 @@ class ConnectorToolCallbacksTest {
 		assertEquals(
 			List.of(
 				"myThing_showThing",
+				"myThing_listThings",
+				"myThing_reboot",
 				"TestConnectorWithTool_listThings",
 				"TestConnectorWithTool_reboot",
 				"TestTemplateWithTool_showThing"
@@ -126,10 +117,29 @@ class ConnectorToolCallbacksTest {
 		);
 
 		// The template itself, with its default variables
-		final JsonNode defaultResult = MAPPER.readTree(callbacks.get(3).call("{\"hostname\":[\"host-01\"]}"));
+		final JsonNode defaultResult = MAPPER.readTree(callbacks.get(5).call("{\"hostname\":[\"host-01\"]}"));
 		assertEquals(
 			List.of(List.of("alpha")),
 			MAPPER.convertValue(response(defaultResult, HOSTNAME).get("rows"), List.class)
+		);
+	}
+
+	@Test
+	void testToolDeclaredOtherwiseByTheVariablesOfTheHostIsRefused() throws Exception {
+		final ConnectorStore connectorStore = telemetryManager.getConnectorStore();
+		resources(
+			telemetryManager(HOSTNAME, resolved(connectorStore, "omega")),
+			telemetryManager("host-02", resolved(connectorStore, "delta"))
+		);
+
+		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
+
+		// The arguments were completed with the default of host-01's connector
+		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\",\"host-02\"]}"));
+		assertEquals(List.of(List.of("omega")), MAPPER.convertValue(response(result, HOSTNAME).get("rows"), List.class));
+		assertEquals(
+			"Connector myThing declares tool showThing on host host-02 with other parameters or another destructive flag, through its variables.",
+			response(result, "host-02").get("error").asText()
 		);
 	}
 
@@ -140,6 +150,43 @@ class ConnectorToolCallbacksTest {
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"nope\"],\"owner\":\"me\"}"));
 
 		assertEquals("Host nope is not configured.", result.get("hosts").get(0).get("response").get("error").asText());
+	}
+
+	/**
+	 * @return a copy of the store with the connectors with variables resolved, as the agent does for each resource,
+	 *         and an additional connector myThing using the template with the given thing
+	 */
+	private static ConnectorStore resolved(final ConnectorStore connectorStore, final String thing) {
+		final ConnectorStore resourceConnectorStore = connectorStore.newConnectorStore();
+		resourceConnectorStore.setConnectorsWithVariables(List.of(TEMPLATE));
+		resourceConnectorStore.addMany(
+			ConfigHelper.buildAdditionalConnectors(
+				resourceConnectorStore,
+				Map.of("myThing", AdditionalConnector.builder().uses(TEMPLATE).variables(Map.of("thing", thing)).build()),
+				resourceConnectorStore.getRawConnectorStore()
+			).getCustomConnectorsMap()
+		);
+		return resourceConnectorStore;
+	}
+
+	private static TelemetryManager telemetryManager(final String hostname, final ConnectorStore connectorStore) {
+		return TelemetryManager.builder()
+			.connectorStore(connectorStore)
+			.hostConfiguration(
+				HostConfiguration.builder().hostId(hostname).hostname(hostname).hostType(DeviceKind.LINUX).build()
+			)
+			.build();
+	}
+
+	/**
+	 * Configures one resource per telemetry manager, in this order.
+	 */
+	private void resources(final TelemetryManager... telemetryManagers) {
+		final Map<String, TelemetryManager> resources = new LinkedHashMap<>();
+		for (final TelemetryManager resource : telemetryManagers) {
+			resources.put("resource-" + resources.size(), resource);
+		}
+		when(agentContextHolder.getAgentContext().getTelemetryManagers()).thenReturn(Map.of("group", resources));
 	}
 
 	private static List<String> names(final List<ToolCallback> callbacks) {

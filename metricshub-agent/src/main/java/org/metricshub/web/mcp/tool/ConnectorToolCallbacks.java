@@ -23,10 +23,12 @@ package org.metricshub.web.mcp.tool;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +55,9 @@ import org.springframework.ai.tool.ToolCallback;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConnectorToolCallbacks {
 
+	private static final String OTHER_DECLARATION_ERROR =
+		"Connector %s declares tool %s on host %s with other parameters or another destructive flag, through its variables.";
+
 	/**
 	 * What a connector tool returns for one host.
 	 *
@@ -73,36 +78,47 @@ public final class ConnectorToolCallbacks {
 		}
 
 		// Connectors with variables are only resolved in the store of each resource, under their own identifier
-		// and under the identifier of each additional connector using them. The first one found declares the tool;
-		// each host runs its own.
-		final Map<String, Connector> connectors = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-		connectors.putAll(connectorStore.getStore());
-		agentContext
-			.getTelemetryManagers()
-			.values()
-			.stream()
-			.flatMap(telemetryManagers -> telemetryManagers.values().stream())
-			.map(TelemetryManager::getConnectorStore)
-			.filter(resourceConnectorStore -> resourceConnectorStore != null && resourceConnectorStore.getStore() != null)
-			.forEach(resourceConnectorStore -> resourceConnectorStore.getStore().forEach(connectors::putIfAbsent));
-
-		connectors.forEach((connectorId, connector) ->
-			connector
-				.getTools()
-				.forEach((toolName, tool) -> {
-					// Destructive tools included: the interfaces decide what they expose
-					try {
-						final ToolDefinition definition = tool.toDefinition(toolName);
-						callbacks.add(
-							HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
-								run(agentContext, connectorId, toolName, hostname, arguments)
+		// and under the identifier of each additional connector using them, which may name another connector in
+		// another resource: one tool per connector identifier and tool name, declared by the first store that has
+		// it, each host running its own (see run)
+		final Map<String, Map<String, ConnectorTool>> tools = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		Stream.concat(
+			Stream.of(connectorStore),
+			agentContext
+				.getTelemetryManagers()
+				.values()
+				.stream()
+				.flatMap(telemetryManagers -> telemetryManagers.values().stream())
+				.map(TelemetryManager::getConnectorStore)
+		)
+			.filter(store -> store != null && store.getStore() != null)
+			.forEach(store ->
+				store
+					.getStore()
+					.forEach((connectorId, connector) ->
+						connector
+							.getTools()
+							.forEach((toolName, tool) ->
+								tools.computeIfAbsent(connectorId, id -> new LinkedHashMap<>()).putIfAbsent(toolName, tool)
 							)
-						);
-					} catch (IllegalArgumentException e) {
-						// One bad declaration must not take the connector's other tools down
-						log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
-					}
-				})
+					)
+			);
+
+		tools.forEach((connectorId, connectorTools) ->
+			connectorTools.forEach((toolName, tool) -> {
+				// Destructive tools included: the interfaces decide what they expose
+				try {
+					final ToolDefinition definition = tool.toDefinition(toolName);
+					callbacks.add(
+						HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
+							run(agentContext, connectorId, toolName, definition, hostname, arguments)
+						)
+					);
+				} catch (IllegalArgumentException e) {
+					// One bad declaration must not take the connector's other tools down
+					log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
+				}
+			})
 		);
 		return callbacks;
 	}
@@ -114,15 +130,18 @@ public final class ConnectorToolCallbacks {
 	 * @param agentContext the agent context the tool was built from, where the host's configuration is
 	 * @param connectorId  the connector identifier in the host's store
 	 * @param toolName     the tool name within the connector
+	 * @param definition   the advertised definition, which the arguments were checked and completed with
 	 * @param hostname     the host
 	 * @param arguments    the resolved arguments
-	 * @return the table of the tool's result source, or an error when the host is not configured or its connector
-	 *         store has no such tool
+	 * @return the table of the tool's result source, or an error when the host is not configured, when none of its
+	 *         resources has the tool, or when its own tool takes other parameters or is destructive where the
+	 *         advertised one is not, or the reverse
 	 */
 	static Object run(
 		final AgentContext agentContext,
 		final String connectorId,
 		final String toolName,
+		final ToolDefinition definition,
 		final String hostname,
 		final Map<String, String> arguments
 	) {
@@ -134,16 +153,29 @@ public final class ConnectorToolCallbacks {
 			return QueryResponse.builder().error("Host %s is not configured.".formatted(hostname)).build();
 		}
 
-		final Connector connector = telemetryManagers.get(0).getConnectorStore().getStore().get(connectorId);
-		final ConnectorTool tool = connector == null ? null : connector.getTools().get(toolName);
-		if (tool == null) {
+		// A host may belong to several resources: the first one whose connector store has the tool
+		final TelemetryManager hostTelemetryManager = telemetryManagers
+			.stream()
+			.filter(candidate -> toolOf(candidate, connectorId, toolName) != null)
+			.findFirst()
+			.orElse(null);
+		if (hostTelemetryManager == null) {
 			return QueryResponse.builder()
 				.error("Connector %s has no tool %s on host %s.".formatted(connectorId, toolName, hostname))
 				.build();
 		}
+		final Connector connector = hostTelemetryManager.getConnectorStore().getStore().get(connectorId);
+		final ConnectorTool tool = connector.getTools().get(toolName);
+
+		// Variables that change the parameters (the arguments were completed with other defaults) or the
+		// destructive flag (the tool would be advertised for what it is not)
+		final ToolDefinition own = tool.toDefinition(toolName);
+		if (own.destructive() != definition.destructive() || !own.parameters().equals(definition.parameters())) {
+			return QueryResponse.builder().error(OTHER_DECLARATION_ERROR.formatted(connectorId, toolName, hostname)).build();
+		}
 
 		// A telemetry manager of its own: the tool's source tables must not land in the collected one
-		final TelemetryManager telemetryManager = MCPConfigHelper.newFrom(telemetryManagers.get(0), connectorId);
+		final TelemetryManager telemetryManager = MCPConfigHelper.newFrom(hostTelemetryManager, connectorId);
 		final long strategyTime = System.currentTimeMillis();
 		// The job duration metrics of the connector's beforeAll sources need the endpoint host monitor
 		MonitorFactory.builder()
@@ -165,5 +197,14 @@ public final class ConnectorToolCallbacks {
 		strategy.run();
 
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
+	}
+
+	private static ConnectorTool toolOf(
+		final TelemetryManager telemetryManager,
+		final String connectorId,
+		final String toolName
+	) {
+		final Connector connector = telemetryManager.getConnectorStore().getStore().get(connectorId);
+		return connector == null ? null : connector.getTools().get(toolName);
 	}
 }
