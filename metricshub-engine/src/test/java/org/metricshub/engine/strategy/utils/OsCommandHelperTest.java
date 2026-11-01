@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -48,5 +49,23 @@ class OsCommandHelperTest {
 		);
 
 		assertArrayEquals(" cmd\r\nexit\r\n".getBytes(), Files.readAllBytes(file.toPath()));
+	}
+
+	@Test
+	void testCreateTempFileWithEmbeddedFileContentSudo() throws IOException {
+		final EmbeddedFile embeddedFile = EmbeddedFile.builder()
+			.content("%{SUDO:ioscan} ioscan\n%{SUDO:fcmsutil} fcmsutil\n".getBytes())
+			.filename("script.sh")
+			.id(1)
+			.build();
+
+		final File file = OsCommandHelper.createTempFileWithEmbeddedFileContent(
+			embeddedFile,
+			new SudoInformation(true, Set.of("ioscan"), "sudo"),
+			(baseName, extension) -> tempDir.resolve(baseName + extension).toFile(),
+			NEW_LINE
+		);
+
+		assertArrayEquals("sudo ioscan\n fcmsutil\n".getBytes(), Files.readAllBytes(file.toPath()));
 	}
 }

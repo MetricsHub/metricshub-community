@@ -24,7 +24,6 @@ package org.metricshub.engine.strategy.utils;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
 import static org.springframework.util.Assert.state;
 
 import java.io.ByteArrayOutputStream;
@@ -37,7 +36,6 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -192,47 +190,27 @@ public class OsCommandHelper {
 	}
 
 	/**
-	 * Replace the %{SUDO:xxx}% tag in the given text with the sudo command.
+	 * Replace every %{SUDO:xxx} tag in the given text with the sudo command.
 	 * The replacement is based on the configuration in the provided OsCommandConfiguration.
-	 * If the useSudo configuration is enabled and the sudo command is associated with the specified file,
+	 * If the useSudo configuration is enabled and the sudo command is associated with the tag's name,
 	 * it replaces the tag with the sudo command; otherwise, it replaces it with an empty string.
 	 *
-	 * @param text            The text containing %{SUDO:xxx}% tags to be replaced.
+	 * @param text            The text containing %{SUDO:xxx} tags to be replaced.
 	 * @param sudoInformation The Sudo Information of the Os Command configuration.
-	 * @return The text with %{SUDO:xxx}% tags replaced with the sudo command or empty string.
+	 * @return The text with %{SUDO:xxx} tags replaced with the sudo command or empty string.
 	 */
 	public static String replaceSudo(final String text, final SudoInformation sudoInformation) {
 		if (text == null || text.isBlank()) {
 			return text;
 		}
 
-		final Optional<String> maybeSudoFile = getFileNameFromSudoCommand(text);
-
-		final String sudoReplace =
-			maybeSudoFile.isPresent() &&
+		return SUDO_COMMAND_PATTERN.matcher(text).replaceAll(match ->
 			sudoInformation != null &&
 			sudoInformation.isUseSudo() &&
-			sudoInformation.useSudoCommands().contains(maybeSudoFile.get())
-				? sudoInformation.sudoCommand()
-				: EMPTY;
-
-		return maybeSudoFile
-			.map(fileName ->
-				text.replaceAll(protectCaseInsensitiveRegex(String.format("%%{SUDO:%s}", fileName)), sudoReplace)
-			)
-			.orElse(text);
-	}
-
-	/**
-	 * <p>Get the file name of the sudo pattern from the command.</p>
-	 * <p>Example:</p>
-	 * <p>"%{SUDO:fileName}" return "fileName"</p>
-	 * @param command The command.
-	 * @return An Optional with The file name if found otherwise an empty optional.
-	 */
-	public static Optional<String> getFileNameFromSudoCommand(@NonNull final String command) {
-		final Matcher matcher = SUDO_COMMAND_PATTERN.matcher(command);
-		return matcher.find() ? Optional.ofNullable(matcher.group(1)) : Optional.empty();
+			sudoInformation.useSudoCommands().contains(match.group(1))
+				? Matcher.quoteReplacement(sudoInformation.sudoCommand())
+				: EMPTY
+		);
 	}
 
 	/**

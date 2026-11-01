@@ -95,7 +95,6 @@ class OsCommandHelperTest {
 	public static final String ECHO_TEST_UPPER_CASE = "ECHO Test";
 	public static final String ECHO_TEST_LOWER_CASE = "echo Test";
 	public static final String TEST_RESULT = "Test";
-	public static final String RAIDCTL_PATH = "/usr/sbin/raidctl";
 	public static final String HARD_DRIVE = "Hard drive";
 
 	// Embedded files
@@ -158,10 +157,6 @@ class OsCommandHelperTest {
 		" & ${file::2}.bat" +
 		" & del /F /Q ${file::1}" +
 		" & del /F /Q ${file::2}.bat";
-	public static final String RAIDCTL_COMMAND = "/usr/sbin/raidctl -S";
-	public static final String SUDO_RAIDCTL_COMMAND = "%{SUDO:/usr/sbin/raidctl} /usr/sbin/raidctl -S";
-	public static final String SUDO_NAVISECCLI_COMMAND =
-		"%{Sudo:NaviSecCli} NaviSecCli -User %{USERNAME} -Password %{PASSWORD} -Address host -Scope 1 getagent";
 	public static final String SEN_EMBEDDED_0001_PATH = "/tmp/metricshub_embedded_0001";
 	public static final String SH_SEN_EMBEDDED_0001_PATH = "/bin/sh /tmp/metricshub_embedded_0001";
 	public static final String EMBEDDED_TEMP_FILE_PREFIX = "metricshub_embedded_";
@@ -392,6 +387,12 @@ class OsCommandHelperTest {
 			SUDO_KEY_RESULT,
 			OsCommandHelper.replaceSudo(SUDO_KEY + END_OF_LINE + SUDO_KEY, useSudoKeyInformation)
 		);
+
+		// Every name is replaced, with sudo only when it is in useSudoCommands, whatever the case of the tag
+		assertEquals(
+			"sudo key;  other; sudo key",
+			OsCommandHelper.replaceSudo("%{SUDO:key} key; %{SUDO:other} other; %{sudo:key} key", useSudoKeyInformation)
+		);
 	}
 
 	@Test
@@ -506,17 +507,6 @@ class OsCommandHelperTest {
 				osCommandService.runSshCommand(CMD, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 			);
 		}
-	}
-
-	@Test
-	void testGetFileNameFromSudoCommand() {
-		assertThrows(IllegalArgumentException.class, () -> OsCommandHelper.getFileNameFromSudoCommand(null));
-		assertEquals(Optional.empty(), OsCommandHelper.getFileNameFromSudoCommand(RAIDCTL_COMMAND));
-		assertEquals(Optional.of(RAIDCTL_PATH), OsCommandHelper.getFileNameFromSudoCommand(SUDO_RAIDCTL_COMMAND));
-		assertEquals(
-			Optional.of(NAVISECCLI_CAMEL_CASE),
-			OsCommandHelper.getFileNameFromSudoCommand(SUDO_NAVISECCLI_COMMAND)
-		);
 	}
 
 	@Test
@@ -823,7 +813,6 @@ class OsCommandHelperTest {
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
 			mockedOsCommandHelper.when(() -> OsCommandHelper.replaceSudo(anyString(), isNull())).thenCallRealMethod();
-			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() ->
@@ -889,7 +878,6 @@ class OsCommandHelperTest {
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
-			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() ->
@@ -956,7 +944,6 @@ class OsCommandHelperTest {
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
-			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() ->
@@ -1023,7 +1010,6 @@ class OsCommandHelperTest {
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
-			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() ->
@@ -1100,7 +1086,6 @@ class OsCommandHelperTest {
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
-			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
