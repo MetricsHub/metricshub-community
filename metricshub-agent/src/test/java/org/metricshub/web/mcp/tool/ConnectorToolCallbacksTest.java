@@ -14,6 +14,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -26,6 +28,7 @@ class ConnectorToolCallbacksTest {
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final String HOSTNAME = "host-01";
+	private static final String TEMPLATE = "TestTemplateWithTool";
 
 	private AgentContextHolder agentContextHolder;
 	private TelemetryManager telemetryManager;
@@ -79,6 +82,58 @@ class ConnectorToolCallbacksTest {
 	}
 
 	@Test
+	void testToolsOfConnectorsWithVariablesRunWithTheVariablesOfTheHost() throws Exception {
+		// What the agent does for each resource: the connectors with variables resolved in a store of its own
+		final ConnectorStore resourceConnectorStore = telemetryManager.getConnectorStore().newConnectorStore();
+		resourceConnectorStore.setConnectorsWithVariables(List.of(TEMPLATE));
+		resourceConnectorStore.addMany(
+			ConfigHelper.buildAdditionalConnectors(
+				resourceConnectorStore,
+				Map.of("myThing", AdditionalConnector.builder().uses(TEMPLATE).variables(Map.of("thing", "omega")).build()),
+				resourceConnectorStore.getRawConnectorStore()
+			).getCustomConnectorsMap()
+		);
+		telemetryManager.setConnectorStore(resourceConnectorStore);
+
+		// A host without the template, under another resource
+		final TelemetryManager otherTelemetryManager = TelemetryManager.builder()
+			.connectorStore(new ConnectorStore(Paths.get("src", "test", "resources", "mcp", "tool")))
+			.hostConfiguration(
+				HostConfiguration.builder().hostId("host-02").hostname("host-02").hostType(DeviceKind.LINUX).build()
+			)
+			.build();
+		when(agentContextHolder.getAgentContext().getTelemetryManagers()).thenReturn(
+			Map.of("group", Map.of(HOSTNAME, telemetryManager, "host-02", otherTelemetryManager))
+		);
+
+		final List<ToolCallback> callbacks = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext());
+
+		assertEquals(
+			List.of(
+				"myThing_showThing",
+				"TestConnectorWithTool_listThings",
+				"TestConnectorWithTool_reboot",
+				"TestTemplateWithTool_showThing"
+			),
+			names(callbacks)
+		);
+
+		final JsonNode result = MAPPER.readTree(callbacks.get(0).call("{\"hostname\":[\"host-01\",\"host-02\"]}"));
+		assertEquals(List.of(List.of("omega")), MAPPER.convertValue(response(result, HOSTNAME).get("rows"), List.class));
+		assertEquals(
+			"Connector myThing has no tool showThing on host host-02.",
+			response(result, "host-02").get("error").asText()
+		);
+
+		// The template itself, with its default variables
+		final JsonNode defaultResult = MAPPER.readTree(callbacks.get(3).call("{\"hostname\":[\"host-01\"]}"));
+		assertEquals(
+			List.of(List.of("alpha")),
+			MAPPER.convertValue(response(defaultResult, HOSTNAME).get("rows"), List.class)
+		);
+	}
+
+	@Test
 	void testUnknownHostIsReported() throws Exception {
 		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
@@ -92,5 +147,14 @@ class ConnectorToolCallbacksTest {
 			.stream()
 			.map(callback -> callback.getToolDefinition().name())
 			.toList();
+	}
+
+	private static JsonNode response(final JsonNode result, final String hostname) {
+		for (final JsonNode host : result.get("hosts")) {
+			if (hostname.equals(host.get("hostname").asText())) {
+				return host.get("response");
+			}
+		}
+		throw new AssertionError("No response for " + hostname + " in " + result);
 	}
 }
