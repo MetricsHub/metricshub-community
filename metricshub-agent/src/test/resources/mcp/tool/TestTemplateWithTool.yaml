@@ -1,0 +1,29 @@
+connector:
+  displayName: Tool template test connector
+  platforms: Test platform
+  reliesOn: Nothing
+  version: 1.0
+  information: Declares a tool that uses a connector variable
+  detection:
+    appliesTo:
+      - Linux
+    criteria:
+      - type: snmpGetNext
+        oid: 1.3.6.1.4.1.795.10.1.1.3.1.1
+  variables:
+    thing:
+      description: The thing to show
+      defaultValue: alpha
+tools:
+  showThing:
+    description: Shows a thing, the configured one by default.
+    parameters:
+      thing:
+        description: The thing to show
+        default: ${var::thing}
+    sources:
+      thing:
+        type: static
+        value: ${param::thing}
+    result:
+      source: ${source::thing}
