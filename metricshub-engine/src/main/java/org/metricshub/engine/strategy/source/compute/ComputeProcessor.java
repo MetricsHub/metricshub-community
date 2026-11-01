@@ -36,6 +36,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -1024,6 +1025,23 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
+	 * Parses a value as an exact number: an integer or a decimal, negative or with an exponent (1.5E3).
+	 *
+	 * @param value The value to parse.
+	 * @return The number, or null when the value is not a number.
+	 */
+	private static BigDecimal toExactNumber(final String value) {
+		if (value == null) {
+			return null;
+		}
+		try {
+			return new BigDecimal(value.trim());
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	/**
 	 * This method processes Json2Csv compute
 	 * @param json2csv {@link Json2Csv} instance
 	 */
@@ -1433,7 +1451,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final List<List<String>> others = new ArrayList<>();
 		for (final List<String> line : sourceTable.getTable()) {
 			final String value = columnIndex < line.size() ? line.get(columnIndex) : null;
-			if (sort.isNumeric() ? NumberHelper.isNumeric(value) : value != null) {
+			if (sort.isNumeric() ? toExactNumber(value) != null : value != null) {
 				sorted.add(line);
 			} else {
 				others.add(line);
@@ -1442,7 +1460,8 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		Comparator<String> comparator;
 		if (sort.isNumeric()) {
-			comparator = Comparator.comparingDouble(Double::parseDouble);
+			// Exact, unlike a double, which makes the 64-bit counters above 2^53 equal
+			comparator = Comparator.comparing(ComputeProcessor::toExactNumber);
 		} else if (sort.isIgnoreCase()) {
 			comparator = String.CASE_INSENSITIVE_ORDER;
 		} else {

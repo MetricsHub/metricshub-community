@@ -3441,5 +3441,13 @@ class ComputeProcessorTest {
 		sourceTable.setTable(table);
 		computeProcessor.process(Sort.builder().column(0).build());
 		assertEquals(table, sourceTable.getTable());
+
+		// 64-bit counters above 2^53, which are equal as doubles, compare exactly; NaN is not a number
+		final List<String> big = List.of("9007199254740993");
+		final List<String> smaller = List.of("9007199254740992");
+		final List<String> nan = List.of("NaN");
+		sourceTable.setTable(List.of(big, nan, smaller));
+		computeProcessor.process(Sort.builder().column(1).numeric(true).build());
+		assertEquals(List.of(smaller, big, nan), sourceTable.getTable());
 	}
 }
