@@ -84,11 +84,10 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 		return REGEX_SOURCE_REF_MONITORS.matcher(valueToUpdate).replaceAll(match -> {
 			// If the context starts with the string "monitors", perform the corresponding replacement
 			if (
-				// CHECKSTYLE:OFF
 				parts.length >= 4 &&
 				"monitors".equals(parts[0]) &&
 				JOBS.contains(parts[2]) &&
-				("sources".equals(parts[3]) || "mapping".equals(parts[3])) // CHECKSTYLE:ON
+				("sources".equals(parts[3]) || "mapping".equals(parts[3]))
 			) {
 				return Matcher.quoteReplacement(
 					String.format(

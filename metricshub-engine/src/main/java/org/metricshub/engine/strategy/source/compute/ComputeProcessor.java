@@ -811,7 +811,6 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @return boolean
 	 */
 	private boolean isConsistentMatchingLinesInfo(AbstractMatchingLines abstractMatchingLines) {
-		// CHECKSTYLE:OFF
 		return (
 			abstractMatchingLines != null &&
 			abstractMatchingLines.getColumn() != null &&
@@ -820,7 +819,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			sourceTable.getTable() != null &&
 			!sourceTable.getTable().isEmpty()
 		);
-		// CHECKSTYLE:ON
 	}
 
 	/**

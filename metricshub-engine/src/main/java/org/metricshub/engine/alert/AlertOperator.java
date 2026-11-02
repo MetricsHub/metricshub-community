@@ -33,7 +33,6 @@ import lombok.Getter;
  */
 @AllArgsConstructor
 public enum AlertOperator {
-	// CHECKSTYLE:OFF
 	/**
 	 * Equality operator.
 	 */
@@ -76,8 +75,6 @@ public enum AlertOperator {
 		(paramValue, threshold) -> nonNull(paramValue, threshold) && paramValue.doubleValue() != threshold.doubleValue(),
 		"!="
 	);
-
-	// CHECKSTYLE:ON
 
 	@Getter
 	private BiPredicate<Double, Double> function;

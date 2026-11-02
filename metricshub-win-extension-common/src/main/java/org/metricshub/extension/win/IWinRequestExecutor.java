@@ -149,7 +149,6 @@ public interface IWinRequestExecutor {
 	 * @return boolean value
 	 */
 	static boolean isAcceptableWmiComError(final String errorMessage) {
-		// CHECKSTYLE:OFF
 		return (
 			errorMessage != null &&
 			// @formatter:off
@@ -160,6 +159,5 @@ public interface IWinRequestExecutor {
 			)
 			// @formatter:on
 		);
-		// CHECKSTYLE:ON
 	}
 }

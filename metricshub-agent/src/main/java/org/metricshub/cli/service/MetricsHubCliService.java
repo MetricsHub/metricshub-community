@@ -96,7 +96,6 @@ import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
-//CHECKSTYLE:OFF
 @Command(
 	name = "metricshub",
 	sortOptions = false,
@@ -122,8 +121,6 @@ import picocli.CommandLine.Spec;
 			"[@|yellow -u|@=@|italic USER|@ [@|yellow -p|@=@|italic P4SSW0RD|@]] [OPTIONS]..."
 	}
 )
-//CHECKSTYLE:ON
-
 /**
  * MetricsHub CLI service providing a command-line interface to gather metrics from specified hosts.
  * It implements a {@link Callable} which return an exit code as follows:

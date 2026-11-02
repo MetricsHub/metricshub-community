@@ -201,9 +201,8 @@ public class ExtensionManager {
 
 		if ((maybeWmiExtension.isPresent() || maybeWinrmExtension.isPresent()) && maybeOsCommandExtension.isPresent()) {
 			if (
-				// CHECKSTYLE:OFF
 				DeviceKind.WINDOWS == telemetryManager.getHostConfiguration().getHostType() &&
-				!telemetryManager.getHostProperties().isLocalhost() // CHECKSTYLE:ON
+				!telemetryManager.getHostProperties().isLocalhost()
 			) {
 				return Stream.of(maybeWmiExtension, maybeWinrmExtension)
 					.filter(Optional::isPresent)

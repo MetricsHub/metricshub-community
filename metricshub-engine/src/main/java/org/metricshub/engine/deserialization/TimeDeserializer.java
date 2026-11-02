@@ -98,7 +98,6 @@ public class TimeDeserializer extends JsonDeserializer<Long> {
 		final long milliseconds = (matcher.start(7) == -1 ? 0 : Integer.parseInt(matcher.group(7)));
 
 		// @formatter:off
-		// CHECKSTYLE:OFF
 		return (
 			years * 60 * 60 * 24 * 365 +
 			weeks * 60 * 60 * 24 * 7 +
@@ -108,7 +107,6 @@ public class TimeDeserializer extends JsonDeserializer<Long> {
 			seconds +
 			milliseconds / 1000
 		);
-		// CHECKSTYLE:ON
 		// @formatter:on
 	}
 }

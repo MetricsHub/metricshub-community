@@ -98,7 +98,6 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Normalization logic for low degraded metric
 		// @formatter:off
-		// @CHECKSTYLE:OFF
 		if (
 				available > 1.0 &&
 				(
@@ -109,7 +108,6 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 			collectLowDegradedMetric(monitor, available - 1);
 		}
 
-		// @CHECKSTYLE:ON
 		// @formatter:on
 
 		// Normalization logic for expected metric

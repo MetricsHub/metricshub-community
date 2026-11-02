@@ -300,13 +300,11 @@ public class HwCollectHelper {
 				// Extract the metric name prefix
 				final String currentMetricNamePrefix = MetricFactory.extractName(metric.getName());
 				final Map<String, String> metricAttributes = metric.getAttributes();
-				// CHECKSTYLE:OFF
 				return (
 					metricNamePrefix.equals(currentMetricNamePrefix) &&
 					(!metricAttributes.containsKey("hw.type") || monitor.getType().equals(metricAttributes.get("hw.type"))) &&
 					metric.isUpdated()
 				);
-				// CHECKSTYLE:ON
 			});
 	}
 
