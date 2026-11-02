@@ -333,10 +333,7 @@ public class WbemRequestExecutor {
 		if (t instanceof WBEMException wbemException) {
 			final int cimErrorType = wbemException.getID();
 			return isAcceptableWbemError(cimErrorType);
-		} else if (
-			// CHECKSTYLE:OFF
-			t instanceof org.metricshub.wbem.client.exceptions.WqlQuerySyntaxException // CHECKSTYLE:ON
-		) {
+		} else if (t instanceof org.metricshub.wbem.client.exceptions.WqlQuerySyntaxException) {
 			return true;
 		}
 
@@ -351,12 +348,10 @@ public class WbemRequestExecutor {
 	 * @return boolean value
 	 */
 	private boolean isAcceptableWbemError(final int errorId) {
-		// CHECKSTYLE:OFF
 		return (
 			errorId == WBEMException.CIM_ERR_INVALID_NAMESPACE ||
 			errorId == WBEMException.CIM_ERR_INVALID_CLASS ||
 			errorId == WBEMException.CIM_ERR_NOT_FOUND
 		);
-		// CHECKSTYLE:ON
 	}
 }

@@ -338,12 +338,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return boolean value
 	 */
 	private boolean isEntryConcatMethodJsonArrayOrExtended(final Source copy) {
-		// CHECKSTYLE:OFF
 		return (
 			EntryConcatMethod.JSON_ARRAY_EXTENDED.equals(copy.getEntryConcatMethod()) ||
 			EntryConcatMethod.JSON_ARRAY.equals(copy.getEntryConcatMethod())
 		);
-		// CHECKSTYLE:ON
 	}
 
 	/**
@@ -476,14 +474,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return boolean value
 	 */
 	private boolean isSourceWithProtectedReferences(final Source source) {
-		// CHECKSTYLE:OFF
 		return (
 			source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
 			source instanceof TableJoinSource
 		);
-		// CHECKSTYLE:ON
 	}
 
 	/**

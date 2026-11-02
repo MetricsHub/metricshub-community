@@ -649,12 +649,10 @@ public abstract class AbstractStrategy implements IStrategy {
 		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
 		final Set<String> includedMonitors = hostConfiguration.getIncludedMonitors();
 		final Set<String> excludedMonitors = hostConfiguration.getExcludedMonitors();
-		// CHECKSTYLE:OFF
 		return (
 			(includedMonitors != null && !includedMonitors.contains(monitorType)) ||
 			(excludedMonitors != null && excludedMonitors.contains(monitorType))
 		);
-		// CHECKSTYLE:ON
 	}
 
 	/**

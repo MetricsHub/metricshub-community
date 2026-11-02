@@ -347,7 +347,6 @@ public class OsCommandExtension implements IProtocolExtension {
 		final DeviceKind hostType,
 		final long timeout
 	) {
-		// CHECKSTYLE:OFF
 		try {
 			if (
 				osCommandService.runSshCommand(SSH_TEST_COMMAND, hostname, sshConfiguration, timeout, null, null, hostType) ==
@@ -368,7 +367,6 @@ public class OsCommandExtension implements IProtocolExtension {
 			return DOWN;
 		}
 		return previousSshStatus;
-		// CHECKSTYLE:ON
 	}
 
 	/**

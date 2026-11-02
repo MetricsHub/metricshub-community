@@ -182,7 +182,6 @@ public class MonitorNameBuilder {
 		final Map<DeviceKind, String> map = new EnumMap<>(DeviceKind.class);
 		for (DeviceKind deviceKind : DeviceKind.values()) {
 			// @formatter:off
-			// @CHECKSTYLE:OFF
 			final String value =
 				switch (deviceKind) {
 					case VMS -> HP_OPEN_VMS_COMPUTER;
@@ -198,7 +197,6 @@ public class MonitorNameBuilder {
 					case SOLARIS -> SUN_SOLARIS_COMPUTER;
 					default -> null;
 				};
-			// @CHECKSTYLE:ON
 			// @formatter:on
 			map.put(deviceKind, value);
 		}
@@ -573,7 +571,6 @@ public class MonitorNameBuilder {
 		String enclosureType = attributes.get(ENCLOSURE_TYPE);
 		if (enclosureType != null) {
 			// @formatter:off
-			// @CHECKSTYLE:OFF
 			enclosureType =
 				switch (enclosureType.toLowerCase()) {
 					case "", "computer" -> COMPUTER;
@@ -582,7 +579,6 @@ public class MonitorNameBuilder {
 					case "switch" -> SWITCH;
 					default -> ENCLOSURE;
 				};
-			// @CHECKSTYLE:ON
 			// @formatter:on
 		} else {
 			enclosureType = ENCLOSURE;

@@ -142,11 +142,9 @@ public class PowerMeasurementStatusUpdate extends AbstractConnectorUpdateChain {
 			return false;
 		}
 		final String lowerKey = metricName.toLowerCase();
-		// CHECKSTYLE:OFF
 		return (
 			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC) ||
 			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_ENERGY_METRIC)
 		);
-		// CHECKSTYLE:ON
 	}
 }

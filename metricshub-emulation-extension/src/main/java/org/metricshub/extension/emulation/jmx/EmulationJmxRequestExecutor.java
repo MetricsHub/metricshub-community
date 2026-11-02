@@ -186,13 +186,11 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 		final List<String> attributes,
 		final List<String> keyProperties
 	) {
-		//CHECKSTYLE:OFF
 		return (
 			Objects.equals(objectName, request.getObjectName()) &&
 			Objects.equals(normalizeList(attributes), normalizeList(request.getAttributes())) &&
 			Objects.equals(normalizeList(keyProperties), normalizeList(request.getKeyProperties()))
 		);
-		//CHECKSTYLE:ON
 	}
 
 	/**

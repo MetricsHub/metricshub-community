@@ -307,11 +307,9 @@ public class PowerAndEnergyCollectHelper {
 	private static boolean isPowerMetricNotDeactivated(final Monitor monitor) {
 		final Map<String, String> conditionalCollection = monitor.getConditionalCollection();
 		// Safely check the metrics as conditionalCollection can never be null
-		// CHECKSTYLE:OFF
 		return (
 			(conditionalCollection.containsKey(HW_ENCLOSURE_ENERGY) && !monitor.isMetricDeactivated(HW_ENCLOSURE_ENERGY)) ||
 			(conditionalCollection.containsKey(HW_ENCLOSURE_POWER) && !monitor.isMetricDeactivated(HW_ENCLOSURE_POWER))
 		);
-		// CHECKSTYLE:ON
 	}
 }

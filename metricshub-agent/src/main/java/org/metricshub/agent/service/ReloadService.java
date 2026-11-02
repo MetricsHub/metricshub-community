@@ -186,7 +186,6 @@ public class ReloadService {
 	 * @return {@code true} if global settings have changed, otherwise {@code false}
 	 */
 	public boolean globalConfigurationHasChanged(final AgentConfig runningConf, final AgentConfig newConf) {
-		// CHECKSTYLE:OFF
 		return (
 			runningConf.getJobPoolSize() != newConf.getJobPoolSize() ||
 			!Objects.equals(runningConf.getLoggerLevel(), newConf.getLoggerLevel()) ||
@@ -208,7 +207,6 @@ public class ReloadService {
 			!Objects.equals(runningConf.getPatchDirectory(), newConf.getPatchDirectory()) ||
 			!Objects.equals(runningConf.getCentral(), newConf.getCentral())
 		);
-		// CHECKSTYLE:ON
 	}
 
 	/**
@@ -475,7 +473,6 @@ public class ReloadService {
 		final ResourceGroupConfig runningResourceGroupConfig,
 		final ResourceGroupConfig newResourceGroupConfig
 	) {
-		// CHECKSTYLE:OFF
 		return (
 			!Objects.equals(runningResourceGroupConfig.getLoggerLevel(), newResourceGroupConfig.getLoggerLevel()) ||
 			!Objects.equals(runningResourceGroupConfig.getOutputDirectory(), newResourceGroupConfig.getOutputDirectory()) ||
@@ -507,7 +504,6 @@ public class ReloadService {
 				newResourceGroupConfig.getStateSetCompression()
 			)
 		);
-		// CHECKSTYLE:ON
 	}
 
 	/**

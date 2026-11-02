@@ -48,7 +48,6 @@ import picocli.CommandLine.Spec;
 /**
  * Service for managing API keys via CLI commands.
  */
-//CHECKSTYLE:OFF
 @Command(
 	name = "apikey",
 	subcommands = {
@@ -64,7 +63,6 @@ import picocli.CommandLine.Spec;
 	parameterListHeading = "%n@|bold,underline Parameters|@:%n",
 	optionListHeading = "%n@|bold,underline Options|@:%n"
 )
-//CHECKSTYLE:ON
 @NoArgsConstructor
 @Data
 public class ApiKeyCliService {

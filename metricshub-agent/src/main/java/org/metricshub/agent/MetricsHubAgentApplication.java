@@ -113,7 +113,6 @@ public class MetricsHubAgentApplication implements Runnable {
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
 					log.info("RELOAD - Directory Watcher Task event triggered.\nContext: " + context.toString());
-					// CHECKSTYLE:OFF
 					return (
 						context != null &&
 						agentContextHolder
@@ -123,7 +122,6 @@ public class MetricsHubAgentApplication implements Runnable {
 							.stream()
 							.anyMatch(fileExtension -> context.toString().endsWith(fileExtension))
 					);
-					// CHECKSTYLE:ON
 				})
 				.await(CONFIG_WATCHER_AWAIT_MS)
 				.checksumSupplier(() ->

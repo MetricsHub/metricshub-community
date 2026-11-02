@@ -389,12 +389,10 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 					// Execute the SNMPv3 query
 					final String result = extension.executeQuery(configuration, queryNode);
 					// Save the snmp result to a file if the filename is provided when the record option is enabled
-					// CHECKSTYLE:OFF
 					if ("walk".equals(action) && record) {
 						final String oid = queryNode.get("oid").asText();
 						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter, oid);
 					}
-					// CHECKSTYLE:ON
 					// display the result
 					displayResult(result);
 				} catch (Exception e) {

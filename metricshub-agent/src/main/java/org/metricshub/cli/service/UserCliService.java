@@ -53,7 +53,6 @@ import picocli.CommandLine.Spec;
  * Manage users via CLI.
  * Stored payload: username &lt;SEP&gt; bcrypt(password) &lt;SEP&gt; role
  */
-//CHECKSTYLE:OFF
 @Command(
 	name = "user",
 	subcommands = {
@@ -70,7 +69,6 @@ import picocli.CommandLine.Spec;
 	parameterListHeading = "%n@|bold,underline Parameters|@:%n",
 	optionListHeading = "%n@|bold,underline Options|@:%n"
 )
-//CHECKSTYLE:ON
 @NoArgsConstructor
 @Data
 public class UserCliService {
