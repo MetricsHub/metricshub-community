@@ -1,7 +1,18 @@
 version: 2
+
+registries:
+  nexus-metricshub:
+    type: maven-repository
+    url: https://repo.metricshub.com/repository/maven-public/
+    username: ${{secrets.DEPENDABOT_NEXUS_USERNAME}}
+    password: ${{secrets.DEPENDABOT_NEXUS_PASSWORD}}
+    replaces-base: false
+
 updates:
 - package-ecosystem: maven
   directory: "/"
+  registries:
+    - nexus-metricshub
   schedule:
     interval: daily
   # ignore:

@@ -14,11 +14,6 @@ on:
         description: "New SNAPSHOT version"
         required: true
         default: ""
-      autoRelease:
-        type: boolean
-        description: "Release staging repository immediately?"
-        required: false
-        default: false
       pushToDockerHub:
         type: boolean
         description: "Publish Docker images on Docker Hub?"
@@ -131,44 +126,59 @@ jobs:
     - name: Set up Maven settings.xml
       uses: s4u/maven-settings-action@v4.1.0
       with:
-        repositories: >-
+        repositories: |
           [
             {
-              "id": "central-snapshots",
-              "name": "Maven Repository Switchboard",
-              "url": "https://central.sonatype.com/repository/maven-snapshots",
+              "id": "metricshub",
+              "name": "metricshub-repository",
+              "url": "https://repo.metricshub.com/repository/maven-public",
               "snapshots": { "enabled": true },
-              "releases": { "enabled": false }
+              "releases": { "enabled": true }
             }
           ]
-        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}, {"id": "gpg.passphrase", "passphrase": "${env.MAVEN_GPG_PASSPHRASE}", "configuration": {}}]'
-        sonatypeSnapshots: true
+        pluginRepositories: |
+          [
+            {
+              "id": "metricshub",
+              "name": "metricshub-repository",
+              "url": "https://repo.metricshub.com/repository/maven-public",
+              "snapshots": { "enabled": true },
+              "releases": { "enabled": true }
+            }
+          ]
+        servers: |
+          [
+            {
+              "id": "metricshub",
+              "username": "${env.REPO_METRICSHUB_USERNAME}",
+              "password": "${env.REPO_METRICSHUB_TOKEN}"
+            },
+            {
+              "id": "gpg.passphrase",
+              "passphrase": "${env.MAVEN_GPG_PASSPHRASE}",
+              "configuration": {}
+            }
+          ]
 
     - name: Checkout ${{ needs.prepare.outputs.tagName }} branch
       run: |
         git fetch
         git checkout ${{ needs.prepare.outputs.tagName }} 2>/dev/null
 
-    # central-publishing-maven-plugin 0.11.0 stages the artifacts with the maven-compat ArtifactInstaller. With
-    # Maven 3.10, that install also writes maven-metadata-local.xml (group/artifact level), _remote.repositories and
-    # .locks into the staging directory, and Central rejects the bundle ("Bundle has content that does NOT have a
-    # .pom file"). Disable the versions metadata generator and the enhanced local repository manager (a NaN priority
-    # disables a Resolver component), and use in-JVM locks. The bundle then holds only the artifacts, as with Maven 3.9.
-    # Same fix as MetricsHub/workflows#39 (v8); see apache/maven#13388.
-    - name: Perform MetricsHub Artifacts release to Maven Central
+    # The release repository refuses to redeploy an artifact. deployAtEnd only deploys once every module has been
+    # built, so a build failure doesn't leave a partial release behind. If the deployment itself fails midway, delete
+    # the components of this version on repo.metricshub.com before restarting the workflow, or release the next version.
+    - name: Perform MetricsHub Artifacts release to repo.metricshub.com
       run: |
         mvn -B -U -Prelease deploy --file pom.xml \
-        -Daether.priority.VersionsMetadataGeneratorFactory=NaN \
-        -Daether.priority.EnhancedLocalRepositoryManagerFactory=NaN \
-        -Daether.syncContext.named.factory=rwlock-local \
+        -DdeployAtEnd=true \
         -Dgpg.passphraseServerId=gpg.passphrase \
         -Darguments=-Dgpg.passphraseServerId=gpg.passphrase
       env:
         GITHUB_TOKEN: ${{ github.token }}
-        AUTO_RELEASE_AFTER_CLOSE: ${{ inputs.autoRelease }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
+        REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
 
     - name: Get Project Version
       id: version

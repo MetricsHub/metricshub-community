@@ -5,6 +5,13 @@
 #
 # Call this workflow on push to the base branch.
 #
+# Dependencies are resolved from, and SNAPSHOTs deployed to, repo.metricshub.com.
+#
+# Requirements:
+#
+# - REPO_METRICSHUB_USERNAME secret (at the repository or organization level)
+# - REPO_METRICSHUB_TOKEN secret
+#
 
 name: Maven Build
 run-name: Maven ${{ github.head_ref }} Build
@@ -85,25 +92,31 @@ jobs:
         repositories: |
           [
             {
-              "id": "central-snapshots",
-              "name": "Maven Repository Switchboard",
-              "url": "https://central.sonatype.com/repository/maven-snapshots",
+              "id": "metricshub",
+              "name": "metricshub-repository",
+              "url": "https://repo.metricshub.com/repository/maven-public",
               "snapshots": { "enabled": true },
-              "releases": { "enabled": false }
+              "releases": { "enabled": true }
             }
           ]
-        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}]'
-        sonatypeSnapshots: true
-
-    - name: Declare Central as an origin of server central
-      # Maven 3.10 only sends the credentials of a server to the origins declared for its id, and the id "central"
-      # is bound to repo.maven.apache.org by the built-in central repository. Add https://central.sonatype.com to the
-      # origins of server central, so the publishing token reaches Central but not a repository named "central" at
-      # any other origin (unlike -Dmaven.repository.credentialScope=id). Maven 3.9 ignores the element (with a warning).
-      shell: bash
-      run: |
-        perl -0pi -e 's#(<server>\s*<id>central</id>)#$1\n    <repositoryOrigins>\n        <repositoryOrigin>https://central.sonatype.com</repositoryOrigin>\n    </repositoryOrigins>#' ~/.m2/settings.xml
-        grep -q '<repositoryOrigin>https://central.sonatype.com</repositoryOrigin>' ~/.m2/settings.xml
+        pluginRepositories: |
+          [
+            {
+              "id": "metricshub",
+              "name": "metricshub-repository",
+              "url": "https://repo.metricshub.com/repository/maven-public",
+              "snapshots": { "enabled": true },
+              "releases": { "enabled": true }
+            }
+          ]
+        servers: |
+          [
+            {
+              "id": "metricshub",
+              "username": "${env.REPO_METRICSHUB_USERNAME}",
+              "password": "${env.REPO_METRICSHUB_TOKEN}"
+            }
+          ]
 
     - name: Setup tmate SSH session
       uses: mxschmitt/action-tmate@v3
@@ -132,13 +145,16 @@ jobs:
       id: version
       run: |
         echo "version=$(mvn help:evaluate -Dexpression=project.version -q -N -DforceStdout)" >> $GITHUB_OUTPUT
+      env:
+        REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
+        REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
 
     - name: Build with Maven
       run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml ${{ inputs.mavenPhases }} ${{ inputs.mavenOptions }}
       env:
         LOCAL_REPOSITORY_PATH_INSTALL: ${{ env.additionalInstallPath }}
-        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
+        REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
 
     - name: Upload Maven Artifacts
       uses: actions/upload-artifact@v7
