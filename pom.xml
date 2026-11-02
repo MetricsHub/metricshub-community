@@ -90,7 +90,7 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.23</community-connectors.version>
+		<community-connectors.version>1.0.24</community-connectors.version>
 		<maven.compiler.release>25</maven.compiler.release>
 
 		<project.build.outputTimestamp>2026-09-30T13:50:50Z</project.build.outputTimestamp>
