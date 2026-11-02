@@ -71,31 +71,51 @@ This is a multi-module project:
 
 MetricsHub Community ships with a custom runtime built with `jlink` from [Eclipse Temurin](https://adoptium.net). The Temurin version is defined in the root `pom.xml` as `metricshub-jre.version` and is downloaded from the Adoptium API during packaging (see `metricshub-assets` scripts).
 
-### Accessing Snapshots from Maven Central
+### Accessing the MetricsHub Maven Repository
 
-To access **snapshot artifacts** from [Maven Central Snapshots](https://central.sonatype.com/repository/maven-snapshots/), you need to explicitly configure the repository in your Maven `~/.m2/settings.xml`.
+MetricsHub artifacts (releases and *SNAPSHOT* versions, including the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors)) are published to the MetricsHub Maven repository:
 
-Add the following `<repository>` entry:
+* Releases: https://repo.metricshub.com/repository/maven-oss-releases/
+* Snapshots: https://repo.metricshub.com/repository/maven-oss-snapshots/
+
+To build the project, declare `https://repo.metricshub.com/repository/maven-public/` (for dependencies and plugins) and your credentials in your Maven `~/.m2/settings.xml`:
 
 ```xml
-<repositories>
-    ...
-    <repository>
-        <id>central-snapshots</id>
-        <name>Maven Repository Switchboard</name>
-        <url>https://central.sonatype.com/repository/maven-snapshots</url>
-        <releases>
-            <enabled>false</enabled>
-        </releases>
-        <snapshots>
+<settings>
+  <servers>
+    <server>
+      <id>metricshub</id>
+      <username>your-username</username>
+      <password>your-token</password>
+    </server>
+  </servers>
+  <profiles>
+    <profile>
+      <id>metricshub</id>
+      <repositories>
+        <repository>
+          <id>metricshub</id>
+          <url>https://repo.metricshub.com/repository/maven-public/</url>
+          <snapshots>
             <enabled>true</enabled>
-        </snapshots>
-    </repository>
-    ...
-</repositories>
+          </snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>metricshub</id>
+          <url>https://repo.metricshub.com/repository/maven-public/</url>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>metricshub</activeProfile>
+  </activeProfiles>
+</settings>
 ```
 
-> 💡 This is required if your build depends on snapshot versions of dependencies hosted on Maven Central’s snapshots repository.
+> 💡 Releases are performed with the **Release** GitHub Actions workflow. The release repository refuses to redeploy an artifact: if a release fails while deploying, delete the components of this version on https://repo.metricshub.com before restarting the workflow, or release the next version instead.
 
 ### Build
 

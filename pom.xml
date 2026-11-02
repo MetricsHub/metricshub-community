@@ -27,6 +27,17 @@
 		<url>https://github.com/metricshub/metricshub-community</url>
 	</scm>
 
+	<distributionManagement>
+		<repository>
+			<id>metricshub</id>
+			<url>https://repo.metricshub.com/repository/maven-oss-releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>metricshub</id>
+			<url>https://repo.metricshub.com/repository/maven-oss-snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+
 	<licenses>
 		<license>
 			<name>AGPL-3.0</name>
