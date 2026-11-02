@@ -34,6 +34,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -41,8 +42,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Multipl
 import org.metricshub.engine.connector.model.monitor.task.source.compute.PerBitTranslation;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 
@@ -50,8 +53,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv
  * Interface for a ComputeProcessor responsible for processing various compute operations on source data.
  * Implementations of this interface should handle specific types of compute operations, such as Add, And,
  * ArrayTranslate, Awk, Convert, Divide, DuplicateColumn, ExcludeMatchingLines, Extract, ExtractPropertyFromWbemPath,
- * Json2Csv, KeepColumns, KeepOnlyMatchingLines, Prepend, Multiply, PerBitTranslation, Replace, Append,
- * Substring, Subtract, Translate, and Xml2Csv.
+ * Head, Json2Csv, KeepColumns, KeepOnlyMatchingLines, Prepend, Multiply, PerBitTranslation, Replace, Sort, Append,
+ * Substring, Subtract, Tail, Translate, and Xml2Csv.
  */
 public interface IComputeProcessor {
 	/**
@@ -139,6 +142,13 @@ public interface IComputeProcessor {
 	void process(ExtractPropertyFromWbemPath extractPropertyFromWbemPath);
 
 	/**
+	 * Processes the Head compute operation on the source data.
+	 *
+	 * @param head The Head compute operation to be processed.
+	 */
+	void process(Head head);
+
+	/**
 	 * Processes the Json2Csv compute operation on the source data.
 	 *
 	 * @param json2Csv The Json2Csv compute operation to be processed.
@@ -188,6 +198,13 @@ public interface IComputeProcessor {
 	void process(Replace replace);
 
 	/**
+	 * Processes the Sort compute operation on the source data.
+	 *
+	 * @param sort The Sort compute operation to be processed.
+	 */
+	void process(Sort sort);
+
+	/**
 	 * Processes the Append compute operation on the source data.
 	 *
 	 * @param append The Append compute operation to be processed.
@@ -207,6 +224,13 @@ public interface IComputeProcessor {
 	 * @param subtract The Subtract compute operation to be processed.
 	 */
 	void process(Subtract subtract);
+
+	/**
+	 * Processes the Tail compute operation on the source data.
+	 *
+	 * @param tail The Tail compute operation to be processed.
+	 */
+	void process(Tail tail);
 
 	/**
 	 * Processes the Translate compute operation on the source data.

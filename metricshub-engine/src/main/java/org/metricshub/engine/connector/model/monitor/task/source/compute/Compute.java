@@ -50,6 +50,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = ExcludeMatchingLines.class, name = "excludeMatchingLines"),
 		@JsonSubTypes.Type(value = Extract.class, name = "extract"),
 		@JsonSubTypes.Type(value = ExtractPropertyFromWbemPath.class, name = "extractPropertyFromWbemPath"),
+		@JsonSubTypes.Type(value = Head.class, name = "head"),
 		@JsonSubTypes.Type(value = Json2Csv.class, name = "json2Csv"),
 		@JsonSubTypes.Type(value = KeepColumns.class, name = "keepColumns"),
 		@JsonSubTypes.Type(value = KeepOnlyMatchingLines.class, name = "keepOnlyMatchingLines"),
@@ -57,9 +58,11 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = Multiply.class, name = "multiply"),
 		@JsonSubTypes.Type(value = PerBitTranslation.class, name = "perBitTranslation"),
 		@JsonSubTypes.Type(value = Replace.class, name = "replace"),
+		@JsonSubTypes.Type(value = Sort.class, name = "sort"),
 		@JsonSubTypes.Type(value = Append.class, name = "append"),
 		@JsonSubTypes.Type(value = Subtract.class, name = "subtract"),
 		@JsonSubTypes.Type(value = Substring.class, name = "substring"),
+		@JsonSubTypes.Type(value = Tail.class, name = "tail"),
 		@JsonSubTypes.Type(value = Translate.class, name = "translate"),
 		@JsonSubTypes.Type(value = Xml2Csv.class, name = "xml2Csv")
 	}

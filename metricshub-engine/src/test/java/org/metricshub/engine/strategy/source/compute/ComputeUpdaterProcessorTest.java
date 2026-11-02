@@ -27,6 +27,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Duplica
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -34,8 +35,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Multipl
 import org.metricshub.engine.connector.model.monitor.task.source.compute.PerBitTranslation;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -272,5 +275,28 @@ class ComputeUpdaterProcessorTest {
 		// The connector's own compute is left as declared, its translation table included
 		assertEquals("${param::sep}", original.getArraySeparator());
 		assertNotSame(original.getTranslationTable(), processed.getValue().getTranslationTable());
+	}
+
+	@Test
+	void testProcessHeadReplacesParameters() {
+		final ComputeUpdaterProcessor updater = ComputeUpdaterProcessor.builder()
+			.computeProcessor(computeProcessor)
+			.attributes(Map.of("lines", "20"))
+			.telemetryManager(TelemetryManager.builder().hostConfiguration(HostConfiguration.builder().build()).build())
+			.build();
+
+		updater.process(Head.builder().lines("${param::lines}").build());
+
+		final ArgumentCaptor<Head> processed = ArgumentCaptor.forClass(Head.class);
+		verify(computeProcessor).process(processed.capture());
+		assertEquals("20", processed.getValue().getLines());
+	}
+
+	@Test
+	void testProcessTailAndSort() {
+		computeUpdaterProcessor.process(Tail.builder().lines("5").build());
+		verify(computeProcessor, times(1)).process(any(Tail.class));
+		computeUpdaterProcessor.process(Sort.builder().column(1).build());
+		verify(computeProcessor, times(1)).process(any(Sort.class));
 	}
 }

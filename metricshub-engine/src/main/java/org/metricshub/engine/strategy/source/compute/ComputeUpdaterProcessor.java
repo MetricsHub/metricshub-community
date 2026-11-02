@@ -40,6 +40,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -47,8 +48,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Multipl
 import org.metricshub.engine.connector.model.monitor.task.source.compute.PerBitTranslation;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
@@ -134,6 +137,11 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 	}
 
 	@Override
+	public void process(final Head head) {
+		processCompute(head);
+	}
+
+	@Override
 	public void process(final Json2Csv json2csv) {
 		processCompute(json2csv);
 	}
@@ -169,6 +177,11 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 	}
 
 	@Override
+	public void process(final Sort sort) {
+		processCompute(sort);
+	}
+
+	@Override
 	public void process(final Append append) {
 		processCompute(append);
 	}
@@ -176,6 +189,11 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 	@Override
 	public void process(final Subtract subtract) {
 		processCompute(subtract);
+	}
+
+	@Override
+	public void process(final Tail tail) {
+		processCompute(tail);
 	}
 
 	@Override
