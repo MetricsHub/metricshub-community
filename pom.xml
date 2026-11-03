@@ -295,7 +295,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>wmi-java</artifactId>
-				<version>1.0.05</version>
+				<version>1.0.07</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
@@ -330,7 +330,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>winrm-java</artifactId>
-				<version>3.0.00</version>
+				<version>3.1.02</version>
 			</dependency>
 			<dependency>
 				<groupId>io.jawk</groupId>
