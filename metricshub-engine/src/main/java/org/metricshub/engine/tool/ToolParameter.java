@@ -171,8 +171,26 @@ public record ToolParameter(
 		if (enumValues != null && enumValues.stream().noneMatch(entry -> sameValue(type, entry, value))) {
 			throw new IllegalArgumentException("The argument %s must be one of %s".formatted(name, enumValues));
 		}
-		if (pattern != null && !Pattern.matches(pattern, value)) {
+		if (pattern != null && !matches(name, pattern, value)) {
 			throw new IllegalArgumentException("The argument %s must match the pattern %s".formatted(name, pattern));
+		}
+	}
+
+	/**
+	 * @param name    the parameter name, for the error message
+	 * @param pattern a regular expression
+	 * @param value   the argument
+	 * @return whether the whole value matches the pattern
+	 * @throws IllegalArgumentException if the value is too long for the pattern: Java matches a repeated group
+	 *                                  recursively, and a long value overflows the stack
+	 */
+	private static boolean matches(final String name, final String pattern, final String value) {
+		try {
+			return Pattern.matches(pattern, value);
+		} catch (StackOverflowError e) {
+			throw new IllegalArgumentException(
+				"The argument %s (%d characters) is too long for the pattern %s".formatted(name, value.length(), pattern)
+			);
 		}
 	}
 
