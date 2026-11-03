@@ -138,6 +138,21 @@ class ToolParameterTest {
 	}
 
 	@Test
+	void testValidateRefusesValueThatOverflowsThePattern() {
+		// A repeated group is matched recursively: a long value overflows the stack
+		final ToolParameter path = new ToolParameter(null, null, true, null, "/|(/[a-z][a-z.-]*)+", null);
+		assertDoesNotThrow(() -> path.validate("path", "/var/log"));
+		final String value = "/a".repeat(50_000);
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			path.validate("path", value)
+		);
+		assertEquals(
+			"The argument path (100000 characters) is too long for the pattern /|(/[a-z][a-z.-]*)+",
+			exception.getMessage()
+		);
+	}
+
+	@Test
 	void testValidateEnum() {
 		final ToolParameter signal = new ToolParameter(null, null, false, null, null, List.of("TERM", "KILL"));
 		assertDoesNotThrow(() -> signal.validate("signal", "KILL"));
