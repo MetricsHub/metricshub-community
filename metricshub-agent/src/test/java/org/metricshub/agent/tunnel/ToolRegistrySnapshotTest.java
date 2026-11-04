@@ -32,7 +32,7 @@ class ToolRegistrySnapshotTest {
 		when(definition.inputSchema()).thenReturn(schema);
 		final ToolCallback callback = mock(ToolCallback.class);
 		when(callback.getToolDefinition()).thenReturn(definition);
-		// The agent's own tool, as the configuration classifies it: the one kind the tunnel advertises
+		// The agent's own tool, as the configuration classifies it
 		return new ProductToolCallback(callback, ToolAccess.Access.READ);
 	}
 
@@ -116,23 +116,35 @@ class ToolRegistrySnapshotTest {
 	}
 
 	@Test
-	void onlyTheAgentsOwnToolsAreAdvertisedEachWithItsAccess() {
+	void eachToolIsAdvertisedWithItsAccess() {
+		final ToolCallback ssh = dynamic("ssh_runCommand", true);
+		final ToolCallback snmp = dynamic("snmp_get", false);
+		final ToolCallback unknown = ((ProductToolCallback) callback("Unknown", "Of no known kind", "")).delegate();
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
-		// An extension's tool: whether it fits a host depends on that host, so Central asks for it per host
-		final ToolCallback ssh = new org.metricshub.web.mcp.tool.DynamicToolCallback(
+
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ssh, snmp, unknown, list), Set.of());
+
+		assertEquals(
+			List.of("ListHosts=read", "snmp_get=read", "ssh_runCommand=write"),
+			snapshot
+				.tools()
+				.stream()
+				.map(tool -> tool.name() + "=" + tool.access())
+				.toList(),
+			"a tool that changes a host is write, and one of no known kind is not advertised"
+		);
+		assertSame(unknown, snapshot.callbacks().get("Unknown"), "though the bridge still holds it");
+	}
+
+	private static ToolCallback dynamic(final String name, final boolean destructive) {
+		return new org.metricshub.web.mcp.tool.DynamicToolCallback(
 			org.springframework.ai.tool.definition.ToolDefinition.builder()
-				.name("ssh_runCommand")
-				.description("Runs a command")
+				.name(name)
+				.description(name)
 				.inputSchema(HOST_SCHEMA)
 				.build(),
 			arguments -> "",
-			true
+			destructive
 		);
-
-		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ssh, list), Set.of());
-
-		assertEquals(List.of("ListHosts"), snapshot.tools().stream().map(ToolDescriptor::name).toList());
-		assertEquals("read", snapshot.tools().get(0).access(), "and Central is told its class");
-		assertSame(ssh, snapshot.callbacks().get("ssh_runCommand"), "the bridge still runs the extension's tool");
 	}
 }
