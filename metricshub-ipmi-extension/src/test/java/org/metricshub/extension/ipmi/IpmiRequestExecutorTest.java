@@ -281,8 +281,9 @@ class IpmiRequestExecutorTest {
 		// A busy BMC is not a cleared log: the poll fails and the next one tries again
 		when(rawRequest.execute()).thenReturn(IpmiClientResults.rawResponse(0xC0, new byte[0]));
 		final IpmiRequestExecutor executor = executor();
-		assertThrows(IpmiClientException.class, () ->
-			executor.executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false, 0)
+		assertThrows(
+			IpmiClientException.class,
+			() -> executor.executeIpmiSel(HOSTNAME, ipmiConfiguration, cursor, false, 0)
 		);
 
 		// A cursor at an empty log: the whole log

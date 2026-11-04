@@ -116,8 +116,7 @@ public class DetectionStrategy extends AbstractStrategy {
 		// If one configuration's hostname is not localhost, then we are dealing with a remote host for sure!
 		// This means that remote support connector will be staged for the automatic detection.
 		hostProperties.setLocalhost(
-			hostConfiguration
-				.getConfigurations()
+			hostConfiguration.getConfigurations()
 				.values()
 				.stream()
 				.allMatch(config -> NetworkHelper.isLocalhost(config.getHostname()))
@@ -256,8 +255,7 @@ public class DetectionStrategy extends AbstractStrategy {
 
 		monitorAttributes.put(
 			MONITOR_ATTRIBUTE_APPLIES_TO_OS,
-			connector
-				.getConnectorIdentity()
+			connector.getConnectorIdentity()
 				.getDetection()
 				.getAppliesTo()
 				.stream()

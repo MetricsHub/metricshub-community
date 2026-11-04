@@ -116,13 +116,16 @@ public class ExplorerService {
 		}
 
 		// Resource Groups (excluding top-level group key)
-		var resourceGroups = telemetryManagers
-			.entrySet()
+		var resourceGroups = telemetryManagers.entrySet()
 			.stream()
 			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
 			.sorted(Map.Entry.comparingByKey())
-			.map((Entry<String, Map<String, TelemetryManager>> entry) ->
-				buildResourceGroupNode(entry.getKey(), entry.getValue(), deep)
+			.map(
+				(Entry<String, Map<String, TelemetryManager>> entry) -> buildResourceGroupNode(
+					entry.getKey(),
+					entry.getValue(),
+					deep
+				)
 			)
 			.toList();
 
@@ -164,15 +167,9 @@ public class ExplorerService {
 		groupNode.getResources().addAll(buildResources(groupTms, deep));
 
 		// Optionally, aggregate resource metrics (sum/avg/etc.)
-		groupNode
-			.getResources()
-			.forEach(resource ->
-				resource
-					.getMetrics()
-					.forEach((_, _) -> {
-						// implement aggregation logic here
-					})
-			);
+		groupNode.getResources().forEach(resource -> resource.getMetrics().forEach((_, _) -> {
+			// implement aggregation logic here
+		}));
 
 		return groupNode;
 	}
@@ -192,36 +189,31 @@ public class ExplorerService {
 		if (tms == null || tms.isEmpty()) {
 			return new ArrayList<>();
 		}
-		return tms
-			.entrySet()
-			.stream()
-			.sorted(Entry.comparingByKey())
-			.map((Entry<String, TelemetryManager> entry) -> {
-				final String resourceKey = entry.getKey();
-				final TelemetryManager tm = entry.getValue();
+		return tms.entrySet().stream().sorted(Entry.comparingByKey()).map((Entry<String, TelemetryManager> entry) -> {
+			final String resourceKey = entry.getKey();
+			final TelemetryManager tm = entry.getValue();
 
-				if (deep && tm != null) {
-					return buildFullResourceNode(resourceKey, tm);
-				}
+			if (deep && tm != null) {
+				return buildFullResourceNode(resourceKey, tm);
+			}
 
-				final Map<String, String> attributes = new HashMap<>();
-				final Map<String, Object> metrics = new HashMap<>();
+			final Map<String, String> attributes = new HashMap<>();
+			final Map<String, Object> metrics = new HashMap<>();
 
-				if (tm != null) {
-					final var endpointHost = tm.getEndpointHostMonitor();
-					if (endpointHost != null) {
-						if (endpointHost.getAttributes() != null) {
-							attributes.putAll(endpointHost.getAttributes());
-						}
-						if (endpointHost.getMetrics() != null) {
-							endpointHost.getMetrics().forEach((k, v) -> metrics.put(k, getMetricValue(v)));
-						}
+			if (tm != null) {
+				final var endpointHost = tm.getEndpointHostMonitor();
+				if (endpointHost != null) {
+					if (endpointHost.getAttributes() != null) {
+						attributes.putAll(endpointHost.getAttributes());
+					}
+					if (endpointHost.getMetrics() != null) {
+						endpointHost.getMetrics().forEach((k, v) -> metrics.put(k, getMetricValue(v)));
 					}
 				}
+			}
 
-				return ResourceTelemetry.builder().name(resourceKey).attributes(attributes).metrics(metrics).build();
-			})
-			.toList();
+			return ResourceTelemetry.builder().name(resourceKey).attributes(attributes).metrics(metrics).build();
+		}).toList();
 	}
 
 	/**
@@ -263,8 +255,7 @@ public class ExplorerService {
 		}
 
 		// 2. Search grouped resources
-		TelemetryManager groupedResult = telemetryManagers
-			.entrySet()
+		TelemetryManager groupedResult = telemetryManagers.entrySet()
 			.stream()
 			// skip top-level groups
 			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
@@ -360,8 +351,7 @@ public class ExplorerService {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 		}
 
-		return telemetryManagers
-			.entrySet()
+		return telemetryManagers.entrySet()
 			.stream()
 			// Skip top-level virtual group
 			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
@@ -429,12 +419,11 @@ public class ExplorerService {
 
 		final List<ConnectorTelemetry> connectors = new ArrayList<>();
 
-		connectorMonitors
-			.values()
+		connectorMonitors.values()
 			.stream()
 			.sorted(ExplorerService::compareMonitorsById)
-			.forEach((Monitor connectorMonitor) ->
-				appendConnectorNode(tm, connectorIdToMonitorTypes, connectors, connectorMonitor)
+			.forEach(
+				(Monitor connectorMonitor) -> appendConnectorNode(tm, connectorIdToMonitorTypes, connectors, connectorMonitor)
 			);
 		return connectors;
 	}
@@ -474,8 +463,7 @@ public class ExplorerService {
 		}
 
 		final Set<String> monitorTypes = connectorIdToMonitorTypes.getOrDefault(connectorId, Set.of());
-		monitorTypes
-			.stream()
+		monitorTypes.stream()
 			.sorted(String::compareToIgnoreCase)
 			.forEach((String type) -> appendMonitorType(tm, connectorId, connectorNode, type));
 
@@ -503,8 +491,7 @@ public class ExplorerService {
 		// Expand with monitor instances for this connector and type
 		final Map<String, Monitor> monitorsOfType = tm.findMonitorsByType(type);
 		if (monitorsOfType != null && !monitorsOfType.isEmpty()) {
-			monitorsOfType
-				.values()
+			monitorsOfType.values()
 				.stream()
 				.filter(Objects::nonNull)
 				.filter(monitor -> connectorId.equals(monitor.getAttributes().get(MONITOR_ATTRIBUTE_CONNECTOR_ID)))
@@ -611,8 +598,7 @@ public class ExplorerService {
 
 		// Flatten all monitors and group types by connector-id, excluding host and
 		// connector monitors
-		tm
-			.getMonitors()
+		tm.getMonitors()
 			.values()
 			.stream()
 			.filter(Objects::nonNull)
@@ -631,8 +617,7 @@ public class ExplorerService {
 		// Ensure that each listed connector-id exists, even if no non-connector/host
 		// monitor types were found
 		if (connectorMonitors != null && !connectorMonitors.isEmpty()) {
-			final Set<String> connectorIds = connectorMonitors
-				.values()
+			final Set<String> connectorIds = connectorMonitors.values()
 				.stream()
 				.map(m -> m.getAttributes().get(MONITOR_ATTRIBUTE_ID))
 				.collect(Collectors.toSet());

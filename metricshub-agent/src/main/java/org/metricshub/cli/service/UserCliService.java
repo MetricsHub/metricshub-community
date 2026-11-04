@@ -56,8 +56,9 @@ import picocli.CommandLine.Spec;
 @Command(
 	name = "user",
 	subcommands = {
-		UserCliService.CreateCommand.class, UserCliService.ListCommand.class, UserCliService.DeleteCommand.class
-	},
+		UserCliService.CreateCommand.class,
+		UserCliService.ListCommand.class,
+		UserCliService.DeleteCommand.class },
 	sortOptions = false,
 	usageHelpAutoWidth = true,
 	headerHeading = "%n",

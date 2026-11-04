@@ -24,8 +24,9 @@ class JdbcExtensionToolsTest {
 		final JdbcConfiguration configuration = JdbcConfiguration.builder().build();
 		configuration.setHostname("db-01");
 
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			new JdbcExtension().executeTool(
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> new JdbcExtension().executeTool(
 				"query",
 				configuration,
 				JsonNodeFactory.instance.objectNode().put("query", "SELECT 1")

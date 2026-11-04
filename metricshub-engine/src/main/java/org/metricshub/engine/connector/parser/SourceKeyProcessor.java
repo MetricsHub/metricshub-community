@@ -91,24 +91,20 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 		// Make sure the node is available
 		if (monitorsNode != null && !monitorsNode.isNull()) {
 			// Traverse the monitors until the source nodes and set the key of each source node
-			monitorsNode
-				.properties()
-				.forEach((Entry<String, JsonNode> monitorEntry) -> {
-					final String monitorName = monitorEntry.getKey();
-					final JsonNode monitorJobsNode = monitorEntry.getValue();
-					monitorJobsNode
-						.properties()
-						.forEach((Entry<String, JsonNode> monitorJobEntry) -> {
-							final String monitorJobType = monitorJobEntry.getKey();
-							// Make sure the node is a monitor job node (discovery, collect, simple)
-							if (MONITOR_JOB_TYPES.contains(monitorJobType)) {
-								setSourceKeys(
-									monitorJobEntry.getValue().get("sources"),
-									String.format("${source::monitors.%s.%s.sources.%%s}", monitorName, monitorJobType)
-								);
-							}
-						});
+			monitorsNode.properties().forEach((Entry<String, JsonNode> monitorEntry) -> {
+				final String monitorName = monitorEntry.getKey();
+				final JsonNode monitorJobsNode = monitorEntry.getValue();
+				monitorJobsNode.properties().forEach((Entry<String, JsonNode> monitorJobEntry) -> {
+					final String monitorJobType = monitorJobEntry.getKey();
+					// Make sure the node is a monitor job node (discovery, collect, simple)
+					if (MONITOR_JOB_TYPES.contains(monitorJobType)) {
+						setSourceKeys(
+							monitorJobEntry.getValue().get("sources"),
+							String.format("${source::monitors.%s.%s.sources.%%s}", monitorName, monitorJobType)
+						);
+					}
 				});
+			});
 		}
 
 		// Tool nodes: ${source::tools.<tool>.sources.<source>}
@@ -139,10 +135,9 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 		if (sourcesNode == null || sourcesNode.isNull()) {
 			return;
 		}
-		sourcesNode
-			.properties()
-			.forEach((Entry<String, JsonNode> sourceEntry) ->
-				((ObjectNode) sourceEntry.getValue()).set(
+		sourcesNode.properties()
+			.forEach(
+				(Entry<String, JsonNode> sourceEntry) -> ((ObjectNode) sourceEntry.getValue()).set(
 					SOURCE_KEY_PROPERTY,
 					new TextNode(String.format(keyFormat, sourceEntry.getKey()))
 				)
@@ -160,17 +155,12 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 		final JsonNode surroundingNode = node.get(nodeKey);
 		if (surroundingNode != null && !surroundingNode.isNull()) {
 			// Loop over the source nodes and set the key property on each source node
-			surroundingNode
-				.properties()
-				.forEach((Entry<String, JsonNode> sourceNodeEntry) -> {
-					final String sourceName = sourceNodeEntry.getKey();
-					final JsonNode sourceNode = sourceNodeEntry.getValue();
-					final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;
-					sourceObjectNode.set(
-						SOURCE_KEY_PROPERTY,
-						new TextNode(String.format("${source::%s.%s}", nodeKey, sourceName))
-					);
-				});
+			surroundingNode.properties().forEach((Entry<String, JsonNode> sourceNodeEntry) -> {
+				final String sourceName = sourceNodeEntry.getKey();
+				final JsonNode sourceNode = sourceNodeEntry.getValue();
+				final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;
+				sourceObjectNode.set(SOURCE_KEY_PROPERTY, new TextNode(String.format("${source::%s.%s}", nodeKey, sourceName)));
+			});
 		}
 	}
 }

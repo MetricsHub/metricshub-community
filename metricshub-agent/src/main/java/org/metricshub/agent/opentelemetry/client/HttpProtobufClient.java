@@ -94,30 +94,27 @@ public class HttpProtobufClient extends AbstractOtelClient {
 			// Send request and handle response
 			final long startTime = System.currentTimeMillis();
 
-			client
-				.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
-				.thenAccept(response -> {
-					// Set the log context
-					logContextSetter.setContext();
+			client.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString()).thenAccept(response -> {
+				// Set the log context
+				logContextSetter.setContext();
 
-					if (response.statusCode() == 200) {
-						log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
-					} else {
-						log.error(
-							"Failed to send metrics. HTTP Response Code: {}. Server response: {}",
-							response.statusCode(),
-							response.body()
-						);
-					}
-				})
-				.exceptionally(e -> {
-					// Set the log context
-					logContextSetter.setContext();
+				if (response.statusCode() == 200) {
+					log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
+				} else {
+					log.error(
+						"Failed to send metrics. HTTP Response Code: {}. Server response: {}",
+						response.statusCode(),
+						response.body()
+					);
+				}
+			}).exceptionally(e -> {
+				// Set the log context
+				logContextSetter.setContext();
 
-					log.error("Failed to send metrics: {}", e.getMessage());
-					log.debug("Failed to send metrics:", e);
-					return null;
-				});
+				log.error("Failed to send metrics: {}", e.getMessage());
+				log.debug("Failed to send metrics:", e);
+				return null;
+			});
 		} catch (Exception e) {
 			throw new IllegalStateException("Failed to send metrics: " + e.getMessage(), e);
 		}
@@ -146,10 +143,9 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				return HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(timeout)).executor(executorService).build();
 			}
 
-			final SSLContext sslContext =
-				certificate != null && !certificate.isBlank()
-					? createSslContext(certificate) // Load custom certificate
-					: SSLContext.getDefault(); // Use system CA trust store
+			final SSLContext sslContext = certificate != null && !certificate.isBlank()
+				? createSslContext(certificate) // Load custom certificate
+				: SSLContext.getDefault(); // Use system CA trust store
 
 			return HttpClient.newBuilder()
 				.sslContext(sslContext)

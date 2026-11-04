@@ -249,20 +249,13 @@ class ExtensionClassLoaderTest {
 						read(c.getResource(service)),
 						"C (requires A, which requires B) sees B's service file transitively"
 					);
-					assertEquals(
-						List.of("org.example.ImplB"),
-						Collections.list(c.getResources(service))
-							.stream()
-							.map(url -> {
-								try {
-									return read(url);
-								} catch (IOException e) {
-									throw new UncheckedIOException(e);
-								}
-							})
-							.toList(),
-						"getResources must traverse the dependency graph transitively"
-					);
+					assertEquals(List.of("org.example.ImplB"), Collections.list(c.getResources(service)).stream().map(url -> {
+						try {
+							return read(url);
+						} catch (IOException e) {
+							throw new UncheckedIOException(e);
+						}
+					}).toList(), "getResources must traverse the dependency graph transitively");
 				}
 			}
 		}

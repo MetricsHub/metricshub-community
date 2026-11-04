@@ -67,22 +67,16 @@ public class TelemetryResultConverter {
 		// Step 1: Group MonitorVo by type
 		final Map<String, List<MonitorVo>> monitorsByType = new LinkedHashMap<>();
 
-		telemetryManager
-			.getMonitors()
-			.forEach((monitorType, monitorsMap) -> {
-				if (monitorType == null || monitorType.isEmpty() || monitorsMap == null) {
-					return;
-				}
+		telemetryManager.getMonitors().forEach((monitorType, monitorsMap) -> {
+			if (monitorType == null || monitorType.isEmpty() || monitorsMap == null) {
+				return;
+			}
 
-				monitorsMap
-					.entrySet()
-					.stream()
-					.sorted(Map.Entry.comparingByKey())
-					.forEach(entry -> {
-						final MonitorVo monitorVo = convertMonitor(entry.getValue());
-						monitorsByType.computeIfAbsent(monitorType, _ -> new ArrayList<>()).add(monitorVo);
-					});
+			monitorsMap.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+				final MonitorVo monitorVo = convertMonitor(entry.getValue());
+				monitorsByType.computeIfAbsent(monitorType, _ -> new ArrayList<>()).add(monitorVo);
 			});
+		});
 
 		if (monitorsByType.isEmpty()) {
 			return null;
@@ -137,8 +131,7 @@ public class TelemetryResultConverter {
 		if (!numericValues.isEmpty()) {
 			numericMetrics = new LinkedHashMap<>();
 			for (final Map.Entry<String, List<Double>> entry : numericValues.entrySet()) {
-				final DoubleSummaryStatistics stats = entry
-					.getValue()
+				final DoubleSummaryStatistics stats = entry.getValue()
 					.stream()
 					.mapToDouble(Double::doubleValue)
 					.summaryStatistics();
@@ -161,8 +154,7 @@ public class TelemetryResultConverter {
 			stateSetMetrics = new LinkedHashMap<>();
 			for (final Map.Entry<String, Map<String, Integer>> entry : stateCounts.entrySet()) {
 				final List<StateSetCountVo> counts = new ArrayList<>();
-				entry
-					.getValue()
+				entry.getValue()
 					.forEach((state, count) -> counts.add(StateSetCountVo.builder().value(state).count(count).build()));
 				stateSetMetrics.put(entry.getKey(), counts);
 			}

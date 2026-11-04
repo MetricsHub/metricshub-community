@@ -55,8 +55,7 @@ import org.springframework.ai.tool.ToolCallback;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConnectorToolCallbacks {
 
-	private static final String OTHER_DECLARATION_ERROR =
-		"Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
+	private static final String OTHER_DECLARATION_ERROR = "Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
 
 	/**
 	 * What a connector tool returns for one host.
@@ -84,42 +83,40 @@ public final class ConnectorToolCallbacks {
 		final Map<String, Map<String, ConnectorTool>> tools = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		Stream.concat(
 			Stream.of(connectorStore),
-			agentContext
-				.getTelemetryManagers()
+			agentContext.getTelemetryManagers()
 				.values()
 				.stream()
 				.flatMap(telemetryManagers -> telemetryManagers.values().stream())
 				.map(TelemetryManager::getConnectorStore)
 		)
 			.filter(store -> store != null && store.getStore() != null)
-			.forEach(store ->
-				store
-					.getStore()
-					.forEach((connectorId, connector) ->
-						connector
-							.getTools()
-							.forEach((toolName, tool) ->
-								tools.computeIfAbsent(connectorId, id -> new LinkedHashMap<>()).putIfAbsent(toolName, tool)
+			.forEach(
+				store -> store.getStore()
+					.forEach(
+						(connectorId, connector) -> connector.getTools()
+							.forEach(
+								(toolName, tool) -> tools.computeIfAbsent(connectorId, id -> new LinkedHashMap<>())
+									.putIfAbsent(toolName, tool)
 							)
 					)
 			);
 
-		tools.forEach((connectorId, connectorTools) ->
-			connectorTools.forEach((toolName, tool) -> {
-				// Destructive tools included: the interfaces decide what they expose
-				try {
-					final ToolDefinition definition = tool.toDefinition(toolName);
-					callbacks.add(
-						HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
-							run(agentContext, connectorId, toolName, definition, hostname, arguments)
-						)
-					);
-				} catch (IllegalArgumentException e) {
-					// One bad declaration must not take the connector's other tools down
-					log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
-				}
-			})
-		);
+		tools.forEach((connectorId, connectorTools) -> connectorTools.forEach((toolName, tool) -> {
+			// Destructive tools included: the interfaces decide what they expose
+			try {
+				final ToolDefinition definition = tool.toDefinition(toolName);
+				callbacks.add(
+					HostTools.perHost(
+						HostTools.toolName(connectorId, toolName),
+						definition,
+						(hostname, arguments) -> run(agentContext, connectorId, toolName, definition, hostname, arguments)
+					)
+				);
+			} catch (IllegalArgumentException e) {
+				// One bad declaration must not take the connector's other tools down
+				log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
+			}
+		}));
 		return callbacks;
 	}
 
@@ -160,8 +157,7 @@ public final class ConnectorToolCallbacks {
 
 		// A host may belong to several resources: the first one whose variables leave the tool as advertised, since
 		// the arguments were completed with its defaults and the assistant chose it for its description
-		final TelemetryManager hostTelemetryManager = telemetryManagers
-			.stream()
+		final TelemetryManager hostTelemetryManager = telemetryManagers.stream()
 			.filter(candidate -> declaresAsAdvertised(candidate, connectorId, toolName, definition))
 			.findFirst()
 			.orElse(null);

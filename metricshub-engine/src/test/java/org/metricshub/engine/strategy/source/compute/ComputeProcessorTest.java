@@ -135,12 +135,9 @@ class ComputeProcessorTest {
 	private static final String PREFIX_PREPEND_REF_MANUFACTURER1 = "prefix_ID1_middle_NAME1_suffixMANUFACTURER1";
 	private static final String PREFIX_PREPEND_REF_MANUFACTURER2 = "prefix_ID2_middle_NAME2_suffixMANUFACTURER2";
 	private static final String PREFIX_PREPEND_REF_MANUFACTURER3 = "prefix_ID3_middle_NAME3_suffixMANUFACTURER3";
-	private static final String PREFIX_PREPEND_REF_MANUFACTURER1_PROTECTED =
-		"prefix_$$1_middle_NAME1_suffixMANUFACTURER1";
-	private static final String PREFIX_PREPEND_REF_MANUFACTURER2_PROTECTED =
-		"prefix_$$1_middle_NAME2_suffixMANUFACTURER2";
-	private static final String PREFIX_PREPEND_REF_MANUFACTURER3_PROTECTED =
-		"prefix_$$1_middle_NAME3_suffixMANUFACTURER3";
+	private static final String PREFIX_PREPEND_REF_MANUFACTURER1_PROTECTED = "prefix_$$1_middle_NAME1_suffixMANUFACTURER1";
+	private static final String PREFIX_PREPEND_REF_MANUFACTURER2_PROTECTED = "prefix_$$1_middle_NAME2_suffixMANUFACTURER2";
+	private static final String PREFIX_PREPEND_REF_MANUFACTURER3_PROTECTED = "prefix_$$1_middle_NAME3_suffixMANUFACTURER3";
 	private static final String SUFFIX_APPEND_REF_MANUFACTURER1_PROTECTED = "MANUFACTURER1prefix_$$1_middle_NAME1_suffix";
 	private static final String SUFFIX_APPEND_REF_MANUFACTURER2_PROTECTED = "MANUFACTURER2prefix_$$1_middle_NAME2_suffix";
 	private static final String SUFFIX_APPEND_REF_MANUFACTURER3_PROTECTED = "MANUFACTURER3prefix_$$1_middle_NAME3_suffix";
@@ -1319,8 +1316,7 @@ class ComputeProcessorTest {
 
 		computeProcessor.process(jsonToCsv);
 
-		final String expectedRawDataResult =
-			"/monitors[0];enclosure-1;enclosure-1;ENCLOSURE;hostId;\n" +
+		final String expectedRawDataResult = "/monitors[0];enclosure-1;enclosure-1;ENCLOSURE;hostId;\n" +
 			"/monitors[1];enclosure-2;enclosure-2;ENCLOSURE;hostId;\n";
 		assertEquals(expectedRawDataResult, sourceTable.getRawData());
 
@@ -1329,13 +1325,8 @@ class ComputeProcessorTest {
 		jsonToCsv.setParsingMode(Json2Csv.ParsingMode.EVENTS);
 		computeProcessor.process(jsonToCsv);
 		assertEquals(expectedRawDataResult, sourceTable.getRawData());
-		Mockito.verify(clientsExecutorMock).executeJson2Csv(
-			rawData,
-			"/monitors",
-			List.of("id", "name", "monitorType", "hostId"),
-			";",
-			true
-		);
+		Mockito.verify(clientsExecutorMock)
+			.executeJson2Csv(rawData, "/monitors", List.of("id", "name", "monitorType", "hostId"), ";", true);
 	}
 
 	@Test
@@ -1953,8 +1944,7 @@ class ComputeProcessorTest {
 		final String xml = ResourceHelper.getResourceAsString("/test-files/compute/xml2Csv/xml2Csv.xml", this.getClass());
 		sourceTable.setRawData(xml);
 
-		final String properties =
-			">classId;" +
+		final String properties = ">classId;" +
 			"outConfigs/equipmentFan>dn;" +
 			"outConfigs/equipmentFan>serial;" +
 			"outConfigs/equipmentFan>model;" +
@@ -2207,8 +2197,7 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 		assertNotNull(sourceTable.getRawData());
 
-		final String expectedCsvResult =
-			"equipmentFan;sys/switch-A/fan-module-1-1/fan-1;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
+		final String expectedCsvResult = "equipmentFan;sys/switch-A/fan-module-1-1/fan-1;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
 			"equipmentFan;sys/switch-A/fan-module-1-1/fan-2;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
 			"equipmentFan;sys/switch-A/fan-module-1-1/fan-3;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
 			"equipmentFan;sys/switch-A/fan-module-1-1/fan-4;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
@@ -2534,8 +2523,7 @@ class ComputeProcessorTest {
 				.build();
 
 			// 1) Return a multi-line CSV string
-			awkStatic
-				.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
 				.thenReturn(
 					"FOO;ID1;NAME1;MANUFACTURER1;NUMBER_OF_DISKS1\n" +
 						"BAR;ID2;NAME2;MANUFACTURER2;NUMBER_OF_DISKS2\n" +
@@ -2587,8 +2575,7 @@ class ComputeProcessorTest {
 			sourceTable.setRawData(null);
 			sourceTable.setTable(table);
 
-			awkStatic
-				.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			computeProcessor.process(
@@ -2598,8 +2585,7 @@ class ComputeProcessorTest {
 			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
 
 			// 5) Same but with space in selectColumns
-			awkStatic
-				.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			computeProcessor.process(
@@ -2623,19 +2609,12 @@ class ComputeProcessorTest {
 		sourceTable.setTable(table);
 		sourceTable.setRawData(null);
 
-		final Awk awkOK = Awk.builder()
-			.script(
-				"""
-					BEGIN { FS = ";"; }
-					{
-						print $1 ";" $2 ";" $3 ";"
-					}
-				"""
-			)
-			.keep("^" + ID1)
-			.separators(TABLE_SEP)
-			.selectColumns(ONE_TWO_THREE)
-			.build();
+		final Awk awkOK = Awk.builder().script("""
+				BEGIN { FS = ";"; }
+				{
+					print $1 ";" $2 ";" $3 ";"
+				}
+			""").keep("^" + ID1).separators(TABLE_SEP).selectColumns(ONE_TWO_THREE).build();
 
 		computeProcessor.process(awkOK);
 		final List<List<String>> expectedTable = Arrays.asList(Arrays.asList(ID1, NAME1, MANUFACTURER1));
@@ -2657,8 +2636,7 @@ class ComputeProcessorTest {
 		final String sourceRef = "${source::monitors.enclosure.discovery.sources.other}";
 		final String connectorId = "awkVariablesConnector";
 
-		telemetryManager
-			.getHostProperties()
+		telemetryManager.getHostProperties()
 			.getConnectorNamespace(connectorId)
 			.addSourceTable(
 				sourceRef,
@@ -2670,19 +2648,13 @@ class ComputeProcessorTest {
 		computeProcessor.setTelemetryManager(telemetryManager);
 		computeProcessor.setConnectorId(connectorId);
 
-		final Awk awk = Awk.builder()
-			.script(
-				"""
-					BEGIN {
-						for (row = 0; row < length(other); row++) {
-							print other[row][0] ";" other[row][1] ";" factor * 2 ";"
-						}
+		final Awk awk = Awk.builder().script("""
+				BEGIN {
+					for (row = 0; row < length(other); row++) {
+						print other[row][0] ";" other[row][1] ";" factor * 2 ";"
 					}
-				"""
-			)
-			.separators(TABLE_SEP)
-			.variables(new LinkedHashMap<>(Map.of("other", sourceRef, "factor", "21")))
-			.build();
+				}
+			""").separators(TABLE_SEP).variables(new LinkedHashMap<>(Map.of("other", sourceRef, "factor", "21"))).build();
 
 		computeProcessor.process(awk);
 

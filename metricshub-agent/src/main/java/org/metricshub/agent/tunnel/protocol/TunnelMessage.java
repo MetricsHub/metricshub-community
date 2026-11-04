@@ -57,8 +57,7 @@ import java.util.List;
 		@Type(value = TunnelMessage.ToolInvoke.class, name = TunnelMessage.ToolInvoke.TYPE),
 		@Type(value = TunnelMessage.ToolResult.class, name = TunnelMessage.ToolResult.TYPE),
 		@Type(value = TunnelMessage.ToolError.class, name = TunnelMessage.ToolError.TYPE),
-		@Type(value = TunnelMessage.ProtocolError.class, name = TunnelMessage.ProtocolError.TYPE)
-	}
+		@Type(value = TunnelMessage.ProtocolError.class, name = TunnelMessage.ProtocolError.TYPE) }
 )
 public sealed interface TunnelMessage {
 	/**

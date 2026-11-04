@@ -47,8 +47,7 @@ class WinRmConfigCliTest {
 				.withProtocolExtensions(List.of(new WinRmExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			// Create a WinRmTestConfiguration and call method toProtocol

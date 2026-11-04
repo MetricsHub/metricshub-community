@@ -146,8 +146,7 @@ class ConnectorStoreComposerTest {
 
 		// Additional Connectors Parsing result must contain all the configured Additional Connectors
 		assertTrue(
-			addedConnectors
-				.keySet()
+			addedConnectors.keySet()
 				.containsAll(
 					List.of(
 						"LinuxProcessGeneric",
@@ -163,8 +162,7 @@ class ConnectorStoreComposerTest {
 
 		// Verify that connectors are correctly forced.
 		assertTrue(
-			results
-				.getResourceConnectors()
+			results.getResourceConnectors()
 				.containsAll(
 					List.of(
 						"+LinuxProcessGeneric",

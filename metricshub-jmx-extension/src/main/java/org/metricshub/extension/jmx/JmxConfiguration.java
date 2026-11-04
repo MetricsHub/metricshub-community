@@ -72,35 +72,28 @@ public class JmxConfiguration implements IConfiguration {
 		StringHelper.validateConfigurationAttribute(
 			hostname,
 			h -> (h == null || h.isBlank()),
-			() ->
-				String.format(
-					"Resource %s - Invalid JMX host configured. Host: %s. Please verify host value.",
-					resourceKey,
-					hostname
-				)
+			() -> String.format(
+				"Resource %s - Invalid JMX host configured. Host: %s. Please verify host value.",
+				resourceKey,
+				hostname
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			port,
 			p -> (p == null || p < 1 || p > 65535),
-			() ->
-				String.format(
-					"Resource %s - Invalid JMX port configured. Port: %s. Please verify port value.",
-					resourceKey,
-					port
-				)
+			() -> String.format(
+				"Resource %s - Invalid JMX port configured. Port: %s. Please verify port value.",
+				resourceKey,
+				port
+			)
 		);
 
-		StringHelper.validateConfigurationAttribute(
-			timeout,
-			attr -> attr == null || attr < 0L,
-			() ->
-				"""
-				Resource %s - Timeout value is invalid for JMX. \
-				Timeout value returned: %s. This resource will not be monitored. \
-				Please verify the configured timeout value.\
-				""".formatted(resourceKey, timeout)
-		);
+		StringHelper.validateConfigurationAttribute(timeout, attr -> attr == null || attr < 0L, () -> """
+			Resource %s - Timeout value is invalid for JMX. \
+			Timeout value returned: %s. This resource will not be monitored. \
+			Please verify the configured timeout value.\
+			""".formatted(resourceKey, timeout));
 	}
 
 	@Override

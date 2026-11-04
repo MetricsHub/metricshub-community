@@ -88,8 +88,7 @@ public class AgentInfoService implements IMCPToolService {
 	 *
 	 * @return an {@link AgentInfoResponse} containing all agent metadata and runtime information
 	 */
-	@Tool(
-		description = """
+	@Tool(description = """
 		Get detailed information about the MetricsHub Agent.
 		Returns agent metadata including name, version, build number, build date,
 		Community Connector Library version, host information (hostname, OS type,
@@ -98,9 +97,7 @@ public class AgentInfoService implements IMCPToolService {
 		CPU usage percentage), application status (UP/DOWN, OTel collector status,
 		number of observed/configured resources, monitors, and jobs), and license
 		information (type and days remaining).
-		""",
-		name = "GetAgentInfo"
-	)
+		""", name = "GetAgentInfo")
 	public AgentInfoResponse getAgentInfo() {
 		final AgentInfo agentInfo = agentContextHolder.getAgentContext().getAgentInfo();
 		final Map<String, String> attributes = agentInfo.getAttributes();

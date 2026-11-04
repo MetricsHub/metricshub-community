@@ -51,8 +51,9 @@ import picocli.CommandLine.Spec;
 @Command(
 	name = "apikey",
 	subcommands = {
-		ApiKeyCliService.CreateCommand.class, ApiKeyCliService.ListCommand.class, ApiKeyCliService.RevokeCommand.class
-	},
+		ApiKeyCliService.CreateCommand.class,
+		ApiKeyCliService.ListCommand.class,
+		ApiKeyCliService.RevokeCommand.class },
 	sortOptions = false,
 	usageHelpAutoWidth = true,
 	headerHeading = "%n",
@@ -89,8 +90,9 @@ public class ApiKeyCliService {
 			final var printWriter = spec.commandLine().getOut();
 			try {
 				final LocalDateTime expirationDateTime = resolveExpirationDateTime(expiresOn);
-				final String expirationMessage =
-					expirationDateTime != null ? String.format(" (Expires on %s)", expirationDateTime) : " (No expiration)";
+				final String expirationMessage = expirationDateTime != null
+					? String.format(" (Expires on %s)", expirationDateTime)
+					: " (No expiration)";
 				final var apiKey = createApiKey(alias, expirationDateTime);
 				printWriter.println(
 					Ansi.ansi()

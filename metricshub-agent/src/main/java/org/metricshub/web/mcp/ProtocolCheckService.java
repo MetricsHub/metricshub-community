@@ -70,24 +70,21 @@ public class ProtocolCheckService implements IMCPToolService {
 	 * @param poolSize optional pool size for concurrent protocol checks; defaults to {@value #DEFAULT_PROTOCOL_CHECK_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
 	 */
-	@Tool(
-		name = "CheckProtocol",
-		description = """
+	@Tool(name = "CheckProtocol", description = """
 		Determines if the specified hosts are accessible using a given protocol.
 		Supported protocols include: http, ipmi, jdbc, jmx, oscommand, snmp, snmpv3, ssh, wbem, winrm, and wmi.
 		OS Command (oscommand) checks command execution on the machine running MetricsHub.
 		The target may be localhost, a loopback address, or a hostname/IP address resolving to that machine.
 		SSH checks targeting that machine also use local command execution, following the collection optimization.
 		Provides a response detailing the host reachability status along with the response time.
-		"""
-	)
+		""")
 	public MultiHostToolResponse<ProtocolCheckResponse> checkProtocol(
 		@ToolParam(description = "The hostname(s) to check") final List<String> hostname,
 		@ToolParam(
 			description = """
-			The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, oscommand, snmp, snmpv3, ssh, wbem, winrm, and wmi.
-			oscommand applies to the machine running MetricsHub, including localhost, loopback addresses, and hostnames/IPs resolving to that machine.
-			""",
+				The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, oscommand, snmp, snmpv3, ssh, wbem, winrm, and wmi.
+				oscommand applies to the machine running MetricsHub, including localhost, loopback addresses, and hostnames/IPs resolving to that machine.
+				""",
 			required = true
 		) final String protocol,
 		@ToolParam(description = "Timeout for the protocol check in seconds", required = false) final Long timeout,
@@ -98,19 +95,17 @@ public class ProtocolCheckService implements IMCPToolService {
 	) {
 		final String protocolIdentifier = protocol;
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_PROTOCOL_CHECK_POOL_SIZE);
-		return agentContextHolder
-			.getAgentContext()
+		return agentContextHolder.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
-			.map((IProtocolExtension extension) ->
-				executeForHosts(
+			.map(
+				(IProtocolExtension extension) -> executeForHosts(
 					hostname,
 					this::buildNullHostnameResponse,
-					host ->
-						HostToolResponse.<ProtocolCheckResponse>builder()
-							.hostname(host)
-							.response(protocolHealthCheckService.checkFromAgentContext(host, protocol, timeout, extension))
-							.build(),
+					host -> HostToolResponse.<ProtocolCheckResponse>builder()
+						.hostname(host)
+						.response(protocolHealthCheckService.checkFromAgentContext(host, protocol, timeout, extension))
+						.build(),
 					resolvedPoolSize
 				)
 			)
@@ -124,8 +119,8 @@ public class ProtocolCheckService implements IMCPToolService {
 	 * @return a host-level response with an error payload highlighting the missing hostname
 	 */
 	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
-		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		return IMCPToolService.super.buildNullHostnameResponse(
+			() -> ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
 		);
 	}
 }

@@ -170,8 +170,7 @@ public class ApplicationStatusService {
 		if (telemetryManagers == null) {
 			return 0;
 		}
-		return telemetryManagers
-			.values()
+		return telemetryManagers.values()
 			.stream()
 			.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values().stream())
 			.count();
@@ -188,8 +187,7 @@ public class ApplicationStatusService {
 		if (telemetryManagers == null) {
 			return 0;
 		}
-		return telemetryManagers
-			.values()
+		return telemetryManagers.values()
 			.stream()
 			.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values().stream())
 			.mapToLong(telemetryManager -> telemetryManager.getMonitors().values().stream().mapToLong(Map::size).sum())

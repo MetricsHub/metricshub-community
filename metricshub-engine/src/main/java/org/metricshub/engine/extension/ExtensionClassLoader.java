@@ -102,11 +102,10 @@ public class ExtensionClassLoader extends URLClassLoader {
 		this.delegates = delegates == null ? List.of() : List.copyOf(delegates);
 		// Normalize each prefix to end with a package separator, so "com.foo" matches com.foo.* but
 		// never an unrelated namespace such as com.foobar.*.
-		this.childFirstPackages =
-			childFirstPackages == null ? List.of() : childFirstPackages.stream().map(this::normalizePackagePrefix).toList();
-		this.childFirstResourcePrefixes = this.childFirstPackages.stream()
-			.map(prefix -> prefix.replace('.', '/'))
-			.toList();
+		this.childFirstPackages = childFirstPackages == null
+			? List.of()
+			: childFirstPackages.stream().map(this::normalizePackagePrefix).toList();
+		this.childFirstResourcePrefixes = this.childFirstPackages.stream().map(prefix -> prefix.replace('.', '/')).toList();
 	}
 
 	/**

@@ -32,8 +32,7 @@ class LinkStatusTest {
 			"warn",
 			"alarm",
 			"1",
-			"2"
-		};
+			"2" };
 		for (String state : unpluggedStates) {
 			assertEquals(
 				LinkStatus.UNPLUGGED,

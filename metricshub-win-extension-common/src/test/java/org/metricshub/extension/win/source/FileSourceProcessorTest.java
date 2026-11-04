@@ -68,8 +68,7 @@ class FileSourceProcessorTest {
 
 	@Test
 	void buildResolveCommand_passesFullPatternToGetItem() {
-		final String template =
-			"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object FullName\"";
+		final String template = "PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object FullName\"";
 
 		assertEquals(template.formatted(WINDOWS_ABSOLUTE_PATH), buildResolveCommand(WINDOWS_ABSOLUTE_PATH));
 		assertEquals(
@@ -237,9 +236,8 @@ class FileSourceProcessorTest {
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		final String initialContentBase64 = Base64.getEncoder().encodeToString(initialContent.getBytes());
 		final String newContentBase64 = Base64.getEncoder().encodeToString(newContent.getBytes());
-		when(
-			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
-		).thenReturn(resolvedPath, initialContentBase64);
+		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
+			.thenReturn(resolvedPath, initialContentBase64);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -254,9 +252,8 @@ class FileSourceProcessorTest {
 		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content (mock again for next two calls)
-		when(
-			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
-		).thenReturn(resolvedPath, newContentBase64);
+		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
+			.thenReturn(resolvedPath, newContentBase64);
 
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
@@ -296,15 +293,14 @@ class FileSourceProcessorTest {
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		// Call order: 1) path resolution, 2) getFileSize, 3) path resolution, 4) getFileSize, 5) readFromOffset
-		when(
-			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
-		).thenReturn(
-			resolvedPath,
-			String.valueOf(initialFileSize),
-			resolvedPath,
-			String.valueOf(newFileSize),
-			newContentBase64
-		);
+		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
+			.thenReturn(
+				resolvedPath,
+				String.valueOf(initialFileSize),
+				resolvedPath,
+				String.valueOf(newFileSize),
+				newContentBase64
+			);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -318,8 +314,7 @@ class FileSourceProcessorTest {
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-		Map<String, Long> cursors = telemetryManager
-			.getHostProperties()
+		Map<String, Long> cursors = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getFileSourceCursors("sourceKey");
 		assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -360,11 +355,9 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFileContent(anyString())).thenReturn(content);
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(resolvedPath));
-			mockedFileHelper
-				.when(() -> FileHelper.escapeNewLines(any()))
+			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any()))
 				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
@@ -419,8 +412,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFromOffset(eq(resolvedPath), eq(initialFileSize), anyInt())).thenReturn(newContent);
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
@@ -439,8 +431,7 @@ class FileSourceProcessorTest {
 			assertNotNull(result1);
 			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-			Map<String, Long> cursors = telemetryManager
-				.getHostProperties()
+			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
 				.getFileSourceCursors("sourceKey");
 			assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -484,8 +475,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFromOffset(eq(resolvedPath), eq(initialFileSize), anyInt())).thenReturn(newContent);
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
@@ -503,8 +493,7 @@ class FileSourceProcessorTest {
 			assertNotNull(result1);
 			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-			Map<String, Long> cursors = telemetryManager
-				.getHostProperties()
+			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
 				.getFileSourceCursors("sourceKey");
 			assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -599,9 +588,8 @@ class FileSourceProcessorTest {
 			.build();
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(
-			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
-		).thenThrow(new ClientException("Remote command failed"));
+		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
+			.thenThrow(new ClientException("Remote command failed"));
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -646,13 +634,12 @@ class FileSourceProcessorTest {
 		final String pathResolutionOutput = path1 + "\n" + path2;
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(
-			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
-		).thenReturn(
-			pathResolutionOutput,
-			Base64.getEncoder().encodeToString(content1.getBytes()),
-			Base64.getEncoder().encodeToString(content2.getBytes())
-		);
+		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
+			.thenReturn(
+				pathResolutionOutput,
+				Base64.getEncoder().encodeToString(content1.getBytes()),
+				Base64.getEncoder().encodeToString(content2.getBytes())
+			);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -701,8 +688,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFileContent(eq(path2))).thenThrow(new IOException("boom"));
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(path1, path2));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
@@ -737,8 +723,8 @@ class FileSourceProcessorTest {
 		when(fileOps.getFileSize(path1)).thenReturn(10L, 10L, 14L);
 		when(fileOps.getFileSize(path2)).thenReturn(10L);
 		when(fileOps.readFromOffset(path1, 10L, 4)).thenReturn("line");
-		final String emptyBlocks =
-			"<<<LOG:file=\"/logs/a.log\">>>\n<<<END_LOG>>>\n\n" + "<<<LOG:file=\"/logs/b.log\">>>\n<<<END_LOG>>>\n\n";
+		final String emptyBlocks = "<<<LOG:file=\"/logs/a.log\">>>\n<<<END_LOG>>>\n\n" +
+			"<<<LOG:file=\"/logs/b.log\">>>\n<<<END_LOG>>>\n\n";
 
 		for (int poll = 0; poll < 2; poll++) {
 			final var rows = processor.processFilesInLogMode(fileOps, paths, cursors, source, HOSTNAME);

@@ -143,13 +143,11 @@ class EventLogSourceProcessorTest {
 			)
 		);
 
-		String query =
-			"SELECT RecordNumber FROM Win32_NTLogEvent " +
+		String query = "SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(
-			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
-		).thenReturn(wmiRequestResults);
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+			.thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
 		// WMI request result contains 4 records
@@ -213,14 +211,12 @@ class EventLogSourceProcessorTest {
 			)
 		);
 
-		query =
-			"SELECT RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, " +
+		query = "SELECT RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, " +
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(
-			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
-		).thenReturn(wmiRequestResults);
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+			.thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
 		// WMI request result contains 3 records
@@ -247,9 +243,8 @@ class EventLogSourceProcessorTest {
 		// ITERATION 3:
 		// A ClientException is thrown, the client returns null
 		// Cursors are set, they remain unchanged
-		when(
-			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
-		).thenThrow(ClientException.class);
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+			.thenThrow(ClientException.class);
 		results = processor.process(source, telemetryManagerMock);
 		assertEquals(
 			11,
@@ -332,13 +327,11 @@ class EventLogSourceProcessorTest {
 			)
 		);
 
-		String query =
-			"SELECT RecordNumber FROM Win32_NTLogEvent " +
+		String query = "SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(
-			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
-		).thenReturn(wmiRequestResults);
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+			.thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
 		// WMI request result contains 4 records
@@ -405,14 +398,12 @@ class EventLogSourceProcessorTest {
 			)
 		);
 
-		query =
-			"SELECT RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, " +
+		query = "SELECT RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, " +
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(
-			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
-		).thenReturn(wmiRequestResults);
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+			.thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
 		// WMI request result contains 3 records
@@ -448,8 +439,7 @@ class EventLogSourceProcessorTest {
 
 		final String result = processor.buildEventLogQuery(source, null);
 
-		final String expected =
-			"SELECT RecordNumber " +
+		final String expected = "SELECT RecordNumber " +
 			"FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '8005' OR EventCode = '9010')";
 
@@ -481,8 +471,9 @@ class EventLogSourceProcessorTest {
 
 		final String result = processor.buildEventLogQuery(source, null);
 
-		final String expected =
-			"SELECT RecordNumber " + "FROM Win32_NTLogEvent " + "WHERE (EventCode = '6005' OR EventCode = '6009')";
+		final String expected = "SELECT RecordNumber " +
+			"FROM Win32_NTLogEvent " +
+			"WHERE (EventCode = '6005' OR EventCode = '6009')";
 
 		assertEquals(
 			expected,
@@ -499,8 +490,7 @@ class EventLogSourceProcessorTest {
 
 		final String result = processor.buildEventLogQuery(source, null);
 
-		final String expected =
-			"SELECT RecordNumber " +
+		final String expected = "SELECT RecordNumber " +
 			"FROM Win32_NTLogEvent " +
 			"WHERE (SourceName = 'Service Control Manager' OR SourceName = 'Winlogon')";
 
@@ -539,8 +529,7 @@ class EventLogSourceProcessorTest {
 
 		final String result = processor.buildEventLogQuery(source, 1234);
 
-		final String expected =
-			"SELECT RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, " +
+		final String expected = "SELECT RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, " +
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' " +
@@ -636,10 +625,8 @@ class EventLogSourceProcessorTest {
 		final EventLogSource source = EventLogSource.builder().maxEventsPerPoll(10).build();
 
 		final String insertionStrings = "S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|";
-		final String messageWithNewlines =
-			"An account was logged off.\r\n\r\nSubject:\r\n\tSecurity ID:\t\tS-1-5-21-1098790905\r\n\tAccount Name:\t\tAdministrator";
-		final String expectedMessageEscaped =
-			"An account was logged off.@{newLine}@@{newLine}@Subject:@{newLine}@\tSecurity ID:\t\tS-1-5-21-1098790905@{newLine}@\tAccount Name:\t\tAdministrator";
+		final String messageWithNewlines = "An account was logged off.\r\n\r\nSubject:\r\n\tSecurity ID:\t\tS-1-5-21-1098790905\r\n\tAccount Name:\t\tAdministrator";
+		final String expectedMessageEscaped = "An account was logged off.@{newLine}@@{newLine}@Subject:@{newLine}@\tSecurity ID:\t\tS-1-5-21-1098790905@{newLine}@\tAccount Name:\t\tAdministrator";
 
 		// RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, EventIdentifier, SourceName,
 		// InsertionStrings, Message, LogFile
@@ -673,10 +660,8 @@ class EventLogSourceProcessorTest {
 		// cursor != null => newline escaping for InsertionStrings with newlines
 		final EventLogSource source = EventLogSource.builder().maxEventsPerPoll(10).build();
 
-		final String insertionStringsWithNewlines =
-			"S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|\r\nAdditional info";
-		final String expectedInsertionStringsEscaped =
-			"S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|@{newLine}@Additional info";
+		final String insertionStringsWithNewlines = "S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|\r\nAdditional info";
+		final String expectedInsertionStringsEscaped = "S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|@{newLine}@Additional info";
 		final String message = "Simple message";
 
 		// RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, EventIdentifier, SourceName,

@@ -77,10 +77,9 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
 
-		final String emulationInputDirectory =
-			emulationConfiguration != null && emulationConfiguration.getWbem() != null
-				? emulationConfiguration.getWbem().getDirectory()
-				: null;
+		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getWbem() != null
+			? emulationConfiguration.getWbem().getDirectory()
+			: null;
 
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - WBEM emulation input directory is not configured.", hostname);
@@ -92,12 +91,7 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			emulationInputDirectory,
 			WbemEmulationImage.class,
 			new WbemContext(query, namespace),
-			new AbstractEmulationExecutor.ReplayOperations<
-				WbemEmulationImage,
-				WbemEmulationEntry,
-				WbemContext,
-				List<List<String>>
-			>() {
+			new AbstractEmulationExecutor.ReplayOperations<WbemEmulationImage, WbemEmulationEntry, WbemContext, List<List<String>>>() {
 				@Override
 				public String protocolName() {
 					return "WBEM";
@@ -161,17 +155,14 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			return List.of();
 		}
 
-		return entries
-			.stream()
-			.filter(entry -> {
-				if (entry == null || entry.getRequest() == null) {
-					return false;
-				}
+		return entries.stream().filter(entry -> {
+			if (entry == null || entry.getRequest() == null) {
+				return false;
+			}
 
-				final String requestWql = entry.getRequest().getWql();
-				final String requestNamespace = entry.getRequest().getNamespace();
-				return query.equals(requestWql) && namespace.equals(requestNamespace);
-			})
-			.collect(Collectors.toCollection(ArrayList::new));
+			final String requestWql = entry.getRequest().getWql();
+			final String requestNamespace = entry.getRequest().getNamespace();
+			return query.equals(requestWql) && namespace.equals(requestNamespace);
+		}).collect(Collectors.toCollection(ArrayList::new));
 	}
 }

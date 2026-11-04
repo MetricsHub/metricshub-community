@@ -113,8 +113,7 @@ public class UiConfigService {
 	 */
 	public String getAgentHostname() {
 		final String variable = LocalOsHandler.isWindows() ? "COMPUTERNAME" : "HOSTNAME";
-		final String hostname = new EnvironmentProcessor()
-			.performEnvReplacements("${env::" + variable + ":-localhost}")
+		final String hostname = new EnvironmentProcessor().performEnvReplacements("${env::" + variable + ":-localhost}")
 			.trim();
 		return hostname.isEmpty() ? "localhost" : hostname;
 	}
@@ -239,15 +238,12 @@ public class UiConfigService {
 			originalHostnames.set("hostName", originalHostName);
 		}
 		final ObjectNode originalProtocolHostnames = yamlMapper.createObjectNode();
-		configuration
-			.path("protocols")
-			.properties()
-			.forEach(entry -> {
-				final JsonNode original = resolveHostnameField(entry.getValue(), "hostname");
-				if (original != null) {
-					originalProtocolHostnames.set(entry.getKey(), original);
-				}
-			});
+		configuration.path("protocols").properties().forEach(entry -> {
+			final JsonNode original = resolveHostnameField(entry.getValue(), "hostname");
+			if (original != null) {
+				originalProtocolHostnames.set(entry.getKey(), original);
+			}
+		});
 		if (!originalProtocolHostnames.isEmpty()) {
 			originalHostnames.set("protocols", originalProtocolHostnames);
 		}
@@ -497,10 +493,9 @@ public class UiConfigService {
 		final AgentConfig agentConfig = context.getAgentConfig() != null ? context.getAgentConfig() : AgentConfig.empty();
 		final ResourceGroupConfig group = resolveResourceGroupConfig(resourceGroup, agentConfig);
 
-		final AlertingSystemConfig globalAlerting =
-			agentConfig.getAlertingSystemConfig() != null
-				? agentConfig.getAlertingSystemConfig()
-				: AlertingSystemConfig.builder().build();
+		final AlertingSystemConfig globalAlerting = agentConfig.getAlertingSystemConfig() != null
+			? agentConfig.getAlertingSystemConfig()
+			: AlertingSystemConfig.builder().build();
 		final AlertingSystemConfig groupAlerting = group != null ? group.getAlertingSystemConfig() : null;
 		final UiAlertingSystemConfigDto alerting = new UiAlertingSystemConfigDto();
 		alerting.setDisable(

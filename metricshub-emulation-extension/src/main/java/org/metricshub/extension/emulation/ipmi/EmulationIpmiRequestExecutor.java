@@ -223,8 +223,7 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 			return List.of();
 		}
 
-		return entries
-			.stream()
+		return entries.stream()
 			.filter(
 				entry -> entry != null && requestType.equals(entry.getRequest()) && Objects.equals(query, entry.getQuery())
 			)

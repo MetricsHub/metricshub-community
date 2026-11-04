@@ -43,8 +43,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 @JsonSubTypes(
 	{
 		@JsonSubTypes.Type(value = MonoInstanceCollect.class, name = "monoInstance"),
-		@JsonSubTypes.Type(value = MultiInstanceCollect.class, name = "multiInstance")
-	}
+		@JsonSubTypes.Type(value = MultiInstanceCollect.class, name = "multiInstance") }
 )
 public class AbstractCollect extends AbstractMonitorTask {
 

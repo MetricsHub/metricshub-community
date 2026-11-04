@@ -40,8 +40,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class AlertingSystemConfig {
 
-	private static final String DEFAULT_PROBLEM_TEMPLATE =
-		"Problem on ${FQDN} with ${MONITOR_NAME}.${NEWLINE}${NEWLINE}${ALERT_DETAILS}${NEWLINE}${NEWLINE}${FULLREPORT}";
+	private static final String DEFAULT_PROBLEM_TEMPLATE = "Problem on ${FQDN} with ${MONITOR_NAME}.${NEWLINE}${NEWLINE}${ALERT_DETAILS}${NEWLINE}${NEWLINE}${FULLREPORT}";
 
 	@Default
 	private Boolean disable = false;

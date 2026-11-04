@@ -45,26 +45,24 @@ class HttpRequestExecutorTest {
 			httpResponse.setStatusCode(200);
 			final String expecteBody = "{ \"key\": \"value\" }";
 			httpResponse.appendBody(expecteBody);
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenReturn(httpResponse);
+			).thenReturn(httpResponse);
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
@@ -110,26 +108,24 @@ class HttpRequestExecutorTest {
 			final HttpResponse httpResponse = new HttpResponse();
 			httpResponse.setStatusCode(200);
 			httpResponse.appendHeader("token", "value");
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenReturn(httpResponse);
+			).thenReturn(httpResponse);
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
@@ -174,26 +170,24 @@ class HttpRequestExecutorTest {
 			final int timeout = 120;
 			final HttpResponse httpResponse = new HttpResponse();
 			httpResponse.setStatusCode(200);
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenReturn(httpResponse);
+			).thenReturn(httpResponse);
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
@@ -240,26 +234,24 @@ class HttpRequestExecutorTest {
 			httpResponse.setStatusCode(200);
 			httpResponse.appendBody("body");
 			httpResponse.appendHeader("key", "value");
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenReturn(httpResponse);
+			).thenReturn(httpResponse);
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
@@ -306,26 +298,24 @@ class HttpRequestExecutorTest {
 			httpResponse.setStatusCode(200);
 			httpResponse.appendBody("body");
 			httpResponse.appendHeader("key", "value");
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenThrow(new IOException());
+			).thenThrow(new IOException());
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
@@ -377,27 +367,24 @@ class HttpRequestExecutorTest {
 			httpResponse2.setStatusCode(200);
 			expecteBody = "{ \"key\": \"success\" }";
 			httpResponse2.appendBody(expecteBody);
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenReturn(httpResponse1)
-				.thenReturn(httpResponse2);
+			).thenReturn(httpResponse1).thenReturn(httpResponse2);
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
@@ -445,26 +432,24 @@ class HttpRequestExecutorTest {
 			httpResponse.setStatusCode(200);
 			final String expectedBody = "recorded response";
 			httpResponse.appendBody(expectedBody);
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://hostname:443/api/test",
-						method,
-						null,
-						username,
-						password,
-						null,
-						proxyPort,
-						null,
-						null,
-						null,
-						headerContent,
-						bodyContent,
-						timeout,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/api/test",
+					method,
+					null,
+					username,
+					password,
+					null,
+					proxyPort,
+					null,
+					null,
+					null,
+					headerContent,
+					bodyContent,
+					timeout,
+					null
 				)
-				.thenReturn(httpResponse);
+			).thenReturn(httpResponse);
 
 			final String hostname = "hostname";
 			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()

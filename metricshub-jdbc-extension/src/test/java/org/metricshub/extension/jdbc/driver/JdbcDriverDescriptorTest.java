@@ -33,15 +33,17 @@ class JdbcDriverDescriptorTest {
 
 	@Test
 	void rejectsNullDriverClass() {
-		assertThrows(NullPointerException.class, () ->
-			new JdbcDriverDescriptor(null, "x", DriverOrigin.BUILT_IN, List.of())
+		assertThrows(
+			NullPointerException.class,
+			() -> new JdbcDriverDescriptor(null, "x", DriverOrigin.BUILT_IN, List.of())
 		);
 	}
 
 	@Test
 	void rejectsBlankDriverClass() {
-		assertThrows(IllegalArgumentException.class, () ->
-			new JdbcDriverDescriptor("   ", "x", DriverOrigin.BUILT_IN, List.of())
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new JdbcDriverDescriptor("   ", "x", DriverOrigin.BUILT_IN, List.of())
 		);
 	}
 

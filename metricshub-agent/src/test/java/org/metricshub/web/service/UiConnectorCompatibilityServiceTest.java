@@ -108,17 +108,14 @@ class UiConnectorCompatibilityServiceTest {
 			.build();
 
 		final RawConnector rawTemplate = new RawConnector();
-		rawTemplate.setByteConnector(
-			"""
+		rawTemplate.setByteConnector("""
 			connector:
 			  information: Template connector description from raw YAML
 			  variables:
 			    instance:
 			      description: Instance name
 			      defaultValue: default
-			""".stripIndent()
-				.getBytes(StandardCharsets.UTF_8)
-		);
+			""".stripIndent().getBytes(StandardCharsets.UTF_8));
 
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore();
 		rawConnectorStore.setStore(Map.of(TEMPLATE_CONNECTOR_ID, rawTemplate));
@@ -146,8 +143,7 @@ class UiConnectorCompatibilityServiceTest {
 		assertEquals(3, first.size(), "Catalog should contain all connectors");
 		assertSame(first, second, "Second call should return cached catalog");
 
-		final UiConnectorSummaryDto linux = first
-			.stream()
+		final UiConnectorSummaryDto linux = first.stream()
 			.filter(item -> LINUX_CONNECTOR_ID.equals(item.getId()))
 			.findFirst()
 			.orElseThrow();
@@ -157,8 +153,7 @@ class UiConnectorCompatibilityServiceTest {
 		assertTrue(linux.getRequiredProtocols().contains("ssh"));
 		assertFalse(linux.isCompatible(), "Static catalog should not pre-compute compatibility");
 
-		final UiConnectorSummaryDto template = first
-			.stream()
+		final UiConnectorSummaryDto template = first.stream()
 			.filter(item -> TEMPLATE_CONNECTOR_ID.equals(item.getId()))
 			.findFirst()
 			.orElseThrow();
@@ -176,15 +171,13 @@ class UiConnectorCompatibilityServiceTest {
 
 		final List<UiConnectorSummaryDto> catalog = service.getConnectorCatalog(connectorStore, extensionManager);
 
-		final UiConnectorSummaryDto windows = catalog
-			.stream()
+		final UiConnectorSummaryDto windows = catalog.stream()
 			.filter(item -> WINDOWS_CONNECTOR_ID.equals(item.getId()))
 			.findFirst()
 			.orElseThrow();
 		assertTrue(windows.isPatched(), "Connector from the patch directory should be flagged as patched");
 
-		final UiConnectorSummaryDto linux = catalog
-			.stream()
+		final UiConnectorSummaryDto linux = catalog.stream()
 			.filter(item -> LINUX_CONNECTOR_ID.equals(item.getId()))
 			.findFirst()
 			.orElseThrow();
@@ -219,8 +212,7 @@ class UiConnectorCompatibilityServiceTest {
 
 		assertEquals(3, all.size(), "Include-all should return every connector");
 
-		final UiConnectorSummaryDto windows = all
-			.stream()
+		final UiConnectorSummaryDto windows = all.stream()
 			.filter(item -> WINDOWS_CONNECTOR_ID.equals(item.getId()))
 			.findFirst()
 			.orElseThrow();
@@ -241,8 +233,7 @@ class UiConnectorCompatibilityServiceTest {
 		assertEquals(3, all.size());
 		assertTrue(all.stream().noneMatch(UiConnectorSummaryDto::isCompatible));
 		assertTrue(
-			all
-				.stream()
+			all.stream()
 				.flatMap(item -> item.getIncompatibilityReasons().stream())
 				.anyMatch(reason -> reason.contains("Invalid or missing host.type"))
 		);
@@ -261,8 +252,7 @@ class UiConnectorCompatibilityServiceTest {
 		assertEquals(3, all.size());
 		assertTrue(all.stream().noneMatch(UiConnectorSummaryDto::isCompatible));
 		assertTrue(
-			all
-				.stream()
+			all.stream()
 				.flatMap(item -> item.getIncompatibilityReasons().stream())
 				.anyMatch(reason -> reason.contains("Configure at least one protocol"))
 		);
@@ -287,13 +277,7 @@ class UiConnectorCompatibilityServiceTest {
 
 		assertEquals(1, all.size());
 		assertFalse(all.get(0).isCompatible());
-		assertTrue(
-			all
-				.get(0)
-				.getIncompatibilityReasons()
-				.stream()
-				.anyMatch(r -> r.contains("no detection definition"))
-		);
+		assertTrue(all.get(0).getIncompatibilityReasons().stream().anyMatch(r -> r.contains("no detection definition")));
 	}
 
 	@Test
@@ -326,13 +310,7 @@ class UiConnectorCompatibilityServiceTest {
 
 		assertEquals(1, all.size());
 		assertFalse(all.get(0).isCompatible());
-		assertTrue(
-			all
-				.get(0)
-				.getIncompatibilityReasons()
-				.stream()
-				.anyMatch(r -> r.contains("remote connection"))
-		);
+		assertTrue(all.get(0).getIncompatibilityReasons().stream().anyMatch(r -> r.contains("remote connection")));
 	}
 
 	@Test
@@ -362,8 +340,7 @@ class UiConnectorCompatibilityServiceTest {
 		store.setRawConnectorStore(rawConnectorStore);
 		store.addConnectorsWithVariables(List.of("BrokenTemplate"));
 
-		final UiConnectorSummaryDto summary = service
-			.getConnectorCatalog(store, extensionManager)
+		final UiConnectorSummaryDto summary = service.getConnectorCatalog(store, extensionManager)
 			.stream()
 			.filter(item -> "BrokenTemplate".equals(item.getId()))
 			.findFirst()

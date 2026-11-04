@@ -113,40 +113,36 @@ class PingExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(pingExtension.isValidConfiguration(PingConfiguration.builder().build()));
-		assertFalse(
-			pingExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(pingExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test

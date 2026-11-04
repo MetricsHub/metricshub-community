@@ -59,66 +59,60 @@ class ProgrammableConfigurationProviderTest {
 		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
 			final HttpResponse httpResponseList = new HttpResponse();
 			httpResponseList.setStatusCode(200);
-			httpResponseList.appendBody(
-				"""
+			httpResponseList.appendBody("""
 				  [
 				    {"hostname":"winhost1","OSType":"Windows","adminUsername":"admin1"}
 				  ]
-				"""
-			);
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://cmdb/servers",
-						"GET",
-						null,
-						null,
-						null,
-						null,
-						0,
-						null,
-						null,
-						null,
-						Map.of(),
-						null,
-						HttpTool.DEFAULT_HTTP_TIMEOUT,
-						null
-					)
+				""");
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://cmdb/servers",
+					"GET",
+					null,
+					null,
+					null,
+					null,
+					0,
+					null,
+					null,
+					null,
+					Map.of(),
+					null,
+					HttpTool.DEFAULT_HTTP_TIMEOUT,
+					null
 				)
-				.thenReturn(httpResponseList);
+			).thenReturn(httpResponseList);
 
 			httpClientMock.clearInvocations();
 
 			final HttpResponse passwordResponse = new HttpResponse();
 			passwordResponse.setStatusCode(200);
 			passwordResponse.appendBody("password");
-			httpClientMock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://passwords/servers/winhost1/password",
-						"GET",
-						null,
-						null,
-						null,
-						null,
-						0,
-						null,
-						null,
-						null,
-						Map.of(),
-						null,
-						HttpTool.DEFAULT_HTTP_TIMEOUT,
-						null
-					)
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://passwords/servers/winhost1/password",
+					"GET",
+					null,
+					null,
+					null,
+					null,
+					0,
+					null,
+					null,
+					null,
+					Map.of(),
+					null,
+					HttpTool.DEFAULT_HTTP_TIMEOUT,
+					null
 				)
-				.thenReturn(passwordResponse);
+			).thenReturn(passwordResponse);
 
 			var pcp = new ProgrammableConfigurationProvider();
 			var nodes = pcp.load(Paths.get("src/test/resources/http"));
 
 			assertEquals(
 				"""
-				[{"resources":{"winhost1":{"attributes":{"host.name":"winhost1","host.type":"windows"},"protocols":{"ping":null,"wmi":{"timeout":120,"username":"admin1","password":"password"}}}}}]""",
+					[{"resources":{"winhost1":{"attributes":{"host.name":"winhost1","host.type":"windows"},"protocols":{"ping":null,"wmi":{"timeout":120,"username":"admin1","password":"password"}}}}}]""",
 				nodes.toString(),
 				"Should load one configuration fragment with HTTP tool"
 			);
@@ -131,7 +125,7 @@ class ProgrammableConfigurationProviderTest {
 		var nodes = pcp.load(Paths.get("src/test/resources/file"));
 		assertEquals(
 			"""
-			[{"resources":{"host1":{"attributes":{"host.name":"host1","host.type":"win"},"protocols":{"wmi":{"username":"user","password":"pass"}}},"host2":{"attributes":{"host.name":"host2","host.type":"linux"},"protocols":{"ssh":{"username":"user","password":"pass"}}}}}]""",
+				[{"resources":{"host1":{"attributes":{"host.name":"host1","host.type":"win"},"protocols":{"wmi":{"username":"user","password":"pass"}}},"host2":{"attributes":{"host.name":"host2","host.type":"linux"},"protocols":{"ssh":{"username":"user","password":"pass"}}}}}]""",
 			nodes.toString(),
 			"Should load correct configuration fragment using file tool"
 		);
@@ -169,7 +163,7 @@ class ProgrammableConfigurationProviderTest {
 
 			assertEquals(
 				"""
-				[{"resources":{"host-a":{"attributes":{"host.name":"host-a","host.type":"STORAGE"},"protocols":{"http":{"hostname":"host-a","https":true,"port":443,"username":"adminA","password":"passA"}}}}}]""",
+					[{"resources":{"host-a":{"attributes":{"host.name":"host-a","host.type":"STORAGE"},"protocols":{"http":{"hostname":"host-a","https":true,"port":443,"username":"adminA","password":"passA"}}}}}]""",
 				nodes.toString(),
 				"Should load one configuration fragment with sql tool"
 			);

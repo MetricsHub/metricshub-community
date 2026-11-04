@@ -97,8 +97,7 @@ public class HttpExtension implements IProtocolExtension {
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		// Retrieve HTTP configuration from the telemetry manager
-		final HttpConfiguration httpConfiguration = (HttpConfiguration) telemetryManager
-			.getHostConfiguration()
+		final HttpConfiguration httpConfiguration = (HttpConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(HttpConfiguration.class);
 

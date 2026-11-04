@@ -71,20 +71,18 @@ public class ExtensionProtocolsDeserializer extends JsonDeserializer<Map<String,
 				null
 			);
 
-			node
-				.properties()
-				.forEach((Entry<String, JsonNode> entry) -> {
-					final String protocolName = entry.getKey();
-					final JsonNode protocolConfigNode = entry.getValue();
+			node.properties().forEach((Entry<String, JsonNode> entry) -> {
+				final String protocolName = entry.getKey();
+				final JsonNode protocolConfigNode = entry.getValue();
 
-					final Optional<IConfiguration> protocolConfig = buildConfigurationFromJsonNode(
-						extensionManager,
-						protocolName,
-						protocolConfigNode
-					);
+				final Optional<IConfiguration> protocolConfig = buildConfigurationFromJsonNode(
+					extensionManager,
+					protocolName,
+					protocolConfigNode
+				);
 
-					protocolConfig.ifPresent(config -> protocols.put(protocolName, config));
-				});
+				protocolConfig.ifPresent(config -> protocols.put(protocolName, config));
+			});
 		}
 
 		return protocols;

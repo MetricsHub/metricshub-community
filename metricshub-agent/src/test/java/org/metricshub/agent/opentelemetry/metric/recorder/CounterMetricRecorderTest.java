@@ -97,16 +97,14 @@ class CounterMetricRecorderTest {
 		final List<KeyValue> attributesList = numberDataPoint.getAttributesList();
 		assertEquals(2, attributesList.size(), "Expected two attributes");
 
-		final KeyValue resourceKeyValue = attributesList
-			.stream()
+		final KeyValue resourceKeyValue = attributesList.stream()
 			.filter(kv -> kv.getKey().equals("resource"))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("resource attribute not found"));
 		assertEquals("resource", resourceKeyValue.getKey(), "Attribute resource should match");
 		assertEquals("resourceValue", resourceKeyValue.getValue().getStringValue(), "Attribute resourceValue should match");
 
-		final KeyValue keyValue = attributesList
-			.stream()
+		final KeyValue keyValue = attributesList.stream()
 			.filter(kv -> kv.getKey().equals("key"))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("key attribute not found"));

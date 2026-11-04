@@ -137,8 +137,9 @@ class JdbcDriverRegistryTest {
 				JdbcDriverRegistryTest.class.getClassLoader()
 			)
 		) {
-			final DriverResolutionException ex = assertThrows(DriverResolutionException.class, () ->
-				registry.resolve("com.acme.Nope", (String) null)
+			final DriverResolutionException ex = assertThrows(
+				DriverResolutionException.class,
+				() -> registry.resolve("com.acme.Nope", (String) null)
 			);
 			assertTrue(ex.getMessage().contains("com.acme.Nope"));
 			assertTrue(ex.getMessage().contains("IJdbcDriverProvider"), ex.getMessage());
@@ -156,8 +157,9 @@ class JdbcDriverRegistryTest {
 		) {
 			// Explicit path is set so the BUILT_IN shortcut is skipped; locator returns empty.
 			final String explicit = "/does/not/exist/h2-test.jar";
-			final DriverResolutionException ex = assertThrows(DriverResolutionException.class, () ->
-				registry.resolve("org.h2.Driver", explicit)
+			final DriverResolutionException ex = assertThrows(
+				DriverResolutionException.class,
+				() -> registry.resolve("org.h2.Driver", explicit)
 			);
 			assertTrue(ex.getMessage().contains("h2-test.jar"), ex.getMessage());
 		}
@@ -232,8 +234,9 @@ class JdbcDriverRegistryTest {
 				JdbcDriverRegistryTest.class.getClassLoader()
 			)
 		) {
-			final DriverResolutionException ex = assertThrows(DriverResolutionException.class, () ->
-				registry.resolve("com.example.absent.Driver", (String) null)
+			final DriverResolutionException ex = assertThrows(
+				DriverResolutionException.class,
+				() -> registry.resolve("com.example.absent.Driver", (String) null)
 			);
 			assertTrue(ex.getMessage().contains("com.example.absent.Driver"), ex.getMessage());
 		}
@@ -246,8 +249,9 @@ class JdbcDriverRegistryTest {
 		final URL h2JarUrl = org.h2.Driver.class.getProtectionDomain().getCodeSource().getLocation();
 		assertNotNull(h2JarUrl, "test setup: h2 jar must be locatable");
 
-		final IJdbcDriverJarLocator locator = (_, _) ->
-			Optional.of(new IJdbcDriverJarLocator.LocatedDriverJars(new URL[] { h2JarUrl }, DriverOrigin.USER_EXPLICIT));
+		final IJdbcDriverJarLocator locator = (_, _) -> Optional.of(
+			new IJdbcDriverJarLocator.LocatedDriverJars(new URL[] { h2JarUrl }, DriverOrigin.USER_EXPLICIT)
+		);
 
 		try (
 			JdbcDriverRegistry registry = new JdbcDriverRegistry(

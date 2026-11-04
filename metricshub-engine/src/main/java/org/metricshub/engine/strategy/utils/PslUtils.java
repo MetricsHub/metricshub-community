@@ -86,27 +86,28 @@ public class PslUtils {
 
 			if (c == BACKSLASH_CHAR && i < pslRegex.length() - 1) {
 				i = handleBackSlash(pslRegex, inRange, i, javaRegex);
-			} else if (
-				c == OPENING_PARENTHESIS_CHAR ||
-				c == CLOSING_PARENTHESIS_CHAR ||
-				c == PIPE_CHAR ||
-				c == OPENING_CURLY_BRACKET_CHAR ||
-				c == CLOSING_CURLY_BRACKET_CHAR
-			) {
-				javaRegex.append(BACKSLASH_CHAR).append(c);
-			} else if (c == OPENING_SQUARE_BRACKET_CHAR) {
-				// Regex ranges have a different escaping system, so we need to
-				// know when we're inside a [a-z] range or not
-				javaRegex.append(c);
-				inRange = true;
-			} else if (c == CLOSING_SQUARE_BRACKET_CHAR) {
-				// Getting out of a [] range
-				javaRegex.append(c);
-				inRange = false;
-			} else {
-				// Other cases
-				javaRegex.append(c);
-			}
+			} else
+				if (
+					c == OPENING_PARENTHESIS_CHAR ||
+						c == CLOSING_PARENTHESIS_CHAR ||
+						c == PIPE_CHAR ||
+						c == OPENING_CURLY_BRACKET_CHAR ||
+						c == CLOSING_CURLY_BRACKET_CHAR
+				) {
+					javaRegex.append(BACKSLASH_CHAR).append(c);
+				} else if (c == OPENING_SQUARE_BRACKET_CHAR) {
+					// Regex ranges have a different escaping system, so we need to
+					// know when we're inside a [a-z] range or not
+					javaRegex.append(c);
+					inRange = true;
+				} else if (c == CLOSING_SQUARE_BRACKET_CHAR) {
+					// Getting out of a [] range
+					javaRegex.append(c);
+					inRange = false;
+				} else {
+					// Other cases
+					javaRegex.append(c);
+				}
 		}
 
 		return javaRegex.toString();
@@ -254,11 +255,11 @@ public class PslUtils {
 		// If any arg is null, then return empty String
 		if (
 			text == null ||
-			selectColumns == null ||
-			separators == null ||
-			text.isEmpty() ||
-			selectColumns.isEmpty() ||
-			separators.isEmpty()
+				selectColumns == null ||
+				separators == null ||
+				text.isEmpty() ||
+				selectColumns.isEmpty() ||
+				separators.isEmpty()
 		) {
 			return "";
 		}

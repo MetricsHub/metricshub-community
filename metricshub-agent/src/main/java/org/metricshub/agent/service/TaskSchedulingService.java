@@ -98,8 +98,7 @@ public class TaskSchedulingService {
 	 * Initialize the {@link ResourceGroupScheduling} to schedule recorders for each resource group
 	 */
 	void scheduleResourceGroupRecorders() {
-		agentConfig
-			.getResourceGroups()
+		agentConfig.getResourceGroups()
 			.entrySet()
 			.stream()
 			.filter(entry -> Objects.nonNull(entry.getValue()))
@@ -117,8 +116,7 @@ public class TaskSchedulingService {
 	 * Schedule top level resources recorders
 	 */
 	void scheduleTopLevelResourcesRecorders() {
-		agentConfig
-			.getResources()
+		agentConfig.getResources()
 			.entrySet()
 			.stream()
 			.filter(entry -> Objects.nonNull(entry.getValue()))
@@ -155,8 +153,7 @@ public class TaskSchedulingService {
 	 * @param resourceGroupConfig {@link ResourceGroupConfig} instance defining resource configurations
 	 */
 	void scheduleResourcesInResourceGroups(final String resourceGroupKey, final ResourceGroupConfig resourceGroupConfig) {
-		resourceGroupConfig
-			.getResources()
+		resourceGroupConfig.getResources()
 			.entrySet()
 			.stream()
 			.filter(entry -> Objects.nonNull(entry.getValue()))

@@ -94,15 +94,15 @@ class MacrosUpdaterTest {
 	void testUpdate() {
 		final String text = String.format(
 			"""
-			%s
-			%s
-			%s
-			%s
-			%s
-			%s
-			%s
-			%s
-			""",
+				%s
+				%s
+				%s
+				%s
+				%s
+				%s
+				%s
+				%s
+				""",
 			HOSTNAME_MACRO,
 			PASSWORD_MACRO,
 			USERNAME_MACRO,

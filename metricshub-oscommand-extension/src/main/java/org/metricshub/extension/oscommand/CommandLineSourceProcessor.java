@@ -65,8 +65,8 @@ public class CommandLineSourceProcessor {
 
 		if (
 			commandLineSource == null ||
-			commandLineSource.getCommandLine() == null ||
-			commandLineSource.getCommandLine().isEmpty()
+				commandLineSource.getCommandLine() == null ||
+				commandLineSource.getCommandLine().isEmpty()
 		) {
 			log.error("Hostname {} - Malformed OS command source.", hostname);
 			return SourceTable.empty();
@@ -102,8 +102,7 @@ public class CommandLineSourceProcessor {
 			return SourceTable.builder()
 				.rawData(selectedColumnsLines.stream().collect(Collectors.joining(NEW_LINE)))
 				.table(
-					selectedColumnsLines
-						.stream()
+					selectedColumnsLines.stream()
 						.map(line -> Stream.of(line.split(TABLE_SEP)).collect(Collectors.toList()))
 						.collect(Collectors.toList())
 				)

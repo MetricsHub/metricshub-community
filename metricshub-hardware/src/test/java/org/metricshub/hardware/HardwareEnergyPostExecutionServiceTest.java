@@ -507,8 +507,7 @@ class HardwareEnergyPostExecutionServiceTest {
 		);
 
 		// Value from a previous cycle (saved): it is not collected by the connector in the current cycle, so it is re-estimated
-		metricFactory
-			.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime() - 120 * 1000)
+		metricFactory.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime() - 120 * 1000)
 			.save();
 
 		final Monitor disk = Monitor.builder()
@@ -518,9 +517,12 @@ class HardwareEnergyPostExecutionServiceTest {
 			.build();
 
 		// Value from a previous cycle (saved): it is not collected by the connector in the current cycle, so it is re-estimated
-		metricFactory
-			.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime() - 120 * 1000)
-			.save();
+		metricFactory.collectNumberMetric(
+			disk,
+			HW_PHYSICAL_DISK_POWER,
+			6.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		).save();
 
 		final Monitor diskNoPower = Monitor.builder()
 			.id("disk_noPower")
@@ -1244,17 +1246,11 @@ class HardwareEnergyPostExecutionServiceTest {
 		assertNull(cpu.getMetric(CPU_POWER_METRIC, NumberMetric.class));
 
 		// Next cycle, 120 s later: the CPU counter grows by 18000 J, i.e. 150 W
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.flatMap(monitors -> monitors.values().stream())
-			.forEach(monitor ->
-				monitor
-					.getMetrics()
-					.values()
-					.forEach(metric -> metric.save())
-			);
+			.forEach(monitor -> monitor.getMetrics().values().forEach(metric -> metric.save()));
 		telemetryManager.setStrategyTime(NEXT_STRATEGY_TIME);
 		final Monitor enclosure = telemetryManager.findMonitorsByType(ENCLOSURE).get(ENCLOSURE);
 		metricFactory.collectNumberMetric(enclosure, HW_ENCLOSURE_POWER, 200.0, NEXT_STRATEGY_TIME);
@@ -1273,17 +1269,11 @@ class HardwareEnergyPostExecutionServiceTest {
 		assertEquals(200.0, CollectHelper.getNumberMetricValue(host, HW_HOST_MEASURED_POWER, false));
 
 		// Next cycle, 120 s later: the CPU counter resets, its previous derived power is removed
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.flatMap(monitors -> monitors.values().stream())
-			.forEach(monitor ->
-				monitor
-					.getMetrics()
-					.values()
-					.forEach(metric -> metric.save())
-			);
+			.forEach(monitor -> monitor.getMetrics().values().forEach(metric -> metric.save()));
 		final long resetStrategyTime = NEXT_STRATEGY_TIME + 2 * 60 * 1000;
 		telemetryManager.setStrategyTime(resetStrategyTime);
 		metricFactory.collectNumberMetric(enclosure, HW_ENCLOSURE_POWER, 200.0, resetStrategyTime);
@@ -1442,14 +1432,8 @@ class HardwareEnergyPostExecutionServiceTest {
 		assertNull(fan.getMetric(FAN_ENERGY_METRIC, NumberMetric.class));
 
 		// Next cycle, 120 s later (PrepareCollectStrategy saves the metrics, then the connector collects again)
-		fan
-			.getMetrics()
-			.values()
-			.forEach(metric -> metric.save());
-		gpu
-			.getMetrics()
-			.values()
-			.forEach(metric -> metric.save());
+		fan.getMetrics().values().forEach(metric -> metric.save());
+		gpu.getMetrics().values().forEach(metric -> metric.save());
 		telemetryManager.setStrategyTime(NEXT_STRATEGY_TIME);
 		metricFactory.collectNumberMetric(fan, FAN_SPEED_METRIC, 5000.0, NEXT_STRATEGY_TIME);
 		metricFactory.collectNumberMetric(fan, FAN_POWER_METRIC, 7.5, NEXT_STRATEGY_TIME);

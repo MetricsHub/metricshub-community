@@ -121,10 +121,8 @@ public class PasswordEncrypt {
 		}
 
 		// path/hws-keystore.p12
-		return Paths.get(
-			securityDirectory.toAbsolutePath().toString(),
-			SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME
-		).toFile();
+		return Paths.get(securityDirectory.toAbsolutePath().toString(), SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME)
+			.toFile();
 	}
 
 	/**

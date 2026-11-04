@@ -79,8 +79,7 @@ public class SourceTable {
 		final boolean replaceSeparator
 	) {
 		if (table != null) {
-			return table
-				.stream()
+			return table.stream()
 				.filter(Objects::nonNull)
 				.map(line -> lineToCsv(line, separator, replaceSeparator))
 				.collect(Collectors.joining(NEW_LINE));

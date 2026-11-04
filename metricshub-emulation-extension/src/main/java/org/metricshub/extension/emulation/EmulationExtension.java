@@ -219,138 +219,130 @@ public class EmulationExtension implements IProtocolExtension {
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
 	 */
-	private static final Function<TelemetryManager, EmulationConfiguration> EMULATION_CONFIGURATION_PROVIDER =
-		telemetryManager ->
-			(EmulationConfiguration) telemetryManager
-				.getHostConfiguration()
-				.getConfigurations()
-				.get(EmulationConfiguration.class);
+	private static final Function<TelemetryManager, EmulationConfiguration> EMULATION_CONFIGURATION_PROVIDER = telemetryManager -> (EmulationConfiguration) telemetryManager
+		.getHostConfiguration()
+		.getConfigurations()
+		.get(EmulationConfiguration.class);
 
 	/**
 	 * Provides the HTTP configuration used by emulation processors.
 	 *
 	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
-	private static final Function<TelemetryManager, HttpConfiguration> EMULATION_HTTP_CONFIGURATION_PROVIDER =
-		telemetryManager -> {
-			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-			if (emulationConfiguration == null) {
-				return HttpConfiguration.builder().hostname(telemetryManager.getHostname()).build();
-			}
-			final var httpConfiguration = emulationConfiguration.getHttp();
-			final String hostname = telemetryManager.getHostname();
-			if (httpConfiguration == null) {
-				return HttpConfiguration.builder().hostname(hostname).build();
-			} else {
-				httpConfiguration.setHostname(hostname);
-				return httpConfiguration;
-			}
-		};
+	private static final Function<TelemetryManager, HttpConfiguration> EMULATION_HTTP_CONFIGURATION_PROVIDER = telemetryManager -> {
+		final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		if (emulationConfiguration == null) {
+			return HttpConfiguration.builder().hostname(telemetryManager.getHostname()).build();
+		}
+		final var httpConfiguration = emulationConfiguration.getHttp();
+		final String hostname = telemetryManager.getHostname();
+		if (httpConfiguration == null) {
+			return HttpConfiguration.builder().hostname(hostname).build();
+		} else {
+			httpConfiguration.setHostname(hostname);
+			return httpConfiguration;
+		}
+	};
 
 	/**
 	 * Provides the SNMP configuration used by emulation processors.
 	 *
 	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
-	private static final Function<TelemetryManager, ISnmpConfiguration> EMULATION_SNMP_CONFIGURATION_PROVIDER =
-		telemetryManager -> {
-			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-			if (emulationConfiguration == null) {
-				return SnmpConfiguration.builder().hostname(telemetryManager.getHostname()).build();
-			}
-			final var snmpConfiguration = emulationConfiguration.getSnmp();
-			final String hostname = telemetryManager.getHostname();
-			if (snmpConfiguration == null) {
-				return SnmpConfiguration.builder().hostname(hostname).build();
-			} else {
-				snmpConfiguration.setHostname(hostname);
-				return snmpConfiguration;
-			}
-		};
+	private static final Function<TelemetryManager, ISnmpConfiguration> EMULATION_SNMP_CONFIGURATION_PROVIDER = telemetryManager -> {
+		final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		if (emulationConfiguration == null) {
+			return SnmpConfiguration.builder().hostname(telemetryManager.getHostname()).build();
+		}
+		final var snmpConfiguration = emulationConfiguration.getSnmp();
+		final String hostname = telemetryManager.getHostname();
+		if (snmpConfiguration == null) {
+			return SnmpConfiguration.builder().hostname(hostname).build();
+		} else {
+			snmpConfiguration.setHostname(hostname);
+			return snmpConfiguration;
+		}
+	};
 
 	/**
 	 * Provides the WBEM configuration used by emulation processors.
 	 *
 	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
-	private static final Function<TelemetryManager, WbemConfiguration> EMULATION_WBEM_CONFIGURATION_PROVIDER =
-		telemetryManager -> {
-			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-			if (emulationConfiguration == null) {
-				return null;
-			}
-			final var wbemConfiguration = emulationConfiguration.getWbem();
-			final String hostname = telemetryManager.getHostname();
-			if (wbemConfiguration == null) {
-				return null;
-			} else {
-				wbemConfiguration.setHostname(hostname);
-				return wbemConfiguration;
-			}
-		};
+	private static final Function<TelemetryManager, WbemConfiguration> EMULATION_WBEM_CONFIGURATION_PROVIDER = telemetryManager -> {
+		final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		if (emulationConfiguration == null) {
+			return null;
+		}
+		final var wbemConfiguration = emulationConfiguration.getWbem();
+		final String hostname = telemetryManager.getHostname();
+		if (wbemConfiguration == null) {
+			return null;
+		} else {
+			wbemConfiguration.setHostname(hostname);
+			return wbemConfiguration;
+		}
+	};
 
 	/**
 	 * Provides the JDBC configuration used by emulation processors.
 	 *
 	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
-	private static final Function<TelemetryManager, JdbcConfiguration> EMULATION_JDBC_CONFIGURATION_PROVIDER =
-		telemetryManager -> {
-			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-			if (emulationConfiguration == null) {
-				return null;
-			}
-			final var jdbcConfiguration = emulationConfiguration.getJdbc();
-			final String hostname = telemetryManager.getHostname();
-			if (jdbcConfiguration == null) {
-				return null;
-			} else {
-				jdbcConfiguration.setHostname(hostname);
-				return jdbcConfiguration;
-			}
-		};
+	private static final Function<TelemetryManager, JdbcConfiguration> EMULATION_JDBC_CONFIGURATION_PROVIDER = telemetryManager -> {
+		final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		if (emulationConfiguration == null) {
+			return null;
+		}
+		final var jdbcConfiguration = emulationConfiguration.getJdbc();
+		final String hostname = telemetryManager.getHostname();
+		if (jdbcConfiguration == null) {
+			return null;
+		} else {
+			jdbcConfiguration.setHostname(hostname);
+			return jdbcConfiguration;
+		}
+	};
 
 	/**
 	 * Provides the JMX configuration used by emulation processors.
 	 *
 	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
-	private static final Function<TelemetryManager, JmxConfiguration> EMULATION_JMX_CONFIGURATION_PROVIDER =
-		telemetryManager -> {
-			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-			if (emulationConfiguration == null) {
-				return null;
-			}
-			final var jmxConfiguration = emulationConfiguration.getJmx();
-			final String hostname = telemetryManager.getHostname();
-			if (jmxConfiguration == null) {
-				return null;
-			} else {
-				jmxConfiguration.setHostname(hostname);
-				return jmxConfiguration;
-			}
-		};
+	private static final Function<TelemetryManager, JmxConfiguration> EMULATION_JMX_CONFIGURATION_PROVIDER = telemetryManager -> {
+		final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		if (emulationConfiguration == null) {
+			return null;
+		}
+		final var jmxConfiguration = emulationConfiguration.getJmx();
+		final String hostname = telemetryManager.getHostname();
+		if (jmxConfiguration == null) {
+			return null;
+		} else {
+			jmxConfiguration.setHostname(hostname);
+			return jmxConfiguration;
+		}
+	};
 
 	/**
 	 * Provides the WMI configuration used by emulation processors.
 	 *
 	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
-	private static final Function<TelemetryManager, IWinConfiguration> EMULATION_WMI_CONFIGURATION_PROVIDER =
-		telemetryManager -> {
-			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-			if (emulationConfiguration == null) {
-				return null;
-			}
-			final var wmiConfiguration = emulationConfiguration.getWmi();
-			final String hostname = telemetryManager.getHostname();
-			if (wmiConfiguration == null) {
-				return null;
-			} else {
-				wmiConfiguration.setHostname(hostname);
-				return wmiConfiguration;
-			}
-		};
+	private static final Function<TelemetryManager, IWinConfiguration> EMULATION_WMI_CONFIGURATION_PROVIDER = telemetryManager -> {
+		final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		if (emulationConfiguration == null) {
+			return null;
+		}
+		final var wmiConfiguration = emulationConfiguration.getWmi();
+		final String hostname = telemetryManager.getHostname();
+		if (wmiConfiguration == null) {
+			return null;
+		} else {
+			wmiConfiguration.setHostname(hostname);
+			return wmiConfiguration;
+		}
+	};
 
 	@Override
 	public boolean isValidConfiguration(final IConfiguration configuration) {
@@ -397,8 +389,7 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Optional<Boolean> checkProtocol(final TelemetryManager telemetryManager) {
-		final EmulationConfiguration configuration = (EmulationConfiguration) telemetryManager
-			.getHostConfiguration()
+		final EmulationConfiguration configuration = (EmulationConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
 
@@ -650,10 +641,9 @@ public class EmulationExtension implements IProtocolExtension {
 	 */
 	private EmulationSnmpRequestExecutor getSnmpRequestExecutor(final TelemetryManager telemetryManager) {
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-		final String directory =
-			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
-				? emulationConfiguration.getSnmp().getDirectory()
-				: null;
+		final String directory = emulationConfiguration != null && emulationConfiguration.getSnmp() != null
+			? emulationConfiguration.getSnmp().getDirectory()
+			: null;
 		final String cacheKey = directory == null ? "" : directory;
 		return snmpRequestExecutorsByDirectory.computeIfAbsent(cacheKey, _ -> new EmulationSnmpRequestExecutor(directory));
 	}

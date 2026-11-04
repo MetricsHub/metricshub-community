@@ -333,8 +333,9 @@ public class MetricFactory {
 
 		// Retrieve the monitor job metric definitions
 		final AbstractMonitorJob monitorJob = (AbstractMonitorJob) connector.getMonitors().get(monitor.getType());
-		final Map<String, MetricDefinition> monitorMetricDefinitionMap =
-			monitorJob != null ? monitorJob.getMetrics() : null;
+		final Map<String, MetricDefinition> monitorMetricDefinitionMap = monitorJob != null
+			? monitorJob.getMetrics()
+			: null;
 
 		// Monitor jobs metric definitions should override connector metric definitions
 		if (monitorMetricDefinitionMap != null && monitorMetricDefinitionMap.containsKey(extractedName)) {
@@ -382,8 +383,9 @@ public class MetricFactory {
 		boolean hasStateAttribute = checkForStateAttribute(metricAttributes);
 
 		// Resolve metricType: use connector definition if available, otherwise fallback to host-metrics YAML
-		final String metricType =
-			metricDefinition != null ? resolveMetricType(metricDefinition) : resolveMetricTypeFromName(metricName);
+		final String metricType = metricDefinition != null
+			? resolveMetricType(metricDefinition)
+			: resolveMetricTypeFromName(metricName);
 
 		// Update the Number metric check
 		if (metricDefinition == null || (metricDefinition.getType() instanceof MetricType) || hasStateAttribute) {
@@ -418,10 +420,7 @@ public class MetricFactory {
 	 * @return {@code true} if the state attribute exists, {@code false} otherwise.
 	 */
 	public boolean checkForStateAttribute(final Map<String, String> attributes) {
-		return attributes
-			.keySet()
-			.stream()
-			.anyMatch(attributeKey -> attributeKey.equals("state"));
+		return attributes.keySet().stream().anyMatch(attributeKey -> attributeKey.equals("state"));
 	}
 
 	/**

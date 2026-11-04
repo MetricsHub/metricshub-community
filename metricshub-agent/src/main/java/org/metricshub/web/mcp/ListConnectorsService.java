@@ -55,14 +55,13 @@ public class ListConnectorsService implements IMCPToolService {
 	@Tool(
 		name = "ListConnectors",
 		description = """
-		Lists all connectors supported by MetricsHub.
-		You can ask for supported platforms, available tags or categories, connector identifiers, display names, detection criteria, or general connector information.
-		This tool returns all of that in a structured list.
-		"""
+			Lists all connectors supported by MetricsHub.
+			You can ask for supported platforms, available tags or categories, connector identifiers, display names, detection criteria, or general connector information.
+			This tool returns all of that in a structured list.
+			"""
 	)
 	public Map<String, ConnectorInfo> listConnectors() {
-		return agentContextHolder
-			.getAgentContext()
+		return agentContextHolder.getAgentContext()
 			.getConnectorStore()
 			.getStore()
 			.entrySet()

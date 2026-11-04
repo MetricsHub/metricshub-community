@@ -69,25 +69,24 @@ class WbemRequestExecutorTest {
 				Arrays.asList("value1b", "value2b", "value3b")
 			);
 
-			assertThrows(ClientException.class, () ->
-				wbemRequestExecutor.doWbemQuery(HOST_NAME, wbemConfiguration, QUERY, NAMESPACE)
+			assertThrows(
+				ClientException.class,
+				() -> wbemRequestExecutor.doWbemQuery(HOST_NAME, wbemConfiguration, QUERY, NAMESPACE)
 			);
 
 			WbemQueryResult wbemQueryResult = new WbemQueryResult(properties, values);
 
-			wbemExecutorMock
-				.when(() ->
-					WbemExecutor.executeWql(
-						any(URL.class),
-						anyString(),
-						anyString(),
-						eq(PASSWORD.toCharArray()),
-						anyString(),
-						anyInt(),
-						eq(null)
-					)
+			wbemExecutorMock.when(
+				() -> WbemExecutor.executeWql(
+					any(URL.class),
+					anyString(),
+					anyString(),
+					eq(PASSWORD.toCharArray()),
+					anyString(),
+					anyInt(),
+					eq(null)
 				)
-				.thenReturn(wbemQueryResult);
+			).thenReturn(wbemQueryResult);
 
 			assertEquals(values, wbemRequestExecutor.doWbemQuery(HOST_NAME, wbemConfiguration, QUERY, NAMESPACE));
 		}
@@ -107,19 +106,17 @@ class WbemRequestExecutorTest {
 			final List<List<String>> values = Arrays.asList(Arrays.asList("value1a", "value2a"));
 			final WbemQueryResult wbemQueryResult = new WbemQueryResult(properties, values);
 
-			wbemExecutorMock
-				.when(() ->
-					WbemExecutor.executeWql(
-						any(URL.class),
-						anyString(),
-						anyString(),
-						eq(PASSWORD.toCharArray()),
-						anyString(),
-						anyInt(),
-						eq(null)
-					)
+			wbemExecutorMock.when(
+				() -> WbemExecutor.executeWql(
+					any(URL.class),
+					anyString(),
+					anyString(),
+					eq(PASSWORD.toCharArray()),
+					anyString(),
+					anyInt(),
+					eq(null)
 				)
-				.thenReturn(wbemQueryResult);
+			).thenReturn(wbemQueryResult);
 
 			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.recordOutputDirectory(tempDir.toString())

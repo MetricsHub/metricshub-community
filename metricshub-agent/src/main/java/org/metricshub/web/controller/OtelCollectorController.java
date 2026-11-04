@@ -65,8 +65,7 @@ public class OtelCollectorController {
 		description = "Restarts the OpenTelemetry Collector process.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Collector restarted successfully"),
-			@ApiResponse(responseCode = "500", description = "Failed to restart the collector")
-		}
+			@ApiResponse(responseCode = "500", description = "Failed to restart the collector") }
 	)
 	@PostMapping(value = "/restart", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> restartCollector() throws OtelCollectorException {
@@ -86,8 +85,7 @@ public class OtelCollectorController {
 		description = "Returns the last N lines of the OpenTelemetry Collector log file.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Log tail retrieved successfully"),
-			@ApiResponse(responseCode = "500", description = "Failed to read collector logs")
-		}
+			@ApiResponse(responseCode = "500", description = "Failed to read collector logs") }
 	)
 	@GetMapping(value = "/logs", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getCollectorLogs(

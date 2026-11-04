@@ -291,16 +291,12 @@ public class TunnelService {
 			// dropped -- a stopped client discards what it is handed, and a live one compares the
 			// generation on its own thread.
 			final AtomicReference<TunnelClient> owner = new AtomicReference<>();
-			final ToolBridge newBridge = new ToolBridge(
-				snapshot,
-				(message, generation) -> {
-					final TunnelClient target = owner.get();
-					if (target != null) {
-						target.send(message, generation);
-					}
-				},
-				toolWorkers
-			);
+			final ToolBridge newBridge = new ToolBridge(snapshot, (message, generation) -> {
+				final TunnelClient target = owner.get();
+				if (target != null) {
+					target.send(message, generation);
+				}
+			}, toolWorkers);
 			newClient = clientFactory.apply(settings, new BridgeListener(newBridge));
 			owner.set(newClient);
 			bridge = newBridge;

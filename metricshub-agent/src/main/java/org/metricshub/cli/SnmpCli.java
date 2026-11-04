@@ -289,45 +289,43 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode snmpConfigNode = JsonNodeFactory.instance.objectNode();
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode snmpConfigNode = JsonNodeFactory.instance.objectNode();
 
-					snmpConfigNode.set("version", new TextNode(snmpVersion));
-					snmpConfigNode.set("community", new TextNode((String.valueOf(community))));
-					snmpConfigNode.set("port", new IntNode(port));
-					snmpConfigNode.set("timeout", new TextNode(timeout));
-					if (retryIntervals != null) {
-						final ArrayNode retryIntervalsArrayNode = snmpConfigNode.putArray("retryIntervals");
-						Arrays.stream(retryIntervals).forEach(retryIntervalsArrayNode::add);
-					}
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, snmpConfigNode, null);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
-					// display the request
-					final JsonNode queryNode = getQuery();
-					final String action = queryNode.get("action").asText();
-					displayQuery(action, queryNode.get("oid").asText());
-					// Execute the SNMP query
-					String result = extension.executeQuery(configuration, queryNode);
-					// Save the snmp result to a file if the filename is provided
-					if ("walk".equals(action) && record) {
-						final String oid = queryNode.get("oid").asText();
-						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter, oid);
-					}
-					// display the returned result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute SNMP query.\n", e);
+				snmpConfigNode.set("version", new TextNode(snmpVersion));
+				snmpConfigNode.set("community", new TextNode((String.valueOf(community))));
+				snmpConfigNode.set("port", new IntNode(port));
+				snmpConfigNode.set("timeout", new TextNode(timeout));
+				if (retryIntervals != null) {
+					final ArrayNode retryIntervalsArrayNode = snmpConfigNode.putArray("retryIntervals");
+					Arrays.stream(retryIntervals).forEach(retryIntervalsArrayNode::add);
 				}
-			});
+
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, snmpConfigNode, null);
+				configuration.setHostname(hostname);
+
+				configuration.validateConfiguration(hostname);
+
+				// display the request
+				final JsonNode queryNode = getQuery();
+				final String action = queryNode.get("action").asText();
+				displayQuery(action, queryNode.get("oid").asText());
+				// Execute the SNMP query
+				String result = extension.executeQuery(configuration, queryNode);
+				// Save the snmp result to a file if the filename is provided
+				if ("walk".equals(action) && record) {
+					final String oid = queryNode.get("oid").asText();
+					saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter, oid);
+				}
+				// display the returned result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute SNMP query.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

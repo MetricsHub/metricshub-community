@@ -120,17 +120,14 @@ class MonitoringTaskTest {
 				.resolveHostnameToFqdn(true)
 				.stateSetCompression(StateSetMetricCompression.SUPPRESS_ZEROS)
 				.build()
-		)
-			.when(monitoringTaskInfoMock)
-			.getResourceConfig();
+		).when(monitoringTaskInfoMock).getResourceConfig();
 		doReturn(hostConfiguration).when(telemetryManagerMock).getHostConfiguration();
 
 		doNothing().when(telemetryManagerMock).run(any(IStrategy[].class));
 
 		doReturn(ExtensionManager.empty()).when(monitoringTaskInfoMock).getExtensionManager();
 
-		doReturn(MetricsExporter.builder().withClient(new NoopClient()).build())
-			.when(monitoringTaskInfoMock)
+		doReturn(MetricsExporter.builder().withClient(new NoopClient()).build()).when(monitoringTaskInfoMock)
 			.getMetricsExporter();
 
 		monitoringTask.run(); // Discover + Collect
@@ -228,9 +225,7 @@ class MonitoringTaskTest {
 					MetricDefinition.builder().description("Whether the host is configured or not").type(MetricType.GAUGE).build()
 				)
 			)
-		)
-			.when(monitoringTaskInfoMock)
-			.getHostMetricDefinitions();
+		).when(monitoringTaskInfoMock).getHostMetricDefinitions();
 
 		final ResourceConfig resourceConfig = ResourceConfig.builder().attributes(hostAttributes).build();
 		monitoringTask.initHostAttributes(telemetryManager, resourceConfig);
@@ -241,8 +236,7 @@ class MonitoringTaskTest {
 		assertNotNull(request);
 
 		// Verify the host metrics
-		final ResourceMetrics hostResourceMetrics = request
-			.getResourceMetricsList()
+		final ResourceMetrics hostResourceMetrics = request.getResourceMetricsList()
 			.stream()
 			.filter(r -> r.getResource().getAttributesList().size() == hostAttributes.size())
 			.findFirst()
@@ -251,8 +245,7 @@ class MonitoringTaskTest {
 		final Resource hostResource = hostResourceMetrics.getResource();
 		assertNotNull(hostResource);
 		final List<KeyValue> hostKeyValueAttributes = hostResource.getAttributesList();
-		final Map<String, String> hostAttributesResult = hostKeyValueAttributes
-			.stream()
+		final Map<String, String> hostAttributesResult = hostKeyValueAttributes.stream()
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
 
 		assertTrue(MapHelper.areEqual(hostAttributes, hostAttributesResult), "Host attributes are not equal");
@@ -274,8 +267,7 @@ class MonitoringTaskTest {
 		assertEquals(1.0, dataPoint.getAsDouble());
 
 		// Verify the enclosure metrics
-		final ResourceMetrics enclosureResourceMetrics = request
-			.getResourceMetricsList()
+		final ResourceMetrics enclosureResourceMetrics = request.getResourceMetricsList()
 			.stream()
 			.filter(r -> r.getResource().getAttributesList().size() == enclosureAttributes.size() + hostAttributes.size())
 			.findFirst()
@@ -287,8 +279,7 @@ class MonitoringTaskTest {
 		final Map<String, String> expectedEnclosureAttributes = new HashMap<>(hostAttributes);
 		expectedEnclosureAttributes.putAll(enclosureAttributes);
 
-		final Map<String, String> enclosureAttributesResult = enclosureKeyValueAttributes
-			.stream()
+		final Map<String, String> enclosureAttributesResult = enclosureKeyValueAttributes.stream()
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
 		assertTrue(
 			MapHelper.areEqual(expectedEnclosureAttributes, enclosureAttributesResult),
@@ -310,8 +301,7 @@ class MonitoringTaskTest {
 		assertEquals(1, enclosureDataPointsList.size());
 		final NumberDataPoint enclosureDataPoint = enclosureDataPointsList.get(0);
 		assertEquals(30.0, enclosureDataPoint.getAsDouble());
-		final Map<String, Object> enclosureDataPointAttributes = enclosureDataPoint
-			.getAttributesList()
+		final Map<String, Object> enclosureDataPointAttributes = enclosureDataPoint.getAttributesList()
 			.stream()
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
 		assertEquals(Map.of("hw.type", "enclosure"), enclosureDataPointAttributes);

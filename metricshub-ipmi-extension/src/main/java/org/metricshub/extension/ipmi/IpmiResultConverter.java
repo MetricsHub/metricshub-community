@@ -68,8 +68,7 @@ public final class IpmiResultConverter {
 	/**
 	 * The columns of the rows of {@link #convertSel(List, List)}, as a CSV header line
 	 */
-	public static final String SEL_HEADER =
-		"recordId;timestamp;sensorType;sensorNumber;sensorName;entity;eventType;description;direction;generatorId;oem";
+	public static final String SEL_HEADER = "recordId;timestamp;sensorType;sensorNumber;sensorName;entity;eventType;description;direction;generatorId;oem";
 
 	private static final Set<EntityId> PANELS = EnumSet.of(
 		EntityId.FrontPanelBoard,
@@ -193,8 +192,7 @@ public final class IpmiResultConverter {
 			// manufacturer, the board area otherwise
 			final ProductInfo product = fru.product().orElse(null);
 			final boolean fromProduct = product != null && !isBlank(product.getManufacturerName());
-			final FruDevice device = fru
-				.spd()
+			final FruDevice device = fru.spd()
 				.map(spd -> fromSpd(fru, spd))
 				.or(() -> fru.pirom().map(pirom -> fromPirom(fru, pirom)))
 				.orElseGet(() -> fromProduct ? fromProduct(product) : fromBoard(fru.board().orElse(null)));
@@ -369,11 +367,10 @@ public final class IpmiResultConverter {
 			statesByEntity.merge(entity, states, (previous, next) -> previous + "|" + next);
 		}
 
-		return headsByEntity
-			.entrySet()
+		return headsByEntity.entrySet()
 			.stream()
-			.map(entry ->
-				String.join(
+			.map(
+				entry -> String.join(
 					";",
 					entry.getValue(),
 					statesByEntity.get(entry.getKey()),
@@ -392,8 +389,7 @@ public final class IpmiResultConverter {
 	static String buildStates(final Sensor sensor) {
 		final String name = sensor.name();
 		// ponytail: HashSet order kept for byte-identical output; use distinct() once a cross-path fixture pins the format
-		return sensor
-			.states()
+		return sensor.states()
 			.stream()
 			.map(state -> name + "=" + state)
 			.collect(Collectors.toSet())
@@ -413,9 +409,9 @@ public final class IpmiResultConverter {
 		// disabled, no analog reading: IPMI 2.0 Table 35-15 and Table 43-1)
 		if (
 			!(sensor.record() instanceof FullSensorRecord) ||
-			sensor.rawReading().isEmpty() ||
-			sensor.rawReading().getAsInt() == NO_READING ||
-			sensor.reading().isEmpty()
+				sensor.rawReading().isEmpty() ||
+				sensor.rawReading().getAsInt() == NO_READING ||
+				sensor.reading().isEmpty()
 		) {
 			return null;
 		}
@@ -435,24 +431,36 @@ public final class IpmiResultConverter {
 			case DegreesC -> temperatureLine(sensor, id, name, entity, value, IDENTITY);
 			case DegreesF -> temperatureLine(sensor, id, name, entity, value, FAHRENHEIT_TO_CELSIUS);
 			case DegreesK -> temperatureLine(sensor, id, name, entity, value, KELVIN_TO_CELSIUS);
-			case Volts -> line(
-				"Voltage",
-				id,
-				name,
-				entity,
-				value * 1000,
-				threshold(VOLTS_TO_MILLIVOLTS, sensor.lowerNonCritical(), sensor.lowerCritical(), sensor.lowerNonRecoverable()),
-				threshold(VOLTS_TO_MILLIVOLTS, sensor.upperNonCritical(), sensor.upperCritical(), sensor.upperNonRecoverable())
-			);
-			case Rpm -> line(
-				"Fan",
-				id,
-				name,
-				entity,
-				value,
-				threshold(IDENTITY, sensor.lowerCritical(), sensor.lowerNonRecoverable()),
-				threshold(IDENTITY, sensor.lowerNonCritical())
-			);
+			case Volts ->
+				line(
+					"Voltage",
+					id,
+					name,
+					entity,
+					value * 1000,
+					threshold(
+						VOLTS_TO_MILLIVOLTS,
+						sensor.lowerNonCritical(),
+						sensor.lowerCritical(),
+						sensor.lowerNonRecoverable()
+					),
+					threshold(
+						VOLTS_TO_MILLIVOLTS,
+						sensor.upperNonCritical(),
+						sensor.upperCritical(),
+						sensor.upperNonRecoverable()
+					)
+				);
+			case Rpm ->
+				line(
+					"Fan",
+					id,
+					name,
+					entity,
+					value,
+					threshold(IDENTITY, sensor.lowerCritical(), sensor.lowerNonRecoverable()),
+					threshold(IDENTITY, sensor.lowerNonCritical())
+				);
 			case Amps -> line("Current", id, name, entity, value);
 			case Watts -> line("PowerConsumption", id, name, entity, value);
 			case Joules -> line("Energy", id, name, entity, value);
@@ -491,9 +499,8 @@ public final class IpmiResultConverter {
 		final double value,
 		final String... thresholds
 	) {
-		return Stream.concat(Stream.of(type, id, name, entity, String.valueOf(value)), Arrays.stream(thresholds)).collect(
-			Collectors.joining(";")
-		);
+		return Stream.concat(Stream.of(type, id, name, entity, String.valueOf(value)), Arrays.stream(thresholds))
+			.collect(Collectors.joining(";"));
 	}
 
 	/**
@@ -574,10 +581,7 @@ public final class IpmiResultConverter {
 	 * @return the rows, in the order of the entries
 	 */
 	public static List<List<String>> convertSel(final List<SelEntry> entries, final List<Sensor> sensors) {
-		return entries
-			.stream()
-			.map(entry -> selRow(entry, sensors))
-			.toList();
+		return entries.stream().map(entry -> selRow(entry, sensors)).toList();
 	}
 
 	private static List<String> selRow(final SelEntry entry, final List<Sensor> sensors) {
@@ -585,14 +589,8 @@ public final class IpmiResultConverter {
 		final String deviceType = sensor == null ? null : DeviceDescription.getDeviceType(sensor.entity());
 		return List.of(
 			String.valueOf(entry.id()),
-			entry
-				.timestamp()
-				.map(time -> String.valueOf(time.getEpochSecond()))
-				.orElse(EMPTY),
-			entry
-				.sensorType()
-				.map(type -> sensorTypeName(type, entry.sensorTypeCode().orElse(0)))
-				.orElse(EMPTY),
+			entry.timestamp().map(time -> String.valueOf(time.getEpochSecond())).orElse(EMPTY),
+			entry.sensorType().map(type -> sensorTypeName(type, entry.sensorTypeCode().orElse(0))).orElse(EMPTY),
 			hexByte(entry.sensorNumber()),
 			sensor == null || sensor.name() == null ? EMPTY : sensor.name(),
 			sensor == null || deviceType == null ? EMPTY : entityKey(deviceType, (byte) sensor.entityInstance()),

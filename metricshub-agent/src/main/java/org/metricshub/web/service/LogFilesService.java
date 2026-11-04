@@ -75,8 +75,7 @@ public class LogFilesService {
 
 		// Only list top-level log files
 		try (Stream<Path> files = Files.list(logsDirectory)) {
-			return files
-				.filter(Files::isRegularFile)
+			return files.filter(Files::isRegularFile)
 				.filter(LogFilesService::hasLogExtension)
 				.map(this::buildLogFile)
 				.filter(Objects::nonNull)
@@ -312,8 +311,9 @@ public class LogFilesService {
 
 		final Path logsDir;
 		try {
-			logsDir =
-				outputDir != null && !outputDir.isBlank() ? Path.of(outputDir) : ConfigHelper.getDefaultOutputDirectory();
+			logsDir = outputDir != null && !outputDir.isBlank()
+				? Path.of(outputDir)
+				: ConfigHelper.getDefaultOutputDirectory();
 		} catch (InvalidPathException e) {
 			LogFilesException ex = new LogFilesException(
 				LogFilesException.Code.LOGS_DIR_UNAVAILABLE,

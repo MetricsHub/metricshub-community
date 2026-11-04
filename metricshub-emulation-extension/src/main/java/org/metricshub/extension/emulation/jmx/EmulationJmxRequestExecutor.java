@@ -99,12 +99,7 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 			emulationInputDirectory,
 			JmxEmulationImage.class,
 			new JmxContext(objectNamePattern, attributesList, keyPropertiesList),
-			new AbstractEmulationExecutor.ReplayOperations<
-				JmxEmulationImage,
-				JmxEmulationEntry,
-				JmxContext,
-				List<List<String>>
-			>() {
+			new AbstractEmulationExecutor.ReplayOperations<JmxEmulationImage, JmxEmulationEntry, JmxContext, List<List<String>>>() {
 				@Override
 				public String protocolName() {
 					return "JMX";
@@ -186,11 +181,9 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 		final List<String> attributes,
 		final List<String> keyProperties
 	) {
-		return (
-			Objects.equals(objectName, request.getObjectName()) &&
+		return (Objects.equals(objectName, request.getObjectName()) &&
 			Objects.equals(normalizeList(attributes), normalizeList(request.getAttributes())) &&
-			Objects.equals(normalizeList(keyProperties), normalizeList(request.getKeyProperties()))
-		);
+			Objects.equals(normalizeList(keyProperties), normalizeList(request.getKeyProperties())));
 	}
 
 	/**
@@ -212,14 +205,11 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 			return List.of();
 		}
 
-		return entries
-			.stream()
-			.filter(entry -> {
-				if (entry == null || entry.getRequest() == null) {
-					return false;
-				}
-				return matchesRequest(entry.getRequest(), objectName, attributes, keyProperties);
-			})
-			.collect(Collectors.toCollection(ArrayList::new));
+		return entries.stream().filter(entry -> {
+			if (entry == null || entry.getRequest() == null) {
+				return false;
+			}
+			return matchesRequest(entry.getRequest(), objectName, attributes, keyProperties);
+		}).collect(Collectors.toCollection(ArrayList::new));
 	}
 }

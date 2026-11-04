@@ -61,8 +61,8 @@ public class CommandLineCriterionProcessor {
 
 		if (
 			commandLineCriterion.getCommandLine().isEmpty() ||
-			commandLineCriterion.getExpectedResult() == null ||
-			commandLineCriterion.getExpectedResult().isEmpty()
+				commandLineCriterion.getExpectedResult() == null ||
+				commandLineCriterion.getExpectedResult().isEmpty()
 		) {
 			return CriterionTestResult.success(
 				commandLineCriterion,

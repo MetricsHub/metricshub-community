@@ -29,8 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class WinCommandLineSourceProcessorTest {
 
-	private static final String COMMAND_LINE =
-		"systeminfo | findstr /C:\"Total Physical Memory\" /C:\"Available Physical Memory\"";
+	private static final String COMMAND_LINE = "systeminfo | findstr /C:\"Total Physical Memory\" /C:\"Available Physical Memory\"";
 	private static final String CONNECTOR_ID = "connector_id";
 	private static final String HOST_NAME = "test-host" + UUID.randomUUID().toString();
 	private static final char[] PASSWORD = "pwd".toCharArray();
@@ -126,8 +125,7 @@ class WinCommandLineSourceProcessorTest {
 			Total Physical Memory:16384 MB
 			Available Physical Memory:8192 MB
 			""";
-		doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE))
-			.when(winCommandServiceMock)
+		doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
 			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
 
 		final List<List<String>> expected = List.of(List.of("16384 MB"), List.of("8192 MB"));
@@ -170,8 +168,7 @@ class WinCommandLineSourceProcessorTest {
 			.build();
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 
-		doThrow(new ClientException())
-			.when(winCommandServiceMock)
+		doThrow(new ClientException()).when(winCommandServiceMock)
 			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
 
 		assertEquals(SourceTable.empty(), winCommandLineSourceProcessor.process(commandLineSource, telemetryManager));

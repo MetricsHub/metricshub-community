@@ -89,11 +89,10 @@ class ResourceMeterProviderTest {
 	private static ResourceMetrics buildResourceMetrics(final Map<String, String> attributes, final String metricName) {
 		final Resource resource = Resource.newBuilder()
 			.addAllAttributes(
-				attributes
-					.entrySet()
+				attributes.entrySet()
 					.stream()
-					.map(entry ->
-						KeyValue.newBuilder()
+					.map(
+						entry -> KeyValue.newBuilder()
 							.setKey(entry.getKey())
 							.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 							.build()

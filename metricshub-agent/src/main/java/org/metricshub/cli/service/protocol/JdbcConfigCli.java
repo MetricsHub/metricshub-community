@@ -88,26 +88,16 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 	)
 	private String type;
 
-	@Option(
-		names = "--jdbc-driver-class",
-		order = 9,
-		paramLabel = "CLASSNAME",
-		description = """
+	@Option(names = "--jdbc-driver-class", order = 9, paramLabel = "CLASSNAME", description = """
 		Fully-qualified java.sql.Driver implementation to use (e.g. com.mysql.cj.jdbc.Driver). \
 		Required when the URL is not accepted by any registered drivers\
-		"""
-	)
+		""")
 	private String driverClass;
 
-	@Option(
-		names = "--jdbc-driver-jar",
-		order = 10,
-		paramLabel = "JARPATH",
-		description = """
+	@Option(names = "--jdbc-driver-jar", order = 10, paramLabel = "JARPATH", description = """
 		Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR and $USER_HOME. \
 		Ignored unless --jdbc-driver-class is also provided\
-		"""
-	)
+		""")
 	private String driverJar;
 
 	@Option(names = "--jdbc-hostname", order = 11, paramLabel = "HOSTNAME", description = "Hostname for JDBC")

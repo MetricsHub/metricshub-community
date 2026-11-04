@@ -325,10 +325,8 @@ public class ToolResponseManagerService {
 				}
 
 				// Compute the overhead added by the manifest wrapper (everything except the payload value)
-				final long payloadSizeBytes = objectMapper
-					.writeValueAsString(truncatedPayload)
-					.getBytes(StandardCharsets.UTF_8)
-					.length;
+				final long payloadSizeBytes = objectMapper.writeValueAsString(truncatedPayload)
+					.getBytes(StandardCharsets.UTF_8).length;
 				final long manifestOverhead = manifestSizeBytes - payloadSizeBytes;
 
 				// Validate manifestOverhead is non-negative (manifestSizeBytes should always be >= payloadSizeBytes)
@@ -474,8 +472,7 @@ public class ToolResponseManagerService {
 				objectMapper
 			);
 
-			final String description =
-				truncationResult.summary() +
+			final String description = truncationResult.summary() +
 				"\n\nPayload omitted due to context budget constraints." +
 				"\nFor the complete dataset, use Code Interpreter to read " +
 				"the uploaded file using the openai_file_id.";

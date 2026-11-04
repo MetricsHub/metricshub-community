@@ -70,8 +70,8 @@ public class WinCommandLineCriterionProcessor {
 
 		if (
 			commandLineCriterion.getCommandLine().isEmpty() ||
-			commandLineCriterion.getExpectedResult() == null ||
-			commandLineCriterion.getExpectedResult().isEmpty()
+				commandLineCriterion.getExpectedResult() == null ||
+				commandLineCriterion.getExpectedResult().isEmpty()
 		) {
 			return CriterionTestResult.success(
 				commandLineCriterion,
@@ -104,10 +104,9 @@ public class WinCommandLineCriterionProcessor {
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
-		final String hostname =
-			winConfiguration == null
-				? telemetryManager.getHostname()
-				: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
+		final String hostname = winConfiguration == null
+			? telemetryManager.getHostname()
+			: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		try {
 			final OsCommandResult osCommandResult = winCommandService.runOsCommand(

@@ -88,8 +88,7 @@ public class JmxExtension implements IProtocolExtension {
 
 	@Override
 	public Optional<Boolean> checkProtocol(final TelemetryManager telemetryManager) {
-		final JmxConfiguration configuration = (JmxConfiguration) telemetryManager
-			.getHostConfiguration()
+		final JmxConfiguration configuration = (JmxConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(JmxConfiguration.class);
 
@@ -297,9 +296,6 @@ public class JmxExtension implements IProtocolExtension {
 		if (!arguments.hasNonNull(field)) {
 			return List.of();
 		}
-		return Stream.of(arguments.get(field).asText().split(","))
-			.map(String::trim)
-			.filter(s -> !s.isEmpty())
-			.toList();
+		return Stream.of(arguments.get(field).asText().split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
 	}
 }

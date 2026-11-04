@@ -130,8 +130,7 @@ public class OsCommandExtension implements IProtocolExtension {
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		// Retrieve SSH Configuration
-		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager
-			.getHostConfiguration()
+		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(SshConfiguration.class);
 
@@ -349,8 +348,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	) {
 		try {
 			if (
-				osCommandService.runSshCommand(SSH_TEST_COMMAND, hostname, sshConfiguration, timeout, null, null, hostType) ==
-				null
+				osCommandService.runSshCommand(SSH_TEST_COMMAND, hostname, sshConfiguration, timeout, null, null, hostType)
+					== null
 			) {
 				log.debug(
 					"Hostname {} - Checking SSH protocol status. Remote SSH command has not returned any results.",

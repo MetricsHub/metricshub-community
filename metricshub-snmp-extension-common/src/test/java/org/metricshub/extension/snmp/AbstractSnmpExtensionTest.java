@@ -82,8 +82,9 @@ class AbstractSnmpExtensionTest {
 	}
 
 	private TelemetryManager createTelemetryManager(final ISnmpConfiguration config) {
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations =
-			config != null ? Map.of(ISnmpConfiguration.class, config) : Map.of();
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = config != null
+			? Map.of(ISnmpConfiguration.class, config)
+			: Map.of();
 		return TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(HOSTNAME).configurations(configurations).build())
 			.build();
@@ -137,9 +138,8 @@ class AbstractSnmpExtensionTest {
 	void testProcessSourceSnmpTable() throws Exception {
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
 		final SnmpTableSource source = SnmpTableSource.builder().oid(TEST_OID).selectColumns("1,2").build();
-		when(
-			requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any())
-		).thenReturn(List.of(List.of("a", "b")));
+		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any()))
+			.thenReturn(List.of(List.of("a", "b")));
 		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
 		assertNotNull(result);
 	}
@@ -225,9 +225,8 @@ class AbstractSnmpExtensionTest {
 			"{\"action\": \"table\", \"oid\": \"1.3.6.1\", \"columns\": [\"1\", \"2\"]}"
 		);
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(
-			requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any())
-		).thenReturn(List.of(List.of("a", "b")));
+		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any()))
+			.thenReturn(List.of(List.of("a", "b")));
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
 		assertNotNull(result);
 	}

@@ -78,69 +78,55 @@ public class SearchService {
 			// enqueue children based on type
 			if (current instanceof AgentTelemetry at) {
 				if (at.getResourceGroups() != null) {
-					at
-						.getResourceGroups()
-						.forEach(child -> {
-							String path = tn.childrenBasePath + "/resource-groups/" + encode(child.getName());
-							queue.add(new TraversalNode(child, path, path));
-						});
+					at.getResourceGroups().forEach(child -> {
+						String path = tn.childrenBasePath + "/resource-groups/" + encode(child.getName());
+						queue.add(new TraversalNode(child, path, path));
+					});
 				}
 				if (at.getResources() != null) {
-					at
-						.getResources()
-						.forEach(child -> {
-							String path = tn.childrenBasePath + "/resources/" + encode(child.getName());
-							queue.add(new TraversalNode(child, path, path));
-						});
+					at.getResources().forEach(child -> {
+						String path = tn.childrenBasePath + "/resources/" + encode(child.getName());
+						queue.add(new TraversalNode(child, path, path));
+					});
 				}
 			} else if (current instanceof ResourceGroupTelemetry rgt) {
 				if (rgt.getResources() != null) {
-					rgt
-						.getResources()
-						.forEach(child -> {
-							String path = tn.childrenBasePath + "/resources/" + encode(child.getName());
-							queue.add(new TraversalNode(child, path, path));
-						});
+					rgt.getResources().forEach(child -> {
+						String path = tn.childrenBasePath + "/resources/" + encode(child.getName());
+						queue.add(new TraversalNode(child, path, path));
+					});
 				}
 			} else if (current instanceof ResourceTelemetry rt) {
 				if (rt.getConnectors() != null) {
-					rt
-						.getConnectors()
-						.forEach(child -> {
-							String path = tn.childrenBasePath + "/connectors/" + encode(child.getName());
-							queue.add(new TraversalNode(child, path, path));
-						});
+					rt.getConnectors().forEach(child -> {
+						String path = tn.childrenBasePath + "/connectors/" + encode(child.getName());
+						queue.add(new TraversalNode(child, path, path));
+					});
 				}
 			} else if (current instanceof ConnectorTelemetry ct) {
 				if (ct.getMonitors() != null) {
-					ct
-						.getMonitors()
-						.forEach(child -> {
-							String path = tn.childrenBasePath + "/monitors/" + encode(child.getName());
-							queue.add(new TraversalNode(child, path, path));
-						});
+					ct.getMonitors().forEach(child -> {
+						String path = tn.childrenBasePath + "/monitors/" + encode(child.getName());
+						queue.add(new TraversalNode(child, path, path));
+					});
 				}
 			} else if (current instanceof MonitorTypeTelemetry mtt) {
 				if (mtt.getInstances() != null) {
-					mtt
-						.getInstances()
-						.forEach(child -> {
-							String path = tn.matchPath + "#" + encode(child.getName());
-							queue.add(new TraversalNode(child, path, path));
-						});
+					mtt.getInstances().forEach(child -> {
+						String path = tn.matchPath + "#" + encode(child.getName());
+						queue.add(new TraversalNode(child, path, path));
+					});
 				}
 			}
 		}
 
-		return matches
-			.stream()
-			.sorted((SearchMatch a, SearchMatch b) -> {
-				int cmp = Double.compare(b.getJaroWinklerScore(), a.getJaroWinklerScore());
-				if (cmp == 0) {
-					cmp = a.getPath().compareToIgnoreCase(b.getPath());
-				}
-				return cmp;
-			})
+		return matches.stream().sorted((SearchMatch a, SearchMatch b) -> {
+			int cmp = Double.compare(b.getJaroWinklerScore(), a.getJaroWinklerScore());
+			if (cmp == 0) {
+				cmp = a.getPath().compareToIgnoreCase(b.getPath());
+			}
+			return cmp;
+		})
 			// safety cap
 			.limit(250L)
 			.toList();

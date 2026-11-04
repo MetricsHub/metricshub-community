@@ -51,8 +51,7 @@ class NetworkHelperTest {
 			final InetAddress mockedInetAddress = Mockito.mock(InetAddress.class);
 			try (MockedStatic<InetAddress> inetAddressMock = mockStatic(InetAddress.class)) {
 				inetAddressMock.when(() -> InetAddress.getByName(eq(randomHost))).thenReturn(mockedInetAddress);
-				networkInterface
-					.when(() -> NetworkInterface.getByInetAddress(mockedInetAddress))
+				networkInterface.when(() -> NetworkInterface.getByInetAddress(mockedInetAddress))
 					.thenThrow(new SocketException());
 				assertFalse(NetworkHelper.isLocalhost(randomHost));
 			}
@@ -222,8 +221,7 @@ class NetworkHelperTest {
 			assertEquals(Optional.of("agent-linux"), NetworkHelper.getKernelHostname());
 			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname"))).thenReturn(" \n");
 			assertEquals(Optional.empty(), NetworkHelper.getKernelHostname());
-			files
-				.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname")))
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname")))
 				.thenThrow(new IOException("Unavailable"));
 			assertEquals(Optional.empty(), NetworkHelper.getKernelHostname());
 			os.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.WINDOWS));

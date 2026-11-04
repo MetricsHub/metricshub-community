@@ -37,8 +37,9 @@ class HostToolsTest {
 			false
 		);
 
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			HostTools.perHost("Test_bad", definition, (hostname, arguments) -> Map.of())
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> HostTools.perHost("Test_bad", definition, (hostname, arguments) -> Map.of())
 		);
 
 		assertTrue(exception.getMessage().contains(HostTools.HOSTNAME), exception.getMessage());
@@ -48,8 +49,9 @@ class HostToolsTest {
 	void testPerHostRejectsANameLongerThanAFunctionNameMayBe() {
 		final String name = HostTools.toolName("a".repeat(50), "listTheThingsOfTheHost");
 
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			HostTools.perHost(name, definition(false), (hostname, arguments) -> Map.of())
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> HostTools.perHost(name, definition(false), (hostname, arguments) -> Map.of())
 		);
 
 		assertTrue(exception.getMessage().contains("64"), exception.getMessage());
@@ -119,8 +121,10 @@ class HostToolsTest {
 			Map.of("lines", new ToolParameter("integer", "How many lines", true, null)),
 			false
 		);
-		final ToolCallback callback = HostTools.perHost("Test_tail", definition, (hostname, arguments) ->
-			Map.of("value", arguments.get("lines"))
+		final ToolCallback callback = HostTools.perHost(
+			"Test_tail",
+			definition,
+			(hostname, arguments) -> Map.of("value", arguments.get("lines"))
 		);
 
 		for (final String lines : List.of("1000", "1000.0", "1e3")) {
@@ -170,8 +174,10 @@ class HostToolsTest {
 
 	@Test
 	void testPerHostRunsOncePerHostWithResolvedArguments() throws Exception {
-		final ToolCallback callback = HostTools.perHost("Test_listThings", definition(false), (hostname, arguments) ->
-			Map.of("value", hostname + ":" + arguments.get("owner") + ":" + arguments.get("pattern"))
+		final ToolCallback callback = HostTools.perHost(
+			"Test_listThings",
+			definition(false),
+			(hostname, arguments) -> Map.of("value", hostname + ":" + arguments.get("owner") + ":" + arguments.get("pattern"))
 		);
 
 		assertEquals("Test_listThings", callback.getToolDefinition().name());
@@ -189,8 +195,10 @@ class HostToolsTest {
 
 	@Test
 	void testPerHostAcceptsASingleHostname() throws Exception {
-		final ToolCallback callback = HostTools.perHost("Test_listThings", definition(false), (hostname, arguments) ->
-			Map.of("value", hostname)
+		final ToolCallback callback = HostTools.perHost(
+			"Test_listThings",
+			definition(false),
+			(hostname, arguments) -> Map.of("value", hostname)
 		);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":\"a\",\"owner\":\"me\",\"poolSize\":2}"));
@@ -201,8 +209,10 @@ class HostToolsTest {
 
 	@Test
 	void testPerHostReportsMissingHostnameAndArguments() throws Exception {
-		final ToolCallback callback = HostTools.perHost("Test_listThings", definition(false), (hostname, arguments) ->
-			Map.of()
+		final ToolCallback callback = HostTools.perHost(
+			"Test_listThings",
+			definition(false),
+			(hostname, arguments) -> Map.of()
 		);
 
 		final JsonNode noHost = MAPPER.readTree(callback.call("{\"owner\":\"me\"}"));

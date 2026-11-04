@@ -64,8 +64,8 @@ public class IpmiRequestExecutor {
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
 	) {
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing IPMI detection request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + "- Timeout: {} s\n", // NOSONAR
 				hostname,
 				ipmiConfiguration.getUsername(),
@@ -83,8 +83,8 @@ public class IpmiRequestExecutor {
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed IPMI detection request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
 					"- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 				hostname,
@@ -195,12 +195,12 @@ public class IpmiRequestExecutor {
 	private static void logProblems(final String hostname, final FruList frus, final SensorList sensors) {
 		frus.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI FRUs: Skipped {}", hostname, skipped));
 		sensors.skippedRecords().forEach(skipped -> log.debug("Hostname {} - IPMI sensors: Skipped {}", hostname, skipped));
-		frus.forEach(fru ->
-			fru.problems().forEach(problem -> log.debug("Hostname {} - IPMI FRU {}: {}", hostname, fru.name(), problem))
+		frus.forEach(
+			fru -> fru.problems()
+				.forEach(problem -> log.debug("Hostname {} - IPMI FRU {}: {}", hostname, fru.name(), problem))
 		);
-		sensors.forEach(sensor ->
-			sensor
-				.problem()
+		sensors.forEach(
+			sensor -> sensor.problem()
 				.ifPresent(problem -> log.debug("Hostname {} - IPMI sensor {}: {}", hostname, sensor.name(), problem))
 		);
 	}
@@ -218,8 +218,8 @@ public class IpmiRequestExecutor {
 		@SpanAttribute("host.hostname") String hostname,
 		@SpanAttribute("ipmi.config") @NonNull IpmiConfiguration ipmiConfiguration
 	) {
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing IPMI FRUs and Sensors request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
 					"- Timeout: {} s\n",
 				hostname,
@@ -243,8 +243,8 @@ public class IpmiRequestExecutor {
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed IPMI FRUs and Sensors request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
 					"- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 				hostname,
@@ -344,8 +344,7 @@ public class IpmiRequestExecutor {
 	 *                             is not a cleared log, the next poll tries again
 	 */
 	private static boolean holds(final IpmiClient bmc, final SelCursor since) {
-		final RawResponse response = bmc
-			.raw(STORAGE_NETFN, GET_SEL_ENTRY)
+		final RawResponse response = bmc.raw(STORAGE_NETFN, GET_SEL_ENTRY)
 			.data(0x00, 0x00, since.recordId() & 0xFF, since.recordId() >> 8, 0x00, 0xFF)
 			.execute();
 		if (response.rawCompletionCode() != 0 && response.rawCompletionCode() != RECORD_NOT_PRESENT) {
@@ -353,8 +352,7 @@ public class IpmiRequestExecutor {
 		}
 		final byte[] data = response.data();
 		final byte[] record = since.record();
-		final boolean held =
-			response.rawCompletionCode() == 0 &&
+		final boolean held = response.rawCompletionCode() == 0 &&
 			record != null &&
 			data.length >= 2 + record.length &&
 			Arrays.equals(data, 2, 2 + record.length, record, 0, record.length);
@@ -419,10 +417,9 @@ public class IpmiRequestExecutor {
 			}
 			// ponytail: naming the sensors of the new events walks the whole SDR and reads every sensor; a
 			// records-only walk needs an ipmi-java API
-			final SensorList sensors =
-				withSensors && entries.stream().anyMatch(entry -> entry.type() == SelRecordType.System)
-					? sensorsOrNull(hostname, bmc)
-					: null;
+			final SensorList sensors = withSensors && entries.stream().anyMatch(entry -> entry.type() == SelRecordType.System)
+				? sensorsOrNull(hostname, bmc)
+				: null;
 			result = new SelRead(entries, sensors);
 		}
 
@@ -572,9 +569,7 @@ public class IpmiRequestExecutor {
 	) {
 		final String result = forever
 			? "Chassis identify on until turned off"
-			: seconds == 0
-				? "Chassis identify off"
-				: "Chassis identify on for " + seconds + " s";
+			: seconds == 0 ? "Chassis identify off" : "Chassis identify on for " + seconds + " s";
 		log.info("Hostname {} - IPMI chassis identify: {}", hostname, result);
 		try (IpmiClient bmc = newClient(hostname, ipmiConfiguration, PrivilegeLevel.Operator)) {
 			if (forever) {

@@ -45,8 +45,7 @@ class MappingProcessorTest {
 			.row(row)
 			.build();
 
-		final ConnectorNamespace connectorNamespace = telemetryManager
-			.getHostProperties()
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME);
 		connectorNamespace.addSourceTable(
 			vendorSource1Ref,

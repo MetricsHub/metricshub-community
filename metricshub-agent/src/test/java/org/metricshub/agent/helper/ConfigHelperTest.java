@@ -89,8 +89,7 @@ class ConfigHelperTest {
 				mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenCallRealMethod();
 				mockedConfigHelper.when(ConfigHelper::getSourceDirectory).thenCallRealMethod();
 
-				mockedResourceHelper
-					.when(() -> ResourceHelper.findSourceDirectory(ConfigHelper.class))
+				mockedResourceHelper.when(() -> ResourceHelper.findSourceDirectory(ConfigHelper.class))
 					.thenAnswer(_ -> tempDir.resolve("metricshub/app/jar").toFile());
 
 				final Path configDirOnWindows = ConfigHelper.getDefaultConfigDirectoryPath();
@@ -138,8 +137,7 @@ class ConfigHelperTest {
 				StandardCopyOption.REPLACE_EXISTING
 			);
 
-			mockedConfigHelper
-				.when(() -> ConfigHelper.generateDefaultConfigurationFileIfEmptyDir(configDir))
+			mockedConfigHelper.when(() -> ConfigHelper.generateDefaultConfigurationFileIfEmptyDir(configDir))
 				.thenCallRealMethod();
 			mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenReturn(examplePath);
 
@@ -188,8 +186,7 @@ class ConfigHelperTest {
 		assertNotNull(telemetryManager, "Telemetry manager should not be null");
 		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
 		assertEquals(
-			agentConfig
-				.getResourceGroups()
+			agentConfig.getResourceGroups()
 				.get(PARIS_RESOURCE_GROUP_KEY)
 				.getResources()
 				.get(SERVER_1_RESOURCE_GROUP_KEY)
@@ -253,8 +250,7 @@ class ConfigHelperTest {
 		assertNotNull(telemetryManager, "Telemetry manager should not be null");
 		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
 		assertEquals(
-			agentConfig
-				.getResourceGroups()
+			agentConfig.getResourceGroups()
 				.get(PARIS_RESOURCE_GROUP_KEY)
 				.getResources()
 				.get(SERVER_1_RESOURCE_GROUP_KEY)

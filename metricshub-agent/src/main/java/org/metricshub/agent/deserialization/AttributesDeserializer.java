@@ -56,8 +56,7 @@ public class AttributesDeserializer extends JsonDeserializer<Map<String, String>
 
 		final Map<String, Object> deserializedAttributes = parser.readValueAs(new TypeReference<Map<String, Object>>() {});
 
-		return deserializedAttributes
-			.entrySet()
+		return deserializedAttributes.entrySet()
 			.stream()
 			.collect(
 				Collectors.toMap(

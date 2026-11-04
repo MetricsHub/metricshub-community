@@ -15,10 +15,10 @@ class TapeDriveMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_ERRORS_LIMIT = "hw.errors.limit";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE =
-		HW_ERRORS_LIMIT + "{limit_type=\"critical\", hw.type=\"tape_drive\"}";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE =
-		HW_ERRORS_LIMIT + "{limit_type=\"degraded\", hw.type=\"tape_drive\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE = HW_ERRORS_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"tape_drive\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE = HW_ERRORS_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"tape_drive\"}";
 
 	@Test
 	void testNormalize() {
@@ -68,14 +68,12 @@ class TapeDriveMetricNormalizerTest {
 			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithBothMetrics);
 			assertEquals(
 				2.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -118,14 +116,12 @@ class TapeDriveMetricNormalizerTest {
 			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithBothMetrics);
 			assertEquals(
 				3.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				2.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -144,8 +140,7 @@ class TapeDriveMetricNormalizerTest {
 			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithoutBothMetrics);
 			assertEquals(
 				1.0,
-				monitorWithoutBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithoutBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -183,8 +178,7 @@ class TapeDriveMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithDegradedMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithDegradedMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -219,8 +213,7 @@ class TapeDriveMetricNormalizerTest {
 			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithCriticalMetric);
 			assertEquals(
 				1.0,
-				monitorWithCriticalMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
+				monitorWithCriticalMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 					.getValue()
 			);
 			assertNull(

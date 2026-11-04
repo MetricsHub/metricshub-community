@@ -30,8 +30,7 @@ import org.springframework.context.ApplicationContext;
 		"spring.ai.mcp.server.sse-endpoint=/sse",
 		"spring.ai.mcp.server.sse-message-endpoint=/mcp/message",
 		"spring.ai.mcp.server.request-timeout=30s",
-		"mcp.sse.enabled=false"
-	}
+		"mcp.sse.enabled=false" }
 )
 class McpLegacySseDisabledInSseModeTest {
 

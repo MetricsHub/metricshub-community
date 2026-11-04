@@ -72,8 +72,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 		@JsonSubTypes.Type(value = SqlSource.class, name = "sql"),
 		@JsonSubTypes.Type(value = JmxSource.class, name = "jmx"),
 		@JsonSubTypes.Type(value = EventLogSource.class, name = "eventLog"),
-		@JsonSubTypes.Type(value = FileSource.class, name = "file")
-	}
+		@JsonSubTypes.Type(value = FileSource.class, name = "file") }
 )
 @Data
 @NoArgsConstructor
@@ -185,11 +184,9 @@ public abstract class Source implements Serializable {
 	 *         <code>false</code>
 	 */
 	public boolean isExecuteForEachEntryOf() {
-		return (
-			executeForEachEntryOf != null &&
+		return (executeForEachEntryOf != null &&
 			executeForEachEntryOf.getSource() != null &&
-			!executeForEachEntryOf.getSource().isBlank()
-		);
+			!executeForEachEntryOf.getSource().isBlank());
 	}
 
 	/**

@@ -47,26 +47,22 @@ class TcclClassLoaderDecoratorTest {
 		final Thread thread = Thread.currentThread();
 		final ClassLoader original = thread.getContextClassLoader();
 
-		final Probe probe = TcclClassLoaderDecorator.wrap(
-			Probe.class,
-			new Probe() {
-				@Override
-				public ClassLoader tccl() {
-					return Thread.currentThread().getContextClassLoader();
-				}
+		final Probe probe = TcclClassLoaderDecorator.wrap(Probe.class, new Probe() {
+			@Override
+			public ClassLoader tccl() {
+				return Thread.currentThread().getContextClassLoader();
+			}
 
-				@Override
-				public void boom() throws IOException {
-					throw new IOException("expected");
-				}
+			@Override
+			public void boom() throws IOException {
+				throw new IOException("expected");
+			}
 
-				@Override
-				public ClassLoader reentrant(final Probe inner) {
-					return inner.tccl();
-				}
-			},
-			extensionLoader
-		);
+			@Override
+			public ClassLoader reentrant(final Probe inner) {
+				return inner.tccl();
+			}
+		}, extensionLoader);
 
 		assertSame(extensionLoader, probe.tccl(), "TCCL is the extension loader during the call");
 		assertSame(original, thread.getContextClassLoader(), "TCCL is restored after the call");
@@ -78,26 +74,22 @@ class TcclClassLoaderDecoratorTest {
 		final Thread thread = Thread.currentThread();
 		final ClassLoader original = thread.getContextClassLoader();
 
-		final Probe probe = TcclClassLoaderDecorator.wrap(
-			Probe.class,
-			new Probe() {
-				@Override
-				public ClassLoader tccl() {
-					return Thread.currentThread().getContextClassLoader();
-				}
+		final Probe probe = TcclClassLoaderDecorator.wrap(Probe.class, new Probe() {
+			@Override
+			public ClassLoader tccl() {
+				return Thread.currentThread().getContextClassLoader();
+			}
 
-				@Override
-				public void boom() throws IOException {
-					throw new IOException("expected");
-				}
+			@Override
+			public void boom() throws IOException {
+				throw new IOException("expected");
+			}
 
-				@Override
-				public ClassLoader reentrant(final Probe inner) {
-					return inner.tccl();
-				}
-			},
-			extensionLoader
-		);
+			@Override
+			public ClassLoader reentrant(final Probe inner) {
+				return inner.tccl();
+			}
+		}, extensionLoader);
 
 		final IOException thrown = assertThrows(IOException.class, probe::boom);
 		assertEquals("expected", thrown.getMessage(), "The extension's own checked exception propagates unchanged");

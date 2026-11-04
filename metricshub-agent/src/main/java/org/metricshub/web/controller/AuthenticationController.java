@@ -71,8 +71,7 @@ public class AuthenticationController {
 			"Run this command on the same machine where the MetricsHub Agent (and its keystore) is running.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Login successful"),
-			@ApiResponse(responseCode = "401", description = "Invalid credentials")
-		}
+			@ApiResponse(responseCode = "401", description = "Invalid credentials") }
 	)
 	@PostMapping
 	public ResponseEntity<LoginAuthenticationResponse> login(
@@ -112,11 +111,7 @@ public class AuthenticationController {
 		final ResponseCookie refreshCookie = ResponseCookie.from(
 			SecurityHelper.REFRESH_TOKEN_KEY,
 			authentication.getRefreshToken()
-		)
-			.path("/")
-			.httpOnly(true)
-			.maxAge(authentication.getRefreshExpiresIn())
-			.build();
+		).path("/").httpOnly(true).maxAge(authentication.getRefreshExpiresIn()).build();
 
 		return ResponseEntity.ok()
 			.header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -150,11 +145,7 @@ public class AuthenticationController {
 		final ResponseCookie refreshCookie = ResponseCookie.from(
 			SecurityHelper.REFRESH_TOKEN_KEY,
 			MetricsHubConstants.EMPTY
-		)
-			.path("/")
-			.httpOnly(true)
-			.maxAge(0)
-			.build();
+		).path("/").httpOnly(true).maxAge(0).build();
 
 		return ResponseEntity.ok()
 			.header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -173,8 +164,7 @@ public class AuthenticationController {
 		description = "Refreshes the JWT token using the refresh token from the request cookies.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
-			@ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
-		}
+			@ApiResponse(responseCode = "401", description = "Invalid or expired refresh token") }
 	)
 	@PostMapping("/refresh")
 	public ResponseEntity<LoginAuthenticationResponse> refresh(final HttpServletRequest request) {

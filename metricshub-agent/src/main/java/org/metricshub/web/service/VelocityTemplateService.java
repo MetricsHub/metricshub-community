@@ -93,10 +93,9 @@ public class VelocityTemplateService {
 
 		try {
 			final IConfigurationProvider provider = findProviderFor(fileName);
-			return provider
-				.renderTemplate(vmPath)
-				.orElseThrow(() ->
-					new ConfigFilesException(
+			return provider.renderTemplate(vmPath)
+				.orElseThrow(
+					() -> new ConfigFilesException(
 						ConfigFilesException.Code.VALIDATION_FAILED,
 						"Velocity template evaluation returned no content."
 					)
@@ -166,14 +165,13 @@ public class VelocityTemplateService {
 			);
 		}
 		final String providerLookupName = lowerCaseName;
-		return agentContext
-			.getExtensionManager()
+		return agentContext.getExtensionManager()
 			.getConfigurationProviderExtensions()
 			.stream()
 			.filter(provider -> provider.getFileExtensions().stream().anyMatch(providerLookupName::endsWith))
 			.findFirst()
-			.orElseThrow(() ->
-				new ConfigFilesException(
+			.orElseThrow(
+				() -> new ConfigFilesException(
 					ConfigFilesException.Code.VALIDATION_FAILED,
 					"No configuration provider found for template '" + fileName + "'."
 				)

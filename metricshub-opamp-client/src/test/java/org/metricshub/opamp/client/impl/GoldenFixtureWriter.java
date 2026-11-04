@@ -151,8 +151,7 @@ public final class GoldenFixtureWriter {
 			}
 		}
 		final List<Fixture> fixtures = generate();
-		final StringBuilder manifest = new StringBuilder()
-			.append("{\n")
+		final StringBuilder manifest = new StringBuilder().append("{\n")
 			.append("  \"generator\": \"metricshub-opamp-client GoldenFixtureWriter\",\n")
 			.append("  \"instanceUid\": \"")
 			.append(HexFormat.of().formatHex(INSTANCE_UID))
@@ -166,8 +165,7 @@ public final class GoldenFixtureWriter {
 			final Fixture fixture = fixtures.get(i);
 			final byte[] bytes = fixture.message().toByteArray();
 			Files.write(directory.resolve(fixture.file()), bytes);
-			manifest
-				.append("    {\n")
+			manifest.append("    {\n")
 				.append("      \"file\": \"")
 				.append(fixture.file())
 				.append("\",\n")

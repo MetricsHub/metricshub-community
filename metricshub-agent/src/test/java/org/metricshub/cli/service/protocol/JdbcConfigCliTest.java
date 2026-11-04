@@ -35,8 +35,7 @@ class JdbcConfigCliTest {
 				.withProtocolExtensions(List.of(new JdbcExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			// Call the toProtocol method
@@ -76,8 +75,7 @@ class JdbcConfigCliTest {
 				.withProtocolExtensions(List.of(new JdbcExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) jdbcConfigCli.toConfiguration(
@@ -111,8 +109,7 @@ class JdbcConfigCliTest {
 				.withProtocolExtensions(List.of(new JdbcExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) jdbcConfigCli.toConfiguration(

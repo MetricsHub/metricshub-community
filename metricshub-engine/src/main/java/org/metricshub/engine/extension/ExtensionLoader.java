@@ -60,10 +60,8 @@ public class ExtensionLoader {
 			return extensionManager;
 		}
 
-		extensionManager = ExtensionRuntime.load(
-			extensionsDirectory,
-			ExtensionLoader.class.getClassLoader()
-		).getExtensionManager();
+		extensionManager = ExtensionRuntime.load(extensionsDirectory, ExtensionLoader.class.getClassLoader())
+			.getExtensionManager();
 
 		return extensionManager;
 	}

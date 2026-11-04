@@ -95,16 +95,13 @@ public class MetricNormalizationService implements IPostExecutionService {
 	@Override
 	public void run() {
 		// Retrieve hardware monitors from the TelemetryManager
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.flatMap(monitors -> monitors.values().stream())
 			.filter(this::isHardwareMonitor)
-			.flatMap(monitor ->
-				KnownMonitorType.fromString(monitor.getType())
-					.map(type -> new KnownMonitor(monitor, type))
-					.stream()
+			.flatMap(
+				monitor -> KnownMonitorType.fromString(monitor.getType()).map(type -> new KnownMonitor(monitor, type)).stream()
 			)
 			.forEach(knownMonitor -> {
 				final Monitor monitor = knownMonitor.getMonitor();

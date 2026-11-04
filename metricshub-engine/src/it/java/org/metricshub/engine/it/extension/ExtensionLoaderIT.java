@@ -20,8 +20,8 @@ class ExtensionLoaderIT {
 		final ExtensionManager extensionManager = new ExtensionLoader(new File("target/it/it-extension/target")).load();
 		assertEquals(0, extensionManager.getProtocolExtensions().size());
 		assertEquals(0, extensionManager.getConnectorStoreProviderExtensions().size());
-		final List<IStrategyProviderExtension> strategyProviderExtensions =
-			extensionManager.getStrategyProviderExtensions();
+		final List<IStrategyProviderExtension> strategyProviderExtensions = extensionManager
+			.getStrategyProviderExtensions();
 		assertEquals(1, strategyProviderExtensions.size());
 		// The extension instance is wrapped in a TCCL-managing proxy, so assert its behavior rather
 		// than its concrete class name (which is now a dynamic proxy).

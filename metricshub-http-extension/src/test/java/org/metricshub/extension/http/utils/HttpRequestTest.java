@@ -134,8 +134,9 @@ class HttpRequestTest {
 		final String headerValue = EMBEDDED_FILE_1_REF + " " + EMBEDDED_FILE_2_REF;
 
 		final HttpRequestBuilder httpRequestBuilder = HttpRequest.builder();
-		assertThrows(IllegalStateException.class, () ->
-			httpRequestBuilder.header(headerValue, httpEmbeddedFiles, MY_CONNECTOR_1_NAME, HOST)
+		assertThrows(
+			IllegalStateException.class,
+			() -> httpRequestBuilder.header(headerValue, httpEmbeddedFiles, MY_CONNECTOR_1_NAME, HOST)
 		);
 	}
 }

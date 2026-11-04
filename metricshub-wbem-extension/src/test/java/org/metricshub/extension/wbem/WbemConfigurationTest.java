@@ -43,29 +43,41 @@ class WbemConfigurationTest {
 	@Test
 	void testValidateConfiguration() {
 		final String resourceKey = "resourceKey";
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(-60L).port(1234).vCenter(null).build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder()
+				.timeout(-60L)
+				.port(1234)
+				.vCenter(null)
+				.build()
+				.validateConfiguration(resourceKey)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(null).port(1234).build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder().timeout(null).port(1234).build().validateConfiguration(resourceKey)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(60L).port(-1).build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder().timeout(60L).port(-1).build().validateConfiguration(resourceKey)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(60L).port(null).build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder().timeout(60L).port(null).build().validateConfiguration(resourceKey)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(60L).port(66666).build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder().timeout(60L).port(66666).build().validateConfiguration(resourceKey)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(60L).username("").build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder().timeout(60L).username("").build().validateConfiguration(resourceKey)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WbemConfiguration.builder().timeout(60L).vCenter("").build().validateConfiguration(resourceKey)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WbemConfiguration.builder().timeout(60L).vCenter("").build().validateConfiguration(resourceKey)
 		);
-		assertDoesNotThrow(() ->
-			WbemConfiguration.builder()
+		assertDoesNotThrow(
+			() -> WbemConfiguration.builder()
 				.timeout(60L)
 				.port(1234)
 				.vCenter("vCenter")

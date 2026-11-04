@@ -20,6 +20,7 @@ public interface ITJob {
 	 * @return The actual {@link ITJob}
 	 */
 	ITJob executeStrategies(IStrategy... strategies);
+
 	/**
 	 * Verify the expected result located under the given expectedPath
 	 *

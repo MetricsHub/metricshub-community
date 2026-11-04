@@ -85,8 +85,8 @@ public class MonitoringTask implements Runnable {
 		final ResourceConfig resourceConfig = monitoringTaskInfo.getResourceConfig();
 		final int discoveryCycle = resourceConfig.getDiscoveryCycle();
 		final ExtensionManager extensionManager = monitoringTaskInfo.getExtensionManager();
-		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions =
-			extensionManager.resolveMetricEnrichmentExtensions(resourceConfig.getEnrichments());
+		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions = extensionManager
+			.resolveMetricEnrichmentExtensions(resourceConfig.getEnrichments());
 
 		final String hostId = telemetryManager.getHostConfiguration().getHostId();
 
@@ -122,8 +122,8 @@ public class MonitoringTask implements Runnable {
 			initHostAttributes(telemetryManager, resourceConfig);
 
 			// Record metrics and export them all
-			registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions).exportMetrics(() ->
-				configureLoggerContext(hostId)
+			registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions).exportMetrics(
+				() -> configureLoggerContext(hostId)
 			);
 		}
 
@@ -147,8 +147,8 @@ public class MonitoringTask implements Runnable {
 		applyShiftLeftEnrichments(telemetryManager, metricEnrichmentExtensions);
 
 		// Record metrics and export them all
-		registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions).exportMetrics(() ->
-			configureLoggerContext(hostId)
+		registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions).exportMetrics(
+			() -> configureLoggerContext(hostId)
 		);
 
 		// Increment the number of collects
@@ -179,46 +179,39 @@ public class MonitoringTask implements Runnable {
 			metricEnrichmentExtensions
 		);
 
-		telemetryManager
-			.getMonitors()
-			.values()
-			.stream()
-			.map(Map::values)
-			.flatMap(Collection::stream)
-			.forEach(monitor -> {
-				final boolean isEndpointHost = monitor.isEndpointHost();
-				if (isEndpointHost) {
-					// The host's metric definitions cannot be null because they are available as resources in metricshub-host-metrics.yaml
-					final Map<String, MetricDefinition> hostMetricDefinitions = monitoringTaskInfo
-						.getHostMetricDefinitions()
-						.metrics();
+		telemetryManager.getMonitors().values().stream().map(Map::values).flatMap(Collection::stream).forEach(monitor -> {
+			final boolean isEndpointHost = monitor.isEndpointHost();
+			if (isEndpointHost) {
+				// The host's metric definitions cannot be null because they are available as resources in metricshub-host-metrics.yaml
+				final Map<String, MetricDefinition> hostMetricDefinitions = monitoringTaskInfo.getHostMetricDefinitions()
+					.metrics();
 
-					// New meter for this host
-					final ResourceMeter meter = provider.newResourceMeter(monitor.getId(), hostResourceAttributes);
+				// New meter for this host
+				final ResourceMeter meter = provider.newResourceMeter(monitor.getId(), hostResourceAttributes);
 
-					// Initialize endpoint host metric recorders
-					registerMonitorMetricRecorders(monitor, telemetryManager, hostMetricDefinitions, meter);
-				} else {
-					// Resource attributes
-					final Map<String, String> attributes = new HashMap<>();
-					ConfigHelper.mergeAttributes(hostResourceAttributes, attributes);
-					ConfigHelper.mergeAttributes(monitor.getAttributes(), attributes);
+				// Initialize endpoint host metric recorders
+				registerMonitorMetricRecorders(monitor, telemetryManager, hostMetricDefinitions, meter);
+			} else {
+				// Resource attributes
+				final Map<String, String> attributes = new HashMap<>();
+				ConfigHelper.mergeAttributes(hostResourceAttributes, attributes);
+				ConfigHelper.mergeAttributes(monitor.getAttributes(), attributes);
 
-					// New meter for this monitor
-					final ResourceMeter meter = provider.newResourceMeter(monitor.getId(), attributes);
+				// New meter for this monitor
+				final ResourceMeter meter = provider.newResourceMeter(monitor.getId(), attributes);
 
-					registerMonitorMetricRecorders(
-						monitor,
-						telemetryManager,
-						ConfigHelper.fetchMetricDefinitions(
-							connectorStore,
-							monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID),
-							monitor.getType()
-						),
-						meter
-					);
-				}
-			});
+				registerMonitorMetricRecorders(
+					monitor,
+					telemetryManager,
+					ConfigHelper.fetchMetricDefinitions(
+						connectorStore,
+						monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID),
+						monitor.getType()
+					),
+					meter
+				);
+			}
+		});
 
 		return provider;
 	}
@@ -237,8 +230,7 @@ public class MonitoringTask implements Runnable {
 		final Map<String, MetricDefinition> metricDefinitionMap,
 		final ResourceMeter meter
 	) {
-		monitor
-			.getMetrics()
+		monitor.getMetrics()
 			.entrySet()
 			.stream()
 			.filter(entry -> Objects.nonNull(entry.getValue()))
@@ -293,9 +285,12 @@ public class MonitoringTask implements Runnable {
 		final String metricName,
 		final Map<String, MetricDefinition> metricDefinitionMap
 	) {
-		return Optional.ofNullable(metricDefinitionMap.get(metricName)).orElseGet(() ->
-			MetricDefinition.builder().description(String.format(GENERIC_METRIC_DESCRIPTION_FORMAT, metricName)).build()
-		);
+		return Optional.ofNullable(metricDefinitionMap.get(metricName))
+			.orElseGet(
+				() -> MetricDefinition.builder()
+					.description(String.format(GENERIC_METRIC_DESCRIPTION_FORMAT, metricName))
+					.build()
+			);
 	}
 
 	/**

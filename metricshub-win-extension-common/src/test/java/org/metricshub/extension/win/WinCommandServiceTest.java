@@ -28,8 +28,7 @@ class WinCommandServiceTest {
 	WinCommandService winCommandService;
 
 	private static final String HOST_NAME = "test-host" + UUID.randomUUID().toString();
-	private static final String COMMAND_LINE =
-		"systeminfo | findstr /C:\"Total Physical Memory\" /C:\"Available Physical Memory\"";
+	private static final String COMMAND_LINE = "systeminfo | findstr /C:\"Total Physical Memory\" /C:\"Available Physical Memory\"";
 	private static final char[] PASSWORD = "pwd".toCharArray();
 	private static final String USERNAME = "user";
 
@@ -64,8 +63,7 @@ class WinCommandServiceTest {
 			.password(PASSWORD)
 			.build();
 		final String expectedToBeReturned = "value";
-		doReturn(expectedToBeReturned)
-			.when(winRequestExecutorMock)
+		doReturn(expectedToBeReturned).when(winRequestExecutorMock)
 			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList());
 
 		final OsCommandResult result = winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
@@ -90,8 +88,7 @@ class WinCommandServiceTest {
 			.build();
 
 		// Mocking ClientException to be thrown by the executor
-		doThrow(new ClientException("Client error"))
-			.when(winRequestExecutorMock)
+		doThrow(new ClientException("Client error")).when(winRequestExecutorMock)
 			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList());
 
 		assertThrows(ClientException.class, () -> {

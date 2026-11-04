@@ -50,8 +50,7 @@ class EnvironmentProcessorTest {
 		// Test Case: Verifies that a NullNode remains unchanged after the environment processing.
 		// This checks the processor's ability to ignore null values, maintaining their state post-processing.
 		{
-			final JsonNode jsonNode = JsonNodeFactory.instance
-				.objectNode()
+			final JsonNode jsonNode = JsonNodeFactory.instance.objectNode()
 				.set(keyPropertyName, JsonNodeFactory.instance.nullNode());
 			assertTrue(jsonNode.get(keyPropertyName).isNull(), "Initial state should be a NullNode.");
 			new EnvironmentProcessor().process(jsonNode);
@@ -95,8 +94,7 @@ class EnvironmentProcessorTest {
 		// Test Case: Verifies that a simple ObjectNode containing an environment variable placeholder
 		// is correctly processed, replacing the placeholder with the actual environment value.
 		{
-			final JsonNode jsonNode = JsonNodeFactory.instance
-				.objectNode()
+			final JsonNode jsonNode = JsonNodeFactory.instance.objectNode()
 				.set(keyPropertyName, new TextNode(javaHomeEnvironmentVariable));
 			assertEquals(
 				javaHomeEnvironmentVariable,
@@ -114,8 +112,7 @@ class EnvironmentProcessorTest {
 		// Test Case: Checks the processor's ability to replace multiple concatenated environment variable placeholders
 		// within a single TextNode, ensuring each instance is correctly processed.
 		{
-			final JsonNode jsonNode = JsonNodeFactory.instance
-				.objectNode()
+			final JsonNode jsonNode = JsonNodeFactory.instance.objectNode()
 				.set(keyPropertyName, new TextNode(javaHomeEnvironmentVariable + " " + javaHomeEnvironmentVariable));
 			assertTrue(
 				jsonNode.get(keyPropertyName).asText().contains(javaHomeEnvironmentVariable),
@@ -131,8 +128,7 @@ class EnvironmentProcessorTest {
 		// Test Case: Validates that all occurrences of the environment variable placeholders within an ArrayNode
 		// are individually processed and replaced, demonstrating the processor's effectiveness in array structures.
 		{
-			final JsonNode jsonNode = JsonNodeFactory.instance
-				.objectNode()
+			final JsonNode jsonNode = JsonNodeFactory.instance.objectNode()
 				.set(
 					keyPropertyName,
 					JsonNodeFactory.instance.arrayNode().add(javaHomeEnvironmentVariable).add(javaHomeEnvironmentVariable)
@@ -204,8 +200,7 @@ class EnvironmentProcessorTest {
 
 	@Test
 	void testProcessNodeWithDefaultValue() throws IOException {
-		final JsonNode jsonNode = JsonNodeFactory.instance
-			.objectNode()
+		final JsonNode jsonNode = JsonNodeFactory.instance.objectNode()
 			.set("host.name", new TextNode(String.format("${env::%s:-localhost}", UUID.randomUUID())));
 		new EnvironmentProcessor().process(jsonNode);
 		assertEquals("localhost", jsonNode.get("host.name").asText());
@@ -219,8 +214,7 @@ class EnvironmentProcessorTest {
 			"HOSTNAME, configured-host, true, configured-host",
 			"HOSTNAME, , false, localhost",
 			"OTHER_HOST, , true, localhost",
-			"COMPUTERNAME, , true, localhost"
-		}
+			"COMPUTERNAME, , true, localhost" }
 	)
 	void testLinuxHostnameFallback(String variable, String environmentValue, boolean linux, String expected) {
 		try (var os = mockStatic(LocalOsHandler.class); var files = mockStatic(Files.class)) {
@@ -245,8 +239,7 @@ class EnvironmentProcessorTest {
 				"localhost",
 				EnvironmentProcessor.performEnvReplacements("${env::HOSTNAME:-localhost}", name -> null)
 			);
-			files
-				.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname")))
+			files.when(() -> Files.readString(Path.of("/proc/sys/kernel/hostname")))
 				.thenThrow(new IOException("Unavailable"));
 			assertEquals(
 				"localhost",

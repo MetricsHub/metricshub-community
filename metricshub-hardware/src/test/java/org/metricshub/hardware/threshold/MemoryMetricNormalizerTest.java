@@ -14,10 +14,10 @@ class MemoryMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_ERRORS_LIMIT = "hw.errors.limit";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_MEMORY =
-		HW_ERRORS_LIMIT + "{limit_type=\"critical\", hw.type=\"memory\"}";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_MEMORY =
-		HW_ERRORS_LIMIT + "{limit_type=\"degraded\", hw.type=\"memory\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_MEMORY = HW_ERRORS_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"memory\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_MEMORY = HW_ERRORS_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"memory\"}";
 
 	@Test
 	void testNormalize() {
@@ -61,14 +61,12 @@ class MemoryMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_MEMORY, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_MEMORY, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_MEMORY, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_MEMORY, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -113,14 +111,12 @@ class MemoryMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_MEMORY, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_MEMORY, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_MEMORY, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_MEMORY, NumberMetric.class)
 					.getValue()
 			);
 		}

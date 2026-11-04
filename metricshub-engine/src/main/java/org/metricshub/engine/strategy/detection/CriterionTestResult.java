@@ -122,8 +122,7 @@ public class CriterionTestResult {
 		messageBuilder.append(t.getClass().getSimpleName()).append(": ").append(t.getMessage());
 		Throwable cause = t.getCause();
 		if (cause != null) {
-			messageBuilder
-				.append("\nCaused by ")
+			messageBuilder.append("\nCaused by ")
 				.append(cause.getClass().getSimpleName())
 				.append(": ")
 				.append(cause.getMessage());

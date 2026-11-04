@@ -68,22 +68,23 @@ public class ListResourcesService implements IMCPToolService {
 	@Tool(
 		name = "ListHosts",
 		description = """
-		Retrieves all configured hosts (Resources) in this MetricsHub Agent instance for which we will be able to execute MetricsHub connectors and collect metrics
-		(hardware, system, storage, database, etc.).
-		Returns a lookup of host resources with their protocols and attributes. Host resources are indexed by a unique key managed by MetricsHub, which is not the hostname.
-		To get the hostname, you need to read the `hostname` provided in the protocol object which defines the protocol name and the hostname.
-		"""
+			Retrieves all configured hosts (Resources) in this MetricsHub Agent instance for which we will be able to execute MetricsHub connectors and collect metrics
+			(hardware, system, storage, database, etc.).
+			Returns a lookup of host resources with their protocols and attributes. Host resources are indexed by a unique key managed by MetricsHub, which is not the hostname.
+			To get the hostname, you need to read the `hostname` provided in the protocol object which defines the protocol name and the hostname.
+			"""
 	)
 	public Map<String, ResourceDetails> listConfiguredHosts() {
 		Map<String, ResourceDetails> result = new HashMap<>();
 
 		// List all the resources from the resource groups
-		agentContextHolder
-			.getAgentContext()
+		agentContextHolder.getAgentContext()
 			.getAgentConfig()
 			.getResourceGroups()
-			.forEach((String resourceGroupKey, ResourceGroupConfig resourceGroupConfig) ->
-				result.putAll(listResourceGroupConfiguredResources(resourceGroupKey, resourceGroupConfig.getResources()))
+			.forEach(
+				(String resourceGroupKey, ResourceGroupConfig resourceGroupConfig) -> result.putAll(
+					listResourceGroupConfiguredResources(resourceGroupKey, resourceGroupConfig.getResources())
+				)
 			);
 
 		// Add all the top level resources
@@ -134,8 +135,10 @@ public class ListResourcesService implements IMCPToolService {
 		final Set<ProtocolHostname> protocolNames = new HashSet<>();
 
 		// Retrieve all the protocols hostnames
-		configurations.forEach((String protocolName, IConfiguration configuration) ->
-			protocolNames.add(new ProtocolHostname(protocolName, configuration.getHostname()))
+		configurations.forEach(
+			(String protocolName, IConfiguration configuration) -> protocolNames.add(
+				new ProtocolHostname(protocolName, configuration.getHostname())
+			)
 		);
 
 		return protocolNames;

@@ -222,8 +222,8 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 		final Compute copy = origin.copy();
 
 		// Replace resource attributes references
-		copy.update(value ->
-			SourceUpdaterProcessor.replaceResourceAttributeReferences(
+		copy.update(
+			value -> SourceUpdaterProcessor.replaceResourceAttributeReferences(
 				value,
 				telemetryManager.getHostConfiguration().getAttributes()
 			)

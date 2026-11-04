@@ -63,10 +63,9 @@ public class TranslationTable implements ITranslationTable {
 			.translations(
 				translations == null
 					? null
-					: translations
-							.entrySet()
-							.stream()
-							.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (_, k2) -> k2, HashMap::new))
+					: translations.entrySet()
+						.stream()
+						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (_, k2) -> k2, HashMap::new))
 			)
 			.build();
 	}

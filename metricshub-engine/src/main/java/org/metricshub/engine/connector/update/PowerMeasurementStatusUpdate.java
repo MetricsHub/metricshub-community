@@ -55,10 +55,11 @@ public class PowerMeasurementStatusUpdate extends AbstractConnectorUpdateChain {
 			return;
 		}
 
-		Optional.ofNullable(monitors.get(KnownMonitorType.ENCLOSURE.getKey())).ifPresentOrElse(
-			(MonitorJob enclosure) -> updatePowerMeasurementStatus(connector, enclosure),
-			() -> connector.setPowerMeasurement(PowerMeasurement.ESTIMATED)
-		);
+		Optional.ofNullable(monitors.get(KnownMonitorType.ENCLOSURE.getKey()))
+			.ifPresentOrElse(
+				(MonitorJob enclosure) -> updatePowerMeasurementStatus(connector, enclosure),
+				() -> connector.setPowerMeasurement(PowerMeasurement.ESTIMATED)
+			);
 	}
 
 	/**
@@ -142,9 +143,7 @@ public class PowerMeasurementStatusUpdate extends AbstractConnectorUpdateChain {
 			return false;
 		}
 		final String lowerKey = metricName.toLowerCase();
-		return (
-			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC) ||
-			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_ENERGY_METRIC)
-		);
+		return (lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC) ||
+			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_ENERGY_METRIC));
 	}
 }

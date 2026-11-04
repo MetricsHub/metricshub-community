@@ -86,8 +86,9 @@ class FilesystemDriverScannerTest {
 		Files.createFile(tmp.resolve("ojdbc11-23.6.0.jar"));
 
 		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp);
-		final DriverResolutionException ex = assertThrows(DriverResolutionException.class, () ->
-			scanner.locate("oracle.jdbc.OracleDriver", tmp.toString() + java.io.File.separator + "ojdbc11-*.jar")
+		final DriverResolutionException ex = assertThrows(
+			DriverResolutionException.class,
+			() -> scanner.locate("oracle.jdbc.OracleDriver", tmp.toString() + java.io.File.separator + "ojdbc11-*.jar")
 		);
 		assertTrue(ex.getMessage().contains("matched 2"), ex.getMessage());
 	}

@@ -173,8 +173,7 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 		);
 
 		// Initialize a simple metric recorder for each metric defined in the configuration
-		resourceGroupConfig
-			.getMetrics()
+		resourceGroupConfig.getMetrics()
 			.entrySet()
 			.stream()
 			.filter(metricEntry -> Objects.nonNull(metricEntry.getValue()))
@@ -199,8 +198,8 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 				);
 			});
 
-		meterProvider.exportMetrics(() ->
-			ConfigHelper.configureGlobalLogger(agentConfig.getLoggerLevel(), agentConfig.getOutputDirectory())
+		meterProvider.exportMetrics(
+			() -> ConfigHelper.configureGlobalLogger(agentConfig.getLoggerLevel(), agentConfig.getOutputDirectory())
 		);
 	}
 }

@@ -125,8 +125,7 @@ public class IpmiExtension implements IProtocolExtension {
 		String ipmiResult = null;
 
 		// Retrieve IPMI Configuration from the telemetry manager host configuration
-		final IpmiConfiguration ipmiConfiguration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration ipmiConfiguration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
@@ -153,8 +152,7 @@ public class IpmiExtension implements IProtocolExtension {
 
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
-		final IpmiConfiguration ipmiConfiguration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration ipmiConfiguration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
@@ -310,8 +308,7 @@ public class IpmiExtension implements IProtocolExtension {
 		TelemetryManager telemetryManager,
 		boolean logMode
 	) {
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
@@ -439,19 +436,19 @@ public class IpmiExtension implements IProtocolExtension {
 		return switch (type == null ? "sensors" : type.trim().toLowerCase()) {
 			case "sensors" -> ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
 			case "sel" -> selQuery(hostname, ipmiConfiguration, text(query, "since"));
-			case "raw" -> ipmiRequestExecutor.executeIpmiRaw(
-				hostname,
-				ipmiConfiguration,
-				IpmiRawSource.builder()
-					.netFn(text(query, "netFn"))
-					.command(text(query, "command"))
-					.data(text(query, "data"))
-					.build()
-			);
+			case "raw" ->
+				ipmiRequestExecutor.executeIpmiRaw(
+					hostname,
+					ipmiConfiguration,
+					IpmiRawSource.builder()
+						.netFn(text(query, "netFn"))
+						.command(text(query, "command"))
+						.data(text(query, "data"))
+						.build()
+				);
 			case "chassis" -> chassisQuery(hostname, ipmiConfiguration, text(query, "action"), text(query, "seconds"));
-			default -> throw new IllegalArgumentException(
-				"Unknown IPMI query '" + type + "': expected sensors, sel, raw or chassis"
-			);
+			default ->
+				throw new IllegalArgumentException("Unknown IPMI query '" + type + "': expected sensors, sel, raw or chassis");
 		};
 	}
 
@@ -470,10 +467,7 @@ public class IpmiExtension implements IProtocolExtension {
 		if (since != null && !since.isBlank()) {
 			// An entry logged before the BMC had the time cannot be dated: it is left out
 			final Instant from = Instant.now().minusSeconds(TimeDeserializer.interpretValueOf(since.trim()));
-			entries = entries
-				.stream()
-				.filter(entry -> entry.timestamp().map(from::isBefore).orElse(false))
-				.toList();
+			entries = entries.stream().filter(entry -> entry.timestamp().map(from::isBefore).orElse(false)).toList();
 		}
 		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
 		return IpmiResultConverter.SEL_HEADER + NEW_LINE + SourceTable.tableToCsv(rows, TABLE_SEP, true);
@@ -531,10 +525,8 @@ public class IpmiExtension implements IProtocolExtension {
 	@Override
 	public List<ToolDefinition> getTools() {
 		return List.of(
-			ToolDefinition.builder(
-				"sensors",
-				"Reads the chassis status, the FRUs and the sensors of a server through IPMI."
-			).build(),
+			ToolDefinition.builder("sensors", "Reads the chassis status, the FRUs and the sensors of a server through IPMI.")
+				.build(),
 			ToolDefinition.builder(
 				"sel",
 				"Reads the System Event Log of a server through IPMI, as CSV with a header line. Reading a large log takes" +

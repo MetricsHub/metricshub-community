@@ -36,9 +36,8 @@ class SshConfigCliTest {
 				.withProtocolExtensions(List.of(new OsCommandExtension()))
 				.build();
 
-			CliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton()).thenReturn(
-				extensionManager
-			);
+			CliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+				.thenReturn(extensionManager);
 
 			// Create an SshTestConfiguration and call method toProtocol
 			final SshConfiguration sshConfiguration = (SshConfiguration) sshConfigCli.toConfiguration(username, password);

@@ -159,8 +159,9 @@ class AgentContextTest {
 
 		final Map<String, String> otelConfiguration = agentContext.getOtelConfiguration();
 
-		assertTrue(MapHelper.areEqual(expectedOtelConfiguration, otelConfiguration), () ->
-			String.format("expected %s but was: %s", expectedOtelConfiguration, otelConfiguration)
+		assertTrue(
+			MapHelper.areEqual(expectedOtelConfiguration, otelConfiguration),
+			() -> String.format("expected %s but was: %s", expectedOtelConfiguration, otelConfiguration)
 		);
 
 		// Make sure the engine is notified with configuredConnectorId
@@ -226,8 +227,7 @@ class AgentContextTest {
 		final AgentConfig agentConfig = agentContext.getAgentConfig();
 		assertNotNull(agentConfig, "AgentConfig should not be null");
 
-		final ResourceConfig resourceConfig = agentConfig
-			.getResourceGroups()
+		final ResourceConfig resourceConfig = agentConfig.getResourceGroups()
 			.get(PARIS_RESOURCE_GROUP_KEY)
 			.getResources()
 			.get(SERVER_1_RESOURCE_GROUP_KEY);

@@ -39,8 +39,7 @@ class WbemConfigCliTest {
 				.withProtocolExtensions(List.of(new WbemExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			// Create a WbemTestConfiguration and call method toProtocol

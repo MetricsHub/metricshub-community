@@ -15,10 +15,10 @@ class NetworkMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_NETWORK_ERROR_RATIO_LIMIT = "hw.network.error_ratio.limit";
-	public static final String HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK =
-		HW_NETWORK_ERROR_RATIO_LIMIT + "{limit_type=\"critical\", hw.type=\"network\"}";
-	public static final String HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK =
-		HW_NETWORK_ERROR_RATIO_LIMIT + "{limit_type=\"degraded\", hw.type=\"network\"}";
+	public static final String HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK = HW_NETWORK_ERROR_RATIO_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"network\"}";
+	public static final String HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK = HW_NETWORK_ERROR_RATIO_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"network\"}";
 
 	@Test
 	void testNormalize() {
@@ -76,15 +76,17 @@ class NetworkMetricNormalizerTest {
 			// Validate the normalized metrics
 			assertEquals(
 				2.0,
-				monitorWithHwNetworkErrorRatioMetric
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithHwNetworkErrorRatioMetric.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwNetworkErrorRatioMetric
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithHwNetworkErrorRatioMetric.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 		// Critical metric value is greater than degraded metric value
@@ -141,15 +143,17 @@ class NetworkMetricNormalizerTest {
 			// Validate the normalized metrics
 			assertEquals(
 				3.0,
-				monitorWithHwNetworkErrorRatioMetric
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithHwNetworkErrorRatioMetric.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwNetworkErrorRatioMetric
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithHwNetworkErrorRatioMetric.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 		{
@@ -197,9 +201,10 @@ class NetworkMetricNormalizerTest {
 
 				assertEquals(
 					2.0,
-					monitorWithHwNetworkErrorRatioMetric
-						.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK, NumberMetric.class)
-						.getValue()
+					monitorWithHwNetworkErrorRatioMetric.getMetric(
+						HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK,
+						NumberMetric.class
+					).getValue()
 				);
 			}
 		}
@@ -246,9 +251,10 @@ class NetworkMetricNormalizerTest {
 			// Validate the normalized metrics
 			assertEquals(
 				1.0,
-				monitorWithHwNetworkErrorRatioMetric
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithHwNetworkErrorRatioMetric.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 		// Absent network limit metrics: both critical and degraded are absent
@@ -276,15 +282,17 @@ class NetworkMetricNormalizerTest {
 			// Validate the default normalized metrics
 			assertEquals(
 				0.3,
-				monitorWithoutHwNetworkErrorRatioMetrics
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithoutHwNetworkErrorRatioMetrics.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				0.2,
-				monitorWithoutHwNetworkErrorRatioMetrics
-					.getMetric(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK, NumberMetric.class)
-					.getValue()
+				monitorWithoutHwNetworkErrorRatioMetrics.getMetric(
+					HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 		{

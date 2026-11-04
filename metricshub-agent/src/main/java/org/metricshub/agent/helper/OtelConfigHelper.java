@@ -174,8 +174,8 @@ public class OtelConfigHelper {
 	static Path getProgramDataOtelConfigFile() {
 		return ConfigHelper.getProgramDataPath()
 			.stream()
-			.map(path ->
-				Paths.get(
+			.map(
+				path -> Paths.get(
 					ConfigHelper.createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, OTEL_DIRECTORY_NAME))
 						.toAbsolutePath()
 						.toString(),
@@ -183,8 +183,10 @@ public class OtelConfigHelper {
 				)
 			)
 			.findFirst()
-			.orElseGet(() ->
-				ConfigHelper.getSubPath(String.format(FILE_PATH_FORMAT, OTEL_DIRECTORY_NAME, DEFAULT_OTEL_CONFIG_FILENAME))
+			.orElseGet(
+				() -> ConfigHelper.getSubPath(
+					String.format(FILE_PATH_FORMAT, OTEL_DIRECTORY_NAME, DEFAULT_OTEL_CONFIG_FILENAME)
+				)
 			);
 	}
 }

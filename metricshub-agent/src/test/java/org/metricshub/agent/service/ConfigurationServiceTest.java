@@ -61,29 +61,21 @@ class ConfigurationServiceTest {
 
 	@Test
 	void testUiConfigurationOverridesEveryOtherYamlFile() throws IOException {
-		Files.writeString(
-			tempDir.resolve("metricshub.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("metricshub.yaml"), """
 			loggerLevel: debug
 			resources:
 			  server-1:
 			    attributes:
 			      host.name: server-1
 			      host.type: linux
-			"""
-		);
+			""");
 		// Sorts after metricshub-ui.yaml in a directory listing: without the deferred pass it
 		// would be merged after the UI file and would win.
-		Files.writeString(
-			tempDir.resolve("zzz-extra.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("zzz-extra.yaml"), """
 			loggerLevel: info
 			extraKey: fromZzz
-			"""
-		);
-		Files.writeString(
-			tempDir.resolve(UI_CONFIG_FILENAME),
-			"""
+			""");
+		Files.writeString(tempDir.resolve(UI_CONFIG_FILENAME), """
 			loggerLevel: error
 			resources:
 			  server-1:
@@ -92,8 +84,7 @@ class ConfigurationServiceTest {
 			  ui-host:
 			    attributes:
 			      host.name: ui-host
-			"""
-		);
+			""");
 
 		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))

@@ -73,14 +73,11 @@ public class PingToolService implements IMCPToolService {
 	 * @param poolSize      optional pool size for concurrent ICMP queries; defaults to {@value #DEFAULT_PING_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a list of ProtocolCheckResponse results for each hostname
 	 */
-	@Tool(
-		description = """
+	@Tool(description = """
 		Ping one or more hosts to check if they are reachable.
 		Returns a list of ProtocolCheckResponse entries with the hostname,
 		duration of the ping in milliseconds, and whether it is reachable or not.
-		""",
-		name = "PingHost"
-	)
+		""", name = "PingHost")
 	public MultiHostToolResponse<ProtocolCheckResponse> pingHost(
 		@ToolParam(description = "The hostname(s) to ping, provided as a list of strings") final List<String> hostname,
 		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout,
@@ -92,19 +89,17 @@ public class PingToolService implements IMCPToolService {
 		final long resolvedTimeout = timeout != null ? timeout : DEFAULT_PING_TIMEOUT;
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_PING_POOL_SIZE);
 
-		return agentContextHolder
-			.getAgentContext()
+		return agentContextHolder.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(PING_EXTENSION_TYPE)
-			.map((IProtocolExtension extension) ->
-				executeForHosts(
+			.map(
+				(IProtocolExtension extension) -> executeForHosts(
 					hostname,
 					this::buildNullHostnameResponse,
-					host ->
-						HostToolResponse.<ProtocolCheckResponse>builder()
-							.hostname(host)
-							.response(pingHostWithExtensionSafe(host, resolvedTimeout, extension))
-							.build(),
+					host -> HostToolResponse.<ProtocolCheckResponse>builder()
+						.hostname(host)
+						.response(pingHostWithExtensionSafe(host, resolvedTimeout, extension))
+						.build(),
 					resolvedPoolSize
 				)
 			)
@@ -117,8 +112,8 @@ public class PingToolService implements IMCPToolService {
 	 * @return a {@link HostToolResponse} containing an error message indicating the hostname is missing
 	 */
 	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
-		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		return IMCPToolService.super.buildNullHostnameResponse(
+			() -> ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
 		);
 	}
 

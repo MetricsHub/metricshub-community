@@ -46,8 +46,7 @@ import lombok.NoArgsConstructor;
 		@JsonSubTypes.Type(value = SqlCriterion.class, name = "sql"),
 		@JsonSubTypes.Type(value = ServiceCriterion.class, name = "service"),
 		@JsonSubTypes.Type(value = CommandLineCriterion.class, name = "commandLine"),
-		@JsonSubTypes.Type(value = JmxCriterion.class, name = "jmx")
-	}
+		@JsonSubTypes.Type(value = JmxCriterion.class, name = "jmx") }
 )
 @Data
 @AllArgsConstructor

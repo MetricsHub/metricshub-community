@@ -142,8 +142,7 @@ public class ResourceConfig {
 			.resolveHostnameToFqdn(resolveHostnameToFqdn)
 			.jobTimeout(jobTimeout)
 			.attributes(
-				attributes
-					.entrySet()
+				attributes.entrySet()
 					.stream()
 					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, HashMap::new))
 			)
@@ -166,9 +165,8 @@ public class ResourceConfig {
 	 */
 	public Map<String, ConnectorVariables> getConnectorVariables() {
 		return Optional.ofNullable(additionalConnectors)
-			.map(map ->
-				map
-					.entrySet()
+			.map(
+				map -> map.entrySet()
 					.stream()
 					.filter(entry -> entry.getValue() != null && entry.getValue().getVariables() != null) // Filter out null values
 					.collect(

@@ -73,10 +73,9 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			.getHostConfiguration()
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
-		final String emulationInputDirectory =
-			emulationConfiguration != null && emulationConfiguration.getHttp() != null
-				? emulationConfiguration.getHttp().getDirectory()
-				: null;
+		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getHttp() != null
+			? emulationConfiguration.getHttp().getDirectory()
+			: null;
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - Emulation input directory is not configured.", httpRequest.getHostname());
 			return null;
@@ -128,25 +127,23 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final String path = httpRequest.getPath();
 		final String url = httpRequest.getUrl();
 		final Body body = httpRequest.getBody();
-		final String resolvedBody =
-			body != null
-				? body.getContent(
-						HttpMacroDefaults.USERNAME,
-						HttpMacroDefaults.PASSWORD,
-						authenticationToken,
-						httpRequest.getHostname()
-					)
-				: null;
+		final String resolvedBody = body != null
+			? body.getContent(
+				HttpMacroDefaults.USERNAME,
+				HttpMacroDefaults.PASSWORD,
+				authenticationToken,
+				httpRequest.getHostname()
+			)
+			: null;
 		final Header header = httpRequest.getHeader();
-		final Map<String, String> resolvedHeaders =
-			header != null
-				? header.getContent(
-						HttpMacroDefaults.USERNAME,
-						HttpMacroDefaults.PASSWORD,
-						authenticationToken,
-						httpRequest.getHostname()
-					)
-				: Collections.emptyMap();
+		final Map<String, String> resolvedHeaders = header != null
+			? header.getContent(
+				HttpMacroDefaults.USERNAME,
+				HttpMacroDefaults.PASSWORD,
+				authenticationToken,
+				httpRequest.getHostname()
+			)
+			: Collections.emptyMap();
 		final ResultContent resultContent = httpRequest.getResultContent();
 
 		// Find all matching entries
@@ -256,11 +253,11 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 			if (
 				entryMethod.equals(method) &&
-				nullableEquals(request.getPath(), path) &&
-				nullableEquals(request.getUrl(), url) &&
-				nullableEquals(request.getBody(), body) &&
-				headersMatch(request.getHeaders(), headers) &&
-				resultContentMatches(entry.getResponse(), resultContent)
+					nullableEquals(request.getPath(), path) &&
+					nullableEquals(request.getUrl(), url) &&
+					nullableEquals(request.getBody(), body) &&
+					headersMatch(request.getHeaders(), headers) &&
+					resultContentMatches(entry.getResponse(), resultContent)
 			) {
 				matches.add(entry);
 			}
@@ -342,8 +339,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		key.append(body != null ? body : "").append('|');
 		if (headers != null && !headers.isEmpty()) {
 			key.append(
-				headers
-					.entrySet()
+				headers.entrySet()
 					.stream()
 					.sorted(Map.Entry.comparingByKey())
 					.map(e -> e.getKey() + "=" + e.getValue())

@@ -18,8 +18,7 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 
 class ToolRegistrySnapshotTest {
 
-	private static final String HOST_SCHEMA =
-		"{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"string\"}},\"required\":[\"hostname\"]}";
+	private static final String HOST_SCHEMA = "{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"string\"}},\"required\":[\"hostname\"]}";
 
 	private static ToolCallback callback(final String name, final String description, final String schema) {
 		// Mocked rather than built: the Spring AI builder rejects blank schemas, which is exactly the

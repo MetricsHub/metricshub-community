@@ -80,8 +80,7 @@ class WinRmExtensionTest {
 	private static final char[] PASSWORD = "pwd".toCharArray();
 	private static final String USERNAME = "user";
 	private static final String WQL = "SELECT Name from Win32_Process WHERE Name = 'MetricsHub'";
-	private static final String COMMAND_LINE =
-		"naviseccli -User %{USERNAME} -Password %{PASSWORD} -Address %{HOSTNAME} -Scope 1 getagent";
+	private static final String COMMAND_LINE = "naviseccli -User %{USERNAME} -Password %{PASSWORD} -Address %{HOSTNAME} -Scope 1 getagent";
 	private static final String NAMESPACE = "namespace";
 
 	@Mock
@@ -147,8 +146,7 @@ class WinRmExtensionTest {
 
 		{
 			// Mock a positive WinRm protocol health check response
-			doReturn(WQL_SUCCESS_RESPONSE)
-				.when(winRmRequestExecutorMock)
+			doReturn(WQL_SUCCESS_RESPONSE).when(winRmRequestExecutorMock)
 				.executeWmi(
 					anyString(),
 					any(WinRmConfiguration.class),
@@ -165,8 +163,9 @@ class WinRmExtensionTest {
 
 		{
 			// Mock an acceptable WinRm protocol health check exception
-			doThrow(new RuntimeException(new WqlQuerySyntaxException("WBEM_E_INVALID_NAMESPACE")))
-				.when(winRmRequestExecutorMock)
+			doThrow(new RuntimeException(new WqlQuerySyntaxException("WBEM_E_INVALID_NAMESPACE"))).when(
+				winRmRequestExecutorMock
+			)
 				.executeWmi(
 					anyString(),
 					any(WinRmConfiguration.class),
@@ -190,8 +189,7 @@ class WinRmExtensionTest {
 		initWinRm();
 
 		// Mock a null WinRm protocol health check response
-		doReturn(null)
-			.when(winRmRequestExecutorMock)
+		doReturn(null).when(winRmRequestExecutorMock)
 			.executeWmi(anyString(), any(WinRmConfiguration.class), eq(WINRM_TEST_QUERY), eq(WINRM_TEST_NAMESPACE), isNull());
 
 		// Start the WinRm Health Check
@@ -203,40 +201,36 @@ class WinRmExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(winRmExtension.isValidConfiguration(WinRmConfiguration.builder().build()));
-		assertFalse(
-			winRmExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(winRmExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -294,8 +288,9 @@ class WinRmExtensionTest {
 
 		{
 			final WbemCriterion wbemCriterion = WbemCriterion.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(IllegalArgumentException.class, () ->
-				winRmExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
+			assertThrows(
+				IllegalArgumentException.class,
+				() -> winRmExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
 			);
 		}
 		{
@@ -303,8 +298,7 @@ class WinRmExtensionTest {
 			telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID).setAutomaticWmiNamespace(namespace);
 
 			final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL).namespace(namespace).build();
-			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub"))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub")).when(wmiDetectionServiceMock)
 				.performDetectionTest(any(), eq(winRmConfiguration), eq(wmiCriterion), anyString(), anyBoolean(), isNull());
 			assertTrue(winRmExtension.processCriterion(wmiCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
@@ -325,8 +319,7 @@ class WinRmExtensionTest {
 
 			telemetryManager.setHostProperties(hostProperties);
 
-			doReturn(new OsCommandResult("result", COMMAND_LINE))
-				.when(winCommandServiceMock)
+			doReturn(new OsCommandResult("result", COMMAND_LINE)).when(winCommandServiceMock)
 				.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, winRmConfiguration, Map.of());
 			assertTrue(
 				winRmExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess()
@@ -339,8 +332,7 @@ class WinRmExtensionTest {
 				final ServiceCriterion serviceCriterion = new ServiceCriterion();
 				serviceCriterion.setName("metricshub");
 
-				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running"))
-					.when(wmiDetectionServiceMock)
+				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running")).when(wmiDetectionServiceMock)
 					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean(), any());
 
 				assertTrue(winRmExtension.processCriterion(serviceCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
@@ -382,8 +374,9 @@ class WinRmExtensionTest {
 			.build();
 		{
 			final WbemSource wbemSource = WbemSource.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(IllegalArgumentException.class, () ->
-				winRmExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
+			assertThrows(
+				IllegalArgumentException.class,
+				() -> winRmExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
 			);
 		}
 		{
@@ -398,8 +391,7 @@ class WinRmExtensionTest {
 				Total Physical Memory:16384 MB
 				Available Physical Memory:8192 MB
 				""";
-			doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE))
-				.when(winCommandServiceMock)
+			doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
 				.runOsCommand(COMMAND_LINE, HOST_NAME, winRmConfiguration, Map.of());
 
 			final List<List<String>> expected = List.of(List.of("16384 MB"), List.of("8192 MB"));
@@ -414,8 +406,7 @@ class WinRmExtensionTest {
 				Arrays.asList("1.2", "2|4587"),
 				Arrays.asList("1.3", "1|4587")
 			);
-			doReturn(expected)
-				.when(winRmRequestExecutorMock)
+			doReturn(expected).when(winRmRequestExecutorMock)
 				.executeWmi(HOST_NAME, winRmConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
 			final WmiSource wmiSource = WmiSource.builder().query(WQL).build();
 			assertEquals(
@@ -477,15 +468,13 @@ class WinRmExtensionTest {
 	void testExecuteQuery() throws Exception {
 		initWinRm();
 
-		doReturn(WQL_SUCCESS_RESPONSE)
-			.when(winRmRequestExecutorMock)
+		doReturn(WQL_SUCCESS_RESPONSE).when(winRmRequestExecutorMock)
 			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
 		// The text rendering is the interface's default method: run it, the mock only serves the rows
-		doCallRealMethod()
-			.when(winRmRequestExecutorMock)
+		doCallRealMethod().when(winRmRequestExecutorMock)
 			.executeWqlQuery(anyString(), any(WinRmConfiguration.class), anyString(), anyString());
 		queryNode.set("queryType", new TextNode("wql"));
 		WinRmConfiguration configuration = WinRmConfiguration.builder()
@@ -515,11 +504,9 @@ class WinRmExtensionTest {
 	void testExecuteQueryThrow() throws Exception {
 		initWinRm();
 
-		doThrow(ClientException.class)
-			.when(winRmRequestExecutorMock)
+		doThrow(ClientException.class).when(winRmRequestExecutorMock)
 			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString(), isNull());
-		doCallRealMethod()
-			.when(winRmRequestExecutorMock)
+		doCallRealMethod().when(winRmRequestExecutorMock)
 			.executeWqlQuery(anyString(), any(WinRmConfiguration.class), anyString(), anyString());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
@@ -546,16 +533,14 @@ class WinRmExtensionTest {
 			.timeout(120L)
 			.build();
 
-		doReturn("line 1\nline 2")
-			.when(winRmRequestExecutorMock)
+		doReturn("line 1\nline 2").when(winRmRequestExecutorMock)
 			.readRemoteFile(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\app.log"));
 		final ObjectNode fileNode = JsonNodeFactory.instance.objectNode();
 		fileNode.set("query", new TextNode("C:\\logs\\app.log"));
 		fileNode.set("queryType", new TextNode("file"));
 		assertEquals("line 1\nline 2", winRmExtension.executeQuery(configuration, fileNode));
 
-		doReturn("Path;Size;LastModified")
-			.when(winRmRequestExecutorMock)
+		doReturn("Path;Size;LastModified").when(winRmRequestExecutorMock)
 			.listRemoteFiles(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\*.log"));
 		final ObjectNode listNode = JsonNodeFactory.instance.objectNode();
 		listNode.set("query", new TextNode("C:\\logs\\*.log"));
@@ -563,8 +548,7 @@ class WinRmExtensionTest {
 		assertEquals("Path;Size;LastModified", winRmExtension.executeQuery(configuration, listNode));
 
 		// "command", and its deprecated synonym "winremote", run a remote command
-		doReturn("output")
-			.when(winRmRequestExecutorMock)
+		doReturn("output").when(winRmRequestExecutorMock)
 			.executeWinRemoteCommand(eq(HOST_NAME), any(WinRmConfiguration.class), eq("ipconfig"), isNull());
 		final ObjectNode commandNode = JsonNodeFactory.instance.objectNode();
 		commandNode.set("query", new TextNode("ipconfig"));

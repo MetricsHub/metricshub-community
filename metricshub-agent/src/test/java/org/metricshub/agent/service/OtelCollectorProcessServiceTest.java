@@ -35,8 +35,7 @@ class OtelCollectorProcessServiceTest {
 		final Process process = Mockito.mock(Process.class);
 
 		try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
-			processControl
-				.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
+			processControl.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
 				.thenReturn(pb);
 
 			processControl.when(() -> ProcessControl.start(any(ProcessBuilder.class))).thenCallRealMethod();
@@ -61,12 +60,10 @@ class OtelCollectorProcessServiceTest {
 
 			otelProcess.start();
 
-			Awaitility.await()
-				.atMost(Durations.FIVE_SECONDS)
-				.untilAsserted(() -> {
-					assertEquals("OpenTelemetry Collector started.", outputProcessor.getBlocks());
-					assertEquals("Error.", errorProcessor.getBlocks());
-				});
+			Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+				assertEquals("OpenTelemetry Collector started.", outputProcessor.getBlocks());
+				assertEquals("Error.", errorProcessor.getBlocks());
+			});
 
 			otelProcess.stop();
 
@@ -80,8 +77,7 @@ class OtelCollectorProcessServiceTest {
 		final Process process = Mockito.mock(Process.class);
 
 		try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
-			processControl
-				.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
+			processControl.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
 				.thenReturn(pb);
 
 			processControl.when(() -> ProcessControl.start(any(ProcessBuilder.class))).thenCallRealMethod();
@@ -116,8 +112,7 @@ class OtelCollectorProcessServiceTest {
 		final Process process = Mockito.mock(Process.class);
 
 		try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
-			processControl
-				.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
+			processControl.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
 				.thenReturn(pb);
 
 			processControl.when(() -> ProcessControl.start(any(ProcessBuilder.class))).thenCallRealMethod();
@@ -141,11 +136,9 @@ class OtelCollectorProcessServiceTest {
 
 			otelProcess.start();
 
-			Awaitility.await()
-				.atMost(Durations.FIVE_SECONDS)
-				.untilAsserted(() -> {
-					assertEquals("OpenTelemetry Collector started.", outputProcessor.getBlocks());
-				});
+			Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+				assertEquals("OpenTelemetry Collector started.", outputProcessor.getBlocks());
+			});
 
 			otelProcess.stop();
 
@@ -170,9 +163,9 @@ class OtelCollectorProcessServiceTest {
 	void testLaunchExecutableFileDoesntExist() {
 		final OtelCollectorConfig otelCollectorConfigMock = Mockito.mock(OtelCollectorConfig.class);
 		final AgentConfig agentConfig = AgentConfig.builder().otelCollector(otelCollectorConfigMock).build();
-		doReturn(ProcessConfig.builder().commandLine(List.of(UUID.randomUUID().toString())).build())
-			.when(otelCollectorConfigMock)
-			.toProcessConfig();
+		doReturn(ProcessConfig.builder().commandLine(List.of(UUID.randomUUID().toString())).build()).when(
+			otelCollectorConfigMock
+		).toProcessConfig();
 		final OtelCollectorProcessService otelCollectorProcessService = new OtelCollectorProcessService(agentConfig);
 
 		assertDoesNotThrow(

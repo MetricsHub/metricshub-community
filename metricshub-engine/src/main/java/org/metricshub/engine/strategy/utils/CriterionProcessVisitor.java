@@ -62,8 +62,7 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 		if (extensionManger == null) {
 			throw new IllegalStateException("The ExtensionManager cannot be null for Local Windows Process criterion check.");
 		}
-		extensionManger
-			.findExtensionByType("wmi")
+		extensionManger.findExtensionByType("wmi")
 			.map(extension -> extension.processCriterion(processCriterion, null, null, logMode))
 			.ifPresent(result -> criterionTestResult = result);
 	}
@@ -145,34 +144,30 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 	 * @param result
 	 */
 	private void processResult(final List<List<String>> result) {
-		result
-			.stream()
+		result.stream()
 			.filter(line -> line.get(1).matches(processCriterion.getCommandLine()))
 			.findFirst()
 			.ifPresentOrElse(
-				_ ->
-					success(
-						String.format(
-							"One or more currently running processes match the following regular expression:\n- " +
-								"Regexp (should match with the command-line): %s",
-							processCriterion.getCommandLine()
-						)
-					),
-				() ->
-					fail(
-						String.format(
-							"""
+				_ -> success(
+					String.format(
+						"One or more currently running processes match the following regular expression:\n- " +
+							"Regexp (should match with the command-line): %s",
+						processCriterion.getCommandLine()
+					)
+				),
+				() -> fail(
+					String.format(
+						"""
 							No currently running processes match the following regular expression:
 							- Regexp (should match with the command-line): %s
 							- Currently running process list:
 							%s""",
-							processCriterion.getCommandLine(),
-							result
-								.stream()
-								.map(line -> line.stream().collect(Collectors.joining(TABLE_SEP)))
-								.collect(Collectors.joining(NEW_LINE))
-						)
+						processCriterion.getCommandLine(),
+						result.stream()
+							.map(line -> line.stream().collect(Collectors.joining(TABLE_SEP)))
+							.collect(Collectors.joining(NEW_LINE))
 					)
+				)
 			);
 	}
 

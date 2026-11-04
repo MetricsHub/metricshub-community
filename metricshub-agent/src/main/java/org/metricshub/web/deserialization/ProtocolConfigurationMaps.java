@@ -67,19 +67,18 @@ public final class ProtocolConfigurationMaps {
 		}
 
 		if (isProtocolKeyedNode(configNode, protocolHint, extensionManager)) {
-			configNode
-				.properties()
-				.forEach(entry ->
-					buildConfiguration(extensionManager, entry.getKey(), entry.getValue()).ifPresent(configuration ->
-						protocolConfig.put(entry.getKey(), configuration)
+			configNode.properties()
+				.forEach(
+					entry -> buildConfiguration(extensionManager, entry.getKey(), entry.getValue()).ifPresent(
+						configuration -> protocolConfig.put(entry.getKey(), configuration)
 					)
 				);
 			return protocolConfig;
 		}
 
 		if (protocolHint != null && !protocolHint.isBlank()) {
-			buildConfiguration(extensionManager, protocolHint, configNode).ifPresent(configuration ->
-				protocolConfig.put(protocolHint, configuration)
+			buildConfiguration(extensionManager, protocolHint, configNode).ifPresent(
+				configuration -> protocolConfig.put(protocolHint, configuration)
 			);
 		}
 

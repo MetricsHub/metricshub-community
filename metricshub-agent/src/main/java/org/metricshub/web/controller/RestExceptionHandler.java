@@ -241,11 +241,13 @@ public class RestExceptionHandler {
 	private static Map<String, String> fieldErrorsToMap(
 		final org.springframework.validation.BindingResult bindingResult
 	) {
-		return bindingResult
-			.getFieldErrors()
+		return bindingResult.getFieldErrors()
 			.stream()
-			.map(error ->
-				Map.entry(error.getField(), error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value")
+			.map(
+				error -> Map.entry(
+					error.getField(),
+					error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value"
+				)
 			)
 			.collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
 	}

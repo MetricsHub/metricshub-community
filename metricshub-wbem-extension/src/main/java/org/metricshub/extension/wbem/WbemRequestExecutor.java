@@ -192,18 +192,17 @@ public class WbemRequestExecutor {
 	) throws ClientException {
 		VCenterClient.setDebug(() -> true, log::debug);
 		try {
-			String ticket =
-				resourceHostname != null
-					? ThreadHelper.execute(
-							() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
-							timeout,
-							resourceHostname,
-							"wbem"
-						)
-					: ThreadHelper.execute(
-							() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
-							timeout
-						);
+			String ticket = resourceHostname != null
+				? ThreadHelper.execute(
+					() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
+					timeout,
+					resourceHostname,
+					"wbem"
+				)
+				: ThreadHelper.execute(
+					() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
+					timeout
+				);
 			if (ticket == null) {
 				throw new ClientException("Cannot get the ticket through vCenter module");
 			}
@@ -262,8 +261,8 @@ public class WbemRequestExecutor {
 
 			final URL url = new URI(urlSpec).toURL();
 
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executing WBEM request:\n- Hostname: {}\n- Port: {}\n- Protocol: {}\n- URL: {}\n" + // NOSONAR
 						"- Username: {}\n- Query: {}\n- Namespace: {}\n- Timeout: {} s\n",
 					hostname,
@@ -293,8 +292,8 @@ public class WbemRequestExecutor {
 
 			List<List<String>> result = wbemQueryResult.getValues();
 
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executed WBEM request:\n- Hostname: {}\n- Port: {}\n- Protocol: {}\n- URL: {}\n" + // NOSONAR
 						"- Username: {}\n- Query: {}\n- Namespace: {}\n- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
@@ -348,10 +347,8 @@ public class WbemRequestExecutor {
 	 * @return boolean value
 	 */
 	private boolean isAcceptableWbemError(final int errorId) {
-		return (
-			errorId == WBEMException.CIM_ERR_INVALID_NAMESPACE ||
+		return (errorId == WBEMException.CIM_ERR_INVALID_NAMESPACE ||
 			errorId == WBEMException.CIM_ERR_INVALID_CLASS ||
-			errorId == WBEMException.CIM_ERR_NOT_FOUND
-		);
+			errorId == WBEMException.CIM_ERR_NOT_FOUND);
 	}
 }

@@ -34,8 +34,7 @@ class WmiConfigCliTest {
 				.withProtocolExtensions(List.of(new WmiExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			// Create an WmiTestConfiguration and call method toProtocol

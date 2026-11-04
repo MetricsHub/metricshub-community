@@ -77,16 +77,16 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 	}
 
 	private static ToolDescriptor describe(final ToolDefinition definition) {
-		final String description =
-			definition.description() == null || definition.description().isBlank()
-				? definition.name()
-				: definition.description();
+		final String description = definition.description() == null || definition.description().isBlank()
+			? definition.name()
+			: definition.description();
 		return new ToolDescriptor(definition.name(), description, parseSchema(definition));
 	}
 
 	private static JsonNode parseSchema(final ToolDefinition definition) {
-		final String schema =
-			definition.inputSchema() == null || definition.inputSchema().isBlank() ? EMPTY_SCHEMA : definition.inputSchema();
+		final String schema = definition.inputSchema() == null || definition.inputSchema().isBlank()
+			? EMPTY_SCHEMA
+			: definition.inputSchema();
 		try {
 			return TunnelJson.MAPPER.readTree(schema);
 		} catch (JsonProcessingException e) {

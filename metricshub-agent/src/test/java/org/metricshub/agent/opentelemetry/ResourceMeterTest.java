@@ -114,8 +114,7 @@ class ResourceMeterTest {
 
 		final Map<String, Double> stateValues = new HashMap<>();
 		for (NumberDataPoint dataPoint : dataPoints) {
-			final String state = dataPoint
-				.getAttributesList()
+			final String state = dataPoint.getAttributesList()
 				.stream()
 				.filter(attribute -> "state".equals(attribute.getKey()))
 				.map(KeyValue::getValue)

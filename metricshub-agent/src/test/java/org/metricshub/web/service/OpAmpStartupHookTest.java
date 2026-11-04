@@ -33,15 +33,10 @@ class OpAmpStartupHookTest {
 	 * the shutdown action it registers.
 	 */
 	private OpAmpStartupHook newHook() {
-		return new OpAmpStartupHook(
-			agentContextHolder,
-			holder -> upgradeManager,
-			(holder, packagesHandler) -> {
-				capturedHandler.set(packagesHandler);
-				return opAmpService;
-			},
-			capturedShutdownAction::set
-		);
+		return new OpAmpStartupHook(agentContextHolder, holder -> upgradeManager, (holder, packagesHandler) -> {
+			capturedHandler.set(packagesHandler);
+			return opAmpService;
+		}, capturedShutdownAction::set);
 	}
 
 	@Test
@@ -85,19 +80,13 @@ class OpAmpStartupHookTest {
 		final AtomicReference<AgentContextHolder> upgradeManagerHolder = new AtomicReference<>();
 		final AtomicReference<AgentContextHolder> opAmpServiceHolder = new AtomicReference<>();
 
-		new OpAmpStartupHook(
-			agentContextHolder,
-			holder -> {
-				upgradeManagerHolder.set(holder);
-				return upgradeManager;
-			},
-			(holder, packagesHandler) -> {
-				opAmpServiceHolder.set(holder);
-				return opAmpService;
-			},
-			runnable -> {}
-		)
-			.onStartup();
+		new OpAmpStartupHook(agentContextHolder, holder -> {
+			upgradeManagerHolder.set(holder);
+			return upgradeManager;
+		}, (holder, packagesHandler) -> {
+			opAmpServiceHolder.set(holder);
+			return opAmpService;
+		}, runnable -> {}).onStartup();
 
 		// Both collaborators must read the live context through the shared holder, never a snapshot.
 		assertSame(agentContextHolder, upgradeManagerHolder.get());

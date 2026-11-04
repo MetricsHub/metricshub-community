@@ -107,8 +107,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextCriterionException() throws Exception {
 		initSnmp();
 
-		doThrow(new TimeoutException("SNMPGetNext timeout"))
-			.when(snmpRequestExecutorMock)
+		doThrow(new TimeoutException("SNMPGetNext timeout")).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
@@ -209,8 +208,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextCriterionSuccessWithNoExpectedResult() throws Exception {
 		initSnmp();
 
-		doReturn(SNMP_GET_NEXT_SECOND_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(SNMP_GET_NEXT_SECOND_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
@@ -237,8 +235,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextCriterionExpectedResultNotMatches() throws Exception {
 		initSnmp();
 
-		doReturn(SNMP_GET_NEXT_SECOND_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(SNMP_GET_NEXT_SECOND_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
@@ -264,8 +261,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextExpectedResultMatches() throws Exception {
 		initSnmp();
 
-		doReturn(SNMP_GET_NEXT_THIRD_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(SNMP_GET_NEXT_THIRD_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
@@ -292,8 +288,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextCriterionExpectedResultCannotExtract() throws Exception {
 		initSnmp();
 
-		doReturn(SNMP_GET_NEXT_FOURTH_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(SNMP_GET_NEXT_FOURTH_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
@@ -320,9 +315,12 @@ class SnmpExtensionTest {
 		initSnmp();
 
 		assertNull(
-			snmpExtension
-				.processCriterion(SnmpGetNextCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
-				.getResult()
+			snmpExtension.processCriterion(
+				SnmpGetNextCriterion.builder().oid(OID).build(),
+				CONNECTOR_ID,
+				telemetryManager,
+				true
+			).getResult()
 		);
 	}
 
@@ -331,8 +329,7 @@ class SnmpExtensionTest {
 		initSnmp();
 
 		assertNull(
-			snmpExtension
-				.processCriterion(SnmpGetCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
+			snmpExtension.processCriterion(SnmpGetCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
 				.getResult()
 		);
 	}
@@ -341,8 +338,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetExpectedResultMatches() throws Exception {
 		initSnmp();
 
-		doReturn(EXECUTE_SNMP_GET_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(EXECUTE_SNMP_GET_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGet(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).expectedResult("CMC").build(),
@@ -367,8 +363,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetExpectedResultNotMatches() throws Exception {
 		initSnmp();
 
-		doReturn(EXECUTE_SNMP_GET_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(EXECUTE_SNMP_GET_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGet(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
@@ -394,8 +389,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetSuccessWithNoExpectedResult() throws Exception {
 		initSnmp();
 
-		doReturn(EXECUTE_SNMP_GET_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(EXECUTE_SNMP_GET_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPGet(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
@@ -467,8 +461,7 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetException() throws Exception {
 		initSnmp();
 
-		doThrow(new TimeoutException("SNMPGet timeout"))
-			.when(snmpRequestExecutorMock)
+		doThrow(new TimeoutException("SNMPGet timeout")).when(snmpRequestExecutorMock)
 			.executeSNMPGet(any(), any(), any(), eq(false), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
@@ -496,8 +489,7 @@ class SnmpExtensionTest {
 		initSnmp();
 
 		// Mock SNMP protocol health check response
-		doReturn("success")
-			.when(snmpRequestExecutorMock)
+		doReturn("success").when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(eq(SnmpExtension.SNMP_OID), any(SnmpConfiguration.class), anyString(), anyBoolean(), any());
 
 		// Start the SNMP protocol check
@@ -512,8 +504,7 @@ class SnmpExtensionTest {
 		initSnmp();
 
 		// Mock SNMP protocol health check response
-		doReturn(null)
-			.when(snmpRequestExecutorMock)
+		doReturn(null).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(eq(SnmpExtension.SNMP_OID), any(SnmpConfiguration.class), anyString(), anyBoolean(), any());
 
 		// Start the SNMP protocol check
@@ -525,40 +516,36 @@ class SnmpExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(snmpExtension.isValidConfiguration(SnmpConfiguration.builder().build()));
-		assertFalse(
-			snmpExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(snmpExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -611,8 +598,9 @@ class SnmpExtensionTest {
 
 		final ObjectNode invalidConfiguration = JsonNodeFactory.instance.objectNode();
 		invalidConfiguration.set("version", new TextNode("version un"));
-		final InvalidConfigurationException exception = assertThrows(InvalidConfigurationException.class, () ->
-			snmpExtension.buildConfiguration("snmp", invalidConfiguration, null)
+		final InvalidConfigurationException exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> snmpExtension.buildConfiguration("snmp", invalidConfiguration, null)
 		);
 		assertTrue(exception.getMessage().contains("Error while reading SNMP Configuration"));
 	}
@@ -621,8 +609,7 @@ class SnmpExtensionTest {
 	void testExecuteGetQuery() throws Exception {
 		final String message = String.format(SUCCESSFUL_SNMP_QUERY_RESULT, GET);
 		initSnmp();
-		doReturn(message)
-			.when(snmpRequestExecutorMock)
+		doReturn(message).when(snmpRequestExecutorMock)
 			.executeSNMPGet(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
@@ -637,8 +624,7 @@ class SnmpExtensionTest {
 	void testExecuteGetNextQuery() throws Exception {
 		final String message = String.format(SUCCESSFUL_SNMP_QUERY_RESULT, GET_NEXT);
 		initSnmp();
-		doReturn(message)
-			.when(snmpRequestExecutorMock)
+		doReturn(message).when(snmpRequestExecutorMock)
 			.executeSNMPGetNext(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
@@ -653,8 +639,7 @@ class SnmpExtensionTest {
 	void testExecuteWalkQuery() throws Exception {
 		final String message = String.format(SUCCESSFUL_SNMP_QUERY_RESULT, WALK);
 		initSnmp();
-		doReturn(message)
-			.when(snmpRequestExecutorMock)
+		doReturn(message).when(snmpRequestExecutorMock)
 			.executeSNMPWalk(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
@@ -668,8 +653,7 @@ class SnmpExtensionTest {
 	@Test
 	void testExecuteTableQuery() throws Exception {
 		initSnmp();
-		doReturn(SNMP_TABLE_RESULT)
-			.when(snmpRequestExecutorMock)
+		doReturn(SNMP_TABLE_RESULT).when(snmpRequestExecutorMock)
 			.executeSNMPTable(anyString(), any(String[].class), any(SnmpConfiguration.class), anyString(), eq(false), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
@@ -689,8 +673,7 @@ class SnmpExtensionTest {
 	@Test
 	void testThrowsExceptionWithQuery() throws Exception {
 		initSnmp();
-		doThrow(new InterruptedException())
-			.when(snmpRequestExecutorMock)
+		doThrow(new InterruptedException()).when(snmpRequestExecutorMock)
 			.executeSNMPWalk(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();

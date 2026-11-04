@@ -120,10 +120,8 @@ class IpmiRecorderTest {
 		recorder.flush();
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
-		final Map<String, List<Map<String, String>>> image = JsonHelper.buildYamlMapper().readValue(
-			ipmiDir.resolve("image.yaml").toFile(),
-			IMAGE_TYPE
-		);
+		final Map<String, List<Map<String, String>>> image = JsonHelper.buildYamlMapper()
+			.readValue(ipmiDir.resolve("image.yaml").toFile(), IMAGE_TYPE);
 		assertEquals("Raw", image.get("image").get(0).get("request"));
 		assertEquals("06 01", image.get("image").get(0).get("query"));
 		assertEquals("GetSel", image.get("image").get(1).get("request"));

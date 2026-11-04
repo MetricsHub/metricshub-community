@@ -186,8 +186,7 @@ public class ReloadService {
 	 * @return {@code true} if global settings have changed, otherwise {@code false}
 	 */
 	public boolean globalConfigurationHasChanged(final AgentConfig runningConf, final AgentConfig newConf) {
-		return (
-			runningConf.getJobPoolSize() != newConf.getJobPoolSize() ||
+		return (runningConf.getJobPoolSize() != newConf.getJobPoolSize() ||
 			!Objects.equals(runningConf.getLoggerLevel(), newConf.getLoggerLevel()) ||
 			!Objects.equals(runningConf.getOutputDirectory(), newConf.getOutputDirectory()) ||
 			runningConf.getCollectPeriod() != newConf.getCollectPeriod() ||
@@ -205,8 +204,7 @@ public class ReloadService {
 			!Objects.equals(runningConf.getMetrics(), newConf.getMetrics()) ||
 			!Objects.equals(runningConf.getStateSetCompression(), newConf.getStateSetCompression()) ||
 			!Objects.equals(runningConf.getPatchDirectory(), newConf.getPatchDirectory()) ||
-			!Objects.equals(runningConf.getCentral(), newConf.getCentral())
-		);
+			!Objects.equals(runningConf.getCentral(), newConf.getCentral()));
 	}
 
 	/**
@@ -229,10 +227,8 @@ public class ReloadService {
 		final Map<String, ResourceConfig> runningResources,
 		final Map<String, ResourceConfig> newResources
 	) {
-		final Set<String> allResources = Stream.concat(
-			runningResources.keySet().stream(),
-			newResources.keySet().stream()
-		).collect(Collectors.toSet());
+		final Set<String> allResources = Stream.concat(runningResources.keySet().stream(), newResources.keySet().stream())
+			.collect(Collectors.toSet());
 
 		// Creating the map that will contain all the resources to schedule
 		final Map<String, ResourceConfig> resourcesToSchedule = new HashMap<>();
@@ -365,18 +361,16 @@ public class ReloadService {
 
 		// cancel and remove the resource group schedule
 		Optional.ofNullable(
-			runningAgentContext
-				.getTaskSchedulingService()
+			runningAgentContext.getTaskSchedulingService()
 				.getSchedules()
 				.remove(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted(resourceGroupKey))
 		).ifPresent(s -> s.cancel(true));
 
 		// remove all the resource group resources from the task scheduling service
-		resourceGroupConfig
-			.getResources()
+		resourceGroupConfig.getResources()
 			.keySet()
-			.forEach(resourceKey ->
-				removeResourceFromTaskSchedulingService(
+			.forEach(
+				resourceKey -> removeResourceFromTaskSchedulingService(
 					resourceGroupKey,
 					resourceKey,
 					METRICSHUB_RESOURCE_KEY_FORMAT.formatted(resourceGroupKey, resourceKey)
@@ -444,11 +438,10 @@ public class ReloadService {
 		});
 
 		// remove all the resource group resources from the task scheduling service
-		oldGroup
-			.getResources()
+		oldGroup.getResources()
 			.keySet()
-			.forEach(resourceKey ->
-				removeResourceFromTaskSchedulingService(
+			.forEach(
+				resourceKey -> removeResourceFromTaskSchedulingService(
 					resourceGroupKey,
 					resourceKey,
 					METRICSHUB_RESOURCE_KEY_FORMAT.formatted(resourceGroupKey, resourceKey)
@@ -473,8 +466,7 @@ public class ReloadService {
 		final ResourceGroupConfig runningResourceGroupConfig,
 		final ResourceGroupConfig newResourceGroupConfig
 	) {
-		return (
-			!Objects.equals(runningResourceGroupConfig.getLoggerLevel(), newResourceGroupConfig.getLoggerLevel()) ||
+		return (!Objects.equals(runningResourceGroupConfig.getLoggerLevel(), newResourceGroupConfig.getLoggerLevel()) ||
 			!Objects.equals(runningResourceGroupConfig.getOutputDirectory(), newResourceGroupConfig.getOutputDirectory()) ||
 			!Objects.equals(runningResourceGroupConfig.getCollectPeriod(), newResourceGroupConfig.getCollectPeriod()) ||
 			!Objects.equals(runningResourceGroupConfig.getDiscoveryCycle(), newResourceGroupConfig.getDiscoveryCycle()) ||
@@ -502,8 +494,7 @@ public class ReloadService {
 			!Objects.equals(
 				runningResourceGroupConfig.getStateSetCompression(),
 				newResourceGroupConfig.getStateSetCompression()
-			)
-		);
+			));
 	}
 
 	/**
@@ -529,8 +520,7 @@ public class ReloadService {
 			.getTelemetryManagers();
 
 		// Add the TelemetryManager to the resource
-		oldTelemetryManagers
-			.computeIfAbsent(resourceGroupKey, _ -> new HashMap<>())
+		oldTelemetryManagers.computeIfAbsent(resourceGroupKey, _ -> new HashMap<>())
 			.put(resourceKey, newTelemetryManagers.get(resourceGroupKey).get(resourceKey));
 	}
 
@@ -568,8 +558,7 @@ public class ReloadService {
 		}
 
 		// Remove Telemetry Manager from task scheduling service, if the map still exists
-		runningAgentContext
-			.getTaskSchedulingService()
+		runningAgentContext.getTaskSchedulingService()
 			.getTelemetryManagers()
 			.computeIfPresent(resourceGroupKey, (_, resourceMap) -> {
 				resourceMap.remove(resourceKey);
@@ -594,8 +583,7 @@ public class ReloadService {
 		final Integer quota
 	) {
 		// Calculate the number of Telemetry Managers in the task scheduling service.
-		int currentQuota = runningAgentContext
-			.getTaskSchedulingService()
+		int currentQuota = runningAgentContext.getTaskSchedulingService()
 			.getTelemetryManagers()
 			.values()
 			.stream()
@@ -621,9 +609,8 @@ public class ReloadService {
 		}
 
 		// Schedule resource groups
-		scheduledResourceGroups.forEach(resourceGroupKey ->
-			runningAgentContext
-				.getTaskSchedulingService()
+		scheduledResourceGroups.forEach(
+			resourceGroupKey -> runningAgentContext.getTaskSchedulingService()
 				.scheduleResourceGroup(
 					resourceGroupKey,
 					runningAgentContext.getAgentConfig().getResourceGroups().get(resourceGroupKey)

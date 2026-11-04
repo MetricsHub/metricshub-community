@@ -82,8 +82,8 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed SNMP GetNext request:\n- OID: {}\n- Result: {}\n- response-time: {}\n",
 				oid,
 				result,
@@ -123,8 +123,13 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
-		LoggingHelper.trace(() ->
-			log.trace("Executed SNMP Get request:\n- OID: {}\n- Result: {}\n- response-time: {}\n", oid, result, responseTime)
+		LoggingHelper.trace(
+			() -> log.trace(
+				"Executed SNMP Get request:\n- OID: {}\n- Result: {}\n- response-time: {}\n",
+				oid,
+				result,
+				responseTime
+			)
 		);
 
 		return result;
@@ -153,8 +158,12 @@ public abstract class AbstractSnmpRequestExecutor {
 		final boolean logMode,
 		final String resourceHostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
-		LoggingHelper.trace(() ->
-			log.trace("Executing SNMP Table request:\n- OID: {}\n- Columns: {}\n", oid, Arrays.toString(selectColumnArray))
+		LoggingHelper.trace(
+			() -> log.trace(
+				"Executing SNMP Table request:\n- OID: {}\n- Columns: {}\n",
+				oid,
+				Arrays.toString(selectColumnArray)
+			)
 		);
 
 		final long startTime = System.currentTimeMillis();
@@ -170,8 +179,8 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed SNMP Table request:\n- OID: {}\n- Columns: {}\n- Result:\n{}\n- response-time: {}\n",
 				oid,
 				Arrays.toString(selectColumnArray),
@@ -313,8 +322,8 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed SNMP Walk request:\n- OID: {}\n- Result: {}\n- response-time: {}\n",
 				oid,
 				result,

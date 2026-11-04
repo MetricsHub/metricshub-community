@@ -204,13 +204,14 @@ public class OsCommandHelper {
 			return text;
 		}
 
-		return SUDO_COMMAND_PATTERN.matcher(text).replaceAll(match ->
-			sudoInformation != null &&
-			sudoInformation.isUseSudo() &&
-			sudoInformation.useSudoCommands().contains(match.group(1))
-				? Matcher.quoteReplacement(sudoInformation.sudoCommand())
-				: EMPTY
-		);
+		return SUDO_COMMAND_PATTERN.matcher(text)
+			.replaceAll(
+				match -> sudoInformation != null &&
+					sudoInformation.isUseSudo() &&
+					sudoInformation.useSudoCommands().contains(match.group(1))
+						? Matcher.quoteReplacement(sudoInformation.sudoCommand())
+						: EMPTY
+			);
 	}
 
 	/**

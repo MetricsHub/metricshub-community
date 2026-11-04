@@ -57,8 +57,7 @@ class MonitorFactoryTest {
 		final Monitor monitor = Monitor.builder().attributes(monitorAttributes).build();
 
 		// Mock findMonitorByTypeAndId response
-		doReturn(monitor)
-			.when(telemetryManagerMock)
+		doReturn(monitor).when(telemetryManagerMock)
 			.findMonitorByTypeAndId(KnownMonitorType.CONNECTOR.getKey(), MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Call method createOrUpdateMonitor in MonitorFactory
@@ -82,8 +81,7 @@ class MonitorFactoryTest {
 		monitorAttributes.put(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Mock findMonitorByTypeAndId response
-		doReturn(null)
-			.when(telemetryManagerMock)
+		doReturn(null).when(telemetryManagerMock)
 			.findMonitorByTypeAndId(KnownMonitorType.CONNECTOR.getKey(), MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Call method createOrUpdateMonitor in MonitorFactory and retrieve the created monitor
@@ -105,8 +103,7 @@ class MonitorFactoryTest {
 		monitorAttributes.put(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Mock findMonitorByTypeAndId response
-		doReturn(null)
-			.when(telemetryManagerMock)
+		doReturn(null).when(telemetryManagerMock)
 			.findMonitorByTypeAndId(KnownMonitorType.CONNECTOR.getKey(), MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Create the monitor and check its attributes
@@ -146,8 +143,7 @@ class MonitorFactoryTest {
 
 		// Create the monitor
 		final Monitor monitor = Monitor.builder().attributes(monitorAttributes).metrics(monitorMetrics).build();
-		doReturn(monitor)
-			.when(telemetryManagerMock)
+		doReturn(monitor).when(telemetryManagerMock)
 			.findMonitorByTypeAndId(KnownMonitorType.CONNECTOR.getKey(), MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Call method createOrUpdateMonitor in MonitorFactory, retrieve the created monitor then check its attributes
@@ -182,8 +178,7 @@ class MonitorFactoryTest {
 		monitorAttributes.put(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Mock findMonitorByTypeAndId response
-		doReturn(null)
-			.when(telemetryManagerMock)
+		doReturn(null).when(telemetryManagerMock)
 			.findMonitorByTypeAndId(KnownMonitorType.CONNECTOR.getKey(), MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Create the monitor and check its attributes
@@ -224,8 +219,7 @@ class MonitorFactoryTest {
 
 		// Mock findMonitorByTypeAndId response
 		final Monitor monitor = Monitor.builder().attributes(monitorAttributes).metrics(monitorMetrics).build();
-		doReturn(monitor)
-			.when(telemetryManagerMock)
+		doReturn(monitor).when(telemetryManagerMock)
 			.findMonitorByTypeAndId(KnownMonitorType.CONNECTOR.getKey(), MONITOR_ID_ATTRIBUTE_VALUE);
 
 		// Create the monitor and check its attributes

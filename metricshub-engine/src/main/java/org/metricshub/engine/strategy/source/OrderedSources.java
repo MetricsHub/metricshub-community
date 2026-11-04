@@ -130,8 +130,7 @@ public class OrderedSources {
 				throw new IllegalStateException(message);
 			}
 
-			this.sources$value = sources
-				.entrySet()
+			this.sources$value = sources.entrySet()
 				.stream()
 				.sorted(Comparator.comparing(entry -> findSourcePosition(entry.getKey(), order, orderDescription, jobInfo)))
 				.map(Entry::getValue)

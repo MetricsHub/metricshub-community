@@ -81,15 +81,11 @@ class InstanceUidStoreTest {
 
 		final List<byte[]> loaded;
 		try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
-			final List<Future<byte[]>> claims = IntStream.range(0, channels)
-				.mapToObj(index ->
-					pool.submit(() -> {
-						together.await(10, TimeUnit.SECONDS);
-						// A store each, as the real callers have: the OpAMP client builds its own
-						return new InstanceUidStore(file).loadOrCreate();
-					})
-				)
-				.toList();
+			final List<Future<byte[]>> claims = IntStream.range(0, channels).mapToObj(index -> pool.submit(() -> {
+				together.await(10, TimeUnit.SECONDS);
+				// A store each, as the real callers have: the OpAMP client builds its own
+				return new InstanceUidStore(file).loadOrCreate();
+			})).toList();
 			loaded = claims.stream().map(InstanceUidStoreTest::join).toList();
 		}
 

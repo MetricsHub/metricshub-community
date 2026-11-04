@@ -185,8 +185,9 @@ public class LinuxSystemdRunnerLauncher implements RunnerLauncher {
 	 * @throws UpgradeException when the deployment kind is not a Linux package
 	 */
 	private static String packageType(final UpgradeTransaction transaction) throws UpgradeException {
-		final String kind =
-			transaction.getDeploymentKind() == null ? "" : transaction.getDeploymentKind().toLowerCase(Locale.ROOT);
+		final String kind = transaction.getDeploymentKind() == null
+			? ""
+			: transaction.getDeploymentKind().toLowerCase(Locale.ROOT);
 		if (!Set.of("deb", "rpm").contains(kind)) {
 			throw new UpgradeException("The systemd upgrade runner only supports deb and rpm packages, not " + kind);
 		}

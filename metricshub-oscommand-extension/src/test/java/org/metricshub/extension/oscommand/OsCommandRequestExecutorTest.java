@@ -32,8 +32,8 @@ class OsCommandRequestExecutorTest {
 	void authenticateSshTest() throws IOException, ClientException {
 		doReturn(true).when(sshClient).authenticate(anyString(), any(File.class), any(char[].class));
 
-		assertDoesNotThrow(() ->
-			OsCommandRequestExecutor.authenticateSsh(
+		assertDoesNotThrow(
+			() -> OsCommandRequestExecutor.authenticateSsh(
 				sshClient,
 				"hostname",
 				"username",
@@ -44,8 +44,8 @@ class OsCommandRequestExecutorTest {
 
 		doReturn(true).when(sshClient).authenticate(anyString(), any(char[].class));
 
-		assertDoesNotThrow(() ->
-			OsCommandRequestExecutor.authenticateSsh(sshClient, "hostname", "username", "password".toCharArray(), null)
+		assertDoesNotThrow(
+			() -> OsCommandRequestExecutor.authenticateSsh(sshClient, "hostname", "username", "password".toCharArray(), null)
 		);
 
 		doReturn(true).when(sshClient).authenticate(anyString());
@@ -53,8 +53,9 @@ class OsCommandRequestExecutorTest {
 		assertDoesNotThrow(() -> OsCommandRequestExecutor.authenticateSsh(sshClient, "hostname", "username", null, null));
 
 		doThrow(new IOException()).when(sshClient).authenticate(anyString(), any(File.class), any(char[].class));
-		assertThrows(ClientException.class, () ->
-			OsCommandRequestExecutor.authenticateSsh(
+		assertThrows(
+			ClientException.class,
+			() -> OsCommandRequestExecutor.authenticateSsh(
 				sshClient,
 				"hostname",
 				"username",
@@ -64,8 +65,9 @@ class OsCommandRequestExecutorTest {
 		);
 
 		doReturn(false).when(sshClient).authenticate(anyString(), any(File.class), any(char[].class));
-		assertThrows(ClientException.class, () ->
-			OsCommandRequestExecutor.authenticateSsh(
+		assertThrows(
+			ClientException.class,
+			() -> OsCommandRequestExecutor.authenticateSsh(
 				sshClient,
 				"hostname",
 				"username",
@@ -105,8 +107,12 @@ class OsCommandRequestExecutorTest {
 		final List<File> localFiles2 = List.of(tempFile1, tempFile2);
 
 		result = OsCommandRequestExecutor.updateCommandWithLocalList(commandWithFiles, localFiles2, remoteDirectory);
-		final String expected2 =
-			"python " + remoteDirectory + tempFile1.getName() + " && bash " + remoteDirectory + tempFile2.getName();
+		final String expected2 = "python " +
+			remoteDirectory +
+			tempFile1.getName() +
+			" && bash " +
+			remoteDirectory +
+			tempFile2.getName();
 		assertEquals(expected2, result, "Multiple file paths should be replaced with remote directory + filename");
 
 		// Test with two embedded files to verify reduce accumulator works correctly
@@ -124,8 +130,7 @@ class OsCommandRequestExecutorTest {
 			localFilesTwoEmbedded,
 			remoteDirectory
 		);
-		final String expectedTwoEmbedded =
-			"bash " +
+		final String expectedTwoEmbedded = "bash " +
 			remoteDirectory +
 			tempFile5.getName() +
 			" && " +

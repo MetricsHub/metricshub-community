@@ -120,8 +120,7 @@ public class ConfigurationFilesService {
 
 		// Only list top-level YAML files, excluding any subdirectories (e.g., backup)
 		try (Stream<Path> files = Files.list(configurationDirectory)) {
-			return files
-				.filter(Files::isRegularFile)
+			return files.filter(Files::isRegularFile)
 				.filter(ConfigurationFilesService::hasAllowedExtension)
 				.map(this::buildConfigurationFile)
 				.filter(Objects::nonNull)
@@ -503,11 +502,7 @@ public class ConfigurationFilesService {
 				return "";
 			}
 
-			return errors
-				.stream()
-				.findFirst()
-				.map(DeserializationFailure.Error::getMessage)
-				.orElseGet(() -> "");
+			return errors.stream().findFirst().map(DeserializationFailure.Error::getMessage).orElseGet(() -> "");
 		}
 	}
 
@@ -692,8 +687,7 @@ public class ConfigurationFilesService {
 			return List.of();
 		}
 		try (Stream<Path> files = Files.list(backupDir)) {
-			return files
-				.filter(Files::isRegularFile)
+			return files.filter(Files::isRegularFile)
 				.filter(ConfigurationFilesService::hasAllowedExtension)
 				.filter(path -> BackupFileNames.isBackupFileName(path.getFileName().toString()))
 				.map(this::buildConfigurationFile)

@@ -194,10 +194,7 @@ class ConnectorToolCallbacksTest {
 	}
 
 	private static List<String> names(final List<ToolCallback> callbacks) {
-		return callbacks
-			.stream()
-			.map(callback -> callback.getToolDefinition().name())
-			.toList();
+		return callbacks.stream().map(callback -> callback.getToolDefinition().name()).toList();
 	}
 
 	private static JsonNode response(final JsonNode result, final String hostname) {

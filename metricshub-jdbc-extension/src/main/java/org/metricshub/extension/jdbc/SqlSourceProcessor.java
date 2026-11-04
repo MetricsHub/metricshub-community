@@ -43,9 +43,10 @@ public class SqlSourceProcessor {
 	private Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider;
 	private JdbcDriverSelection driverSelection;
 
-	private static final Function<TelemetryManager, JdbcConfiguration> DEFAULT_JDBC_CONFIGURATION_PROVIDER =
-		telemetryManager ->
-			(JdbcConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(JdbcConfiguration.class);
+	private static final Function<TelemetryManager, JdbcConfiguration> DEFAULT_JDBC_CONFIGURATION_PROVIDER = telemetryManager -> (JdbcConfiguration) telemetryManager
+		.getHostConfiguration()
+		.getConfigurations()
+		.get(JdbcConfiguration.class);
 
 	/**
 	 * Creates a new {@link SqlSourceProcessor} with the given executor and connector ID,

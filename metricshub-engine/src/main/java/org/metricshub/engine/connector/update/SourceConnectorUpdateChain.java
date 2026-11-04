@@ -75,8 +75,7 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 		// source2 -> []
 		// source3 -> [source1, source2]
 		// Open a stream and call buildDependencyEntry to fetch the dependency identifiers on the same context
-		final Map<String, Set<String>> sourceIdToDependencyIds = sources
-			.entrySet()
+		final Map<String, Set<String>> sourceIdToDependencyIds = sources.entrySet()
 			.stream()
 			.map(entry -> buildDependencyEntry(entry, context, sourceGroup))
 			.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (v1, _) -> v1));
@@ -87,8 +86,7 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 		// Initialize the Map of found dependencies
 		// With this map we will avoid looping over all the dependencies each time if all the
 		// levels are not computed yet.
-		final Map<String, Map<String, Integer>> foundDependencies = sourceIdToDependencyIds
-			.entrySet()
+		final Map<String, Map<String, Integer>> foundDependencies = sourceIdToDependencyIds.entrySet()
 			.stream()
 			.filter(entry -> !entry.getValue().isEmpty())
 			.map(entry -> Map.entry(entry.getKey(), new HashMap<String, Integer>()))
@@ -150,8 +148,7 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 		remaining.removeAll(found.keySet());
 
 		for (String depId : remaining) {
-			mapLevels
-				.entrySet()
+			mapLevels.entrySet()
 				.stream()
 				.filter(entry -> entry.getValue().contains(depId))
 				.findFirst()

@@ -41,8 +41,7 @@ class CommandLineToolTest {
 		final String yaml = loader.generateYaml();
 
 		assertNotNull(yaml, "Generated YAML should not be null");
-		assertEquals(
-			"""
+		assertEquals("""
 
 			resources:
 			  host-01:
@@ -59,9 +58,7 @@ class CommandLineToolTest {
 			    protocols:
 			      ssh:
 			        username: admin
-			""",
-			yaml
-		);
+			""", yaml);
 	}
 
 	@Test
@@ -91,8 +88,11 @@ class CommandLineToolTest {
 
 	@Test
 	void testFailOnErrorTrueThrowsOnNonZeroExit() {
-		final IOException exception = assertThrows(IOException.class, () ->
-			commandLineTool.execute(Map.of("command", echoToStderrCommand("boom") + " && exit 2", "failOnError", "true"))
+		final IOException exception = assertThrows(
+			IOException.class,
+			() -> commandLineTool.execute(
+				Map.of("command", echoToStderrCommand("boom") + " && exit 2", "failOnError", "true")
+			)
 		);
 		assertTrue(exception.getMessage().contains("exit code 2"), "message should include the exit code");
 		assertTrue(exception.getMessage().contains("boom"), "message should include stderr");
@@ -117,8 +117,9 @@ class CommandLineToolTest {
 			}
 		}
 
-		final IOException exception = assertThrows(IOException.class, () ->
-			commandLineTool.execute(dumpFileCommand(bigFile))
+		final IOException exception = assertThrows(
+			IOException.class,
+			() -> commandLineTool.execute(dumpFileCommand(bigFile))
 		);
 		assertTrue(exception.getMessage().contains("produced more than"), "message should report the overflow");
 	}
@@ -128,8 +129,9 @@ class CommandLineToolTest {
 		// The shell exits at once but leaves a child holding the output pipes: collecting that output
 		// must not run past the deadline.
 		final long start = System.currentTimeMillis();
-		assertThrows(TimeoutException.class, () ->
-			commandLineTool.execute(Map.of("command", detachedSleepCommand(20), "timeout", "1"))
+		assertThrows(
+			TimeoutException.class,
+			() -> commandLineTool.execute(Map.of("command", detachedSleepCommand(20), "timeout", "1"))
 		);
 		final long elapsed = System.currentTimeMillis() - start;
 		assertTrue(elapsed < 10_000, "should have given up near the timeout, but took " + elapsed + " ms");
@@ -191,13 +193,15 @@ class CommandLineToolTest {
 		final String failingCommand,
 		final String slowCommand
 	) {
-		final IOException failure = assertThrows(IOException.class, () ->
-			commandLineTool.execute(Map.of("command", failingCommand, "failOnError", "true"))
+		final IOException failure = assertThrows(
+			IOException.class,
+			() -> commandLineTool.execute(Map.of("command", failingCommand, "failOnError", "true"))
 		);
 		assertFalse(failure.getMessage().contains(secret), "the failure message must not carry the command line");
 
-		final TimeoutException timeout = assertThrows(TimeoutException.class, () ->
-			commandLineTool.execute(Map.of("command", slowCommand, "timeout", "1"))
+		final TimeoutException timeout = assertThrows(
+			TimeoutException.class,
+			() -> commandLineTool.execute(Map.of("command", slowCommand, "timeout", "1"))
 		);
 		assertFalse(timeout.getMessage().contains(secret), "the timeout message must not carry the command line");
 	}
@@ -249,24 +253,27 @@ class CommandLineToolTest {
 
 	@Test
 	void testTimeout() {
-		final TimeoutException exception = assertThrows(TimeoutException.class, () ->
-			commandLineTool.execute(Map.of("command", sleepCommand(3), "timeout", "1"))
+		final TimeoutException exception = assertThrows(
+			TimeoutException.class,
+			() -> commandLineTool.execute(Map.of("command", sleepCommand(3), "timeout", "1"))
 		);
 		assertTrue(exception.getMessage().contains("timed out"), "exception message should mention the timeout");
 	}
 
 	@Test
 	void testMissingCommandThrows() {
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			commandLineTool.execute(Map.of())
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> commandLineTool.execute(Map.of())
 		);
 		assertTrue(exception.getMessage().contains("command"), "exception message should mention the missing argument");
 	}
 
 	@Test
 	void testInvalidEnvFormatThrows() {
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			commandLineTool.execute(Map.of("command", "echo hi", "env", "NOT_A_KEY_VALUE_PAIR"))
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> commandLineTool.execute(Map.of("command", "echo hi", "env", "NOT_A_KEY_VALUE_PAIR"))
 		);
 		assertTrue(
 			exception.getMessage().contains("environment variable"),
@@ -287,12 +294,8 @@ class CommandLineToolTest {
 	private static long countSleepProcesses() {
 		final String name = LocalOsHandler.isWindows() ? "ping.exe" : "sleep";
 		return ProcessHandle.allProcesses()
-			.filter(handle ->
-				handle
-					.info()
-					.command()
-					.map(command -> command.toLowerCase(Locale.ROOT).endsWith(name))
-					.orElse(false)
+			.filter(
+				handle -> handle.info().command().map(command -> command.toLowerCase(Locale.ROOT).endsWith(name)).orElse(false)
 			)
 			.count();
 	}

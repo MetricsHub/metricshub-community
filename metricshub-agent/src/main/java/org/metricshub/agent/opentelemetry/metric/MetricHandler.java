@@ -74,10 +74,8 @@ public class MetricHandler {
 		final Map<String, String> resourceAttributes,
 		final Map<String, Metric> metricsCache
 	) {
-		return HANDLERS.get(context.getType()).apply(
-			new ResourceMetricContext(context, resourceAttributes, metricsCache),
-			metric
-		);
+		return HANDLERS.get(context.getType())
+			.apply(new ResourceMetricContext(context, resourceAttributes, metricsCache), metric);
 	}
 
 	/**
@@ -107,24 +105,22 @@ public class MetricHandler {
 			);
 		} else if (metric instanceof StateSetMetric stateSetMetric) {
 			final Function<String, AbstractMetricRecorder> creator = context.isSuppressZerosCompression()
-				? state ->
-						new GaugeSuppressZerosStateMetricRecorder(
-							stateSetMetric,
-							context.getUnit(),
-							context.getDescription(),
-							state,
-							resourceAttributes,
-							metricsCache
-						)
-				: state ->
-						new GaugeStateMetricRecorder(
-							stateSetMetric,
-							context.getUnit(),
-							context.getDescription(),
-							state,
-							resourceAttributes,
-							metricsCache
-						);
+				? state -> new GaugeSuppressZerosStateMetricRecorder(
+					stateSetMetric,
+					context.getUnit(),
+					context.getDescription(),
+					state,
+					resourceAttributes,
+					metricsCache
+				)
+				: state -> new GaugeStateMetricRecorder(
+					stateSetMetric,
+					context.getUnit(),
+					context.getDescription(),
+					state,
+					resourceAttributes,
+					metricsCache
+				);
 
 			return Stream.of(stateSetMetric.getStateSet()).map(creator).toList();
 		}
@@ -158,24 +154,22 @@ public class MetricHandler {
 			);
 		} else if (metric instanceof StateSetMetric stateSetMetric) {
 			final Function<String, AbstractMetricRecorder> creator = context.isSuppressZerosCompression()
-				? state ->
-						new CounterSuppressZerosStateMetricRecorder(
-							stateSetMetric,
-							context.getUnit(),
-							context.getDescription(),
-							state,
-							resourceAttributes,
-							metricsCache
-						)
-				: state ->
-						new CounterStateMetricRecorder(
-							stateSetMetric,
-							context.getUnit(),
-							context.getDescription(),
-							state,
-							resourceAttributes,
-							metricsCache
-						);
+				? state -> new CounterSuppressZerosStateMetricRecorder(
+					stateSetMetric,
+					context.getUnit(),
+					context.getDescription(),
+					state,
+					resourceAttributes,
+					metricsCache
+				)
+				: state -> new CounterStateMetricRecorder(
+					stateSetMetric,
+					context.getUnit(),
+					context.getDescription(),
+					state,
+					resourceAttributes,
+					metricsCache
+				);
 
 			return Stream.of(stateSetMetric.getStateSet()).map(creator).toList();
 		}
@@ -209,24 +203,22 @@ public class MetricHandler {
 			);
 		} else if (metric instanceof StateSetMetric stateSetMetric) {
 			final Function<String, AbstractMetricRecorder> creator = context.isSuppressZerosCompression()
-				? state ->
-						new UpDownCounterSuppressZerosStateMetricRecorder(
-							stateSetMetric,
-							context.getUnit(),
-							context.getDescription(),
-							state,
-							resourceAttributes,
-							metricsCache
-						)
-				: state ->
-						new UpDownCounterStateMetricRecorder(
-							stateSetMetric,
-							context.getUnit(),
-							context.getDescription(),
-							state,
-							resourceAttributes,
-							metricsCache
-						);
+				? state -> new UpDownCounterSuppressZerosStateMetricRecorder(
+					stateSetMetric,
+					context.getUnit(),
+					context.getDescription(),
+					state,
+					resourceAttributes,
+					metricsCache
+				)
+				: state -> new UpDownCounterStateMetricRecorder(
+					stateSetMetric,
+					context.getUnit(),
+					context.getDescription(),
+					state,
+					resourceAttributes,
+					metricsCache
+				);
 
 			return Stream.of(stateSetMetric.getStateSet()).map(creator).toList();
 		}

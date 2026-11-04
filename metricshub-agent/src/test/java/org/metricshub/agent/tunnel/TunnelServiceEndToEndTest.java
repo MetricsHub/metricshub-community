@@ -104,8 +104,11 @@ class TunnelServiceEndToEndTest {
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 		when(agentContextHolder.getGeneration()).thenReturn(1L);
 
-		service = new TunnelService(agentContextHolder, toolCallbackProvider, TunnelClient::new, () ->
-			"01923e4a-7c1e-7f4b-8a2d-3c5e6f7a8b9c"
+		service = new TunnelService(
+			agentContextHolder,
+			toolCallbackProvider,
+			TunnelClient::new,
+			() -> "01923e4a-7c1e-7f4b-8a2d-3c5e6f7a8b9c"
 		);
 	}
 

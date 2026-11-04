@@ -100,8 +100,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	/**
 	 * Stateless proxy for full source table log lines (used for non-file sources and for file sources when detail logging is on).
 	 */
-	private static final SourceTableLoggingProxy DEFAULT_SOURCE_TABLE_LOGGING_PROXY =
-		new DefaultSourceTableLoggingProxy();
+	private static final SourceTableLoggingProxy DEFAULT_SOURCE_TABLE_LOGGING_PROXY = new DefaultSourceTableLoggingProxy();
 
 	/**
 	 * Format for string value like: <em>connector_connector-id</em>
@@ -157,8 +156,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			logBeginOperation(SOURCE, source, sourceKey, connectorId, hostname);
 
-			final ConnectorNamespace connectorNamespace = telemetryManager
-				.getHostProperties()
+			final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId);
 			final SourceTable previousSourceTable = connectorNamespace.getSourceTable(sourceKey);
 
@@ -263,8 +261,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				);
 			}
 
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
 				.addSourceTable(sourceKey, computeProcessor.getSourceTable());
 		}
@@ -308,16 +305,15 @@ public abstract class AbstractStrategy implements IStrategy {
 			.attributes(attributes)
 			.build();
 
-		final Supplier<SourceTable> executable = () ->
-			source.accept(
-				SourceUpdaterProcessor.builder()
-					.connectorId(connectorId)
-					.sourceProcessor(sourceProcessor)
-					.telemetryManager(telemetryManager)
-					.attributes(attributes)
-					.extensionManager(extensionManager)
-					.build()
-			);
+		final Supplier<SourceTable> executable = () -> source.accept(
+			SourceUpdaterProcessor.builder()
+				.connectorId(connectorId)
+				.sourceProcessor(sourceProcessor)
+				.telemetryManager(telemetryManager)
+				.attributes(attributes)
+				.extensionManager(extensionManager)
+				.build()
+		);
 
 		// Process the source to get a source table
 
@@ -451,22 +447,18 @@ public abstract class AbstractStrategy implements IStrategy {
 			return false;
 		}
 
-		return currentConnector
-			.getMonitors()
-			.values()
-			.stream()
-			.anyMatch(monitorJob -> {
-				switch (strategyJobName.toLowerCase()) {
-					case "discovery":
-						return monitorJob instanceof StandardMonitorJob standardJob && standardJob.getDiscovery() != null;
-					case "collect":
-						return monitorJob instanceof StandardMonitorJob standardJob && standardJob.getCollect() != null;
-					case "simple":
-						return monitorJob instanceof SimpleMonitorJob simpleJob && simpleJob.getSimple() != null;
-					default:
-						throw new IllegalArgumentException("Unknown strategy job name: " + strategyJobName);
-				}
-			});
+		return currentConnector.getMonitors().values().stream().anyMatch(monitorJob -> {
+			switch (strategyJobName.toLowerCase()) {
+				case "discovery":
+					return monitorJob instanceof StandardMonitorJob standardJob && standardJob.getDiscovery() != null;
+				case "collect":
+					return monitorJob instanceof StandardMonitorJob standardJob && standardJob.getCollect() != null;
+				case "simple":
+					return monitorJob instanceof SimpleMonitorJob simpleJob && simpleJob.getSimple() != null;
+				default:
+					throw new IllegalArgumentException("Unknown strategy job name: " + strategyJobName);
+			}
+		});
 	}
 
 	/**
@@ -536,8 +528,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		final boolean validationSuccess = connectorTestResult.isSuccess();
 
 		// Get the connector's namespace to track consecutive validation failures
-		final ConnectorNamespace connectorNamespace = telemetryManager
-			.getHostProperties()
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(connectorId);
 
 		if (validationSuccess) {
@@ -589,16 +580,14 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	protected String buildStatusInformation(final String hostname, final ConnectorTestResult testResult) {
 		final StringBuilder value = new StringBuilder();
-		final String builtTestResult = testResult
-			.getCriterionTestResults()
+		final String builtTestResult = testResult.getCriterionTestResults()
 			.stream()
-			.filter(criterionTestResult ->
-				!(criterionTestResult.getResult() == null && criterionTestResult.getMessage() == null)
+			.filter(
+				criterionTestResult -> !(criterionTestResult.getResult() == null && criterionTestResult.getMessage() == null)
 			)
 			.map(CriterionTestResult::displayCriterionMessage)
 			.collect(Collectors.joining("\n"));
-		value
-			.append(builtTestResult)
+		value.append(builtTestResult)
 			.append("Conclusion:\n")
 			.append(String.format("Test on %s %s", hostname, testResult.isSuccess() ? "SUCCEEDED" : "FAILED"));
 		return value.toString();
@@ -623,8 +612,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		);
 
 		// Get the connector's namespace containing related settings
-		final ConnectorNamespace connectorNamespace = telemetryManager
-			.getHostProperties()
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(connectorId);
 
 		// Collect the metric
@@ -649,10 +637,8 @@ public abstract class AbstractStrategy implements IStrategy {
 		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
 		final Set<String> includedMonitors = hostConfiguration.getIncludedMonitors();
 		final Set<String> excludedMonitors = hostConfiguration.getExcludedMonitors();
-		return (
-			(includedMonitors != null && !includedMonitors.contains(monitorType)) ||
-			(excludedMonitors != null && excludedMonitors.contains(monitorType))
-		);
+		return ((includedMonitors != null && !includedMonitors.contains(monitorType)) ||
+			(excludedMonitors != null && excludedMonitors.contains(monitorType)));
 	}
 
 	/**
@@ -730,8 +716,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		final String monitorType,
 		final String connectorId
 	) {
-		return new StringBuilder()
-			.append("metricshub.job.duration{job.type=\"")
+		return new StringBuilder().append("metricshub.job.duration{job.type=\"")
 			.append(jobName)
 			.append("\", monitor.type=\"")
 			.append(monitorType)
@@ -748,8 +733,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @return the job duration metric key.
 	 */
 	private String generateJobDurationMetricKey(final String jobName, final String connectorId) {
-		return new StringBuilder()
-			.append("metricshub.job.duration{job.type=\"")
+		return new StringBuilder().append("metricshub.job.duration{job.type=\"")
 			.append(jobName)
 			.append("\", connector_id=\"")
 			.append(connectorId)

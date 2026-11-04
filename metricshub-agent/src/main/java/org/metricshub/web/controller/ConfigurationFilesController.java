@@ -126,8 +126,7 @@ public class ConfigurationFilesController {
 		description = "Returns the content of a specific configuration file as plain text.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File content retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getConfigurationFileContent(
@@ -152,8 +151,7 @@ public class ConfigurationFilesController {
 		description = "Creates or updates a configuration file. Optionally validates content before saving.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File saved successfully"),
-			@ApiResponse(responseCode = "400", description = "Validation failed")
-		}
+			@ApiResponse(responseCode = "400", description = "Validation failed") }
 	)
 	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateConfigurationFile(
@@ -201,8 +199,7 @@ public class ConfigurationFilesController {
 		description = "Creates or updates a draft configuration file. Optionally validates content before saving.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Draft file saved successfully"),
-			@ApiResponse(responseCode = "400", description = "Validation failed")
-		}
+			@ApiResponse(responseCode = "400", description = "Validation failed") }
 	)
 	@PutMapping(
 		value = "/draft/{fileName}",
@@ -254,8 +251,7 @@ public class ConfigurationFilesController {
 		description = "Validates a configuration file's content. If no content is provided, validates the file on disk.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Validation result returned"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@PostMapping(
 		value = "/{fileName}",
@@ -302,8 +298,7 @@ public class ConfigurationFilesController {
 		description = "Deletes a configuration file by name.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "File deleted successfully"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@DeleteMapping("/{fileName}")
 	public ResponseEntity<Void> deleteConfigurationFile(
@@ -327,8 +322,7 @@ public class ConfigurationFilesController {
 		description = "Renames a configuration file.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File renamed successfully"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@PatchMapping(
 		value = "/{fileName}",
@@ -390,8 +384,7 @@ public class ConfigurationFilesController {
 		description = "Returns the content of a backup file as plain text.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Backup file content retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "Backup file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Backup file not found") }
 	)
 	@GetMapping(value = "/backup/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getBackupFileContent(
@@ -409,8 +402,7 @@ public class ConfigurationFilesController {
 		description = "Deletes a backup file by name.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Backup file deleted successfully"),
-			@ApiResponse(responseCode = "404", description = "Backup file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Backup file not found") }
 	)
 	@DeleteMapping("/backup/{fileName}")
 	public ResponseEntity<Void> deleteBackupFile(
@@ -439,8 +431,7 @@ public class ConfigurationFilesController {
 		description = "Evaluates a Velocity template (.vm) and returns the generated YAML without schema validation.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Template evaluated successfully"),
-			@ApiResponse(responseCode = "400", description = "Not a .vm file or template evaluation failed")
-		}
+			@ApiResponse(responseCode = "400", description = "Not a .vm file or template evaluation failed") }
 	)
 	@PostMapping(value = "/test/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> testVelocityTemplate(
@@ -482,8 +473,7 @@ public class ConfigurationFilesController {
 			@ApiResponse(responseCode = "202", description = "The change requires a restart, which was requested"),
 			@ApiResponse(responseCode = "400", description = "Not a .vm file, a draft, or no provider handles it"),
 			@ApiResponse(responseCode = "409", description = "The template produced no configuration"),
-			@ApiResponse(responseCode = "500", description = "The configuration reload failed")
-		}
+			@ApiResponse(responseCode = "500", description = "The configuration reload failed") }
 	)
 	@PostMapping(value = "/reevaluate/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Object>> reevaluateConfigurationFile(
@@ -509,23 +499,24 @@ public class ConfigurationFilesController {
 				case RELOADED -> ResponseEntity.ok(body(fileName, true, "Template re-evaluated and configuration reloaded."));
 				// Re-running the template produced exactly what the configuration already holds, so there
 				// is nothing to apply. That is a success, not a failure.
-				case UNCHANGED -> ResponseEntity.ok(
-					body(fileName, false, "Template re-evaluated; the configuration is already up to date.")
-				);
+				case UNCHANGED ->
+					ResponseEntity.ok(body(fileName, false, "Template re-evaluated; the configuration is already up to date."));
 				// The restart runs in the background after this response, and can still fail.
-				case RESTART_REQUESTED -> ResponseEntity.status(HttpStatus.ACCEPTED).body(
-					body(
-						fileName,
-						false,
-						"Template re-evaluated. The change requires a restart of the agent, which was requested."
-					)
-				);
-				case NOTHING_PRODUCED -> ResponseEntity.status(HttpStatus.CONFLICT).body(
-					body(fileName, false, "The template produced no configuration; the last good value is kept.")
-				);
-				case RELOAD_FAILED -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-					body(fileName, false, "The configuration reload failed; the change is retried on the next firing.")
-				);
+				case RESTART_REQUESTED ->
+					ResponseEntity.status(HttpStatus.ACCEPTED)
+						.body(
+							body(
+								fileName,
+								false,
+								"Template re-evaluated. The change requires a restart of the agent, which was requested."
+							)
+						);
+				case NOTHING_PRODUCED ->
+					ResponseEntity.status(HttpStatus.CONFLICT)
+						.body(body(fileName, false, "The template produced no configuration; the last good value is kept."));
+				case RELOAD_FAILED ->
+					ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+						.body(body(fileName, false, "The configuration reload failed; the change is retried on the next firing."));
 			};
 		} catch (IllegalArgumentException | IllegalStateException e) {
 			throw new ConfigFilesException(ConfigFilesException.Code.VALIDATION_FAILED, e.getMessage(), e);
@@ -563,8 +554,7 @@ public class ConfigurationFilesController {
 			@ApiResponse(responseCode = "200", description = "Changes applied, or nothing to apply"),
 			@ApiResponse(responseCode = "202", description = "The changes require a restart, which was requested"),
 			@ApiResponse(responseCode = "400", description = "The agent context is not available yet"),
-			@ApiResponse(responseCode = "500", description = "The configuration reload failed")
-		}
+			@ApiResponse(responseCode = "500", description = "The configuration reload failed") }
 	)
 	@PostMapping(value = "/reevaluate", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Object>> reevaluateConfiguration() throws ConfigFilesException {
@@ -576,18 +566,23 @@ public class ConfigurationFilesController {
 		} catch (ReloadFailedException e) {
 			// The cause is logged by the launcher. It is not echoed here: a configuration parse error can
 			// quote the generated configuration, credentials included.
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-				Map.of("reloaded", false, "message", "The configuration reload failed. See the agent logs for details.")
-			);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(Map.of("reloaded", false, "message", "The configuration reload failed. See the agent logs for details."));
 		}
 		return switch (result) {
 			case LOCAL_ONLY -> ResponseEntity.ok(Map.of("reloaded", true, "message", "Configuration reloaded."));
-			case NO_CHANGE -> ResponseEntity.ok(
-				Map.of("reloaded", false, "message", "The configuration is already up to date.")
-			);
-			case GLOBAL_RESTART_REQUIRED -> ResponseEntity.status(HttpStatus.ACCEPTED).body(
-				Map.of("reloaded", false, "message", "The changes require a restart of the agent. The restart was requested.")
-			);
+			case NO_CHANGE ->
+				ResponseEntity.ok(Map.of("reloaded", false, "message", "The configuration is already up to date."));
+			case GLOBAL_RESTART_REQUIRED ->
+				ResponseEntity.status(HttpStatus.ACCEPTED)
+					.body(
+						Map.of(
+							"reloaded",
+							false,
+							"message",
+							"The changes require a restart of the agent. The restart was requested."
+						)
+					);
 		};
 	}
 

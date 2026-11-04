@@ -45,8 +45,9 @@ class WebConnectorStoreConfigurationTest {
 
 		final WebConnectorStoreConfiguration configuration = new WebConnectorStoreConfiguration();
 
-		final ResponseStatusException exception = assertThrows(ResponseStatusException.class, () ->
-			configuration.webConnectorStore(agentContextHolder)
+		final ResponseStatusException exception = assertThrows(
+			ResponseStatusException.class,
+			() -> configuration.webConnectorStore(agentContextHolder)
 		);
 		assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.getStatusCode());
 	}

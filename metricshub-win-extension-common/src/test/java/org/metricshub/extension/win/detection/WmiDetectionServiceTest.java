@@ -49,8 +49,7 @@ class WmiDetectionServiceTest {
 	@Test
 	void testProcessWmiCriterionSuccess() throws Exception {
 		final IWinConfiguration winConfiguration = WmiTestConfiguration.builder().build();
-		doReturn(List.of(List.of("MetricsHubServiceManager"), List.of("otelcol-contrib")))
-			.when(winRequestExecutorMock)
+		doReturn(List.of(List.of("MetricsHubServiceManager"), List.of("otelcol-contrib"))).when(winRequestExecutorMock)
 			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE, null);
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WMI_QUERY).expectedResult("metricshub").build();
 
@@ -68,8 +67,7 @@ class WmiDetectionServiceTest {
 	@Test
 	void testProcessWmiCriterionActualResultIsNotExpectedResult() throws Exception {
 		final IWinConfiguration winConfiguration = WmiTestConfiguration.builder().build();
-		doReturn(List.of(List.of("otelcol-contrib")))
-			.when(winRequestExecutorMock)
+		doReturn(List.of(List.of("otelcol-contrib"))).when(winRequestExecutorMock)
 			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE, null);
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WMI_QUERY).expectedResult("metricshub").build();
 
@@ -87,8 +85,7 @@ class WmiDetectionServiceTest {
 	@Test
 	void testProcessWmiCriterionNoExpectedResult() throws Exception {
 		final IWinConfiguration winConfiguration = WmiTestConfiguration.builder().build();
-		doReturn(List.of(List.of("otelcol-contrib")))
-			.when(winRequestExecutorMock)
+		doReturn(List.of(List.of("otelcol-contrib"))).when(winRequestExecutorMock)
 			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE, null);
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WMI_QUERY).build();
 
@@ -107,15 +104,15 @@ class WmiDetectionServiceTest {
 	void testPerformDetectionTest() throws Exception {
 		// Invalid parameters
 
-		assertThrows(IllegalArgumentException.class, () ->
-			wmiDetectionService.performDetectionTest(HOST_NAME, null, null, CONNECTOR_ID, true, null)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> wmiDetectionService.performDetectionTest(HOST_NAME, null, null, CONNECTOR_ID, true, null)
 		);
 
 		// ClientException
 
 		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder().build();
-		doThrow(new ClientException(CLIENT_ERROR_MSG, new TimeoutException()))
-			.when(winRequestExecutorMock)
+		doThrow(new ClientException(CLIENT_ERROR_MSG, new TimeoutException())).when(winRequestExecutorMock)
 			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 		WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).build();
 		CriterionTestResult result = wmiDetectionService.performDetectionTest(
@@ -132,8 +129,7 @@ class WmiDetectionServiceTest {
 
 		// Empty result
 		// ClientException
-		doReturn(Collections.emptyList())
-			.when(winRequestExecutorMock)
+		doReturn(Collections.emptyList()).when(winRequestExecutorMock)
 			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 		result = wmiDetectionService.performDetectionTest(
 			HOST_NAME,
@@ -174,8 +170,7 @@ class WmiDetectionServiceTest {
 		assertTrue(result.getMessage().contains(WQL_RESULT_VALUE), RESULT_MESSAGE_SHOULD_CONTAIN_RESULT);
 
 		// Non-empty result, and non-matching expected result => failure
-		doReturn(List.of(List.of("non-matching")))
-			.when(winRequestExecutorMock)
+		doReturn(List.of(List.of("non-matching"))).when(winRequestExecutorMock)
 			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 		wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).expectedResult(WQL_RESULT_VALUE).build();
 		result = wmiDetectionService.performDetectionTest(

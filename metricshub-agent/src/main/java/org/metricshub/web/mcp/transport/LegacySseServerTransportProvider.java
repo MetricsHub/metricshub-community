@@ -284,12 +284,11 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 		return Flux.fromIterable(sessions.values())
 			// The server must not send anything but pings and logging to a client that has not completed the handshake
 			.filter(sseSession -> sseSession.state() == SessionState.INITIALIZED)
-			.flatMap(sseSession ->
-				sseSession
-					.session()
+			.flatMap(
+				sseSession -> sseSession.session()
 					.sendNotification(method, params)
-					.doOnError(e ->
-						log.error("Failed to send {} to MCP SSE session {}: {}", method, sseSession.id(), e.getMessage())
+					.doOnError(
+						e -> log.error("Failed to send {} to MCP SSE session {}: {}", method, sseSession.id(), e.getMessage())
 					)
 					.onErrorComplete()
 			)
@@ -304,23 +303,19 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 */
 	@Override
 	public Mono<Void> closeGracefully() {
-		return Flux.fromIterable(sessions.values())
-			.doFirst(() -> {
-				this.isClosing = true;
-				if (this.maintenanceTask != null) {
-					this.maintenanceTask.dispose();
-				}
-				log.debug(
-					"Initiating graceful shutdown of the legacy MCP SSE transport with {} active sessions",
-					sessions.size()
-				);
-			})
-			.flatMap(sseSession -> sseSession.session().closeGracefully())
-			.then()
-			.doOnSuccess(v -> {
-				log.debug("Graceful shutdown of the legacy MCP SSE transport completed");
-				sessions.clear();
-			});
+		return Flux.fromIterable(sessions.values()).doFirst(() -> {
+			this.isClosing = true;
+			if (this.maintenanceTask != null) {
+				this.maintenanceTask.dispose();
+			}
+			log.debug(
+				"Initiating graceful shutdown of the legacy MCP SSE transport with {} active sessions",
+				sessions.size()
+			);
+		}).flatMap(sseSession -> sseSession.session().closeGracefully()).then().doOnSuccess(v -> {
+			log.debug("Graceful shutdown of the legacy MCP SSE transport completed");
+			sessions.clear();
+		});
 	}
 
 	/**
@@ -363,40 +358,37 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).body("Server is shutting down");
 		}
 
-		return ServerResponse.sse(
-			sseBuilder -> {
-				final WebMvcMcpSessionTransport sessionTransport = new WebMvcMcpSessionTransport(sseBuilder);
-				final McpServerSession session = sessionFactory.create(sessionTransport);
-				final String sessionId = session.getId();
-				final SseSession sseSession = new SseSession(sessionId, session, sessionTransport);
-				sessionTransport.attach(sseSession);
+		return ServerResponse.sse(sseBuilder -> {
+			final WebMvcMcpSessionTransport sessionTransport = new WebMvcMcpSessionTransport(sseBuilder);
+			final McpServerSession session = sessionFactory.create(sessionTransport);
+			final String sessionId = session.getId();
+			final SseSession sseSession = new SseSession(sessionId, session, sessionTransport);
+			sessionTransport.attach(sseSession);
 
-				sseBuilder.onComplete(() -> forgetSession(sseSession, "completed"));
-				sseBuilder.onTimeout(() -> forgetSession(sseSession, "timed out"));
-				sseBuilder.onError(e -> forgetSession(sseSession, "failed: " + e.getMessage()));
-				this.sessions.put(sessionId, sseSession);
-				if (this.isClosing) {
-					// The shutdown started between the check above and the registration: do not leave a stream open
-					closeSession(sseSession, "the server is shutting down");
-					return;
-				}
-				log.debug(
-					"Opened MCP SSE session {} from {}. Active sessions: {}",
-					sessionId,
-					describeRemote(request),
-					sessions.size()
-				);
+			sseBuilder.onComplete(() -> forgetSession(sseSession, "completed"));
+			sseBuilder.onTimeout(() -> forgetSession(sseSession, "timed out"));
+			sseBuilder.onError(e -> forgetSession(sseSession, "failed: " + e.getMessage()));
+			this.sessions.put(sessionId, sseSession);
+			if (this.isClosing) {
+				// The shutdown started between the check above and the registration: do not leave a stream open
+				closeSession(sseSession, "the server is shutting down");
+				return;
+			}
+			log.debug(
+				"Opened MCP SSE session {} from {}. Active sessions: {}",
+				sessionId,
+				describeRemote(request),
+				sessions.size()
+			);
 
-				try {
-					sessionTransport.sendEndpointEvent(buildEndpointUrl(sessionId));
-				} catch (Exception e) {
-					log.error("Failed to send the initial endpoint event to MCP SSE session {}: {}", sessionId, e.getMessage());
-					forgetSession(sseSession, "failed to send the endpoint event");
-					sseBuilder.error(e);
-				}
-			},
-			Duration.ZERO
-		);
+			try {
+				sessionTransport.sendEndpointEvent(buildEndpointUrl(sessionId));
+			} catch (Exception e) {
+				log.error("Failed to send the initial endpoint event to MCP SSE session {}: {}", sessionId, e.getMessage());
+				forgetSession(sseSession, "failed to send the endpoint event");
+				sseBuilder.error(e);
+			}
+		}, Duration.ZERO);
 	}
 
 	/**
@@ -427,17 +419,17 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 		final Optional<String> sessionIdParam = request.param(SESSION_ID);
 		if (sessionIdParam.isEmpty()) {
-			return ServerResponse.badRequest().body(
-				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Session ID missing in message endpoint"))
-			);
+			return ServerResponse.badRequest()
+				.body(
+					new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Session ID missing in message endpoint"))
+				);
 		}
 
 		final String sessionId = sessionIdParam.get();
 		final SseSession sseSession = sessions.get(sessionId);
 		if (sseSession == null) {
-			return ServerResponse.status(HttpStatus.NOT_FOUND).body(
-				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Session not found: " + sessionId))
-			);
+			return ServerResponse.status(HttpStatus.NOT_FOUND)
+				.body(new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Session not found: " + sessionId)));
 		}
 
 		final JSONRPCMessage message;
@@ -445,15 +437,14 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			message = McpSchema.deserializeJsonRpcMessage(jsonMapper, request.body(String.class));
 		} catch (IllegalArgumentException | IOException | ServletException | JacksonException e) {
 			log.error("Failed to deserialize the MCP message posted on SSE session {}: {}", sessionId, e.getMessage());
-			return ServerResponse.badRequest().body(
-				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Invalid message format"))
-			);
+			return ServerResponse.badRequest()
+				.body(new McpError(new JSONRPCError(McpSchema.ErrorCodes.INVALID_REQUEST, "Invalid message format")));
 		}
 
 		if (
 			message instanceof JSONRPCRequest initializeRequest &&
-			McpSchema.METHOD_INITIALIZE.equals(initializeRequest.method()) &&
-			sseSession.claimHandshake(initializeRequest.id()) == HandshakeClaim.PENDING
+				McpSchema.METHOD_INITIALIZE.equals(initializeRequest.method()) &&
+				sseSession.claimHandshake(initializeRequest.id()) == HandshakeClaim.PENDING
 		) {
 			// A single handshake at a time: the initialize that lost the claim would race the owning one for the SDK
 			// session and make the outcome of the owning request meaningless
@@ -523,7 +514,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 
 		if (
 			message instanceof JSONRPCNotification notification &&
-			McpSchema.METHOD_NOTIFICATION_INITIALIZED.equals(notification.method())
+				McpSchema.METHOD_NOTIFICATION_INITIALIZED.equals(notification.method())
 		) {
 			// Only a handshake that actually started can complete: an initialized notification on a fresh session (or
 			// after a rejected initialize) is dropped, so that the SDK session is never marked initialized without a
@@ -544,8 +535,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 */
 	private ServerResponse answerPing(final SseSession sseSession, final JSONRPCRequest pingRequest) {
 		log.debug("Answering a pre-initialization ping on MCP SSE session {}", sseSession.id());
-		sseSession
-			.transport()
+		sseSession.transport()
 			.sendTransportMessage(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, pingRequest.id(), Map.of(), null))
 			.block();
 		return ServerResponse.ok().build();
@@ -618,8 +608,7 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			// the deadline is still written to the SSE stream. Synchronous tool executions run inline on this thread
 			// (immediateExecution) and are therefore never interrupted; the deadline only bounds asynchronous waits.
 			final Sinks.Empty<Void> completion = Sinks.empty();
-			sseSession
-				.session()
+			sseSession.session()
 				.handle(message)
 				.contextWrite(ctx -> ctx.put(McpTransportContext.KEY, transportContext))
 				.subscribe(ignored -> {}, completion::tryEmitError, completion::tryEmitEmpty);
@@ -632,8 +621,8 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 			// and starts the handshake again on a fresh session.
 			if (
 				message instanceof JSONRPCRequest failed &&
-				McpSchema.METHOD_INITIALIZE.equals(failed.method()) &&
-				sseSession.ownsPendingHandshake(failed.id())
+					McpSchema.METHOD_INITIALIZE.equals(failed.method()) &&
+					sseSession.ownsPendingHandshake(failed.id())
 			) {
 				closeSession(sseSession, "its initialize request failed or timed out (" + e.getMessage() + ")");
 			}
@@ -665,9 +654,8 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 				sseSession.id(),
 				e.getMessage()
 			);
-			return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-				new McpError(new JSONRPCError(McpSchema.ErrorCodes.INTERNAL_ERROR, e.getMessage()))
-			);
+			return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(new McpError(new JSONRPCError(McpSchema.ErrorCodes.INTERNAL_ERROR, e.getMessage())));
 		}
 	}
 
@@ -717,10 +705,11 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 * @param interval the loop interval
 	 */
 	private void startMaintenanceLoop(final Duration interval) {
-		this.maintenanceTask = Flux.interval(interval, interval, Schedulers.boundedElastic()).subscribe(
-			tick -> runMaintenance(),
-			error -> log.error("The maintenance loop of the legacy MCP SSE transport failed: {}", error.getMessage(), error)
-		);
+		this.maintenanceTask = Flux.interval(interval, interval, Schedulers.boundedElastic())
+			.subscribe(
+				tick -> runMaintenance(),
+				error -> log.error("The maintenance loop of the legacy MCP SSE transport failed: {}", error.getMessage(), error)
+			);
 	}
 
 	/**
@@ -783,27 +772,23 @@ public class LegacySseServerTransportProvider implements McpServerTransportProvi
 	 * @param sseSession the session to ping
 	 */
 	private void ping(final SseSession sseSession) {
-		sseSession
-			.session()
+		sseSession.session()
 			.sendRequest(McpSchema.METHOD_PING, null, OBJECT_TYPE_REF)
 			// The timeout signal closes the SSE stream (servlet I/O): keep it off Reactor's non-blocking parallel threads
 			.timeout(pingTimeout, Schedulers.boundedElastic())
-			.subscribe(
-				result -> log.trace("Keep-alive ping answered by MCP SSE session {}", sseSession.id()),
-				error -> {
-					if (Exceptions.unwrap(error) instanceof McpError) {
-						// The client answered, even if with a JSON-RPC error (e.g. a client without a ping handler):
-						// the connection is alive, which is all the keep-alive needs to know.
-						log.debug(
-							"MCP SSE session {} answered the keep-alive ping with an error ({}); keeping the session",
-							sseSession.id(),
-							error.getMessage()
-						);
-						return;
-					}
-					closeSession(sseSession, "the keep-alive ping was not answered: " + error.getMessage());
+			.subscribe(result -> log.trace("Keep-alive ping answered by MCP SSE session {}", sseSession.id()), error -> {
+				if (Exceptions.unwrap(error) instanceof McpError) {
+					// The client answered, even if with a JSON-RPC error (e.g. a client without a ping handler):
+					// the connection is alive, which is all the keep-alive needs to know.
+					log.debug(
+						"MCP SSE session {} answered the keep-alive ping with an error ({}); keeping the session",
+						sseSession.id(),
+						error.getMessage()
+					);
+					return;
 				}
-			);
+				closeSession(sseSession, "the keep-alive ping was not answered: " + error.getMessage());
+			});
 	}
 
 	/**

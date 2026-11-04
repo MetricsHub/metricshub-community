@@ -14,10 +14,10 @@ class CpuMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_ERRORS_LIMIT = "hw.errors.limit";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU =
-		HW_ERRORS_LIMIT + "{limit_type=\"critical\", hw.type=\"cpu\"}";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU =
-		HW_ERRORS_LIMIT + "{limit_type=\"degraded\", hw.type=\"cpu\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU = HW_ERRORS_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"cpu\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU = HW_ERRORS_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"cpu\"}";
 
 	@Test
 	void testNormalize() {
@@ -58,14 +58,12 @@ class CpuMetricNormalizerTest {
 		new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithHwErrorsMetric);
 		assertEquals(
 			2.0,
-			monitorWithHwErrorsMetric
-				.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
+			monitorWithHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 				.getValue()
 		);
 		assertEquals(
 			1.0,
-			monitorWithHwErrorsMetric
-				.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU, NumberMetric.class)
+			monitorWithHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU, NumberMetric.class)
 				.getValue()
 		);
 	}

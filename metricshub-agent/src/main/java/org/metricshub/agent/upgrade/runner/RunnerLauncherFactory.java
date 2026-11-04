@@ -76,15 +76,17 @@ public class RunnerLauncherFactory {
 	 */
 	public RunnerLauncher forDeployment(final DeploymentKind deploymentKind, final UpgradeConfig config) {
 		return switch (deploymentKind) {
-			case DEB, RPM -> new LinuxSystemdRunnerLauncher(
-				runnerScriptDirectorySupplier,
-				serviceNameResolver.resolve(config.getServiceName())
-			);
-			case MSI -> new WindowsScheduledTaskRunnerLauncher(
-				runnerScriptDirectorySupplier,
-				serviceNameResolver.resolve(config.getServiceName()),
-				config.getMsiSignatureSubjectContains()
-			);
+			case DEB, RPM ->
+				new LinuxSystemdRunnerLauncher(
+					runnerScriptDirectorySupplier,
+					serviceNameResolver.resolve(config.getServiceName())
+				);
+			case MSI ->
+				new WindowsScheduledTaskRunnerLauncher(
+					runnerScriptDirectorySupplier,
+					serviceNameResolver.resolve(config.getServiceName()),
+					config.getMsiSignatureSubjectContains()
+				);
 			default -> new UnsupportedRunnerLauncher();
 		};
 	}

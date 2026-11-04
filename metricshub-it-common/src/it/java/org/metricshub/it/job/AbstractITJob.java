@@ -60,22 +60,31 @@ public abstract class AbstractITJob implements ITJob {
 		assertConditionalCollection(expected, actual);
 		assertLegacyTextParameters(expected, actual);
 		assertAlertRules(expected, actual);
-		assertNotNull(actual.getDiscoveryTime(), () ->
-			String.format("DiscoveryTime cannot be null on monitor identifier: %s.", expected.getId())
+		assertNotNull(
+			actual.getDiscoveryTime(),
+			() -> String.format("DiscoveryTime cannot be null on monitor identifier: %s.", expected.getId())
 		);
 
 		final String expectedMonitorId = expected.getId();
-		assertEquals(expected.getType(), actual.getType(), () ->
-			String.format("Type doesn't match actual on monitor identifier: %s.", expectedMonitorId)
+		assertEquals(
+			expected.getType(),
+			actual.getType(),
+			() -> String.format("Type doesn't match actual on monitor identifier: %s.", expectedMonitorId)
 		);
-		assertEquals(expected.getId(), actual.getId(), () ->
-			String.format("ID doesn't match actual on monitor identifier: %s.", expectedMonitorId)
+		assertEquals(
+			expected.getId(),
+			actual.getId(),
+			() -> String.format("ID doesn't match actual on monitor identifier: %s.", expectedMonitorId)
 		);
-		assertEquals(expected.isEndpoint(), actual.isEndpoint(), () ->
-			String.format("isEndpoint doesn't match actual on monitor identifier: %s.", expectedMonitorId)
+		assertEquals(
+			expected.isEndpoint(),
+			actual.isEndpoint(),
+			() -> String.format("isEndpoint doesn't match actual on monitor identifier: %s.", expectedMonitorId)
 		);
-		assertEquals(expected.isEndpointHost(), actual.isEndpointHost(), () ->
-			String.format("isEndpointHost doesn't match actual on monitor identifier: %s.", expectedMonitorId)
+		assertEquals(
+			expected.isEndpointHost(),
+			actual.isEndpointHost(),
+			() -> String.format("isEndpointHost doesn't match actual on monitor identifier: %s.", expectedMonitorId)
 		);
 	}
 
@@ -88,8 +97,9 @@ public abstract class AbstractITJob implements ITJob {
 	 */
 	private static void assertAlertRules(final Monitor expectedMonitor, final Monitor actualMonitor) {
 		// Alert rules are not available yet
-		assertTrue(actualMonitor.getAlertRules().isEmpty(), () ->
-			String.format("Alert rules are not empty on monitor identifier: %s.", actualMonitor.getId())
+		assertTrue(
+			actualMonitor.getAlertRules().isEmpty(),
+			() -> String.format("Alert rules are not empty on monitor identifier: %s.", actualMonitor.getId())
 		);
 	}
 
@@ -111,32 +121,37 @@ public abstract class AbstractITJob implements ITJob {
 
 			final String expectedMonitorId = expectedMonitor.getId();
 
-			assertNotNull(expectedMetric, () ->
-				String.format("Expected metric cannot be null for monitor identifier: %s.", expectedMonitorId)
+			assertNotNull(
+				expectedMetric,
+				() -> String.format("Expected metric cannot be null for monitor identifier: %s.", expectedMonitorId)
 			);
 
 			final String expectedMetricName = expectedMetric.getName();
 
 			final AbstractMetric actualMetric = actualMonitor.getMetric(expectedMetricName, expectedMetric.getClass());
 
-			assertNotNull(actualMetric, () ->
-				String.format(
+			assertNotNull(
+				actualMetric,
+				() -> String.format(
 					"Cannot find actual metric on monitor identifier: %s. Metric name: %s.",
 					expectedMonitorId,
 					expectedKey
 				)
 			);
 
-			assertEquals(expectedMetricName, actualMetric.getName(), () ->
-				String.format(
+			assertEquals(
+				expectedMetricName,
+				actualMetric.getName(),
+				() -> String.format(
 					"Name doesn’t match actual on monitor identifier: %s. Metric name: %s.",
 					expectedMonitorId,
 					expectedMetricName
 				)
 			);
 
-			assertNotNull(actualMetric.getCollectTime(), () ->
-				String.format(
+			assertNotNull(
+				actualMetric.getCollectTime(),
+				() -> String.format(
 					"CollectTime doesn’t match actual on monitor identifier: %s. Metric name: %s.",
 					expectedMonitorId,
 					expectedMetricName
@@ -145,8 +160,10 @@ public abstract class AbstractITJob implements ITJob {
 
 			assertMetricAttributes(expectedMetric, actualMetric, expectedMonitorId);
 
-			assertEquals(expectedMetric.isResetMetricTime(), actualMetric.isResetMetricTime(), () ->
-				String.format(
+			assertEquals(
+				expectedMetric.isResetMetricTime(),
+				actualMetric.isResetMetricTime(),
+				() -> String.format(
 					"IsResetMetricTime doesn't match actual on monitor identifier: %s.  Metric name: %s.",
 					expectedMonitorId,
 					expectedMetricName
@@ -155,8 +172,10 @@ public abstract class AbstractITJob implements ITJob {
 
 			final Object expectedValue = expectedMetric.getValue();
 			final Object actualValue = actualMetric.getValue();
-			assertEquals(expectedValue, actualValue, () ->
-				String.format(
+			assertEquals(
+				expectedValue,
+				actualValue,
+				() -> String.format(
 					"Value doesn't match actual on monitor identifier: %s. Metric name: %s.",
 					expectedMonitorId,
 					expectedMetricName
@@ -188,8 +207,10 @@ public abstract class AbstractITJob implements ITJob {
 
 			final String actual = actualMonitor.getAttribute(expectedKey);
 
-			assertEquals(expected, actual, () ->
-				String.format(
+			assertEquals(
+				expected,
+				actual,
+				() -> String.format(
 					"Actual monitor's attribute did not match expected: %s on monitor identifier: %s.",
 					expectedKey,
 					expectedMonitor.getId()
@@ -217,8 +238,10 @@ public abstract class AbstractITJob implements ITJob {
 
 			final String actual = actualMetric.getAttributes().get(expectedKey);
 
-			assertEquals(expected, actual, () ->
-				String.format(
+			assertEquals(
+				expected,
+				actual,
+				() -> String.format(
 					"actual attribute did not match expected: %s on monitor identifier: %s.",
 					expectedKey,
 					expectedMonitorId
@@ -240,8 +263,10 @@ public abstract class AbstractITJob implements ITJob {
 
 			final String actual = actualMonitor.getConditionalCollection().get(expectedKey);
 
-			assertEquals(expected, actual, () ->
-				String.format(
+			assertEquals(
+				expected,
+				actual,
+				() -> String.format(
 					"Actual conditional collection did not match expected: %s on monitor identifier: %s.",
 					expectedKey,
 					expectedMonitor.getId()
@@ -263,8 +288,10 @@ public abstract class AbstractITJob implements ITJob {
 
 			final String actual = actualMonitor.getLegacyTextParameters().get(expectedKey);
 
-			assertEquals(expected, actual, () ->
-				String.format(
+			assertEquals(
+				expected,
+				actual,
+				() -> String.format(
 					"Actual LegacyTextParameter did not match expected: %s on monitor identifier: %s.",
 					expectedKey,
 					expectedMonitor.getId()
@@ -284,16 +311,18 @@ public abstract class AbstractITJob implements ITJob {
 
 		assertEquals(expectedMonitors.getTotal(), actual.getTotal(), () -> "Total monitors count doesn't match actual.");
 
-		expectedMonitors
-			.getMonitors()
-			.forEach(expectedMonitor -> {
-				final String expectedType = expectedMonitor.getType();
-				assertNotNull(expectedType, () ->
-					String.format("Expected monitor 'type' cannot be null for monitor identifier: %s.", expectedMonitor.getId())
-				);
-				final Monitor actualMonitor = telemetryManager.findMonitorByTypeAndId(expectedType, expectedMonitor.getId());
-				assertMonitor(expectedMonitor, actualMonitor);
-			});
+		expectedMonitors.getMonitors().forEach(expectedMonitor -> {
+			final String expectedType = expectedMonitor.getType();
+			assertNotNull(
+				expectedType,
+				() -> String.format(
+					"Expected monitor 'type' cannot be null for monitor identifier: %s.",
+					expectedMonitor.getId()
+				)
+			);
+			final Monitor actualMonitor = telemetryManager.findMonitorByTypeAndId(expectedType, expectedMonitor.getId());
+			assertMonitor(expectedMonitor, actualMonitor);
+		});
 
 		return this;
 	}

@@ -75,8 +75,8 @@ public class ClientsExecutor {
 		final boolean wbemKeyType,
 		boolean caseInsensitive
 	) {
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing Table Join request:\n- Left-table:\n{}\n- Right-table:\n{}\n",
 				TextTableHelper.generateTextTable(leftTable),
 				TextTableHelper.generateTextTable(rightTable)
@@ -93,8 +93,8 @@ public class ClientsExecutor {
 			caseInsensitive
 		);
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed Table Join request:\n- Left-table:\n{}\n- Right-table:\n{}\n- Result:\n{}\n",
 				TextTableHelper.generateTextTable(leftTable),
 				TextTableHelper.generateTextTable(rightTable),
@@ -197,8 +197,8 @@ public class ClientsExecutor {
 		boolean eventParsing,
 		String hostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing JSON to CSV conversion:\n- Json-source:\n{}\n- Json-entry-key: {}\n" + // NOSONAR
 					"- Property-list: {}\n- Separator: {}\n",
 				jsonSource,
@@ -231,8 +231,8 @@ public class ClientsExecutor {
 
 		String result = ThreadHelper.execute(jflatToCSV, JSON_2_CSV_TIMEOUT);
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed JSON to CSV conversion:\n- Json-source:\n{}\n- Json-entry-key: {}\n" + // NOSONAR
 					"- Property-list: {}\n- Separator: {}\n- Result:\n{}\n",
 				jsonSource,
@@ -258,8 +258,8 @@ public class ClientsExecutor {
 	 */
 	public List<List<String>> executeXmlParsing(final String xml, final String properties, final String recordTag)
 		throws XFlatException {
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing XML parsing:\n- Xml-source:\n{}\n- Properties: {}\n- Record-tag: {}\n",
 				xml,
 				properties,
@@ -269,8 +269,8 @@ public class ClientsExecutor {
 
 		List<List<String>> result = XFlat.parseXml(xml, properties, recordTag);
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executed XML parsing:\n- Xml-source:\n{}\n- Properties: {}\n- Record-tag: {}\n- Result:\n{}\n",
 				xml,
 				properties,

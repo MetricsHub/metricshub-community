@@ -97,8 +97,7 @@ public class StringHelper {
 			return EMPTY;
 		}
 
-		return new StringBuilder(throwable.getClass().getSimpleName())
-			.append(": ")
+		return new StringBuilder(throwable.getClass().getSimpleName()).append(": ")
 			.append(throwable.getMessage())
 			.append("\n")
 			.append(
@@ -125,8 +124,7 @@ public class StringHelper {
 			return EMPTY;
 		}
 
-		return headers
-			.entrySet()
+		return headers.entrySet()
 			.stream()
 			.map(entry -> String.format("%s: %s", entry.getKey(), entry.getValue()))
 			.sorted()
@@ -215,8 +213,7 @@ public class StringHelper {
 			return EMPTY;
 		} else if (value instanceof Collection<?> collection) {
 			// If the input is a List, convert it to a CSV string
-			return collection
-				.stream()
+			return collection.stream()
 				.map(item -> item != null ? item.toString() : EMPTY)
 				.collect(Collectors.joining(separator));
 		} else if (value.getClass().isArray()) {

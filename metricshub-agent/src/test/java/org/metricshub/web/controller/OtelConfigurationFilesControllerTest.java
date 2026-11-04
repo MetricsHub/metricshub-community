@@ -54,8 +54,7 @@ class OtelConfigurationFilesControllerTest {
 
 		when(otelConfigurationFilesService.getAllConfigurationFiles()).thenReturn(List.of(f1));
 
-		mockMvc
-			.perform(get(BASE))
+		mockMvc.perform(get(BASE))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.length()").value(1))
@@ -75,8 +74,7 @@ class OtelConfigurationFilesControllerTest {
 	void testShouldGetFileContent() throws Exception {
 		when(otelConfigurationFilesService.getFileContent(OTEL_CONFIG_FILE)).thenReturn("receivers:\n  otlp:\n");
 
-		mockMvc
-			.perform(get(BASE + "/otel-config.yaml").accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get(BASE + "/otel-config.yaml").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("receivers:\n  otlp:\n"));
@@ -92,12 +90,10 @@ class OtelConfigurationFilesControllerTest {
 
 		doReturn(saved).when(otelConfigurationFilesService).saveOrUpdateFile(OTEL_CONFIG_FILE, "receivers:\n  otlp:\n");
 
-		mockMvc
-			.perform(
-				put(BASE + "/otel-config.yaml?skipValidation=true")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content("receivers:\n  otlp:\n".getBytes(StandardCharsets.UTF_8))
-			)
+		mockMvc.perform(
+			put(BASE + "/otel-config.yaml?skipValidation=true").contentType(MediaType.TEXT_PLAIN)
+				.content("receivers:\n  otlp:\n".getBytes(StandardCharsets.UTF_8))
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value(OTEL_CONFIG_FILE))
 			.andExpect(jsonPath("$.lastModificationTime").value("2025-09-03T12:00:00Z"));
@@ -111,13 +107,11 @@ class OtelConfigurationFilesControllerTest {
 			OtelConfigurationFilesService.Validation.ok(OTEL_CONFIG_FILE)
 		);
 
-		mockMvc
-			.perform(
-				post(BASE + "/otel-config.yaml")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content("receivers: {}")
-					.accept(MediaType.APPLICATION_JSON)
-			)
+		mockMvc.perform(
+			post(BASE + "/otel-config.yaml").contentType(MediaType.TEXT_PLAIN)
+				.content("receivers: {}")
+				.accept(MediaType.APPLICATION_JSON)
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.fileName").value(OTEL_CONFIG_FILE))
 			.andExpect(jsonPath("$.valid").value(true));
@@ -144,8 +138,7 @@ class OtelConfigurationFilesControllerTest {
 
 		String body = mapper.writeValueAsString(new FileNewName("new-otel.yaml"));
 
-		mockMvc
-			.perform(patch(BASE + "/otel-config.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
+		mockMvc.perform(patch(BASE + "/otel-config.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("new-otel.yaml"));
 
@@ -162,8 +155,7 @@ class OtelConfigurationFilesControllerTest {
 
 		when(otelConfigurationFilesService.listAllBackupFiles()).thenReturn(List.of(backup));
 
-		mockMvc
-			.perform(get(BASE + "/backup"))
+		mockMvc.perform(get(BASE + "/backup"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.length()").value(1))
 			.andExpect(jsonPath("$[0].name").value("backup-20250101-120000__otel-config.yaml"));
@@ -174,8 +166,7 @@ class OtelConfigurationFilesControllerTest {
 		String backupName = "backup-20250101-120000__otel-config.yaml";
 		when(otelConfigurationFilesService.getBackupFileContent(backupName)).thenReturn("receivers: {}");
 
-		mockMvc
-			.perform(get(BASE + "/backup/" + backupName).accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get(BASE + "/backup/" + backupName).accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().string("receivers: {}"));
 	}
@@ -188,18 +179,13 @@ class OtelConfigurationFilesControllerTest {
 			.lastModificationTime("2025-09-03T12:00:00Z")
 			.build();
 
-		doReturn(draft)
-			.when(otelConfigurationFilesService)
+		doReturn(draft).when(otelConfigurationFilesService)
 			.saveOrUpdateDraftFile("otel-config.yaml", "receivers:\n  otlp:\n");
 
-		mockMvc
-			.perform(
-				put(BASE + "/draft/otel-config.yaml?skipValidation=true")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content("receivers:\n  otlp:\n".getBytes(StandardCharsets.UTF_8))
-			)
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name").value("otel-config.yaml.draft"));
+		mockMvc.perform(
+			put(BASE + "/draft/otel-config.yaml?skipValidation=true").contentType(MediaType.TEXT_PLAIN)
+				.content("receivers:\n  otlp:\n".getBytes(StandardCharsets.UTF_8))
+		).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("otel-config.yaml.draft"));
 
 		verify(otelConfigurationFilesService, Mockito.times(1)).saveOrUpdateDraftFile(
 			"otel-config.yaml",

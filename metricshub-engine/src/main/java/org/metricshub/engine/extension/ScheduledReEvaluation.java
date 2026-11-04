@@ -21,15 +21,15 @@ package org.metricshub.engine.extension;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-/**
- * A configuration source that must be re-evaluated periodically.
- * <p>
- * One entry describes a single re-evaluable unit (for the programmable configuration provider, one
- * {@code .vm} template) together with the cron expression governing how often it is re-evaluated.
- * </p>
- *
- * @param id   provider-specific identifier of the unit to re-evaluate, passed back to
- *             {@link IConfigurationProvider#reevaluate(String)}
- * @param cron the cron expression governing the re-evaluation
- */
+		/**
+		 * A configuration source that must be re-evaluated periodically.
+		 * <p>
+		 * One entry describes a single re-evaluable unit (for the programmable configuration provider, one
+		 * {@code .vm} template) together with the cron expression governing how often it is re-evaluated.
+		 * </p>
+		 *
+		 * @param id   provider-specific identifier of the unit to re-evaluate, passed back to
+		 *             {@link IConfigurationProvider#reevaluate(String)}
+		 * @param cron the cron expression governing the re-evaluation
+		 */
 public record ScheduledReEvaluation(String id, String cron) {}

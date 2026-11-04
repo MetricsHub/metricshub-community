@@ -66,8 +66,7 @@ public class SnmpRequestProcessor extends CommandProcessor {
 			final CommandResponderEvent<?> commandResponder = request.getSource();
 
 			// Get the variable bindings
-			final List<VariableBinding> variableBindings = (List<VariableBinding>) commandResponder
-				.getPDU()
+			final List<VariableBinding> variableBindings = (List<VariableBinding>) commandResponder.getPDU()
 				.getVariableBindings();
 
 			if (variableBindings != null && !variableBindings.isEmpty()) {
@@ -150,7 +149,7 @@ public class SnmpRequestProcessor extends CommandProcessor {
 						// Handle the Counter64
 						if (
 							(request.getMessageProcessingModel() == MPv1.ID) &&
-							(sreq.getVariableBinding().getSyntax() == SMIConstants.SYNTAX_COUNTER64)
+								(sreq.getVariableBinding().getSyntax() == SMIConstants.SYNTAX_COUNTER64)
 						) {
 							sreq.getVariableBinding().setVariable(Null.noSuchInstance);
 						}

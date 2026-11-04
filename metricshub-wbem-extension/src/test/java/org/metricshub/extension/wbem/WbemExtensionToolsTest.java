@@ -54,8 +54,7 @@ class WbemExtensionToolsTest {
 		final String result = wbemExtension.executeTool(
 			"wql",
 			configuration,
-			JsonNodeFactory.instance
-				.objectNode()
+			JsonNodeFactory.instance.objectNode()
 				.put("query", "SELECT Name FROM EMC_StorageSystem")
 				.put("namespace", "root/emc")
 		);
@@ -66,8 +65,13 @@ class WbemExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			wbemExtension.executeTool("nope", WbemConfiguration.builder().build(), JsonNodeFactory.instance.objectNode())
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> wbemExtension.executeTool(
+				"nope",
+				WbemConfiguration.builder().build(),
+				JsonNodeFactory.instance.objectNode()
+			)
 		);
 	}
 }

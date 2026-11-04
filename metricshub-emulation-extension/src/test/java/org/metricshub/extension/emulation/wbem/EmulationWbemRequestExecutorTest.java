@@ -59,17 +59,13 @@ class EmulationWbemRequestExecutorTest {
 
 	@Test
 	void testExecuteWbemMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM CIM_ManagedElement
 			      namespace: root/emc
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("value1", "value2")), MetricsHubConstants.TABLE_SEP, true),
@@ -92,9 +88,7 @@ class EmulationWbemRequestExecutorTest {
 
 	@Test
 	void testExecuteWbemRoundRobin(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM CIM_ManagedElement
@@ -104,9 +98,7 @@ class EmulationWbemRequestExecutorTest {
 			      wql: SELECT Name FROM CIM_ManagedElement
 			      namespace: root/emc
 			    response: r2.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("first")), MetricsHubConstants.TABLE_SEP, true),
@@ -153,17 +145,13 @@ class EmulationWbemRequestExecutorTest {
 
 	@Test
 	void testExecuteWbemNoMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Other_Class
 			      namespace: root/cimv2
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("other")), MetricsHubConstants.TABLE_SEP, true),
@@ -262,17 +250,13 @@ class EmulationWbemRequestExecutorTest {
 
 	@Test
 	void testExecuteWbemReturnsEmptyWhenMatchedResponseIsBlank(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM CIM_ManagedElement
 			      namespace: root/emc
 			    response: " "
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final List<List<String>> result = executor.executeWbem(
 			HOSTNAME,
@@ -288,17 +272,13 @@ class EmulationWbemRequestExecutorTest {
 
 	@Test
 	void testExecuteWbemReturnsEmptyWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM CIM_ManagedElement
 			      namespace: root/emc
 			    response: missing.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final List<List<String>> result = executor.executeWbem(
 			HOSTNAME,

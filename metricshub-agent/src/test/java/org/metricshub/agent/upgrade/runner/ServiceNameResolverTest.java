@@ -76,8 +76,8 @@ class ServiceNameResolverTest {
 		writeUnit("metricshub-enterprise-service.service");
 
 		// Only the Enterprise unit is active on this host
-		final ServiceNameResolver resolver = linuxResolver(command ->
-			command.contains("metricshub-enterprise-service.service") ? List.of("active") : List.of("inactive")
+		final ServiceNameResolver resolver = linuxResolver(
+			command -> command.contains("metricshub-enterprise-service.service") ? List.of("active") : List.of("inactive")
 		);
 
 		assertEquals("metricshub-enterprise-service.service", resolver.resolve(null));
@@ -108,12 +108,12 @@ class ServiceNameResolverTest {
 
 	@Test
 	void windowsServicesShouldBeDiscoveredFromTheRegistry() {
-		final ServiceNameResolver resolver = windowsResolver(command ->
-			command.contains("query")
+		final ServiceNameResolver resolver = windowsResolver(
+			command -> command.contains("query")
 				? List.of(
-						"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\MetricsHub Enterprise",
-						"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\MetricsHubHelper"
-					)
+					"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\MetricsHub Enterprise",
+					"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\MetricsHubHelper"
+				)
 				: List.of()
 		);
 

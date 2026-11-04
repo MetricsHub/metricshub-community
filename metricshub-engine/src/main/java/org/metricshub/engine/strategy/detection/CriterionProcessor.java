@@ -288,8 +288,8 @@ public class CriterionProcessor {
 		// If there is no requirement, then no check is needed
 		if (
 			productRequirementsCriterion == null ||
-			productRequirementsCriterion.getEngineVersion() == null ||
-			productRequirementsCriterion.getEngineVersion().isBlank()
+				productRequirementsCriterion.getEngineVersion() == null ||
+				productRequirementsCriterion.getEngineVersion().isBlank()
 		) {
 			return CriterionTestResult.builder().success(true).criterion(productRequirementsCriterion).build();
 		}
@@ -343,15 +343,13 @@ public class CriterionProcessor {
 			criterion,
 			telemetryManager
 		);
-		return maybeExtension
-			.map(extension -> {
-				CriterionTestResult result = extension.processCriterion(criterion, connectorId, telemetryManager, logMode);
-				if (result != null) {
-					result.setCriterion(criterion);
-				}
-				return result;
-			})
-			.orElseGet(CriterionTestResult::empty);
+		return maybeExtension.map(extension -> {
+			CriterionTestResult result = extension.processCriterion(criterion, connectorId, telemetryManager, logMode);
+			if (result != null) {
+				result.setCriterion(criterion);
+			}
+			return result;
+		}).orElseGet(CriterionTestResult::empty);
 	}
 
 	/**

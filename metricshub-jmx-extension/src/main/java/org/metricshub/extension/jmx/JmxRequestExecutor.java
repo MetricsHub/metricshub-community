@@ -129,8 +129,7 @@ public class JmxRequestExecutor {
 			}
 
 			for (ObjectName matchedObjectName : matches) {
-				final List<String> keyPropertyValues = keyProperties
-					.stream()
+				final List<String> keyPropertyValues = keyProperties.stream()
 					.map(matchedObjectName::getKeyProperty)
 					.map(value -> value == null ? EMPTY : value)
 					.toList();
@@ -138,8 +137,10 @@ public class JmxRequestExecutor {
 				final List<String> row = new ArrayList<>(keyPropertyValues);
 
 				// Build the row with the requested attributes
-				attributes.forEach((String requestedAttribute) ->
-					row.add(getAttributeValue(hostname, mBeanServerConnection, matchedObjectName, requestedAttribute).toString())
+				attributes.forEach(
+					(String requestedAttribute) -> row.add(
+						getAttributeValue(hostname, mBeanServerConnection, matchedObjectName, requestedAttribute).toString()
+					)
 				);
 
 				results.add(row);

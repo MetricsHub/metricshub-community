@@ -48,8 +48,7 @@ public class UploadedToolOutputManifest {
 	private String fileName;
 
 	@Default
-	private String description =
-		"Tool output was too large to include directly and has been omitted from the payload. " +
+	private String description = "Tool output was too large to include directly and has been omitted from the payload. " +
 		"The full data was uploaded to OpenAI Files API. " +
 		"Use Code Interpreter to analyze the file using openai_file_id. Do not request raw JSON chunks.";
 

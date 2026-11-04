@@ -32,8 +32,7 @@ class WinProcessCriterionProcessorTest {
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine("MBM[5-9]\\.exe");
 
-		doReturn(CriterionTestResult.success(processCriterion, "success"))
-			.when(wmiDetectionServiceMock)
+		doReturn(CriterionTestResult.success(processCriterion, "success")).when(wmiDetectionServiceMock)
 			.performDetectionTest(
 				eq(MetricsHubConstants.LOCALHOST),
 				any(IWinConfiguration.class),
@@ -44,9 +43,13 @@ class WinProcessCriterionProcessorTest {
 			);
 
 		assertTrue(
-			winProcessCriterionProcessor
-				.process(processCriterion, WmiTestConfiguration.builder().build(), "testConnector", true, null)
-				.isSuccess()
+			winProcessCriterionProcessor.process(
+				processCriterion,
+				WmiTestConfiguration.builder().build(),
+				"testConnector",
+				true,
+				null
+			).isSuccess()
 		);
 	}
 }

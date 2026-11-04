@@ -56,15 +56,11 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandMatch(@TempDir Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - command: \"echo test\"
 			    result: \"r1.txt\"
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final OsCommandResult result = service.runOsCommand(
@@ -82,15 +78,11 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandNoMatchReturnsEmpty(@TempDir Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - command: \"echo other\"
 			    result: \"r1.txt\"
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final OsCommandResult result = service.runOsCommand(
@@ -107,17 +99,13 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandRoundRobin(@TempDir Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - command: \"echo test\"
 			    result: \"r1.txt\"
 			  - command: \"echo test\"
 			    result: \"r2.txt\"
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "first", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r2.txt"), "second", StandardCharsets.UTF_8);
 
@@ -169,8 +157,9 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunSshCommandThrowsUnsupportedOperationException() {
-		assertThrows(UnsupportedOperationException.class, () ->
-			service.runSshCommand(
+		assertThrows(
+			UnsupportedOperationException.class,
+			() -> service.runSshCommand(
 				"echo test",
 				HOSTNAME,
 				new SshConfiguration(),

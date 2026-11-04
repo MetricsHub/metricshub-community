@@ -78,8 +78,7 @@ class JawkSourceExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
-		hostProperties
-			.getConnectorNamespace(CONNECTOR_ID)
+		hostProperties.getConnectorNamespace(CONNECTOR_ID)
 			.addSourceTable("${source::monitors.system.discovery.sources.source_one}", sourceTableOne);
 
 		telemetryManager.setHostProperties(hostProperties);
@@ -90,8 +89,7 @@ class JawkSourceExtensionTest {
 		final Source source = JawkSource.builder()
 			.type("Awk")
 			.input(SourceTable.tableToCsv(tableOne, ";", false))
-			.script(
-				"""
+			.script("""
 					BEGIN {
 					    FS=";"
 					    OFS=";"
@@ -108,8 +106,7 @@ class JawkSourceExtensionTest {
 					    json2csvArguments["separator"] = ";"
 					    print json2csv(json2csvArguments)
 					}
-				"""
-			)
+				""")
 			.build();
 
 		final SourceTable sourceTableResult1 = SourceTable.builder().rawData(RAW_DATA_RESULT_1).build();
@@ -183,8 +180,7 @@ class JawkSourceExtensionTest {
 		assertEquals(httpSourceBaz.getResultContent(), capturedHttpSources.get(2).getResultContent());
 
 		// WBEM Request
-		((JawkSource) source).setScript(
-			"""
+		((JawkSource) source).setScript("""
 				BEGIN {
 				    FS=";"
 				    OFS=";"
@@ -195,14 +191,11 @@ class JawkSourceExtensionTest {
 			    	requestArguments["namespace"] = "myNamespace"
 				    print executeWbemRequest(requestArguments)
 				}
-			"""
-		);
+			""");
 		((JawkSource) source).setInput("input test");
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		)
-			.when(sourceProcessorMock)
-			.process(any(WbemSource.class));
+		).when(sourceProcessorMock).process(any(WbemSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<WbemSource> wbemCaptor = ArgumentCaptor.forClass(WbemSource.class);
@@ -225,8 +218,7 @@ class JawkSourceExtensionTest {
 		assertEquals("myNamespace", wbemCaptor.getValue().getNamespace());
 
 		// WMI Request
-		((JawkSource) source).setScript(
-			"""
+		((JawkSource) source).setScript("""
 				BEGIN {
 				    FS=";"
 				    OFS=";"
@@ -237,13 +229,10 @@ class JawkSourceExtensionTest {
 			    	requestArguments["namespace"] = "myNamespace"
 				    print executeWmiRequest(requestArguments)
 				}
-			"""
-		);
+			""");
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		)
-			.when(sourceProcessorMock)
-			.process(any(WmiSource.class));
+		).when(sourceProcessorMock).process(any(WmiSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<WmiSource> wmiCaptor = ArgumentCaptor.forClass(WmiSource.class);
@@ -266,8 +255,7 @@ class JawkSourceExtensionTest {
 		assertEquals("myNamespace", wmiCaptor.getValue().getNamespace());
 
 		// SNMP Get Request
-		((JawkSource) source).setScript(
-			"""
+		((JawkSource) source).setScript("""
 				BEGIN {
 				    FS=";"
 				    OFS=";"
@@ -277,14 +265,11 @@ class JawkSourceExtensionTest {
 			    	requestArguments["oid"] = "1.2.3.4.5.6"
 				    print executeSnmpGet(requestArguments)
 				}
-			"""
-		);
+			""");
 
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		)
-			.when(sourceProcessorMock)
-			.process(any(SnmpGetSource.class));
+		).when(sourceProcessorMock).process(any(SnmpGetSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<SnmpGetSource> snmpGetCaptor = ArgumentCaptor.forClass(SnmpGetSource.class);
@@ -306,8 +291,7 @@ class JawkSourceExtensionTest {
 		assertEquals("1.2.3.4.5.6", snmpGetCaptor.getValue().getOid());
 
 		// SNMP Table Request
-		((JawkSource) source).setScript(
-			"""
+		((JawkSource) source).setScript("""
 				BEGIN {
 				    FS=";"
 				    OFS=";"
@@ -318,13 +302,10 @@ class JawkSourceExtensionTest {
 			    	requestArguments["selectColumns"] = "1"
 				    print executeSnmpTable(requestArguments)
 				}
-			"""
-		);
+			""");
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		)
-			.when(sourceProcessorMock)
-			.process(any(SnmpTableSource.class));
+		).when(sourceProcessorMock).process(any(SnmpTableSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<SnmpTableSource> snmpTableCaptor = ArgumentCaptor.forClass(SnmpTableSource.class);
@@ -367,15 +348,13 @@ class JawkSourceExtensionTest {
 			.type("awk")
 			// No input: the script reads everything from the variable
 			.variables(Map.of("aTable", "${source::monitors.system.discovery.sources.source_one}"))
-			.script(
-				"""
+			.script("""
 					BEGIN {
 					    for (row = 0; row < length(aTable); row++) {
 					        print aTable[row][0] ";" aTable[row][2] ";"
 					    }
 					}
-				"""
-			)
+				""")
 			.build();
 
 		final SourceTable result = new JawkSourceExtension().processSource(
@@ -481,8 +460,7 @@ class JawkSourceExtensionTest {
 			.build();
 
 		final HostProperties hostProperties = HostProperties.builder().build();
-		hostProperties
-			.getConnectorNamespace(CONNECTOR_ID)
+		hostProperties.getConnectorNamespace(CONNECTOR_ID)
 			.addSourceTable(
 				"${source::monitors.system.discovery.sources.source_one}",
 				SourceTable.builder().table(table).build()
@@ -497,17 +475,11 @@ class JawkSourceExtensionTest {
 		variables.put("monoInstance", "${attribute::id}");
 		variables.put("aTable", "${source::monitors.system.discovery.sources.source_one}");
 
-		final Source source = JawkSource.builder()
-			.type("awk")
-			.variables(variables)
-			.script(
-				"""
-					BEGIN {
-					    print resourceAttr ";" monoInstance ";" aTable[1][0] ";"
-					}
-				"""
-			)
-			.build();
+		final Source source = JawkSource.builder().type("awk").variables(variables).script("""
+				BEGIN {
+				    print resourceAttr ";" monoInstance ";" aTable[1][0] ";"
+				}
+			""").build();
 
 		final SourceTable result = new JawkSourceExtension().processSource(
 			source,
@@ -536,8 +508,7 @@ class JawkSourceExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
-		hostProperties
-			.getConnectorNamespace(CONNECTOR_ID)
+		hostProperties.getConnectorNamespace(CONNECTOR_ID)
 			.addSourceTable("${source::monitors.system.discovery.sources.source_one}", sourceTable);
 
 		telemetryManager.setHostProperties(hostProperties);

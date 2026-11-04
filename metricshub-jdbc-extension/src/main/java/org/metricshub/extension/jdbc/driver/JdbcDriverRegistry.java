@@ -180,12 +180,10 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	private LoadedDriver doResolve(final Key key) {
 		final JdbcDriverDescriptor descriptor = descriptorsByClass.get(key.driverClass());
 		if (descriptor == null) {
-			throw new DriverResolutionException(
-				"""
+			throw new DriverResolutionException("""
 				Unknown JDBC driver class: %s. Declare it through a IJdbcDriverProvider or check your JDBC \
 
-				configuration (resource jdbc.driver / connector jdbc block).""".formatted(key.driverClass())
-			);
+				configuration (resource jdbc.driver / connector jdbc block).""".formatted(key.driverClass()));
 		}
 
 		final boolean useBuiltIn = descriptor.origin() == DriverOrigin.BUILT_IN && key.explicitJarPath() == null;
@@ -339,13 +337,13 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	private static String missingJarMessage(final JdbcDriverDescriptor descriptor, final String explicitJarPath) {
 		if (explicitJarPath == null) {
 			return """
-			JDBC driver %s not found. Drop the driver JAR into the operator-default drivers directory \
-			(typically $APP_DIR/extensions/jdbc/) or set jdbc.driver.jarPath.\
-			""".formatted(descriptor.driverClass());
+				JDBC driver %s not found. Drop the driver JAR into the operator-default drivers directory \
+				(typically $APP_DIR/extensions/jdbc/) or set jdbc.driver.jarPath.\
+				""".formatted(descriptor.driverClass());
 		}
 		return """
-		JDBC driver %s not found at %s. Verify the jarPath expression and that the JAR exists.\
-		""".formatted(descriptor.driverClass(), explicitJarPath);
+			JDBC driver %s not found at %s. Verify the jarPath expression and that the JAR exists.\
+			""".formatted(descriptor.driverClass(), explicitJarPath);
 	}
 
 	/**

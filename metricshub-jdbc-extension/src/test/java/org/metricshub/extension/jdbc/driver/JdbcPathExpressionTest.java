@@ -43,8 +43,9 @@ class JdbcPathExpressionTest {
 
 	@Test
 	void unknownPlaceholderRejected() {
-		final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-			resolver().resolve("$APP_DIR/$NOPE/foo.jar")
+		final IllegalArgumentException ex = assertThrows(
+			IllegalArgumentException.class,
+			() -> resolver().resolve("$APP_DIR/$NOPE/foo.jar")
 		);
 		assertTrue(ex.getMessage().contains("$NOPE"), ex.getMessage());
 	}

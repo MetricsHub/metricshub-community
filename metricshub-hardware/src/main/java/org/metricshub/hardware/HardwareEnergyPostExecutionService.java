@@ -114,8 +114,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 		}
 
 		// For each monitor, estimate and collect power and energy consumption metrics
-		sameTypeMonitors
-			.values()
+		sameTypeMonitors.values()
 			.stream()
 			.filter(monitor -> !HwCollectHelper.isMissing(monitor))
 			.filter(monitor -> telemetryManager.isConnectorStatusOk(monitor))
@@ -176,8 +175,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 			telemetryManager.getHostname(),
 			telemetryManager.getConnectorStore()
 		);
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)
@@ -235,8 +233,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 	 * @return the ids of the monitors whose power or energy is collected
 	 */
 	private Set<String> findMonitorIdsWithCollectedPowerOrEnergy() {
-		return telemetryManager
-			.getMonitors()
+		return telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)
@@ -261,8 +258,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 	 * @return the ids of the monitors whose measured power includes their children's power
 	 */
 	private Set<String> findMeasuredPowerParentIds() {
-		return telemetryManager
-			.getMonitors()
+		return telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)
@@ -304,8 +300,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 		}
 
 		// Only the VMs to estimate share the power source: the measured VMs keep their power
-		final Map<String, Double> totalPowerSharesByPowerSource = vmMonitors
-			.values()
+		final Map<String, Double> totalPowerSharesByPowerSource = vmMonitors.values()
 			.stream()
 			.collect(
 				Collectors.toMap(
@@ -316,8 +311,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 			);
 
 		// The power of the measured VMs is deducted from their power source before it is shared
-		final Map<String, Double> measuredVmPowerByPowerSource = vmMonitors
-			.values()
+		final Map<String, Double> measuredVmPowerByPowerSource = vmMonitors.values()
 			.stream()
 			.filter(monitor -> measuredMonitorIds.contains(monitor.getId()))
 			.filter(monitor -> CollectHelper.getNumberMetricValue(monitor, HW_POWER_VM_METRIC, false) != null)
@@ -330,8 +324,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 			);
 
 		// For each vm monitor, estimate and collect power and energy consumption metrics
-		vmMonitors
-			.values()
+		vmMonitors.values()
 			.stream()
 			.filter(monitor -> !HwCollectHelper.isMissing(monitor))
 			.filter(monitor -> telemetryManager.isConnectorStatusOk(monitor))
@@ -487,8 +480,13 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 		// The measured monitors are not estimated: derive their missing energy or power from what the connector collects
 		collectMissingPowerOrEnergy(measuredMonitorIds);
 
-		final boolean isPowerMeasured = estimateAndCollectPowerAndEnergyForHost((hostMonitor, manager) ->
-			new HostMonitorPowerAndEnergyEstimator(hostMonitor, manager, measuredPowerParentIds, estimatedMonitorIds)
+		final boolean isPowerMeasured = estimateAndCollectPowerAndEnergyForHost(
+			(hostMonitor, manager) -> new HostMonitorPowerAndEnergyEstimator(
+				hostMonitor,
+				manager,
+				measuredPowerParentIds,
+				estimatedMonitorIds
+			)
 		);
 		estimateAndCollectPowerAndEnergyForVm(isPowerMeasured, measuredMonitorIds);
 	}
@@ -511,8 +509,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 		}
 
 		// For each monitor, estimate and collect power and energy consumption metrics
-		sameTypeMonitors
-			.values()
+		sameTypeMonitors.values()
 			.forEach(monitor -> collectNetworkMonitorMetrics(monitor, measuredMonitorIds, measuredPowerParentIds));
 	}
 
@@ -581,7 +578,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 
 		if (
 			connectorHasHardwareTag(monitor, telemetryManager) &&
-			shouldEstimatePower(monitor, measuredMonitorIds, measuredPowerParentIds)
+				shouldEstimatePower(monitor, measuredMonitorIds, measuredPowerParentIds)
 		) {
 			PowerAndEnergyCollectHelper.collectPowerAndEnergy(
 				monitor,

@@ -46,8 +46,7 @@ class ExplorerControllerTest {
 
 		when(explorerService.getHierarchy()).thenReturn(root);
 
-		mockMvc
-			.perform(get("/api/hierarchy"))
+		mockMvc.perform(get("/api/hierarchy"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("AgentOne"))
@@ -64,8 +63,7 @@ class ExplorerControllerTest {
 		final AgentTelemetry root = AgentTelemetry.builder().name("MetricsHub").build();
 		when(explorerService.getHierarchy()).thenReturn(root);
 
-		mockMvc
-			.perform(get("/api/hierarchy"))
+		mockMvc.perform(get("/api/hierarchy"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("MetricsHub"))
@@ -81,8 +79,7 @@ class ExplorerControllerTest {
 		resource.getConnectors().add(connector);
 		when(explorerService.getTopLevelResource("top1")).thenReturn(resource);
 
-		mockMvc
-			.perform(get("/api/resources/top1"))
+		mockMvc.perform(get("/api/resources/top1"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("top1"))
@@ -99,8 +96,7 @@ class ExplorerControllerTest {
 		resource.getConnectors().add(connector);
 		when(explorerService.getGroupedResource("serverA", "GroupA")).thenReturn(resource);
 
-		mockMvc
-			.perform(get("/api/resource-groups/GroupA/resources/serverA"))
+		mockMvc.perform(get("/api/resource-groups/GroupA/resources/serverA"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("serverA"))
@@ -124,8 +120,7 @@ class ExplorerControllerTest {
 			.build();
 		when(explorerService.search("serverA")).thenReturn(java.util.List.of(match1, match2));
 
-		mockMvc
-			.perform(get("/api/search").param("q", "serverA"))
+		mockMvc.perform(get("/api/search").param("q", "serverA"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$[0].name").value("serverA"))

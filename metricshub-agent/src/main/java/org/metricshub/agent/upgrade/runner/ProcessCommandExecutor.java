@@ -38,8 +38,7 @@ public class ProcessCommandExecutor implements CommandExecutor {
 
 	@Override
 	public int run(final List<String> command) throws IOException, InterruptedException {
-		final Process process = new ProcessBuilder(command)
-			.redirectOutput(ProcessBuilder.Redirect.DISCARD)
+		final Process process = new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.DISCARD)
 			.redirectErrorStream(true)
 			.start();
 		if (!process.waitFor(LAUNCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {

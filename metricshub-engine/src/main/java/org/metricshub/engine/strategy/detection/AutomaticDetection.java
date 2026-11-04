@@ -113,8 +113,7 @@ public class AutomaticDetection extends AbstractConnectorProcessor {
 			return new ArrayList<>();
 		}
 
-		final List<Connector> connectors = connectorStore
-			.entrySet()
+		final List<Connector> connectors = connectorStore.entrySet()
 			.stream()
 			.filter(connectorEntry -> connectorIds.contains(connectorEntry.getKey()))
 			.map(Entry::getValue)
@@ -142,10 +141,9 @@ public class AutomaticDetection extends AbstractConnectorProcessor {
 		connectorTestResults.forEach(connectorTestResult -> updateSupersedes(supersedes, connectorTestResult));
 
 		// Filter Superseded connectors
-		connectorTestResults = connectorTestResults
-			.stream()
-			.filter(connectorTestResult ->
-				!supersedes.contains(
+		connectorTestResults = connectorTestResults.stream()
+			.filter(
+				connectorTestResult -> !supersedes.contains(
 					connectorTestResult.getConnector().getConnectorIdentity().getCompiledFilename().toLowerCase()
 				)
 			)
@@ -165,8 +163,7 @@ public class AutomaticDetection extends AbstractConnectorProcessor {
 	 * @return True if the connector has the same connection type as the host, false otherwise.
 	 */
 	private boolean hasSameConnectionTypeAsHost(final Connector connector, final boolean isLocalhost) {
-		return connector
-			.getConnectorIdentity()
+		return connector.getConnectorIdentity()
 			.getDetection()
 			.getConnectionTypes()
 			.contains(isLocalhost ? ConnectionType.LOCAL : ConnectionType.REMOTE);

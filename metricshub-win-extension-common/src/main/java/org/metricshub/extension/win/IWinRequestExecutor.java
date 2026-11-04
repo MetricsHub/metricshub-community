@@ -149,9 +149,8 @@ public interface IWinRequestExecutor {
 	 * @return boolean value
 	 */
 	static boolean isAcceptableWmiComError(final String errorMessage) {
-		return (
-			errorMessage != null &&
-			// @formatter:off
+		return (errorMessage != null &&
+		// @formatter:off
 			(
 				errorMessage.contains(WBEM_E_NOT_FOUND) ||
 				errorMessage.contains(WBEM_E_INVALID_NAMESPACE) ||

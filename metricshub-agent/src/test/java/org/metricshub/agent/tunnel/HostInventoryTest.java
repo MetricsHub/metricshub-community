@@ -73,10 +73,7 @@ class HostInventoryTest {
 
 		assertEquals(
 			List.of(TOP_LEVEL + "/win-01", "paris/paris-host1"),
-			hosts
-				.stream()
-				.map(host -> host.resourceGroup() + "/" + host.resourceKey())
-				.toList(),
+			hosts.stream().map(host -> host.resourceGroup() + "/" + host.resourceKey()).toList(),
 			"Sorted by resource group then resource key"
 		);
 

@@ -48,8 +48,7 @@ class JmxExtensionToolsTest {
 		final String result = jmxExtension.executeTool(
 			"fetchMBean",
 			configuration,
-			JsonNodeFactory.instance
-				.objectNode()
+			JsonNodeFactory.instance.objectNode()
 				.put("objectName", "java.lang:type=MemoryPool,name=*")
 				.put("attributes", "Usage, PeakUsage")
 				.put("keyProperties", "name")
@@ -60,8 +59,9 @@ class JmxExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			jmxExtension.executeTool(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.executeTool(
 				"nope",
 				JmxConfiguration.builder().hostname("localhost").port(1099).build(),
 				JsonNodeFactory.instance.objectNode()

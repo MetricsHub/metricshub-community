@@ -133,14 +133,12 @@ class HostDetailsServiceTest {
 		// Pull out the payloads (you may have >2 if multiple managers; we only care about snmp/ssh)
 		List<HostDetails> details = results.stream().map(HostToolResponse::getResponse).toList();
 
-		HostDetails snmp = details
-			.stream()
+		HostDetails snmp = details.stream()
 			.filter(h -> h.getConfiguredProtocols().contains("snmp"))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("No SNMP HostDetails found"));
 
-		HostDetails ssh = details
-			.stream()
+		HostDetails ssh = details.stream()
 			.filter(h -> h.getConfiguredProtocols().contains("ssh"))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("No SSH HostDetails found"));
@@ -151,78 +149,65 @@ class HostDetailsServiceTest {
 		// SNMP-side assertions
 		assertAll(
 			"SNMP host assertions",
-			() ->
-				assertEquals(
-					Set.of("CiscoUCSBladeSNMP"),
-					snmp.getWorkingConnectors(),
-					() -> "SNMP host: expected workingConnectors=[CiscoUCSBladeSNMP] but was " + snmp.getWorkingConnectors()
-				),
-			() ->
-				assertEquals(
-					Set.of("snmp"),
-					snmp.getConfiguredProtocols(),
-					() -> "SNMP host: expected configuredProtocols=[snmp] but was " + snmp.getConfiguredProtocols()
-				),
-			() ->
-				assertTrue(
-					snmp.getCollectors().contains("SNMP Get"),
-					() -> "SNMP host: expected collectors to contain 'SNMP Get' but had " + snmp.getCollectors()
-				),
-			() ->
-				assertTrue(
-					snmp.getCollectors().contains("SNMP Walk"),
-					() -> "SNMP host: expected collectors to contain 'SNMP Walk' but had " + snmp.getCollectors()
-				),
-			() ->
-				assertTrue(
-					snmp.getCollectors().size() >= 4,
-					() ->
-						"SNMP host: expected at least 4 collectors but had " +
-						snmp.getCollectors().size() +
-						" -> " +
-						snmp.getCollectors()
-				),
-			() ->
-				assertNull(
-					snmp.getErrorMessage(),
-					() -> "SNMP host: expected no errorMessage but was '" + snmp.getErrorMessage() + "'"
-				)
+			() -> assertEquals(
+				Set.of("CiscoUCSBladeSNMP"),
+				snmp.getWorkingConnectors(),
+				() -> "SNMP host: expected workingConnectors=[CiscoUCSBladeSNMP] but was " + snmp.getWorkingConnectors()
+			),
+			() -> assertEquals(
+				Set.of("snmp"),
+				snmp.getConfiguredProtocols(),
+				() -> "SNMP host: expected configuredProtocols=[snmp] but was " + snmp.getConfiguredProtocols()
+			),
+			() -> assertTrue(
+				snmp.getCollectors().contains("SNMP Get"),
+				() -> "SNMP host: expected collectors to contain 'SNMP Get' but had " + snmp.getCollectors()
+			),
+			() -> assertTrue(
+				snmp.getCollectors().contains("SNMP Walk"),
+				() -> "SNMP host: expected collectors to contain 'SNMP Walk' but had " + snmp.getCollectors()
+			),
+			() -> assertTrue(
+				snmp.getCollectors().size() >= 4,
+				() -> "SNMP host: expected at least 4 collectors but had " +
+					snmp.getCollectors().size() +
+					" -> " +
+					snmp.getCollectors()
+			),
+			() -> assertNull(
+				snmp.getErrorMessage(),
+				() -> "SNMP host: expected no errorMessage but was '" + snmp.getErrorMessage() + "'"
+			)
 		);
 
 		// SSH-side assertions
 		assertAll(
 			"SSH host assertions",
-			() ->
-				assertEquals(
-					Set.of("Linux"),
-					ssh.getWorkingConnectors(),
-					() -> "SSH host: expected workingConnectors=[Linux] but was " + ssh.getWorkingConnectors()
-				),
-			() ->
-				assertEquals(
-					Set.of("ssh"),
-					ssh.getConfiguredProtocols(),
-					() -> "SSH host: expected configuredProtocols=[ssh] but was " + ssh.getConfiguredProtocols()
-				),
-			() ->
-				assertTrue(
-					ssh.getCollectors().contains("CommandLine via SSH"),
-					() -> "SSH host: expected collectors to contain 'CommandLine via SSH' but had " + ssh.getCollectors()
-				),
-			() ->
-				assertTrue(
-					ssh.getCollectors().size() >= 1,
-					() ->
-						"SSH host: expected at least 1 collector but had " +
-						ssh.getCollectors().size() +
-						" -> " +
-						ssh.getCollectors()
-				),
-			() ->
-				assertNull(
-					ssh.getErrorMessage(),
-					() -> "SSH host: expected no errorMessage but was '" + ssh.getErrorMessage() + "'"
-				)
+			() -> assertEquals(
+				Set.of("Linux"),
+				ssh.getWorkingConnectors(),
+				() -> "SSH host: expected workingConnectors=[Linux] but was " + ssh.getWorkingConnectors()
+			),
+			() -> assertEquals(
+				Set.of("ssh"),
+				ssh.getConfiguredProtocols(),
+				() -> "SSH host: expected configuredProtocols=[ssh] but was " + ssh.getConfiguredProtocols()
+			),
+			() -> assertTrue(
+				ssh.getCollectors().contains("CommandLine via SSH"),
+				() -> "SSH host: expected collectors to contain 'CommandLine via SSH' but had " + ssh.getCollectors()
+			),
+			() -> assertTrue(
+				ssh.getCollectors().size() >= 1,
+				() -> "SSH host: expected at least 1 collector but had " +
+					ssh.getCollectors().size() +
+					" -> " +
+					ssh.getCollectors()
+			),
+			() -> assertNull(
+				ssh.getErrorMessage(),
+				() -> "SSH host: expected no errorMessage but was '" + ssh.getErrorMessage() + "'"
+			)
 		);
 	}
 }

@@ -115,8 +115,7 @@ public class SecurityManager {
 		'o',
 		'm',
 		'a',
-		's'
-	};
+		's' };
 	/**
 	 * Alias for the master key stored in the KeyStore.
 	 */

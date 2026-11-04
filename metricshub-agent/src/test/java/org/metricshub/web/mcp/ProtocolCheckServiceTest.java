@@ -75,8 +75,7 @@ class ProtocolCheckServiceTest {
 
 	@Test
 	void testHttpProtocolIsReachable() {
-		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier())
-			.getHosts()
+		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier()).getHosts()
 			.get(0)
 			.getResponse();
 		assertNotNull(result, "Result should not be null");
@@ -89,8 +88,7 @@ class ProtocolCheckServiceTest {
 		// Simulate unreachable host
 		doReturn(Optional.of(Boolean.FALSE)).when(httpExtension).checkProtocol(any());
 
-		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier())
-			.getHosts()
+		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier()).getHosts()
 			.get(0)
 			.getResponse();
 
@@ -105,8 +103,7 @@ class ProtocolCheckServiceTest {
 		// Simulate extension not returning a result
 		doReturn(Optional.empty()).when(httpExtension).checkProtocol(any());
 
-		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier())
-			.getHosts()
+		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier()).getHosts()
 			.get(0)
 			.getResponse();
 

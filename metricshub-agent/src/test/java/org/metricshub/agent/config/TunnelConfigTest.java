@@ -25,8 +25,7 @@ class TunnelConfigTest {
 
 	@Test
 	void tunnelSectionShouldBeDeserialized() throws Exception {
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  enabled: true
 			  tunnel:
@@ -36,8 +35,7 @@ class TunnelConfigTest {
 			    certificateFile: /opt/metricshub/security/central-ca.pem
 			    heartbeatInterval: 1m
 			    excludedTools: [ ExecuteSshCommandline, ExecuteWinRemoteCommand ]
-			"""
-		);
+			""");
 
 		final TunnelConfig tunnel = agentConfig.getCentral().getTunnel();
 		assertTrue(tunnel.isEnabled());
@@ -63,16 +61,14 @@ class TunnelConfigTest {
 
 	@Test
 	void nullValuesShouldKeepDefaults() throws Exception {
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  enabled: true
 			  tunnel:
 			    endpoint:
 			    heartbeatInterval:
 			    excludedTools:
-			"""
-		);
+			""");
 
 		final TunnelConfig tunnel = agentConfig.getCentral().getTunnel();
 		assertTrue(tunnel.isEnabled());
@@ -84,15 +80,13 @@ class TunnelConfigTest {
 
 	@Test
 	void tunnelShouldBeRefusableOnItsOwn() throws Exception {
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
 			  tunnel:
 			    enabled: false
-			"""
-		);
+			""");
 
 		// Fleet management without exposing this agent's tools to Central: said on the channel,
 		// and the roof being on does not overrule it

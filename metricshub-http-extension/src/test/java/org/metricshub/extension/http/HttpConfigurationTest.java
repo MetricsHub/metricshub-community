@@ -34,23 +34,28 @@ class HttpConfigurationTest {
 
 	@Test
 	void testValidateConfiguration() {
-		assertThrows(InvalidConfigurationException.class, () ->
-			HttpConfiguration.builder().timeout(-60L).port(1234).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> HttpConfiguration.builder().timeout(-60L).port(1234).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			HttpConfiguration.builder().timeout(null).port(1234).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> HttpConfiguration.builder().timeout(null).port(1234).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			HttpConfiguration.builder().timeout(60L).port(-1).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> HttpConfiguration.builder().timeout(60L).port(-1).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			HttpConfiguration.builder().timeout(60L).port(null).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> HttpConfiguration.builder().timeout(60L).port(null).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			HttpConfiguration.builder().timeout(60L).port(66666).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> HttpConfiguration.builder().timeout(60L).port(66666).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertDoesNotThrow(() ->
-			HttpConfiguration.builder().timeout(60L).port(1234).build().validateConfiguration(RESOURCE_KEY)
+		assertDoesNotThrow(
+			() -> HttpConfiguration.builder().timeout(60L).port(1234).build().validateConfiguration(RESOURCE_KEY)
 		);
 	}
 

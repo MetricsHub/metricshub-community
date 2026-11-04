@@ -114,21 +114,18 @@ class TaskSchedulingServiceTest {
 
 		assertEquals(
 			scheduledFutureMock,
-			taskSchedulingService
-				.getSchedules()
+			taskSchedulingService.getSchedules()
 				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, PARIS_RESOURCE_GROUP_KEY))
 		);
 
 		assertEquals(
 			scheduledFutureMock,
-			taskSchedulingService
-				.getSchedules()
+			taskSchedulingService.getSchedules()
 				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, OTTAWA_RESOURCE_GROUP_KEY))
 		);
 
 		assertNull(
-			taskSchedulingService
-				.getSchedules()
+			taskSchedulingService.getSchedules()
 				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, NO_CONFIG_RESOURCE_GROUP_KEY))
 		);
 	}
@@ -192,15 +189,13 @@ class TaskSchedulingServiceTest {
 
 		assertEquals(
 			scheduledFutureMock,
-			taskSchedulingService
-				.getSchedules()
+			taskSchedulingService.getSchedules()
 				.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, PARIS_RESOURCE_GROUP_KEY, resourceKey1))
 		);
 
 		assertEquals(
 			scheduledFutureMock,
-			taskSchedulingService
-				.getSchedules()
+			taskSchedulingService.getSchedules()
 				.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, PARIS_RESOURCE_GROUP_KEY, resourceKey2))
 		);
 	}

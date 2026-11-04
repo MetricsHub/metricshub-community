@@ -34,17 +34,13 @@ class EmulationWmiRequestExecutorTest {
 
 	@Test
 	void testExecuteWmiMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_ComputerSystem
 			      namespace: root\\cimv2
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("value1", "value2")), MetricsHubConstants.TABLE_SEP, true),
@@ -66,9 +62,7 @@ class EmulationWmiRequestExecutorTest {
 
 	@Test
 	void testExecuteWmiRoundRobin(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_Process
@@ -78,9 +72,7 @@ class EmulationWmiRequestExecutorTest {
 			      wql: SELECT Name FROM Win32_Process
 			      namespace: root\\cimv2
 			    response: r2.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("first")), MetricsHubConstants.TABLE_SEP, true),
@@ -123,17 +115,13 @@ class EmulationWmiRequestExecutorTest {
 
 	@Test
 	void testExecuteWmiNoMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_Service
 			      namespace: root\\cimv2
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("other")), MetricsHubConstants.TABLE_SEP, true),
@@ -220,17 +208,13 @@ class EmulationWmiRequestExecutorTest {
 
 	@Test
 	void testExecuteWmiNamespaceCaseSensitive(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_Process
 			      namespace: ROOT\\CIMV2
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("matched")), MetricsHubConstants.TABLE_SEP, true),

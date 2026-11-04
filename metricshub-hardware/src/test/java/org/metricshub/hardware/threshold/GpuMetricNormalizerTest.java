@@ -14,10 +14,8 @@ class GpuMetricNormalizerTest {
 
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
-	private static final String GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL =
-		"hw.gpu.memory.utilization.limit{limit_type=\"critical\"}";
-	private static final String GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED =
-		"hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}";
+	private static final String GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL = "hw.gpu.memory.utilization.limit{limit_type=\"critical\"}";
+	private static final String GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED = "hw.gpu.memory.utilization.limit{limit_type=\"degraded\"}";
 	private static final String GPU_UTILIZATION_LIMIT_TYPE_CRITICAL = "hw.gpu.utilization.limit{limit_type=\"critical\"}";
 	private static final String GPU_UTILIZATION_LIMIT_TYPE_DEGRADED = "hw.gpu.utilization.limit{limit_type=\"degraded\"}";
 

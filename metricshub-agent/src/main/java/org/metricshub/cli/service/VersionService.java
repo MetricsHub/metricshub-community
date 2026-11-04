@@ -80,7 +80,6 @@ public class VersionService implements IVersionProvider {
 			"",
 			"Java version @|magenta,bold ${java.version}|@ @|faint (${java.vendor} ${java.vm.name} ${java.vm.version})|@",
 			"@|faint - Java Home:|@ @|magenta ${java.home}|@",
-			"@|faint - System:|@ @|magenta ${os.name} ${os.version} ${os.arch}|@"
-		};
+			"@|faint - System:|@ @|magenta ${os.name} ${os.version} ${os.arch}|@" };
 	}
 }

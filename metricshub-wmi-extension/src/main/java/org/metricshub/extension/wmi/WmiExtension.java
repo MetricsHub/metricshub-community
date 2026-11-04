@@ -128,8 +128,7 @@ public class WmiExtension implements IProtocolExtension {
 		List<List<String>> wmiResult = null;
 
 		// Retrieve WMI Configuration from the telemetry manager host configuration
-		final WmiConfiguration wmiConfiguration = (WmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final WmiConfiguration wmiConfiguration = (WmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(WmiConfiguration.class);
 
@@ -177,8 +176,10 @@ public class WmiExtension implements IProtocolExtension {
 		TelemetryManager telemetryManager,
 		boolean logMode
 	) {
-		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager ->
-			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WmiConfiguration.class);
+		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager -> (IWinConfiguration) manager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(WmiConfiguration.class);
 
 		if (criterion instanceof WmiCriterion wmiCriterion) {
 			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode).process(
@@ -218,8 +219,10 @@ public class WmiExtension implements IProtocolExtension {
 
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
-		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager ->
-			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WmiConfiguration.class);
+		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager -> (IWinConfiguration) manager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(WmiConfiguration.class);
 
 		if (source instanceof WmiSource wmiSource) {
 			return new WmiSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId).process(
@@ -332,15 +335,12 @@ public class WmiExtension implements IProtocolExtension {
 
 		return switch (queryType) {
 			case "wql", "wmi" -> wmiRequestExecutor.executeWqlQuery(hostname, wmiConfiguration, query, namespace);
-			case "command", "winremote" -> wmiRequestExecutor.executeWinRemoteCommand(
-				hostname,
-				wmiConfiguration,
-				query,
-				null
-			);
-			default -> throw new IllegalArgumentException(
-				String.format("Query type %s is not supported over WMI (supported: wql, command).", queryType)
-			);
+			case "command", "winremote" ->
+				wmiRequestExecutor.executeWinRemoteCommand(hostname, wmiConfiguration, query, null);
+			default ->
+				throw new IllegalArgumentException(
+					String.format("Query type %s is not supported over WMI (supported: wql, command).", queryType)
+				);
 		};
 	}
 
@@ -360,10 +360,7 @@ public class WmiExtension implements IProtocolExtension {
 			ToolDefinition.builder(
 				"runCommand",
 				"Runs a Windows command (CMD) on a Windows host through WMI and returns its output."
-			)
-				.requiredParameter("commandLine", "The command line to run")
-				.destructive()
-				.build()
+			).requiredParameter("commandLine", "The command line to run").destructive().build()
 		);
 	}
 
