@@ -100,6 +100,17 @@ public class ExecuteForEachEntryOf implements Serializable {
 	}
 
 	/**
+	 * Constructs a sequential instance of {@link ExecuteForEachEntryOf} (kept for API compatibility).
+	 *
+	 * @param source       The source for executing the operation for each entry.
+	 * @param concatMethod The method used to concatenate entries.
+	 * @param sleep        The sleep integer in ms.
+	 */
+	public ExecuteForEachEntryOf(@NonNull String source, IEntryConcatMethod concatMethod, Integer sleep) {
+		this(source, concatMethod, sleep, null);
+	}
+
+	/**
 	 * Creates a copy of the current {@link ExecuteForEachEntryOf} instance.
 	 *
 	 * @return A new instance of {@link ExecuteForEachEntryOf} with the same source and concatenation method.
