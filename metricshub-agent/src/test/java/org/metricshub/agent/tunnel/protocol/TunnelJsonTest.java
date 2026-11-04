@@ -31,14 +31,16 @@ class TunnelJsonTest {
 			new ToolDescriptor(
 				"ListHosts",
 				"Lists hosts",
-				TunnelJson.MAPPER.readTree("{\"type\":\"object\",\"properties\":{}}")
+				TunnelJson.MAPPER.readTree("{\"type\":\"object\",\"properties\":{}}"),
+				"read"
 			),
 			new ToolDescriptor(
 				"PingHost",
 				"Pings hosts",
 				TunnelJson.MAPPER.readTree(
 					"{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"hostname\"]}"
-				)
+				),
+				"read"
 			)
 		);
 		return new AgentRegister(
@@ -125,12 +127,12 @@ class TunnelJsonTest {
 		final JsonNode c = TunnelJson.MAPPER.readTree("{\"properties\":{\"x\":{\"type\":\"number\"}},\"type\":\"object\"}");
 
 		assertEquals(
-			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", a))),
-			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", b)))
+			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", a, "read"))),
+			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", b, "read")))
 		);
 		assertNotEquals(
-			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", a))),
-			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", c)))
+			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", a, "read"))),
+			TunnelJson.fingerprint(List.of(new ToolDescriptor("T", "d", c, "read")))
 		);
 		assertTrue(TunnelJson.fingerprint(List.of()).matches("sha256:[0-9a-f]{64}"));
 	}

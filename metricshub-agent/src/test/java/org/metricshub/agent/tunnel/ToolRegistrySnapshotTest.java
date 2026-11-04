@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
+import org.metricshub.web.mcp.ToolAccess;
+import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -30,7 +32,8 @@ class ToolRegistrySnapshotTest {
 		when(definition.inputSchema()).thenReturn(schema);
 		final ToolCallback callback = mock(ToolCallback.class);
 		when(callback.getToolDefinition()).thenReturn(definition);
-		return callback;
+		// The agent's own tool, as the configuration classifies it: the one kind the tunnel advertises
+		return new ProductToolCallback(callback, ToolAccess.Access.READ);
 	}
 
 	private static ToolCallbackProvider provider(final ToolCallback... callbacks) {
@@ -110,5 +113,26 @@ class ToolRegistrySnapshotTest {
 		final ToolCallbackProvider provider = provider(callback("Broken", "Broken", "{not json"));
 
 		assertThrows(IllegalStateException.class, () -> ToolRegistrySnapshot.from(provider, Set.of()));
+	}
+
+	@Test
+	void onlyTheAgentsOwnToolsAreAdvertisedEachWithItsAccess() {
+		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
+		// An extension's tool: whether it fits a host depends on that host, so Central asks for it per host
+		final ToolCallback ssh = new org.metricshub.web.mcp.tool.DynamicToolCallback(
+			org.springframework.ai.tool.definition.ToolDefinition.builder()
+				.name("ssh_runCommand")
+				.description("Runs a command")
+				.inputSchema(HOST_SCHEMA)
+				.build(),
+			arguments -> "",
+			true
+		);
+
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ssh, list), Set.of());
+
+		assertEquals(List.of("ListHosts"), snapshot.tools().stream().map(ToolDescriptor::name).toList());
+		assertEquals("read", snapshot.tools().get(0).access(), "and Central is told its class");
+		assertSame(ssh, snapshot.callbacks().get("ssh_runCommand"), "the bridge still runs the extension's tool");
 	}
 }

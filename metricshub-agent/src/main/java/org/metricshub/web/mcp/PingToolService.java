@@ -27,6 +27,7 @@ import java.util.List;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +74,7 @@ public class PingToolService implements IMCPToolService {
 	 * @param poolSize      optional pool size for concurrent ICMP queries; defaults to {@value #DEFAULT_PING_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a list of ProtocolCheckResponse results for each hostname
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		description = """
 		Ping one or more hosts to check if they are reachable.
