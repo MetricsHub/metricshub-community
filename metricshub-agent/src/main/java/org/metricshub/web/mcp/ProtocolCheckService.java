@@ -24,6 +24,7 @@ package org.metricshub.web.mcp;
 import java.util.List;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.metricshub.web.service.ProtocolHealthCheckService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -70,6 +71,7 @@ public class ProtocolCheckService implements IMCPToolService {
 	 * @param poolSize optional pool size for concurrent protocol checks; defaults to {@value #DEFAULT_PROTOCOL_CHECK_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = "CheckProtocol",
 		description = """

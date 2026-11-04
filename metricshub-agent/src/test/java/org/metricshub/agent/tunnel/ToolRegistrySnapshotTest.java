@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
+import org.metricshub.web.mcp.ToolAccess;
+import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -30,7 +32,8 @@ class ToolRegistrySnapshotTest {
 		when(definition.inputSchema()).thenReturn(schema);
 		final ToolCallback callback = mock(ToolCallback.class);
 		when(callback.getToolDefinition()).thenReturn(definition);
-		return callback;
+		// The agent's own tool, as the configuration classifies it
+		return new ProductToolCallback(callback, ToolAccess.Access.READ);
 	}
 
 	private static ToolCallbackProvider provider(final ToolCallback... callbacks) {
@@ -110,5 +113,42 @@ class ToolRegistrySnapshotTest {
 		final ToolCallbackProvider provider = provider(callback("Broken", "Broken", "{not json"));
 
 		assertThrows(IllegalStateException.class, () -> ToolRegistrySnapshot.from(provider, Set.of()));
+	}
+
+	@Test
+	void eachToolIsAdvertisedWithItsAccess() {
+		final ToolCallback ssh = dynamic("ssh_runCommand", true);
+		final ToolCallback snmp = dynamic("snmp_get", false);
+		final ToolCallback unknown = ((ProductToolCallback) callback("Unknown", "Of no known kind", "")).delegate();
+		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
+
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ssh, snmp, unknown, list), Set.of());
+
+		assertEquals(
+			List.of("ListHosts=read", "snmp_get=read", "ssh_runCommand=write"),
+			snapshot
+				.tools()
+				.stream()
+				.map(tool -> tool.name() + "=" + tool.access())
+				.toList(),
+			"a tool that changes a host is write, and one of no known kind is not advertised"
+		);
+		assertEquals(
+			Set.of("ListHosts", "snmp_get", "ssh_runCommand"),
+			snapshot.callbacks().keySet(),
+			"nor can Central invoke it by name"
+		);
+	}
+
+	private static ToolCallback dynamic(final String name, final boolean destructive) {
+		return new org.metricshub.web.mcp.tool.DynamicToolCallback(
+			org.springframework.ai.tool.definition.ToolDefinition.builder()
+				.name(name)
+				.description(name)
+				.inputSchema(HOST_SCHEMA)
+				.build(),
+			arguments -> "",
+			destructive
+		);
 	}
 }

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ConnectorInfo;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class ListConnectorsService implements IMCPToolService {
 	 *
 	 * @return a list of {@link ConnectorInfo} containing connector IDs and their identities.
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = "ListConnectors",
 		description = """

@@ -38,6 +38,7 @@ import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.mcp.TelemetryResult;
 import org.metricshub.web.dto.mcp.TelemetryResultConverter;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -108,6 +109,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @param poolSize    optional pool size for concurrent collection; defaults to {@value #DEFAULT_TROUBLESHOOT_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = COLLECT_METRICS_FOR_HOST,
 		description = """
@@ -168,6 +170,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @param poolSize optional pool size for concurrent cache reads; defaults to {@value #DEFAULT_TROUBLESHOOT_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = GET_METRICS_FROM_CACHE_FOR_HOST,
 		description = """
@@ -221,6 +224,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @param poolSize    optional pool size for concurrent tests; defaults to {@value #DEFAULT_TROUBLESHOOT_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = TEST_AVAILABLE_CONNECTORS_FOR_HOST,
 		description = """

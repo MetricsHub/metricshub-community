@@ -31,6 +31,7 @@ import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,7 @@ public class ListResourcesService implements IMCPToolService {
 	 *
 	 * @return a map where the key is the resource identifier and the value contains its details
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = "ListHosts",
 		description = """
