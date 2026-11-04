@@ -3,3 +3,6 @@
 
 # Normalize line endings to LF (#1400)
 ac6982706d798ba93f4d48d780752d1b3a270516
+
+# Reformat Java with the Eclipse formatter (#1473)
+7a628b7cf449d28aa9f7fff29ccf556c7a25e251
