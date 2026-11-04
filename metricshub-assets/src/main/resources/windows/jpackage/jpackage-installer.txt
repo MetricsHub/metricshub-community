@@ -1,0 +1,8 @@
+--type ${package.type}
+--name MetricsHub
+--description "${package.description}"
+--vendor "MetricsHub"
+--app-version ${project.version.noSnapshot}
+--resource-dir override
+--license-file assets\LICENSE
+--win-dir-chooser

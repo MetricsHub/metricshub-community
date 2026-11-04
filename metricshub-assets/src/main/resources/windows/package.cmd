@@ -82,23 +82,6 @@ set COMMON_ARGS=^
  --dest "%DEST_DIR%"
 
 REM -----------------------------------------------------------------------------
-REM installable
-REM -----------------------------------------------------------------------------
-echo Running jpackage for installable...
-"%JPACKAGE_BIN%" --verbose ^
- --add-launcher MetricsHubServiceManager=metricshub-agent.properties ^
- --license-file assets/LICENSE ^
- --win-dir-chooser ^
- %COMMON_ARGS% ^
- @jpackage.txt
-if errorlevel 1 (
-    echo jpackage failed for installable.
-    exit /b 1
-)
-echo installable packaging completed.
-echo.
-
-REM -----------------------------------------------------------------------------
 REM app-image
 REM -----------------------------------------------------------------------------
 echo Running jpackage for app-image...
@@ -112,6 +95,37 @@ if errorlevel 1 (
     exit /b 1
 )
 echo app-image packaging completed.
+echo.
+
+REM -----------------------------------------------------------------------------
+REM Disable the launcher self-restart
+REM -----------------------------------------------------------------------------
+REM By default, the jpackage Windows launcher restarts itself in a child process
+REM and rebuilds the command line without escaping embedded double quotes, so an
+REM argument such as --password "a\"b" reaches the application broken.
+REM win.norestart=true (read from the [Application] section) disables the restart.
+echo Disabling launcher restart in the app-image .cfg files...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "Get-ChildItem '%DEST_DIR%\MetricsHub\app\*.cfg' | ForEach-Object { $c = (Get-Content -Raw $_.FullName) -replace '\[Application\]\r?\n', ('[Application]' + [Environment]::NewLine + 'win.norestart=true' + [Environment]::NewLine); [IO.File]::WriteAllText($_.FullName, $c) }"
+if errorlevel 1 (
+    echo Failed to update the launcher .cfg files.
+    exit /b 1
+)
+echo.
+
+REM -----------------------------------------------------------------------------
+REM installable (built from the app-image above)
+REM -----------------------------------------------------------------------------
+echo Running jpackage for installable...
+"%JPACKAGE_BIN%" --verbose ^
+ --app-image "%DEST_DIR%\MetricsHub" ^
+ --dest "%DEST_DIR%" ^
+ @jpackage-installer.txt
+if errorlevel 1 (
+    echo jpackage failed for installable.
+    exit /b 1
+)
+echo installable packaging completed.
 echo.
 
 echo All packaging steps completed successfully! Output in: %DEST_DIR%
