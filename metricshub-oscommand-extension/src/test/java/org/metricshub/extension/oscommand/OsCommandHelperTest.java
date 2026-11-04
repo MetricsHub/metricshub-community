@@ -83,7 +83,6 @@ class OsCommandHelperTest {
 	public static final String ECHO_HELLO_WORLD = "echo Hello World";
 	public static final String WINDOWS_NT_HELLO_WORLD = "Windows_NT\nHello World";
 	public static final String END_OF_LINE = "\n";
-	public static final String END_OF_LINE_IN_BRACKETS = "[\r\n]";
 	public static final String TEXT = "text";
 	public static final String KEY = "key";
 	public static final String SPACE_KEY = SINGLE_SPACE + KEY;
@@ -342,13 +341,8 @@ class OsCommandHelperTest {
 				assertNotNull(file);
 				assertTrue(file.exists());
 				assertTrue(file.getName().matches(EMBEDDED_TEMP_FILE_PREFIX + AWK_SCRIPT_BASE_NAME + AWK_FILE_EXTENSION));
-				/*
-				 * assertEquals(
--						expectedContent.replaceAll("[\r\n]", EMPTY),
--						Files.readAllLines(Paths.get(file.getAbsolutePath())).stream().collect(Collectors.joining()));
-				 */
 				assertEquals(
-					AWK_EMBEDDED_CONTENT_SUDO.replaceAll(END_OF_LINE_IN_BRACKETS, EMPTY),
+					AWK_EMBEDDED_CONTENT_SUDO.replace(END_OF_LINE, EMPTY),
 					Files.readAllLines(Paths.get(file.getAbsolutePath())).stream().collect(Collectors.joining())
 				);
 				file.delete();

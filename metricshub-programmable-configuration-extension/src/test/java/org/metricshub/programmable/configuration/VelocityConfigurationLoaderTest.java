@@ -90,7 +90,7 @@ class VelocityConfigurationLoaderTest {
 	 *
 	 * @param tempDir the directory hosting the template
 	 * @param content the Velocity template content
-	 * @return the generated YAML, with normalized line separators
+	 * @return the generated YAML
 	 * @throws IOException if the template cannot be written
 	 */
 	private static String render(final Path tempDir, final String content) throws IOException {
@@ -100,7 +100,7 @@ class VelocityConfigurationLoaderTest {
 		final String yaml = new VelocityConfigurationLoader(templatePath, Map.of()).generateYaml();
 		assertNotNull(yaml, "Generated YAML should not be null");
 
-		return yaml.replaceAll("\r\n", "\n");
+		return yaml;
 	}
 
 	@Test
@@ -146,7 +146,7 @@ class VelocityConfigurationLoaderTest {
 			        password: pass
 			    connectors: ["#system"]
 			""",
-			yaml.replaceAll("\r\n", "\n"),
+			yaml,
 			"Generated YAML should match expected output"
 		);
 	}

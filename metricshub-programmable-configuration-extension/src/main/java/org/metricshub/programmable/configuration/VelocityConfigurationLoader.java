@@ -217,7 +217,8 @@ public class VelocityConfigurationLoader {
 		template.merge(context, writer);
 
 		// Handed to the caller, not published: the generated configuration may still be rejected.
-		return new RenderResult(writer.toString(), scheduleTool.getCron().orElse(null));
+		// Velocity keeps the template's line endings (CRLF in a Windows checkout): always yield LF.
+		return new RenderResult(writer.toString().replace("\r\n", "\n"), scheduleTool.getCron().orElse(null));
 	}
 
 	/**

@@ -330,7 +330,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>winrm-java</artifactId>
-				<version>3.1.02</version>
+				<version>3.1.04</version>
 			</dependency>
 			<dependency>
 				<groupId>io.jawk</groupId>
