@@ -218,4 +218,13 @@ public abstract class Source implements Serializable {
 	public Integer getSleepExecuteForEachEntryOf() {
 		return executeForEachEntryOf != null ? executeForEachEntryOf.getSleep() : null;
 	}
+
+	/**
+	 * Get the executeForEachEntryOf maxParallel Integer value
+	 *
+	 * @return Integer value
+	 */
+	public Integer getMaxParallelExecuteForEachEntryOf() {
+		return executeForEachEntryOf != null ? executeForEachEntryOf.getMaxParallel() : null;
+	}
 }

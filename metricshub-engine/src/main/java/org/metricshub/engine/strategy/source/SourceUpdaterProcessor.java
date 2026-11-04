@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy.source;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
@@ -32,6 +33,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -638,45 +643,104 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final SourceTable result = SourceTable.builder().rawData(EMPTY).build();
 
 		final Integer sleep = source.getSleepExecuteForEachEntryOf();
+		final List<List<String>> table = maybeSourceTable.get().getTable();
 
-		for (List<String> row : maybeSourceTable.get().getTable()) {
-			if (row == null) {
-				continue;
-			}
+		final int poolSize = computeExecuteForEachEntryOfPoolSize(source, sleep, table.size());
+		final ExecutorService pool = poolSize > 1 ? Executors.newFixedThreadPool(poolSize) : null;
+		final List<List<String>> pendingRows = new ArrayList<>();
+		final List<Future<SourceTable>> pendingResults = new ArrayList<>();
 
-			final Source copy = source.copy();
-
-			try {
-				copy.update(dataValue -> replaceDynamicEntry(dataValue, row));
-			} catch (NumberFormatException e) {
-				log.warn("Hostname {} - The dynamic key from Source is incorrectly formatted : {}.", hostname, copy);
-				continue;
-			}
-
-			copy.update(value ->
-				replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
-			);
-			copy.update(dataValue -> replaceAttributeReferences(dataValue, attributes));
-
-			copy.update(value -> replaceProtocolPropertyReferences(value));
-
-			copy.update(value -> replaceSourceReference(value, copy));
-
-			concatEntryResult(source, result, row, copy.accept(sourceProcessor));
-			if (sleep != null && sleep != 0) {
-				try {
-					Thread.sleep(sleep);
-				} catch (InterruptedException e) {
-					log.error(
-						"Hostname {} - Thread interrupted during sleep between two 'execute for each entry' requests.",
-						hostname
-					);
-					Thread.currentThread().interrupt();
+		try {
+			for (List<String> row : table) {
+				if (row == null) {
+					continue;
 				}
+
+				final Source copy = source.copy();
+
+				try {
+					copy.update(dataValue -> replaceDynamicEntry(dataValue, row));
+				} catch (NumberFormatException e) {
+					log.warn("Hostname {} - The dynamic key from Source is incorrectly formatted : {}.", hostname, copy);
+					continue;
+				}
+
+				copy.update(value ->
+					replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
+				);
+				copy.update(dataValue -> replaceAttributeReferences(dataValue, attributes));
+
+				copy.update(value -> replaceProtocolPropertyReferences(value));
+
+				copy.update(value -> replaceSourceReference(value, copy));
+
+				if (pool != null) {
+					pendingRows.add(row);
+					pendingResults.add(pool.submit(() -> copy.accept(sourceProcessor)));
+					continue;
+				}
+
+				concatEntryResult(source, result, row, copy.accept(sourceProcessor));
+				if (sleep != null && sleep != 0) {
+					try {
+						Thread.sleep(sleep);
+					} catch (InterruptedException e) {
+						log.error(
+							"Hostname {} - Thread interrupted during sleep between two 'execute for each entry' requests.",
+							hostname
+						);
+						Thread.currentThread().interrupt();
+					}
+				}
+			}
+
+			// Concatenate the parallel results in the original row order, as the sequential run does
+			for (int i = 0; i < pendingResults.size(); i++) {
+				concatEntryResult(source, result, pendingRows.get(i), pendingResults.get(i).get());
+			}
+		} catch (InterruptedException e) {
+			log.error(
+				"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
+				hostname
+			);
+			Thread.currentThread().interrupt();
+			return SourceTable.empty();
+		} catch (ExecutionException e) {
+			// Source.accept throws no checked exception: rethrow what the sequential run would have thrown
+			if (e.getCause() instanceof Error error) {
+				throw error;
+			}
+			throw (RuntimeException) e.getCause();
+		} finally {
+			if (pool != null) {
+				pool.shutdownNow();
 			}
 		}
 
 		return result;
+	}
+
+	/**
+	 * Compute the number of threads processing the entries of an <em>executeForEachEntryOf</em> source.
+	 * The entries are processed sequentially (1) unless <em>maxParallel</em> is set, and also when
+	 * <em>sleep</em> is set (throttling), the source forces serialization or the host is configured as sequential.
+	 *
+	 * @param source     The {@link Source} defining the executeForEachEntryOf
+	 * @param sleep      The sleep in milliseconds between two entries
+	 * @param entryCount The number of entries to process
+	 * @return The pool size, 1 or less meaning sequential processing
+	 */
+	private int computeExecuteForEachEntryOfPoolSize(final Source source, final Integer sleep, final int entryCount) {
+		final Integer maxParallel = source.getMaxParallelExecuteForEachEntryOf();
+		if (
+			maxParallel == null ||
+			(sleep != null && sleep != 0) ||
+			source.isForceSerialization() ||
+			telemetryManager.getHostConfiguration().isSequential()
+		) {
+			return 1;
+		}
+		return Math.min(Math.min(maxParallel, MAX_THREADS_COUNT), entryCount);
 	}
 
 	/**

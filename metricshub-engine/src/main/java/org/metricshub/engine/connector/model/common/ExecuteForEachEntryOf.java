@@ -71,22 +71,43 @@ public class ExecuteForEachEntryOf implements Serializable {
 	private Integer sleep;
 
 	/**
+	 * The maximum number of entries processed concurrently. Absent or 1 means sequential.
+	 */
+	@JsonDeserialize(using = PositiveIntegerDeserializer.class)
+	@JsonSetter(nulls = SKIP)
+	private Integer maxParallel;
+
+	/**
 	 * Constructs an instance of {@link ExecuteForEachEntryOf}.
 	 *
 	 * @param source       The source for executing the operation for each entry.
 	 * @param concatMethod The method used to concatenate entries.
 	 * @param sleep        The sleep integer in ms.
+	 * @param maxParallel  The maximum number of entries processed concurrently.
 	 */
 	@Builder
 	@JsonCreator
 	public ExecuteForEachEntryOf(
 		@JsonProperty(value = "source", required = true) @NonNull String source,
 		@JsonProperty("concatMethod") IEntryConcatMethod concatMethod,
-		@JsonProperty(value = "sleep", required = false) Integer sleep
+		@JsonProperty(value = "sleep", required = false) Integer sleep,
+		@JsonProperty(value = "maxParallel", required = false) Integer maxParallel
 	) {
 		this.source = source;
 		this.concatMethod = concatMethod == null ? EntryConcatMethod.LIST : concatMethod;
 		this.sleep = sleep;
+		this.maxParallel = maxParallel;
+	}
+
+	/**
+	 * Constructs a sequential instance of {@link ExecuteForEachEntryOf} (kept for API compatibility).
+	 *
+	 * @param source       The source for executing the operation for each entry.
+	 * @param concatMethod The method used to concatenate entries.
+	 * @param sleep        The sleep integer in ms.
+	 */
+	public ExecuteForEachEntryOf(@NonNull String source, IEntryConcatMethod concatMethod, Integer sleep) {
+		this(source, concatMethod, sleep, null);
 	}
 
 	/**
@@ -95,7 +116,12 @@ public class ExecuteForEachEntryOf implements Serializable {
 	 * @return A new instance of {@link ExecuteForEachEntryOf} with the same source and concatenation method.
 	 */
 	public ExecuteForEachEntryOf copy() {
-		return ExecuteForEachEntryOf.builder().source(source).concatMethod(concatMethod.copy()).sleep(sleep).build();
+		return ExecuteForEachEntryOf.builder()
+			.source(source)
+			.concatMethod(concatMethod.copy())
+			.sleep(sleep)
+			.maxParallel(maxParallel)
+			.build();
 	}
 
 	@Override
@@ -105,6 +131,7 @@ public class ExecuteForEachEntryOf implements Serializable {
 		addNonNull(stringJoiner, "- executeForEachEntryOf=", source);
 		addNonNull(stringJoiner, "- concatMethod=", concatMethod != null ? concatMethod.getDescription() : EMPTY);
 		addNonNull(stringJoiner, "- sleep=", sleep);
+		addNonNull(stringJoiner, "- maxParallel=", maxParallel);
 
 		return stringJoiner.toString();
 	}
