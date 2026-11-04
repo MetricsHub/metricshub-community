@@ -36,7 +36,7 @@ Each step **depends** on the previous one.
 1. 🧹 **Code Formatting**
 
    ```bash
-   mvn prettier:write
+   mvn formatter:format
    ```
 
    * Must be run **before any other Maven goal.**
@@ -119,7 +119,7 @@ Each step **depends** on the previous one.
 Before committing or submitting changes, the agent **must** execute all of the following in order:
 
 ```bash
-mvn prettier:write
+mvn formatter:format
 mvn license:check-file-header
 mvn checkstyle:check
 mvn verify
@@ -143,7 +143,7 @@ To avoid “forgetting” steps or commands when the project is large:
 * **Preserve execution context:** before submitting changes, the agent must recall:
 
   * The last Maven module worked on.
-  * Whether previous commands (`prettier`, `license`, `verify`) succeeded or failed.
+  * Whether previous commands (`formatter`, `license`, `verify`) succeeded or failed.
   * Any pending errors or warnings that require fixing.
 
 If at any time context is lost or unclear, **rebuild from the module root** using:
@@ -169,7 +169,7 @@ mvn clean verify
 
 | Problem                 | Likely Cause                  | Fix                                                            |
 | ----------------------- | ----------------------------- | -------------------------------------------------------------- |
-| Build fails on `verify` | Code formatting not fixed     | Run `mvn prettier:write`                                       |
+| Build fails on `validate` | Code formatting not fixed   | Run `mvn formatter:format`                                     |
 | License check fails     | Missing AGPL header           | Run `mvn license:update-file-header -Dlicense.includes=<path>` |
 | Checkstyle errors       | Formatting or Javadoc missing | Run `mvn checkstyle:check` and fix reported issues             |
 | Tests failing           | Unit/integration issue        | Inspect `target/surefire-reports` or `target/failsafe-reports` |
@@ -192,7 +192,7 @@ When you (the AI agent) **propose a change or submit a pull request**, your outp
 
 * Confirmation that:
 
-  * `mvn prettier:write` was executed successfully
+  * `mvn formatter:format` was executed successfully
   * `mvn license:check-file-header` passed
   * `mvn checkstyle:check` passed
   * `mvn verify` succeeded

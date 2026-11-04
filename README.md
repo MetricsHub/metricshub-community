@@ -196,23 +196,23 @@ mvn checkstyle:check
 
 ## Code Formatting
 
-In this project, we maintain code formatting using [prettier-java](https://github.com/jhipster/prettier-java), a tool that helps ensure clean and consistent Java code. It automatically formats your code according to a predefined set of rules.
+Java code is formatted with the Eclipse formatter, through the [formatter-maven-plugin](https://github.com/revelc/formatter-maven-plugin) and the [`metricshub-eclipse-formatter.xml`](metricshub-eclipse-formatter.xml) profile at the root of the repository.
 
-### Prettier Maven Plugin
-
-To automatically format the Java code in a specific Maven module, navigate to the directory of the Maven project you wish to format and run the following `mvn` command:
+To format the Java code of a Maven module, or of the whole repository from its root, run:
 
 ```bash
-mvn prettier:write
+mvn formatter:format
 ```
 
-To validate the formatted code, navigate to the directory of the Maven project you wish to check and run the following `mvn` command:
+The build validates the formatting in the `validate` phase and fails if a file is not formatted.
 
-```bash
-mvn prettier:check
-```
+Your IDE can format exactly like the build, with no extra tool:
 
-The build will fail if you forgot to run Prettier.
+* **VS Code** (Red Hat Java extension): set `java.format.settings.url` to the path of `metricshub-eclipse-formatter.xml`.
+* **Eclipse**: import `metricshub-eclipse-formatter.xml` in *Preferences > Java > Code Style > Formatter*.
+* **IntelliJ IDEA**: install the *Eclipse Code Formatter* plugin and point it at `metricshub-eclipse-formatter.xml`.
+
+The React web UI in `metricshub-web/react` is still formatted with Prettier (`npm run format`).
 
 ## Submitting a PR
 

@@ -153,16 +153,6 @@
 			<build>
 				<plugins>
 
-					<!-- Prettier will use local Node.js and npm-->
-					<plugin>
-						<groupId>com.hubspot.maven.plugins</groupId>
-						<artifactId>prettier-maven-plugin</artifactId>
-						<configuration>
-							<nodePath>node</nodePath>
-							<npmPath>npm</npmPath>
-						</configuration>
-					</plugin>
-
 					<!-- On Codex, merge the specific IT settings.xml with Codex settings.xml -->
 					<!-- which includes the necessary proxy settings -->
 					<plugin>
@@ -458,19 +448,6 @@
 					</dependencies>
 				</plugin>
 				<plugin>
-					<groupId>com.hubspot.maven.plugins</groupId>
-					<artifactId>prettier-maven-plugin</artifactId>
-					<configuration>
-						<prettierJavaVersion>2.8.1</prettierJavaVersion>
-						<ignoreConfigFile>false</ignoreConfigFile>
-						<ignoreEditorConfig>false</ignoreEditorConfig>
-						<inputGlobs>
-							<inputGlob>src/main/java/**/*.java</inputGlob>
-							<inputGlob>src/test/java/**/*.java</inputGlob>
-						</inputGlobs>
-					</configuration>
-				</plugin>
-				<plugin>
 					<artifactId>maven-javadoc-plugin</artifactId>
 					<configuration>
 						<detectJavaApiLink>false</detectJavaApiLink>
@@ -594,25 +571,30 @@
 				</configuration>
 			</plugin>
 
+			<!-- formatter: mvn formatter:format before committing -->
 			<plugin>
-				<groupId>com.hubspot.maven.plugins</groupId>
-				<artifactId>prettier-maven-plugin</artifactId>
+				<groupId>net.revelc.code.formatter</groupId>
+				<artifactId>formatter-maven-plugin</artifactId>
+				<version>2.29.0</version>
 				<executions>
 					<execution>
-						<phase>verify</phase>
+						<phase>validate</phase>
 						<goals>
-							<goal>check</goal>
+							<goal>validate</goal>
 						</goals>
 					</execution>
 				</executions>
 				<configuration>
-					<inputGlobs>
-						<!-- These are the default patterns, you can omit
-						<inputGlobs> entirely unless you want to override them -->
-						<inputGlob>src/main/java/**/*.java</inputGlob>
-						<inputGlob>src/test/java/**/*.java</inputGlob>
-						<inputGlob>src/it/java/**/*.java</inputGlob>
-					</inputGlobs>
+					<directories>
+						<directory>${project.build.sourceDirectory}</directory>
+						<directory>${project.build.testSourceDirectory}</directory>
+						<directory>${project.basedir}/src/it/java</directory>
+					</directories>
+					<includes>
+						<include>**/*.java</include>
+					</includes>
+					<!-- .mvn/ anchors maven.multiModuleProjectDirectory to the repository root, from any module -->
+					<configFile>${maven.multiModuleProjectDirectory}/metricshub-eclipse-formatter.xml</configFile>
 				</configuration>
 			</plugin>
 
