@@ -41,7 +41,6 @@ class CommandLineToolTest {
 		final String yaml = loader.generateYaml();
 
 		assertNotNull(yaml, "Generated YAML should not be null");
-		// Velocity keeps the template's line endings: a CRLF checkout of command.vm yields CRLF
 		assertEquals(
 			"""
 
@@ -61,7 +60,7 @@ class CommandLineToolTest {
 			      ssh:
 			        username: admin
 			""",
-			yaml.replace("\r\n", "\n")
+			yaml
 		);
 	}
 
