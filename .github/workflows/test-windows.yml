@@ -30,7 +30,15 @@ jobs:
       with:
         java-version: "25"
         distribution: temurin
-        cache: maven
+
+    # Same cache scheme as maven-build.yml: closest match restored, saved from main only
+    - name: Restore Maven repository
+      id: maven-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.m2/repository
+        key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+        restore-keys: maven-${{ runner.os }}-
 
     - name: Set up Maven settings.xml
       uses: s4u/maven-settings-action@v4.1.0
@@ -70,6 +78,13 @@ jobs:
       env:
         REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
         REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
+
+    - name: Save Maven repository
+      if: github.ref == 'refs/heads/main' && steps.maven-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.m2/repository
+        key: ${{ steps.maven-cache.outputs.cache-primary-key }}
 
     - name: Check that the build changed no tracked file
       shell: bash
