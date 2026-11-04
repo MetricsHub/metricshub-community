@@ -31,5 +31,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * @param name        tool name, unique within the agent
  * @param description human/LLM-readable description
  * @param inputSchema JSON schema of the arguments object
+ * @param access      {@code read} or {@code write}: what Central requires of a user to call the tool, and,
+ *                    for a write, an approval of every call
  */
-public record ToolDescriptor(String name, String description, JsonNode inputSchema) {}
+public record ToolDescriptor(String name, String description, JsonNode inputSchema, String access) {}

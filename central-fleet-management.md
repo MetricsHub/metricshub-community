@@ -802,14 +802,14 @@ flowchart TB
 | `agent.tunnel.TunnelService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `central:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
 | `agent.tunnel.client.TunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
 | `agent.tunnel.client.TunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback unless `central.insecure` is set |
-| `agent.tunnel.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
+| `agent.tunnel.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`, `access`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
 | `agent.tunnel.HostInventory` | Hosts with an active `TelemetryManager`, identified by (resource group, resource key) |
 | `agent.tunnel.AgentDescriptorMapper` | Reuses `OpAmpAgentDescriptionMapper.resolveAttributes`, adds the edition |
 | `agent.tunnel.ToolBridge` | Executes `tool.invoke`: exact-name lookup, in-flight cap, deadline, payload cap; exactly one answer per request |
 | `agent.tunnel.protocol.*` | `TunnelMessage` (sealed envelope), `ToolErrorCode`, `TunnelJson` (lenient mapper, canonical fingerprint) |
 | `agent.fleet.AgentInstanceUid`, `agent.fleet.FleetHeaders` | Identity file and header decryption shared by both channels |
 
-Adding a tool needs **no protocol change**: implement an `IMCPToolService`, and the next (re)connection advertises it.
+Adding a tool needs **no protocol change**: implement an `IMCPToolService`, declare each `@Tool` method's class with `@ToolAccess` (the agent refuses to start without it), and the next (re)connection advertises it.
 
 ### 13.2 Connection lifecycle
 
@@ -884,7 +884,7 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 |---|---|
 | Outbound only, `wss://` required outside a loopback **literal** | Credentials travel in the handshake headers, so cleartext is granted to `localhost`, `127.0.0.0/8` and `::1` as written — never to a name that merely resolves to one. The resolution that would matter is the one the HTTP client does when it connects, and a record can change between the two. `central.insecure` lifts the rule for every host, and a tunnel configured in cleartext that way logs a warning |
 | Only advertised tools are invokable; `excludedTools` removes a tool from the advertisement itself | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
-| The local flag `metricshub.mcp.tool.destructive.enabled` gates only the agent's own MCP server and chat: every tool, the destructive ones included, is advertised to Central, which decides itself (enabled in the UI, authorized user, manual approval) before invoking one | A remotely invoked tool never has more rights than a locally invoked one |
+| The local flag `metricshub.mcp.tool.destructive.enabled` gates only the agent's own MCP server and chat: every tool, the destructive ones included, is advertised to Central with its access class (`write` for a destructive one), and Central decides itself (enabled in the UI, authorized user, manual approval) before invoking one | A remotely invoked tool never has more rights than a locally invoked one |
 | Every outbound frame is bounded, and weighed in bytes | Measured at the socket, so it covers a registration and a `hosts.updated` as well as an answer: a fleet monitoring thousands of hosts can produce either above the cap, and sending it would close the tunnel (`1009`) rather than lose one frame. Above the cap, a result becomes `RESULT_TOO_LARGE`, a failure's detail is truncated rather than the failure going unreported, and anything still too large is dropped with an error in the log — the server's own deadline then ends that one invocation |
 | Only actively monitored hosts are advertised | Central never routes to a resource the agent could not validate |
 | `maxInFlight` bounds concurrent **invocations**; the work inside one is bounded by the tool, but it is cancelled with the invocation | A multi-host tool fans out internally, exactly as it does for the agent's own AI features — the tunnel exposes that concurrency, it does not introduce it. Bound it where it is configured (the tool's own pool size), not at the bridge, which cannot tell one tool's fan-out from another's. The deadline's interruption does reach that fan-out: `MultiHostToolExecutor` waits interruptibly and shuts its per-call pool down, so a timed-out invocation stops its per-host work instead of leaving it to run to completion unattended. Per-host work that ignores its interruption keeps its thread, as ever — and keeps the worker too, until its pool has terminated, so it stays under the same thread ceiling rather than accumulating a pool per cancelled invocation |

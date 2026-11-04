@@ -31,6 +31,8 @@ import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegistered;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolError;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolInvoke;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolResult;
+import org.metricshub.web.mcp.ToolAccess;
+import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -57,12 +59,22 @@ class ToolBridgeTest {
 		return callback;
 	}
 
+	/** The agent's own tools, as the configuration classifies them: the bridge runs only a classified tool. */
+	private static ToolCallbackProvider provider(final ToolCallback... callbacks) {
+		final ToolCallback[] classified = new ToolCallback[callbacks.length];
+		for (int index = 0; index < callbacks.length; index++) {
+			classified[index] = new ProductToolCallback(callbacks[index], ToolAccess.Access.READ);
+		}
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenReturn(classified);
+		return provider;
+	}
+
 	@BeforeEach
 	void setUp() {
 		listHosts = callback("ListHosts");
 		slow = callback("Slow");
-		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
-		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { listHosts, slow });
+		final ToolCallbackProvider provider = provider(listHosts, slow);
 		workers = ToolBridge.newWorkerPool();
 		bridge = new ToolBridge(ToolRegistrySnapshot.from(provider, Set.of()), (answer, generation) -> {
 			answers.add(answer);
@@ -227,8 +239,7 @@ class ToolBridgeTest {
 	void shouldRunTheRebuiltCallbackAfterAnUpdate() throws Exception {
 		final ToolCallback rebuilt = callback("ListHosts");
 		when(rebuilt.call(anyString())).thenReturn("\"rebuilt\"");
-		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
-		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { rebuilt, slow });
+		final ToolCallbackProvider provider = provider(rebuilt, slow);
 
 		bridge.update(ToolRegistrySnapshot.from(provider, Set.of()));
 		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
@@ -362,8 +373,7 @@ class ToolBridgeTest {
 		// Cancelling a queued worker means its body never runs -- and the body is the only thing
 		// that drops its own deadline, so the timer went on holding the request and its arguments
 		// for the whole timeout. Reconnect often enough and they pile up.
-		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
-		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[] { listHosts, slow });
+		final ToolCallbackProvider provider = provider(listHosts, slow);
 		final ExecutorService single = Executors.newSingleThreadExecutor();
 		final ToolBridge queueing = new ToolBridge(
 			ToolRegistrySnapshot.from(provider, Set.of()),

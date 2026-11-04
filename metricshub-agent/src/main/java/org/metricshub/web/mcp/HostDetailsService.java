@@ -32,6 +32,7 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +100,7 @@ public class HostDetailsService implements IMCPToolService {
 	 * @return a {@link MultiHostToolResponse} where each input hostname maps to one or more {@link HostDetails},
 	 *         or to an error message if the host cannot be found
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(
 		name = "GetHostDetails",
 		description = """

@@ -31,6 +31,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
 import org.metricshub.agent.tunnel.protocol.TunnelJson;
+import org.metricshub.web.mcp.ToolAccess.Access;
+import org.metricshub.web.mcp.tool.DynamicToolCallback;
+import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -64,23 +67,41 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 		final Map<String, ToolCallback> callbacks = new TreeMap<>();
 		for (final ToolCallback callback : provider.getToolCallbacks()) {
 			final String name = callback.getToolDefinition().name();
-			if (!excludedTools.contains(name)) {
+			// A callback of no known kind has no access class: neither advertised nor invokable
+			if (!excludedTools.contains(name) && accessOf(callback) != null) {
 				callbacks.put(name, callback);
 			}
 		}
 
-		final List<ToolDescriptor> tools = new ArrayList<>(callbacks.size());
-		callbacks.values().forEach(callback -> tools.add(describe(callback.getToolDefinition())));
+		final List<ToolDescriptor> tools = new ArrayList<>();
+		callbacks.values().forEach(callback -> tools.add(describe(callback, accessOf(callback))));
 		tools.sort(Comparator.comparing(ToolDescriptor::name));
 
 		return new ToolRegistrySnapshot(List.copyOf(tools), Map.copyOf(callbacks), TunnelJson.fingerprint(tools));
 	}
 
-	private static ToolDescriptor describe(final ToolDefinition definition) {
+	/**
+	 * @param callback a tool
+	 * @return the class its {@code @ToolAccess} declares for the agent's own tool, write for a protocol-extension
+	 *         or connector tool that changes a host and read for any other, or null for a callback of no known kind
+	 */
+	// ponytail: the extension and connector tools ride the registration until Central asks for them per host
+	private static Access accessOf(final ToolCallback callback) {
+		if (callback instanceof final ProductToolCallback product) {
+			return product.access();
+		}
+		if (callback instanceof final DynamicToolCallback dynamic) {
+			return dynamic.isDestructive() ? Access.WRITE : Access.READ;
+		}
+		return null;
+	}
+
+	private static ToolDescriptor describe(final ToolCallback callback, final Access access) {
+		final ToolDefinition definition = callback.getToolDefinition();
 		final String description = definition.description() == null || definition.description().isBlank()
 			? definition.name()
 			: definition.description();
-		return new ToolDescriptor(definition.name(), description, parseSchema(definition));
+		return new ToolDescriptor(definition.name(), description, parseSchema(definition), access.wire());
 	}
 
 	private static JsonNode parseSchema(final ToolDefinition definition) {

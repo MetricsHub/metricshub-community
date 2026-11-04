@@ -25,6 +25,7 @@ import java.util.Map;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.IMCPToolService;
 import org.metricshub.web.mcp.tool.MetricsHubToolCallbackProvider;
+import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -55,10 +56,14 @@ public class ToolCallbackConfiguration {
 		// Automatically get all beans of type IMCPToolService
 		final Map<String, IMCPToolService> toolMap = context.getBeansOfType(IMCPToolService.class);
 		final var tools = toolMap.values();
-		final ToolCallback[] staticCallbacks = MethodToolCallbackProvider.builder()
-			.toolObjects(tools.toArray(new Object[tools.size()]))
-			.build()
-			.getToolCallbacks();
+		// Each with the access class its @ToolAccess declares; a tool without one stops the agent here
+		final ToolCallback[] staticCallbacks = ProductToolCallback.classify(
+			MethodToolCallbackProvider.builder()
+				.toolObjects(tools.toArray(new Object[tools.size()]))
+				.build()
+				.getToolCallbacks(),
+			tools
+		);
 		return new MetricsHubToolCallbackProvider(staticCallbacks, agentContextHolder);
 	}
 }

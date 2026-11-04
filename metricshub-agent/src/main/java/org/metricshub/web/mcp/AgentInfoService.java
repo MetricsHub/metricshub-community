@@ -40,6 +40,7 @@ import java.util.Map;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ApplicationStatus;
+import org.metricshub.web.mcp.ToolAccess.Access;
 import org.metricshub.web.service.ApplicationStatusService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +89,7 @@ public class AgentInfoService implements IMCPToolService {
 	 *
 	 * @return an {@link AgentInfoResponse} containing all agent metadata and runtime information
 	 */
+	@ToolAccess(Access.READ)
 	@Tool(description = """
 		Get detailed information about the MetricsHub Agent.
 		Returns agent metadata including name, version, build number, build date,

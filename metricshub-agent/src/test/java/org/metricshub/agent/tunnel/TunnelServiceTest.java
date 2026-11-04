@@ -39,6 +39,8 @@ import org.metricshub.agent.tunnel.protocol.TunnelMessage.HostsUpdated;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.mcp.ToolAccess;
+import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -78,7 +80,8 @@ class TunnelServiceTest {
 		when(definition.inputSchema()).thenReturn("");
 		final ToolCallback callback = mock(ToolCallback.class);
 		when(callback.getToolDefinition()).thenReturn(definition);
-		return callback;
+		// The agent's own tool, as the configuration classifies it: the one kind the tunnel advertises
+		return new ProductToolCallback(callback, ToolAccess.Access.READ);
 	}
 
 	@BeforeEach

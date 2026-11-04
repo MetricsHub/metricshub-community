@@ -15,12 +15,13 @@
 			"version": "3.9.07"
 		}
 	},
-	"toolRegistryRevision": "sha256:0050cf5717ee1385a12f0b27378ffbf8e03585ec0c15d536ae3730b5f141bfbb",
+	"toolRegistryRevision": "sha256:85e5886e0c687cd738fc64fd8869e0d1ae3de908a92b7063fc22f29b33145723",
 	"tools": [
 		{
 			"name": "ListHosts",
 			"description": "Lists hosts",
-			"inputSchema": { "type": "object", "properties": {} }
+			"inputSchema": { "type": "object", "properties": {} },
+			"access": "read"
 		},
 		{
 			"name": "PingHost",
@@ -29,7 +30,8 @@
 				"type": "object",
 				"properties": { "hostname": { "type": "array", "items": { "type": "string" } } },
 				"required": ["hostname"]
-			}
+			},
+			"access": "read"
 		}
 	],
 	"hosts": [
