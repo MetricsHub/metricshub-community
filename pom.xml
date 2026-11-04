@@ -595,6 +595,10 @@
 					</includes>
 					<!-- .mvn/ anchors maven.multiModuleProjectDirectory to the repository root, from any module -->
 					<configFile>${maven.multiModuleProjectDirectory}/metricshub-eclipse-formatter.xml</configFile>
+					<!-- parse the sources as the Java version we compile (the plugin defaults to 1.8) -->
+					<compilerSource>${maven.compiler.release}</compilerSource>
+					<compilerCompliance>${maven.compiler.release}</compilerCompliance>
+					<compilerTargetPlatform>${maven.compiler.release}</compilerTargetPlatform>
 				</configuration>
 			</plugin>
 
