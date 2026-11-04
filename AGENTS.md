@@ -154,6 +154,17 @@ mvn clean verify
 
 ---
 
+## ↩️ Line Endings
+
+* Every text file is stored with LF in the repository (`.gitattributes`: `* text=auto`) and checked out with the platform's line endings: CRLF on Windows (`core.autocrlf=true`), LF on Linux and macOS. Exceptions: `*.sh` is always LF, `*.cmd` and `*.bat` are always CRLF.
+* Write files with the line endings of the checkout. Never rewrite a whole file's line endings: `sed -i` in Git Bash and most scripting languages write LF. Check `git diff --stat`: a change as long as the file is a line-ending rewrite.
+* `git ls-files --eol` must never show `i/crlf` or `i/mixed` for a tracked file (`i/none` is a file without line terminator, `i/-text` a binary file). Git never renormalizes a file that is already CRLF in the index, so fix such a file with `git add --renormalize <file>`.
+* Code that reads text (files, command output, HTTP bodies, templates) and produces a text result converts CRLF to LF, so its result does not depend on the platform or on how a fixture was checked out.
+* Tests compare results with LF, never with `System.lineSeparator()`, and never strip `\r` from a result to make a test pass: fix the code under test. A test expects `\r\n` only when CRLF is the input under test or the test is Windows-only.
+* The `Test - Windows` workflow runs `mvn verify` on Windows with `core.autocrlf=true`.
+
+---
+
 ## 🧱 Common Failure Scenarios
 
 | Problem                 | Likely Cause                  | Fix                                                            |

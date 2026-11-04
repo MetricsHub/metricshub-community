@@ -1,0 +1,8 @@
+# Store every text file with LF. Working copies follow core.autocrlf (CRLF on Windows with
+# core.autocrlf=true). Files that are not text are recognised and left alone.
+* text=auto
+
+# Scripts that must keep their line endings whatever the platform of the checkout
+*.sh text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
