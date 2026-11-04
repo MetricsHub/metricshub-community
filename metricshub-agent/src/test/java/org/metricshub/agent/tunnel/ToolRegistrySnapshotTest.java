@@ -133,7 +133,11 @@ class ToolRegistrySnapshotTest {
 				.toList(),
 			"a tool that changes a host is write, and one of no known kind is not advertised"
 		);
-		assertSame(unknown, snapshot.callbacks().get("Unknown"), "though the bridge still holds it");
+		assertEquals(
+			Set.of("ListHosts", "snmp_get", "ssh_runCommand"),
+			snapshot.callbacks().keySet(),
+			"nor can Central invoke it by name"
+		);
 	}
 
 	private static ToolCallback dynamic(final String name, final boolean destructive) {

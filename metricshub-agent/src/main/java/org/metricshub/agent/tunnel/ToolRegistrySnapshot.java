@@ -67,20 +67,14 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 		final Map<String, ToolCallback> callbacks = new TreeMap<>();
 		for (final ToolCallback callback : provider.getToolCallbacks()) {
 			final String name = callback.getToolDefinition().name();
-			if (excludedTools.contains(name)) {
-				continue;
+			// A callback of no known kind has no access class: neither advertised nor invokable
+			if (!excludedTools.contains(name) && accessOf(callback) != null) {
+				callbacks.put(name, callback);
 			}
-			callbacks.put(name, callback);
 		}
 
-		// Each tool with its access class; a callback of no known kind has none, and is not advertised
 		final List<ToolDescriptor> tools = new ArrayList<>();
-		for (final ToolCallback callback : callbacks.values()) {
-			final Access access = accessOf(callback);
-			if (access != null) {
-				tools.add(describe(callback, access));
-			}
-		}
+		callbacks.values().forEach(callback -> tools.add(describe(callback, accessOf(callback))));
 		tools.sort(Comparator.comparing(ToolDescriptor::name));
 
 		return new ToolRegistrySnapshot(List.copyOf(tools), Map.copyOf(callbacks), TunnelJson.fingerprint(tools));
