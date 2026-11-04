@@ -2,6 +2,7 @@ package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.constants.Constants.EMPTY;
 import static org.metricshub.engine.constants.Constants.ENCLOSURE_COLLECT_SOURCE_1;
@@ -26,6 +27,7 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL1;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL2;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,6 +39,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
@@ -67,6 +72,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
 @ExtendWith(MockitoExtension.class)
 class SourceUpdaterProcessorTest {
@@ -258,6 +264,187 @@ class SourceUpdaterProcessorTest {
 				.build()
 		);
 		assertEquals(400, httpSource.getSleepExecuteForEachEntryOf());
+	}
+
+	/**
+	 * Run an HTTP source with {@code path: $1} for each of the 4 entries "a", "b", "c" and "d".
+	 *
+	 * @param executeForEachEntryOf The executeForEachEntryOf definition (its source is overridden)
+	 * @param sequentialHost        Whether the host is configured as sequential
+	 * @param forceSerialization    Whether the source forces serialization
+	 * @param answer                Answer returning the result of each entry
+	 * @return The concatenated result
+	 */
+	private SourceTable runForEachEntry(
+		final ExecuteForEachEntryOf executeForEachEntryOf,
+		final boolean sequentialHost,
+		final boolean forceSerialization,
+		final Answer<SourceTable> answer
+	) {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(LOCALHOST)
+					.hostId(LOCALHOST)
+					.hostType(DeviceKind.LINUX)
+					.sequential(sequentialHost)
+					.build()
+			)
+			.build();
+		final HostProperties hostProperties = HostProperties.builder().build();
+		hostProperties
+			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+			.addSourceTable(
+				ENCLOSURE_COLLECT_SOURCE_1,
+				SourceTable.builder().table(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d"))).build()
+			);
+		telemetryManager.setHostProperties(hostProperties);
+
+		executeForEachEntryOf.setSource(ENCLOSURE_COLLECT_SOURCE_1);
+		final HttpSource httpSource = HttpSource.builder()
+			.url(URL)
+			.path("$1")
+			.forceSerialization(forceSerialization)
+			.executeForEachEntryOf(executeForEachEntryOf)
+			.build();
+
+		doAnswer(answer).when(sourceProcessor).process(any(HttpSource.class));
+
+		return new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
+		).process(httpSource);
+	}
+
+	/**
+	 * Answer recording the maximum number of concurrent calls in {@code maxConcurrent}.
+	 */
+	private static Answer<SourceTable> concurrencyRecordingAnswer(final AtomicInteger maxConcurrent) {
+		final AtomicInteger current = new AtomicInteger();
+		return invocation -> {
+			maxConcurrent.accumulateAndGet(current.incrementAndGet(), Math::max);
+			Thread.sleep(20);
+			current.decrementAndGet();
+			return SourceTable.builder().rawData("result-" + invocation.<HttpSource>getArgument(0).getPath()).build();
+		};
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryParallel() {
+		// Every entry waits until all 4 entries run at the same time, then the first entries finish last
+		final CountDownLatch allRunning = new CountDownLatch(4);
+		final List<String> notConcurrent = Collections.synchronizedList(new ArrayList<>());
+		final Answer<SourceTable> answer = invocation -> {
+			final String entry = invocation.<HttpSource>getArgument(0).getPath();
+			allRunning.countDown();
+			if (!allRunning.await(10, TimeUnit.SECONDS)) {
+				notConcurrent.add(entry);
+			}
+			Thread.sleep(('e' - entry.charAt(0)) * 30L);
+			return SourceTable.builder().rawData("result-" + entry).table(List.of(List.of(entry, "x"))).build();
+		};
+
+		final SourceTable parallel = runForEachEntry(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).build(),
+			false,
+			false,
+			answer
+		);
+
+		assertEquals(List.of(), notConcurrent);
+		// Same output, in the same order, as the sequential run
+		final SourceTable sequential = runForEachEntry(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build(),
+			false,
+			false,
+			concurrencyRecordingAnswer(new AtomicInteger())
+		);
+		assertEquals("result-a\nresult-b\nresult-c\nresult-d", parallel.getRawData());
+		assertEquals(sequential.getRawData(), parallel.getRawData());
+		assertEquals(
+			List.of(List.of("a", "x"), List.of("b", "x"), List.of("c", "x"), List.of("d", "x")),
+			parallel.getTable()
+		);
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryParallelJsonArray() {
+		final SourceTable result = runForEachEntry(
+			ExecuteForEachEntryOf.builder()
+				.source(ENCLOSURE_COLLECT_SOURCE_1)
+				.concatMethod(EntryConcatMethod.JSON_ARRAY)
+				.maxParallel(2)
+				.build(),
+			false,
+			false,
+			invocation -> {
+				final String entry = invocation.<HttpSource>getArgument(0).getPath();
+				Thread.sleep(('e' - entry.charAt(0)) * 20L);
+				return SourceTable.builder().rawData("{\"id\":\"" + entry + "\"}").build();
+			}
+		);
+		assertEquals("[{\"id\":\"a\"},\n{\"id\":\"b\"},\n{\"id\":\"c\"},\n{\"id\":\"d\"}]", result.getRawData());
+	}
+
+	@Test
+	void testProcessExecuteForEachEntrySequentialCases() {
+		// maxParallel absent
+		AtomicInteger maxConcurrent = new AtomicInteger();
+		runForEachEntry(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build(),
+			false,
+			false,
+			concurrencyRecordingAnswer(maxConcurrent)
+		);
+		assertEquals(1, maxConcurrent.get());
+
+		// maxParallel set, but the host is sequential
+		maxConcurrent = new AtomicInteger();
+		runForEachEntry(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).build(),
+			true,
+			false,
+			concurrencyRecordingAnswer(maxConcurrent)
+		);
+		assertEquals(1, maxConcurrent.get());
+
+		// maxParallel set, but sleep throttles the entries
+		maxConcurrent = new AtomicInteger();
+		runForEachEntry(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).sleep(1).build(),
+			false,
+			false,
+			concurrencyRecordingAnswer(maxConcurrent)
+		);
+		assertEquals(1, maxConcurrent.get());
+
+		// maxParallel set, but the source forces serialization
+		maxConcurrent = new AtomicInteger();
+		final SourceTable result = runForEachEntry(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).build(),
+			false,
+			true,
+			concurrencyRecordingAnswer(maxConcurrent)
+		);
+		assertEquals(1, maxConcurrent.get());
+		assertEquals("result-a\nresult-b\nresult-c\nresult-d", result.getRawData());
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryParallelException() {
+		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
+			.source(ENCLOSURE_COLLECT_SOURCE_1)
+			.maxParallel(4)
+			.build();
+		final IllegalStateException thrown = assertThrows(IllegalStateException.class, () ->
+			runForEachEntry(executeForEachEntryOf, false, false, invocation -> {
+				throw new IllegalStateException("boom");
+			})
+		);
+		assertEquals("boom", thrown.getMessage());
 	}
 
 	@Test
