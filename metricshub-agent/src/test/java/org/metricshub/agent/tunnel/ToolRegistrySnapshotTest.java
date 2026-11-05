@@ -46,9 +46,12 @@ class ToolRegistrySnapshotTest {
 		final ToolCallback ping = callback("PingHost", "Pings hosts", HOST_SCHEMA);
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
 
-		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ping, list), Set.of());
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ping, list), Set.of(), () -> null);
 
-		assertEquals(List.of("ListHosts", "PingHost"), snapshot.tools().stream().map(ToolDescriptor::name).toList());
+		assertEquals(
+			List.of("ListHostTools", "ListHosts", "PingHost"),
+			snapshot.tools().stream().map(ToolDescriptor::name).toList()
+		);
 		assertSame(ping, snapshot.callbacks().get("PingHost"));
 		assertSame(list, snapshot.callbacks().get("ListHosts"));
 		assertTrue(snapshot.revision().startsWith("sha256:"));
@@ -56,9 +59,17 @@ class ToolRegistrySnapshotTest {
 
 	@Test
 	void shouldDefaultBlankSchemaAndDescription() {
-		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(callback("ListHosts", "", "")), Set.of());
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(
+			provider(callback("ListHosts", "", "")),
+			Set.of(),
+			() -> null
+		);
 
-		final ToolDescriptor tool = snapshot.tools().get(0);
+		final ToolDescriptor tool = snapshot.tools()
+			.stream()
+			.filter(t -> t.name().equals("ListHosts"))
+			.findFirst()
+			.orElseThrow();
 		assertEquals("ListHosts", tool.description(), "A blank description falls back to the tool name");
 		assertEquals("object", tool.inputSchema().get("type").asText());
 		assertTrue(tool.inputSchema().get("properties").isEmpty());
@@ -71,10 +82,14 @@ class ToolRegistrySnapshotTest {
 			callback("ListHosts", "Lists hosts", "")
 		);
 
-		final ToolRegistrySnapshot all = ToolRegistrySnapshot.from(provider, Set.of());
-		final ToolRegistrySnapshot filtered = ToolRegistrySnapshot.from(provider, Set.of("ExecuteSshCommandline"));
+		final ToolRegistrySnapshot all = ToolRegistrySnapshot.from(provider, Set.of(), () -> null);
+		final ToolRegistrySnapshot filtered = ToolRegistrySnapshot.from(
+			provider,
+			Set.of("ExecuteSshCommandline"),
+			() -> null
+		);
 
-		assertEquals(List.of("ListHosts"), filtered.tools().stream().map(ToolDescriptor::name).toList());
+		assertEquals(List.of("ListHostTools", "ListHosts"), filtered.tools().stream().map(ToolDescriptor::name).toList());
 		assertTrue(filtered.callbacks().containsKey("ListHosts"));
 		assertTrue(!filtered.callbacks().containsKey("ExecuteSshCommandline"));
 		assertNotEquals(all.revision(), filtered.revision(), "Excluding a tool changes the advertised registry");
@@ -86,8 +101,8 @@ class ToolRegistrySnapshotTest {
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
 
 		assertEquals(
-			ToolRegistrySnapshot.from(provider(ping, list), Set.of()).revision(),
-			ToolRegistrySnapshot.from(provider(list, ping), Set.of()).revision()
+			ToolRegistrySnapshot.from(provider(ping, list), Set.of(), () -> null).revision(),
+			ToolRegistrySnapshot.from(provider(list, ping), Set.of(), () -> null).revision()
 		);
 	}
 
@@ -95,13 +110,15 @@ class ToolRegistrySnapshotTest {
 	void revisionShouldChangeWhenASchemaChanges() {
 		final ToolRegistrySnapshot v1 = ToolRegistrySnapshot.from(
 			provider(callback("PingHost", "Pings", HOST_SCHEMA)),
-			Set.of()
+			Set.of(),
+			() -> null
 		);
 		final ToolRegistrySnapshot v2 = ToolRegistrySnapshot.from(
 			provider(
 				callback("PingHost", "Pings", "{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"array\"}}}")
 			),
-			Set.of()
+			Set.of(),
+			() -> null
 		);
 
 		assertNotEquals(v1.revision(), v2.revision());
@@ -111,7 +128,7 @@ class ToolRegistrySnapshotTest {
 	void shouldRejectInvalidSchema() {
 		final ToolCallbackProvider provider = provider(callback("Broken", "Broken", "{not json"));
 
-		assertThrows(IllegalStateException.class, () -> ToolRegistrySnapshot.from(provider, Set.of()));
+		assertThrows(IllegalStateException.class, () -> ToolRegistrySnapshot.from(provider, Set.of(), () -> null));
 	}
 
 	@Test
@@ -121,18 +138,25 @@ class ToolRegistrySnapshotTest {
 		final ToolCallback unknown = ((ProductToolCallback) callback("Unknown", "Of no known kind", "")).delegate();
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
 
-		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ssh, snmp, unknown, list), Set.of());
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(
+			provider(ssh, snmp, unknown, list),
+			Set.of(),
+			() -> null
+		);
 
+		// The host-scoped tools are not advertised: Central learns them per host, with their access, from ListHostTools
 		assertEquals(
-			List.of("ListHosts=read", "snmp_get=read", "ssh_runCommand=write"),
+			List.of("ListHostTools=read", "ListHosts=read"),
 			snapshot.tools().stream().map(tool -> tool.name() + "=" + tool.access()).toList(),
-			"a tool that changes a host is write, and one of no known kind is not advertised"
+			"one of no known kind is not advertised"
 		);
 		assertEquals(
-			Set.of("ListHosts", "snmp_get", "ssh_runCommand"),
+			Set.of("ListHostTools", "ListHosts", "snmp_get", "ssh_runCommand"),
 			snapshot.callbacks().keySet(),
 			"nor can Central invoke it by name"
 		);
+		assertEquals("write", ToolRegistrySnapshot.describe(snapshot.callbacks().get("ssh_runCommand")).access());
+		assertEquals("read", ToolRegistrySnapshot.describe(snapshot.callbacks().get("snmp_get")).access());
 	}
 
 	private static ToolCallback dynamic(final String name, final boolean destructive) {

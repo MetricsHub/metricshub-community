@@ -169,11 +169,15 @@ public class TunnelService {
 			return;
 		}
 		if (client != null && agentContextHolder.getGeneration() != snapshotGeneration) {
-			// A configuration reload may have changed the connector and protocol tools. The bridge answers
-			// from the snapshot it was built with and Central learns the tools at registration, so a
-			// changed set means a new bridge and a new registration: the same as a configuration change.
+			// A configuration reload may have changed the connector and protocol tools. They are not advertised
+			// (Central asks ListHostTools per host), so they only need the bridge's callbacks refreshed; a
+			// changed advertised set means a new bridge and a new registration: the same as a configuration change.
 			snapshotGeneration = agentContextHolder.getGeneration();
-			final ToolRegistrySnapshot current = ToolRegistrySnapshot.from(toolCallbackProvider, config.getExcludedTools());
+			final ToolRegistrySnapshot current = ToolRegistrySnapshot.from(
+				toolCallbackProvider,
+				config.getExcludedTools(),
+				agentContextHolder::getAgentContext
+			);
 			if (!current.revision().equals(snapshot.revision())) {
 				log.info(
 					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
@@ -267,7 +271,11 @@ public class TunnelService {
 		TunnelClient newClient = null;
 		try {
 			snapshotGeneration = agentContextHolder.getGeneration();
-			snapshot = ToolRegistrySnapshot.from(toolCallbackProvider, newConfig.getExcludedTools());
+			snapshot = ToolRegistrySnapshot.from(
+				toolCallbackProvider,
+				newConfig.getExcludedTools(),
+				agentContextHolder::getAgentContext
+			);
 			final TunnelSettings settings = new TunnelSettings(
 				URI.create(endpoint.trim()),
 				FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel"),

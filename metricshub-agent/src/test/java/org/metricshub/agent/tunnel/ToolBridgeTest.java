@@ -76,7 +76,7 @@ class ToolBridgeTest {
 		slow = callback("Slow");
 		final ToolCallbackProvider provider = provider(listHosts, slow);
 		workers = ToolBridge.newWorkerPool();
-		bridge = new ToolBridge(ToolRegistrySnapshot.from(provider, Set.of()), (answer, generation) -> {
+		bridge = new ToolBridge(ToolRegistrySnapshot.from(provider, Set.of(), () -> null), (answer, generation) -> {
 			answers.add(answer);
 			answeredGenerations.add(generation);
 		}, workers);
@@ -241,7 +241,7 @@ class ToolBridgeTest {
 		when(rebuilt.call(anyString())).thenReturn("\"rebuilt\"");
 		final ToolCallbackProvider provider = provider(rebuilt, slow);
 
-		bridge.update(ToolRegistrySnapshot.from(provider, Set.of()));
+		bridge.update(ToolRegistrySnapshot.from(provider, Set.of(), () -> null));
 		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 
 		final ToolResult result = assertInstanceOf(ToolResult.class, answer());
@@ -376,7 +376,7 @@ class ToolBridgeTest {
 		final ToolCallbackProvider provider = provider(listHosts, slow);
 		final ExecutorService single = Executors.newSingleThreadExecutor();
 		final ToolBridge queueing = new ToolBridge(
-			ToolRegistrySnapshot.from(provider, Set.of()),
+			ToolRegistrySnapshot.from(provider, Set.of(), () -> null),
 			(answer, generation) -> answers.add(answer),
 			single
 		);

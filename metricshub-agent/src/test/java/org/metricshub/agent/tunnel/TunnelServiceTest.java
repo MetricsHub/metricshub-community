@@ -200,7 +200,8 @@ class TunnelServiceTest {
 		assertEquals(1, register.protocolVersion());
 		assertEquals("MetricsHub Agent", register.agent().name());
 		assertEquals("Community", register.agent().edition());
-		assertEquals(List.of("ListHosts"), register.tools().stream().map(ToolDescriptor::name).toList());
+		// The agent's own tools, and the lookup Central asks a host's tools with
+		assertEquals(List.of("ListHostTools", "ListHosts"), register.tools().stream().map(ToolDescriptor::name).toList());
 		assertTrue(register.toolRegistryRevision().startsWith("sha256:"));
 		assertEquals(1, register.hosts().size());
 		assertEquals("server-01", register.hosts().get(0).resourceKey());
