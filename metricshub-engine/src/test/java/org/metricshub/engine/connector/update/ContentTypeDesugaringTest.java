@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
@@ -261,6 +262,45 @@ class ContentTypeDesugaringTest {
 		desugar(source);
 		assertEquals(once, types(source));
 		assertEquals(List.of("toText", "awk", "toTable", "keepColumns"), once);
+	}
+
+	/**
+	 * An awk compute declaring <code>input: table</code> reads the table itself: no toText is inserted, and its
+	 * <code>output: table</code> ends the chain in a table, so nothing is appended either. A printf in a script
+	 * producing a table is reported.
+	 */
+	@Test
+	void awkWithTableInputAndOutputNeedsNoConversion() {
+		final Source source = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					Awk.builder()
+						.type("awk")
+						.script("{ printf \"%s\", $1 }")
+						.input(ContentType.TABLE)
+						.output(ContentType.TABLE)
+						.build(),
+					KeepColumns.builder().type("keepColumns").columnNumbers("1").build()
+				)
+			)
+			.build();
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("awk", "keepColumns"), types(source));
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(connector));
+
+		// Text output after a table input: the following table compute needs a toTable, and the chain ends typed
+		final Source textOut = CommandLineSource.builder()
+			.commandLine("ls")
+			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+			.build();
+		final Connector textOutConnector = connectorWith(textOut);
+		new ContentTypeDesugaring().update(textOutConnector);
+		assertEquals(List.of("toTable", "awk", "toTable"), types(textOut));
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(textOutConnector));
 	}
 
 	@Test

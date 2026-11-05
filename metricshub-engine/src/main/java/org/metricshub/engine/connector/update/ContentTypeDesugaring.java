@@ -92,6 +92,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static final Pattern FS_SEMICOLON = Pattern.compile("\\bFS\\s*=\\s*\"\\s*;\\s*\"");
 
 	/**
+	 * A <code>printf</code> call in an AWK script.
+	 */
+	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
+
+	/**
 	 * Who produced the current text of a chain.
 	 */
 	private enum TextProducer {
@@ -205,7 +210,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final String where,
 		final List<ContentTypeReportEntry> report
 	) {
-		if (compute instanceof AbstractConcat concat) {
+		if (compute instanceof Awk awk) {
+			if (awk.getOutputContentType() == ContentType.TABLE && PRINTF.matcher(scriptContent(connector, awk)).find()) {
+				report.add(new ContentTypeReportEntry(key, Kind.PRINTF_IN_TABLE_OUTPUT, where));
+			}
+		} else if (compute instanceof AbstractConcat concat) {
 			// A pure $n reference never round-trips, whatever the referenced cell holds
 			if (concat.getValue() != null && !COLUMN_PATTERN.matcher(concat.getValue()).matches()) {
 				lintValue(key, where, "value", concat.getValue(), report);
@@ -258,18 +267,31 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (script == null) {
 			return "script=null";
 		}
-		String content = script;
-		final Matcher matcher = FILE_PATTERN.matcher(script);
-		if (matcher.find() && connector.getEmbeddedFiles() != null) {
-			try {
-				final EmbeddedFile embeddedFile = connector.getEmbeddedFiles().get(Integer.parseInt(matcher.group(1)));
-				content = embeddedFile == null ? "" : embeddedFile.getContentAsString();
-			} catch (NumberFormatException e) {
-				content = "";
-			}
-			return "script=" + script + (FS_SEMICOLON.matcher(content).find() ? " (sets FS to \";\")" : "");
+		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, awk)).find() ? " (sets FS to \";\")" : "";
+		return (FILE_PATTERN.matcher(script).find() ? "script=" + script : "inline script") + fs;
+	}
+
+	/**
+	 * The text of the script of an <code>awk</code> compute: the embedded file it references, or the script itself.
+	 */
+	private static String scriptContent(final Connector connector, final Awk awk) {
+		final String script = awk.getScript();
+		if (script == null) {
+			return "";
 		}
-		return "inline script" + (FS_SEMICOLON.matcher(content).find() ? " (sets FS to \";\")" : "");
+		final Matcher matcher = FILE_PATTERN.matcher(script);
+		if (!matcher.find()) {
+			return script;
+		}
+		if (connector.getEmbeddedFiles() == null) {
+			return "";
+		}
+		try {
+			final EmbeddedFile embeddedFile = connector.getEmbeddedFiles().get(Integer.parseInt(matcher.group(1)));
+			return embeddedFile == null ? "" : embeddedFile.getContentAsString();
+		} catch (NumberFormatException e) {
+			return "";
+		}
 	}
 
 	private static boolean isPureTextSource(final Source source) {

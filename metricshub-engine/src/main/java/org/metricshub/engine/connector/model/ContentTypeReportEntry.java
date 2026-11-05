@@ -68,7 +68,12 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		/** A <code>tableJoin</code> declares a <code>defaultRightLine</code> as a <code>;</code> string. */
 		DEFAULT_RIGHT_LINE,
 		/** A <code>static</code> source declares its table as a <code>;</code> string. */
-		STATIC_CSV
+		STATIC_CSV,
+		/**
+		 * An <code>awk</code> compute producing a table (<code>output: table</code>) calls <code>printf</code>:
+		 * each call gives a single-cell row, which is rarely what the script means.
+		 */
+		PRINTF_IN_TABLE_OUTPUT
 	}
 
 	@Override

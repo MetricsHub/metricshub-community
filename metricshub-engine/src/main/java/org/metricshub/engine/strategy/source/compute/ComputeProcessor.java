@@ -68,11 +68,13 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.awk.AwkVariableHelper;
+import org.metricshub.engine.awk.TableInputSource;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ConversionType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ITranslationTable;
@@ -390,9 +392,14 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		final String input = (sourceTable.getRawData() == null || sourceTable.getRawData().isEmpty())
-			? SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true)
-			: sourceTable.getRawData();
+		// Table input: the rows are the records, nothing is serialized. Text input (the default, what every script
+		// written so far expects): the raw text, else the table serialized with "," for ";" inside cells
+		final boolean tableInput = awk.getInputContentType() == ContentType.TABLE;
+		final String input = tableInput
+			? null
+			: (sourceTable.getRawData() == null || sourceTable.getRawData().isEmpty())
+				? SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true)
+				: sourceTable.getRawData();
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
 
@@ -412,7 +419,29 @@ public class ComputeProcessor implements IComputeProcessor {
 		);
 
 		try {
-			String awkResult = AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
+			if (awk.getOutputContentType() == ContentType.TABLE) {
+				// Each print is a row: no re-parsing, the text filters and column selection do not apply
+				final List<List<String>> rows = tableInput
+					? AwkExecutor.executeAwkToTable(
+						awkScript,
+						new TableInputSource(sourceTable.getTable()),
+						AwkExecutor.getUtilityEngine(),
+						variables
+					)
+					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
+				sourceTable.setTable(rows);
+				sourceTable.setRawData(SourceTable.tableToCsv(rows, TABLE_SEP, false));
+				return;
+			}
+
+			String awkResult = tableInput
+				? AwkExecutor.executeAwk(
+					awkScript,
+					new TableInputSource(sourceTable.getTable()),
+					AwkExecutor.getUtilityEngine(),
+					variables
+				)
+				: AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 
 			if (awkResult == null || awkResult.isEmpty()) {
 				log.warn(

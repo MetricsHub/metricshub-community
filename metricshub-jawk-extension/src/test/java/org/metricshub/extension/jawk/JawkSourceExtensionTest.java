@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -326,6 +327,68 @@ class JawkSourceExtensionTest {
 
 		assertEquals("1.2.3.4.5.6", snmpTableCaptor.getValue().getOid());
 		assertEquals("1", snmpTableCaptor.getValue().getSelectColumns());
+	}
+
+	/**
+	 * With <code>inputFormat: table</code> the referenced source's rows are the records (a ";" inside a cell stays
+	 * in its field) and with <code>output: table</code> each print is a row (#1511).
+	 */
+	@Test
+	void testProcessSourceWithTableInputAndOutput() {
+		final String inputRef = "${source::monitors.enclosure.discovery.sources.raw}";
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
+			.hostProperties(HostProperties.builder().build())
+			.build();
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(CONNECTOR_ID)
+			.addSourceTable(
+				inputRef,
+				SourceTable.builder().table(List.of(List.of("fan1", "x;y", "3000"), List.of("fan2", "z", "0"))).build()
+			);
+
+		final JawkSource source = JawkSource.builder()
+			.input(inputRef)
+			.inputFormat(ContentType.TABLE)
+			.output(ContentType.TABLE)
+			.script("$3 > 0 { print $1, $2, $3 / 60, NF }")
+			.build();
+		// The input reference is kept as is by update(): the extension resolves it to the table
+		source.update(value -> value == null ? null : value.toUpperCase());
+		assertEquals(inputRef, source.getInput());
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+		assertEquals(List.of(List.of("fan1", "x;y", "50", "3")), result.getTable());
+		assertEquals("fan1;x;y;50;3;", result.getRawData());
+
+		// Text output of a table input: the printed lines are re-parsed on ";"
+		final JawkSource textOutput = JawkSource.builder()
+			.input(inputRef)
+			.inputFormat(ContentType.TABLE)
+			.script("{ print $1 \";\" NF }")
+			.build();
+		assertEquals(
+			List.of(List.of("fan1", "3"), List.of("fan2", "3")),
+			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+				.getTable()
+		);
+
+		// An unknown input source gives no record
+		final JawkSource unknown = JawkSource.builder()
+			.input("${source::monitors.enclosure.discovery.sources.missing}")
+			.inputFormat(ContentType.TABLE)
+			.output(ContentType.TABLE)
+			.script("{ print $1 } END { print \"end\" }")
+			.build();
+		assertEquals(
+			List.of(List.of("end")),
+			new JawkSourceExtension().processSource(unknown, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+		);
 	}
 
 	@Test
