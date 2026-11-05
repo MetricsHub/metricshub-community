@@ -110,10 +110,10 @@ class AwkComputeStructuredIoTest {
 		assertEquals("", sourceTable.getRawData());
 		assertEquals(ContentType.TEXT, sourceTable.getContentType());
 
-		// The legacy text input keeps the stale raw text, as pinned by the edge-case tests
-		final SourceTable legacy = SourceTable.builder().rawData("a;b").table(table("a|b")).build();
-		processor(legacy).process(Awk.builder().script("BEGIN { }").build());
-		assertEquals("a;b", legacy.getRawData());
+		// The text input clears it as well (since stage 2 of #1508: it used to keep the stale raw text)
+		final SourceTable text = SourceTable.builder().rawData("a;b").table(table("a|b")).build();
+		processor(text).process(Awk.builder().script("BEGIN { }").build());
+		assertEquals("", text.getRawData());
 	}
 
 	@Test
