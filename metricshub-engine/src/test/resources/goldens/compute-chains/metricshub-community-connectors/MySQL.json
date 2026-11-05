@@ -1,0 +1,145 @@
+{
+  "connector" : "MySQL",
+  "sources" : {
+    "${source::tools.explainQuery.sources.plan}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;\n1;2.5;3;\ncell,with,sep;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "No plan: session ${param::id} runs no SELECT, INSERT, UPDATE, DELETE or REPLACE now, runs one in a stored program, does not exist, or belongs to another user (the PROCESS privilege shows the others), or the server is older than MySQL 8.0.16 (no FORMAT=TREE)" ] ],
+          "rawData" : "No plan: session ${param::id} runs no SELECT, INSERT, UPDATE, DELETE or REPLACE now, runs one in a stored program, does not exist, or belongs to another user (the PROCESS privilege shows the others), or the server is older than MySQL 8.0.16 (no FORMAT=TREE);"
+        }
+      }
+    },
+    "${source::tools.innodbStatus.sources.status}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "No ${param::section} section in the output (e.g. no deadlock since the server started)" ] ],
+          "rawData" : "No ${param::section} section in the output (e.g. no deadlock since the server started);"
+        },
+        "empty" : {
+          "table" : [ [ "SHOW ENGINE INNODB STATUS failed: it needs the PROCESS privilege" ] ],
+          "rawData" : "SHOW ENGINE INNODB STATUS failed: it needs the PROCESS privilege;"
+        }
+      }
+    },
+    "${source::tools.killSession.sources.session}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "Could not check session ${param::id}: it needs the PROCESS privilege. The KILL may have been refused too (killing the session of another user needs CONNECTION_ADMIN)" ] ],
+          "rawData" : "Could not check session ${param::id}: it needs the PROCESS privilege. The KILL may have been refused too (killing the session of another user needs CONNECTION_ADMIN);"
+        }
+      }
+    },
+    "${source::tools.lockWaits.sources.waits}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs the PROCESS privilege and SELECT on performance_schema" ] ],
+          "rawData" : "The query failed: it needs the PROCESS privilege and SELECT on performance_schema;"
+        }
+      }
+    },
+    "${source::tools.replicationStatus.sources.channels}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs SELECT on performance_schema" ] ],
+          "rawData" : "The query failed: it needs SELECT on performance_schema;"
+        }
+      }
+    },
+    "${source::tools.schemaSizes.sources.schemas}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs the PROCESS privilege" ] ],
+          "rawData" : "The query failed: it needs the PROCESS privilege;"
+        }
+      }
+    },
+    "${source::tools.sessions.sources.sessions}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs the PROCESS privilege" ] ],
+          "rawData" : "The query failed: it needs the PROCESS privilege;"
+        }
+      }
+    },
+    "${source::tools.tableSizes.sources.tables}" : {
+      "source" : "sql",
+      "computes" : [ "awk", "keepColumns" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs the PROCESS privilege" ] ],
+          "rawData" : "The query failed: it needs the PROCESS privilege;"
+        }
+      }
+    },
+    "${source::tools.topStatements.sources.statements}" : {
+      "source" : "sql",
+      "computes" : [ "awk", "keepColumns" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs SELECT on performance_schema" ] ],
+          "rawData" : "The query failed: it needs SELECT on performance_schema;"
+        }
+      }
+    },
+    "${source::tools.variables.sources.variables}" : {
+      "source" : "sql",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell,with,sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell,with,sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ [ "The query failed: it needs SELECT on performance_schema" ] ],
+          "rawData" : "The query failed: it needs SELECT on performance_schema;"
+        }
+      }
+    }
+  }
+}
