@@ -40,8 +40,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import org.metricshub.engine.connector.deserializer.custom.ExtendsDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.SourcesDeserializer;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -168,6 +170,16 @@ public class Connector implements Serializable {
 	@Default
 	@JsonIgnore
 	private Map<Integer, EmbeddedFile> embeddedFiles = new HashMap<>();
+
+	/**
+	 * The findings of the content-type desugaring step on this connector: the conversions it inserted and the
+	 * legacy idioms it found. Computed when the connector is parsed, never serialized.
+	 */
+	@Default
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private List<ContentTypeReportEntry> contentTypeReport = new ArrayList<>();
 
 	/**
 	 * The power measurement state ESTIMATED, MEASURED or CONDITIONAL.

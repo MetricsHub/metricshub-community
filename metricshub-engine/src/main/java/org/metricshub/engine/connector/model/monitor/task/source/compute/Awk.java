@@ -38,6 +38,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -112,6 +113,16 @@ public class Awk extends Compute {
 		this.separators = separators;
 		this.selectColumns = selectColumns;
 		this.variables = variables == null ? new LinkedHashMap<>() : variables;
+	}
+
+	@Override
+	public ContentType getInputContentType() {
+		return ContentType.TEXT;
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TEXT;
 	}
 
 	@Override

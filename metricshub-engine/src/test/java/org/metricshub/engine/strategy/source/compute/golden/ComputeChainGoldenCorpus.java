@@ -58,6 +58,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
@@ -198,12 +200,15 @@ public class ComputeChainGoldenCorpus {
 		final ConnectorGolden golden = new ConnectorGolden();
 		golden.setConnector(connectorId);
 		sources.forEach((key, source) -> {
-			if (source.getComputes() == null || source.getComputes().isEmpty()) {
+			// The chain as written in the connector; the implicit conversions inserted by the desugaring step run too,
+			// but they are not part of the golden's identity: the goldens pin the results of the written chains
+			final List<Compute> explicitComputes = explicitComputes(source);
+			if (explicitComputes.isEmpty()) {
 				return;
 			}
 			final SourceGolden sourceGolden = new SourceGolden();
 			sourceGolden.setSource(source.getType());
-			sourceGolden.setComputes(source.getComputes().stream().map(Compute::getType).toList());
+			sourceGolden.setComputes(explicitComputes.stream().map(Compute::getType).toList());
 			Inputs.inputsFor(source, sources)
 				.forEach(
 					(name, input) -> sourceGolden.getOutputs().put(name, run(connectorStore, connectorId, source, input.get()))
@@ -211,6 +216,24 @@ public class ComputeChainGoldenCorpus {
 			golden.getSources().put(key, sourceGolden);
 		});
 		return golden;
+	}
+
+	/**
+	 * The computes written in the connector, without the implicit conversions inserted by the content-type
+	 * desugaring step.
+	 *
+	 * @param source The source
+	 * @return the explicit computes
+	 */
+	public static List<Compute> explicitComputes(final Source source) {
+		return source.getComputes() == null
+			? List.of()
+			: source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
+	}
+
+	private static boolean isImplicit(final Compute compute) {
+		return ((compute instanceof ToTable toTable && toTable.isImplicit()) ||
+			(compute instanceof ToText toText && toText.isImplicit()));
 	}
 
 	/**
@@ -572,7 +595,7 @@ public class ComputeChainGoldenCorpus {
 			final Map<String, Supplier<SourceTable>> inputs = new LinkedHashMap<>();
 			addShapes(inputs, source, sources, 0);
 			inputs.put("empty", SourceTable::empty);
-			final Compute first = source.getComputes().get(0);
+			final Compute first = explicitComputes(source).get(0);
 			if (first instanceof Json2Csv json2Csv) {
 				inputs.put("json", () -> text(json(json2Csv)));
 			} else if (first instanceof Xml2Csv xml2Csv) {
@@ -608,7 +631,7 @@ public class ComputeChainGoldenCorpus {
 				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom());
 				if (origin == null || depth > 5) {
 					addDualShapes(inputs);
-				} else if (origin.getComputes() != null && !origin.getComputes().isEmpty()) {
+				} else if (!explicitComputes(origin).isEmpty()) {
 					inputs.put("csv", () -> csv(table(), false));
 				} else {
 					addShapes(inputs, origin, sources, depth + 1);

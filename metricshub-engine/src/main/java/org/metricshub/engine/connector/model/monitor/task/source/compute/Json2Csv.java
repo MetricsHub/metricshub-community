@@ -35,6 +35,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -104,6 +105,16 @@ public class Json2Csv extends Compute {
 		 * at a time. Use it for large lists. The result is the same as with {@link #TREE}.
 		 */
 		EVENTS
+	}
+
+	@Override
+	public ContentType getInputContentType() {
+		return ContentType.TEXT;
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TABLE;
 	}
 
 	@Override
