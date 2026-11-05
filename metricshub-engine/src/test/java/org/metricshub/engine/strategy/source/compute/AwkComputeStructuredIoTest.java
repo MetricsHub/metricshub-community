@@ -49,7 +49,8 @@ class AwkComputeStructuredIoTest {
 			Awk.builder().script("$2 > 1 { print $1, $2 * 2, \"x;y\" }").output(ContentType.TABLE).build()
 		);
 		assertEquals(table("a|42|x;y"), sourceTable.getTable());
-		assertEquals("a;42;x;y;", sourceTable.getRawData());
+		// The raw text is serialized as toText does: the cell keeps its ";" in the table, "," in the text
+		assertEquals("a;42;x,y;", sourceTable.getRawData());
 		assertEquals(ContentType.TABLE, sourceTable.getContentType());
 	}
 

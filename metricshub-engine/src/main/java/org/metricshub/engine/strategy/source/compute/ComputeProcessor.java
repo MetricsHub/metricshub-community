@@ -430,7 +430,8 @@ public class ComputeProcessor implements IComputeProcessor {
 					)
 					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 				sourceTable.setTable(rows);
-				sourceTable.setRawData(SourceTable.tableToCsv(rows, TABLE_SEP, false));
+				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator
+				sourceTable.setRawData(SourceTable.tableToCsv(rows, TABLE_SEP, true));
 				return;
 			}
 

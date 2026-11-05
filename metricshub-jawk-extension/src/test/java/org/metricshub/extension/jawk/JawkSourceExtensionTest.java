@@ -364,7 +364,7 @@ class JawkSourceExtensionTest {
 			sourceProcessorMock
 		);
 		assertEquals(List.of(List.of("fan1", "x;y", "50", "3")), result.getTable());
-		assertEquals("fan1;x;y;50;3;", result.getRawData());
+		assertEquals("fan1;x,y;50;3;", result.getRawData());
 
 		// Text output of a table input: the printed lines are re-parsed on ";"
 		final JawkSource textOutput = JawkSource.builder()

@@ -92,9 +92,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static final Pattern FS_SEMICOLON = Pattern.compile("\\bFS\\s*=\\s*\"\\s*;\\s*\"");
 
 	/**
-	 * A <code>printf</code> call in an AWK script.
+	 * A <code>printf</code> call in an AWK script, looked for once the comments and the string literals are gone.
 	 */
 	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
+
+	/**
+	 * A string literal (escapes included) or a comment up to the end of the line in an AWK script.
+	 */
+	private static final Pattern STRING_OR_COMMENT = Pattern.compile("\"(?:[^\"\\\\\\n]|\\\\.)*\"|#[^\\n]*");
 
 	/**
 	 * Who produced the current text of a chain.
@@ -211,7 +216,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final List<ContentTypeReportEntry> report
 	) {
 		if (compute instanceof Awk awk) {
-			if (awk.getOutputContentType() == ContentType.TABLE && PRINTF.matcher(scriptContent(connector, awk)).find()) {
+			if (
+				awk.getOutputContentType() == ContentType.TABLE && PRINTF.matcher(code(scriptContent(connector, awk))).find()
+			) {
 				report.add(new ContentTypeReportEntry(key, Kind.PRINTF_IN_TABLE_OUTPUT, where));
 			}
 		} else if (compute instanceof AbstractConcat concat) {
@@ -269,6 +276,17 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, awk)).find() ? " (sets FS to \";\")" : "";
 		return (FILE_PATTERN.matcher(script).find() ? "script=" + script : "inline script") + fs;
+	}
+
+	/**
+	 * The code of an AWK script without its string literals and comments, so that a word inside them is not taken
+	 * for a statement.
+	 *
+	 * @param script The script
+	 * @return the script with every string literal and comment replaced by a space
+	 */
+	static String code(final String script) {
+		return STRING_OR_COMMENT.matcher(script).replaceAll(" ");
 	}
 
 	/**

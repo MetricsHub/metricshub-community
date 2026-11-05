@@ -292,6 +292,25 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("awk", "keepColumns"), types(source));
 		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(connector));
 
+		// The word in a comment or a string literal is not a printf statement
+		final Source noPrintf = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					Awk.builder()
+						.type("awk")
+						.script("# avoid printf here\n{ print \"printf\", \"a \\\"quoted\\\" printf\" } # printf")
+						.input(ContentType.TABLE)
+						.output(ContentType.TABLE)
+						.build()
+				)
+			)
+			.build();
+		final Connector noPrintfConnector = connectorWith(noPrintf);
+		new ContentTypeDesugaring().update(noPrintfConnector);
+		assertTrue(noPrintfConnector.getContentTypeReport().isEmpty());
+
 		// Text output after a table input: the following table compute needs a toTable, and the chain ends typed
 		final Source textOut = CommandLineSource.builder()
 			.commandLine("ls")
