@@ -159,6 +159,13 @@ jobs:
         REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
         REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
 
+    # The compute-chain golden corpus (metricshub-engine, ComputeChainGoldenCorpusTest) verifies the committed
+    # goldens against the connectors of the repositories found next to this checkout, and is skipped when none
+    # is there. The community repository is public: check it out so that pull requests and main verify its goldens.
+    # The enterprise repository is private and is verified locally only.
+    - name: Checkout the community connectors for the golden corpus
+      run: git clone --depth 1 --branch main https://github.com/MetricsHub/community-connectors.git ../metricshub-community-connectors
+
     - name: Build with Maven
       run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml ${{ inputs.mavenPhases }} ${{ inputs.mavenOptions }}
       env:

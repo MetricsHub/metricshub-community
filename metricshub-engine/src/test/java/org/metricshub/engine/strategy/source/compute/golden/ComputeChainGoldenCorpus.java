@@ -350,11 +350,19 @@ public class ComputeChainGoldenCorpus {
 					key + ": compute chain changed " + storedSource.path("computes") + " -> " + generatedSource.path("computes")
 				);
 			}
-			generatedSource.path("outputs").fieldNames().forEachRemaining(input -> {
-				final JsonNode storedOutput = storedSource.path("outputs").get(input);
-				final JsonNode generatedOutput = generatedSource.path("outputs").get(input);
+			final JsonNode storedOutputs = storedSource.path("outputs");
+			final JsonNode generatedOutputs = generatedSource.path("outputs");
+			generatedOutputs.fieldNames().forEachRemaining(input -> {
+				final JsonNode storedOutput = storedOutputs.get(input);
+				final JsonNode generatedOutput = generatedOutputs.get(input);
 				if (!generatedOutput.equals(storedOutput)) {
 					differences.add(key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
+				}
+			});
+			// An input the generator no longer produces leaves a stale output behind: report it too
+			storedOutputs.fieldNames().forEachRemaining(input -> {
+				if (!generatedOutputs.has(input)) {
+					differences.add(key + " [" + input + "]: stored output no longer generated");
 				}
 			});
 		});
