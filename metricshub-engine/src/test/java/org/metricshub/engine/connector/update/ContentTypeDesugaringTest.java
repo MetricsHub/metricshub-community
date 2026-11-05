@@ -182,6 +182,65 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(Kind.TEXT_COMPUTE_ON_TABLE_SOURCE), kinds(connector));
 	}
 
+	/**
+	 * A copy source produces what its origin produces: a copy of an http source is text (nothing before json2Csv,
+	 * a table compute reported), a copy of a chain ending with an awk is a legacy dual text (toTable inserted).
+	 */
+	@Test
+	void copySourceTakesTheTypeOfItsOrigin() {
+		final Source http = HttpSource.builder().url("/").build();
+		http.setKey(KEY);
+		final Source copyToJson = CopySource.builder()
+			.from(KEY)
+			.computes(List.of(Json2Csv.builder().type("json2Csv").properties("/a").build()))
+			.build();
+		copyToJson.setKey("${source::monitors.enclosure.discovery.sources.json}");
+		final Source copyToTable = CopySource.builder()
+			.from(KEY)
+			.computes(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build()))
+			.build();
+		copyToTable.setKey("${source::monitors.enclosure.discovery.sources.table}");
+		final Source awkChain = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		awkChain.setKey("${source::monitors.enclosure.discovery.sources.awk}");
+		final Source copyOfAwk = CopySource.builder()
+			.from(awkChain.getKey())
+			.computes(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build()))
+			.build();
+		copyOfAwk.setKey("${source::monitors.enclosure.discovery.sources.copyOfAwk}");
+
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("source(1)", http);
+		sources.put("json", copyToJson);
+		sources.put("table", copyToTable);
+		sources.put("awk", awkChain);
+		sources.put("copyOfAwk", copyOfAwk);
+		final Connector connector = Connector.builder().build();
+		connector.getMonitors()
+			.put(
+				"enclosure",
+				StandardMonitorJob.standardBuilder().discovery(Discovery.builder().sources(sources).build()).build()
+			);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("json2Csv"), types(copyToJson));
+		assertEquals(List.of("keepColumns"), types(copyToTable));
+		assertEquals(List.of("toTable", "keepColumns"), types(copyOfAwk));
+		assertEquals(
+			List.of(
+				Kind.TABLE_COMPUTE_ON_TEXT_SOURCE,
+				Kind.TO_TEXT_INSERTED,
+				Kind.AWK_ON_TABLE,
+				Kind.TO_TABLE_APPENDED,
+				Kind.TO_TABLE_INSERTED
+			),
+			kinds(connector)
+		);
+	}
+
 	@Test
 	void legacyIdiomsAreReported() {
 		final TranslationTable table = TranslationTable.builder().translations(orderedTranslations()).build();

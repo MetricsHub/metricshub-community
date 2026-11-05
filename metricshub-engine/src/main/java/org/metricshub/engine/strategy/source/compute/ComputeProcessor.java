@@ -1821,8 +1821,9 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		sourceTable.setTable(table);
-		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell
-		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never
+		// with CRLF
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE));
 		sourceTable.setContentType(ContentType.TABLE);
 	}
 
@@ -1981,8 +1982,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			row.add(columnIndex, resolved.toString());
 		}
 		sourceTable.setTable(table);
-		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell
-		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never
+		// with CRLF
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE));
 		sourceTable.setContentType(ContentType.TABLE);
 	}
 
