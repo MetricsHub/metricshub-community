@@ -133,6 +133,8 @@ public class SourceProcessor implements ISourceProcessor {
 		if (origin.getRawData() != null) {
 			sourceTable.setRawData(origin.getRawData());
 		}
+		// An empty converted result is typed by its marker only: the copy keeps it
+		sourceTable.setContentType(origin.getExplicitContentType());
 
 		logSourceCopy(connectorId, copyFrom, copySource.getKey(), sourceTable, hostname);
 

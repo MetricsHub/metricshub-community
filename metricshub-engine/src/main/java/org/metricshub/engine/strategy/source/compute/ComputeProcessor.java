@@ -1842,8 +1842,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			final int to = range[1] == 0
 				? cells.size()
 				: (int) Math.min(range[1], Math.max(cells.size(), (long) from + MAX_RANGE_PADDING - 1));
-			for (int column = from; column <= to; column++) {
-				selected.add(column <= cells.size() ? cells.get(column - 1) : EMPTY);
+			// A long counter: a range ending at Integer.MAX_VALUE must not wrap around
+			for (long column = from; column <= to; column++) {
+				selected.add(column <= cells.size() ? cells.get((int) column - 1) : EMPTY);
 			}
 		}
 		return selected;
