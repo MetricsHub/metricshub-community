@@ -125,4 +125,24 @@ class SqlSourceProcessorTest {
 			.build();
 		return TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 	}
+
+	/**
+	 * Legacy shape pinned for #1509: the raw text is serialized with <code>replaceSeparator=true</code>, so a
+	 * <code>;</code> inside a cell shows as <code>,</code> in the raw text while the table keeps it.
+	 */
+	@Test
+	void testRawTextReplacesSeparatorInsideCellsWhileTableKeepsIt() throws Exception {
+		when(jdbcConfiguration.copy()).thenReturn(JdbcConfiguration.builder().hostname("hostname").build());
+		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
+		when(sqlRequestExecutor.executeSql(eq("hostname"), any(JdbcConfiguration.class), any(), eq(false), any(), any()))
+			.thenReturn(List.of(List.of("a;b", "c"), List.of("", "d")));
+
+		final SourceTable result = sqlSourceProcessor.process(
+			SqlSource.builder().query("SELECT 1").build(),
+			createTelemetryManagerWithHostConfiguration()
+		);
+
+		assertEquals(List.of(List.of("a;b", "c"), List.of("", "d")), result.getTable());
+		assertEquals("a,b;c;\n;d;", result.getRawData());
+	}
 }

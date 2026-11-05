@@ -159,6 +159,20 @@ jobs:
         REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
         REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
 
+    # The compute-chain golden corpus (metricshub-engine, ComputeChainGoldenCorpusTest) verifies the goldens
+    # committed in each connector repository (src/test/goldens/compute-chains) against its connectors, for the
+    # repositories found next to this checkout, and is skipped when none is there. The community repository is
+    # public: check it out, at the revision recorded in metricshub-engine's goldens/compute-chains/revisions.properties
+    # (a revision holding the goldens), so that pull requests and main verify its goldens. The enterprise repository
+    # is private: its goldens stay there and are verified locally only.
+    - name: Checkout the community connectors for the golden corpus
+      shell: bash
+      run: |
+        rev=$(grep '^metricshub-community-connectors=' metricshub-engine/src/test/resources/goldens/compute-chains/revisions.properties | cut -d= -f2 | tr -d '\r')
+        git init -q ../metricshub-community-connectors
+        git -C ../metricshub-community-connectors fetch -q --depth 1 https://github.com/MetricsHub/community-connectors.git "$rev"
+        git -C ../metricshub-community-connectors checkout -q FETCH_HEAD
+
     - name: Build with Maven
       run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml ${{ inputs.mavenPhases }} ${{ inputs.mavenOptions }}
       env:
