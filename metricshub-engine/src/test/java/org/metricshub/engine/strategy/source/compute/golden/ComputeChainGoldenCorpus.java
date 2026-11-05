@@ -47,7 +47,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSour
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -432,7 +431,7 @@ public class ComputeChainGoldenCorpus {
 	 * </ul>
 	 * Each source type gets the shapes its legacy processor produces:
 	 * <ul>
-	 * <li><code>http</code>, <code>file</code>, <code>ipmiRaw</code>: raw text only, with and without a trailing
+	 * <li><code>http</code>, <code>file</code>: raw text only, with and without a trailing
 	 * line feed;</li>
 	 * <li><code>commandLine</code>: the raw lines joined with line feeds (no trailing <code>;</code>) and the table
 	 * built with <code>String.split(";")</code>;</li>
@@ -522,7 +521,7 @@ public class ComputeChainGoldenCorpus {
 			final Map<String, Source> sources,
 			final int depth
 		) {
-			if (source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiRawSource) {
+			if (source instanceof HttpSource || source instanceof FileSource) {
 				inputs.put("text", () -> text(TEXT));
 				inputs.put("textNoTrailingNewline", () -> text(TEXT.substring(0, TEXT.length() - 1)));
 			} else if (source instanceof CommandLineSource) {

@@ -47,7 +47,6 @@ import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -74,7 +73,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * before it (a no-op on the table those producers already built);</li>
  * <li>a chain ending in text from a legacy dual producer gets an implicit <code>toTable</code> appended, so that
  * the mapping reads a table;</li>
- * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>, <code>ipmiRaw</code>)
+ * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>)
  * finds an empty table today and keeps doing so: nothing is inserted, the case is reported;</li>
  * <li>a text compute reading the raw text only (<code>json2Csv</code>, <code>xml2Csv</code>) fed by a table
  * producer keeps reading whatever raw text the producer left: nothing is inserted, the case is reported.</li>
@@ -107,7 +106,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private enum TextProducer {
 		/** No text: the current content is a table. */
 		NONE,
-		/** A pure text source: <code>http</code>, <code>file</code>, <code>ipmiRaw</code>. */
+		/** A pure text source: <code>http</code>, <code>file</code>. */
 		PURE,
 		/** A legacy producer filling both the text and the table: <code>commandLine</code>, <code>awk</code>. */
 		LEGACY_DUAL,
@@ -140,10 +139,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			report.add(new ContentTypeReportEntry(key, Kind.STATIC_CSV, "value=" + staticSource.getValue()));
 		}
 
-		final List<Compute> computes = source.getComputes();
-		if (computes == null) {
+		if (source.getComputes() == null) {
 			return;
 		}
+		// Start again from the chain as written: a previous pass may have inserted implicit conversions
+		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
 		ContentType current = source.getOutputContentType();
 		TextProducer producer = current != ContentType.TEXT
 			? TextProducer.NONE
@@ -169,6 +169,12 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 					}
 				} else if (producer == TextProducer.PURE) {
 					report.add(new ContentTypeReportEntry(key, Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, where));
+				} else if (producer == TextProducer.EXPLICIT) {
+					// An explicit toText left text only: a real conversion is needed to get a table back
+					desugared.add(ToTable.builder().type("toTable").build());
+					report.add(
+						new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where + " (after an explicit toText)")
+					);
 				} else {
 					desugared.add(ToTable.implicit());
 					report.add(new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where));
@@ -200,9 +206,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			);
 		}
 
-		if (desugared.size() != computes.size()) {
-			source.setComputes(desugared);
-		}
+		source.setComputes(desugared);
 	}
 
 	/**
@@ -312,8 +316,13 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 	}
 
+	private static boolean isImplicit(final Compute compute) {
+		return (compute instanceof ToTable toTable && toTable.isImplicit()) ||
+			(compute instanceof ToText toText && toText.isImplicit());
+	}
+
 	private static boolean isPureTextSource(final Source source) {
-		return source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiRawSource;
+		return source instanceof HttpSource || source instanceof FileSource;
 	}
 
 	/**
@@ -358,6 +367,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 		}
 		forEach(connector.getAfterAll(), action);
+		// The tools run their sources through the same compute processor
+		if (connector.getTools() != null) {
+			connector.getTools().values().forEach(tool -> forEach(tool.getSources(), action));
+		}
 	}
 
 	private static void forEach(final Map<String, Source> sources, final Consumer<Source> action) {

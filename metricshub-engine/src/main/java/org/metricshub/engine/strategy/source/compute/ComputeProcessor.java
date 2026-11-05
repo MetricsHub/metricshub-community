@@ -33,6 +33,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -358,6 +359,8 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Compute Operation (Awk) is null, the table remains unchanged.", hostname);
 			return;
 		}
+		// The result of the script is typed by its content, not by what an explicit conversion marked before
+		sourceTable.setContentType(null);
 		final String script = awk.getScript();
 
 		// An Awk Script is supposed to be only the reference to the EmbeddedFile, so the map contains only one item which is our EmbeddedFile
@@ -1787,7 +1790,10 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		final String rawData = sourceTable.getRawData();
-		final List<String> lines = rawData == null ? List.of() : SourceTable.lineToList(rawData, NEW_LINE);
+		// The text may come with CRLF line endings: the result must not depend on them
+		final List<String> lines = rawData == null
+			? List.of()
+			: SourceTable.lineToList(rawData.replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE);
 		final List<String> filteredLines = FilterResultHelper.filterLines(
 			lines,
 			null,
@@ -1795,24 +1801,70 @@ public class ComputeProcessor implements IComputeProcessor {
 			toTable.getExclude(),
 			toTable.getKeep()
 		);
-		final String selectColumns = toTable.getSelectColumns() == null
-			? EMPTY
-			: toTable.getSelectColumns().replaceAll("\\s+", EMPTY);
-		final List<String> selectedLines = FilterResultHelper.selectedColumns(
-			filteredLines,
-			toTable.getSeparator(),
-			selectColumns
-		);
-		// selectedColumns joins the selected columns with the table separator; otherwise the lines keep their own
-		final String separator = selectColumns.isEmpty() ? toTable.getSeparator() : TABLE_SEP;
+		final List<int[]> columns = columnRanges(toTable.getSelectColumns());
 
-		final List<List<String>> table = selectedLines.stream()
-			.map(line -> splitLine(line, separator))
-			.filter(row -> !row.isEmpty())
-			.collect(Collectors.toList()); // NOSONAR
+		final List<List<String>> table = new ArrayList<>();
+		for (final String line : filteredLines) {
+			// A blank line gives no row; a line whose selected columns are all absent gives empty cells
+			if (line.isEmpty()) {
+				continue;
+			}
+			final List<String> cells = splitLine(line, toTable.getSeparator());
+			table.add(columns == null ? cells : selectCells(cells, columns));
+		}
 
 		sourceTable.setTable(table);
-		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, false));
+		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		sourceTable.setContentType(ContentType.TABLE);
+	}
+
+	/**
+	 * Parses a column selection such as <code>1,3-5,8-</code> into 1-based ranges.
+	 *
+	 * @param selectColumns The selection, blank for every column
+	 * @return the ranges as <code>{from, to}</code> pairs, <code>to</code> being 0 for an open range, or null for
+	 *         every column
+	 */
+	static List<int[]> columnRanges(final String selectColumns) {
+		if (selectColumns == null || selectColumns.isBlank()) {
+			return null;
+		}
+		final List<int[]> ranges = new ArrayList<>();
+		for (final String token : selectColumns.replaceAll("\\s+", EMPTY).split(COMMA)) {
+			if (token.isEmpty()) {
+				continue;
+			}
+			final int dash = token.indexOf('-');
+			try {
+				if (dash < 0) {
+					final int column = Integer.parseInt(token);
+					ranges.add(new int[] { column, column });
+				} else {
+					final int from = dash == 0 ? 1 : Integer.parseInt(token.substring(0, dash));
+					final int to = dash == token.length() - 1 ? 0 : Integer.parseInt(token.substring(dash + 1));
+					ranges.add(new int[] { from, to });
+				}
+			} catch (NumberFormatException e) {
+				log.warn("Invalid column selection {}: {} is ignored.", selectColumns, token);
+			}
+		}
+		return ranges;
+	}
+
+	/**
+	 * Keeps the cells of the selected columns, in selection order: an absent column of a closed range gives an empty
+	 * cell, an open range stops at the last cell.
+	 */
+	private static List<String> selectCells(final List<String> cells, final List<int[]> ranges) {
+		final List<String> selected = new ArrayList<>();
+		for (final int[] range : ranges) {
+			final int to = range[1] == 0 ? cells.size() : range[1];
+			for (int column = Math.max(range[0], 1); column <= to; column++) {
+				selected.add(column <= cells.size() ? cells.get(column - 1) : EMPTY);
+			}
+		}
+		return selected;
 	}
 
 	/**
@@ -1859,6 +1911,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true));
 		sourceTable.setTable(new ArrayList<>());
+		sourceTable.setContentType(ContentType.TEXT);
 	}
 
 	/**
@@ -1886,7 +1939,11 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 		final int columnIndex = column - 1;
-		for (final List<String> row : sourceTable.getTable()) {
+		// Fresh rows: a source may hand out fixed-size rows (Arrays.asList)
+		final List<List<String>> table = new ArrayList<>();
+		for (final List<String> original : sourceTable.getTable()) {
+			final List<String> row = new ArrayList<>(original);
+			table.add(row);
 			if (columnIndex > row.size()) {
 				log.warn(
 					"Hostname {} - Cannot insert column {} in the {}-cell row {}, the row remains unchanged.",
@@ -1900,16 +1957,23 @@ public class ComputeProcessor implements IComputeProcessor {
 			final Matcher matcher = COLUMN_REFERENCE_PATTERN.matcher(value);
 			final StringBuilder resolved = new StringBuilder();
 			while (matcher.find()) {
-				final int referenced = Integer.parseInt(matcher.group(1)) - 1;
-				matcher.appendReplacement(
-					resolved,
-					Matcher.quoteReplacement(referenced < row.size() ? row.get(referenced) : EMPTY)
-				);
+				// An absent column (a number too large for an int included), or a null cell, is an empty value
+				String cell = null;
+				try {
+					final int referenced = Integer.parseInt(matcher.group(1)) - 1;
+					cell = referenced < row.size() ? row.get(referenced) : null;
+				} catch (NumberFormatException e) {
+					cell = null;
+				}
+				matcher.appendReplacement(resolved, Matcher.quoteReplacement(cell == null ? EMPTY : cell));
 			}
 			matcher.appendTail(resolved);
 			row.add(columnIndex, resolved.toString());
 		}
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+		sourceTable.setTable(table);
+		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		sourceTable.setContentType(ContentType.TABLE);
 	}
 
 	@Override

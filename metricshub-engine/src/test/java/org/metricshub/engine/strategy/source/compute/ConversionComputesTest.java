@@ -155,8 +155,59 @@ class ConversionComputesTest {
 		// Past the last column, and a reference to an absent column
 		processor(sourceTable).process(InsertColumn.builder().column(5).value("$9;x").build());
 		assertEquals(table("b-a|a|MSHW|b|;x", "d-c|c|MSHW|d|;x"), sourceTable.getTable());
-		// The value is one cell whatever it holds: no round trip
-		assertEquals("b-a;a;MSHW;b;;x;\nd-c;c;MSHW;d;;x;", sourceTable.getRawData());
+		// The value is one cell whatever it holds: no round trip, and the raw text shows "," for the ";" inside it
+		assertEquals("b-a;a;MSHW;b;,x;\nd-c;c;MSHW;d;,x;", sourceTable.getRawData());
+
+		// A reference too large for an int is an absent column
+		processor(sourceTable).process(InsertColumn.builder().column(1).value("$9999999999").build());
+		assertEquals("", sourceTable.getTable().get(0).get(0));
+	}
+
+	@Test
+	void toTableUsesALiteralSeparatorAndKeepsSparseRows() {
+		final SourceTable sourceTable = SourceTable.ofText("a::b::c\nd\n\ne::f");
+		processor(sourceTable).process(ToTable.builder().separator("::").selectColumns("2,3-").build());
+		// "d" has no column 2: an empty cell keeps the row; the blank line gives no row
+		assertEquals(table("b|c", "", "f"), sourceTable.getTable());
+		assertEquals(ContentType.TABLE, sourceTable.getContentType());
+	}
+
+	@Test
+	void explicitConversionsTypeAnEmptyResult() {
+		final SourceTable fromEmptyText = SourceTable.ofText("");
+		processor(fromEmptyText).process(ToTable.builder().build());
+		assertEquals(ContentType.TABLE, fromEmptyText.getContentType());
+
+		final SourceTable fromEmptyTable = SourceTable.ofTable(new ArrayList<>());
+		processor(fromEmptyTable).process(ToText.builder().build());
+		assertEquals(ContentType.TEXT, fromEmptyTable.getContentType());
+		assertEquals("", fromEmptyTable.getRawData());
+
+		// A legacy compute types its result by its content again
+		processor(fromEmptyText).process(Awk.builder().script("{ print }").build());
+		assertEquals(ContentType.TEXT, fromEmptyText.getContentType());
+	}
+
+	@Test
+	void toTableNormalizesCrlf() {
+		final SourceTable sourceTable = SourceTable.ofText("a;b\r\nc;d\r\n");
+		processor(sourceTable).process(ToTable.builder().build());
+		assertEquals(table("a|b", "c|d"), sourceTable.getTable());
+		assertEquals("a;b;\nc;d;", sourceTable.getRawData());
+	}
+
+	/**
+	 * A source may hand out fixed-size rows (ipmiRaw builds its row with Arrays.asList) or null cells: the compute
+	 * builds fresh rows and treats a null cell as empty.
+	 */
+	@Test
+	void insertColumnCopesWithFixedSizeRowsAndNullCells() {
+		final SourceTable sourceTable = SourceTable.ofTable(
+			new ArrayList<>(List.of(Arrays.asList("a", null), Arrays.asList("c", "d")))
+		);
+		processor(sourceTable).process(InsertColumn.builder().column(3).value("[$2]").build());
+		assertEquals(List.of(Arrays.asList("a", null, "[]"), List.of("c", "d", "[d]")), sourceTable.getTable());
+		assertEquals("a;;[];\nc;d;[d];", sourceTable.getRawData());
 	}
 
 	@Test

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -34,6 +36,9 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 
 class ContentTypeDesugaringTest {
 
@@ -68,12 +73,6 @@ class ContentTypeDesugaringTest {
 		translations.put("ok", "OK;1");
 		translations.put("default", "line1\nline2");
 		return translations;
-	}
-
-	private static Source desugar(final Source source) {
-		final Connector connector = connectorWith(source);
-		new ContentTypeDesugaring().update(connector);
-		return source;
 	}
 
 	@Test
@@ -257,11 +256,84 @@ class ContentTypeDesugaringTest {
 				)
 			)
 			.build();
-		desugar(source);
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
 		final List<String> once = types(source);
-		desugar(source);
+		final List<ContentTypeReportEntry> report = List.copyOf(connector.getContentTypeReport());
+		new ContentTypeDesugaring().update(connector);
 		assertEquals(once, types(source));
 		assertEquals(List.of("toText", "awk", "toTable", "keepColumns"), once);
+		// The report is rebuilt from the chain as written, so a second pass loses no finding
+		assertEquals(report, connector.getContentTypeReport());
+		assertEquals(List.of(Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED), kinds(connector));
+	}
+
+	/**
+	 * An explicit toText leaves text only, so the table compute that follows gets a real toTable, not the no-op
+	 * implicit one: the chain keeps its rows end to end.
+	 */
+	@Test
+	void tableComputeAfterExplicitToTextGetsAnExecutableToTable() {
+		final Source source = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					ToText.builder().type("toText").build(),
+					KeepColumns.builder().type("keepColumns").columnNumbers("2").build()
+				)
+			)
+			.build();
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toText", "toTable", "keepColumns"), types(source));
+		assertFalse(((ToTable) source.getComputes().get(1)).isImplicit());
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+
+		// Run the desugared chain: the rows survive, with "," for ";" inside a cell as toText serializes
+		final SourceTable sourceTable = SourceTable.ofTable(
+			new ArrayList<>(List.of(new ArrayList<>(List.of("a;b", "c")), new ArrayList<>(List.of("d", "e"))))
+		);
+		final ComputeProcessor processor = ComputeProcessor.builder().hostname("host").sourceTable(sourceTable).build();
+		source.getComputes().forEach(compute -> compute.accept(processor));
+		assertEquals(List.of(List.of("c"), List.of("e")), sourceTable.getTable());
+	}
+
+	@Test
+	void toolSourcesAreDesugaredToo() {
+		final Source source = CommandLineSource.builder()
+			.commandLine("ls")
+			.computes(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build()))
+			.build();
+		source.setKey("${source::tools.list.sources.raw}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("raw", source);
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("list", ConnectorTool.builder().sources(sources).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable", "keepColumns"), types(source));
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+		assertEquals("${source::tools.list.sources.raw}", connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * ipmiRaw produces a table (one row holding the request and the response), not text: a table compute after it
+	 * needs no conversion and is not reported.
+	 */
+	@Test
+	void ipmiRawIsATableProducer() {
+		final Source source = IpmiRawSource.builder()
+			.netFn("0x06")
+			.command("0x01")
+			.computes(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("2").build()))
+			.build();
+		assertEquals(ContentType.TABLE, source.getOutputContentType());
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("keepColumns"), types(source));
+		assertTrue(connector.getContentTypeReport().isEmpty());
 	}
 
 	/**
