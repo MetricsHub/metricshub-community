@@ -44,7 +44,7 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		/** An implicit <code>toTable</code> was appended to a chain ending in text from a legacy dual producer. */
 		TO_TABLE_APPENDED,
 		/**
-		 * A table compute follows a pure text producer (<code>http</code>, <code>file</code>):
+		 * A table compute follows a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>):
 		 * it finds an empty table today. No conversion is inserted, so that it stays that way.
 		 */
 		TABLE_COMPUTE_ON_TEXT_SOURCE,

@@ -189,6 +189,20 @@ class ConversionComputesTest {
 	}
 
 	@Test
+	void toTextNormalizesCrlfInsideCells() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("a\r\nb|c"));
+		processor(sourceTable).process(ToText.builder().build());
+		assertEquals("a\nb;c;", sourceTable.getRawData());
+	}
+
+	@Test
+	void toTableKeepsTheDefaultSeparatorWhenAReferenceResolvesToNothing() {
+		final ToTable toTable = ToTable.builder().separator("${attribute::sep}").build();
+		toTable.update(value -> value == null ? null : value.replace("${attribute::sep}", ""));
+		assertEquals(";", toTable.getSeparator());
+	}
+
+	@Test
 	void toTableNormalizesCrlf() {
 		final SourceTable sourceTable = SourceTable.ofText("a;b\r\nc;d\r\n");
 		processor(sourceTable).process(ToTable.builder().build());

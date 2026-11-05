@@ -153,7 +153,9 @@ public class ToTable extends Compute {
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		separator = updater.apply(separator);
+		// A reference resolving to nothing must not leave an empty separator: back to the default
+		final String updated = updater.apply(separator);
+		separator = updated == null || updated.isEmpty() ? TABLE_SEP : updated;
 		keep = updater.apply(keep);
 		exclude = updater.apply(exclude);
 		selectColumns = updater.apply(selectColumns);
