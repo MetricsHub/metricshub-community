@@ -34,6 +34,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -75,6 +76,16 @@ public class Xml2Csv extends Compute {
 		super(type);
 		this.recordTag = recordTag == null ? "/" : recordTag;
 		this.properties = properties;
+	}
+
+	@Override
+	public ContentType getInputContentType() {
+		return ContentType.TEXT;
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TABLE;
 	}
 
 	@Override

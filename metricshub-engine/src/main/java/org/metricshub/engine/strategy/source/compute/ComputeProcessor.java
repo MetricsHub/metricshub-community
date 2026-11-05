@@ -33,6 +33,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -73,6 +74,7 @@ import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ConversionType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ITranslationTable;
@@ -95,6 +97,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Exclude
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.InsertColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -106,6 +109,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -353,6 +358,8 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Compute Operation (Awk) is null, the table remains unchanged.", hostname);
 			return;
 		}
+		// The result of the script is typed by its content, not by what an explicit conversion marked before
+		sourceTable.setContentType(null);
 		final String script = awk.getScript();
 
 		// An Awk Script is supposed to be only the reference to the EmbeddedFile, so the map contains only one item which is our EmbeddedFile
@@ -1062,6 +1069,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			if (json2csvResult != null && !json2csvResult.isEmpty()) {
 				sourceTable.setRawData(json2csvResult);
 				sourceTable.setTable(SourceTable.csvToTable(json2csvResult, json2csv.getSeparator()));
+				sourceTable.setContentType(ContentType.TABLE);
 			}
 		} catch (Exception e) {
 			logComputeError(
@@ -1728,6 +1736,246 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * This method processes {@link Xml2Csv} compute
 	 * @param xml2csv {@link Xml2Csv} instance
 	 */
+	/**
+	 * Converts the raw text into a table: one row per line, split on the separator, after the line filters and the
+	 * column selection of the compute (the <code>commandLine</code> semantics).
+	 * <p>
+	 * An implicit <code>toTable</code> (inserted by the content-type desugaring after <code>commandLine</code>, the
+	 * <code>awk</code> source or the <code>awk</code> compute) leaves the source table unchanged: those producers
+	 * build their table themselves.
+	 *
+	 * @param toTable The {@link ToTable} compute
+	 */
+	@Override
+	@WithSpan("Compute ToTable Exec")
+	public void process(@SpanAttribute("compute.definition") final ToTable toTable) {
+		if (toTable == null) {
+			log.warn("Hostname {} - Compute Operation (ToTable) is null, the table remains unchanged.", hostname);
+			return;
+		}
+		if (toTable.isImplicit()) {
+			log.debug(
+				"Hostname {} - Implicit toTable: the table is already built, the source table remains unchanged.",
+				hostname
+			);
+			return;
+		}
+
+		final String rawData = sourceTable.getRawData();
+		// The text may come with CRLF line endings: the result must not depend on them
+		final List<String> lines = rawData == null
+			? List.of()
+			: SourceTable.lineToList(rawData.replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE);
+		final List<String> filteredLines = FilterResultHelper.filterLines(
+			lines,
+			null,
+			null,
+			toTable.getExclude(),
+			toTable.getKeep()
+		);
+		final List<int[]> columns = columnRanges(toTable.getSelectColumns());
+
+		final List<List<String>> table = new ArrayList<>();
+		for (final String line : filteredLines) {
+			// A blank line gives no row; a line whose selected columns are all absent gives empty cells
+			if (line.isEmpty()) {
+				continue;
+			}
+			final List<String> cells = splitLine(line, toTable.getSeparator());
+			// A line of blank separators only gives no cell: no row either
+			if (cells.isEmpty()) {
+				continue;
+			}
+			table.add(columns == null ? cells : selectCells(cells, columns));
+		}
+
+		sourceTable.setTable(table);
+		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never
+		// with CRLF
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE));
+		sourceTable.setContentType(ContentType.TABLE);
+	}
+
+	/**
+	 * Parses a column selection such as <code>1,3-5,8-</code> into 1-based ranges.
+	 *
+	 * @param selectColumns The selection, blank for every column
+	 * @return the ranges as <code>{from, to}</code> pairs, <code>to</code> being {@link #OPEN_RANGE} for an open
+	 *         range, or null for every column; a range ending at 0 or below selects nothing
+	 */
+	static List<int[]> columnRanges(final String selectColumns) {
+		if (selectColumns == null || selectColumns.isBlank()) {
+			return null;
+		}
+		final List<int[]> ranges = new ArrayList<>();
+		for (final String token : selectColumns.replaceAll("\\s+", EMPTY).split(COMMA)) {
+			if (token.isEmpty()) {
+				continue;
+			}
+			final int dash = token.indexOf('-');
+			try {
+				if (dash < 0) {
+					final int column = Integer.parseInt(token);
+					ranges.add(new int[] { column, column });
+				} else {
+					final int from = dash == 0 ? 1 : Integer.parseInt(token.substring(0, dash));
+					final int to = dash == token.length() - 1 ? OPEN_RANGE : Integer.parseInt(token.substring(dash + 1));
+					ranges.add(new int[] { from, to });
+				}
+			} catch (NumberFormatException e) {
+				log.warn("Invalid column selection {}: {} is ignored.", selectColumns, token);
+			}
+		}
+		return ranges;
+	}
+
+	/**
+	 * The most cells a closed range of a <code>toTable</code> selection can pad with: a range such as
+	 * <code>1-2147483647</code> must not materialize billions of empty cells. The cells present are always kept.
+	 */
+	static final int MAX_RANGE_PADDING = 1000;
+
+	/**
+	 * The end of an open range such as <code>3-</code>: distinct from any column number, 0 included.
+	 */
+	private static final int OPEN_RANGE = -1;
+
+	/**
+	 * Keeps the cells of the selected columns, in selection order: an absent column of a closed range gives an empty
+	 * cell (at most {@link #MAX_RANGE_PADDING} cells past the ones present), an open range stops at the last cell.
+	 */
+	private static List<String> selectCells(final List<String> cells, final List<int[]> ranges) {
+		final List<String> selected = new ArrayList<>();
+		for (final int[] range : ranges) {
+			final int from = Math.max(range[0], 1);
+			final int to = range[1] == OPEN_RANGE
+				? cells.size()
+				: (int) Math.min(range[1], Math.max(cells.size(), (long) from + MAX_RANGE_PADDING - 1));
+			// A long counter: a range ending at Integer.MAX_VALUE must not wrap around
+			for (long column = from; column <= to; column++) {
+				selected.add(column <= cells.size() ? cells.get((int) column - 1) : EMPTY);
+			}
+		}
+		return selected;
+	}
+
+	/**
+	 * Splits a line into cells on a literal separator, keeping the empty cells but the one after a trailing
+	 * separator, as {@link SourceTable#lineToList(String, String)} does. A blank separator (a space, a tab) splits on
+	 * runs of it and keeps no empty cell, as the <code>commandLine</code> selection does. An empty line gives no cell.
+	 *
+	 * @param line      The line
+	 * @param separator The literal separator
+	 * @return the cells, mutable
+	 */
+	private static List<String> splitLine(final String line, final String separator) {
+		if (line == null || line.isEmpty()) {
+			return new ArrayList<>();
+		}
+		final String[] cells = line.split(Pattern.quote(separator), -1);
+		if (separator.isBlank()) {
+			return Stream.of(cells).filter(cell -> !cell.isEmpty()).collect(Collectors.toCollection(ArrayList::new));
+		}
+		final int count = line.endsWith(separator) ? cells.length - 1 : cells.length;
+		return Stream.of(cells).limit(count).collect(Collectors.toCollection(ArrayList::new));
+	}
+
+	/**
+	 * Converts the table into text: one line per row, cells joined with <code>;</code> and a trailing
+	 * <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code> (what the <code>awk</code> compute
+	 * read from a table so far).
+	 * <p>
+	 * An implicit <code>toText</code> (inserted by the content-type desugaring before an <code>awk</code> compute
+	 * fed by a table producer) leaves the source table unchanged: the <code>awk</code> compute serializes the table
+	 * itself when it finds no raw text, and an empty <code>awk</code> result must keep leaving the raw text as it was.
+	 *
+	 * @param toText The {@link ToText} compute
+	 */
+	@Override
+	@WithSpan("Compute ToText Exec")
+	public void process(@SpanAttribute("compute.definition") final ToText toText) {
+		if (toText == null) {
+			log.warn("Hostname {} - Compute Operation (ToText) is null, the table remains unchanged.", hostname);
+			return;
+		}
+		if (toText.isImplicit()) {
+			log.debug(
+				"Hostname {} - Implicit toText: the awk compute serializes the table itself, the source table remains unchanged.",
+				hostname
+			);
+			return;
+		}
+		// A text result never carries CRLF, whatever the cells hold
+		sourceTable.setRawData(
+			SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
+		);
+		sourceTable.setTable(new ArrayList<>());
+		sourceTable.setContentType(ContentType.TEXT);
+	}
+
+	/**
+	 * Inserts a column at the given 1-based position in every row. The value is a literal where <code>$n</code> is
+	 * replaced by the content of column <em>n</em> of the row (an absent column gives an empty string). A row
+	 * shorter than <em>column - 1</em> is left unchanged.
+	 *
+	 * @param insertColumn The {@link InsertColumn} compute
+	 */
+	@Override
+	@WithSpan("Compute InsertColumn Exec")
+	public void process(@SpanAttribute("compute.definition") final InsertColumn insertColumn) {
+		if (insertColumn == null) {
+			log.warn("Hostname {} - Compute Operation (InsertColumn) is null, the table remains unchanged.", hostname);
+			return;
+		}
+		final Integer column = insertColumn.getColumn();
+		final String value = insertColumn.getValue();
+		if (column == null || column < 1 || value == null) {
+			log.warn(
+				"Hostname {} - Arguments in Compute Operation (InsertColumn): {} are wrong, the table remains unchanged.",
+				hostname,
+				insertColumn
+			);
+			return;
+		}
+		final int columnIndex = column - 1;
+		// Fresh rows: a source may hand out fixed-size rows (Arrays.asList)
+		final List<List<String>> table = new ArrayList<>();
+		for (final List<String> original : sourceTable.getTable()) {
+			final List<String> row = new ArrayList<>(original);
+			table.add(row);
+			if (columnIndex > row.size()) {
+				log.warn(
+					"Hostname {} - Cannot insert column {} in the {}-cell row {}, the row remains unchanged.",
+					hostname,
+					column,
+					row.size(),
+					row
+				);
+				continue;
+			}
+			final Matcher matcher = COLUMN_REFERENCE_PATTERN.matcher(value);
+			final StringBuilder resolved = new StringBuilder();
+			while (matcher.find()) {
+				// An absent column (a number too large for an int included), or a null cell, is an empty value
+				String cell = null;
+				try {
+					final int referenced = Integer.parseInt(matcher.group(1)) - 1;
+					cell = referenced < row.size() ? row.get(referenced) : null;
+				} catch (NumberFormatException e) {
+					cell = null;
+				}
+				matcher.appendReplacement(resolved, Matcher.quoteReplacement(cell == null ? EMPTY : cell));
+			}
+			matcher.appendTail(resolved);
+			row.add(columnIndex, resolved.toString());
+		}
+		sourceTable.setTable(table);
+		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never
+		// with CRLF
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE));
+		sourceTable.setContentType(ContentType.TABLE);
+	}
+
 	@Override
 	@WithSpan("Compute Xml2Csv Exec")
 	public void process(@SpanAttribute("compute.definition") final Xml2Csv xml2csv) {
@@ -1746,6 +1994,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			if (xmlResult != null && !xmlResult.isEmpty()) {
 				sourceTable.setTable(xmlResult);
 				sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+				sourceTable.setContentType(ContentType.TABLE);
 			}
 		} catch (Exception e) {
 			logComputeError(

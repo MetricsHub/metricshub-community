@@ -35,6 +35,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Exclude
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.InsertColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -46,6 +47,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 
@@ -245,4 +248,25 @@ public interface IComputeProcessor {
 	 * @param xml2Csv The Xml2Csv compute operation to be processed.
 	 */
 	void process(Xml2Csv xml2Csv);
+
+	/**
+	 * Processes the ToTable compute operation on the source data.
+	 *
+	 * @param toTable The ToTable compute operation to be processed.
+	 */
+	void process(ToTable toTable);
+
+	/**
+	 * Processes the ToText compute operation on the source data.
+	 *
+	 * @param toText The ToText compute operation to be processed.
+	 */
+	void process(ToText toText);
+
+	/**
+	 * Processes the InsertColumn compute operation on the source data.
+	 *
+	 * @param insertColumn The InsertColumn compute operation to be processed.
+	 */
+	void process(InsertColumn insertColumn);
 }
