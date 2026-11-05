@@ -350,6 +350,25 @@ class ContentTypeDesugaringTest {
 		connector = connectorWith(StaticSource.builder().value("single").build());
 		new ContentTypeDesugaring().update(connector);
 		assertTrue(connector.getContentTypeReport().isEmpty());
+
+		// The list forms are not reported, even with a ';' in a cell
+		connector = connectorWith(
+			TableJoinSource.builder()
+				.leftTable("a")
+				.rightTable("b")
+				.leftKeyColumn(1)
+				.rightKeyColumn(1)
+				.defaultRightLine(List.of("", "a;b"))
+				.build()
+		);
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(connector.getContentTypeReport().isEmpty());
+
+		connector = connectorWith(
+			StaticSource.builder().value(List.of("DDN", "Data Direct Networks", "Disk;Array")).build()
+		);
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(connector.getContentTypeReport().isEmpty());
 	}
 
 	@Test

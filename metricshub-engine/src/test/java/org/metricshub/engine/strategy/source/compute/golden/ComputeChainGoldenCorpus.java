@@ -3,6 +3,7 @@ package org.metricshub.engine.strategy.source.compute.golden;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,18 +18,24 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.Data;
@@ -40,7 +47,10 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.ContentTypeReportEntry;
+import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.RawConnectorStore;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -87,7 +97,12 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * path separator. A root is used as is when it has no <code>src/main/connector</code> directory. Default: the
  * community and enterprise repositories checked out next to this repository. A missing root is skipped.</li>
  * <li>{@value #UPDATE_PROPERTY}: when <code>true</code>, the goldens are (re)written instead of verified.</li>
+ * <li>{@value #COMPARE_PROPERTY}: <code>exact</code> (default) compares the whole output, <code>typed</code> compares
+ * what the chain produces for its consumers, see {@link CompareMode#TYPED}.</li>
+ * <li>{@value #CONNECTORS_PROPERTY}: a comma-separated list of connector ids (case-insensitive) restricting the
+ * connectors checked and reported. Default: every connector.</li>
  * </ul>
+ * {@link GoldenCheck} runs the same checks outside Maven.
  * The goldens are written into each connector repository (<code>src/test/goldens/compute-chains</code>) and
  * committed there; this module records the revision of each repository they were generated from. After committing
  * regenerated goldens in a repository, set its line of the revision pin to that commit: CI checks the community
@@ -99,6 +114,39 @@ public class ComputeChainGoldenCorpus {
 	public static final String ROOTS_PROPERTY = "metricshub.connectors.roots";
 	public static final String ROOTS_ENV = "METRICSHUB_CONNECTORS_ROOTS";
 	public static final String UPDATE_PROPERTY = "metricshub.goldens.update";
+	public static final String COMPARE_PROPERTY = "metricshub.goldens.compare";
+	public static final String CONNECTORS_PROPERTY = "metricshub.goldens.connectors";
+
+	/** Prefix of a difference that is an intended change of the migration: printed, never failing. */
+	public static final String INTENDED_PREFIX = "intended: ";
+
+	/** Suffix of the input names whose differences are intended (a <code>;</code> inside a cell). */
+	public static final String SEPARATOR_IN_CELL_SUFFIX = "SeparatorInCell";
+
+	/**
+	 * How a generated golden is compared with the stored one.
+	 */
+	public enum CompareMode {
+		/** The whole output (table, raw text, error, time-out), the source type and the compute list. */
+		EXACT,
+		/**
+		 * What the chain produces for its consumers: the table (trailing empty cells stripped from every row on both
+		 * sides, raw text ignored) when the generated chain ends in a table, the raw text only when it ends in text;
+		 * error and time-out as they are. A changed compute list or source type is not a difference, and the
+		 * differences on the {@value #SEPARATOR_IN_CELL_SUFFIX} inputs are intended ones.
+		 */
+		TYPED;
+
+		/**
+		 * Parses a mode name, case-insensitively.
+		 *
+		 * @param name The name, null or blank for the default (exact)
+		 * @return the mode
+		 */
+		public static CompareMode parse(final String name) {
+			return name == null || name.isBlank() ? EXACT : valueOf(name.trim().toUpperCase(Locale.ROOT));
+		}
+	}
 
 	/**
 	 * The corpus directory of this module, relative to the module directory: it holds the revision pin only. The
@@ -146,6 +194,59 @@ public class ComputeChainGoldenCorpus {
 	 */
 	public static boolean isUpdateMode() {
 		return Boolean.getBoolean(UPDATE_PROPERTY);
+	}
+
+	/**
+	 * The configured comparison mode.
+	 *
+	 * @return the mode, exact unless {@value #COMPARE_PROPERTY} says otherwise
+	 */
+	public static CompareMode compareMode() {
+		return CompareMode.parse(System.getProperty(COMPARE_PROPERTY));
+	}
+
+	/**
+	 * Whether a connector is selected by {@value #CONNECTORS_PROPERTY}.
+	 *
+	 * @param connectorId The connector identifier
+	 * @return <code>true</code> when the property is unset or lists the connector (case-insensitively)
+	 */
+	public static boolean isSelected(final String connectorId) {
+		final String selection = System.getProperty(CONNECTORS_PROPERTY);
+		if (selection == null || selection.isBlank()) {
+			return true;
+		}
+		return Stream.of(selection.split(",")).map(String::trim).anyMatch(connectorId::equalsIgnoreCase);
+	}
+
+	/**
+	 * The ids listed by {@value #CONNECTORS_PROPERTY} that match none of the given connectors: a misspelt id would
+	 * otherwise select nothing and pass silently.
+	 *
+	 * @param connectorIds The ids of every loaded connector, across all repositories
+	 * @return the listed ids no connector carries (case-insensitively); empty when the property is unset
+	 */
+	public static List<String> unknownSelection(final Collection<String> connectorIds) {
+		final String selection = System.getProperty(CONNECTORS_PROPERTY);
+		if (selection == null || selection.isBlank()) {
+			return List.of();
+		}
+		final TreeSet<String> known = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		known.addAll(connectorIds);
+		return Stream.of(selection.split(","))
+			.map(String::trim)
+			.filter(id -> !id.isEmpty() && !known.contains(id))
+			.toList();
+	}
+
+	/**
+	 * Whether a difference line is an intended change (see {@link CompareMode#TYPED}).
+	 *
+	 * @param difference The difference line
+	 * @return <code>true</code> when it carries the {@value #INTENDED_PREFIX} prefix
+	 */
+	public static boolean isIntended(final String difference) {
+		return difference.startsWith(INTENDED_PREFIX);
 	}
 
 	/**
@@ -209,6 +310,7 @@ public class ComputeChainGoldenCorpus {
 			final SourceGolden sourceGolden = new SourceGolden();
 			sourceGolden.setSource(source.getType());
 			sourceGolden.setComputes(explicitComputes.stream().map(Compute::getType).toList());
+			sourceGolden.setEnding(explicitComputes.get(explicitComputes.size() - 1).getOutputContentType());
 			Inputs.inputsFor(source, sources)
 				.forEach(
 					(name, input) -> sourceGolden.getOutputs().put(name, run(connectorStore, connectorId, source, input.get()))
@@ -418,7 +520,48 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * Compares a generated golden with the stored one.
+	 * Generates the golden of a connector and checks it against the stored one (or writes it in update mode), as
+	 * the test and {@link GoldenCheck} do.
+	 *
+	 * @param repository  The repository holding the connector and its golden
+	 * @param store       The store holding the connector
+	 * @param connectorId The identifier of the connector
+	 * @param mode        The comparison mode
+	 * @return the differences, one line each (see {@link #isIntended(String)}), empty when the golden matches or
+	 *         was written
+	 * @throws IOException when the golden cannot be read or written
+	 */
+	public static List<String> check(
+		final Repository repository,
+		final ConnectorStore store,
+		final String connectorId,
+		final CompareMode mode
+	) throws IOException {
+		final ConnectorGolden golden = generate(store, connectorId);
+		final Path file = repository.getGoldenDirectory().resolve(connectorId + ".json");
+		if (isUpdateMode()) {
+			if (golden.getSources().isEmpty()) {
+				Files.deleteIfExists(file);
+			} else {
+				write(file, golden);
+			}
+			return List.of();
+		}
+		if (golden.getSources().isEmpty()) {
+			return Files.exists(file)
+				? List.of(connectorId + " has no compute chain but a stored golden " + file)
+				: List.of();
+		}
+		if (!Files.exists(file)) {
+			return List.of(
+				connectorId + " has no stored golden " + file + ": generate it with -D" + UPDATE_PROPERTY + "=true"
+			);
+		}
+		return diff(file, golden, mode);
+	}
+
+	/**
+	 * Compares a generated golden with the stored one, exactly.
 	 *
 	 * @param file   The stored golden file
 	 * @param golden The generated golden
@@ -426,6 +569,21 @@ public class ComputeChainGoldenCorpus {
 	 * @throws IOException when the stored golden cannot be read
 	 */
 	public static List<String> diff(final Path file, final ConnectorGolden golden) throws IOException {
+		return diff(file, golden, CompareMode.EXACT);
+	}
+
+	/**
+	 * Compares a generated golden with the stored one.
+	 *
+	 * @param file   The stored golden file
+	 * @param golden The generated golden
+	 * @param mode   The comparison mode
+	 * @return the differences, one line each, empty when the goldens are equal; in typed mode the intended ones
+	 *         carry {@value #INTENDED_PREFIX}
+	 * @throws IOException when the stored golden cannot be read
+	 */
+	public static List<String> diff(final Path file, final ConnectorGolden golden, final CompareMode mode)
+		throws IOException {
 		final JsonNode stored = MAPPER.readTree(file.toFile());
 		final JsonNode generated = MAPPER.valueToTree(golden);
 		final List<String> differences = new ArrayList<>();
@@ -443,23 +601,32 @@ public class ComputeChainGoldenCorpus {
 				return;
 			}
 			final JsonNode generatedSource = generatedSources.get(key);
-			if (!storedSource.path("source").equals(generatedSource.path("source"))) {
-				differences.add(
-					key + ": source type changed " + storedSource.path("source") + " -> " + generatedSource.path("source")
-				);
+			if (mode == CompareMode.EXACT) {
+				if (!storedSource.path("source").equals(generatedSource.path("source"))) {
+					differences.add(
+						key + ": source type changed " + storedSource.path("source") + " -> " + generatedSource.path("source")
+					);
+				}
+				if (!storedSource.path("computes").equals(generatedSource.path("computes"))) {
+					differences.add(
+						key + ": compute chain changed " + storedSource.path("computes") + " -> " + generatedSource.path("computes")
+					);
+				}
 			}
-			if (!storedSource.path("computes").equals(generatedSource.path("computes"))) {
-				differences.add(
-					key + ": compute chain changed " + storedSource.path("computes") + " -> " + generatedSource.path("computes")
-				);
-			}
+			final ContentType ending = golden.getSources().get(key).getEnding();
 			final JsonNode storedOutputs = storedSource.path("outputs");
 			final JsonNode generatedOutputs = generatedSource.path("outputs");
 			generatedOutputs.fieldNames().forEachRemaining(input -> {
 				final JsonNode storedOutput = storedOutputs.get(input);
 				final JsonNode generatedOutput = generatedOutputs.get(input);
-				if (!generatedOutput.equals(storedOutput)) {
-					differences.add(key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
+				final boolean same = mode == CompareMode.EXACT
+					? generatedOutput.equals(storedOutput)
+					: sameForConsumers(storedOutput, generatedOutput, ending);
+				if (!same) {
+					final String prefix = mode == CompareMode.TYPED && input.endsWith(SEPARATOR_IN_CELL_SUFFIX)
+						? INTENDED_PREFIX
+						: "";
+					differences.add(prefix + key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
 				}
 			});
 			// An input the generator no longer produces leaves a stale output behind: report it too
@@ -470,6 +637,86 @@ public class ComputeChainGoldenCorpus {
 			});
 		});
 		return differences;
+	}
+
+	/**
+	 * Whether two outputs are the same for the consumers of the chain (see {@link CompareMode#TYPED}).
+	 *
+	 * @param stored    The stored output, null when the stored golden has none for the input
+	 * @param generated The generated output
+	 * @param ending    The content type the generated chain ends in
+	 * @return <code>true</code> when the consumers see the same result
+	 */
+	static boolean sameForConsumers(final JsonNode stored, final JsonNode generated, final ContentType ending) {
+		if (stored == null) {
+			return false;
+		}
+		if (
+			!stored.path("error").equals(generated.path("error")) ||
+				!stored.path("timedOut").equals(generated.path("timedOut"))
+		) {
+			return false;
+		}
+		return ending == ContentType.TEXT
+			? stored.path("rawData").equals(generated.path("rawData"))
+			: stripTrailingEmptyCells(stored.path("table")).equals(stripTrailingEmptyCells(generated.path("table")));
+	}
+
+	/**
+	 * The rows of a JSON table, each one without its trailing empty cells (<code>commandLine</code> drops them with
+	 * <code>String.split</code>, <code>toTable</code> keeps them).
+	 *
+	 * @param table The JSON array of rows, or a missing node
+	 * @return the stripped rows
+	 */
+	static List<List<String>> stripTrailingEmptyCells(final JsonNode table) {
+		final List<List<String>> rows = new ArrayList<>();
+		for (final JsonNode row : table) {
+			final List<String> cells = new ArrayList<>();
+			row.forEach(cell -> cells.add(cell.asText()));
+			while (!cells.isEmpty() && cells.get(cells.size() - 1).isEmpty()) {
+				cells.remove(cells.size() - 1);
+			}
+			rows.add(cells);
+		}
+		return rows;
+	}
+
+	/**
+	 * Renders the content-type desugaring report of the selected connectors of each repository: the worklist of
+	 * stage 2 of #1508 and the exit criterion of stage 4.
+	 *
+	 * @param stores The connector store of each repository, in order
+	 * @return the report
+	 */
+	public static String contentTypeReport(final Map<Repository, ConnectorStore> stores) {
+		final StringBuilder report = new StringBuilder();
+		final Map<Kind, Integer> totals = new EnumMap<>(Kind.class);
+		int connectorsWithFindings = 0;
+		for (final Map.Entry<Repository, ConnectorStore> repository : stores.entrySet()) {
+			final Map<Kind, Integer> counts = new EnumMap<>(Kind.class);
+			final Path root = repository.getKey().getRoot();
+			report.append("# ").append(root.toAbsolutePath().normalize()).append('\n');
+			for (final Map.Entry<String, Connector> entry : new TreeMap<>(repository.getValue().getStore()).entrySet()) {
+				final List<ContentTypeReportEntry> findings = entry.getValue().getContentTypeReport();
+				if (findings.isEmpty() || !isSelected(entry.getKey())) {
+					continue;
+				}
+				connectorsWithFindings++;
+				report.append('\n').append(entry.getKey()).append(" (").append(findings.size()).append(")\n");
+				for (final ContentTypeReportEntry finding : findings) {
+					report.append("  ").append(finding).append('\n');
+					counts.merge(finding.kind(), 1, Integer::sum);
+				}
+			}
+			report.append("\nTotals for ").append(root.getFileName()).append(":\n");
+			counts.forEach((kind, count) -> report.append("  ").append(kind).append(": ").append(count).append('\n'));
+			counts.forEach((kind, count) -> totals.merge(kind, count, Integer::sum));
+			report.append('\n');
+		}
+		report.append("Connectors with findings: ").append(connectorsWithFindings).append('\n');
+		totals.forEach((kind, count) -> report.append("  ").append(kind).append(": ").append(count).append('\n'));
+		return report.toString();
 	}
 
 	/**
@@ -491,6 +738,13 @@ public class ComputeChainGoldenCorpus {
 		private String source;
 		private List<String> computes;
 		private Map<String, Output> outputs = new TreeMap<>();
+
+		/**
+		 * The content type the chain ends in: that of the last explicit compute. Not stored: the typed comparison
+		 * reads it from the generated golden.
+		 */
+		@JsonIgnore
+		private ContentType ending;
 	}
 
 	/**
@@ -516,8 +770,14 @@ public class ComputeChainGoldenCorpus {
 	 * <ul>
 	 * <li>the text holds a line with <code>;</code> separators, a line with an empty cell and a trailing
 	 * <code>;</code>, a blank line, numbers, a cell containing a comma and a single-cell line;</li>
-	 * <li>the table holds the same, plus a cell containing <code>;</code> and trailing empty cells.</li>
+	 * <li>the table holds the same, plus trailing empty cells.</li>
 	 * </ul>
+	 * Every table-derived shape has a <code>&lt;shape&gt;SeparatorInCell</code> twin built from a two-row table whose
+	 * second row holds <code>;</code> inside a cell, and every shape has a <code>&lt;shape&gt;Wide</code> twin built
+	 * from a 3 × 16 table of cells <code>r1c1</code> to <code>r3c16</code> (text shapes: the cells joined with
+	 * <code>;</code>, the lines with a line feed), so that a compute indexing a high column runs in the regime of a
+	 * real table.
+	 * <p>
 	 * Each source type gets the shapes its legacy processor produces:
 	 * <ul>
 	 * <li><code>http</code>, <code>file</code>, <code>ipmi</code>: raw text only, with and without a trailing
@@ -539,12 +799,35 @@ public class ComputeChainGoldenCorpus {
 
 		static final String TEXT = "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly\n";
 
+		/** The wide table as text: 3 lines of 16 cells joined with <code>;</code>, trailing line feed included. */
+		static final String WIDE_TEXT = wideTable().stream()
+			.map(row -> String.join(TABLE_SEP, row))
+			.collect(Collectors.joining("\n", "", "\n"));
+
 		private static final Pattern INDEXED = Pattern.compile("^(.*?)\\[(\\d+)\\]$");
 
 		private Inputs() {}
 
 		static List<List<String>> table() {
-			return rows("a|b|c", "x||z|", "1|2.5|3", "cell;with;sep||", "only");
+			return rows("a|b|c", "x||z|", "1|2.5|3", "only");
+		}
+
+		/** A normal row and a row holding <code>;</code> inside a cell. */
+		static List<List<String>> separatorInCellTable() {
+			return rows("a|b|c", "cell;with;sep||");
+		}
+
+		/** 3 rows of 16 cells, <code>r1c1</code> to <code>r3c16</code>. */
+		static List<List<String>> wideTable() {
+			final List<List<String>> table = new ArrayList<>();
+			for (int row = 1; row <= 3; row++) {
+				final List<String> cells = new ArrayList<>();
+				for (int column = 1; column <= 16; column++) {
+					cells.add("r" + row + "c" + column);
+				}
+				table.add(cells);
+			}
+			return table;
 		}
 
 		static List<List<String>> rows(final String... rows) {
@@ -611,45 +894,103 @@ public class ComputeChainGoldenCorpus {
 			final int depth
 		) {
 			if (source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiSource) {
-				inputs.put("text", () -> text(TEXT));
-				inputs.put("textNoTrailingNewline", () -> text(TEXT.substring(0, TEXT.length() - 1)));
+				textShape(inputs, "text", Inputs::text, true);
+				textShape(inputs, "textNoTrailingNewline", Inputs::text, false);
 			} else if (source instanceof CommandLineSource) {
-				inputs.put("commandLine", () -> commandLine(TEXT));
+				textShape(inputs, "commandLine", Inputs::commandLine, true);
 			} else if (source instanceof JawkSource) {
-				inputs.put("awkSource", () -> awkSource(TEXT));
+				textShape(inputs, "awkSource", Inputs::awkSource, true);
 			} else if (source instanceof SqlSource || source instanceof JmxSource) {
-				inputs.put("csvReplaceSeparator", () -> csv(table(), true));
+				tableShape(inputs, "csvReplaceSeparator", table -> csv(table, true));
 			} else if (source instanceof StaticSource staticSource) {
 				final String value = staticSource.getValue() == null ? "" : staticSource.getValue();
-				if (SOURCE_REF_PATTERN.matcher(value).find()) {
+				if (staticSource.getCells() != null) {
+					// The list form is the single row of exactly these cells
+					inputs.put("static", () -> csv(List.of(staticSource.getCells()), false));
+					twins(inputs, "static", table -> csv(table, false));
+				} else if (SOURCE_REF_PATTERN.matcher(value).find()) {
 					// The processor copies the referenced source's table and serializes it
-					inputs.put("csv", () -> csv(table(), false));
+					tableShape(inputs, "csv", table -> csv(table, false));
 				} else {
 					inputs.put("static", () -> csv(SourceTable.csvToTable(value, TABLE_SEP), false));
+					twins(inputs, "static", table -> csv(table, false));
 				}
 			} else if (source instanceof CopySource copySource) {
 				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom());
 				if (origin == null || depth > 5) {
 					addDualShapes(inputs);
 				} else if (!explicitComputes(origin).isEmpty()) {
-					inputs.put("csv", () -> csv(table(), false));
+					tableShape(inputs, "csv", table -> csv(table, false));
 				} else {
 					addShapes(inputs, origin, sources, depth + 1);
 				}
 			} else if (source instanceof TableUnionSource) {
 				addDualShapes(inputs);
 			} else {
-				inputs.put("table", () -> tableOnly(table()));
+				tableShape(inputs, "table", Inputs::tableOnly);
 			}
 		}
 
 		private static void addDualShapes(final Map<String, Supplier<SourceTable>> inputs) {
-			inputs.put("text", () -> text(TEXT));
-			inputs.put("table", () -> tableOnly(table()));
-			inputs.put("commandLine", () -> commandLine(TEXT));
-			inputs.put("awkSource", () -> awkSource(TEXT));
-			inputs.put("csv", () -> csv(table(), false));
-			inputs.put("csvReplaceSeparator", () -> csv(table(), true));
+			textShape(inputs, "text", Inputs::text, true);
+			tableShape(inputs, "table", Inputs::tableOnly);
+			textShape(inputs, "commandLine", Inputs::commandLine, true);
+			textShape(inputs, "awkSource", Inputs::awkSource, true);
+			tableShape(inputs, "csv", table -> csv(table, false));
+			tableShape(inputs, "csvReplaceSeparator", table -> csv(table, true));
+		}
+
+		/**
+		 * A text-derived shape and its wide twin.
+		 *
+		 * @param inputs          The inputs to add to
+		 * @param name            The shape name
+		 * @param builder         Builds the source table from the text
+		 * @param trailingNewline Whether the text ends with a line feed
+		 */
+		private static void textShape(
+			final Map<String, Supplier<SourceTable>> inputs,
+			final String name,
+			final Function<String, SourceTable> builder,
+			final boolean trailingNewline
+		) {
+			inputs.put(name, () -> builder.apply(trailingNewline ? TEXT : TEXT.substring(0, TEXT.length() - 1)));
+			inputs.put(
+				name + "Wide",
+				() -> builder.apply(trailingNewline ? WIDE_TEXT : WIDE_TEXT.substring(0, WIDE_TEXT.length() - 1))
+			);
+		}
+
+		/**
+		 * A table-derived shape on the generic table, and its twins.
+		 *
+		 * @param inputs  The inputs to add to
+		 * @param name    The shape name
+		 * @param builder Builds the source table from a table
+		 */
+		private static void tableShape(
+			final Map<String, Supplier<SourceTable>> inputs,
+			final String name,
+			final Function<List<List<String>>, SourceTable> builder
+		) {
+			inputs.put(name, () -> builder.apply(table()));
+			twins(inputs, name, builder);
+		}
+
+		/**
+		 * The separator-in-cell and wide twins of a table-derived shape.
+		 *
+		 * @param inputs  The inputs to add to
+		 * @param name    The shape name
+		 * @param builder Builds the source table from a table
+		 */
+		private static void twins(
+			final Map<String, Supplier<SourceTable>> inputs,
+			final String name,
+			final Function<List<List<String>>, SourceTable> builder
+		) {
+			inputs.put(name + SEPARATOR_IN_CELL_SUFFIX, () -> builder.apply(separatorInCellTable()));
+			inputs.put(name + "Wide", () -> builder.apply(wideTable()));
 		}
 
 		/**
@@ -942,16 +1283,21 @@ public class ComputeChainGoldenCorpus {
 		 * @return the existing repositories
 		 */
 		public static List<Repository> existing() {
-			return configuredRoots().stream()
-				.filter(Files::isDirectory)
-				.map(
-					root -> Repository.builder()
-						.root(root)
-						.connectorDirectory(connectorDirectory(root))
-						.goldenDirectory(goldenDirectory(root))
-						.build()
-				)
-				.toList();
+			return configuredRoots().stream().filter(Files::isDirectory).map(Repository::of).toList();
+		}
+
+		/**
+		 * The repository at a root.
+		 *
+		 * @param root The repository root
+		 * @return the repository
+		 */
+		public static Repository of(final Path root) {
+			return Repository.builder()
+				.root(root)
+				.connectorDirectory(connectorDirectory(root))
+				.goldenDirectory(goldenDirectory(root))
+				.build();
 		}
 	}
 }

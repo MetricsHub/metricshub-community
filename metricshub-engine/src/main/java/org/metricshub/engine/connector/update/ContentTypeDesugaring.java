@@ -85,12 +85,12 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
- * The implicit computes are flagged ({@link ToText#isImplicit()}, {@link ToTable#isImplicit()}) and leave the
+ * The implicit computes are flagged ({@code ToText#isImplicit()}, {@code ToTable#isImplicit()}) and leave the
  * results of the existing connectors byte for byte identical. Every inserted compute, the executable toTable
- * included, is flagged as generated ({@link ToTable#isGenerated()}): a later pass removes them first, so the
+ * included, is flagged as generated ({@code ToTable#isGenerated()}): a later pass removes them first, so the
  * chain and the report are rebuilt from what is written.
  * <p>
- * The findings are stored on the connector ({@link Connector#getContentTypeReport()}).
+ * The findings are stored on the connector ({@code Connector#getContentTypeReport()}).
  */
 public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 

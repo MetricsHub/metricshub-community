@@ -245,39 +245,43 @@ public class SourceProcessor implements ISourceProcessor {
 		}
 
 		final String staticValue = staticSource.getValue();
+		final List<List<String>> rows;
 
-		if (staticValue == null || staticValue.isEmpty()) {
+		if (staticSource.getCells() != null) {
+			// The list form is the single row of exactly these cells
+			rows = List.of(staticSource.getCells());
+		} else if (staticValue == null || staticValue.isEmpty()) {
 			log.error(
 				"Hostname {} - Static Source reference cannot be null. Returning an empty table for source {}.",
 				hostname,
 				staticSource
 			);
 			return SourceTable.empty();
-		}
+		} else {
+			log.debug(
+				"Hostname {} - Got Static Source value [{}] referenced in source [{}].",
+				hostname,
+				staticValue,
+				staticSource.getKey()
+			);
 
-		log.debug(
-			"Hostname {} - Got Static Source value [{}] referenced in source [{}].",
-			hostname,
-			staticValue,
-			staticSource.getKey()
-		);
+			final Optional<SourceTable> maybeStaticTable = SourceTable.lookupSourceTable(
+				staticValue,
+				connectorId,
+				telemetryManager
+			);
+
+			if (maybeStaticTable.isEmpty()) {
+				return SourceTable.empty();
+			}
+
+			// Note: In case of the static source getSourceTable never returns null
+			rows = maybeStaticTable.get().getTable();
+		}
 
 		final SourceTable sourceTable = new SourceTable();
 
-		final Optional<SourceTable> maybeStaticTable = SourceTable.lookupSourceTable(
-			staticValue,
-			connectorId,
-			telemetryManager
-		);
-
-		if (maybeStaticTable.isEmpty()) {
-			return SourceTable.empty();
-		}
-
-		// Note: In case of the static source getSourceTable never returns null
-		final List<List<String>> table = maybeStaticTable.get()
-			.getTable()
-			.stream()
+		final List<List<String>> table = rows.stream()
 			// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
 			.map(ArrayList::new)
 			.filter(row -> !row.isEmpty())
@@ -351,9 +355,9 @@ public class SourceProcessor implements ISourceProcessor {
 		if (tableJoinSource.getLeftKeyColumn() < 1 || tableJoinSource.getRightKeyColumn() < 1) {
 			log.error(
 				"Hostname {} - Invalid key column number (leftKeyColumnNumber={}, rightKeyColumnNumber={}).",
+				hostname,
 				tableJoinSource.getLeftKeyColumn(),
-				tableJoinSource.getDefaultRightLine(),
-				hostname
+				tableJoinSource.getRightKeyColumn()
 			);
 			return SourceTable.empty();
 		}
@@ -374,7 +378,10 @@ public class SourceProcessor implements ISourceProcessor {
 			rightTable.getTable(),
 			tableJoinSource.getLeftKeyColumn(),
 			tableJoinSource.getRightKeyColumn(),
-			SourceTable.lineToList(tableJoinSource.getDefaultRightLine(), SEMICOLON),
+			// The list form is the exact cells; the string form is split on ';' as it always was
+			tableJoinSource.getDefaultRightLineCells() != null
+				? tableJoinSource.getDefaultRightLineCells()
+				: SourceTable.lineToList(tableJoinSource.getDefaultRightLine(), SEMICOLON),
 			"wbem".equalsIgnoreCase(tableJoinSource.getKeyType()),
 			true
 		);
