@@ -120,8 +120,7 @@ class MCPConfigHelperTest {
 		HttpConfiguration sourceConfig = HttpConfiguration.builder().build();
 
 		OsCommandExtension osCommandExtension = mock(OsCommandExtension.class);
-		doThrow(InvalidConfigurationException.class)
-			.when(osCommandExtension)
+		doThrow(InvalidConfigurationException.class).when(osCommandExtension)
 			.buildConfiguration(eq("ssh"), any(JsonNode.class), any());
 
 		IConfiguration result = MCPConfigHelper.convertConfigurationForProtocol(sourceConfig, "ssh", osCommandExtension);

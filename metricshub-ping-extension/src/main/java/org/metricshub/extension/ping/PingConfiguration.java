@@ -62,14 +62,13 @@ public class PingConfiguration implements IConfiguration {
 		StringHelper.validateConfigurationAttribute(
 			timeout,
 			attr -> attr == null || attr < 0L,
-			() ->
-				String.format(
-					"Resource %s - Timeout value is invalid for protocol %s." +
-						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
-					resourceKey,
-					"Ping",
-					timeout
-				)
+			() -> String.format(
+				"Resource %s - Timeout value is invalid for protocol %s." +
+					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+				resourceKey,
+				"Ping",
+				timeout
+			)
 		);
 	}
 

@@ -50,8 +50,7 @@ class WmiExtensionToolsTest {
 		final String result = wmiExtension.executeTool(
 			"wql",
 			configuration,
-			JsonNodeFactory.instance
-				.objectNode()
+			JsonNodeFactory.instance.objectNode()
 				.put("query", "SELECT Name FROM Win32_Service")
 				.put("namespace", "root\\default")
 		);
@@ -77,8 +76,9 @@ class WmiExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			wmiExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode())
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> wmiExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode())
 		);
 	}
 }

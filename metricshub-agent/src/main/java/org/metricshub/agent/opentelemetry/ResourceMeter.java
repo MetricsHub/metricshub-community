@@ -92,13 +92,12 @@ public class ResourceMeter {
 	private ResourceMetrics doRecord() {
 		final Resource resource = Resource.newBuilder()
 			.addAllAttributes(
-				attributes
-					.entrySet()
+				attributes.entrySet()
 					.stream()
 					.filter(entry -> entry.getValue() != null)
 					.filter(entry -> OtelHelper.isAcceptedKey(entry.getKey()))
-					.map(entry ->
-						KeyValue.newBuilder()
+					.map(
+						entry -> KeyValue.newBuilder()
 							.setKey(entry.getKey())
 							.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 							.build()

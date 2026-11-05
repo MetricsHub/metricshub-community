@@ -58,8 +58,7 @@ final class McpTransportTestSupport {
 			SecurityAutoConfiguration.class,
 			SecurityFilterAutoConfiguration.class,
 			UserDetailsServiceAutoConfiguration.class,
-			ServletWebSecurityAutoConfiguration.class
-		}
+			ServletWebSecurityAutoConfiguration.class }
 	)
 	@Import(LegacySseMcpServerConfiguration.class)
 	static class TestApplication {
@@ -88,8 +87,7 @@ final class McpTransportTestSupport {
 			client.initialize();
 
 			// McpSchema.Tool collides with Spring AI's @Tool annotation, hence the qualified name
-			final McpSchema.Tool echoTool = client
-				.listTools()
+			final McpSchema.Tool echoTool = client.listTools()
 				.tools()
 				.stream()
 				.filter(tool -> ECHO_TOOL.equals(tool.name()))
@@ -107,8 +105,7 @@ final class McpTransportTestSupport {
 			final CallToolResult result = client.callTool(new CallToolRequest(ECHO_TOOL, Map.of(argumentName, "hello")));
 			assertFalse(Boolean.TRUE.equals(result.isError()), "The tool call must succeed: " + result);
 			assertTrue(
-				result
-					.content()
+				result.content()
 					.stream()
 					.filter(TextContent.class::isInstance)
 					.map(TextContent.class::cast)
@@ -139,13 +136,7 @@ final class McpTransportTestSupport {
 			Thread.sleep(1_500);
 
 			assertEquals(before, activeSessionCount.getAsInt(), "A client answering the pings must keep its session");
-			assertTrue(
-				client
-					.listTools()
-					.tools()
-					.stream()
-					.anyMatch(tool -> ECHO_TOOL.equals(tool.name()))
-			);
+			assertTrue(client.listTools().tools().stream().anyMatch(tool -> ECHO_TOOL.equals(tool.name())));
 		}
 	}
 

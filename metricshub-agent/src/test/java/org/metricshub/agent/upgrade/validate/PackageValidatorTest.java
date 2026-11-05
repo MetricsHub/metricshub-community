@@ -31,8 +31,8 @@ class PackageValidatorTest {
 
 	@Test
 	void validOfferShouldPass() {
-		assertDoesNotThrow(() ->
-			validator.validateOffer(
+		assertDoesNotThrow(
+			() -> validator.validateOffer(
 				offer("3.10.00", "https://repo/metricshub.deb"),
 				CURRENT_VERSION,
 				config,
@@ -43,8 +43,9 @@ class PackageValidatorTest {
 
 	@Test
 	void unsupportedDeploymentShouldBeRejected() {
-		assertThrows(UpgradeException.class, () ->
-			validator.validateOffer(
+		assertThrows(
+			UpgradeException.class,
+			() -> validator.validateOffer(
 				offer("3.10.00", "https://repo/metricshub.deb"),
 				CURRENT_VERSION,
 				config,
@@ -55,8 +56,9 @@ class PackageValidatorTest {
 
 	@Test
 	void mismatchedPackageTypeShouldBeRejected() {
-		assertThrows(UpgradeException.class, () ->
-			validator.validateOffer(
+		assertThrows(
+			UpgradeException.class,
+			() -> validator.validateOffer(
 				offer("3.10.00", "https://repo/metricshub.rpm"),
 				CURRENT_VERSION,
 				config,
@@ -67,8 +69,8 @@ class PackageValidatorTest {
 
 	@Test
 	void queryStringShouldNotDefeatTheExtensionCheck() {
-		assertDoesNotThrow(() ->
-			validator.validateOffer(
+		assertDoesNotThrow(
+			() -> validator.validateOffer(
 				offer("3.10.00", "https://repo/metricshub.deb?token=abc"),
 				CURRENT_VERSION,
 				config,
@@ -87,15 +89,17 @@ class PackageValidatorTest {
 			new byte[] { 7 },
 			Map.of()
 		);
-		assertThrows(UpgradeException.class, () ->
-			validator.validateOffer(offer, CURRENT_VERSION, config, DeploymentKind.DEB)
+		assertThrows(
+			UpgradeException.class,
+			() -> validator.validateOffer(offer, CURRENT_VERSION, config, DeploymentKind.DEB)
 		);
 	}
 
 	@Test
 	void downgradeShouldBeRejectedByDefault() {
-		assertThrows(UpgradeException.class, () ->
-			validator.validateOffer(
+		assertThrows(
+			UpgradeException.class,
+			() -> validator.validateOffer(
 				offer("3.9.00", "https://repo/metricshub.deb"),
 				CURRENT_VERSION,
 				config,
@@ -107,8 +111,8 @@ class PackageValidatorTest {
 	@Test
 	void downgradeShouldBeAcceptedWhenAllowed() {
 		final UpgradeConfig allowing = UpgradeConfig.builder().allowDowngrade(true).build();
-		assertDoesNotThrow(() ->
-			validator.validateOffer(
+		assertDoesNotThrow(
+			() -> validator.validateOffer(
 				offer("3.9.00", "https://repo/metricshub.deb"),
 				CURRENT_VERSION,
 				allowing,
@@ -120,8 +124,9 @@ class PackageValidatorTest {
 	@Test
 	void msiDowngradeShouldAlwaysBeRejected() {
 		final UpgradeConfig allowing = UpgradeConfig.builder().allowDowngrade(true).build();
-		assertThrows(UpgradeException.class, () ->
-			validator.validateOffer(
+		assertThrows(
+			UpgradeException.class,
+			() -> validator.validateOffer(
 				offer("3.9.00", "https://repo/metricshub.msi"),
 				CURRENT_VERSION,
 				allowing,
@@ -148,8 +153,9 @@ class PackageValidatorTest {
 		assertDoesNotThrow(() -> validator.validateStagedPackage(stagedPackage, matching, config));
 
 		final PackageOffer mismatching = offer("3.10.00", "https://repo/m.deb");
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			validator.validateStagedPackage(stagedPackage, mismatching, config)
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> validator.validateStagedPackage(stagedPackage, mismatching, config)
 		);
 		assertTrue(failure.getMessage().contains("SHA-256"));
 	}
@@ -158,8 +164,9 @@ class PackageValidatorTest {
 	void missingOrEmptyStagedPackageShouldBeRejected() throws Exception {
 		final PackageOffer offer = offer("3.10.00", "https://repo/m.deb");
 
-		assertThrows(UpgradeException.class, () ->
-			validator.validateStagedPackage(tempDir.resolve("missing.deb"), offer, config)
+		assertThrows(
+			UpgradeException.class,
+			() -> validator.validateStagedPackage(tempDir.resolve("missing.deb"), offer, config)
 		);
 
 		final Path empty = tempDir.resolve("empty.deb");

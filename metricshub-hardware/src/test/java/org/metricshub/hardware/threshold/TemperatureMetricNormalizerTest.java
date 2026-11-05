@@ -14,10 +14,10 @@ class TemperatureMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_TEMPERATURE_LIMIT = "hw.temperature.limit";
-	public static final String HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL =
-		HW_TEMPERATURE_LIMIT + "{limit_type=\"high.critical\"}";
-	public static final String HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED =
-		HW_TEMPERATURE_LIMIT + "{limit_type=\"high.degraded\"}";
+	public static final String HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL = HW_TEMPERATURE_LIMIT +
+		"{limit_type=\"high.critical\"}";
+	public static final String HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED = HW_TEMPERATURE_LIMIT +
+		"{limit_type=\"high.degraded\"}";
 
 	@Test
 	void testNormalize() {
@@ -62,14 +62,12 @@ class TemperatureMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwTemperatureLimitMetric
-					.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, NumberMetric.class)
+				monitorWithHwTemperatureLimitMetric.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwTemperatureLimitMetric
-					.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED, NumberMetric.class)
+				monitorWithHwTemperatureLimitMetric.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -115,14 +113,12 @@ class TemperatureMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwTemperatureLimitMetric
-					.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, NumberMetric.class)
+				monitorWithHwTemperatureLimitMetric.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwTemperatureLimitMetric
-					.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED, NumberMetric.class)
+				monitorWithHwTemperatureLimitMetric.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -159,8 +155,7 @@ class TemperatureMetricNormalizerTest {
 			);
 			assertEquals(
 				1.8,
-				monitorWithHwTemperatureLimitMetric
-					.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED, NumberMetric.class)
+				monitorWithHwTemperatureLimitMetric.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -196,8 +191,7 @@ class TemperatureMetricNormalizerTest {
 			);
 			assertEquals(
 				2.2,
-				monitorWithHwTemperatureLimitMetric
-					.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, NumberMetric.class)
+				monitorWithHwTemperatureLimitMetric.getMetric(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL, NumberMetric.class)
 					.getValue()
 			);
 		}

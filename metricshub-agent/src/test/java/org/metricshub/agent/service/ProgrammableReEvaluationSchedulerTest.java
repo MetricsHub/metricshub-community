@@ -130,8 +130,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(first, second), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(first, second),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 		scheduler.start();
 
@@ -150,8 +152,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		doReturn(firstTask, secondTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(first, second), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(first, second),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 		scheduler.start();
 
@@ -217,8 +221,10 @@ class ProgrammableReEvaluationSchedulerTest {
 			}
 		};
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			mock(TaskScheduler.class),
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		// Fire "slow" on its own thread; it parks inside reevaluate() until the test releases it.
@@ -328,8 +334,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		// Initial discovery schedules the one known template.
@@ -379,8 +387,10 @@ class ProgrammableReEvaluationSchedulerTest {
 			mock(ScheduledFuture.class)
 		);
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		scheduler.start();
@@ -435,8 +445,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		// doReturn avoids the wildcard-capture mismatch of when(...).thenReturn(...) here.
 		doReturn(scriptTask, deletedTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		scheduler.start();
@@ -486,8 +498,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		doReturn(firstTask, secondTask).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 		final ArgumentCaptor<Trigger> triggerCaptor = ArgumentCaptor.forClass(Trigger.class);
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		scheduler.start();
@@ -586,8 +600,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		scheduler.start();
@@ -637,8 +653,10 @@ class ProgrammableReEvaluationSchedulerTest {
 			}
 		};
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			mock(TaskScheduler.class),
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		final List<Thread> firings = new ArrayList<>();
@@ -752,17 +770,11 @@ class ProgrammableReEvaluationSchedulerTest {
 		// A reload from another path starts meanwhile.
 		final CountDownLatch otherReloadStarted = new CountDownLatch(1);
 		final AgentContext running = mock(AgentContext.class);
-		final Thread otherReload = new Thread(() ->
-			ConfigurationReloadService.builder()
-				.withRunningAgentContext(running)
-				.withComparisonContextSupplier(() -> {
-					otherReloadStarted.countDown();
-					return running;
-				})
-				.withRestartContextSupplier(() -> running)
-				.withRestartRequester(supplier -> true)
-				.build()
-				.reload()
+		final Thread otherReload = new Thread(
+			() -> ConfigurationReloadService.builder().withRunningAgentContext(running).withComparisonContextSupplier(() -> {
+				otherReloadStarted.countDown();
+				return running;
+			}).withRestartContextSupplier(() -> running).withRestartRequester(supplier -> true).build().reload()
 		);
 		otherReload.start();
 
@@ -818,8 +830,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		when(taskScheduler.schedule(any(Runnable.class), any(Trigger.class))).thenReturn(mock(ScheduledFuture.class));
 
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(scheduledProvider()), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(scheduledProvider()),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 		scheduler.stop();
 
@@ -843,8 +857,9 @@ class ProgrammableReEvaluationSchedulerTest {
 		);
 		scheduler.stop();
 
-		assertThrows(ProgrammableReEvaluationScheduler.SchedulerStoppedException.class, () ->
-			scheduler.reevaluateNow(provider, "hosts.vm")
+		assertThrows(
+			ProgrammableReEvaluationScheduler.SchedulerStoppedException.class,
+			() -> scheduler.reevaluateNow(provider, "hosts.vm")
 		);
 		// A cron firing that was already running is dropped quietly.
 		assertDoesNotThrow(() -> scheduler.onReEvaluation(provider, "hosts.vm"));
@@ -906,16 +921,11 @@ class ProgrammableReEvaluationSchedulerTest {
 		final IConfigurationProvider provider = fixedFragmentProvider();
 		final AtomicInteger restartRequests = new AtomicInteger();
 		final AtomicBoolean restartRunning = new AtomicBoolean();
-		final var scheduler = new ProgrammableReEvaluationScheduler(
-			holderFor(provider),
-			mock(TaskScheduler.class),
-			() -> {
-				restartRequests.incrementAndGet();
-				restartRunning.set(true);
-				return ReloadResult.GLOBAL_RESTART_REQUIRED;
-			},
-			restartRunning::get
-		);
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), mock(TaskScheduler.class), () -> {
+			restartRequests.incrementAndGet();
+			restartRunning.set(true);
+			return ReloadResult.GLOBAL_RESTART_REQUIRED;
+		}, restartRunning::get);
 
 		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
 		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));
@@ -934,8 +944,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final ScheduledFuture<?> cronFuture = mock(ScheduledFuture.class);
 		doReturn(cronFuture).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 		final IConfigurationProvider provider = scheduledProvider();
-		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () ->
-			ReloadResult.LOCAL_ONLY
+		final var scheduler = new ProgrammableReEvaluationScheduler(
+			holderFor(provider),
+			taskScheduler,
+			() -> ReloadResult.LOCAL_ONLY
 		);
 
 		scheduler.start();
@@ -963,8 +975,9 @@ class ProgrammableReEvaluationSchedulerTest {
 	 */
 	@Test
 	void testAChangeWhoseRestartFailedIsRetriedAfterResume() {
-		final java.util.concurrent.atomic.AtomicReference<JsonNode> cache =
-			new java.util.concurrent.atomic.AtomicReference<>(TextNode.valueOf("original"));
+		final java.util.concurrent.atomic.AtomicReference<JsonNode> cache = new java.util.concurrent.atomic.AtomicReference<>(
+			TextNode.valueOf("original")
+		);
 		final IConfigurationProvider provider = new IConfigurationProvider() {
 			@Override
 			public Collection<JsonNode> load(final Path path) {
@@ -996,15 +1009,10 @@ class ProgrammableReEvaluationSchedulerTest {
 		final TaskScheduler taskScheduler = mock(TaskScheduler.class);
 		doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
 		final AtomicInteger restartRequests = new AtomicInteger();
-		final var scheduler = new ProgrammableReEvaluationScheduler(
-			holderFor(provider),
-			taskScheduler,
-			() -> {
-				restartRequests.incrementAndGet();
-				return ReloadResult.GLOBAL_RESTART_REQUIRED;
-			},
-			() -> false
-		);
+		final var scheduler = new ProgrammableReEvaluationScheduler(holderFor(provider), taskScheduler, () -> {
+			restartRequests.incrementAndGet();
+			return ReloadResult.GLOBAL_RESTART_REQUIRED;
+		}, () -> false);
 		scheduler.start();
 
 		assertEquals(ReEvaluationOutcome.RESTART_REQUESTED, scheduler.reevaluateNow(provider, "hosts.vm"));

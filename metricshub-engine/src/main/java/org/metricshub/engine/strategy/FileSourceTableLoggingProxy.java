@@ -44,15 +44,13 @@ public class FileSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final String hostname
 	) {
 		if (!logFileSourceDetails) {
-			final String headerOnly =
-				DefaultSourceTableLoggingProxy.buildLogHeader(
-					operationTag,
-					executionClassName,
-					executionKey,
-					connectorId,
-					hostname
-				) +
-				"\n";
+			final String headerOnly = DefaultSourceTableLoggingProxy.buildLogHeader(
+				operationTag,
+				executionClassName,
+				executionKey,
+				connectorId,
+				hostname
+			) + "\n";
 			return headerOnly;
 		}
 		return delegate.formatForLog(operationTag, executionClassName, executionKey, connectorId, sourceTable, hostname);

@@ -106,8 +106,7 @@ public class JdbcExtension implements IProtocolExtension {
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		// Retrieve SQL Configuration from the telemetry manager host configuration
-		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) telemetryManager
-			.getHostConfiguration()
+		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(JdbcConfiguration.class);
 
@@ -230,8 +229,7 @@ public class JdbcExtension implements IProtocolExtension {
 		if (telemetryManager == null || telemetryManager.getHostConfiguration() == null) {
 			return null;
 		}
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
-			.getHostConfiguration()
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager.getHostConfiguration()
 			.getConfigurations();
 		if (configurations == null) {
 			return null;
@@ -254,8 +252,7 @@ public class JdbcExtension implements IProtocolExtension {
 		if (telemetryManager.getHostConfiguration() == null) {
 			return null;
 		}
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
-			.getHostConfiguration()
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager.getHostConfiguration()
 			.getConfigurations();
 		if (configurations == null) {
 			return null;

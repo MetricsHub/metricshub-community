@@ -22,8 +22,7 @@ class UpgradeConfigTest {
 
 	@Test
 	void upgradeSectionShouldBeDeserialized() throws Exception {
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  upgrade:
 			    enabled: true
@@ -32,8 +31,7 @@ class UpgradeConfigTest {
 			      nexus.example.com:
 			        Authorization: Basic cmVhZGVyOnNlY3JldA==
 			        X-Repo-Token: my-token
-			"""
-		);
+			""");
 
 		final UpgradeConfig upgrade = agentConfig.getCentral().getUpgrade();
 		assertTrue(upgrade.isEnabled());
@@ -47,15 +45,13 @@ class UpgradeConfigTest {
 	void downloadHeadersShouldAcceptAuthorityKeysWithAPort() throws Exception {
 		// The shipped examples show 'nexus.example.com:8443:' as a plain YAML key; this pins
 		// that the parser reads it as one key, not a nested mapping.
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  upgrade:
 			    downloadHeaders:
 			      nexus.example.com:8443:
 			        Authorization: Basic cmVhZGVyOnNlY3JldA==
-			"""
-		);
+			""");
 
 		assertEquals(
 			Map.of("nexus.example.com:8443", Map.of("Authorization", "Basic cmVhZGVyOnNlY3JldA==")),
@@ -72,13 +68,11 @@ class UpgradeConfigTest {
 
 	@Test
 	void nullDownloadHeadersShouldKeepTheDefault() throws Exception {
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  upgrade:
 			    downloadHeaders:
-			"""
-		);
+			""");
 
 		assertEquals(Map.of(), agentConfig.getCentral().getUpgrade().getDownloadHeaders());
 	}

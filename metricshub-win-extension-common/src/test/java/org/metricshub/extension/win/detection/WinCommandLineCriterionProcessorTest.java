@@ -33,8 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class WinCommandLineCriterionProcessorTest {
 
-	private static final String COMMAND_LINE =
-		"naviseccli -User %{USERNAME} -Password %{PASSWORD} -Address %{HOSTNAME} -Scope 1 getagent";
+	private static final String COMMAND_LINE = "naviseccli -User %{USERNAME} -Password %{PASSWORD} -Address %{HOSTNAME} -Scope 1 getagent";
 
 	private static final String CONNECTOR_ID = "connectorId";
 
@@ -172,8 +171,7 @@ class WinCommandLineCriterionProcessorTest {
 		final CommandLineCriterion commandLineCriterion = null;
 
 		assertTrue(
-			winCommandLineCriterionProcessor
-				.process(commandLineCriterion, TelemetryManager.builder().build())
+			winCommandLineCriterionProcessor.process(commandLineCriterion, TelemetryManager.builder().build())
 				.getMessage()
 				.contains("Malformed CommandLine criterion.")
 		);
@@ -270,8 +268,7 @@ class WinCommandLineCriterionProcessorTest {
 			.build();
 
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
-		doReturn(new OsCommandResult(commandLineResult, COMMAND_LINE))
-			.when(winCommandServiceMock)
+		doReturn(new OsCommandResult(commandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
 			.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
 
 		final CriterionTestResult criterionTestResult = winCommandLineCriterionProcessor.process(
@@ -323,8 +320,7 @@ class WinCommandLineCriterionProcessorTest {
 			.build();
 
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
-		doThrow(new NoCredentialProvidedException())
-			.when(winCommandServiceMock)
+		doThrow(new NoCredentialProvidedException()).when(winCommandServiceMock)
 			.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
 
 		final CriterionTestResult criterionTestResult = winCommandLineCriterionProcessor.process(
@@ -371,8 +367,7 @@ class WinCommandLineCriterionProcessorTest {
 			.build();
 
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
-		doThrow(new IOException("error"))
-			.when(winCommandServiceMock)
+		doThrow(new IOException("error")).when(winCommandServiceMock)
 			.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
 
 		final CriterionTestResult criterionTestResult = winCommandLineCriterionProcessor.process(

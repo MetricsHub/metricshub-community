@@ -150,8 +150,9 @@ class EmulationSnmpRequestExecutorTest {
 		);
 
 		// Configured directory does not exist -> should throw
-		assertThrows(Exception.class, () ->
-			executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
+		assertThrows(
+			Exception.class,
+			() -> executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
 		);
 	}
 
@@ -159,8 +160,9 @@ class EmulationSnmpRequestExecutorTest {
 	void testCreateSnmpClientNullDirectory() {
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(null);
 
-		assertThrows(Exception.class, () ->
-			executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
+		assertThrows(
+			Exception.class,
+			() -> executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
 		);
 	}
 

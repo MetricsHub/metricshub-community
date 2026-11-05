@@ -135,8 +135,7 @@ public class PrettyPrinterService {
 		// Build monitor children hierarchy
 		final MonitorChildren root = MonitorChildren.build(
 			telemetryManager.getEndpointHostMonitor(),
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.values()
 				.stream()
 				.map(Map::values)
@@ -185,23 +184,18 @@ public class PrettyPrinterService {
 		printWriter.flush();
 
 		// Generate a comparator to print monitors based on the predefined priority
-		final Comparator<Entry<String, Set<MonitorChildren>>> comparator = Comparator.comparing(entry ->
-			MONITOR_TYPE_PRIORITY.getOrDefault(entry.getKey(), Integer.MAX_VALUE)
+		final Comparator<Entry<String, Set<MonitorChildren>>> comparator = Comparator.comparing(
+			entry -> MONITOR_TYPE_PRIORITY.getOrDefault(entry.getKey(), Integer.MAX_VALUE)
 		);
 		// Modify the comparator to arrange other children using lexicographic order based on their type
 		comparator.thenComparing(Entry::getKey);
 
 		// Iterate through the children and use recursion to print each child
-		monitorChildren
-			.getChildren()
-			.entrySet()
-			.stream()
-			.sorted(comparator)
-			.forEach(entry -> {
-				addMargin(indentation + 4);
-				printWriter.println(Ansi.ansi().bold().a(entry.getKey()).boldOff().a(" monitors:").toString());
-				entry.getValue().forEach(children -> print(children, indentation + 4));
-			});
+		monitorChildren.getChildren().entrySet().stream().sorted(comparator).forEach(entry -> {
+			addMargin(indentation + 4);
+			printWriter.println(Ansi.ansi().bold().a(entry.getKey()).boldOff().a(" monitors:").toString());
+			entry.getValue().forEach(children -> print(children, indentation + 4));
+		});
 	}
 
 	/**
@@ -249,8 +243,7 @@ public class PrettyPrinterService {
 		}
 
 		// Iterate through the metrics, printing each metric name along with its corresponding value
-		metrics
-			.entrySet()
+		metrics.entrySet()
 			.stream()
 			.filter(entry -> shouldDisplayKey(entry.getKey()))
 			.filter(entry -> entry.getValue() != null)
@@ -373,8 +366,7 @@ public class PrettyPrinterService {
 		printWriter.println(header);
 
 		// Iterate through the attributes, printing each attribute name along with its corresponding value
-		attributes
-			.entrySet()
+		attributes.entrySet()
 			.stream()
 			.filter(entry -> shouldDisplayKey(entry.getKey()))
 			.filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
@@ -409,8 +401,7 @@ public class PrettyPrinterService {
 		printWriter.println("Text parameters:");
 
 		// Iterate through the text parameters, printing each parameter name along with its corresponding value
-		textParameters
-			.entrySet()
+		textParameters.entrySet()
 			.stream()
 			.filter(entry -> shouldDisplayKey(entry.getKey()))
 			.filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
@@ -527,8 +518,7 @@ public class PrettyPrinterService {
 			String parentId = monitorChildren.getMonitor().getAttribute(MONITOR_ATTRIBUTE_PARENT_ID);
 			if (parentId == null) {
 				// Search any other attribute containing "parent.id" in the key
-				parentId = monitorChildren
-					.getMonitor()
+				parentId = monitorChildren.getMonitor()
 					.getAttributes()
 					.entrySet()
 					.stream()
@@ -541,8 +531,7 @@ public class PrettyPrinterService {
 			String parentType = monitorChildren.getMonitor().getAttribute(MONITOR_ATTRIBUTE_PARENT_TYPE);
 			if (parentType == null) {
 				// Search any other attribute containing "parent.type" in the key
-				parentType = monitorChildren
-					.getMonitor()
+				parentType = monitorChildren.getMonitor()
 					.getAttributes()
 					.entrySet()
 					.stream()

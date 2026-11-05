@@ -243,23 +243,19 @@ public class PowerAndEnergyCollectHelper {
 	 */
 	static boolean isPowerMeasured(final List<Connector> connectors, final TelemetryManager telemetryManager) {
 		final Optional<List<Connector>> maybeConnectors = Optional.ofNullable(connectors);
-		boolean isPowerMeasured = maybeConnectors
-			.stream()
-			.flatMap(Collection::stream)
-			.anyMatch((Connector connector) -> {
-				final var powerMeasurement = connector.getPowerMeasurement();
-				log.debug(
-					"Hostname {} - Connector {} power measurement status: {}",
-					telemetryManager.getHostname(),
-					connector.getCompiledFilename(),
-					powerMeasurement
-				);
-				return PowerMeasurement.MEASURED == powerMeasurement;
-			});
+		boolean isPowerMeasured = maybeConnectors.stream().flatMap(Collection::stream).anyMatch((Connector connector) -> {
+			final var powerMeasurement = connector.getPowerMeasurement();
+			log.debug(
+				"Hostname {} - Connector {} power measurement status: {}",
+				telemetryManager.getHostname(),
+				connector.getCompiledFilename(),
+				powerMeasurement
+			);
+			return PowerMeasurement.MEASURED == powerMeasurement;
+		});
 
 		if (!isPowerMeasured) {
-			final boolean isConditionalPower = maybeConnectors
-				.stream()
+			final boolean isConditionalPower = maybeConnectors.stream()
 				.flatMap(Collection::stream)
 				.anyMatch(connector -> PowerMeasurement.CONDITIONAL == connector.getPowerMeasurement());
 
@@ -307,9 +303,8 @@ public class PowerAndEnergyCollectHelper {
 	private static boolean isPowerMetricNotDeactivated(final Monitor monitor) {
 		final Map<String, String> conditionalCollection = monitor.getConditionalCollection();
 		// Safely check the metrics as conditionalCollection can never be null
-		return (
-			(conditionalCollection.containsKey(HW_ENCLOSURE_ENERGY) && !monitor.isMetricDeactivated(HW_ENCLOSURE_ENERGY)) ||
-			(conditionalCollection.containsKey(HW_ENCLOSURE_POWER) && !monitor.isMetricDeactivated(HW_ENCLOSURE_POWER))
-		);
+		return ((conditionalCollection.containsKey(HW_ENCLOSURE_ENERGY) &&
+			!monitor.isMetricDeactivated(HW_ENCLOSURE_ENERGY)) ||
+			(conditionalCollection.containsKey(HW_ENCLOSURE_POWER) && !monitor.isMetricDeactivated(HW_ENCLOSURE_POWER)));
 	}
 }

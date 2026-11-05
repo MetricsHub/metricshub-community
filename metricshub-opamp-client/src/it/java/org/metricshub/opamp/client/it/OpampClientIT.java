@@ -175,7 +175,7 @@ class OpampClientIT {
 		AgentToServer report = server.awaitRequest(AWAIT_MS).message();
 		while (
 			!report.hasPackageStatuses() ||
-			!"3.10.0".equals(report.getPackageStatuses().getPackagesOrThrow(PACKAGE_NAME).getAgentHasVersion())
+				!"3.10.0".equals(report.getPackageStatuses().getPackagesOrThrow(PACKAGE_NAME).getAgentHasVersion())
 		) {
 			report = server.awaitRequest(AWAIT_MS).message();
 		}

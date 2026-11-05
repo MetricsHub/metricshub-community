@@ -100,8 +100,7 @@ public class AgentController {
 			"a requestId; a polled terminal status belongs to this request only when its requestId is >= this value.",
 		responses = {
 			@ApiResponse(responseCode = "202", description = "Agent restart scheduled, queued or coalesced"),
-			@ApiResponse(responseCode = "500", description = "Failed to schedule the restart")
-		}
+			@ApiResponse(responseCode = "500", description = "Failed to schedule the restart") }
 	)
 	@PostMapping("/restart")
 	public ResponseEntity<Map<String, Object>> restart() {
@@ -130,14 +129,12 @@ public class AgentController {
 				}
 			});
 
-			return ResponseEntity.accepted().body(
-				Map.of("message", messageFor(ack.result()), "result", ack.result().name(), "requestId", ack.requestId())
-			);
+			return ResponseEntity.accepted()
+				.body(Map.of("message", messageFor(ack.result()), "result", ack.result().name(), "requestId", ack.requestId()));
 		} catch (Exception e) {
 			log.error("Failed to schedule MetricsHub Agent restart.", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-				Map.of("error", "Failed to restart MetricsHub Agent: " + e.getMessage())
-			);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(Map.of("error", "Failed to restart MetricsHub Agent: " + e.getMessage()));
 		}
 	}
 
@@ -164,8 +161,9 @@ public class AgentController {
 		return switch (result) {
 			case SCHEDULED -> "MetricsHub Agent restart scheduled.";
 			case QUEUED -> "A MetricsHub Agent restart is already running; the new request has been queued.";
-			case COALESCED -> "A MetricsHub Agent restart is already running and another was queued; " +
-			"the newer request replaces the previously queued one.";
+			case COALESCED ->
+				"A MetricsHub Agent restart is already running and another was queued; " +
+					"the newer request replaces the previously queued one.";
 		};
 	}
 }

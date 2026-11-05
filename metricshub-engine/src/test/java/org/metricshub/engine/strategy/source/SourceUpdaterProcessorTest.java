@@ -292,8 +292,7 @@ class SourceUpdaterProcessorTest {
 			)
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().build();
-		hostProperties
-			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 			.addSourceTable(
 				ENCLOSURE_COLLECT_SOURCE_1,
 				SourceTable.builder().table(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d"))).build()
@@ -439,8 +438,9 @@ class SourceUpdaterProcessorTest {
 			.source(ENCLOSURE_COLLECT_SOURCE_1)
 			.maxParallel(4)
 			.build();
-		final IllegalStateException thrown = assertThrows(IllegalStateException.class, () ->
-			runForEachEntry(executeForEachEntryOf, false, false, invocation -> {
+		final IllegalStateException thrown = assertThrows(
+			IllegalStateException.class,
+			() -> runForEachEntry(executeForEachEntryOf, false, false, invocation -> {
 				throw new IllegalStateException("boom");
 			})
 		);
@@ -823,8 +823,7 @@ class SourceUpdaterProcessorTest {
 
 		{
 			final String value = String.format("%s value", vendorSource1Ref);
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
@@ -843,8 +842,7 @@ class SourceUpdaterProcessorTest {
 
 		{
 			final String value = String.format("%s %s value", vendorSource1Ref, vendorSource1Ref);
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
@@ -862,8 +860,7 @@ class SourceUpdaterProcessorTest {
 		}
 		{
 			final String value = String.format("%s%s value", vendorSource1Ref, vendorSource1Ref);
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,

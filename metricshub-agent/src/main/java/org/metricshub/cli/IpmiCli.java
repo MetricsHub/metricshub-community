@@ -204,41 +204,35 @@ public class IpmiCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
-					configurationNode.set("username", new TextNode(username));
-					if (password != null) {
-						configurationNode.set("password", new TextNode(String.valueOf(password)));
-					}
-
-					configurationNode.set("timeout", new TextNode(timeout));
-					configurationNode.set("skipAuth", BooleanNode.valueOf(skipAuth));
-					configurationNode.set("bmcKey", new TextNode(bmcKey));
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(
-						PROTOCOL_IDENTIFIER,
-						configurationNode,
-						null
-					);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
-					// display the request
-					displayRequest();
-					// Execute the IPMI query
-					final String result = extension.executeQuery(configuration, null);
-					// display the returned result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute IPMI query.\n", e);
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
+				configurationNode.set("username", new TextNode(username));
+				if (password != null) {
+					configurationNode.set("password", new TextNode(String.valueOf(password)));
 				}
-			});
+
+				configurationNode.set("timeout", new TextNode(timeout));
+				configurationNode.set("skipAuth", BooleanNode.valueOf(skipAuth));
+				configurationNode.set("bmcKey", new TextNode(bmcKey));
+
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, configurationNode, null);
+				configuration.setHostname(hostname);
+
+				configuration.validateConfiguration(hostname);
+
+				// display the request
+				displayRequest();
+				// Execute the IPMI query
+				final String result = extension.executeQuery(configuration, null);
+				// display the returned result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute IPMI query.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

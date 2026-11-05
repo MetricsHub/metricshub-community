@@ -98,8 +98,7 @@ public class MonitorFactory {
 	public Monitor createOrUpdateMonitor() {
 		// Retrieve the keys values. The keys are located under the corresponding
 		// monitor section in the connector file
-		final String keysString = keys
-			.stream()
+		final String keysString = keys.stream()
 			.sorted()
 			.map(key -> Optional.ofNullable(attributes.get(key)).orElse(""))
 			.collect(Collectors.joining("_"));
@@ -238,8 +237,7 @@ public class MonitorFactory {
 		@NonNull final String monitorType,
 		@NonNull final String id
 	) {
-		return new StringBuilder()
-			.append(connectorId)
+		return new StringBuilder().append(connectorId)
 			.append(UNDERSCORE)
 			.append(monitorType)
 			.append(UNDERSCORE)

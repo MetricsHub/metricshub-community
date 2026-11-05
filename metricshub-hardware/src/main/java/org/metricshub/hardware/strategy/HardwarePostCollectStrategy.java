@@ -63,8 +63,7 @@ public class HardwarePostCollectStrategy extends AbstractStrategy {
 
 	@Override
 	public void run() {
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)

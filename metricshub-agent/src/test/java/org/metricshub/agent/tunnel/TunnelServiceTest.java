@@ -101,25 +101,20 @@ class TunnelServiceTest {
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
 		when(provider.getToolCallbacks()).thenReturn(callbacks);
 
-		service = new TunnelService(
-			agentContextHolder,
-			provider,
-			(settings, listener) -> {
-				if (failClientCreation) {
-					throw new IllegalStateException("cannot connect");
-				}
-				capturedSettings.add(settings);
-				capturedListeners.add(listener);
-				final TunnelClient client = mock(TunnelClient.class);
-				when(client.isConnected()).thenReturn(true);
-				// A frame that fits, which is the ordinary case; the test about one that does not
-				// says so for itself
-				when(client.send(any())).thenReturn(true);
-				createdClients.add(client);
-				return client;
-			},
-			() -> UID
-		);
+		service = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			if (failClientCreation) {
+				throw new IllegalStateException("cannot connect");
+			}
+			capturedSettings.add(settings);
+			capturedListeners.add(listener);
+			final TunnelClient client = mock(TunnelClient.class);
+			when(client.isConnected()).thenReturn(true);
+			// A frame that fits, which is the ordinary case; the test about one that does not
+			// says so for itself
+			when(client.send(any())).thenReturn(true);
+			createdClients.add(client);
+			return client;
+		}, () -> UID);
 	}
 
 	private void configure(final TunnelConfig tunnel) {
@@ -257,20 +252,15 @@ class TunnelServiceTest {
 		final boolean[] fail = { true };
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
 		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[0]);
-		service = new TunnelService(
-			agentContextHolder,
-			provider,
-			(settings, listener) -> {
-				capturedSettings.add(settings);
-				return mock(TunnelClient.class);
-			},
-			() -> {
-				if (fail[0]) {
-					throw new IOException("security directory is read-only");
-				}
-				return UID;
+		service = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			capturedSettings.add(settings);
+			return mock(TunnelClient.class);
+		}, () -> {
+			if (fail[0]) {
+				throw new IOException("security directory is read-only");
 			}
-		);
+			return UID;
+		});
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 
 		service.supervise();

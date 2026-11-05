@@ -15,16 +15,17 @@ class WmiConfigurationTest {
 
 	@Test
 	void testValidateConfiguration() throws InvalidConfigurationException {
-		assertDoesNotThrow(() ->
-			WmiConfiguration.builder()
+		assertDoesNotThrow(
+			() -> WmiConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.timeout(15L)
 				.build()
 				.validateConfiguration("resourceKey")
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WmiConfiguration.builder()
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WmiConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.timeout(-15L) // Bad timeout

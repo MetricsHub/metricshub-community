@@ -69,29 +69,22 @@ public class PrepareCollectStrategy extends AbstractStrategy {
 
 	@Override
 	public void run() {
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)
 			.flatMap(Collection::stream)
-			.forEach(monitor ->
-				monitor
-					.getMetrics()
-					.values()
-					.stream()
-					.forEach(metric -> {
-						// Save metric, push current value to previous and current collect time to previous
-						// Why ? Before the next collect we save the metric previous values
-						// in order to compute delta and rates
-						metric.save();
+			.forEach(monitor -> monitor.getMetrics().values().stream().forEach(metric -> {
+				// Save metric, push current value to previous and current collect time to previous
+				// Why ? Before the next collect we save the metric previous values
+				// in order to compute delta and rates
+				metric.save();
 
-						// Discovery metrics are never re-collected by the collect jobs: refresh their collect time
-						// so that they are considered updated and keep being exported on each collect cycle
-						if (metric.isResetMetricTime()) {
-							metric.setCollectTime(strategyTime);
-						}
-					})
-			);
+				// Discovery metrics are never re-collected by the collect jobs: refresh their collect time
+				// so that they are considered updated and keep being exported on each collect cycle
+				if (metric.isResetMetricTime()) {
+					metric.setCollectTime(strategyTime);
+				}
+			}));
 	}
 }

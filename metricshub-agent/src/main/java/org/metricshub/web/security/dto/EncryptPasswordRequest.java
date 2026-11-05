@@ -29,7 +29,7 @@ import jakarta.validation.constraints.NotBlank;
  */
 @Schema(description = "Password encryption request")
 public record EncryptPasswordRequest(
-	@Schema(description = "Base64 encoding of the UTF-8 bytes of the password")
-	@NotBlank(message = "passwordBase64 cannot be blank")
-	String passwordBase64
+	@Schema(description = "Base64 encoding of the UTF-8 bytes of the password") @NotBlank(
+		message = "passwordBase64 cannot be blank"
+	) String passwordBase64
 ) {}

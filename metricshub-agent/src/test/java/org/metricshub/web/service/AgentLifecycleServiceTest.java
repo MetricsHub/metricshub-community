@@ -101,17 +101,15 @@ class AgentLifecycleServiceTest {
 		final RestartRequestAck ack = agentLifecycleService.restartAsync(() -> reloadedContext);
 		assertEquals(RestartRequestResult.SCHEDULED, ack.result());
 
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> {
-				final RestartStatus status = agentLifecycleService.getRestartStatus();
-				assertEquals(RestartStatus.State.SUCCEEDED, status.getState());
-				assertEquals("MetricsHub Agent restarted successfully.", status.getMessage());
-				assertNotNull(status.getStartedAt());
-				assertNotNull(status.getEndedAt());
-				assertEquals(2L, status.getContextGeneration());
-				assertEquals(ack.requestId(), status.getRequestId());
-			});
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+			final RestartStatus status = agentLifecycleService.getRestartStatus();
+			assertEquals(RestartStatus.State.SUCCEEDED, status.getState());
+			assertEquals("MetricsHub Agent restarted successfully.", status.getMessage());
+			assertNotNull(status.getStartedAt());
+			assertNotNull(status.getEndedAt());
+			assertEquals(2L, status.getContextGeneration());
+			assertEquals(ack.requestId(), status.getRequestId());
+		});
 
 		verify(bootContext.getTaskSchedulingService()).stop();
 		verify(bootContext.getOtelCollectorProcessService()).stop();
@@ -135,9 +133,7 @@ class AgentLifecycleServiceTest {
 		doAnswer(_ -> {
 			releaseFirstRestart.await(5, TimeUnit.SECONDS);
 			return null;
-		})
-			.when(bootScheduler)
-			.stop();
+		}).when(bootScheduler).stop();
 
 		final RestartRequestAck first = agentLifecycleService.restartAsync(() -> firstReloaded);
 		assertEquals(RestartRequestResult.SCHEDULED, first.result());
@@ -158,16 +154,14 @@ class AgentLifecycleServiceTest {
 		// Release the first restart; the queued second one must then run automatically.
 		releaseFirstRestart.countDown();
 
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> {
-				final RestartStatus status = agentLifecycleService.getRestartStatus();
-				assertEquals(RestartStatus.State.SUCCEEDED, status.getState());
-				// Two swaps happened: bootstrap -> firstReloaded -> secondReloaded
-				assertEquals(3L, status.getContextGeneration());
-				// The terminal status must be correlated with the queued (second) request
-				assertEquals(second.requestId(), status.getRequestId());
-			});
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+			final RestartStatus status = agentLifecycleService.getRestartStatus();
+			assertEquals(RestartStatus.State.SUCCEEDED, status.getState());
+			// Two swaps happened: bootstrap -> firstReloaded -> secondReloaded
+			assertEquals(3L, status.getContextGeneration());
+			// The terminal status must be correlated with the queued (second) request
+			assertEquals(second.requestId(), status.getRequestId());
+		});
 
 		// Both reloaded contexts had their scheduler / OTEL launched and started
 		verify(firstReloaded.getOtelCollectorProcessService(), times(1)).launch();
@@ -196,9 +190,7 @@ class AgentLifecycleServiceTest {
 		doAnswer(_ -> {
 			releaseFirstRestart.await(5, TimeUnit.SECONDS);
 			return null;
-		})
-			.when(bootScheduler)
-			.stop();
+		}).when(bootScheduler).stop();
 
 		// First restart runs, second is queued, third coalesces with the second
 		assertEquals(RestartRequestResult.SCHEDULED, agentLifecycleService.restartAsync(() -> firstReloaded).result());
@@ -219,17 +211,15 @@ class AgentLifecycleServiceTest {
 
 		releaseFirstRestart.countDown();
 
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> {
-				final RestartStatus status = agentLifecycleService.getRestartStatus();
-				assertEquals(RestartStatus.State.SUCCEEDED, status.getState());
-				assertEquals(3L, status.getContextGeneration());
-				// The run serves the coalesced (newest) request; its id also covers the
-				// discarded queued request (coalescedAck.requestId() > queuedAck.requestId()),
-				// so a client polling for either request resolves on this status.
-				assertEquals(coalescedAck.requestId(), status.getRequestId());
-			});
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+			final RestartStatus status = agentLifecycleService.getRestartStatus();
+			assertEquals(RestartStatus.State.SUCCEEDED, status.getState());
+			assertEquals(3L, status.getContextGeneration());
+			// The run serves the coalesced (newest) request; its id also covers the
+			// discarded queued request (coalescedAck.requestId() > queuedAck.requestId()),
+			// so a client polling for either request resolves on this status.
+			assertEquals(coalescedAck.requestId(), status.getRequestId());
+		});
 
 		// Only firstReloaded and newerPending were activated; olderPending was never launched
 		verify(firstReloaded.getOtelCollectorProcessService(), times(1)).launch();
@@ -248,22 +238,18 @@ class AgentLifecycleServiceTest {
 		final TaskSchedulingService bootScheduler = bootContext.getTaskSchedulingService();
 		doAnswer(_ -> {
 			throw new IllegalStateException("boom");
-		})
-			.when(bootScheduler)
-			.stop();
+		}).when(bootScheduler).stop();
 
 		final RestartRequestAck ack = agentLifecycleService.restartAsync(() -> reloadedContext);
 		assertEquals(RestartRequestResult.SCHEDULED, ack.result());
 
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> {
-				final RestartStatus status = agentLifecycleService.getRestartStatus();
-				assertEquals(RestartStatus.State.FAILED, status.getState());
-				assertTrue(status.getMessage().contains("boom"), "Status message should carry the error");
-				assertNotNull(status.getEndedAt());
-				assertEquals(ack.requestId(), status.getRequestId());
-			});
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+			final RestartStatus status = agentLifecycleService.getRestartStatus();
+			assertEquals(RestartStatus.State.FAILED, status.getState());
+			assertTrue(status.getMessage().contains("boom"), "Status message should carry the error");
+			assertNotNull(status.getEndedAt());
+			assertEquals(ack.requestId(), status.getRequestId());
+		});
 
 		// Reloaded context that we built but never activated must be closed to avoid leaks
 		verify(reloadedContext).close();
@@ -277,8 +263,7 @@ class AgentLifecycleServiceTest {
 	void testPreAndPostRestartHooksFireInOrderAroundTheRestart() {
 		final AgentContext reloadedContext = mockContext();
 		final java.util.List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
-		final java.util.concurrent.atomic.AtomicReference<AgentContext> postArg =
-			new java.util.concurrent.atomic.AtomicReference<>();
+		final java.util.concurrent.atomic.AtomicReference<AgentContext> postArg = new java.util.concurrent.atomic.AtomicReference<>();
 
 		agentLifecycleService.addPreRestartHook(() -> events.add("pre"));
 		agentLifecycleService.addPostRestartHook(ctx -> {
@@ -315,8 +300,8 @@ class AgentLifecycleServiceTest {
 
 		Awaitility.await()
 			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() ->
-				assertEquals(RestartStatus.State.SUCCEEDED, agentLifecycleService.getRestartStatus().getState())
+			.untilAsserted(
+				() -> assertEquals(RestartStatus.State.SUCCEEDED, agentLifecycleService.getRestartStatus().getState())
 			);
 		assertEquals(java.util.List.of("before-build", "build", "pre", "post"), events);
 	}
@@ -328,8 +313,7 @@ class AgentLifecycleServiceTest {
 	@Test
 	void testRestartFailureHooksRunWhenTheBuildFails() {
 		final java.util.List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
-		final java.util.concurrent.atomic.AtomicReference<RestartStatus.State> stateSeenByHook =
-			new java.util.concurrent.atomic.AtomicReference<>();
+		final java.util.concurrent.atomic.AtomicReference<RestartStatus.State> stateSeenByHook = new java.util.concurrent.atomic.AtomicReference<>();
 
 		agentLifecycleService.addBeforeContextBuildHook(() -> events.add("before-build"));
 		agentLifecycleService.addPostRestartHook(_ -> events.add("post"));
@@ -342,9 +326,7 @@ class AgentLifecycleServiceTest {
 			throw new IllegalStateException("build-boom");
 		});
 
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.until(() -> events.contains("failure"));
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).until(() -> events.contains("failure"));
 		assertEquals(java.util.List.of("before-build", "failure"), events);
 		assertEquals(RestartStatus.State.FAILED, stateSeenByHook.get());
 		assertEquals(bootContext, agentContextHolder.getAgentContext());
@@ -444,9 +426,7 @@ class AgentLifecycleServiceTest {
 		final AgentContext c1 = mockContext(m1);
 		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0
 
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> verify(m0, times(1)).close());
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> verify(m0, times(1)).close());
 		verify(m1, never()).close();
 	}
 
@@ -493,9 +473,7 @@ class AgentLifecycleServiceTest {
 
 		// Once the old scheduler terminates, the next recheck retires the orphaned manager.
 		oldExecutor.shutdown();
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> verify(m0, times(1)).close());
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> verify(m0, times(1)).close());
 	}
 
 	@Test
@@ -522,9 +500,7 @@ class AgentLifecycleServiceTest {
 
 		// Releasing the lease lets the next recheck retire the orphaned manager.
 		tracker.release(outgoingGeneration);
-		Awaitility.await()
-			.atMost(Durations.FIVE_SECONDS)
-			.untilAsserted(() -> verify(m0, times(1)).close());
+		Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> verify(m0, times(1)).close());
 	}
 
 	@Test
@@ -555,9 +531,7 @@ class AgentLifecycleServiceTest {
 		final TaskSchedulingService bootScheduler = boot.getTaskSchedulingService();
 		doAnswer(_ -> {
 			throw new IllegalStateException("boom");
-		})
-			.when(bootScheduler)
-			.stop();
+		}).when(bootScheduler).stop();
 
 		final AgentContextHolder holder = new AgentContextHolder(boot);
 		final AgentLifecycleService service = new AgentLifecycleService(holder);

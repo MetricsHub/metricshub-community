@@ -142,27 +142,24 @@ public class CollectStrategy extends AbstractStrategy {
 		beforeAllStrategy.run();
 
 		// Sort the connector monitor jobs according to the priority map
-		final Map<String, MonitorJob> connectorMonitorJobs = currentConnector
-			.getMonitors()
+		final Map<String, MonitorJob> connectorMonitorJobs = currentConnector.getMonitors()
 			.entrySet()
 			.stream()
 			.sorted(
-				Comparator.comparing(entry ->
-					MONITOR_JOBS_PRIORITY.containsKey(entry.getKey())
+				Comparator.comparing(
+					entry -> MONITOR_JOBS_PRIORITY.containsKey(entry.getKey())
 						? MONITOR_JOBS_PRIORITY.get(entry.getKey())
 						: MONITOR_JOBS_PRIORITY.get(OTHER_MONITOR_JOB_TYPES)
 				)
 			)
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
-		final Map<String, MonitorJob> sequentialMonitorJobs = connectorMonitorJobs
-			.entrySet()
+		final Map<String, MonitorJob> sequentialMonitorJobs = connectorMonitorJobs.entrySet()
 			.stream()
 			.filter(entry -> MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
-		final Map<String, MonitorJob> otherMonitorJobs = connectorMonitorJobs
-			.entrySet()
+		final Map<String, MonitorJob> otherMonitorJobs = connectorMonitorJobs.entrySet()
 			.stream()
 			.filter(entry -> !MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
@@ -190,8 +187,7 @@ public class CollectStrategy extends AbstractStrategy {
 				Math.max(1, Math.min(MAX_THREADS_COUNT, otherMonitorJobs.size()))
 			);
 
-			otherMonitorJobs
-				.entrySet()
+			otherMonitorJobs.entrySet()
 				.forEach(entry -> threadsPool.execute(() -> processMonitorJob(currentConnector, hostname, entry)));
 
 			// Two-phase shutdown: first graceful, then forced
@@ -283,11 +279,11 @@ public class CollectStrategy extends AbstractStrategy {
 				final Map<String, Monitor> sameTypeMonitors = telemetryManager.findMonitorsByType(monitorType);
 
 				if (sameTypeMonitors != null && !sameTypeMonitors.isEmpty()) {
-					sameTypeMonitors
-						.values()
+					sameTypeMonitors.values()
 						.stream()
-						.filter(monitor ->
-							currentConnector.getCompiledFilename().equals(monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID))
+						.filter(
+							monitor -> currentConnector.getCompiledFilename()
+								.equals(monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID))
 						)
 						.forEach(monitor -> {
 							processSourcesAndComputes(orderedSources.getSources(), monitor.getAttributes(), jobInfo);
@@ -431,37 +427,27 @@ public class CollectStrategy extends AbstractStrategy {
 				.build();
 
 			// In case of multi-instance, maybeMonitor is empty. So, we try to find it by type, connector id and attribute keys
-			maybeMonitor
-				.or(() ->
-					findMonitor(
-						connectorId,
-						sameTypeMonitors,
-						mappingProcessor.interpretNonContextMappingAttributes(),
-						attributeKeys
-					)
+			maybeMonitor.or(
+				() -> findMonitor(
+					connectorId,
+					sameTypeMonitors,
+					mappingProcessor.interpretNonContextMappingAttributes(),
+					attributeKeys
 				)
-				.ifPresent(monitor -> {
-					// Collect metrics
-					final Map<String, String> metrics = mappingProcessor.interpretNonContextMappingMetrics();
+			).ifPresent(monitor -> {
+				// Collect metrics
+				final Map<String, String> metrics = mappingProcessor.interpretNonContextMappingMetrics();
 
-					metrics.putAll(mappingProcessor.interpretContextMappingMetrics(monitor));
+				metrics.putAll(mappingProcessor.interpretContextMappingMetrics(monitor));
 
-					final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
+				final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
-					metricFactory.collectMonitorMetrics(
-						monitorType,
-						connector,
-						monitor,
-						connectorId,
-						metrics,
-						strategyTime,
-						false
-					);
+				metricFactory.collectMonitorMetrics(monitorType, connector, monitor, connectorId, metrics, strategyTime, false);
 
-					// Collect legacy parameters
-					monitor.addLegacyParameters(mappingProcessor.interpretNonContextMappingLegacyTextParameters());
-					monitor.addLegacyParameters(mappingProcessor.interpretContextMappingLegacyTextParameters(monitor));
-				});
+				// Collect legacy parameters
+				monitor.addLegacyParameters(mappingProcessor.interpretNonContextMappingLegacyTextParameters());
+				monitor.addLegacyParameters(mappingProcessor.interpretContextMappingLegacyTextParameters(monitor));
+			});
 		}
 	}
 
@@ -480,12 +466,10 @@ public class CollectStrategy extends AbstractStrategy {
 		final Map<String, String> collectedAttributeValues,
 		final Set<String> attributeKeys
 	) {
-		return sameTypeMonitors
-			.values()
+		return sameTypeMonitors.values()
 			.stream()
 			.filter(
-				monitor ->
-					matchMonitorAttributes(monitor, collectedAttributeValues, attributeKeys) &&
+				monitor -> matchMonitorAttributes(monitor, collectedAttributeValues, attributeKeys) &&
 					connectorId.equals(monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID))
 			)
 			.findFirst();
@@ -506,28 +490,26 @@ public class CollectStrategy extends AbstractStrategy {
 		final Map<String, String> collectedAttributeValues,
 		final Set<String> attributeKeys
 	) {
-		return attributeKeys
-			.stream()
-			.allMatch(key -> {
-				// Get the existing monitor attribute value that should be set at the discovery
-				final String monitorAttributeValue = monitor.getAttribute(key);
+		return attributeKeys.stream().allMatch(key -> {
+			// Get the existing monitor attribute value that should be set at the discovery
+			final String monitorAttributeValue = monitor.getAttribute(key);
 
-				// The absence of the value prevents us from progressing any further
-				if (monitorAttributeValue == null) {
-					return false;
-				}
+			// The absence of the value prevents us from progressing any further
+			if (monitorAttributeValue == null) {
+				return false;
+			}
 
-				// Get the collected attribute value
-				final String collectedAttributeValue = collectedAttributeValues.get(key);
+			// Get the collected attribute value
+			final String collectedAttributeValue = collectedAttributeValues.get(key);
 
-				// The absence of the value prevents us from progressing any further
-				if (collectedAttributeValue == null) {
-					return false;
-				}
+			// The absence of the value prevents us from progressing any further
+			if (collectedAttributeValue == null) {
+				return false;
+			}
 
-				// Compares the existing monitor attribute value to the collected attribute value
-				return monitorAttributeValue.equals(collectedAttributeValue);
-			});
+			// Compares the existing monitor attribute value to the collected attribute value
+			return monitorAttributeValue.equals(collectedAttributeValue);
+		});
 	}
 
 	/**
@@ -539,8 +521,7 @@ public class CollectStrategy extends AbstractStrategy {
 		final String hostname = telemetryManager.getHostname();
 
 		//Retrieve connector Monitor instances from TelemetryManager
-		final Map<String, Monitor> connectorMonitors = telemetryManager
-			.getMonitors()
+		final Map<String, Monitor> connectorMonitors = telemetryManager.getMonitors()
 			.get(KnownMonitorType.CONNECTOR.getKey());
 
 		// Check whether the resulting map is null or empty
@@ -559,14 +540,12 @@ public class CollectStrategy extends AbstractStrategy {
 		);
 
 		// Get only connectors that define monitors
-		final List<Connector> connectorsWithMonitorJobs = detectedConnectors
-			.stream()
+		final List<Connector> connectorsWithMonitorJobs = detectedConnectors.stream()
 			.filter(connector -> !connector.getMonitors().isEmpty())
 			.toList();
 
 		// Sort connectors by monitor job type: first put hosts then enclosures. If two connectors have the same type of monitor job, sort them by name
-		final List<Connector> sortedConnectors = connectorsWithMonitorJobs
-			.stream()
+		final List<Connector> sortedConnectors = connectorsWithMonitorJobs.stream()
 			.sorted(new ConnectorMonitorTypeComparator())
 			.toList();
 

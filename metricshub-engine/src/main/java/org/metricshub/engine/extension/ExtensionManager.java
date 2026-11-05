@@ -161,11 +161,9 @@ public class ExtensionManager {
 		final Criterion criterion,
 		final TelemetryManager telemetryManager
 	) {
-		final List<IProtocolExtension> criterionExtensions = protocolExtensions
-			.stream()
-			.filter(extension ->
-				telemetryManager
-					.getHostConfiguration()
+		final List<IProtocolExtension> criterionExtensions = protocolExtensions.stream()
+			.filter(
+				extension -> telemetryManager.getHostConfiguration()
 					.getConfigurations()
 					.values()
 					.stream()
@@ -202,7 +200,7 @@ public class ExtensionManager {
 		if ((maybeWmiExtension.isPresent() || maybeWinrmExtension.isPresent()) && maybeOsCommandExtension.isPresent()) {
 			if (
 				DeviceKind.WINDOWS == telemetryManager.getHostConfiguration().getHostType() &&
-				!telemetryManager.getHostProperties().isLocalhost()
+					!telemetryManager.getHostProperties().isLocalhost()
 			) {
 				return Stream.of(maybeWmiExtension, maybeWinrmExtension)
 					.filter(Optional::isPresent)
@@ -227,10 +225,7 @@ public class ExtensionManager {
 		final List<IProtocolExtension> extensions,
 		final String type
 	) {
-		return extensions
-			.stream()
-			.filter(extension -> extension.isSupportedConfigurationType(type))
-			.findFirst();
+		return extensions.stream().filter(extension -> extension.isSupportedConfigurationType(type)).findFirst();
 	}
 
 	/**
@@ -253,8 +248,7 @@ public class ExtensionManager {
 		if (extensionId == null || extensionId.isBlank()) {
 			return Optional.empty();
 		}
-		return metricEnrichmentExtensions
-			.stream()
+		return metricEnrichmentExtensions.stream()
 			.filter(extension -> extensionId.equalsIgnoreCase(extension.getId()))
 			.findFirst();
 	}
@@ -297,11 +291,9 @@ public class ExtensionManager {
 		final Source source,
 		final TelemetryManager telemetryManager
 	) {
-		final List<IProtocolExtension> sourceExtensions = protocolExtensions
-			.stream()
-			.filter(extension ->
-				telemetryManager
-					.getHostConfiguration()
+		final List<IProtocolExtension> sourceExtensions = protocolExtensions.stream()
+			.filter(
+				extension -> telemetryManager.getHostConfiguration()
 					.getConfigurations()
 					.values()
 					.stream()
@@ -320,11 +312,9 @@ public class ExtensionManager {
 	 * @return a {@link List} of {@link IProtocolExtension} instances.
 	 */
 	public List<IProtocolExtension> findProtocolCheckExtensions(@NonNull TelemetryManager telemetryManager) {
-		return protocolExtensions
-			.stream()
-			.filter(extension ->
-				telemetryManager
-					.getHostConfiguration()
+		return protocolExtensions.stream()
+			.filter(
+				extension -> telemetryManager.getHostConfiguration()
 					.getConfigurations()
 					.values()
 					.stream()
@@ -343,8 +333,7 @@ public class ExtensionManager {
 	 *         configuration type for data exchange operations.
 	 */
 	public Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> findConfigurationToSourceMapping() {
-		return protocolExtensions
-			.stream()
+		return protocolExtensions.stream()
 			.map(IProtocolExtension::getConfigurationToSourceMapping)
 			.flatMap(map -> map.entrySet().stream())
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue));
@@ -412,10 +401,7 @@ public class ExtensionManager {
 	 * @return an {@link Optional} of an {@link ISourceComputationExtension} instance.
 	 */
 	public Optional<ISourceComputationExtension> findSourceComputationExtension(final Source source) {
-		return sourceComputationExtensions
-			.stream()
-			.filter(extension -> extension.isValidSource(source))
-			.findFirst();
+		return sourceComputationExtensions.stream().filter(extension -> extension.isValidSource(source)).findFirst();
 	}
 
 	/**
@@ -425,10 +411,7 @@ public class ExtensionManager {
 	 * @return an {@link Optional} of an {@link ICompositeSourceScriptExtension} instance.
 	 */
 	public Optional<ICompositeSourceScriptExtension> findCompositeSourceScriptExtension(final Source source) {
-		return compositeSourceScriptExtensions
-			.stream()
-			.filter(extension -> extension.isValidSource(source))
-			.findFirst();
+		return compositeSourceScriptExtensions.stream().filter(extension -> extension.isValidSource(source)).findFirst();
 	}
 
 	/**
@@ -437,8 +420,7 @@ public class ExtensionManager {
 	 * @return A set of supported file extensions.
 	 */
 	public Set<String> findConfigurationFileExtensions() {
-		return configurationProviderExtensions
-			.stream()
+		return configurationProviderExtensions.stream()
 			.flatMap((IConfigurationProvider provider) -> provider.getFileExtensions().stream())
 			.collect(Collectors.toSet());
 	}

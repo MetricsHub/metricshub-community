@@ -170,8 +170,7 @@ class ExtensionIsolationIT {
 	 * Finds a protocol extension by its identifier.
 	 */
 	private static IProtocolExtension findByIdentifier(final List<IProtocolExtension> extensions, final String id) {
-		return extensions
-			.stream()
+		return extensions.stream()
 			.filter(extension -> id.equals(extension.getIdentifier()))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("Extension '" + id + "' was not loaded"));

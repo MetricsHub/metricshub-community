@@ -72,11 +72,10 @@ class SuperConnectorOsIT {
 	void test() throws Exception {
 		long discoveryTime = System.currentTimeMillis();
 		long collectTime = discoveryTime + 60 * 2 * 1000;
-		new SuperConnectorITJob(clientsExecutor, telemetryManager)
-			.executeStrategies(
-				new DetectionStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
-				new DiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager)
-			)
+		new SuperConnectorITJob(clientsExecutor, telemetryManager).executeStrategies(
+			new DetectionStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
+			new DiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager)
+		)
 			.executeStrategies(
 				new PrepareCollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 				new ProtocolHealthCheckStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),

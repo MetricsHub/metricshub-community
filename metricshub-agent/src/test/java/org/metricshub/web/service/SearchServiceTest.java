@@ -28,10 +28,7 @@ class SearchServiceTest {
 		AgentTelemetry hierarchy = buildTelemetryHierarchy();
 
 		List<SearchMatch> matches = searchService.search("core", hierarchy);
-		List<SearchMatch> instanceMatches = matches
-			.stream()
-			.filter(match -> "instance".equals(match.getType()))
-			.toList();
+		List<SearchMatch> instanceMatches = matches.stream().filter(match -> "instance".equals(match.getType())).toList();
 
 		assertEquals(
 			List.of("core-0", "core-1"),

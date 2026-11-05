@@ -77,8 +77,7 @@ public class RunnerMarkers {
 	 * @return {@code true} when the result marker starts with {@code INSTALL_OK}
 	 */
 	public static boolean installSucceeded(final Path stagingDirectory) {
-		return readResult(stagingDirectory)
-			.map(result -> result.toUpperCase(Locale.ROOT).startsWith(INSTALL_OK))
+		return readResult(stagingDirectory).map(result -> result.toUpperCase(Locale.ROOT).startsWith(INSTALL_OK))
 			.orElse(false);
 	}
 

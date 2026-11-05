@@ -148,8 +148,7 @@ public class EventLogSourceProcessor {
 		final String resolvedHostname = telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		// Get the connector namespace where the cursor is stored
-		final ConnectorNamespace connectorNamespace = telemetryManager
-			.getHostProperties()
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(connectorId);
 
 		final String sourceKey = eventLogSource.getKey();
@@ -185,12 +184,12 @@ public class EventLogSourceProcessor {
 
 			log.info(
 				"""
-				Hostname {} - EventLog poll
-				Source: {}
-				Current RecordNumber cursor: {}
-				New recordNumber cursor: {}
-				Returning {} rows
-				""",
+					Hostname {} - EventLog poll
+					Source: {}
+					Current RecordNumber cursor: {}
+					New recordNumber cursor: {}
+					Returning {} rows
+					""",
 				hostname,
 				eventLogSource.getKey(),
 				cursor,
@@ -251,8 +250,7 @@ public class EventLogSourceProcessor {
 		}
 
 		// Sort the results, then retain only the maxEventsPerPoll elements
-		final List<List<String>> finalResults = queryResults
-			.stream()
+		final List<List<String>> finalResults = queryResults.stream()
 			.sorted(Comparator.comparingLong((List<String> list) -> Integer.parseInt(list.get(RECORD_NUMBER_COLUMN))))
 			// Make sure each row is mutable before performing in-place column replacement.
 			// WMI results (and unit tests) may provide immutable rows (e.g. List.of(...)).
@@ -331,8 +329,9 @@ public class EventLogSourceProcessor {
 			// Examples:
 			// - if results size is 10 and max = 5, cursor will be set as the record number of the 5th element (position 4)
 			// - if results size is 10 and max = 50, cursor will be set as the record number of the 10th element (position 9)
-			lastEventPosition =
-				numberOfEvents > 0 && numberOfEvents > maxEventsPerPoll ? maxEventsPerPoll - 1 : numberOfEvents - 1;
+			lastEventPosition = numberOfEvents > 0 && numberOfEvents > maxEventsPerPoll
+				? maxEventsPerPoll - 1
+				: numberOfEvents - 1;
 		}
 
 		final List<String> lastEvent = results.get(lastEventPosition);
@@ -385,8 +384,7 @@ public class EventLogSourceProcessor {
 		}
 
 		// Add level filter if specified
-		final Set<String> eventTypes = eventLogSource
-			.getLevels()
+		final Set<String> eventTypes = eventLogSource.getLevels()
 			.stream()
 			.filter(Objects::nonNull)
 			.map(level -> String.valueOf(level.getCode()))
@@ -420,8 +418,7 @@ public class EventLogSourceProcessor {
 	 * @return a WQL predicate string like {@code "(attribute = 'value1' OR attribute = 'value2')"}, or null if empty
 	 */
 	static String joinWithOrString(@NonNull final String attribute, @NonNull final Set<String> values) {
-		final String predicate = values
-			.stream()
+		final String predicate = values.stream()
 			.filter(Objects::nonNull)
 			.map(String::trim)
 			.filter(value -> !value.isEmpty())

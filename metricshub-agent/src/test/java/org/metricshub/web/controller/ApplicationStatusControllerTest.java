@@ -34,8 +34,7 @@ class ApplicationStatusControllerTest {
 			.build();
 		when(applicationStatusService.reportApplicationStatus()).thenReturn(mockStatus);
 
-		mockMvc
-			.perform(get("/api/status"))
+		mockMvc.perform(get("/api/status"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("UP"))
 			.andExpect(jsonPath("$.agentInfo.version").value("1.0.0"));

@@ -185,8 +185,7 @@ class TunnelClientTest {
 				new RecordingListener()
 			);
 			client.start();
-			await()
-				.atMost(Duration.ofMillis(TIMEOUT_MS))
+			await().atMost(Duration.ofMillis(TIMEOUT_MS))
 				.until(() -> written.toString().contains("Central tunnel connection to"));
 		} finally {
 			logger.removeAppender("refused-connection");
@@ -254,9 +253,7 @@ class TunnelClientTest {
 		server.closeAll(1012, "restart");
 
 		assertEquals(1012, listener.disconnections.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
-		await()
-			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-			.until(() -> !client.isConnected() || client.isConnected());
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> !client.isConnected() || client.isConnected());
 		assertNotNull(server.awaitFrame(TunnelMessage.AgentRegister.TYPE, TIMEOUT_MS), "The client must register again");
 		assertNotNull(listener.registered.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
 		assertEquals(2, listener.registrations.get(), "Each connection builds a fresh registration");
@@ -283,9 +280,7 @@ class TunnelClientTest {
 			);
 			// The counter is incremented when the next attempt is scheduled, just after the listener
 			// is notified, so wait for it rather than racing it. A reset would stall this at 1.
-			await()
-				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-				.until(() -> client.retryFailureCount() == expected);
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> client.retryFailureCount() == expected);
 		}
 	}
 
@@ -525,8 +520,8 @@ class TunnelClientTest {
 		// every host, not a pathological string
 		final String description = "x".repeat(500);
 		final List<HostDescriptor> enormous = IntStream.range(0, 20_000)
-			.mapToObj(index ->
-				new HostDescriptor(
+			.mapToObj(
+				index -> new HostDescriptor(
 					"host-" + index,
 					"group",
 					Map.of("ssh", "host-" + index + ".a-fairly-long-domain-name.example.com"),
@@ -603,8 +598,9 @@ class TunnelClientTest {
 		assertEquals(remote, settings.endpoint());
 
 		// It lifts the TLS requirement, not the scheme rule: a tunnel is still a WebSocket
-		assertThrows(IllegalArgumentException.class, () ->
-			new TunnelSettings(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new TunnelSettings(
 				URI.create("http://tunnel.example.com/ws/agent"),
 				Map.of(),
 				null,
@@ -749,9 +745,7 @@ class TunnelClientTest {
 		client.stop("shutdown");
 
 		assertEquals(1000, server.awaitClose(TIMEOUT_MS));
-		await()
-			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-			.until(() -> server.connectionCount() == 0);
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> server.connectionCount() == 0);
 		// stop() is final: no reconnection
 		assertEquals(null, server.awaitHandshake(1500));
 	}

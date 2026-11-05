@@ -20,8 +20,7 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 
 class ToolRegistrySnapshotTest {
 
-	private static final String HOST_SCHEMA =
-		"{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"string\"}},\"required\":[\"hostname\"]}";
+	private static final String HOST_SCHEMA = "{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"string\"}},\"required\":[\"hostname\"]}";
 
 	private static ToolCallback callback(final String name, final String description, final String schema) {
 		// Mocked rather than built: the Spring AI builder rejects blank schemas, which is exactly the
@@ -126,11 +125,7 @@ class ToolRegistrySnapshotTest {
 
 		assertEquals(
 			List.of("ListHosts=read", "snmp_get=read", "ssh_runCommand=write"),
-			snapshot
-				.tools()
-				.stream()
-				.map(tool -> tool.name() + "=" + tool.access())
-				.toList(),
+			snapshot.tools().stream().map(tool -> tool.name() + "=" + tool.access()).toList(),
 			"a tool that changes a host is write, and one of no known kind is not advertised"
 		);
 		assertEquals(

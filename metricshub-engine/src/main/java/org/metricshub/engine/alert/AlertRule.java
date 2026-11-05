@@ -219,8 +219,7 @@ public class AlertRule {
 	public AlertRule copy() {
 		return new AlertRule(
 			conditionsChecker,
-			conditions
-				.stream()
+			conditions.stream()
 				.filter(Objects::nonNull)
 				.map(AlertCondition::copy)
 				.collect(Collectors.toCollection(HashSet::new)),

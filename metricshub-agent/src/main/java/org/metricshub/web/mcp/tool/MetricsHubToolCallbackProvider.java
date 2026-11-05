@@ -94,9 +94,7 @@ public final class MetricsHubToolCallbackProvider implements ToolCallbackProvide
 		if (HostTools.isDestructiveEnabled()) {
 			return all;
 		}
-		return Arrays.stream(all)
-			.filter(callback -> !isDestructive(callback))
-			.toArray(ToolCallback[]::new);
+		return Arrays.stream(all).filter(callback -> !isDestructive(callback)).toArray(ToolCallback[]::new);
 	}
 
 	/**

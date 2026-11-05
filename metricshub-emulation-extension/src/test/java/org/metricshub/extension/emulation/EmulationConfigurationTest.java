@@ -166,8 +166,7 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testBuildConfigurationWithNestedProtocolConfigurationNode() throws Exception {
-		final JsonNode jsonNode = EmulationExtension.newObjectMapper().readTree(
-			"""
+		final JsonNode jsonNode = EmulationExtension.newObjectMapper().readTree("""
 			http:
 			  directory: http-recordings
 			  configuration:
@@ -180,8 +179,7 @@ class EmulationConfigurationTest {
 			    username: ssh-user
 			    password: ssh-password
 			    port: 2222
-			"""
-		);
+			""");
 
 		final EmulationConfiguration configuration = (EmulationConfiguration) new EmulationExtension().buildConfiguration(
 			EmulationExtension.IDENTIFIER,

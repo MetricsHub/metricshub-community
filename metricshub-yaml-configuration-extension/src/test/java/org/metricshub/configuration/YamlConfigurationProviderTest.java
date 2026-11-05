@@ -41,14 +41,12 @@ class YamlConfigurationProviderTest {
 		assertEquals(2, configurations.size(), "Should load exactly 2 YAML files");
 
 		// Verify the contents of the loaded YAML configurations
-		final boolean config1Found = configurations
-			.stream()
+		final boolean config1Found = configurations.stream()
 			.anyMatch(node -> "value1".equals(getJsonNodeAsText(node, "key1")));
-		final boolean config2Found = configurations
-			.stream()
+		final boolean config2Found = configurations.stream()
 			.anyMatch(
-				node ->
-					"value2".equals(getJsonNodeAsText(node, "key2")) && Integer.valueOf(3).equals(getJsonNodeAsInt(node, "key3"))
+				node -> "value2".equals(getJsonNodeAsText(node, "key2")) &&
+					Integer.valueOf(3).equals(getJsonNodeAsInt(node, "key3"))
 			);
 
 		assertTrue(config1Found, "config1.yaml should be correctly loaded");

@@ -10,8 +10,9 @@ class Slf4jStreamProcessorTest {
 
 	@Test
 	void test() {
-		assertDoesNotThrow(() ->
-			ProcessorHelper.logger(LoggerFactory.getLogger(Slf4jStreamProcessorTest.class), Slf4jLevel.DEBUG).process(null)
+		assertDoesNotThrow(
+			() -> ProcessorHelper.logger(LoggerFactory.getLogger(Slf4jStreamProcessorTest.class), Slf4jLevel.DEBUG)
+				.process(null)
 		);
 	}
 }

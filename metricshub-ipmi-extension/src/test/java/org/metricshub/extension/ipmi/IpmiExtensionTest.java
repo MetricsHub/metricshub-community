@@ -103,8 +103,7 @@ class IpmiExtensionTest {
 		initIpmi();
 
 		// Mock successful IPMI protocol health check response
-		doReturn(SUCCESS_RESPONSE)
-			.when(ipmiRequestExecutorMock)
+		doReturn(SUCCESS_RESPONSE).when(ipmiRequestExecutorMock)
 			.executeIpmiDetection(anyString(), any(IpmiConfiguration.class));
 
 		// Start the IPMI Health Check strategy
@@ -129,40 +128,36 @@ class IpmiExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(ipmiExtension.isValidConfiguration(IpmiConfiguration.builder().build()));
-		assertFalse(
-			ipmiExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(ipmiExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -238,15 +233,13 @@ class IpmiExtensionTest {
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().type(IPMI_CRITERION_TYPE).build();
 
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
 		doReturn(null).when(ipmiRequestExecutorMock).executeIpmiDetection(HOST_NAME, configuration);
 
-		final String message =
-			"Received <null> result after connecting to the IPMI BMC chip with the IPMI-over-LAN interface.";
+		final String message = "Received <null> result after connecting to the IPMI BMC chip with the IPMI-over-LAN interface.";
 		final CriterionTestResult criterionTestResult = ipmiExtension.processCriterion(
 			ipmiCriterion,
 			CONNECTOR_ID,
@@ -266,8 +259,7 @@ class IpmiExtensionTest {
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().type(IPMI_CRITERION_TYPE).build();
 
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
@@ -291,8 +283,7 @@ class IpmiExtensionTest {
 	void testProcessIpmiSourceOk() {
 		initIpmi();
 
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
@@ -311,13 +302,11 @@ class IpmiExtensionTest {
 	void testProcessIpmiSourceThrowsException() {
 		initIpmi();
 
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
-		doThrow(new RuntimeException("exception"))
-			.when(ipmiRequestExecutorMock)
+		doThrow(new RuntimeException("exception")).when(ipmiRequestExecutorMock)
 			.executeIpmiGetSensors(HOST_NAME, configuration);
 		final SourceTable actual = ipmiExtension.processSource(
 			IpmiSource.builder().build(),
@@ -333,8 +322,7 @@ class IpmiExtensionTest {
 	void testProcessIpmiSourceEmptyResult() {
 		initIpmi();
 
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
@@ -394,8 +382,7 @@ class IpmiExtensionTest {
 	@Test
 	void testExecuteQueryThrows() throws Exception {
 		initIpmi();
-		doThrow(IpmiTimeoutException.class)
-			.when(ipmiRequestExecutorMock)
+		doThrow(IpmiTimeoutException.class).when(ipmiRequestExecutorMock)
 			.executeIpmiGetSensors(anyString(), any(IpmiConfiguration.class));
 		IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.hostname(HOST_NAME)
@@ -411,8 +398,7 @@ class IpmiExtensionTest {
 	@Test
 	void testProcessIpmiRawSource() {
 		initIpmi();
-		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
-			.getHostConfiguration()
+		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 		final IpmiRawSource source = IpmiRawSource.builder().key("raw").netFn("6").command("1").build();
@@ -425,8 +411,7 @@ class IpmiExtensionTest {
 
 		// A source that does not hold numbers is an error of the source
 		final IpmiRawSource bad = IpmiRawSource.builder().key("bad").netFn("x").command("1").build();
-		doThrow(new IllegalArgumentException("x"))
-			.when(ipmiRequestExecutorMock)
+		doThrow(new IllegalArgumentException("x")).when(ipmiRequestExecutorMock)
 			.executeIpmiRaw(HOST_NAME, configuration, bad);
 		assertEquals(SourceTable.empty(), ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager));
 	}
@@ -476,8 +461,7 @@ class IpmiExtensionTest {
 		verify(ipmiRequestExecutorMock, never()).executeIpmiSel(any(), any(), any(), anyBoolean(), anyInt());
 
 		// Next poll: the read stops at maxEventsPerPoll (one entry after record 5), the cursor stops at it
-		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6), null), null))
-			.when(ipmiRequestExecutorMock)
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6), null), null)).when(ipmiRequestExecutorMock)
 			.executeIpmiSel(HOST_NAME, configuration, end, true, 1);
 		final SourceTable table = ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager);
 		assertEquals(1, table.getTable().size());
@@ -486,15 +470,13 @@ class IpmiExtensionTest {
 		assertEquals(SelCursor.of(entry6), namespace.getSourceCursor("sel"));
 
 		// Nothing new: the cursor stays
-		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(), null), null))
-			.when(ipmiRequestExecutorMock)
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(), null), null)).when(ipmiRequestExecutorMock)
 			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true, 1);
 		assertTrue(ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().isEmpty());
 		assertEquals(SelCursor.of(entry6), namespace.getSourceCursor("sel"));
 
 		// The log was cleared and refilled: its entries come back from the first one
-		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
-			.when(ipmiRequestExecutorMock)
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null)).when(ipmiRequestExecutorMock)
 			.executeIpmiSel(HOST_NAME, configuration, SelCursor.of(entry6), true, 1);
 		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
 		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
@@ -515,8 +497,7 @@ class IpmiExtensionTest {
 		assertSame(empty, namespace.getSourceCursor("sel"));
 
 		// So that the first entry logged is returned by the next poll, which reads the whole log
-		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null))
-			.when(ipmiRequestExecutorMock)
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry5), null), null)).when(ipmiRequestExecutorMock)
 			.executeIpmiSel(HOST_NAME, configuration, empty, true, 50);
 		assertEquals("5", ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager).getTable().get(0).get(0));
 		assertEquals(SelCursor.of(entry5), namespace.getSourceCursor("sel"));
@@ -528,9 +509,9 @@ class IpmiExtensionTest {
 		final IpmiConfiguration configuration = queryConfiguration();
 		final SelEntry old = IpmiResultConverterTest.psuFailure(5);
 		final SelEntry recent = psuFailureAt(6, Instant.now().getEpochSecond() - 60);
-		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(old, recent), null), null))
-			.when(ipmiRequestExecutorMock)
-			.executeIpmiSel(HOST_NAME, configuration, null, true, 0);
+		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(old, recent), null), null)).when(
+			ipmiRequestExecutorMock
+		).executeIpmiSel(HOST_NAME, configuration, null, true, 0);
 
 		final String whole = ipmiExtension.executeQuery(
 			configuration,
@@ -573,8 +554,7 @@ class IpmiExtensionTest {
 			ipmiExtension.executeQuery(configuration, JsonNodeFactory.instance.objectNode().put("query", "chassis"))
 		);
 
-		doReturn("System power state is up")
-			.when(ipmiRequestExecutorMock)
+		doReturn("System power state is up").when(ipmiRequestExecutorMock)
 			.executeIpmiChassisControl(HOST_NAME, configuration, PowerCommand.PowerUp);
 		assertEquals(
 			"System power state is up",
@@ -584,8 +564,7 @@ class IpmiExtensionTest {
 			)
 		);
 
-		doReturn("Chassis identify on for 15 s")
-			.when(ipmiRequestExecutorMock)
+		doReturn("Chassis identify on for 15 s").when(ipmiRequestExecutorMock)
 			.executeIpmiChassisIdentify(HOST_NAME, configuration, 15, false);
 		assertEquals(
 			"Chassis identify on for 15 s",
@@ -594,8 +573,7 @@ class IpmiExtensionTest {
 				JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "identify")
 			)
 		);
-		doReturn("Chassis identify on until turned off")
-			.when(ipmiRequestExecutorMock)
+		doReturn("Chassis identify on until turned off").when(ipmiRequestExecutorMock)
 			.executeIpmiChassisIdentify(HOST_NAME, configuration, 0, true);
 		final ObjectNode forever = JsonNodeFactory.instance.objectNode().put("query", "chassis").put("action", "identify");
 		assertEquals(

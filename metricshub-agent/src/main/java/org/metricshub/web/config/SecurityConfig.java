@@ -93,16 +93,15 @@ public class SecurityConfig {
 	@Bean
 	@Order(1)
 	public SecurityFilterChain filterChain(HttpSecurity http, Environment environment) throws Exception {
-		return http
-			.securityMatcher(securedPaths(environment))
+		return http.securityMatcher(securedPaths(environment))
 			.csrf(csrf -> csrf.disable())
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), ApiKeyAuthFilter.class)
 			.addFilterAfter(readOnlyAccessFilter, JwtAuthFilter.class)
 			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
-			.exceptionHandling(ex ->
-				ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
+			.exceptionHandling(
+				ex -> ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
 			)
 			.build();
 	}
@@ -120,8 +119,7 @@ public class SecurityConfig {
 			"/api/**",
 			environment.getProperty("spring.ai.mcp.server.sse-endpoint", "/sse"),
 			environment.getProperty("spring.ai.mcp.server.sse-message-endpoint", "/mcp/message"),
-			environment.getProperty("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp")
-		};
+			environment.getProperty("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp") };
 	}
 
 	/**
@@ -134,8 +132,7 @@ public class SecurityConfig {
 	@Bean
 	@Order(2)
 	public SecurityFilterChain defaultFilterChain(HttpSecurity http) throws Exception {
-		return http
-			.csrf(csrf -> csrf.disable())
+		return http.csrf(csrf -> csrf.disable())
 			.addFilterAfter(readOnlyAccessFilter, UsernamePasswordAuthenticationFilter.class)
 			.authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
 			.build();

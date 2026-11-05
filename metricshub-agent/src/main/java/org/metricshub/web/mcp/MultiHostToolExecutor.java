@@ -90,10 +90,9 @@ public final class MultiHostToolExecutor {
 		final ExecutorService executor = Executors.newFixedThreadPool(resolvedPoolSize);
 
 		try {
-			final List<CompletableFuture<HostToolResponse<T>>> futures = hostnames
-				.stream()
-				.map(hostname ->
-					CompletableFuture.supplyAsync(
+			final List<CompletableFuture<HostToolResponse<T>>> futures = hostnames.stream()
+				.map(
+					hostname -> CompletableFuture.supplyAsync(
 						() -> hostname == null ? nullHostnameSupplier.get() : perHostTask.apply(hostname),
 						executor
 					)

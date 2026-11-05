@@ -158,20 +158,17 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
-		doReturn(Set.of(SnmpGetCriterion.class, SnmpGetNextCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetCriterion.class, SnmpGetNextCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		final SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.2.3.4.5.6").build();
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(snmpGetCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -194,8 +191,7 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(WmiCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
@@ -207,8 +203,7 @@ class CriterionProcessorTest {
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(wmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -231,8 +226,7 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(WbemCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
@@ -244,8 +238,7 @@ class CriterionProcessorTest {
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(wbemCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -268,8 +261,7 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(ServiceCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
@@ -278,8 +270,7 @@ class CriterionProcessorTest {
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(serviceCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -302,8 +293,7 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(IpmiCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
@@ -312,8 +302,7 @@ class CriterionProcessorTest {
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -336,8 +325,7 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(CommandLineCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
@@ -346,8 +334,7 @@ class CriterionProcessorTest {
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -404,20 +391,17 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
-		doReturn(Set.of(SnmpGetCriterion.class, SnmpGetNextCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetCriterion.class, SnmpGetNextCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder().oid("1.2.3.4.5").build();
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(snmpGetNextCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -516,8 +500,7 @@ class CriterionProcessorTest {
 			)
 		) {
 			mockedLocalOSHandler.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.LINUX));
-			mockedCriterionProcessVisitorImpl
-				.when(CriterionProcessVisitor::listAllLinuxProcesses)
+			mockedCriterionProcessVisitorImpl.when(CriterionProcessVisitor::listAllLinuxProcesses)
 				.thenReturn(LIST_ALL_LINUX_PROCESSES_RESULT);
 
 			final CriterionTestResult criterionTestResult = criterionProcessor.process(process);
@@ -550,8 +533,7 @@ class CriterionProcessorTest {
 			)
 		) {
 			mockedLocalOSHandler.when(LocalOsHandler::getOS).thenReturn(Optional.of(LocalOsHandler.LINUX));
-			mockedCriterionProcessVisitorImpl
-				.when(CriterionProcessVisitor::listAllLinuxProcesses)
+			mockedCriterionProcessVisitorImpl.when(CriterionProcessVisitor::listAllLinuxProcesses)
 				.thenReturn(EXECUTE_WMI_RESULT);
 
 			final CriterionTestResult criterionTestResult = criterionProcessor.process(processCriterion);
@@ -728,14 +710,12 @@ class CriterionProcessorTest {
 
 		final CriterionTestResult expected = CriterionTestResult.builder().success(true).result(RESULT).build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(HttpCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processCriterion(any(HttpCriterion.class), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -763,8 +743,7 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(IpmiCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
@@ -788,8 +767,7 @@ class CriterionProcessorTest {
 			.success(true)
 			.build();
 
-		doReturn(result)
-			.when(protocolExtensionMock)
+		doReturn(result).when(protocolExtensionMock)
 			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
@@ -821,16 +799,14 @@ class CriterionProcessorTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn(Set.of(IpmiCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().build();
 
-		doReturn(null)
-			.when(protocolExtensionMock)
+		doReturn(null).when(protocolExtensionMock)
 			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(

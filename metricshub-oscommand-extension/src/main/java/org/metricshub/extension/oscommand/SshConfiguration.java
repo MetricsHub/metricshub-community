@@ -92,26 +92,24 @@ public class SshConfiguration extends OsCommandConfiguration {
 		StringHelper.validateConfigurationAttribute(
 			username,
 			attr -> attr == null || attr.isBlank(),
-			() ->
-				String.format(
-					"Resource %s - No username configured for protocol %s." +
-						" This resource will not be monitored. Please verify the configured username.",
-					resourceKey,
-					"SSH"
-				)
+			() -> String.format(
+				"Resource %s - No username configured for protocol %s." +
+					" This resource will not be monitored. Please verify the configured username.",
+				resourceKey,
+				"SSH"
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			timeout,
 			attr -> attr == null || attr < 0L,
-			() ->
-				String.format(
-					"Resource %s - Timeout value is invalid for protocol %s." +
-						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
-					resourceKey,
-					"SSH",
-					timeout
-				)
+			() -> String.format(
+				"Resource %s - Timeout value is invalid for protocol %s." +
+					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+				resourceKey,
+				"SSH",
+				timeout
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(

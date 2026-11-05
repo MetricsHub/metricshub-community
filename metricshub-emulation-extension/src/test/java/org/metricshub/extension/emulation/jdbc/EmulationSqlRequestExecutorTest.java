@@ -59,15 +59,11 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: r1.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
 			SourceTable.tableToCsv(List.of(List.of("value1", "value2")), MetricsHubConstants.TABLE_SEP, true),
@@ -90,17 +86,13 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlRoundRobin(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: r1.csv
 			  - query: SELECT * FROM test_table
 			    response: r2.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
 			SourceTable.tableToCsv(List.of(List.of("first")), MetricsHubConstants.TABLE_SEP, true),
@@ -147,15 +139,11 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlNoMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM other_table
 			    response: r1.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
 			SourceTable.tableToCsv(List.of(List.of("other")), MetricsHubConstants.TABLE_SEP, true),
@@ -234,15 +222,11 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlReturnsEmptyWhenMatchedResponseIsBlank(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: " "
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final List<List<String>> result = executor.executeSql(
 			HOSTNAME,
@@ -258,15 +242,11 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlReturnsEmptyWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: missing.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final List<List<String>> result = executor.executeSql(
 			HOSTNAME,

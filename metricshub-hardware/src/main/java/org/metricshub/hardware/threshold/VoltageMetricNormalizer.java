@@ -82,8 +82,7 @@ public class VoltageMetricNormalizer extends AbstractMetricNormalizer {
 		// Discard out-of-range limits (e.g. 65535) so they are neither used below nor published,
 		// even when the voltage reading itself was not collected
 		final String limitMetricName = String.format("%s.limit", metricNamePrefix);
-		monitor
-			.getMetrics()
+		monitor.getMetrics()
 			.values()
 			.removeIf(
 				metric -> limitMetricName.equals(MetricFactory.extractName(metric.getName())) && isInvalidVoltage(metric)

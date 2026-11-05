@@ -319,8 +319,7 @@ public class ConfigHelper {
 	 * @return new {@link Path} instance
 	 */
 	static Path getProgramDataConfigDirectory() {
-		return getProgramDataPath()
-			.stream()
+		return getProgramDataPath().stream()
 			.map(path -> createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, CONFIG_DIRECTORY_NAME)).toAbsolutePath())
 			.findFirst()
 			.orElseGet(() -> ConfigHelper.getSubPath(CONFIG_DIRECTORY_NAME));
@@ -391,23 +390,18 @@ public class ConfigHelper {
 	 */
 	public static void normalizeAgentConfiguration(final AgentConfig agentConfig) {
 		// Normalize the top level resources using agent configuration
-		agentConfig
-			.getResources()
+		agentConfig.getResources()
 			.entrySet()
 			.forEach(resourceConfigEntry -> normalizeResourceConfigUsingAgentConfig(agentConfig, resourceConfigEntry));
 
 		// Normalize the resources using resource groups
-		agentConfig
-			.getResourceGroups()
-			.entrySet()
-			.forEach(resourceGroupConfigEntry -> {
-				final ResourceGroupConfig resourceGroupConfig = resourceGroupConfigEntry.getValue();
-				normalizeResourceGroupConfig(agentConfig, resourceGroupConfig);
-				resourceGroupConfig
-					.getResources()
-					.entrySet()
-					.forEach(resourceConfigEntry -> normalizeResourceConfig(resourceGroupConfigEntry, resourceConfigEntry));
-			});
+		agentConfig.getResourceGroups().entrySet().forEach(resourceGroupConfigEntry -> {
+			final ResourceGroupConfig resourceGroupConfig = resourceGroupConfigEntry.getValue();
+			normalizeResourceGroupConfig(agentConfig, resourceGroupConfig);
+			resourceGroupConfig.getResources()
+				.entrySet()
+				.forEach(resourceConfigEntry -> normalizeResourceConfig(resourceGroupConfigEntry, resourceConfigEntry));
+		});
 	}
 
 	/**
@@ -772,32 +766,28 @@ public class ConfigHelper {
 	) {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 
-		agentConfig
-			.getResourceGroups()
-			.forEach((resourceGroupKey, resourceKeyGroupConfig) -> {
-				final Map<String, TelemetryManager> resourceGroupTelemetryManagers = new HashMap<>();
-				telemetryManagers.put(resourceGroupKey, resourceGroupTelemetryManagers);
-				resourceKeyGroupConfig
-					.getResources()
-					.forEach((resourceKey, resourceConfig) ->
-						updateResourceGroupTelemetryManagers(
-							resourceGroupTelemetryManagers,
-							resourceGroupKey,
-							resourceKey,
-							resourceConfig,
-							connectorStore
-						)
-					);
-			});
+		agentConfig.getResourceGroups().forEach((resourceGroupKey, resourceKeyGroupConfig) -> {
+			final Map<String, TelemetryManager> resourceGroupTelemetryManagers = new HashMap<>();
+			telemetryManagers.put(resourceGroupKey, resourceGroupTelemetryManagers);
+			resourceKeyGroupConfig.getResources()
+				.forEach(
+					(resourceKey, resourceConfig) -> updateResourceGroupTelemetryManagers(
+						resourceGroupTelemetryManagers,
+						resourceGroupKey,
+						resourceKey,
+						resourceConfig,
+						connectorStore
+					)
+				);
+		});
 
 		// Initialize top level resources telemetry managers map
 		final Map<String, TelemetryManager> topLevelResourcesTelemetryManagers = new HashMap<>();
 
 		// Update top level resources telemetry managers
-		agentConfig
-			.getResources()
-			.forEach((resourceKey, resourceConfig) ->
-				updateResourceGroupTelemetryManagers(
+		agentConfig.getResources()
+			.forEach(
+				(resourceKey, resourceConfig) -> updateResourceGroupTelemetryManagers(
 					topLevelResourcesTelemetryManagers,
 					TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
 					resourceKey,
@@ -912,26 +902,24 @@ public class ConfigHelper {
 	 * to the connector Id.
 	 */
 	public static void normalizeAdditionalConnectors(final Map<String, AdditionalConnector> additionalConnectors) {
-		additionalConnectors
-			.entrySet()
-			.forEach(entry -> {
-				final String connectorId = entry.getKey();
-				final AdditionalConnector additionalConnector = entry.getValue();
+		additionalConnectors.entrySet().forEach(entry -> {
+			final String connectorId = entry.getKey();
+			final AdditionalConnector additionalConnector = entry.getValue();
 
-				/*
-					If the user only configures a key referencing the connector identifier, and the user does not provide
-					a complete variables configuration for this connector, create a new object with default information.
-				*/
-				if (additionalConnector == null) {
-					entry.setValue(AdditionalConnector.builder().uses(connectorId).build());
-					return;
-				}
+			/*
+				If the user only configures a key referencing the connector identifier, and the user does not provide
+				a complete variables configuration for this connector, create a new object with default information.
+			*/
+			if (additionalConnector == null) {
+				entry.setValue(AdditionalConnector.builder().uses(connectorId).build());
+				return;
+			}
 
-				// If uses() is null, set it to the connectorId
-				if (additionalConnector.getUses() == null) {
-					additionalConnector.setUses(connectorId);
-				}
-			});
+			// If uses() is null, set it to the connectorId
+			if (additionalConnector.getUses() == null) {
+				additionalConnector.setUses(connectorId);
+			}
+		});
 	}
 
 	/**
@@ -1027,14 +1015,12 @@ public class ConfigHelper {
 		final String resourceKey
 	) {
 		final Map<String, IConfiguration> protocols = resourceConfig.getProtocols();
-		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations =
-			protocols == null
-				? new HashMap<>()
-				: protocols
-						.values()
-						.stream()
-						.filter(Objects::nonNull)
-						.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
+		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations = protocols == null
+			? new HashMap<>()
+			: protocols.values()
+				.stream()
+				.filter(Objects::nonNull)
+				.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
 
 		final Map<String, String> attributes = resourceConfig.getAttributes();
 
@@ -1186,8 +1172,9 @@ public class ConfigHelper {
 
 		// If the connector status metric is not already associated with a definition,
 		// attempt to compute its definition.
-		metricDefinitions.computeIfAbsent(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY, _ ->
-			MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
+		metricDefinitions.computeIfAbsent(
+			MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY,
+			_ -> MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
 		);
 
 		return metricDefinitions;

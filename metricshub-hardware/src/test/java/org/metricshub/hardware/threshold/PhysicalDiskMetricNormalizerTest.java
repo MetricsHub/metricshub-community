@@ -15,10 +15,10 @@ class PhysicalDiskMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_ERRORS_LIMIT = "hw.errors.limit";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK =
-		HW_ERRORS_LIMIT + "{limit_type=\"critical\", hw.type=\"physical_disk\"}";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK =
-		HW_ERRORS_LIMIT + "{limit_type=\"degraded\", hw.type=\"physical_disk\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK = HW_ERRORS_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"physical_disk\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK = HW_ERRORS_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"physical_disk\"}";
 
 	@Test
 	void testNormalize() {
@@ -68,14 +68,12 @@ class PhysicalDiskMetricNormalizerTest {
 			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithBothMetrics);
 			assertEquals(
 				2.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -118,14 +116,12 @@ class PhysicalDiskMetricNormalizerTest {
 			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithBothMetrics);
 			assertEquals(
 				3.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				2.0,
-				monitorWithBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
+				monitorWithBothMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -146,9 +142,10 @@ class PhysicalDiskMetricNormalizerTest {
 			);
 			assertEquals(
 				1.0,
-				monitorWithoutBothMetrics
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithoutBothMetrics.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 		// Test case 4: Only degraded is present
@@ -190,9 +187,10 @@ class PhysicalDiskMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithDegradedMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithDegradedMetric.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 		// Test case 5: Only critical is present
@@ -228,9 +226,10 @@ class PhysicalDiskMetricNormalizerTest {
 			);
 			assertEquals(
 				1.0,
-				monitorWithCriticalMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithCriticalMetric.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 			assertNull(
 				monitorWithCriticalMetric.getMetric(

@@ -132,23 +132,17 @@ class LoginAuthenticationProviderTest {
 			() -> assertEquals(jwt, ((JwtAuthToken) out).getToken(), "JWT token should match"),
 			() -> assertEquals(1800L, ((JwtAuthToken) out).getExpiresIn(), "ExpiresIn should come from jwtComponent"),
 			() -> assertEquals(refreshJwt, ((JwtAuthToken) out).getRefreshToken(), "Refresh token should match"),
-			() ->
-				assertEquals(
-					86400L,
-					((JwtAuthToken) out).getRefreshExpiresIn(),
-					"RefreshExpiresIn should come from jwtComponent"
-				),
+			() -> assertEquals(
+				86400L,
+				((JwtAuthToken) out).getRefreshExpiresIn(),
+				"RefreshExpiresIn should come from jwtComponent"
+			),
 			() -> assertEquals("alice", ((User) out.getPrincipal()).getUsername(), "Principal username should match"),
-			() ->
-				assertEquals(
-					Collections.singleton(SecurityHelper.ROLE_APP_USER),
-					out
-						.getAuthorities()
-						.stream()
-						.map(a -> a.getAuthority())
-						.collect(Collectors.toSet()),
-					"Should have ROLE_APP_USER authority only"
-				)
+			() -> assertEquals(
+				Collections.singleton(SecurityHelper.ROLE_APP_USER),
+				out.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toSet()),
+				"Should have ROLE_APP_USER authority only"
+			)
 		);
 	}
 
@@ -187,19 +181,17 @@ class LoginAuthenticationProviderTest {
 			() -> assertEquals("jwt-new", ((JwtAuthToken) out).getToken(), "Access token should match"),
 			() -> assertEquals(900L, ((JwtAuthToken) out).getExpiresIn(), "Access TTL should come from jwtComponent"),
 			() -> assertEquals("rjwt-new", ((JwtAuthToken) out).getRefreshToken(), "Refresh token should match"),
-			() ->
-				assertEquals(86400L, ((JwtAuthToken) out).getRefreshExpiresIn(), "Refresh TTL should come from jwtComponent"),
+			() -> assertEquals(
+				86400L,
+				((JwtAuthToken) out).getRefreshExpiresIn(),
+				"Refresh TTL should come from jwtComponent"
+			),
 			() -> assertEquals("bob", ((User) out.getPrincipal()).getUsername(), "Principal should be bob"),
-			() ->
-				assertEquals(
-					Collections.singleton(SecurityHelper.ROLE_APP_USER),
-					out
-						.getAuthorities()
-						.stream()
-						.map(a -> a.getAuthority())
-						.collect(Collectors.toSet()),
-					"Should have ROLE_APP_USER authority only"
-				)
+			() -> assertEquals(
+				Collections.singleton(SecurityHelper.ROLE_APP_USER),
+				out.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toSet()),
+				"Should have ROLE_APP_USER authority only"
+			)
 		);
 	}
 

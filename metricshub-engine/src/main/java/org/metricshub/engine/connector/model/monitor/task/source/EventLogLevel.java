@@ -104,9 +104,6 @@ public enum EventLogLevel {
 	 * @return the corresponding EventLogLevel, or null if not found
 	 */
 	public static EventLogLevel detectFromCode(final int code) {
-		return Stream.of(values())
-			.filter(element -> element.getCode() == code)
-			.findFirst()
-			.orElse(null);
+		return Stream.of(values()).filter(element -> element.getCode() == code).findFirst().orElse(null);
 	}
 }

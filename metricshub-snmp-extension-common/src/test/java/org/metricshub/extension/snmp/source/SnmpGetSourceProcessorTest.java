@@ -65,8 +65,7 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
-		doThrow(new InterruptedException("Test exception"))
-			.when(snmpRequestExecutor)
+		doThrow(new InterruptedException("Test exception")).when(snmpRequestExecutor)
 			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname");
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);

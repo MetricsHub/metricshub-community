@@ -121,8 +121,7 @@ public class SourceProcessor implements ISourceProcessor {
 
 		final SourceTable origin = maybeOrigin.get();
 
-		final List<List<String>> table = origin
-			.getTable()
+		final List<List<String>> table = origin.getTable()
 			.stream()
 			// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
 			.map(ArrayList::new)
@@ -156,8 +155,7 @@ public class SourceProcessor implements ISourceProcessor {
 	 *         or an empty table if no extension can process the source.
 	 */
 	private SourceTable processSourceThroughExtension(Source source) {
-		return extensionManager
-			.findSourceExtension(source, telemetryManager)
+		return extensionManager.findSourceExtension(source, telemetryManager)
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
 			.orElseGet(SourceTable::empty);
 	}
@@ -175,8 +173,7 @@ public class SourceProcessor implements ISourceProcessor {
 		final Optional<ISourceComputationExtension> maybeExtension = extensionManager.findSourceComputationExtension(
 			source
 		);
-		return maybeExtension
-			.map(extension -> extension.processSource(source, connectorId, telemetryManager))
+		return maybeExtension.map(extension -> extension.processSource(source, connectorId, telemetryManager))
 			.orElseGet(SourceTable::empty);
 	}
 
@@ -190,10 +187,9 @@ public class SourceProcessor implements ISourceProcessor {
 	 *         or an empty table if no extension can process the source.
 	 */
 	private SourceTable processCompositeSourceScriptThroughExtension(final Source source) {
-		final Optional<ICompositeSourceScriptExtension> maybeExtension =
-			extensionManager.findCompositeSourceScriptExtension(source);
-		return maybeExtension
-			.map(extension -> extension.processSource(source, connectorId, telemetryManager, this))
+		final Optional<ICompositeSourceScriptExtension> maybeExtension = extensionManager
+			.findCompositeSourceScriptExtension(source);
+		return maybeExtension.map(extension -> extension.processSource(source, connectorId, telemetryManager, this))
 			.orElseGet(SourceTable::empty);
 	}
 
@@ -277,8 +273,7 @@ public class SourceProcessor implements ISourceProcessor {
 		}
 
 		// Note: In case of the static source getSourceTable never returns null
-		final List<List<String>> table = maybeStaticTable
-			.get()
+		final List<List<String>> table = maybeStaticTable.get()
 			.getTable()
 			.stream()
 			// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
@@ -445,24 +440,21 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final List<SourceTable> sourceTablesToConcat = unionTables
-			.stream()
+		final List<SourceTable> sourceTablesToConcat = unionTables.stream()
 			.map(key -> SourceTable.lookupSourceTable(key, connectorId, telemetryManager))
 			.filter(Optional::isPresent)
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
 		final SourceTable sourceTable = new SourceTable();
-		final List<List<String>> executeTableUnion = sourceTablesToConcat
-			.stream()
+		final List<List<String>> executeTableUnion = sourceTablesToConcat.stream()
 			.map(SourceTable::getTable)
 			.flatMap(Collection::stream)
 			.collect(Collectors.toList()); //NOSONAR
 
 		sourceTable.setTable(executeTableUnion);
 
-		String rawData = sourceTablesToConcat
-			.stream()
+		String rawData = sourceTablesToConcat.stream()
 			.map(SourceTable::getRawData)
 			.filter(Objects::nonNull)
 			.collect(Collectors.joining(NEW_LINE))

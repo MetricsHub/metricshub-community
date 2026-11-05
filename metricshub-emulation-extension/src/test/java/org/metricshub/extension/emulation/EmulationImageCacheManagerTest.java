@@ -19,17 +19,13 @@ class EmulationImageCacheManagerTest {
 	@Test
 	void testGetImageReusesCachedImageWhenFileUnchanged(@TempDir final Path tempDir) throws Exception {
 		final Path indexFile = tempDir.resolve("image.yaml");
-		Files.writeString(
-			indexFile,
-			"""
+		Files.writeString(indexFile, """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_ComputerSystem
 			      namespace: root\\cimv2
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final EmulationImageCacheManager cacheManager = new EmulationImageCacheManager();
 		final WmiEmulationImage firstRead = cacheManager.getImage(indexFile, WmiEmulationImage.class);
@@ -41,24 +37,18 @@ class EmulationImageCacheManagerTest {
 	@Test
 	void testGetImageReloadsWhenFileChanges(@TempDir final Path tempDir) throws Exception {
 		final Path indexFile = tempDir.resolve("image.yaml");
-		Files.writeString(
-			indexFile,
-			"""
+		Files.writeString(indexFile, """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_ComputerSystem
 			      namespace: root\\cimv2
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final EmulationImageCacheManager cacheManager = new EmulationImageCacheManager();
 		final WmiEmulationImage firstRead = cacheManager.getImage(indexFile, WmiEmulationImage.class);
 
-		Files.writeString(
-			indexFile,
-			"""
+		Files.writeString(indexFile, """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_ComputerSystem
@@ -68,9 +58,7 @@ class EmulationImageCacheManagerTest {
 			      wql: SELECT Name FROM Win32_Process
 			      namespace: root\\cimv2
 			    response: r2.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final WmiEmulationImage secondRead = cacheManager.getImage(indexFile, WmiEmulationImage.class);
 

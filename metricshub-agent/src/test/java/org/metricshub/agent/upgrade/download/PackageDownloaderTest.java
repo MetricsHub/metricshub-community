@@ -197,8 +197,9 @@ class PackageDownloaderTest {
 
 	@Test
 	void hashMismatchShouldFailAfterRetries() {
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			downloader.download(
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> downloader.download(
 				offer(baseUrl() + "/repo/metricshub.deb", new byte[] { 9, 9, 9 }),
 				config(),
 				tempDir,
@@ -214,8 +215,9 @@ class PackageDownloaderTest {
 	void anUnreachableHostSaysWhatHappenedRatherThanNull() {
 		// NOTHING LISTENS on port 1: the JDK fails the connection with exceptions that carry no message, and
 		// the upgrade then failed with "Package download failed: null"
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			downloader.download(
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> downloader.download(
 				offer("http://127.0.0.1:1/repo/metricshub.deb", packageSha256),
 				UpgradeConfig.builder().downloadRetries(1).build(),
 				tempDir,
@@ -228,8 +230,14 @@ class PackageDownloaderTest {
 
 	@Test
 	void httpErrorShouldFail() {
-		assertThrows(UpgradeException.class, () ->
-			downloader.download(offer(baseUrl() + "/missing/metricshub.deb", packageSha256), config(), tempDir, (_, _) -> {})
+		assertThrows(
+			UpgradeException.class,
+			() -> downloader.download(
+				offer(baseUrl() + "/missing/metricshub.deb", packageSha256),
+				config(),
+				tempDir,
+				(_, _) -> {}
+			)
 		);
 	}
 
@@ -237,8 +245,14 @@ class PackageDownloaderTest {
 	void oversizedPackageShouldBeRejected() {
 		final UpgradeConfig tinyCap = UpgradeConfig.builder().maxPackageSizeBytes(1024).downloadRetries(1).build();
 
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			downloader.download(offer(baseUrl() + "/repo/metricshub.deb", packageSha256), tinyCap, tempDir, (_, _) -> {})
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> downloader.download(
+				offer(baseUrl() + "/repo/metricshub.deb", packageSha256),
+				tinyCap,
+				tempDir,
+				(_, _) -> {}
+			)
 		);
 
 		assertTrue(failure.getMessage().contains("maximum"));
@@ -249,8 +263,9 @@ class PackageDownloaderTest {
 		final UpgradeConfig shortTimeout = UpgradeConfig.builder().downloadTimeout(2).downloadRetries(1).build();
 
 		final long startedMs = System.currentTimeMillis();
-		assertThrows(UpgradeException.class, () ->
-			downloader.download(
+		assertThrows(
+			UpgradeException.class,
+			() -> downloader.download(
 				offer(baseUrl() + "/stall/metricshub.deb", packageSha256),
 				shortTimeout,
 				tempDir,
@@ -284,8 +299,9 @@ class PackageDownloaderTest {
 			.downloadRetries(1)
 			.build();
 
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			downloader.download(
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> downloader.download(
 				offer(baseUrl() + "/redirect-other-host/metricshub.deb", packageSha256),
 				allowlisted,
 				tempDir,
@@ -298,16 +314,17 @@ class PackageDownloaderTest {
 
 	@Test
 	void plainHttpShouldBeRejectedForNonLoopbackHosts() {
-		assertThrows(UpgradeException.class, () ->
-			PackageDownloader.validateSource(offer("http://repo.example.com/metricshub.deb", packageSha256), config())
+		assertThrows(
+			UpgradeException.class,
+			() -> PackageDownloader.validateSource(offer("http://repo.example.com/metricshub.deb", packageSha256), config())
 		);
 	}
 
 	@Test
 	void insecureShouldAcceptPlainHttpFromAnyHostButKeepTheAllowlist() {
 		final UpgradeConfig insecure = UpgradeConfig.builder().insecure(true).build();
-		assertDoesNotThrow(() ->
-			PackageDownloader.validateSource(offer("http://repo.example.com/metricshub.deb", packageSha256), insecure)
+		assertDoesNotThrow(
+			() -> PackageDownloader.validateSource(offer("http://repo.example.com/metricshub.deb", packageSha256), insecure)
 		);
 
 		// It lifts the TLS requirement and nothing else: the allowlist still decides the host
@@ -315,8 +332,12 @@ class PackageDownloaderTest {
 			.insecure(true)
 			.hostAllowlist(List.of("repo.metricshub.com"))
 			.build();
-		assertThrows(UpgradeException.class, () ->
-			PackageDownloader.validateSource(offer("http://evil.example.com/metricshub.deb", packageSha256), allowlisted)
+		assertThrows(
+			UpgradeException.class,
+			() -> PackageDownloader.validateSource(
+				offer("http://evil.example.com/metricshub.deb", packageSha256),
+				allowlisted
+			)
 		);
 	}
 
@@ -346,11 +367,18 @@ class PackageDownloaderTest {
 			.hostAllowlist(java.util.List.of("repo.metricshub.com"))
 			.build();
 
-		assertThrows(UpgradeException.class, () ->
-			PackageDownloader.validateSource(offer("https://evil.example.com/metricshub.deb", packageSha256), allowlisted)
+		assertThrows(
+			UpgradeException.class,
+			() -> PackageDownloader.validateSource(
+				offer("https://evil.example.com/metricshub.deb", packageSha256),
+				allowlisted
+			)
 		);
-		org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
-			PackageDownloader.validateSource(offer("https://repo.metricshub.com/metricshub.deb", packageSha256), allowlisted)
+		org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+			() -> PackageDownloader.validateSource(
+				offer("https://repo.metricshub.com/metricshub.deb", packageSha256),
+				allowlisted
+			)
 		);
 	}
 

@@ -97,14 +97,8 @@ public class LocalOsHandler {
 	 * @return An optional with the current local OS. Empty if not determined.
 	 */
 	static Optional<ILocalOs> detectOs() {
-		return getSystemOsName()
-			.map(String::toLowerCase)
-			.map(name ->
-				OS_LIST.stream()
-					.filter(os -> name.startsWith(os.getOsTag()))
-					.findFirst()
-					.orElse(null)
-			);
+		return getSystemOsName().map(String::toLowerCase)
+			.map(name -> OS_LIST.stream().filter(os -> name.startsWith(os.getOsTag())).findFirst().orElse(null));
 	}
 
 	/**
@@ -142,54 +136,63 @@ public class LocalOsHandler {
 		 * @param os Windows operating system instance
 		 */
 		void visit(Windows os);
+
 		/**
 		 * Visit method for Linux operating system.
 		 *
 		 * @param os Linux operating system instance
 		 */
 		void visit(Linux os);
+
 		/**
 		 * Visit method for Sun operating system.
 		 *
 		 * @param os Sun operating system instance
 		 */
 		void visit(Sun os);
+
 		/**
 		 * Visit method for HP-UX operating system.
 		 *
 		 * @param os HP-UX operating system instance
 		 */
 		void visit(Hp os);
+
 		/**
 		 * Visit method for Solaris operating system.
 		 *
 		 * @param os Solaris operating system instance
 		 */
 		void visit(Solaris os);
+
 		/**
 		 * Visit method for AIX operating system.
 		 *
 		 * @param os AIX operating system instance
 		 */
 		void visit(Aix os);
+
 		/**
 		 * Visit method for FreeBSD operating system.
 		 *
 		 * @param os FreeBSD operating system instance
 		 */
 		void visit(FreeBsd os);
+
 		/**
 		 * Visit method for OpenBSD operating system.
 		 *
 		 * @param os OpenBSD operating system instance
 		 */
 		void visit(OpenBsd os);
+
 		/**
 		 * Visit method for NetBSD operating system.
 		 *
 		 * @param os NetBSD operating system instance
 		 */
 		void visit(NetBsd os);
+
 		/**
 		 * Visit method for macOS operating system.
 		 *

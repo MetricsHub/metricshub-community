@@ -121,31 +121,28 @@ public class GrpcClient extends AbstractOtelClient {
 	@Override
 	public void send(final ExportMetricsServiceRequest request, final LogContextSetter logContextSetter) {
 		final long startTime = System.currentTimeMillis();
-		asyncStub.export(
-			request,
-			new StreamObserver<>() {
-				@Override
-				public void onNext(ExportMetricsServiceResponse response) {
-					logContextSetter.setContext();
-					if (log.isTraceEnabled()) {
-						log.trace("Received gRPC Response: {}", response);
-					}
-				}
-
-				@Override
-				public void onError(Throwable t) {
-					logContextSetter.setContext();
-					log.error("Failed to send metrics. Error message: {}", t.getMessage());
-					log.debug("Failed to send metrics:", t);
-				}
-
-				@Override
-				public void onCompleted() {
-					logContextSetter.setContext();
-					log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
+		asyncStub.export(request, new StreamObserver<>() {
+			@Override
+			public void onNext(ExportMetricsServiceResponse response) {
+				logContextSetter.setContext();
+				if (log.isTraceEnabled()) {
+					log.trace("Received gRPC Response: {}", response);
 				}
 			}
-		);
+
+			@Override
+			public void onError(Throwable t) {
+				logContextSetter.setContext();
+				log.error("Failed to send metrics. Error message: {}", t.getMessage());
+				log.debug("Failed to send metrics:", t);
+			}
+
+			@Override
+			public void onCompleted() {
+				logContextSetter.setContext();
+				log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
+			}
+		});
 	}
 
 	/**

@@ -103,26 +103,16 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 	@Option(names = "--query", required = true, order = 5, paramLabel = "QUERY", description = "SQL query to execute")
 	private String query;
 
-	@Option(
-		names = "--driver-class",
-		order = 6,
-		paramLabel = "CLASSNAME",
-		description = """
+	@Option(names = "--driver-class", order = 6, paramLabel = "CLASSNAME", description = """
 		Fully-qualified java.sql.Driver implementation to use (e.g. com.mysql.cj.jdbc.Driver). \
 		Required when the URL is not accepted by any registered drivers\
-		"""
-	)
+		""")
 	private String driverClass;
 
-	@Option(
-		names = "--driver-jar",
-		order = 7,
-		paramLabel = "JARPATH",
-		description = """
+	@Option(names = "--driver-jar", order = 7, paramLabel = "JARPATH", description = """
 		Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR and $USER_HOME. \
 		Ignored unless --driver-class is also provided\
-		"""
-	)
+		""")
 	private String driverJar;
 
 	@Option(
@@ -242,52 +232,46 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
 
-					configurationNode.set("username", new TextNode(username));
+				configurationNode.set("username", new TextNode(username));
 
-					if (password != null) {
-						configurationNode.set("password", new TextNode(String.valueOf(password)));
-					}
-
-					configurationNode.set("url", new TextNode(String.valueOf(url)));
-					configurationNode.set("timeout", new TextNode(timeout));
-
-					// Optional explicit JDBC driver selection (className + optional jarPath).
-					if (driverClass != null && !driverClass.isBlank()) {
-						final ObjectNode driverNode = JsonNodeFactory.instance.objectNode();
-						driverNode.set("className", new TextNode(driverClass.trim()));
-						if (driverJar != null && !driverJar.isBlank()) {
-							driverNode.set("jarPath", new TextNode(driverJar.trim()));
-						}
-						configurationNode.set("driver", driverNode);
-					}
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(
-						PROTOCOL_IDENTIFIER,
-						configurationNode,
-						null
-					);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
-					// display the query
-					displayQuery();
-					// Execute the SQL query
-					final String result = extension.executeQuery(configuration, getQuery());
-					// display the returned result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute SQL query.\n", e);
+				if (password != null) {
+					configurationNode.set("password", new TextNode(String.valueOf(password)));
 				}
-			});
+
+				configurationNode.set("url", new TextNode(String.valueOf(url)));
+				configurationNode.set("timeout", new TextNode(timeout));
+
+				// Optional explicit JDBC driver selection (className + optional jarPath).
+				if (driverClass != null && !driverClass.isBlank()) {
+					final ObjectNode driverNode = JsonNodeFactory.instance.objectNode();
+					driverNode.set("className", new TextNode(driverClass.trim()));
+					if (driverJar != null && !driverJar.isBlank()) {
+						driverNode.set("jarPath", new TextNode(driverJar.trim()));
+					}
+					configurationNode.set("driver", driverNode);
+				}
+
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, configurationNode, null);
+				configuration.setHostname(hostname);
+
+				configuration.validateConfiguration(hostname);
+
+				// display the query
+				displayQuery();
+				// Execute the SQL query
+				final String result = extension.executeQuery(configuration, getQuery());
+				// display the returned result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute SQL query.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

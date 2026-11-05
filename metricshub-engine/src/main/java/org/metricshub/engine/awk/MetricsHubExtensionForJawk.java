@@ -207,16 +207,14 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	@JawkFunction("getVariable")
 	public String getVariable(final Object variableNameObj) {
 		final String variableName = toAwkString(variableNameObj);
-		final ConnectorVariables connectorVariables = sourceProcessor
-			.getTelemetryManager()
+		final ConnectorVariables connectorVariables = sourceProcessor.getTelemetryManager()
 			.getHostConfiguration()
 			.getConnectorVariables()
 			.get(connectorId);
 		if (connectorVariables != null) {
 			return connectorVariables.getVariableValues().get(variableName);
 		}
-		return sourceProcessor
-			.getTelemetryManager()
+		return sourceProcessor.getTelemetryManager()
 			.getConnectorStore()
 			.getStore()
 			.get(connectorId)

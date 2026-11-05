@@ -22,15 +22,10 @@ class ThreadHelperTest {
 
 	@Test
 	void testExecuteThrowsTimeoutException() {
-		assertThrows(TimeoutException.class, () ->
-			ThreadHelper.execute(
-				() -> {
-					Thread.sleep(10_000);
-					return "never";
-				},
-				1
-			)
-		);
+		assertThrows(TimeoutException.class, () -> ThreadHelper.execute(() -> {
+			Thread.sleep(10_000);
+			return "never";
+		}, 1));
 	}
 
 	@Test
@@ -64,17 +59,10 @@ class ThreadHelperTest {
 		final Map<String, ThreadHelper.Stats> before = ThreadHelper.getStats(hostname);
 		final long timeoutBefore = before.containsKey("jmx") ? before.get("jmx").getTimeout() : 0;
 
-		assertThrows(TimeoutException.class, () ->
-			ThreadHelper.execute(
-				() -> {
-					Thread.sleep(10_000);
-					return "never";
-				},
-				1,
-				hostname,
-				"jmx"
-			)
-		);
+		assertThrows(TimeoutException.class, () -> ThreadHelper.execute(() -> {
+			Thread.sleep(10_000);
+			return "never";
+		}, 1, hostname, "jmx"));
 
 		final Map<String, ThreadHelper.Stats> after = ThreadHelper.getStats(hostname);
 		assertNotNull(after.get("jmx"));

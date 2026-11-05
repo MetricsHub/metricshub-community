@@ -159,10 +159,8 @@ public class LegacySseMcpServerConfiguration {
 			);
 
 			final ServerCapabilities.Builder capabilities = ServerCapabilities.builder();
-			final SyncSpecification<?> serverBuilder = McpServer.sync(transportProvider).serverInfo(
-				serverProperties.getName(),
-				serverProperties.getVersion()
-			);
+			final SyncSpecification<?> serverBuilder = McpServer.sync(transportProvider)
+				.serverInfo(serverProperties.getName(), serverProperties.getVersion());
 
 			if (serverProperties.getCapabilities().isTool()) {
 				capabilities.tools(changeNotificationProperties.isToolChangeNotification());
@@ -200,8 +198,7 @@ public class LegacySseMcpServerConfiguration {
 				}
 			}
 
-			final McpSyncServer server = serverBuilder
-				.capabilities(capabilities.build())
+			final McpSyncServer server = serverBuilder.capabilities(capabilities.build())
 				.instructions(serverProperties.getInstructions())
 				.requestTimeout(serverProperties.getRequestTimeout())
 				// Same execution model as the Spring AI auto-configuration in a servlet environment

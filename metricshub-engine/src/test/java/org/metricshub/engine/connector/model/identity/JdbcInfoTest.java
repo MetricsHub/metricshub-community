@@ -41,8 +41,9 @@ class JdbcInfoTest {
 
 	@Test
 	void classNameRequired() {
-		final JsonMappingException nullClass = assertThrows(JsonMappingException.class, () ->
-			DriverInfo.create(null, "/opt/x.jar")
+		final JsonMappingException nullClass = assertThrows(
+			JsonMappingException.class,
+			() -> DriverInfo.create(null, "/opt/x.jar")
 		);
 		assertTrue(nullClass.getMessage().contains("className"));
 		assertThrows(JsonMappingException.class, () -> DriverInfo.create("   ", "/opt/x.jar"));

@@ -73,8 +73,7 @@ class HttpExtensionToolsTest {
 		httpExtension.executeTool(
 			"request",
 			configuration,
-			JsonNodeFactory.instance
-				.objectNode()
+			JsonNodeFactory.instance.objectNode()
 				.put("method", "POST")
 				.put("path", "/redfish/v1/Systems/1/Actions/ComputerSystem.Reset")
 				.put("body", "{\"ResetType\":\"GracefulRestart\"}")
@@ -89,8 +88,9 @@ class HttpExtensionToolsTest {
 	void testExecuteToolRequestRejectsAMethodOutsideTheAllowlist() {
 		final HttpConfiguration configuration = HttpConfiguration.builder().hostname("host").build();
 
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			httpExtension.executeTool(
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> httpExtension.executeTool(
 				"request",
 				configuration,
 				JsonNodeFactory.instance.objectNode().put("method", "TRACE").put("path", "/")
@@ -102,8 +102,9 @@ class HttpExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			httpExtension.executeTool(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> httpExtension.executeTool(
 				"nope",
 				HttpConfiguration.builder().hostname("host").build(),
 				JsonNodeFactory.instance.objectNode()

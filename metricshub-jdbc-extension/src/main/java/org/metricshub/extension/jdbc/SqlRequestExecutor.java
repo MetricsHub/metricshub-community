@@ -69,18 +69,12 @@ public class SqlRequestExecutor {
 			final String url = String.valueOf(jdbcConfig.getUrl());
 
 			// Log the details of the SQL request including the hostname
-			log.trace(
-				"""
+			log.trace("""
 				Hostname {} - Executing SQL query:
 				- Username: {}
 				- Query: {}
 				- Timeout: {}
-				""",
-				hostname,
-				jdbcConfig.getUsername(),
-				sqlQuery,
-				jdbcConfig.getTimeout()
-			);
+				""", hostname, jdbcConfig.getUsername(), sqlQuery, jdbcConfig.getTimeout());
 
 			// Execute the SQL query
 			final SqlResult sqlResult = JdbcClient.execute(
@@ -95,20 +89,13 @@ public class SqlRequestExecutor {
 
 			final List<List<String>> results = sqlResult.getResults();
 
-			log.trace(
-				"""
+			log.trace("""
 				Hostname {} - Executing SQL query:
 				- Username: {}
 				- Query: {}
 				- Timeout: {}
 				- Result: {}
-				""",
-				hostname,
-				jdbcConfig.getUsername(),
-				sqlQuery,
-				jdbcConfig.getTimeout(),
-				results
-			);
+				""", hostname, jdbcConfig.getUsername(), sqlQuery, jdbcConfig.getTimeout(), results);
 
 			// Record the JDBC exchange if recording is enabled
 			if (telemetryManager != null) {

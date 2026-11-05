@@ -120,8 +120,9 @@ public class Detection implements Serializable {
 		@JsonProperty("criteria") List<Criterion> criteria,
 		@JsonProperty("tags") Set<String> tags
 	) {
-		this.connectionTypes =
-			connectionTypes == null ? new HashSet<>(Set.of(ConnectionType.LOCAL, ConnectionType.REMOTE)) : connectionTypes;
+		this.connectionTypes = connectionTypes == null
+			? new HashSet<>(Set.of(ConnectionType.LOCAL, ConnectionType.REMOTE))
+			: connectionTypes;
 		this.disableAutoDetection = disableAutoDetection;
 		this.onLastResort = onLastResort;
 		this.appliesTo = appliesTo;

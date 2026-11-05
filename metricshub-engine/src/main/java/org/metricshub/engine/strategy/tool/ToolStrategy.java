@@ -150,9 +150,8 @@ public class ToolStrategy extends AbstractStrategy {
 			// exactly where ${attribute::name} is
 			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo);
 
-			result = SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager).orElseGet(
-				SourceTable::empty
-			);
+			result = SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
+				.orElseGet(SourceTable::empty);
 		} finally {
 			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that
 			// counts them, whether or not its sources succeeded

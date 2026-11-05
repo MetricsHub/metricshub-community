@@ -362,8 +362,8 @@ public class UpgradeManager {
 			return;
 		}
 
-		final long deadlineMs =
-			transaction.getInstallStartedAt() + TimeUnit.SECONDS.toMillis(effectiveInstallTimeoutSeconds(transaction));
+		final long deadlineMs = transaction.getInstallStartedAt() +
+			TimeUnit.SECONDS.toMillis(effectiveInstallTimeoutSeconds(transaction));
 		if (transaction.getInstallStartedAt() > 0 && System.currentTimeMillis() < deadlineMs) {
 			// The runner may still be working: keep the transaction (and the lock) and re-check
 			log.info(
@@ -538,8 +538,11 @@ public class UpgradeManager {
 
 			persistAndPublish(transaction, UpgradeState.DOWNLOADING, null);
 			final String targetVersion = offer.version();
-			final Path stagedPackage = downloader.download(offer, config, stagingDirectory, (percent, bytesPerSecond) ->
-				publish(
+			final Path stagedPackage = downloader.download(
+				offer,
+				config,
+				stagingDirectory,
+				(percent, bytesPerSecond) -> publish(
 					new UpgradeEvent(
 						PACKAGE_NAME,
 						UpgradeState.DOWNLOADING,

@@ -130,8 +130,7 @@ class UserServiceTest {
 			final User principal = (User) token.getPrincipal();
 			assertEquals("alice", principal.getUsername(), "Username should match");
 
-			final Set<String> authorities = token
-				.getAuthorities()
+			final Set<String> authorities = token.getAuthorities()
 				.stream()
 				.map(a -> a.getAuthority())
 				.collect(Collectors.toSet());

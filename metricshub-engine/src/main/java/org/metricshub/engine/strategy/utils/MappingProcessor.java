@@ -358,8 +358,7 @@ public class MappingProcessor {
 			return null;
 		}
 
-		final Stream<Monitor> monitors = typedMonitors
-			.values()
+		final Stream<Monitor> monitors = typedMonitors.values()
 			.stream()
 			.filter(monitor -> lookupAttributeValue.equals(monitor.getAttributes().get(lookupAttributeKey)));
 
@@ -1401,21 +1400,19 @@ public class MappingProcessor {
 
 		final Map<String, String> result = new HashMap<>();
 
-		computationFunctions
-			.entrySet()
-			.forEach(entry -> {
-				final String attributeKey = entry.getKey();
-				final String value = keyValuePairs.get(attributeKey);
+		computationFunctions.entrySet().forEach(entry -> {
+			final String attributeKey = entry.getKey();
+			final String value = keyValuePairs.get(attributeKey);
 
-				final String attributeValue = SourceUpdaterProcessor.replaceSourceReferenceContent(
-					value,
-					telemetryManager,
-					jobInfo.getConnectorId(),
-					"mapping",
-					attributeKey
-				);
-				result.put(attributeKey, entry.getValue().apply(new KeyValuePair(attributeKey, attributeValue), monitor));
-			});
+			final String attributeValue = SourceUpdaterProcessor.replaceSourceReferenceContent(
+				value,
+				telemetryManager,
+				jobInfo.getConnectorId(),
+				"mapping",
+				attributeKey
+			);
+			result.put(attributeKey, entry.getValue().apply(new KeyValuePair(attributeKey, attributeValue), monitor));
+		});
 
 		computationFunctions.clear();
 

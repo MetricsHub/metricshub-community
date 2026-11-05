@@ -100,16 +100,14 @@ public class HostConfiguration {
 			extensionManager.findConfigurationToSourceMapping();
 		// @formatter:on
 
-		final Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> configurationToSourceMapping =
-			new HashMap<>();
+		final Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> configurationToSourceMapping = new HashMap<>();
 
 		configurationToSourceMapping.putAll(configurationToSourceMappingFromExtensions);
 
 		// protocolConfigurations and host cannot never be null
 		final Set<Class<? extends IConfiguration>> protocolTypes = configurations.keySet();
 
-		final Set<Class<? extends Source>> sources = configurationToSourceMapping
-			.entrySet()
+		final Set<Class<? extends Source>> sources = configurationToSourceMapping.entrySet()
 			.stream()
 			.filter(protocolEntry -> protocolTypes.contains(protocolEntry.getKey()))
 			.flatMap(v -> v.getValue().stream())

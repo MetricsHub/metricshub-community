@@ -66,8 +66,7 @@ class AuthenticationControllerTest {
 			""";
 
 		// Act
-		MvcResult result = mockMvc
-			.perform(post("/auth").contentType(MediaType.APPLICATION_JSON).content(body))
+		MvcResult result = mockMvc.perform(post("/auth").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.token").value(token))
 			.andReturn();
@@ -76,11 +75,9 @@ class AuthenticationControllerTest {
 		final List<String> setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
 
 		assertTrue(
-			setCookies
-				.stream()
+			setCookies.stream()
 				.anyMatch(
-					h ->
-						h.contains(SecurityHelper.TOKEN_KEY + "=" + token) &&
+					h -> h.contains(SecurityHelper.TOKEN_KEY + "=" + token) &&
 						h.contains("Max-Age=" + expiresIn) &&
 						h.contains("Path=/")
 				),
@@ -88,11 +85,9 @@ class AuthenticationControllerTest {
 		);
 
 		assertTrue(
-			setCookies
-				.stream()
+			setCookies.stream()
 				.anyMatch(
-					h ->
-						h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + refreshToken) &&
+					h -> h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + refreshToken) &&
 						h.contains("Max-Age=" + refreshExpiresIn) &&
 						h.contains("Path=/")
 				),
@@ -117,8 +112,7 @@ class AuthenticationControllerTest {
 		when(userService.refreshSecurity(any(HttpServletRequest.class))).thenReturn(refreshed);
 
 		// Act
-		final MvcResult result = mockMvc
-			.perform(post("/auth/refresh"))
+		final MvcResult result = mockMvc.perform(post("/auth/refresh"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.token").value(newToken))
 			.andReturn();
@@ -127,11 +121,9 @@ class AuthenticationControllerTest {
 		List<String> setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
 
 		assertTrue(
-			setCookies
-				.stream()
+			setCookies.stream()
 				.anyMatch(
-					h ->
-						h.contains(SecurityHelper.TOKEN_KEY + "=" + newToken) &&
+					h -> h.contains(SecurityHelper.TOKEN_KEY + "=" + newToken) &&
 						h.contains("Max-Age=" + newExpiresIn) &&
 						h.contains("Path=/")
 				),
@@ -139,11 +131,9 @@ class AuthenticationControllerTest {
 		);
 
 		assertTrue(
-			setCookies
-				.stream()
+			setCookies.stream()
 				.anyMatch(
-					h ->
-						h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + newRefreshToken) &&
+					h -> h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + newRefreshToken) &&
 						h.contains("Max-Age=" + newRefreshExpiresIn) &&
 						h.contains("Path=/")
 				),
@@ -164,8 +154,7 @@ class AuthenticationControllerTest {
 		final List<String> setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
 
 		assertTrue(
-			setCookies
-				.stream()
+			setCookies.stream()
 				.anyMatch(
 					h -> h.contains(SecurityHelper.TOKEN_KEY + "=" + MetricsHubConstants.EMPTY) && h.contains("Max-Age=0")
 				),
@@ -173,8 +162,7 @@ class AuthenticationControllerTest {
 		);
 
 		assertTrue(
-			setCookies
-				.stream()
+			setCookies.stream()
 				.anyMatch(
 					h -> h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + MetricsHubConstants.EMPTY) && h.contains("Max-Age=0")
 				),

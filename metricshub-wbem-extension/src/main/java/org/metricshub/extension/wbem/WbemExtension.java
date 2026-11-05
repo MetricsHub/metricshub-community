@@ -118,8 +118,7 @@ public class WbemExtension implements IProtocolExtension {
 		List<List<String>> wbemResult = null;
 
 		// Retrieve WBEM configuration from the telemetry manager
-		final WbemConfiguration wbemConfiguration = (WbemConfiguration) telemetryManager
-			.getHostConfiguration()
+		final WbemConfiguration wbemConfiguration = (WbemConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(WbemConfiguration.class);
 

@@ -297,19 +297,15 @@ public class ComputeProcessor implements IComputeProcessor {
 					// Set the column value of the 'line' at 'columnIndex' to the result of a bitwise 'AND' operation
 					// between the long representation of the value located at column index retrieved through 'line.get(columnIndex)' and either
 					// 'operand2' or the value at another column index 'colOperand2' retrieved through 'line.get(colOperand2)' based on the condition.
-					line.set(
-						columnIndex,
-						String.valueOf(
-							(long) Double.parseDouble(line.get(columnIndex)) &
-								// @formatter:off
+					line.set(columnIndex, String.valueOf((long) Double.parseDouble(line.get(columnIndex)) &
+					// @formatter:off
 								(
 								colOperand2 == -1
 									? (long) Double.parseDouble(operand2)
 									: (long) Double.parseDouble(line.get(colOperand2))
 							)
 							// @formatter:on
-						)
-					);
+					));
 				}
 			} catch (NumberFormatException e) {
 				log.warn("Hostname {} - Data is not correctly formatted.", hostname);
@@ -445,8 +441,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				awk.getSeparators(),
 				awk.getSelectColumns() == null ? EMPTY : awk.getSelectColumns().replaceAll("\\s+", EMPTY)
 			);
-			awkResult = awkResultLines
-				.stream()
+			awkResult = awkResultLines.stream()
 				// add the TABLE_SEP at the end of each lines.
 				.map(line -> line.endsWith(TABLE_SEP) ? line : line + TABLE_SEP)
 				.collect(Collectors.joining(NEW_LINE));
@@ -492,33 +487,31 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param columnIndex The column number
 	 */
 	void convertHex2Dec(final Integer columnIndex) {
-		sourceTable
-			.getTable()
-			.forEach(row -> {
-				if (columnIndex < row.size()) {
-					final String value = row.get(columnIndex).replace("0x", EMPTY).replace(":", EMPTY).replaceAll("\\s*", EMPTY);
-					if (HEXA_PATTERN.matcher(value).matches()) {
-						try {
-							row.set(columnIndex, new BigInteger(value, 16).toString());
-						} catch (NumberFormatException exception) {
-							log.warn(
-								"Hostname {} - Data is not correctly formatted for Hex2Dec conversion: {} at index {}.",
-								hostname,
-								value,
-								columnIndex
-							);
-						}
-						return;
+		sourceTable.getTable().forEach(row -> {
+			if (columnIndex < row.size()) {
+				final String value = row.get(columnIndex).replace("0x", EMPTY).replace(":", EMPTY).replaceAll("\\s*", EMPTY);
+				if (HEXA_PATTERN.matcher(value).matches()) {
+					try {
+						row.set(columnIndex, new BigInteger(value, 16).toString());
+					} catch (NumberFormatException exception) {
+						log.warn(
+							"Hostname {} - Data is not correctly formatted for Hex2Dec conversion: {} at index {}.",
+							hostname,
+							value,
+							columnIndex
+						);
 					}
+					return;
 				}
+			}
 
-				log.warn(
-					"Hostname {} - Could not perform Hex2Dec conversion compute on row {} at index {}.",
-					hostname,
-					row,
-					columnIndex
-				);
-			});
+			log.warn(
+				"Hostname {} - Could not perform Hex2Dec conversion compute on row {} at index {}.",
+				hostname,
+				row,
+				columnIndex
+			);
+		});
 		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
@@ -528,21 +521,19 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param columnIndex The column number
 	 */
 	void convertArray2SimpleStatus(final Integer columnIndex) {
-		sourceTable
-			.getTable()
-			.forEach(row -> {
-				if (columnIndex < row.size()) {
-					final String value = PslUtils.nthArg(row.get(columnIndex), "1-", VERTICAL_BAR, NEW_LINE);
-					row.set(columnIndex, getWorstStatus(value.split(NEW_LINE)));
-				}
+		sourceTable.getTable().forEach(row -> {
+			if (columnIndex < row.size()) {
+				final String value = PslUtils.nthArg(row.get(columnIndex), "1-", VERTICAL_BAR, NEW_LINE);
+				row.set(columnIndex, getWorstStatus(value.split(NEW_LINE)));
+			}
 
-				log.warn(
-					"Hostname {} - Could not perform Array2SimpleStatus conversion compute on row {} at index {}.",
-					hostname,
-					row,
-					columnIndex
-				);
-			});
+			log.warn(
+				"Hostname {} - Could not perform Array2SimpleStatus conversion compute on row {} at index {}.",
+				hostname,
+				row,
+				columnIndex
+			);
+		});
 		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
@@ -757,19 +748,19 @@ public class ComputeProcessor implements IComputeProcessor {
 
 			final String pslRegexp = abstractMatchingLines.getRegExp();
 
-			final Predicate<String> pslPredicate =
-				pslRegexp != null && !pslRegexp.isEmpty() ? getPredicate(pslRegexp, abstractMatchingLines) : null;
+			final Predicate<String> pslPredicate = pslRegexp != null && !pslRegexp.isEmpty()
+				? getPredicate(pslRegexp, abstractMatchingLines)
+				: null;
 
-			final Predicate<String> valuePredicate =
-				valueSet != null && !valueSet.isEmpty() ? getPredicate(valueSet, abstractMatchingLines) : null;
+			final Predicate<String> valuePredicate = valueSet != null && !valueSet.isEmpty()
+				? getPredicate(valueSet, abstractMatchingLines)
+				: null;
 
 			// If there are both a regex and a valueList, both are applied, one after the other.
-			final List<List<String>> filteredTable = sourceTable
-				.getTable()
+			final List<List<String>> filteredTable = sourceTable.getTable()
 				.stream()
 				.filter(
-					line ->
-						columnIndex < line.size() &&
+					line -> columnIndex < line.size() &&
 						(pslPredicate == null || pslPredicate.test(line.get(columnIndex))) &&
 						(valuePredicate == null || valuePredicate.test(line.get(columnIndex)))
 				)
@@ -793,9 +784,8 @@ public class ComputeProcessor implements IComputeProcessor {
 	 */
 	private Set<String> buildCaseInsensitiveValueSet(@NonNull final String value) {
 		if (value.indexOf(COMMA) >= 0) {
-			return Stream.of(value.split(COMMA)).collect(
-				Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER))
-			);
+			return Stream.of(value.split(COMMA))
+				.collect(Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
 		}
 
 		final Set<String> singletonSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -811,14 +801,12 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @return boolean
 	 */
 	private boolean isConsistentMatchingLinesInfo(AbstractMatchingLines abstractMatchingLines) {
-		return (
-			abstractMatchingLines != null &&
+		return (abstractMatchingLines != null &&
 			abstractMatchingLines.getColumn() != null &&
 			abstractMatchingLines.getColumn() > 0 &&
 			sourceTable != null &&
 			sourceTable.getTable() != null &&
-			!sourceTable.getTable().isEmpty()
-		);
+			!sourceTable.getTable().isEmpty());
 	}
 
 	/**
@@ -973,7 +961,7 @@ public class ComputeProcessor implements IComputeProcessor {
 					 */
 					if (
 						key.length() >= property.length() &&
-						".".concat(key).toLowerCase().endsWith(".".concat(property).toLowerCase())
+							".".concat(key).toLowerCase().endsWith(".".concat(property).toLowerCase())
 					) {
 						line.set(columnIndex, splitedValue[1].replace("\"", EMPTY).trim());
 						break;
@@ -1305,8 +1293,7 @@ public class ComputeProcessor implements IComputeProcessor {
 					return;
 				}
 
-				final String columnResult = bitList
-					.stream()
+				final String columnResult = bitList.stream()
 					.map(bit -> String.format("%d,%d", bit, ((int) Math.pow(2, bit) & valueToBeReplacedLong) != 0 ? 1 : 0))
 					.map(translations::get)
 					.filter(value -> value != null && !value.isBlank())
@@ -1362,24 +1349,20 @@ public class ComputeProcessor implements IComputeProcessor {
 				// If strToReplace is like "$n", the strToReplace is actually the content of the column n.
 				if (COLUMN_PATTERN.matcher(strToReplace).matches()) {
 					final int strToReplaceColumnIndex = getColumnIndex(strToReplace);
-					sourceTable
-						.getTable()
-						.forEach(line -> {
-							if (validateSizeAndIndices(line.size(), columnIndex, replacementColumnIndex, strToReplaceColumnIndex)) {
-								line.set(
-									columnIndex,
-									line.get(columnIndex).replace(line.get(strToReplaceColumnIndex), line.get(replacementColumnIndex))
-								);
-							}
-						});
+					sourceTable.getTable().forEach(line -> {
+						if (validateSizeAndIndices(line.size(), columnIndex, replacementColumnIndex, strToReplaceColumnIndex)) {
+							line.set(
+								columnIndex,
+								line.get(columnIndex).replace(line.get(strToReplaceColumnIndex), line.get(replacementColumnIndex))
+							);
+						}
+					});
 				} else {
-					sourceTable
-						.getTable()
-						.forEach(line -> {
-							if (validateSizeAndIndices(line.size(), columnIndex, replacementColumnIndex)) {
-								line.set(columnIndex, line.get(columnIndex).replace(strToReplace, line.get(replacementColumnIndex)));
-							}
-						});
+					sourceTable.getTable().forEach(line -> {
+						if (validateSizeAndIndices(line.size(), columnIndex, replacementColumnIndex)) {
+							line.set(columnIndex, line.get(columnIndex).replace(strToReplace, line.get(replacementColumnIndex)));
+						}
+					});
 				}
 			}
 		} else {
@@ -1387,22 +1370,18 @@ public class ComputeProcessor implements IComputeProcessor {
 			if (COLUMN_PATTERN.matcher(strToReplace).matches()) {
 				final int strToReplaceColumnIndex = getColumnIndex(strToReplace);
 				if (!sourceTable.getTable().isEmpty()) {
-					sourceTable
-						.getTable()
-						.forEach(line -> {
-							if (validateSizeAndIndices(line.size(), columnIndex, strToReplaceColumnIndex)) {
-								line.set(columnIndex, line.get(columnIndex).replace(line.get(strToReplaceColumnIndex), replacement));
-							}
-						});
-				}
-			} else {
-				sourceTable
-					.getTable()
-					.forEach(line -> {
-						if (validateSizeAndIndices(line.size(), columnIndex)) {
-							line.set(columnIndex, line.get(columnIndex).replace(strToReplace, replacement));
+					sourceTable.getTable().forEach(line -> {
+						if (validateSizeAndIndices(line.size(), columnIndex, strToReplaceColumnIndex)) {
+							line.set(columnIndex, line.get(columnIndex).replace(line.get(strToReplaceColumnIndex), replacement));
 						}
 					});
+				}
+			} else {
+				sourceTable.getTable().forEach(line -> {
+					if (validateSizeAndIndices(line.size(), columnIndex)) {
+						line.set(columnIndex, line.get(columnIndex).replace(strToReplace, replacement));
+					}
+				});
 			}
 		}
 
@@ -1591,45 +1570,41 @@ public class ComputeProcessor implements IComputeProcessor {
 		final Function<ComputeValue, String> startFunction = getValueFunction(startColumnIndex);
 		final Function<ComputeValue, String> endFunction = getValueFunction(endColumnIndex);
 
-		sourceTable
-			.getTable()
-			.forEach(row -> {
-				if (columnIndex < row.size()) {
-					final String columnValue = row.get(columnIndex);
+		sourceTable.getTable().forEach(row -> {
+			if (columnIndex < row.size()) {
+				final String columnValue = row.get(columnIndex);
 
-					final Integer beginIndex = transformToIntegerValue(
-						startFunction.apply(new ComputeValue(row, startColumnIndex, start))
-					);
+				final Integer beginIndex = transformToIntegerValue(
+					startFunction.apply(new ComputeValue(row, startColumnIndex, start))
+				);
 
-					final Integer endIndex = transformToIntegerValue(
-						endFunction.apply(new ComputeValue(row, endColumnIndex, end))
-					);
+				final Integer endIndex = transformToIntegerValue(endFunction.apply(new ComputeValue(row, endColumnIndex, end)));
 
-					if (checkSubstringArguments(beginIndex, endIndex, columnValue.length())) {
-						// No need to put endIndex -1 as the String substring end index is exclusive
-						// PSL substr(1,3) is equivalent to Java String substring(0, 3)
-						row.set(columnIndex, columnValue.substring(beginIndex - 1, endIndex));
-						return;
-					}
-					log.warn(
-						"Hostname {} - Substring arguments are not valid: start={}, end={}," +
-							" startColumnIndex={}, endColumnIndex={}," +
-							" computed beginIndex={}, computed endIndex={}," +
-							" row={}, columnValue={}",
-						hostname,
-						start,
-						end,
-						startColumnIndex,
-						endColumnIndex,
-						beginIndex,
-						endIndex,
-						row,
-						columnValue
-					);
+				if (checkSubstringArguments(beginIndex, endIndex, columnValue.length())) {
+					// No need to put endIndex -1 as the String substring end index is exclusive
+					// PSL substr(1,3) is equivalent to Java String substring(0, 3)
+					row.set(columnIndex, columnValue.substring(beginIndex - 1, endIndex));
+					return;
 				}
+				log.warn(
+					"Hostname {} - Substring arguments are not valid: start={}, end={}," +
+						" startColumnIndex={}, endColumnIndex={}," +
+						" computed beginIndex={}, computed endIndex={}," +
+						" row={}, columnValue={}",
+					hostname,
+					start,
+					end,
+					startColumnIndex,
+					endColumnIndex,
+					beginIndex,
+					endIndex,
+					row,
+					columnValue
+				);
+			}
 
-				log.warn("Hostname {} - Cannot perform substring on row {} on column index {}", hostname, row, columnIndex);
-			});
+			log.warn("Hostname {} - Cannot perform substring on row {} on column index {}", hostname, row, columnIndex);
+		});
 
 		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
@@ -1937,8 +1912,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param abstractConcat
 	 */
 	private void processAbstractConcat(final AbstractConcat abstractConcat) {
-		boolean firstChecks =
-			abstractConcat != null &&
+		boolean firstChecks = abstractConcat != null &&
 			abstractConcat.getValue() != null &&
 			abstractConcat.getColumn() != null &&
 			abstractConcat.getColumn() > 0 &&
@@ -2007,10 +1981,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		final String result =
-			abstractConcat instanceof Prepend
-				? line.get(concatColumnIndex).concat(line.get(columnIndex))
-				: line.get(columnIndex).concat(line.get(concatColumnIndex));
+		final String result = abstractConcat instanceof Prepend
+			? line.get(concatColumnIndex).concat(line.get(columnIndex))
+			: line.get(columnIndex).concat(line.get(concatColumnIndex));
 
 		line.set(columnIndex, result);
 	}
@@ -2045,10 +2018,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			concatValue = concatValue.replace(matcher.group(0), line.get(concatColumnIndex));
 		}
 
-		final String result =
-			abstractConcat instanceof Prepend
-				? concatValue.concat(line.get(columnIndex))
-				: line.get(columnIndex).concat(concatValue);
+		final String result = abstractConcat instanceof Prepend
+			? concatValue.concat(line.get(columnIndex))
+			: line.get(columnIndex).concat(concatValue);
 
 		line.set(columnIndex, result);
 	}
@@ -2065,8 +2037,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		if (translation instanceof ReferenceTranslationTable referenceTranslationTable) {
 			final Connector connector = telemetryManager.getConnectorStore().getStore().get(connectorId);
 			if (connector != null && connector.getTranslations() != null) {
-				final TranslationTable translationTable = connector
-					.getTranslations()
+				final TranslationTable translationTable = connector.getTranslations()
 					.get(referenceTranslationTable.getTableId());
 				if (translationTable == null) {
 					return null;

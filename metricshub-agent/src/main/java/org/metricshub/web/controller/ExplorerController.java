@@ -102,8 +102,7 @@ public class ExplorerController {
 		description = "Retrieves a complete subtree for a top-level resource by name.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Resource retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "Resource not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Resource not found") }
 	)
 	@GetMapping("/resources/{resourceName}")
 	public ResourceTelemetry getTopLevelResource(
@@ -125,8 +124,7 @@ public class ExplorerController {
 		description = "Retrieves a complete subtree for a resource within a specific resource group.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Resource retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "Resource or group not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Resource or group not found") }
 	)
 	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}")
 	public ResourceTelemetry getGroupedResourceByPath(

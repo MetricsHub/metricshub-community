@@ -58,19 +58,15 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 		final List<JsonNode> configurations = new ArrayList<>();
 
 		try (Stream<Path> stream = Files.list(configDirectory)) {
-			stream
-				.filter((Path path) -> !Files.isDirectory(path))
-				.filter((Path path) -> {
-					String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-					return getFileExtensions().stream().anyMatch(fileName::endsWith);
-				})
+			stream.filter((Path path) -> !Files.isDirectory(path)).filter((Path path) -> {
+				String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+				return getFileExtensions().stream().anyMatch(fileName::endsWith);
+			})
 				.filter((Path path) -> !isUiConfigurationFile(path))
-				.forEach((Path path) ->
-					readFragment(path).ifPresent((JsonNode jsonNode) -> {
-						configurations.add(jsonNode);
-						log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
-					})
-				);
+				.forEach((Path path) -> readFragment(path).ifPresent((JsonNode jsonNode) -> {
+					configurations.add(jsonNode);
+					log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
+				}));
 		} catch (IOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
@@ -86,15 +82,12 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 		final List<JsonNode> configurations = new ArrayList<>();
 
 		try (Stream<Path> stream = Files.list(configDirectory)) {
-			stream
-				.filter((Path path) -> !Files.isDirectory(path))
+			stream.filter((Path path) -> !Files.isDirectory(path))
 				.filter(YamlConfigurationProvider::isUiConfigurationFile)
-				.forEach((Path path) ->
-					readFragment(path).ifPresent((JsonNode jsonNode) -> {
-						configurations.add(jsonNode);
-						log.debug("Successfully loaded UI YAML configuration fragment: '{}'", path);
-					})
-				);
+				.forEach((Path path) -> readFragment(path).ifPresent((JsonNode jsonNode) -> {
+					configurations.add(jsonNode);
+					log.debug("Successfully loaded UI YAML configuration fragment: '{}'", path);
+				}));
 		} catch (IOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);

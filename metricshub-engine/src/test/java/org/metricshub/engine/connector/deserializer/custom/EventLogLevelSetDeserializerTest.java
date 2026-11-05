@@ -76,8 +76,7 @@ class EventLogLevelSetDeserializerTest {
 	void testDeserializeArrayAndString() throws IOException {
 		{
 			doReturn(true).when(yamlParser).isExpectedStartArrayToken();
-			doReturn(Set.of("error", "warning", "information", "audit success", "audit failure"))
-				.when(yamlParser)
+			doReturn(Set.of("error", "warning", "information", "audit success", "audit failure")).when(yamlParser)
 				.readValueAs(any(TypeReference.class));
 			assertEquals(
 				Set.of(

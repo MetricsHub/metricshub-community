@@ -119,9 +119,9 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 
 			if (
 				"2".equals(lowerCaseVersion) ||
-				"v2".equals(lowerCaseVersion) ||
-				"v2c".equals(lowerCaseVersion) ||
-				"2c".equals(lowerCaseVersion)
+					"v2".equals(lowerCaseVersion) ||
+					"v2c".equals(lowerCaseVersion) ||
+					"2c".equals(lowerCaseVersion)
 			) {
 				return V2C;
 			}
@@ -139,51 +139,47 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 		StringHelper.validateConfigurationAttribute(
 			community,
 			attr -> attr == null || attr.length == 0,
-			() ->
-				String.format(
-					"Resource %s - No community string configured for %s. This resource will not be monitored.",
-					resourceKey,
-					displayName
-				)
+			() -> String.format(
+				"Resource %s - No community string configured for %s. This resource will not be monitored.",
+				resourceKey,
+				displayName
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			port,
 			attr -> attr == null || attr < 1 || attr > 65535,
-			() ->
-				String.format(
-					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-						" This resource will not be monitored. Please verify the configured port value.",
-					resourceKey,
-					displayName,
-					port
-				)
+			() -> String.format(
+				"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
+					" This resource will not be monitored. Please verify the configured port value.",
+				resourceKey,
+				displayName,
+				port
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			timeout,
 			attr -> attr == null || attr < 0L,
-			() ->
-				String.format(
-					"Resource %s - Timeout value is invalid for protocol %s." +
-						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
-					resourceKey,
-					displayName,
-					timeout
-				)
+			() -> String.format(
+				"Resource %s - Timeout value is invalid for protocol %s." +
+					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+				resourceKey,
+				displayName,
+				timeout
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			retryIntervals,
 			attr -> Objects.nonNull(attr) && Arrays.stream(attr).allMatch(value -> value < 1),
-			() ->
-				String.format(
-					"Resource %s - retryIntervals value is invalid for protocol %s." +
-						" retryIntervals value returned: %s. This resource will not be monitored. Please verify the configured retryIntervals value.",
-					resourceKey,
-					displayName,
-					retryIntervals
-				)
+			() -> String.format(
+				"Resource %s - retryIntervals value is invalid for protocol %s." +
+					" retryIntervals value returned: %s. This resource will not be monitored. Please verify the configured retryIntervals value.",
+				resourceKey,
+				displayName,
+				retryIntervals
+			)
 		);
 	}
 

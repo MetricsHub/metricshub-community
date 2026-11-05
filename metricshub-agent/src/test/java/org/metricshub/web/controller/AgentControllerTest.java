@@ -65,8 +65,7 @@ class AgentControllerTest {
 			new RestartRequestAck(RestartRequestResult.SCHEDULED, 1L)
 		);
 
-		mockMvc
-			.perform(post("/api/agent/restart"))
+		mockMvc.perform(post("/api/agent/restart"))
 			.andExpect(status().isAccepted())
 			.andExpect(jsonPath("$.result").value("SCHEDULED"))
 			.andExpect(jsonPath("$.message").value("MetricsHub Agent restart scheduled."))
@@ -83,8 +82,7 @@ class AgentControllerTest {
 			new RestartRequestAck(RestartRequestResult.QUEUED, 2L)
 		);
 
-		mockMvc
-			.perform(post("/api/agent/restart"))
+		mockMvc.perform(post("/api/agent/restart"))
 			.andExpect(status().isAccepted())
 			.andExpect(jsonPath("$.result").value("QUEUED"))
 			.andExpect(
@@ -101,8 +99,7 @@ class AgentControllerTest {
 			new RestartRequestAck(RestartRequestResult.COALESCED, 3L)
 		);
 
-		mockMvc
-			.perform(post("/api/agent/restart"))
+		mockMvc.perform(post("/api/agent/restart"))
 			.andExpect(status().isAccepted())
 			.andExpect(jsonPath("$.result").value("COALESCED"))
 			.andExpect(
@@ -118,8 +115,7 @@ class AgentControllerTest {
 	void testRestartShouldHandleException() throws Exception {
 		when(agentContextHolder.getAgentContext()).thenThrow(new RuntimeException("Context error"));
 
-		mockMvc
-			.perform(post("/api/agent/restart"))
+		mockMvc.perform(post("/api/agent/restart"))
 			.andExpect(status().isInternalServerError())
 			.andExpect(jsonPath("$.error").value("Failed to restart MetricsHub Agent: Context error"));
 	}
@@ -134,8 +130,7 @@ class AgentControllerTest {
 			.build();
 		when(agentLifecycleService.getRestartStatus()).thenReturn(restartStatus);
 
-		mockMvc
-			.perform(get("/api/agent/restart/status"))
+		mockMvc.perform(get("/api/agent/restart/status"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.state").value("SUCCEEDED"))
 			.andExpect(jsonPath("$.message").value("MetricsHub Agent restarted successfully."))

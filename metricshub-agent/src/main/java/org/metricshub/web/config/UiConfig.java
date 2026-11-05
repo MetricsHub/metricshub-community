@@ -60,36 +60,33 @@ public class UiConfig implements WebMvcConfigurer {
 
 		log.info("Serving web resources from {}", webRootLocation);
 
-		registry
-			.setOrder(Ordered.LOWEST_PRECEDENCE)
+		registry.setOrder(Ordered.LOWEST_PRECEDENCE)
 			.addResourceHandler("/**")
 			.addResourceLocations(webRootLocation)
 			.resourceChain(true)
-			.addResolver(
-				new PathResourceResolver() {
-					@Override
-					protected Resource getResource(String resourcePath, Resource location) throws IOException {
-						// Let springdoc handle its own paths
-						if (resourcePath.startsWith("v3/api-docs") || resourcePath.startsWith("swagger-ui")) {
-							return null;
-						}
-
-						// Serve the file if it exists
-						Resource requested = location.createRelative(resourcePath);
-						if (requested.exists() && requested.isReadable()) {
-							return requested;
-						}
-
-						// Missing static assets must 404 — never return index.html (wrong MIME type for .js/.css)
-						if (isStaticAssetPath(resourcePath)) {
-							return null;
-						}
-
-						// Fallback to the SPA entry point for client-side routes
-						return location.createRelative("index.html");
+			.addResolver(new PathResourceResolver() {
+				@Override
+				protected Resource getResource(String resourcePath, Resource location) throws IOException {
+					// Let springdoc handle its own paths
+					if (resourcePath.startsWith("v3/api-docs") || resourcePath.startsWith("swagger-ui")) {
+						return null;
 					}
+
+					// Serve the file if it exists
+					Resource requested = location.createRelative(resourcePath);
+					if (requested.exists() && requested.isReadable()) {
+						return requested;
+					}
+
+					// Missing static assets must 404 — never return index.html (wrong MIME type for .js/.css)
+					if (isStaticAssetPath(resourcePath)) {
+						return null;
+					}
+
+					// Fallback to the SPA entry point for client-side routes
+					return location.createRelative("index.html");
 				}
-			);
+			});
 	}
 
 	/**
@@ -126,7 +123,8 @@ public class UiConfig implements WebMvcConfigurer {
 				"gif",
 				"svg",
 				"webp",
-				"ico" -> true;
+				"ico" ->
+				true;
 			default -> false;
 		};
 	}

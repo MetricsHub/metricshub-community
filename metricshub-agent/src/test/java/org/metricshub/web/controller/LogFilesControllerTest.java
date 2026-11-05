@@ -51,8 +51,7 @@ class LogFilesControllerTest {
 
 		when(logFilesService.getAllLogFiles()).thenReturn(List.of(f2, f1));
 
-		mockMvc
-			.perform(get("/api/log-files"))
+		mockMvc.perform(get("/api/log-files"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.length()").value(2))
@@ -68,8 +67,7 @@ class LogFilesControllerTest {
 	void testShouldReturnEmptyListWhenNoFiles() throws Exception {
 		when(logFilesService.getAllLogFiles()).thenReturn(List.of());
 
-		mockMvc
-			.perform(get("/api/log-files"))
+		mockMvc.perform(get("/api/log-files"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(content().json("[]"));
@@ -82,8 +80,7 @@ class LogFilesControllerTest {
 			tailContent
 		);
 
-		mockMvc
-			.perform(get("/api/log-files/metricshub.log/tail").accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get("/api/log-files/metricshub.log/tail").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string(tailContent));
@@ -94,8 +91,7 @@ class LogFilesControllerTest {
 		final String tailContent = "Last 512 bytes of log";
 		when(logFilesService.getFileTail(METRICSHUB_LOG_FILE_NAME, 512L)).thenReturn(tailContent);
 
-		mockMvc
-			.perform(get("/api/log-files/metricshub.log/tail?maxBytes=512").accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get("/api/log-files/metricshub.log/tail?maxBytes=512").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string(tailContent));
@@ -117,8 +113,7 @@ class LogFilesControllerTest {
 			new ByteArrayInputStream(fileContent)
 		);
 
-		mockMvc
-			.perform(get("/api/log-files/metricshub.log/download"))
+		mockMvc.perform(get("/api/log-files/metricshub.log/download"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_OCTET_STREAM))
 			.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"metricshub.log\""))

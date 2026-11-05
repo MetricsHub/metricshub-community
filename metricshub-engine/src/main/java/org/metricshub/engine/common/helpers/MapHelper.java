@@ -52,9 +52,6 @@ public class MapHelper {
 			return false;
 		}
 
-		return first
-			.entrySet()
-			.stream()
-			.allMatch(e -> e.getValue().equals(second.get(e.getKey())));
+		return first.entrySet().stream().allMatch(e -> e.getValue().equals(second.get(e.getKey())));
 	}
 }

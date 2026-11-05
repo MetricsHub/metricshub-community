@@ -313,20 +313,17 @@ public final class ExtensionRuntime implements AutoCloseable {
 		final Map<String, ExtensionDescriptor> remaining = new LinkedHashMap<>(byId);
 
 		// Disable extensions that require an id we never discovered.
-		remaining
-			.values()
-			.removeIf(descriptor -> {
-				final List<String> missing = descriptor
-					.requires()
-					.stream()
-					.filter(requiredId -> !byId.containsKey(requiredId))
-					.toList();
-				if (!missing.isEmpty()) {
-					log.error("Disabling extension '{}': required extension(s) {} not found.", descriptor.id(), missing);
-					return true;
-				}
-				return false;
-			});
+		remaining.values().removeIf(descriptor -> {
+			final List<String> missing = descriptor.requires()
+				.stream()
+				.filter(requiredId -> !byId.containsKey(requiredId))
+				.toList();
+			if (!missing.isEmpty()) {
+				log.error("Disabling extension '{}': required extension(s) {} not found.", descriptor.id(), missing);
+				return true;
+			}
+			return false;
+		});
 
 		// Repeatedly emit descriptors whose dependencies are already resolved.
 		boolean progress = true;
@@ -345,10 +342,9 @@ public final class ExtensionRuntime implements AutoCloseable {
 		}
 
 		// Whatever is left cannot be resolved (cyclic, or depends on a disabled extension).
-		remaining
-			.values()
-			.forEach(descriptor ->
-				log.error(
+		remaining.values()
+			.forEach(
+				descriptor -> log.error(
 					"Disabling extension '{}': unresolved or cyclic dependency among {}.",
 					descriptor.id(),
 					descriptor.requires()
@@ -365,27 +361,22 @@ public final class ExtensionRuntime implements AutoCloseable {
 	 * @return the sanitized child-first prefix list.
 	 */
 	static List<String> sanitizeChildFirst(final ExtensionDescriptor descriptor) {
-		return descriptor
-			.childFirstPackages()
-			.stream()
-			.filter(prefix -> {
-				// Reject a declared prefix that overlaps a forced-parent prefix in either direction:
-				// a more specific prefix (e.g. "org.metricshub.engine.telemetry.") that falls under a
-				// forced one, or a broader ancestor (e.g. "org.metricshub.") that would itself capture
-				// a forced namespace and load engine classes child-first.
-				final boolean forced = FORCED_PARENT_PREFIXES.stream().anyMatch(
-					forcedPrefix -> prefix.startsWith(forcedPrefix) || forcedPrefix.startsWith(prefix)
+		return descriptor.childFirstPackages().stream().filter(prefix -> {
+			// Reject a declared prefix that overlaps a forced-parent prefix in either direction:
+			// a more specific prefix (e.g. "org.metricshub.engine.telemetry.") that falls under a
+			// forced one, or a broader ancestor (e.g. "org.metricshub.") that would itself capture
+			// a forced namespace and load engine classes child-first.
+			final boolean forced = FORCED_PARENT_PREFIXES.stream()
+				.anyMatch(forcedPrefix -> prefix.startsWith(forcedPrefix) || forcedPrefix.startsWith(prefix));
+			if (forced) {
+				log.warn(
+					"Ignoring child-first prefix '{}' of extension '{}': it must resolve from the engine.",
+					prefix,
+					descriptor.id()
 				);
-				if (forced) {
-					log.warn(
-						"Ignoring child-first prefix '{}' of extension '{}': it must resolve from the engine.",
-						prefix,
-						descriptor.id()
-					);
-				}
-				return !forced;
-			})
-			.toList();
+			}
+			return !forced;
+		}).toList();
 	}
 
 	/**

@@ -108,24 +108,19 @@ public class MetricsHubAgentApplication implements Runnable {
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = bootAgentContext.getConfigDirectory();
 
-			DirectoryWatcherTask.builder()
-				.directory(configDirectory)
-				.filter((WatchEvent<?> event) -> {
-					final Object context = event.context();
-					log.info("RELOAD - Directory Watcher Task event triggered.\nContext: " + context.toString());
-					return (
-						context != null &&
-						agentContextHolder
-							.getAgentContext()
-							.getExtensionManager()
-							.findConfigurationFileExtensions()
-							.stream()
-							.anyMatch(fileExtension -> context.toString().endsWith(fileExtension))
-					);
-				})
+			DirectoryWatcherTask.builder().directory(configDirectory).filter((WatchEvent<?> event) -> {
+				final Object context = event.context();
+				log.info("RELOAD - Directory Watcher Task event triggered.\nContext: " + context.toString());
+				return (context != null &&
+					agentContextHolder.getAgentContext()
+						.getExtensionManager()
+						.findConfigurationFileExtensions()
+						.stream()
+						.anyMatch(fileExtension -> context.toString().endsWith(fileExtension)));
+			})
 				.await(CONFIG_WATCHER_AWAIT_MS)
-				.checksumSupplier(() ->
-					buildChecksum(agentContextHolder.getAgentContext().getExtensionManager(), configDirectory)
+				.checksumSupplier(
+					() -> buildChecksum(agentContextHolder.getAgentContext().getExtensionManager(), configDirectory)
 				)
 				.onChange(() -> onConfigurationChange(agentContextHolder))
 				.build()
@@ -251,9 +246,9 @@ public class MetricsHubAgentApplication implements Runnable {
 	 * @return The checksum of the configuration directory
 	 */
 	private static String buildChecksum(final ExtensionManager extensionManager, final Path configDirectory) {
-		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(configDirectory, path ->
-			extensionManager
-				.findConfigurationFileExtensions()
+		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(
+			configDirectory,
+			path -> extensionManager.findConfigurationFileExtensions()
 				.stream()
 				.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
 		);

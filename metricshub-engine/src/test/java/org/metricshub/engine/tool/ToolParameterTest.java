@@ -23,8 +23,9 @@ class ToolParameterTest {
 
 	@Test
 	void testUnknownTypeIsRejected() {
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			new ToolParameter("intger", "A typo", false, null)
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> new ToolParameter("intger", "A typo", false, null)
 		);
 		assertTrue(exception.getMessage().contains("intger"), exception.getMessage());
 	}
@@ -35,17 +36,20 @@ class ToolParameterTest {
 		assertThrows(IllegalArgumentException.class, () -> new ToolParameter(null, null, false, null, "[a-z", null));
 		// A default value the parameter itself would refuse
 		assertThrows(IllegalArgumentException.class, () -> new ToolParameter("integer", null, false, "ten"));
-		assertThrows(IllegalArgumentException.class, () ->
-			new ToolParameter(null, null, false, "STOP", null, List.of("TERM", "KILL"))
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new ToolParameter(null, null, false, "STOP", null, List.of("TERM", "KILL"))
 		);
 		// An empty enum accepts anything
 		assertNull(new ToolParameter(null, null, false, null, null, List.of()).enumValues());
 		// Enum entries of another type than the parameter's, or refused by its pattern
-		assertThrows(IllegalArgumentException.class, () ->
-			new ToolParameter("integer", null, false, null, null, List.of("1", "two"))
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new ToolParameter("integer", null, false, null, null, List.of("1", "two"))
 		);
-		assertThrows(IllegalArgumentException.class, () ->
-			new ToolParameter(null, null, false, null, "[a-z]+", List.of("prod", "123"))
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new ToolParameter(null, null, false, null, "[a-z]+", List.of("prod", "123"))
 		);
 	}
 
@@ -131,8 +135,9 @@ class ToolParameterTest {
 	void testValidatePatternMatchesTheWholeValue() {
 		final ToolParameter service = new ToolParameter(null, null, true, null, "[\\w@.-]+", null);
 		assertDoesNotThrow(() -> service.validate("service", "sshd.service"));
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			service.validate("service", "sshd; reboot")
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> service.validate("service", "sshd; reboot")
 		);
 		assertEquals("The argument service must match the pattern [\\w@.-]+", exception.getMessage());
 	}
@@ -143,8 +148,9 @@ class ToolParameterTest {
 		final ToolParameter path = new ToolParameter(null, null, true, null, "/|(/[a-z][a-z.-]*)+", null);
 		assertDoesNotThrow(() -> path.validate("path", "/var/log"));
 		final String value = "/a".repeat(50_000);
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			path.validate("path", value)
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> path.validate("path", value)
 		);
 		assertEquals(
 			"The argument path (100000 characters) is too long for the pattern /|(/[a-z][a-z.-]*)+",
@@ -181,8 +187,9 @@ class ToolParameterTest {
 		assertEquals(Map.of("lines", "100", "service", "sshd"), definition.resolveArguments(arguments));
 
 		arguments.put("lines", "1 && reboot");
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			definition.resolveArguments(arguments)
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> definition.resolveArguments(arguments)
 		);
 		assertEquals("The argument lines must be of type integer", exception.getMessage());
 	}

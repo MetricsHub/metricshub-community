@@ -14,10 +14,10 @@ class LogicalDiskMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_ERRORS_LIMIT = "hw.errors.limit";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_LOGICAL_DISK =
-		HW_ERRORS_LIMIT + "{limit_type=\"critical\", hw.type=\"logical_disk\"}";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_LOGICAL_DISK =
-		HW_ERRORS_LIMIT + "{limit_type=\"degraded\", hw.type=\"logical_disk\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_LOGICAL_DISK = HW_ERRORS_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"logical_disk\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_LOGICAL_DISK = HW_ERRORS_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"logical_disk\"}";
 
 	@Test
 	void testNormalize() {
@@ -61,15 +61,17 @@ class LogicalDiskMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_LOGICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithHwErrorsLimitMetric.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_LOGICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_LOGICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithHwErrorsLimitMetric.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_LOGICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 
@@ -113,15 +115,17 @@ class LogicalDiskMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_LOGICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithHwErrorsLimitMetric.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_LOGICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_LOGICAL_DISK, NumberMetric.class)
-					.getValue()
+				monitorWithHwErrorsLimitMetric.getMetric(
+					HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_LOGICAL_DISK,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 	}

@@ -22,26 +22,24 @@ class HttpToolTest {
 		mockResponse.appendBody("test-body");
 
 		try (MockedStatic<HttpClient> mock = mockStatic(HttpClient.class)) {
-			mock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://example.com",
-						"POST",
-						null,
-						null,
-						null,
-						null,
-						0,
-						null,
-						null,
-						null,
-						Map.of(),
-						"{}",
-						HttpTool.DEFAULT_HTTP_TIMEOUT,
-						null
-					)
+			mock.when(
+				() -> HttpClient.sendRequest(
+					"https://example.com",
+					"POST",
+					null,
+					null,
+					null,
+					null,
+					0,
+					null,
+					null,
+					null,
+					Map.of(),
+					"{}",
+					HttpTool.DEFAULT_HTTP_TIMEOUT,
+					null
 				)
-				.thenReturn(mockResponse);
+			).thenReturn(mockResponse);
 
 			final HttpResponse response = httpTool.execute(
 				Map.of("url", "https://example.com", "method", "POST", "body", "{}")
@@ -58,26 +56,24 @@ class HttpToolTest {
 		mockResponse.appendBody("test-body");
 
 		try (MockedStatic<HttpClient> mock = mockStatic(HttpClient.class)) {
-			mock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://example.com",
-						"GET",
-						null,
-						null,
-						null,
-						null,
-						0,
-						null,
-						null,
-						null,
-						Map.of(),
-						null,
-						HttpTool.DEFAULT_HTTP_TIMEOUT,
-						null
-					)
+			mock.when(
+				() -> HttpClient.sendRequest(
+					"https://example.com",
+					"GET",
+					null,
+					null,
+					null,
+					null,
+					0,
+					null,
+					null,
+					null,
+					Map.of(),
+					null,
+					HttpTool.DEFAULT_HTTP_TIMEOUT,
+					null
 				)
-				.thenReturn(mockResponse);
+			).thenReturn(mockResponse);
 
 			final HttpResponse response = httpTool.get(Map.of("url", "https://example.com"));
 
@@ -92,26 +88,24 @@ class HttpToolTest {
 		mockResponse.appendBody("test-body");
 
 		try (MockedStatic<HttpClient> mock = mockStatic(HttpClient.class)) {
-			mock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://example.com",
-						"POST",
-						null,
-						null,
-						null,
-						null,
-						0,
-						null,
-						null,
-						null,
-						Map.of(),
-						"{ \"key\": \"value\" }",
-						HttpTool.DEFAULT_HTTP_TIMEOUT,
-						null
-					)
+			mock.when(
+				() -> HttpClient.sendRequest(
+					"https://example.com",
+					"POST",
+					null,
+					null,
+					null,
+					null,
+					0,
+					null,
+					null,
+					null,
+					Map.of(),
+					"{ \"key\": \"value\" }",
+					HttpTool.DEFAULT_HTTP_TIMEOUT,
+					null
 				)
-				.thenReturn(mockResponse);
+			).thenReturn(mockResponse);
 
 			final HttpResponse response = httpTool.post(
 				Map.of("url", "https://example.com", "body", "{ \"key\": \"value\" }")
@@ -142,26 +136,24 @@ class HttpToolTest {
 		mockResponse.appendBody("ok");
 
 		try (MockedStatic<HttpClient> mock = mockStatic(HttpClient.class)) {
-			mock
-				.when(() ->
-					HttpClient.sendRequest(
-						"https://example.com/api",
-						"GET",
-						null,
-						"admin",
-						"secret".toCharArray(),
-						null,
-						0,
-						null,
-						null,
-						null,
-						Map.of("Accept", "application/json", "X-Custom", "value"),
-						null,
-						30,
-						null
-					)
+			mock.when(
+				() -> HttpClient.sendRequest(
+					"https://example.com/api",
+					"GET",
+					null,
+					"admin",
+					"secret".toCharArray(),
+					null,
+					0,
+					null,
+					null,
+					null,
+					Map.of("Accept", "application/json", "X-Custom", "value"),
+					null,
+					30,
+					null
 				)
-				.thenReturn(mockResponse);
+			).thenReturn(mockResponse);
 
 			final HttpResponse response = httpTool.execute(
 				Map.of(

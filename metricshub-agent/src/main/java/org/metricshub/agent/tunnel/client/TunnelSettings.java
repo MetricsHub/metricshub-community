@@ -138,8 +138,9 @@ public record TunnelSettings(
 		}
 		final String written = host.toLowerCase(Locale.ROOT).strip();
 		// A URI keeps the brackets around an IPv6 literal on some paths and not others.
-		final String bare =
-			written.startsWith("[") && written.endsWith("]") ? written.substring(1, written.length() - 1) : written;
+		final String bare = written.startsWith("[") && written.endsWith("]")
+			? written.substring(1, written.length() - 1)
+			: written;
 		if ("localhost".equals(bare) || "::1".equals(bare) || "0:0:0:0:0:0:0:1".equals(bare)) {
 			return true;
 		}

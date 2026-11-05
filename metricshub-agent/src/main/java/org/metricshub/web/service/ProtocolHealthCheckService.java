@@ -125,13 +125,12 @@ public class ProtocolHealthCheckService {
 
 		final String targetHostname = activeConfiguration.getHostname();
 
-		return agentContextHolder
-			.getAgentContext()
+		return agentContextHolder.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
 			.map(extension -> checkWithInlineConfiguration(targetHostname, protocol, activeConfiguration, extension))
-			.orElseGet(() ->
-				ProtocolCheckResponse.builder()
+			.orElseGet(
+				() -> ProtocolCheckResponse.builder()
 					.hostname(targetHostname)
 					.errorMessage(protocol + " extension is not available")
 					.build()
@@ -212,10 +211,8 @@ public class ProtocolHealthCheckService {
 			return ProtocolCheckResponse.builder().hostname(hostname).errorMessage("Invalid protocol configuration").build();
 		}
 
-		final long resolvedTimeout = NumberHelper.getPositiveOrDefault(
-			timeoutOverride,
-			DEFAULT_PROTOCOL_CHECK_TIMEOUT
-		).longValue();
+		final long resolvedTimeout = NumberHelper.getPositiveOrDefault(timeoutOverride, DEFAULT_PROTOCOL_CHECK_TIMEOUT)
+			.longValue();
 		configuration.setTimeout(resolvedTimeout);
 
 		final var telemetryManager = TelemetryManager.builder()

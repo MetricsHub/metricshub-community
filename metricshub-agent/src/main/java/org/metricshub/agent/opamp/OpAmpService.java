@@ -97,8 +97,10 @@ public class OpAmpService {
 	 *                           automatic upgrades are not supported on this deployment
 	 */
 	public OpAmpService(final AgentContextHolder agentContextHolder, final OpampPackagesHandler packagesHandler) {
-		this(agentContextHolder, packagesHandler, settings ->
-			HttpPollingOpampClient.builder().withSettings(settings).withCallbacks(new LoggingCallbacks()).build()
+		this(
+			agentContextHolder,
+			packagesHandler,
+			settings -> HttpPollingOpampClient.builder().withSettings(settings).withCallbacks(new LoggingCallbacks()).build()
 		);
 	}
 

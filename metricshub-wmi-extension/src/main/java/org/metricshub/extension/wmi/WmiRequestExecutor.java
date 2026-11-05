@@ -96,8 +96,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			? namespace
 			: String.format("\\\\%s\\%s", hostname, namespace);
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing WMI request:\n- Hostname: {}\n- Network-resource: {}\n- Username: {}\n- Query: {}\n" + // NOSONAR
 					"- Namespace: {}\n- Timeout: {} s\n",
 				hostname,
@@ -124,8 +124,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			// Build the table
 			List<List<String>> resultTable = buildWmiTable(result, properties);
 
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executed WMI request:\n- Hostname: {}\n- Network-resource: {}\n- Username: {}\n- Query: {}\n" + // NOSONAR
 						"- Namespace: {}\n- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
@@ -172,8 +172,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("wmi.local_files") final List<String> localFiles
 	) throws ClientException {
 		try {
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executing WMI remote command:\n- Command: {}\n- Hostname: {}\n- Username: {}\n" + // NOSONAR
 						"- Timeout: {} s\n- Local-files: {}\n",
 					command,
@@ -201,8 +201,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executed WMI remote command:\n- Command: {}\n- Hostname: {}\n- Username: {}\n" + // NOSONAR
 						"- Timeout: {} s\n- Local-files: {}\n- Result:\n{}\n- response-time: {}\n",
 					command,

@@ -115,8 +115,7 @@ class VelocityConfigurationLoaderTest {
 
 		// Validate
 		assertNotNull(yaml, "Generated YAML should not be null");
-		assertEquals(
-			"""
+		assertEquals("""
 			resources:
 			  host-01-system:
 			    attributes:
@@ -145,10 +144,7 @@ class VelocityConfigurationLoaderTest {
 			        username: user
 			        password: pass
 			    connectors: ["#system"]
-			""",
-			yaml,
-			"Generated YAML should match expected output"
-		);
+			""", yaml, "Generated YAML should match expected output");
 	}
 
 	@Test
@@ -215,8 +211,7 @@ class VelocityConfigurationLoaderTest {
 	void testGenerateYamlGobblesDirectiveOnlyLinesByDefault(@TempDir final Path tempDir) throws IOException {
 		final String yaml = render(tempDir, DIRECTIVE_ONLY_LINES_TEMPLATE);
 
-		assertEquals(
-			"""
+		assertEquals("""
 			resources:
 			  host-01-system:
 			    attributes:
@@ -226,10 +221,7 @@ class VelocityConfigurationLoaderTest {
 			    attributes:
 			      host.name: host-02
 			      host.type: linux
-			""",
-			yaml,
-			"Directive-only lines should not produce blank lines, and indentation should be preserved"
-		);
+			""", yaml, "Directive-only lines should not produce blank lines, and indentation should be preserved");
 	}
 
 	@Test
@@ -250,8 +242,7 @@ class VelocityConfigurationLoaderTest {
 
 		final String yaml = render(tempDir, DIRECTIVE_ONLY_LINES_TEMPLATE);
 
-		assertEquals(
-			"""
+		assertEquals("""
 			resources:
 			host-01-system:
 			  attributes:
@@ -261,10 +252,7 @@ class VelocityConfigurationLoaderTest {
 			  attributes:
 			    host.name: host-02
 			  host.type: linux
-			""",
-			yaml,
-			"The 'structured' mode should also gobble the indentation preceding directive-only lines"
-		);
+			""", yaml, "The 'structured' mode should also gobble the indentation preceding directive-only lines");
 	}
 
 	/**
@@ -400,20 +388,18 @@ class VelocityConfigurationLoaderTest {
 
 		final List<Thread> renders = new ArrayList<>();
 		for (int thread = 0; thread < 4; thread++) {
-			renders.add(
-				new Thread(() -> {
-					for (int round = 0; round < 20; round++) {
-						try {
-							final String cron = loader.render().cron();
-							if (!"0/5 * * * * ?".equals(cron)) {
-								wrongCrons.add(String.valueOf(cron));
-							}
-						} catch (Exception e) {
-							wrongCrons.add("render failed: " + e.getMessage());
+			renders.add(new Thread(() -> {
+				for (int round = 0; round < 20; round++) {
+					try {
+						final String cron = loader.render().cron();
+						if (!"0/5 * * * * ?".equals(cron)) {
+							wrongCrons.add(String.valueOf(cron));
 						}
+					} catch (Exception e) {
+						wrongCrons.add("render failed: " + e.getMessage());
 					}
-				})
-			);
+				}
+			}));
 		}
 		renders.forEach(Thread::start);
 		for (final Thread render : renders) {

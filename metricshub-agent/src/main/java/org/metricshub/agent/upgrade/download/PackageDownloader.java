@@ -142,18 +142,16 @@ public class PackageDownloader {
 	) {
 		final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		offer.headers().forEach((key, value) -> putIfSendable(headers, key, value));
-		config
-			.getDownloadHeaders()
-			.forEach((authority, authorityHeaders) -> {
-				if (!matchesOfferedOrigin(authority, offeredUri)) {
-					return;
-				}
-				if (authorityHeaders == null) {
-					log.warn("Ignoring the download headers of '{}': the entry is empty.", authority);
-					return;
-				}
-				authorityHeaders.forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
-			});
+		config.getDownloadHeaders().forEach((authority, authorityHeaders) -> {
+			if (!matchesOfferedOrigin(authority, offeredUri)) {
+				return;
+			}
+			if (authorityHeaders == null) {
+				log.warn("Ignoring the download headers of '{}': the entry is empty.", authority);
+				return;
+			}
+			authorityHeaders.forEach((key, value) -> putIfSendable(headers, key, decrypt(value)));
+		});
 		return headers;
 	}
 
@@ -544,11 +542,10 @@ public class PackageDownloader {
 			try (var _ = response.body()) {
 				// Drop the redirect body
 			}
-			final String location = response
-				.headers()
+			final String location = response.headers()
 				.firstValue("Location")
-				.orElseThrow(() ->
-					new UpgradeException("The package repository answered a redirect without a Location header")
+				.orElseThrow(
+					() -> new UpgradeException("The package repository answered a redirect without a Location header")
 				);
 			currentUri = validateRedirectTarget(currentUri.resolve(location), config);
 			log.debug("Package download redirected to {}.", currentUri);

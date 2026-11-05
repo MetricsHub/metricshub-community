@@ -181,8 +181,7 @@ class SourceProcessorTest {
 
 		final WmiSource wmiSource = WmiSource.builder().query(WBEM_QUERY).namespace(AUTOMATIC).build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(wmiSource), anyString(), any(TelemetryManager.class));
 
 		final SourceTable actual = sourceProcessor.process(wmiSource);
@@ -229,8 +228,7 @@ class SourceProcessorTest {
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
 		final SourceTable expected = SourceTable.builder().table(Arrays.asList(Arrays.asList(ECS1_01))).build();
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpGetSource), anyString(), any(TelemetryManager.class));
 
 		final SourceTable actual = sourceProcessor.process(snmpGetSource);
@@ -283,8 +281,7 @@ class SourceProcessorTest {
 			.table(EXPECTED_SNMP_TABLE_DATA)
 			.headers(SNMP_SELECTED_COLUMNS_LIST)
 			.build();
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
 		final SourceTable actual = sourceProcessor.process(snmpTableSource);
 		assertEquals(expected, actual);
@@ -354,8 +351,7 @@ class SourceProcessorTest {
 			Arrays.asList(UPPERCASE_V1, UPPERCASE_V2, UPPERCASE_V3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
 			Arrays.asList(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1)
 		);
-		doReturn(clientReturn)
-			.when(clientsExecutorMock)
+		doReturn(clientReturn).when(clientsExecutorMock)
 			.executeTableJoin(
 				tabl1.getTable(),
 				tabl2.getTable(),
@@ -389,8 +385,7 @@ class SourceProcessorTest {
 			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)
 		);
 		expectedResult = SourceTable.builder().table(expectedJoin).build();
-		doReturn(expectedJoin)
-			.when(clientsExecutorMock)
+		doReturn(expectedJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
@@ -417,8 +412,7 @@ class SourceProcessorTest {
 		mapSources.put(TAB3_REF, tabl3);
 		expectedJoin = Arrays.asList(Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C));
 		expectedResult = SourceTable.builder().table(expectedJoin).build();
-		doReturn(expectedJoin)
-			.when(clientsExecutorMock)
+		doReturn(expectedJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl3.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
@@ -771,8 +765,7 @@ class SourceProcessorTest {
 			.build();
 
 		doReturn(true).when(sourceComputationExtensionMock).isValidSource(internalDbQuery);
-		doReturn(SourceTable.empty())
-			.when(sourceComputationExtensionMock)
+		doReturn(SourceTable.empty()).when(sourceComputationExtensionMock)
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
 		assertEquals(SourceTable.empty(), sourceProcessor.process(internalDbQuery));
@@ -797,8 +790,7 @@ class SourceProcessorTest {
 		sourceTableExpected.setTable(result);
 
 		doReturn(true).when(sourceComputationExtensionMock).isValidSource(internalDbQuery);
-		doReturn(sourceTableExpected)
-			.when(sourceComputationExtensionMock)
+		doReturn(sourceTableExpected).when(sourceComputationExtensionMock)
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
 		assertEquals(result, sourceProcessor.process(internalDbQuery).getTable());

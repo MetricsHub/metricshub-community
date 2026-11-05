@@ -136,10 +136,7 @@ public final class ProtocolToolCallbacks {
 		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper.resolveAllHostConfigurationCopies(
 			hostname,
 			agentContext
-		)
-			.stream()
-			.filter(extension::isToolConfiguration)
-			.findFirst();
+		).stream().filter(extension::isToolConfiguration).findFirst();
 		if (maybeConfiguration.isEmpty()) {
 			return QueryResponse.builder()
 				.error("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
@@ -166,8 +163,8 @@ public final class ProtocolToolCallbacks {
 
 		// Typed as declared: an extension reading an integer or a boolean gets one, not its text
 		final ObjectNode argumentsNode = JsonNodeFactory.instance.objectNode();
-		toolArguments.forEach((name, value) ->
-			argumentsNode.set(name, typedValue(definition.parameters().get(name), value))
+		toolArguments.forEach(
+			(name, value) -> argumentsNode.set(name, typedValue(definition.parameters().get(name), value))
 		);
 		return runSafe(extension, toolName, configuration, argumentsNode);
 	}

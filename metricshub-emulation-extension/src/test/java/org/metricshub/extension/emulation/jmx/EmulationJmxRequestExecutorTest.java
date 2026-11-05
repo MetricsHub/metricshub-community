@@ -34,9 +34,7 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFetchMBeanMatchingEntry() throws Exception {
-		writeImageYaml(
-			tempDir,
-			"""
+		writeImageYaml(tempDir, """
 			image:
 			- request:
 			    objectName: "java.lang:type=Memory"
@@ -44,8 +42,7 @@ class EmulationJmxRequestExecutorTest {
 			      - HeapMemoryUsage
 			    keyProperties: []
 			  response: resp1.txt
-			"""
-		);
+			""");
 		writeResponseFile(tempDir, "resp1.txt", "val1;val2;");
 
 		final JmxEmulationConfig config = new JmxEmulationConfig(
@@ -69,9 +66,7 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFetchMBeanWithKeyProperties() throws Exception {
-		writeImageYaml(
-			tempDir,
-			"""
+		writeImageYaml(tempDir, """
 			image:
 			- request:
 			    objectName: "com.example:type=Ex,scope=*"
@@ -80,8 +75,7 @@ class EmulationJmxRequestExecutorTest {
 			    keyProperties:
 			      - scope
 			  response: resp2.txt
-			"""
-		);
+			""");
 		writeResponseFile(tempDir, "resp2.txt", "scope1;100;");
 
 		final JmxEmulationConfig config = new JmxEmulationConfig(
@@ -104,9 +98,7 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFetchMBeanNoMatch() throws Exception {
-		writeImageYaml(
-			tempDir,
-			"""
+		writeImageYaml(tempDir, """
 			image:
 			- request:
 			    objectName: "other:type=Other"
@@ -114,8 +106,7 @@ class EmulationJmxRequestExecutorTest {
 			      - Attr1
 			    keyProperties: []
 			  response: resp.txt
-			"""
-		);
+			""");
 		writeResponseFile(tempDir, "resp.txt", "val;");
 
 		final JmxEmulationConfig config = new JmxEmulationConfig(
@@ -137,9 +128,7 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFetchMBeanRoundRobin() throws Exception {
-		writeImageYaml(
-			tempDir,
-			"""
+		writeImageYaml(tempDir, """
 			image:
 			- request:
 			    objectName: "obj:type=T"
@@ -153,8 +142,7 @@ class EmulationJmxRequestExecutorTest {
 			      - A
 			    keyProperties: []
 			  response: r2.txt
-			"""
-		);
+			""");
 		writeResponseFile(tempDir, "r1.txt", "first;");
 		writeResponseFile(tempDir, "r2.txt", "second;");
 
@@ -228,9 +216,7 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFetchMBeanMissingResponseFile() throws Exception {
-		writeImageYaml(
-			tempDir,
-			"""
+		writeImageYaml(tempDir, """
 			image:
 			- request:
 			    objectName: "obj:type=T"
@@ -238,8 +224,7 @@ class EmulationJmxRequestExecutorTest {
 			      - A
 			    keyProperties: []
 			  response: missing.txt
-			"""
-		);
+			""");
 
 		final JmxEmulationConfig config = new JmxEmulationConfig(
 			JmxConfiguration.builder().hostname("host").build(),
@@ -259,9 +244,7 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFetchMBeanBlankResponseFileName() throws Exception {
-		writeImageYaml(
-			tempDir,
-			"""
+		writeImageYaml(tempDir, """
 			image:
 			- request:
 			    objectName: "obj:type=T"
@@ -269,8 +252,7 @@ class EmulationJmxRequestExecutorTest {
 			      - A
 			    keyProperties: []
 			  response: ""
-			"""
-		);
+			""");
 
 		final JmxEmulationConfig config = new JmxEmulationConfig(
 			JmxConfiguration.builder().hostname("host").build(),

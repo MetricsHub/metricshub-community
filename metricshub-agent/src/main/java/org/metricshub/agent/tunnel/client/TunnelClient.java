@@ -397,22 +397,19 @@ public class TunnelClient {
 			return;
 		}
 		log.debug("Central tunnel connecting (generation {}).", connectGeneration);
-		final WebSocket.Builder builder = httpClient
-			.newWebSocketBuilder()
+		final WebSocket.Builder builder = httpClient.newWebSocketBuilder()
 			.connectTimeout(settings.connectTimeout())
 			.header(TunnelSettings.AGENT_UID_HEADER, settings.agentUid());
 		settings.headers().forEach(builder::header);
-		builder
-			.buildAsync(settings.endpoint(), new FrameListener(connectGeneration))
-			.whenComplete((socket, error) -> {
-				if (!dispatch(() -> onConnected(connectGeneration, socket, error)) && socket != null) {
-					// stop() ran while the handshake was in flight: the tunnel thread is gone and
-					// nothing would ever close this authenticated socket. Asking the executor is the
-					// only check without a window after it -- isShutdown() can still turn true
-					// between the answer and the submission.
-					socket.abort();
-				}
-			});
+		builder.buildAsync(settings.endpoint(), new FrameListener(connectGeneration)).whenComplete((socket, error) -> {
+			if (!dispatch(() -> onConnected(connectGeneration, socket, error)) && socket != null) {
+				// stop() ran while the handshake was in flight: the tunnel thread is gone and
+				// nothing would ever close this authenticated socket. Asking the executor is the
+				// only check without a window after it -- isShutdown() can still turn true
+				// between the answer and the submission.
+				socket.abort();
+			}
+		});
 	}
 
 	private void onConnected(final long connectGeneration, final WebSocket socket, final Throwable error) {
@@ -423,8 +420,9 @@ public class TunnelClient {
 			return;
 		}
 		if (error != null) {
-			final Throwable cause =
-				error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+			final Throwable cause = error instanceof CompletionException && error.getCause() != null
+				? error.getCause()
+				: error;
 			log.warn("Central tunnel connection to {} failed: {}", settings.endpoint(), Failures.describe(cause));
 			log.debug("Central tunnel connection failed:", cause);
 			scheduleReconnect(connectGeneration);
@@ -435,16 +433,12 @@ public class TunnelClient {
 		lastInboundNanos = System.nanoTime();
 		limits = null;
 		sendNow(listener.buildRegistration());
-		registrationDeadline = executor.schedule(
-			() -> {
-				if (connectGeneration == generation && limits == null) {
-					log.warn("Central tunnel: no registration acknowledgement within {}.", settings.connectTimeout());
-					dropConnection(connectGeneration, CLOSE_HEARTBEAT_TIMEOUT, "Registration timeout");
-				}
-			},
-			settings.connectTimeout().toMillis(),
-			TimeUnit.MILLISECONDS
-		);
+		registrationDeadline = executor.schedule(() -> {
+			if (connectGeneration == generation && limits == null) {
+				log.warn("Central tunnel: no registration acknowledgement within {}.", settings.connectTimeout());
+				dropConnection(connectGeneration, CLOSE_HEARTBEAT_TIMEOUT, "Registration timeout");
+			}
+		}, settings.connectTimeout().toMillis(), TimeUnit.MILLISECONDS);
 	}
 
 	/**
@@ -546,11 +540,8 @@ public class TunnelClient {
 			case AgentRegistered registered -> onRegistered(registered);
 			case HeartbeatPong pong -> log.trace("Central tunnel heartbeat acknowledged.");
 			case ToolInvoke invoke -> onInvoke(frameGeneration, invoke);
-			case ProtocolError protocolError -> log.warn(
-				"Central reported an error: {} - {}",
-				protocolError.code(),
-				protocolError.message()
-			);
+			case ProtocolError protocolError ->
+				log.warn("Central reported an error: {} - {}", protocolError.code(), protocolError.message());
 			case Unknown unknown -> {
 				log.debug("Central tunnel: ignoring an unknown message type '{}'.", unknown.type());
 				sendNow(new ProtocolError("UNKNOWN_MESSAGE_TYPE", "Unknown message type: " + unknown.type()));
@@ -638,15 +629,11 @@ public class TunnelClient {
 		// resetting here would put them in a tight loop stealing the session from each other.
 		cancel(stability);
 		final long registeredGeneration = generation;
-		stability = executor.schedule(
-			() -> {
-				if (registeredGeneration == generation && !stopped) {
-					retrySchedule.reset();
-				}
-			},
-			STABLE_CONNECTION.toMillis(),
-			TimeUnit.MILLISECONDS
-		);
+		stability = executor.schedule(() -> {
+			if (registeredGeneration == generation && !stopped) {
+				retrySchedule.reset();
+			}
+		}, STABLE_CONNECTION.toMillis(), TimeUnit.MILLISECONDS);
 		final Duration interval = heartbeatIntervalOf(registered);
 		cancel(heartbeat);
 		final long currentGeneration = generation;
@@ -770,17 +757,15 @@ public class TunnelClient {
 		}
 		final long sendGeneration = generation;
 		// The JDK WebSocket refuses concurrent sends: chain them on the tunnel thread
-		sendChain = sendChain
-			.thenCompose(socket -> socket.sendText(text, true))
-			.exceptionally(error -> {
-				executor.execute(() -> {
-					if (sendGeneration == generation) {
-						log.warn("Central tunnel send failed: {}", error.getMessage());
-						disconnected(sendGeneration, -1, error.getMessage());
-					}
-				});
-				return webSocket;
+		sendChain = sendChain.thenCompose(socket -> socket.sendText(text, true)).exceptionally(error -> {
+			executor.execute(() -> {
+				if (sendGeneration == generation) {
+					log.warn("Central tunnel send failed: {}", error.getMessage());
+					disconnected(sendGeneration, -1, error.getMessage());
+				}
 			});
+			return webSocket;
+		});
 	}
 
 	/**
@@ -881,8 +866,7 @@ public class TunnelClient {
 		final String reason,
 		final Duration abortDeadline
 	) {
-		return socket
-			.sendClose(code, closeReason(reason))
+		return socket.sendClose(code, closeReason(reason))
 			.orTimeout(abortDeadline.toMillis(), TimeUnit.MILLISECONDS)
 			.whenComplete((ws, error) -> socket.abort());
 	}
@@ -965,10 +949,9 @@ public class TunnelClient {
 				// Both bounds, because a peer chooses both how big a message is and how many pieces
 				// it arrives in: an empty non-final fragment is legal and adds nothing to the size,
 				// so the size bound alone would never trip on a stream of them.
-				final String why =
-					partialBytes > cap
-						? "Message above " + cap + " bytes"
-						: "Message split into more than " + MAX_INBOUND_FRAGMENTS + " fragments";
+				final String why = partialBytes > cap
+					? "Message above " + cap + " bytes"
+					: "Message split into more than " + MAX_INBOUND_FRAGMENTS + " fragments";
 				reset();
 				dispatch(() -> dropConnection(frameGeneration, CLOSE_MESSAGE_TOO_BIG, why));
 				return null;

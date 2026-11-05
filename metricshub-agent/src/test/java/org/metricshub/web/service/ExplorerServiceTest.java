@@ -85,17 +85,15 @@ class ExplorerServiceTest {
 
 		tm.addNewMonitor(connectorMonitor, "connector", connectorId);
 
-		typeToMonitors.forEach((type, list) ->
-			IntStream.range(0, list.size())
+		typeToMonitors.forEach(
+			(type, list) -> IntStream.range(0, list.size())
 				.boxed()
 				.forEach(i -> tm.addNewMonitor(list.get(i), type, type + "-" + (i + 1)))
 		);
 
 		// Initialize ConnectorStore to avoid NPE in ExplorerService
-		final org.metricshub.engine.connector.model.ConnectorStore connectorStore =
-			new org.metricshub.engine.connector.model.ConnectorStore();
-		final org.metricshub.engine.connector.model.Connector connector =
-			new org.metricshub.engine.connector.model.Connector();
+		final org.metricshub.engine.connector.model.ConnectorStore connectorStore = new org.metricshub.engine.connector.model.ConnectorStore();
+		final org.metricshub.engine.connector.model.Connector connector = new org.metricshub.engine.connector.model.Connector();
 		connectorStore.addOne(connectorId, connector);
 		tm.setConnectorStore(connectorStore);
 
@@ -289,12 +287,9 @@ class ExplorerServiceTest {
 		tm.addNewMonitor(hostIgnored, "host", "h1");
 
 		// Initialize ConnectorStore to avoid NPE in ExplorerService
-		final org.metricshub.engine.connector.model.ConnectorStore connectorStore =
-			new org.metricshub.engine.connector.model.ConnectorStore();
-		final org.metricshub.engine.connector.model.Connector connectorA =
-			new org.metricshub.engine.connector.model.Connector();
-		final org.metricshub.engine.connector.model.Connector connectorB =
-			new org.metricshub.engine.connector.model.Connector();
+		final org.metricshub.engine.connector.model.ConnectorStore connectorStore = new org.metricshub.engine.connector.model.ConnectorStore();
+		final org.metricshub.engine.connector.model.Connector connectorA = new org.metricshub.engine.connector.model.Connector();
+		final org.metricshub.engine.connector.model.Connector connectorB = new org.metricshub.engine.connector.model.Connector();
 		connectorStore.addOne(connA, connectorA);
 		connectorStore.addOne(connB, connectorB);
 		tm.setConnectorStore(connectorStore);

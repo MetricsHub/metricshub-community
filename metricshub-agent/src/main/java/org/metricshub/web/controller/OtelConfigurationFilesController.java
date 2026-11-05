@@ -100,8 +100,7 @@ public class OtelConfigurationFilesController {
 		description = "Returns the content of a specific OTel configuration file as plain text.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File content retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getConfigurationFileContent(
@@ -126,8 +125,7 @@ public class OtelConfigurationFilesController {
 		description = "Creates or updates an OTel configuration file. Optionally validates content before saving.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File saved successfully"),
-			@ApiResponse(responseCode = "400", description = "Validation failed")
-		}
+			@ApiResponse(responseCode = "400", description = "Validation failed") }
 	)
 	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateConfigurationFile(
@@ -164,8 +162,7 @@ public class OtelConfigurationFilesController {
 		description = "Creates or updates a draft OTel configuration file. Optionally validates content before saving.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Draft file saved successfully"),
-			@ApiResponse(responseCode = "400", description = "Validation failed")
-		}
+			@ApiResponse(responseCode = "400", description = "Validation failed") }
 	)
 	@PutMapping(
 		value = "/draft/{fileName}",
@@ -209,8 +206,7 @@ public class OtelConfigurationFilesController {
 		description = "Validates an OTel configuration file's content. If no content is provided, validates the file on disk.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Validation result returned"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@PostMapping(
 		value = "/{fileName}",
@@ -241,8 +237,7 @@ public class OtelConfigurationFilesController {
 		description = "Deletes an OTel configuration file by name.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "File deleted successfully"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@DeleteMapping("/{fileName}")
 	public ResponseEntity<Void> deleteConfigurationFile(
@@ -266,8 +261,7 @@ public class OtelConfigurationFilesController {
 		description = "Renames an OTel configuration file.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File renamed successfully"),
-			@ApiResponse(responseCode = "404", description = "File not found")
-		}
+			@ApiResponse(responseCode = "404", description = "File not found") }
 	)
 	@PatchMapping(
 		value = "/{fileName}",
@@ -329,8 +323,7 @@ public class OtelConfigurationFilesController {
 		description = "Returns the content of an OTel backup file as plain text.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Backup file content retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "Backup file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Backup file not found") }
 	)
 	@GetMapping(value = "/backup/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getBackupFileContent(
@@ -348,8 +341,7 @@ public class OtelConfigurationFilesController {
 		description = "Deletes an OTel backup file by name.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Backup file deleted successfully"),
-			@ApiResponse(responseCode = "404", description = "Backup file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Backup file not found") }
 	)
 	@DeleteMapping("/backup/{fileName}")
 	public ResponseEntity<Void> deleteBackupFile(

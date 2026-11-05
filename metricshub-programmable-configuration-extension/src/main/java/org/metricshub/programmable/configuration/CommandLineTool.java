@@ -98,8 +98,8 @@ public class CommandLineTool {
 	 * @throws InterruptedException if the current thread is interrupted while waiting for completion
 	 * @throws TimeoutException     if the command does not complete within the timeout
 	 */
-	public CommandLineResult execute(final Map<String, String> arguments)
-		throws IOException, InterruptedException, TimeoutException {
+	public CommandLineResult execute(final Map<String, String> arguments) throws IOException, InterruptedException,
+		TimeoutException {
 		final String command = arguments.get("command");
 		if (command == null || command.isBlank()) {
 			throw new IllegalArgumentException("The 'command' argument is required.");

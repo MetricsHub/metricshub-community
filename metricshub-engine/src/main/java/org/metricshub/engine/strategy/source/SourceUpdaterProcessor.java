@@ -240,8 +240,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return runExecuteForEachEntryOf(copy);
 		}
 
-		copy.update(value ->
-			replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
+		copy.update(
+			value -> replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
 		);
 		copy.update(value -> replaceAttributeReferences(value, attributes));
 
@@ -343,10 +343,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return boolean value
 	 */
 	private boolean isEntryConcatMethodJsonArrayOrExtended(final Source copy) {
-		return (
-			EntryConcatMethod.JSON_ARRAY_EXTENDED.equals(copy.getEntryConcatMethod()) ||
-			EntryConcatMethod.JSON_ARRAY.equals(copy.getEntryConcatMethod())
-		);
+		return (EntryConcatMethod.JSON_ARRAY_EXTENDED.equals(copy.getEntryConcatMethod()) ||
+			EntryConcatMethod.JSON_ARRAY.equals(copy.getEntryConcatMethod()));
 	}
 
 	/**
@@ -417,8 +415,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final String template,
 		final int end
 	) {
-		final String joined =
-			(before.isEmpty() ? "" : before.substring(before.length() - 1)) +
+		final String joined = (before.isEmpty() ? "" : before.substring(before.length() - 1)) +
 			value +
 			(end < template.length() ? template.substring(end, end + 1) : "");
 		return joined.contains("%{") || joined.contains("${");
@@ -479,12 +476,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return boolean value
 	 */
 	private boolean isSourceWithProtectedReferences(final Source source) {
-		return (
-			source instanceof CopySource ||
+		return (source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
-			source instanceof TableJoinSource
-		);
+			source instanceof TableJoinSource);
 	}
 
 	/**
@@ -543,8 +538,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final String sourceRefKey
 	) {
 		// Get the source table from the connector namespace
-		final SourceTable sourceTable = telemetryManager
-			.getHostProperties()
+		final SourceTable sourceTable = telemetryManager.getHostProperties()
 			.getConnectorNamespace(connectorId)
 			.getSourceTables()
 			.get(sourceRefKey);
@@ -594,15 +588,13 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (sourceReferenceContent != null) {
 			// Remove last semicolon from the rows containing only one cell.
 			// For instance the last semicolon leads to HTTP Errors when the reference is defined in the Header attribute
-			return Stream.of(sourceReferenceContent.split(NEW_LINE))
-				.map(val -> {
-					final int indexOfSemicolon = val.indexOf(SEMICOLON);
-					if (indexOfSemicolon == val.length() - 1) {
-						return val.replace(SEMICOLON, EMPTY);
-					}
-					return val;
-				})
-				.collect(Collectors.joining(NEW_LINE));
+			return Stream.of(sourceReferenceContent.split(NEW_LINE)).map(val -> {
+				final int indexOfSemicolon = val.indexOf(SEMICOLON);
+				if (indexOfSemicolon == val.length() - 1) {
+					return val.replace(SEMICOLON, EMPTY);
+				}
+				return val;
+			}).collect(Collectors.joining(NEW_LINE));
 		}
 
 		log.error(
@@ -665,8 +657,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					continue;
 				}
 
-				copy.update(value ->
-					replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
+				copy.update(
+					value -> replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
 				);
 				copy.update(dataValue -> replaceAttributeReferences(dataValue, attributes));
 
@@ -734,9 +726,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final Integer maxParallel = source.getMaxParallelExecuteForEachEntryOf();
 		if (
 			maxParallel == null ||
-			(sleep != null && sleep != 0) ||
-			source.isForceSerialization() ||
-			telemetryManager.getHostConfiguration().isSequential()
+				(sleep != null && sleep != 0) ||
+				source.isForceSerialization() ||
+				telemetryManager.getHostConfiguration().isSequential()
 		) {
 			return 1;
 		}
@@ -789,8 +781,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (iEntryConcatMethod instanceof CustomConcatMethod customConcatMethod) {
 			appendCustomEntryResult(customConcatMethod, currentResult, row, rawData);
 		} else {
-			final EntryConcatMethod entryConcatMethod =
-				iEntryConcatMethod != null ? (EntryConcatMethod) iEntryConcatMethod : EntryConcatMethod.LIST;
+			final EntryConcatMethod entryConcatMethod = iEntryConcatMethod != null
+				? (EntryConcatMethod) iEntryConcatMethod
+				: EntryConcatMethod.LIST;
 
 			switch (entryConcatMethod) {
 				case JSON_ARRAY:
@@ -807,14 +800,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					final List<List<String>> table = sourceTableToConcat.getTable();
 
 					if (table != null && !table.isEmpty()) {
-						currentResult
-							.getTable()
-							.addAll(
-								table
-									.stream()
-									.filter(line -> !line.isEmpty())
-									.collect(Collectors.toCollection(ArrayList::new))
-							);
+						currentResult.getTable()
+							.addAll(table.stream().filter(line -> !line.isEmpty()).collect(Collectors.toCollection(ArrayList::new)));
 					}
 					break;
 			}
@@ -838,12 +825,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (rawData == null) {
 			return;
 		}
-		String entryConcatStart =
-			customConcatMethod.getConcatStart() != null
-				? replaceDynamicEntry(customConcatMethod.getConcatStart(), row)
-				: EMPTY;
-		String entryConcatEnd =
-			customConcatMethod.getConcatEnd() != null ? replaceDynamicEntry(customConcatMethod.getConcatEnd(), row) : EMPTY;
+		String entryConcatStart = customConcatMethod.getConcatStart() != null
+			? replaceDynamicEntry(customConcatMethod.getConcatStart(), row)
+			: EMPTY;
+		String entryConcatEnd = customConcatMethod.getConcatEnd() != null
+			? replaceDynamicEntry(customConcatMethod.getConcatEnd(), row)
+			: EMPTY;
 
 		currentResult.setRawData(
 			currentResult.getRawData().concat(entryConcatStart).concat(rawData).concat(entryConcatEnd)

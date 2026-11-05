@@ -73,8 +73,7 @@ public class OpampHttpTransport implements OpampTransport {
 
 		settings.getHeaders().forEach(requestBuilder::header);
 
-		final HttpRequest httpRequest = requestBuilder
-			.POST(HttpRequest.BodyPublishers.ofByteArray(agentToServerBytes))
+		final HttpRequest httpRequest = requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(agentToServerBytes))
 			.build();
 
 		final HttpResponse<byte[]> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());

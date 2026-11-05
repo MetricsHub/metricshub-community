@@ -109,8 +109,7 @@ public class WinRmFileOperations implements WinFileOperations {
 		final String rootPrefix = rootPrefix(pattern);
 		final List<Pattern> globs = pattern.segments().stream().map(WinRmFileOperations::globToRegex).toList();
 		try {
-			return client
-				.file(pattern.root())
+			return client.file(pattern.root())
 				.list()
 				.maxDepth(globs.size())
 				.filesOnly()

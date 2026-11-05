@@ -42,8 +42,7 @@ public class OpenApiConfig {
 	@Bean
 	public OpenAPI metricshubOpenAPI() {
 		return new OpenAPI().info(
-			new Info()
-				.title("MetricsHub Agent API")
+			new Info().title("MetricsHub Agent API")
 				.description("REST API for the MetricsHub Agent — infrastructure metrics collection and management.")
 				.version(VersionHelper.getClassVersion())
 				.license(new License().name("AGPL-3.0").url("https://www.gnu.org/licenses/agpl-3.0.html"))

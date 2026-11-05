@@ -92,15 +92,13 @@ class UpDownCounterSuppressZerosStateMetricRecorderTest {
 		assertEquals(1.0, numberDataPoint.getAsDouble(), "Metric value should match for matching state");
 		final List<KeyValue> attributesList = numberDataPoint.getAttributesList();
 		assertEquals(2, attributesList.size(), "Expected two attributes");
-		final KeyValue resourceKeyVaue = attributesList
-			.stream()
+		final KeyValue resourceKeyVaue = attributesList.stream()
 			.filter(kv -> "resource".equals(kv.getKey()))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("resource attribute not found"));
 		assertEquals("resource", resourceKeyVaue.getKey(), "Attribute resource should match");
 		assertEquals("resourceValue", resourceKeyVaue.getValue().getStringValue(), "Attribute resourceValue should match");
-		final KeyValue keyValue = attributesList
-			.stream()
+		final KeyValue keyValue = attributesList.stream()
 			.filter(kv -> "state".equals(kv.getKey()))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("state attribute not found"));

@@ -66,8 +66,9 @@ class ProductToolCallbackTest {
 		final Unclassified tool = new Unclassified();
 		final ToolCallback[] callbacks = MethodToolCallbackProvider.builder().toolObjects(tool).build().getToolCallbacks();
 
-		final IllegalStateException refused = assertThrows(IllegalStateException.class, () ->
-			ProductToolCallback.classify(callbacks, List.of(tool))
+		final IllegalStateException refused = assertThrows(
+			IllegalStateException.class,
+			() -> ProductToolCallback.classify(callbacks, List.of(tool))
 		);
 		assertTrue(refused.getMessage().contains("forgotten"), refused.getMessage());
 	}

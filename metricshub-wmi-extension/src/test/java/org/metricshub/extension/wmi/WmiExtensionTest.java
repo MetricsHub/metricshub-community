@@ -75,8 +75,7 @@ class WmiExtensionTest {
 	private static final char[] PASSWORD = "pwd".toCharArray();
 	private static final String USERNAME = "user";
 	private static final String WQL = "SELECT Name from Win32_Process WHERE Name = 'MetricsHub'";
-	private static final String COMMAND_LINE =
-		"naviseccli -User %{USERNAME} -Password %{PASSWORD} -Address %{HOSTNAME} -Scope 1 getagent";
+	private static final String COMMAND_LINE = "naviseccli -User %{USERNAME} -Password %{PASSWORD} -Address %{HOSTNAME} -Scope 1 getagent";
 	public static final List<List<String>> EXECUTE_WMI_RESULT = Arrays.asList(
 		Arrays.asList("value1a", "value2a", "value3a"),
 		Arrays.asList("value1b", "value2b", "value3b")
@@ -143,8 +142,7 @@ class WmiExtensionTest {
 
 		{
 			// Mock a positive WMI protocol health check response
-			doReturn(WQL_SUCCESS_RESPONSE)
-				.when(wmiRequestExecutorMock)
+			doReturn(WQL_SUCCESS_RESPONSE).when(wmiRequestExecutorMock)
 				.executeWmi(
 					anyString(),
 					any(WmiConfiguration.class),
@@ -161,8 +159,7 @@ class WmiExtensionTest {
 
 		{
 			// Mock an acceptable WMI protocol health check exception
-			doThrow(new RuntimeException(new WmiComException("WBEM_E_INVALID_NAMESPACE")))
-				.when(wmiRequestExecutorMock)
+			doThrow(new RuntimeException(new WmiComException("WBEM_E_INVALID_NAMESPACE"))).when(wmiRequestExecutorMock)
 				.executeWmi(
 					anyString(),
 					any(WmiConfiguration.class),
@@ -186,8 +183,7 @@ class WmiExtensionTest {
 		initWmi();
 
 		// Mock a null WMI protocol health check response
-		doReturn(null)
-			.when(wmiRequestExecutorMock)
+		doReturn(null).when(wmiRequestExecutorMock)
 			.executeWmi(
 				anyString(),
 				any(WmiConfiguration.class),
@@ -205,40 +201,36 @@ class WmiExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(wmiExtension.isValidConfiguration(WmiConfiguration.builder().build()));
-		assertFalse(
-			wmiExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(wmiExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -294,8 +286,9 @@ class WmiExtensionTest {
 
 		{
 			final WbemCriterion wbemCriterion = WbemCriterion.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(IllegalArgumentException.class, () ->
-				wmiExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
+			assertThrows(
+				IllegalArgumentException.class,
+				() -> wmiExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
 			);
 		}
 		{
@@ -303,8 +296,7 @@ class WmiExtensionTest {
 			telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID).setAutomaticWmiNamespace(namespace);
 
 			final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL).namespace(namespace).build();
-			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub"))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub")).when(wmiDetectionServiceMock)
 				.performDetectionTest(any(), eq(wmiConfiguration), eq(wmiCriterion), anyString(), anyBoolean(), isNull());
 			assertTrue(wmiExtension.processCriterion(wmiCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
@@ -325,8 +317,7 @@ class WmiExtensionTest {
 
 			telemetryManager.setHostProperties(hostProperties);
 
-			doReturn(new OsCommandResult("result", COMMAND_LINE))
-				.when(winCommandServiceMock)
+			doReturn(new OsCommandResult("result", COMMAND_LINE)).when(winCommandServiceMock)
 				.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
 			assertTrue(wmiExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
@@ -337,8 +328,7 @@ class WmiExtensionTest {
 				final ServiceCriterion serviceCriterion = new ServiceCriterion();
 				serviceCriterion.setName("metricshub");
 
-				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running"))
-					.when(wmiDetectionServiceMock)
+				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running")).when(wmiDetectionServiceMock)
 					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean(), any());
 
 				assertTrue(wmiExtension.processCriterion(serviceCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
@@ -348,8 +338,7 @@ class WmiExtensionTest {
 			final ProcessCriterion processCriterion = new ProcessCriterion();
 			processCriterion.setCommandLine("MBM[5-9]\\.exe");
 
-			doReturn(CriterionTestResult.success(processCriterion, "success"))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.success(processCriterion, "success")).when(wmiDetectionServiceMock)
 				.performDetectionTest(
 					eq(MetricsHubConstants.LOCALHOST),
 					any(IWinConfiguration.class),
@@ -396,8 +385,9 @@ class WmiExtensionTest {
 			.build();
 		{
 			final WbemSource wbemSource = WbemSource.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(IllegalArgumentException.class, () ->
-				wmiExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
+			assertThrows(
+				IllegalArgumentException.class,
+				() -> wmiExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
 			);
 		}
 		{
@@ -412,8 +402,7 @@ class WmiExtensionTest {
 				Total Physical Memory:16384 MB
 				Available Physical Memory:8192 MB
 				""";
-			doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE))
-				.when(winCommandServiceMock)
+			doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
 				.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
 
 			final List<List<String>> expected = List.of(List.of("16384 MB"), List.of("8192 MB"));
@@ -428,8 +417,7 @@ class WmiExtensionTest {
 				Arrays.asList("1.2", "2|4587"),
 				Arrays.asList("1.3", "1|4587")
 			);
-			doReturn(expected)
-				.when(wmiRequestExecutorMock)
+			doReturn(expected).when(wmiRequestExecutorMock)
 				.executeWmi(HOST_NAME, wmiConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
 			final WmiSource wmiSource = WmiSource.builder().query(WQL).build();
 			assertEquals(
@@ -507,15 +495,13 @@ class WmiExtensionTest {
 	void testExecuteQuery() throws Exception {
 		initWmi();
 
-		doReturn(EXECUTE_WMI_RESULT)
-			.when(wmiRequestExecutorMock)
+		doReturn(EXECUTE_WMI_RESULT).when(wmiRequestExecutorMock)
 			.executeWmi(anyString(), any(WmiConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
 		// The text rendering is the interface's default method: run it, the mock only serves the rows
-		doCallRealMethod()
-			.when(wmiRequestExecutorMock)
+		doCallRealMethod().when(wmiRequestExecutorMock)
 			.executeWqlQuery(anyString(), any(WmiConfiguration.class), anyString(), anyString());
 		queryNode.set("queryType", new TextNode("wql"));
 		WmiConfiguration configuration = WmiConfiguration.builder()
@@ -541,14 +527,12 @@ class WmiExtensionTest {
 	void testExecuteQueryReturnsNull() throws Exception {
 		initWmi();
 
-		doThrow(ClientException.class)
-			.when(wmiRequestExecutorMock)
+		doThrow(ClientException.class).when(wmiRequestExecutorMock)
 			.executeWmi(anyString(), any(WmiConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
-		doCallRealMethod()
-			.when(wmiRequestExecutorMock)
+		doCallRealMethod().when(wmiRequestExecutorMock)
 			.executeWqlQuery(anyString(), any(WmiConfiguration.class), anyString(), anyString());
 		queryNode.set("queryType", new TextNode("wmi"));
 		WmiConfiguration configuration = WmiConfiguration.builder()
@@ -580,8 +564,7 @@ class WmiExtensionTest {
 		assertThrows(IllegalArgumentException.class, () -> wmiExtension.executeQuery(configuration, queryNode));
 
 		// "command", and its deprecated synonym "winremote", run a remote command
-		doReturn("output")
-			.when(wmiRequestExecutorMock)
+		doReturn("output").when(wmiRequestExecutorMock)
 			.executeWinRemoteCommand(eq(HOST_NAME), any(WmiConfiguration.class), eq("ipconfig"), isNull());
 		queryNode.set("query", new TextNode("ipconfig"));
 		queryNode.set("queryType", new TextNode("command"));

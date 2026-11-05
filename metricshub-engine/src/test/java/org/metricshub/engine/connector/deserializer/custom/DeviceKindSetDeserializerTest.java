@@ -172,9 +172,7 @@ class DeviceKindSetDeserializerTest {
 					"Oracle Solaris",
 					"Other"
 				)
-			)
-				.when(yamlParser)
-				.readValueAs(any(TypeReference.class));
+			).when(yamlParser).readValueAs(any(TypeReference.class));
 			assertEquals(DeviceKind.DEVICE_KINDS, DEVICE_KIND_DESERIALIZER.deserialize(yamlParser, null));
 		}
 

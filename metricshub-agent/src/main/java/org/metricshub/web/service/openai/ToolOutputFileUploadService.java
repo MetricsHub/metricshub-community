@@ -49,10 +49,9 @@ public class ToolOutputFileUploadService {
 	 */
 	public UploadedToolOutputManifest uploadToOpenAi(final Path filePath) {
 		try {
-			final var uploadedFile = openAIClient
-				.orElseThrow(() -> new IllegalStateException("OpenAI Client is not configured"))
-				.files()
-				.create(FileCreateParams.builder().file(filePath).purpose(FilePurpose.USER_DATA).build());
+			final var uploadedFile = openAIClient.orElseThrow(
+				() -> new IllegalStateException("OpenAI Client is not configured")
+			).files().create(FileCreateParams.builder().file(filePath).purpose(FilePurpose.USER_DATA).build());
 
 			return UploadedToolOutputManifest.builder()
 				.openaiFileId(uploadedFile.id())

@@ -117,8 +117,8 @@ class UpgradeManagerTest {
 
 	@Test
 	void successfulPipelineShouldReachRestarting() throws Exception {
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 		final CountDownLatch restarting = expectState(manager, UpgradeState.RESTARTING);
 
@@ -153,8 +153,8 @@ class UpgradeManagerTest {
 
 	@Test
 	void sameVersionOfferWithoutIdentityShouldReportInstalled() throws Exception {
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 		final CountDownLatch idle = expectState(manager, UpgradeState.IDLE);
 
@@ -181,8 +181,8 @@ class UpgradeManagerTest {
 		new UpgradeTransactionStore(tempDir).writeInstalledPackage(
 			new UpgradeTransactionStore.InstalledPackageRecord(CURRENT_VERSION, "0707")
 		);
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 		final CountDownLatch idle = expectState(manager, UpgradeState.IDLE);
 
@@ -212,8 +212,8 @@ class UpgradeManagerTest {
 
 	@Test
 	void concurrentOfferShouldBeIgnoredWhileAnUpgradeIsInFlight() throws Exception {
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 		final CountDownLatch restarting = expectState(manager, UpgradeState.RESTARTING);
 
@@ -232,8 +232,8 @@ class UpgradeManagerTest {
 	@Test
 	void disabledConfigurationShouldRejectOffers() throws Exception {
 		config = UpgradeConfig.builder().enabled(false).build();
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 		final CountDownLatch failed = expectState(manager, UpgradeState.FAILED);
 
@@ -246,8 +246,8 @@ class UpgradeManagerTest {
 
 	@Test
 	void sameVersionOfferWithUnknownIdentityShouldInstall() throws Exception {
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 
 		// The offer carries an identity hash but the installed identity is unknown (the normal
@@ -265,8 +265,8 @@ class UpgradeManagerTest {
 		new UpgradeTransactionStore(tempDir).writeInstalledPackage(
 			new UpgradeTransactionStore.InstalledPackageRecord(CURRENT_VERSION, "0909")
 		);
-		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
-			launches.incrementAndGet()
+		final UpgradeManager manager = newManager(
+			(transaction, stagedPackage, stagingDirectory) -> launches.incrementAndGet()
 		);
 
 		final CountDownLatch restarting = expectState(manager, UpgradeState.RESTARTING);

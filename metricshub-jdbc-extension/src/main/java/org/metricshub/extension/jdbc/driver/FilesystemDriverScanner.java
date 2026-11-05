@@ -166,14 +166,10 @@ public final class FilesystemDriverScanner implements IJdbcDriverJarLocator {
 			final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + remainder);
 			final int maxDepth = computeMaxDepth(remainder);
 			try (Stream<Path> walk = Files.walk(parent, maxDepth)) {
-				walk
-					.filter(Files::isRegularFile)
-					.filter(p -> {
-						final Path rel = parent.relativize(p);
-						return matcher.matches(Paths.get(rel.toString().replace('\\', '/')));
-					})
-					.map(p -> p.toAbsolutePath().normalize())
-					.forEach(matches::add);
+				walk.filter(Files::isRegularFile).filter(p -> {
+					final Path rel = parent.relativize(p);
+					return matcher.matches(Paths.get(rel.toString().replace('\\', '/')));
+				}).map(p -> p.toAbsolutePath().normalize()).forEach(matches::add);
 			} catch (IOException e) {
 				log.warn("Failed to walk {} while resolving glob {}: {}", parent, globPath, e.getMessage());
 				return Optional.empty();
@@ -183,11 +179,9 @@ public final class FilesystemDriverScanner implements IJdbcDriverJarLocator {
 			return Optional.empty();
 		}
 		if (matches.size() > 1) {
-			throw new DriverResolutionException(
-				"""
+			throw new DriverResolutionException("""
 				Driver path glob '%s' matched %d files for %s; expected exactly one. Matches: %s\
-				""".formatted(globPath, matches.size(), driverClass, matches)
-			);
+				""".formatted(globPath, matches.size(), driverClass, matches));
 		}
 		return toLocated(driverClass, matches.get(0), DriverOrigin.USER_EXPLICIT);
 	}

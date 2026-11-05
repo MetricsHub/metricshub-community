@@ -178,8 +178,7 @@ class HttpPollingOpampClientTest {
 		assertEquals(allPackagesHash, receivedOffer.get().getAllPackagesHash());
 
 		// A terminal status report triggers an immediate poll carrying the new statuses
-		receivedSink
-			.get()
+		receivedSink.get()
 			.report(
 				PackageStatus.newBuilder()
 					.setName("metricshub")
@@ -223,15 +222,12 @@ class HttpPollingOpampClientTest {
 		final ConnectException refused = new ConnectException();
 		refused.initCause(new ClosedChannelException());
 		final CountDownLatch failed = new CountDownLatch(1);
-		newClient(
-			new OpampClientCallbacks() {
-				@Override
-				public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
-					failed.countDown();
-				}
-			},
-			null
-		);
+		newClient(new OpampClientCallbacks() {
+			@Override
+			public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
+				failed.countDown();
+			}
+		}, null);
 		transport.enqueue(new RecordingTransport.ScriptedReply(null, refused));
 		// slf4j-simple writes to whatever System.err is when it logs
 		final PrintStream err = System.err;
@@ -583,8 +579,7 @@ class HttpPollingOpampClientTest {
 		assertTrue(firstDispatch.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
 
 		// The handler rejected the offer: the reported statuses must NOT echo the offer hash
-		sink
-			.get()
+		sink.get()
 			.report(
 				PackageStatus.newBuilder()
 					.setName("metricshub")
@@ -607,8 +602,7 @@ class HttpPollingOpampClientTest {
 		);
 		assertTrue(secondDispatch.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
 
-		sink
-			.get()
+		sink.get()
 			.report(
 				PackageStatus.newBuilder()
 					.setName("metricshub")
@@ -618,7 +612,7 @@ class HttpPollingOpampClientTest {
 		AgentToServer ackedReport = transport.awaitRequest(AWAIT);
 		while (
 			!ackedReport.hasPackageStatuses() ||
-			!offerHash.equals(ackedReport.getPackageStatuses().getServerProvidedAllPackagesHash())
+				!offerHash.equals(ackedReport.getPackageStatuses().getServerProvidedAllPackagesHash())
 		) {
 			ackedReport = transport.awaitRequest(AWAIT);
 		}
@@ -631,23 +625,19 @@ class HttpPollingOpampClientTest {
 		client.start();
 
 		assertThrows(IllegalStateException.class, () -> client.start());
-		assertThrows(IllegalStateException.class, () ->
-			client.setPackagesHandler(
-				new OpampPackagesHandler() {
-					@Override
-					public void onPackagesAvailable(
-						final PackagesAvailable packagesAvailable,
-						final PackageStatusSink statusSink,
-						final PackageDownloadContext downloadContext
-					) {}
+		assertThrows(IllegalStateException.class, () -> client.setPackagesHandler(new OpampPackagesHandler() {
+			@Override
+			public void onPackagesAvailable(
+				final PackagesAvailable packagesAvailable,
+				final PackageStatusSink statusSink,
+				final PackageDownloadContext downloadContext
+			) {}
 
-					@Override
-					public PackageStatuses currentPackageStatuses() {
-						return PackageStatuses.getDefaultInstance();
-					}
-				}
-			)
-		);
+			@Override
+			public PackageStatuses currentPackageStatuses() {
+				return PackageStatuses.getDefaultInstance();
+			}
+		}));
 
 		client.stop("Test");
 		assertThrows(IllegalStateException.class, () -> client.start());

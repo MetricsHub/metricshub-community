@@ -102,10 +102,7 @@ public class NetworkHelper {
 		return Stream.concat(
 			Stream.of(envResolver.apply("COMPUTERNAME"), envResolver.apply("HOSTNAME")),
 			getKernelHostname().stream()
-		)
-			.filter(Objects::nonNull)
-			.map(String::trim)
-			.anyMatch(candidate::equalsIgnoreCase);
+		).filter(Objects::nonNull).map(String::trim).anyMatch(candidate::equalsIgnoreCase);
 	}
 
 	/**
@@ -240,7 +237,7 @@ public class NetworkHelper {
 		final String uriHost;
 		if (
 			address instanceof java.net.Inet6Address &&
-			!IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches()
+				!IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches()
 		) {
 			uriHost = "[" + hostnameOrIp + "]";
 		} else {

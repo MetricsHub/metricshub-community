@@ -77,8 +77,7 @@ class SelfSchedulingTest {
 		final Resource resource = resourceMetrics.getResource();
 		assertNotNull(resource);
 		final List<KeyValue> resourceKeyValueAttributes = resource.getAttributesList();
-		final Map<String, String> resourceAttributes = resourceKeyValueAttributes
-			.stream()
+		final Map<String, String> resourceAttributes = resourceKeyValueAttributes.stream()
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
 
 		// Verify resource attributes

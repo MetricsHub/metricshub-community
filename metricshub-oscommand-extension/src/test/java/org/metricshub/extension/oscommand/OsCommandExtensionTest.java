@@ -68,40 +68,36 @@ class OsCommandExtensionTest {
 	void testIsValidConfiguration() {
 		assertTrue(osCommandExtension.isValidConfiguration(OsCommandConfiguration.builder().build()));
 		assertTrue(osCommandExtension.isValidConfiguration(SshConfiguration.builder().build()));
-		assertFalse(
-			osCommandExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(osCommandExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -208,15 +204,17 @@ class OsCommandExtensionTest {
 		{
 			final ObjectNode sshConfiguration = JsonNodeFactory.instance.objectNode();
 			sshConfiguration.set("timeout", new TextNode("NaN"));
-			assertThrows(InvalidConfigurationException.class, () ->
-				osCommandExtension.buildConfiguration("ssh", sshConfiguration, null)
+			assertThrows(
+				InvalidConfigurationException.class,
+				() -> osCommandExtension.buildConfiguration("ssh", sshConfiguration, null)
 			);
 		}
 		{
 			final ObjectNode osCommandconfiguration = JsonNodeFactory.instance.objectNode();
 			osCommandconfiguration.set("timeout", new TextNode("NaN"));
-			assertThrows(InvalidConfigurationException.class, () ->
-				osCommandExtension.buildConfiguration("oscommand", osCommandconfiguration, null)
+			assertThrows(
+				InvalidConfigurationException.class,
+				() -> osCommandExtension.buildConfiguration("oscommand", osCommandconfiguration, null)
 			);
 		}
 		{
@@ -229,8 +227,9 @@ class OsCommandExtensionTest {
 			sshConfiguration.set("useSudo", BooleanNode.TRUE);
 			sshConfiguration.set("sudoCommand", new TextNode("sudo"));
 			sshConfiguration.set("timeout", new TextNode("120"));
-			assertThrows(InvalidConfigurationException.class, () ->
-				osCommandExtension.buildConfiguration("snmp", sshConfiguration, null)
+			assertThrows(
+				InvalidConfigurationException.class,
+				() -> osCommandExtension.buildConfiguration("snmp", sshConfiguration, null)
 			);
 		}
 	}
@@ -332,8 +331,7 @@ class OsCommandExtensionTest {
 		telemetryManager.getHostProperties().setOsCommandExecutesLocally(false);
 		telemetryManager.getHostProperties().setOsCommandExecutesRemotely(true);
 
-		doReturn(SUCCESS_RESPONSE)
-			.when(osCommandService)
+		doReturn(SUCCESS_RESPONSE).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 
 		// Start the SSH Health Check strategy
@@ -342,8 +340,7 @@ class OsCommandExtensionTest {
 		// Assert the result
 		assertTrue(result.get());
 
-		doReturn((String) null)
-			.when(osCommandService)
+		doReturn((String) null).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 
 		// Start the SSH Health Check strategy
@@ -367,8 +364,7 @@ class OsCommandExtensionTest {
 		telemetryManager.getHostProperties().setOsCommandExecutesRemotely(true);
 
 		// Both local and remote commands working fine
-		doReturn(SUCCESS_RESPONSE)
-			.when(osCommandService)
+		doReturn(SUCCESS_RESPONSE).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -379,8 +375,7 @@ class OsCommandExtensionTest {
 		assertTrue(result.get());
 
 		// Local commands not working
-		doReturn(SUCCESS_RESPONSE)
-			.when(osCommandService)
+		doReturn(SUCCESS_RESPONSE).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -391,8 +386,7 @@ class OsCommandExtensionTest {
 		assertFalse(result.get());
 
 		// remote command not working
-		doReturn((String) null)
-			.when(osCommandService)
+		doReturn((String) null).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -403,8 +397,7 @@ class OsCommandExtensionTest {
 		assertFalse(result.get());
 
 		// Both local and remote commands not working, but not throwing exceptions
-		doReturn((String) null)
-			.when(osCommandService)
+		doReturn((String) null).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -425,8 +418,7 @@ class OsCommandExtensionTest {
 		telemetryManager.getHostProperties().setOsCommandExecutesLocally(true);
 		telemetryManager.getHostProperties().setOsCommandExecutesRemotely(true);
 
-		doReturn(SUCCESS_RESPONSE)
-			.when(osCommandService)
+		doReturn(SUCCESS_RESPONSE).when(osCommandService)
 			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
@@ -571,8 +563,9 @@ class OsCommandExtensionTest {
 			.hostProperties(hostProperties)
 			.build();
 
-		assertThrows(IllegalArgumentException.class, () ->
-			osCommandExtension.processSource((CommandLineSource) null, MY_CONNECTOR_1_NAME, telemetryManager)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> osCommandExtension.processSource((CommandLineSource) null, MY_CONNECTOR_1_NAME, telemetryManager)
 		);
 		assertEquals(
 			SourceTable.empty(),
@@ -599,8 +592,7 @@ class OsCommandExtensionTest {
 		commandSource.setSelectColumns(selectColumns);
 		commandSource.setExecuteLocally(true);
 
-		doThrow(NoCredentialProvidedException.class)
-			.when(osCommandService)
+		doThrow(NoCredentialProvidedException.class).when(osCommandService)
 			.runOsCommand(
 				eq(commandLine),
 				eq(telemetryManager),
@@ -615,8 +607,7 @@ class OsCommandExtensionTest {
 			osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
 		);
 
-		doThrow(IOException.class)
-			.when(osCommandService)
+		doThrow(IOException.class).when(osCommandService)
 			.runOsCommand(
 				eq(commandLine),
 				eq(telemetryManager),
@@ -634,8 +625,7 @@ class OsCommandExtensionTest {
 		final String result = "xxxxxx\n" + "xxxxxx\n" + "0:1:ext_bus:3:4:5:6:7:8\n" + "xxxxxx\n" + "xxxxxx\n";
 		final OsCommandResult commandResult = new OsCommandResult(result, commandLine);
 
-		doReturn(commandResult)
-			.when(osCommandService)
+		doReturn(commandResult).when(osCommandService)
 			.runOsCommand(
 				eq(commandLine),
 				eq(telemetryManager),
@@ -690,8 +680,9 @@ class OsCommandExtensionTest {
 		final HostConfiguration hostConfiguration = HostConfiguration.builder().hostname(HOSTNAME).build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		assertThrows(IllegalArgumentException.class, () ->
-			osCommandExtension.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> osCommandExtension.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true)
 		);
 	}
 
@@ -993,8 +984,7 @@ class OsCommandExtensionTest {
 		queryNode.set("commandLine", new TextNode(TEST_COMMAND_LINE));
 		queryNode.set("hostType", new TextNode(DeviceKind.LINUX.toString()));
 
-		doReturn(SUCCESS_RESPONSE)
-			.when(osCommandService)
+		doReturn(SUCCESS_RESPONSE).when(osCommandService)
 			.runSshCommand(
 				anyString(), // commandLine
 				anyString(), // hostname
@@ -1023,8 +1013,7 @@ class OsCommandExtensionTest {
 		queryNode.set("commandLine", new TextNode(TEST_COMMAND_LINE));
 		queryNode.set("hostType", new TextNode(DeviceKind.LINUX.toString()));
 
-		doThrow(ClientException.class)
-			.when(osCommandService)
+		doThrow(ClientException.class).when(osCommandService)
 			.runSshCommand(
 				anyString(), // commandLine
 				anyString(), // hostname

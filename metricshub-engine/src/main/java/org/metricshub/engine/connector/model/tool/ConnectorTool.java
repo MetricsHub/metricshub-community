@@ -133,10 +133,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 			}
 			if (!parameter.required() && parameter.defaultValue() == null) {
 				throw new IllegalArgumentException(
-					"Tool %s references %s, optional without a default: declare a default (even '') or make it required".formatted(
-						name,
-						reference
-					)
+					"Tool %s references %s, optional without a default: declare a default (even '') or make it required"
+						.formatted(name, reference)
 				);
 			}
 			final String escape = matcher.group("esc");

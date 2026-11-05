@@ -115,40 +115,36 @@ class EmulationExtensionTest {
 
 	@Test
 	void testIsValidConfigurationWithAnonymousConfig() {
-		assertFalse(
-			emulationExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(emulationExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	// ---- getSupportedSources ----
@@ -279,15 +275,11 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithCommandLineSource(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - command: "echo test"
 			    result: "r1.txt"
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
@@ -304,15 +296,11 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithSqlSource(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: r1.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
 			SourceTable.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
@@ -352,15 +340,11 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithIpmiSource(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSensors
 			    response: sensors.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("sensors.txt"), "FRU data here", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
@@ -395,18 +379,14 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithIpmiRawAndSelSources(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: Raw
 			    query: 06 01
 			    response: raw.txt
 			  - request: GetSel
 			    response: sel.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("raw.txt"), "00;20 01", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("sel.txt"), "5;1593835520;PowerSupply;\n6;;;\n", StandardCharsets.UTF_8);
 
@@ -540,15 +520,11 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessCriterionCommandLineCriterion(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - command: "echo test"
 			    result: "r1.txt"
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "status=OK", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
@@ -568,15 +544,11 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessCriterionSqlCriterion(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: r1.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
 			SourceTable.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
@@ -602,15 +574,11 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessCriterionIpmiCriterion(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: IpmiDetection
 			    response: detection.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("detection.txt"), "System power state is up.", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
@@ -633,17 +601,13 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithWmiSource(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      wql: SELECT Name FROM Win32_ComputerSystem
 			      namespace: root\\cimv2
 			    response: r1.csv
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
 			SourceTable.tableToCsv(List.of(List.of("MyHost")), ";", true),
@@ -731,8 +695,9 @@ class EmulationExtensionTest {
 	@Test
 	void testExecuteQueryThrowsUnsupported() {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
-		assertThrows(UnsupportedOperationException.class, () ->
-			emulationExtension.executeQuery(EmulationConfiguration.builder().build(), queryNode)
+		assertThrows(
+			UnsupportedOperationException.class,
+			() -> emulationExtension.executeQuery(EmulationConfiguration.builder().build(), queryNode)
 		);
 	}
 

@@ -43,9 +43,8 @@ class JmxSourceProcessorTest {
 		source.setAttributes(List.of("HeapMemoryUsage"));
 		source.setKeyProperties(List.of());
 
-		when(
-			jmxExecutor.fetchMBean(jmxConfig, "java.lang:type=Memory", List.of("HeapMemoryUsage"), List.of(), null, null)
-		).thenReturn(mockResponse);
+		when(jmxExecutor.fetchMBean(jmxConfig, "java.lang:type=Memory", List.of("HeapMemoryUsage"), List.of(), null, null))
+			.thenReturn(mockResponse);
 
 		final SourceTable resultTable = processor.process(source, telemetryManager);
 

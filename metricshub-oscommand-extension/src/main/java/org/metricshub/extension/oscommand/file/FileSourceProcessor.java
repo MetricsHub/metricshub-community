@@ -106,8 +106,7 @@ public class FileSourceProcessor {
 			}
 
 			if (!isLocalhost) {
-				final Object sshConfig = telemetryManager
-					.getHostConfiguration()
+				final Object sshConfig = telemetryManager.getHostConfiguration()
 					.getConfigurations()
 					.get(SshConfiguration.class);
 				if (sshConfig != null) {
@@ -131,8 +130,7 @@ public class FileSourceProcessor {
 				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
-				Map<String, Long> sourceCursors = telemetryManager
-					.getHostProperties()
+				Map<String, Long> sourceCursors = telemetryManager.getHostProperties()
 					.getConnectorNamespace(connectorId)
 					.getFileSourceCursors(fileSource.getKey());
 
@@ -320,8 +318,7 @@ public class FileSourceProcessor {
 		final String hostname,
 		final TelemetryManager telemetryManager
 	) {
-		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager
-			.getHostConfiguration()
+		final SshConfiguration sshConfiguration = (SshConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(SshConfiguration.class);
 
@@ -461,10 +458,9 @@ public class FileSourceProcessor {
 			final long additionalContentSize = fileSize - cursor;
 
 			// Determine the actual size to read, respecting the remaining size limit
-			final long sizeLimit =
-				remainingSize == UNLIMITED_SIZE_PER_POLL
-					? additionalContentSize
-					: Math.min(additionalContentSize, remainingSize);
+			final long sizeLimit = remainingSize == UNLIMITED_SIZE_PER_POLL
+				? additionalContentSize
+				: Math.min(additionalContentSize, remainingSize);
 
 			// Cap read length to int range for readFromOffset; advance cursor by what we actually read
 			final int readLength = sizeLimit > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) sizeLimit;

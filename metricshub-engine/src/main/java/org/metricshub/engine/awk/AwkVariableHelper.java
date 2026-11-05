@@ -80,8 +80,11 @@ public class AwkVariableHelper {
 
 		final Map<String, Object> resolved = new LinkedHashMap<>();
 
-		variables.forEach((name, value) ->
-			resolved.put(name, resolveValue(name, value, telemetryManager, connectorId, attributes, operationKey))
+		variables.forEach(
+			(name, value) -> resolved.put(
+				name,
+				resolveValue(name, value, telemetryManager, connectorId, attributes, operationKey)
+			)
 		);
 
 		return Collections.unmodifiableMap(resolved);

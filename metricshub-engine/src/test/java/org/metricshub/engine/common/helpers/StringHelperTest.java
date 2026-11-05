@@ -65,16 +65,9 @@ class StringHelperTest {
 	void testReplaceWithSupplier() {
 		assertEquals("b b cc", StringHelper.replace("$a", () -> "b", "$a $a cc"));
 		assertEquals("$a $a cc", StringHelper.replace("$a", () -> (String) null, "$a $a cc"));
-		assertEquals(
-			"$a $a cc",
-			StringHelper.replace(
-				"$a",
-				() -> {
-					throw new IllegalStateException();
-				},
-				"$a $a cc"
-			)
-		);
+		assertEquals("$a $a cc", StringHelper.replace("$a", () -> {
+			throw new IllegalStateException();
+		}, "$a $a cc"));
 		assertEquals("$a $a cc", StringHelper.replace("$d", () -> "b", "$a $a cc"));
 		assertThrows(IllegalArgumentException.class, () -> StringHelper.replace(null, () -> "b", "$a $a cc"));
 		assertThrows(IllegalArgumentException.class, () -> StringHelper.replace("$a", () -> "b", null));

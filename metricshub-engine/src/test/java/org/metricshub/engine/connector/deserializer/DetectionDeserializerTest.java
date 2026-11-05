@@ -306,8 +306,10 @@ class DetectionDeserializerTest extends DeserializerTest {
 			final String message = "Cannot deserialize value of type `boolean` from String \"maybe\"";
 			assertTrue(
 				e.getMessage().contains(message),
-				() ->
-					"Expected exception should contain \"" + message + "\" but got the following error instead: " + e.getMessage()
+				() -> "Expected exception should contain \"" +
+					message +
+					"\" but got the following error instead: " +
+					e.getMessage()
 			);
 		}
 	}
@@ -330,8 +332,10 @@ class DetectionDeserializerTest extends DeserializerTest {
 			String message = SUPERSEDES_ERROR_MSG;
 			assertTrue(
 				e.getMessage().contains(message),
-				() ->
-					"Expected exception should contain: " + message + " but got the following error instead: " + e.getMessage()
+				() -> "Expected exception should contain: " +
+					message +
+					" but got the following error instead: " +
+					e.getMessage()
 			);
 		}
 	}

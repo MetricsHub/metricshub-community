@@ -233,36 +233,34 @@ public class WmiCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
 
-					configurationNode.set("username", new TextNode(username));
-					if (password != null) {
-						configurationNode.set("password", new TextNode(String.valueOf(password)));
-					}
-					configurationNode.set("timeout", new TextNode(timeout));
-					configurationNode.set("namespace", new TextNode(namespace));
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(hostname, configurationNode, null);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
-					// display the request
-					displayQuery();
-					// Execute the WMI query
-					final String result = extension.executeQuery(configuration, getQuery());
-					// display the returned result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute WMI query.\n", e);
+				configurationNode.set("username", new TextNode(username));
+				if (password != null) {
+					configurationNode.set("password", new TextNode(String.valueOf(password)));
 				}
-			});
+				configurationNode.set("timeout", new TextNode(timeout));
+				configurationNode.set("namespace", new TextNode(namespace));
+
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(hostname, configurationNode, null);
+				configuration.setHostname(hostname);
+
+				configuration.validateConfiguration(hostname);
+
+				// display the request
+				displayQuery();
+				// Execute the WMI query
+				final String result = extension.executeQuery(configuration, getQuery());
+				// display the returned result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute WMI query.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

@@ -19,10 +19,10 @@ class AbstractMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_ERRORS_LIMIT = "hw.errors.limit";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU =
-		HW_ERRORS_LIMIT + "{limit_type=\"critical\", hw.type=\"cpu\"}";
-	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU =
-		HW_ERRORS_LIMIT + "{limit_type=\"degraded\", hw.type=\"cpu\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU = HW_ERRORS_LIMIT +
+		"{limit_type=\"critical\", hw.type=\"cpu\"}";
+	public static final String HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU = HW_ERRORS_LIMIT +
+		"{limit_type=\"degraded\", hw.type=\"cpu\"}";
 
 	@Test
 	void testContainsAllEntries() {
@@ -222,14 +222,12 @@ class AbstractMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU, NumberMetric.class)
 					.getValue()
 			);
 		}
@@ -274,14 +272,12 @@ class AbstractMetricNormalizerTest {
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 					.getValue()
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwErrorsLimitMetric
-					.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU, NumberMetric.class)
+				monitorWithHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU, NumberMetric.class)
 					.getValue()
 			);
 		}

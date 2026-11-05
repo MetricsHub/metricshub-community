@@ -61,12 +61,9 @@ class MonitorJobsDeserializerTest {
 	@Test
 	void testDeserialize() throws IOException {
 		doReturn(
-			ConfigHelper.newObjectMapper().readTree(
-				ResourceHelper.getResourceAsString("/data/monitors.yaml", MonitorJobsDeserializerTest.class)
-			)
-		)
-			.when(yamlParserMock)
-			.readValueAs(JsonNode.class);
+			ConfigHelper.newObjectMapper()
+				.readTree(ResourceHelper.getResourceAsString("/data/monitors.yaml", MonitorJobsDeserializerTest.class))
+		).when(yamlParserMock).readValueAs(JsonNode.class);
 
 		doReturn(jsonReadContext).when(yamlParserMock).getParsingContext();
 

@@ -64,10 +64,11 @@ public final class HostInventory {
 		final List<HostDescriptor> hosts = new ArrayList<>();
 		active.forEach((groupKey, resources) -> {
 			if (resources != null) {
-				resources
-					.keySet()
-					.forEach(resourceKey ->
-						hosts.add(describe(groupKey, resourceKey, resourceConfig(agentConfig, groupKey, resourceKey)))
+				resources.keySet()
+					.forEach(
+						resourceKey -> hosts.add(
+							describe(groupKey, resourceKey, resourceConfig(agentConfig, groupKey, resourceKey))
+						)
 					);
 			}
 		});
@@ -83,8 +84,9 @@ public final class HostInventory {
 		if (TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(groupKey)) {
 			return agentConfig.getResources() == null ? null : agentConfig.getResources().get(resourceKey);
 		}
-		final ResourceGroupConfig group =
-			agentConfig.getResourceGroups() == null ? null : agentConfig.getResourceGroups().get(groupKey);
+		final ResourceGroupConfig group = agentConfig.getResourceGroups() == null
+			? null
+			: agentConfig.getResourceGroups().get(groupKey);
 		return group == null || group.getResources() == null ? null : group.getResources().get(resourceKey);
 	}
 
@@ -105,13 +107,11 @@ public final class HostInventory {
 				});
 			}
 			if (resourceConfig.getAttributes() != null) {
-				resourceConfig
-					.getAttributes()
-					.forEach((key, value) -> {
-						if (key != null && value != null) {
-							attributes.put(key, value);
-						}
-					});
+				resourceConfig.getAttributes().forEach((key, value) -> {
+					if (key != null && value != null) {
+						attributes.put(key, value);
+					}
+				});
 			}
 		}
 		return new HostDescriptor(resourceKey, groupKey, hostnames, attributes);

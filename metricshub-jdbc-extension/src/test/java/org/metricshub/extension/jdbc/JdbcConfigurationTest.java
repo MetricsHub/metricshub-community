@@ -37,8 +37,9 @@ class JdbcConfigurationTest {
 			.username("")
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -58,8 +59,9 @@ class JdbcConfigurationTest {
 			.timeout(-10L)
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -80,8 +82,9 @@ class JdbcConfigurationTest {
 			.port(-1)
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -118,8 +121,9 @@ class JdbcConfigurationTest {
 			.port(3306)
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(

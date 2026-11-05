@@ -77,8 +77,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	/**
 	 * Message to be returned when the hostname is not configured in MetricsHub.
 	 */
-	protected static final String HOSTNAME_NOT_CONFIGURED_MSG =
-		"The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.";
+	protected static final String HOSTNAME_NOT_CONFIGURED_MSG = "The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.";
 
 	/**
 	 * Default pool size for troubleshooting operations.
@@ -110,26 +109,21 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
 	@ToolAccess(Access.READ)
-	@Tool(
-		name = COLLECT_METRICS_FOR_HOST,
-		description = """
+	@Tool(name = COLLECT_METRICS_FOR_HOST, description = """
 		Fetch and collect metrics for the specified host(s) using the configured protocols and credentials,
 		and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.).
 		Returns the collected metrics and all attributes.
 		Metrics follow OpenTelemetry semantic conventions.
-		"""
-	)
+		""")
 	public MultiHostToolResponse<TelemetryResult> collectMetricsForHost(
-		@ToolParam(description = "The hostname(s) of the resource we are interested in", required = true) final List<
-			String
-		> hostname,
 		@ToolParam(
-			description = """
+			description = "The hostname(s) of the resource we are interested in",
+			required = true
+		) final List<String> hostname,
+		@ToolParam(description = """
 			Optional: The identifier of a specific connector to use for collecting metrics.
 			If not specified, the system will attempt to select an appropriate connector automatically.
-			""",
-			required = false
-		) final String connectorId,
+			""", required = false) final String connectorId,
 		@ToolParam(
 			description = "Optional pool size for concurrent metric collection. Defaults to 20.",
 			required = false
@@ -151,8 +145,8 @@ public class TroubleshootHostService implements IMCPToolService {
 						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
 						.build();
 				}
-				telemetryManagers.forEach(telemetryManager ->
-					telemetryResults.add(collectMetricsForHostInternal(telemetryManager, connectorId))
+				telemetryManagers.forEach(
+					telemetryManager -> telemetryResults.add(collectMetricsForHostInternal(telemetryManager, connectorId))
 				);
 				return HostToolResponse.<List<TelemetryResult>>builder().hostname(host).response(telemetryResults).build();
 			},
@@ -171,18 +165,16 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
 	@ToolAccess(Access.READ)
-	@Tool(
-		name = GET_METRICS_FROM_CACHE_FOR_HOST,
-		description = """
+	@Tool(name = GET_METRICS_FROM_CACHE_FOR_HOST, description = """
 		Retrieves metrics from the MetricsHub cache for the specified host(s).
 		Returns the collected metrics and all attributes.
 		Metrics follow OpenTelemetry semantic conventions.
-		"""
-	)
+		""")
 	public MultiHostToolResponse<TelemetryResult> getMetricsFromCacheForHost(
-		@ToolParam(description = "The hostname(s) of the resource we are interested in", required = true) final List<
-			String
-		> hostname,
+		@ToolParam(
+			description = "The hostname(s) of the resource we are interested in",
+			required = true
+		) final List<String> hostname,
 		@ToolParam(
 			description = "Optional pool size for concurrent cache reads. Defaults to 20.",
 			required = false
@@ -204,8 +196,8 @@ public class TroubleshootHostService implements IMCPToolService {
 						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
 						.build();
 				}
-				telemetryManagers.forEach(telemetryManager ->
-					telemetryResults.add(getMetricsFromCacheForHostInternal(telemetryManager))
+				telemetryManagers.forEach(
+					telemetryManager -> telemetryResults.add(getMetricsFromCacheForHostInternal(telemetryManager))
 				);
 				return HostToolResponse.<List<TelemetryResult>>builder().hostname(host).response(telemetryResults).build();
 			},
@@ -225,22 +217,16 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
 	@ToolAccess(Access.READ)
-	@Tool(
-		name = TEST_AVAILABLE_CONNECTORS_FOR_HOST,
-		description = """
+	@Tool(name = TEST_AVAILABLE_CONNECTORS_FOR_HOST, description = """
 		Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host(s)
 		using the configured credentials and return the list of connectors that work with these hosts.
-		"""
-	)
+		""")
 	public MultiHostToolResponse<TelemetryResult> testAvailableConnectorsForHost(
 		@ToolParam(description = "The hostname(s) of the resource we are interested in") final List<String> hostname,
-		@ToolParam(
-			description = """
+		@ToolParam(description = """
 			Optional: The identifier of a specific connector to use for the test.
 			If not specified, the system will attempt to select an appropriate connector automatically.
-			""",
-			required = false
-		) final String connectorId,
+			""", required = false) final String connectorId,
 		@ToolParam(
 			description = "Optional pool size for concurrent connector tests. Defaults to 20.",
 			required = false
@@ -262,8 +248,10 @@ public class TroubleshootHostService implements IMCPToolService {
 						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
 						.build();
 				}
-				telemetryManagers.forEach(telemetryManager ->
-					telemetryResults.add(testAvailableConnectorsForHostInternal(telemetryManager, connectorId))
+				telemetryManagers.forEach(
+					telemetryManager -> telemetryResults.add(
+						testAvailableConnectorsForHostInternal(telemetryManager, connectorId)
+					)
 				);
 				return HostToolResponse.<List<TelemetryResult>>builder().hostname(host).response(telemetryResults).build();
 			},

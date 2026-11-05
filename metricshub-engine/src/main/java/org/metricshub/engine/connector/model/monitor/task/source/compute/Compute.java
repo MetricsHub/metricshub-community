@@ -64,8 +64,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = Substring.class, name = "substring"),
 		@JsonSubTypes.Type(value = Tail.class, name = "tail"),
 		@JsonSubTypes.Type(value = Translate.class, name = "translate"),
-		@JsonSubTypes.Type(value = Xml2Csv.class, name = "xml2Csv")
-	}
+		@JsonSubTypes.Type(value = Xml2Csv.class, name = "xml2Csv") }
 )
 @Data
 @NoArgsConstructor

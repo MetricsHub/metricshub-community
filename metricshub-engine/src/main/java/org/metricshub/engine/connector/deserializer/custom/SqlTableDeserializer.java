@@ -48,11 +48,9 @@ public class SqlTableDeserializer extends JsonDeserializer<List<SqlTable>> {
 
 		// Iterate through the fields of the JSON object
 		if (node != null) {
-			node
-				.elements()
-				.forEachRemaining(tableNode -> {
-					createSqlTable(tableNode, sqlTables);
-				});
+			node.elements().forEachRemaining(tableNode -> {
+				createSqlTable(tableNode, sqlTables);
+			});
 		}
 
 		return sqlTables;
@@ -70,11 +68,9 @@ public class SqlTableDeserializer extends JsonDeserializer<List<SqlTable>> {
 
 		final JsonNode columnsNode = tableNode.get("columns");
 		final List<SqlColumn> columns = new ArrayList<>();
-		columnsNode
-			.elements()
-			.forEachRemaining(columnNode -> {
-				columns.add(SqlColumn.detect(columnNode));
-			});
+		columnsNode.elements().forEachRemaining(columnNode -> {
+			columns.add(SqlColumn.detect(columnNode));
+		});
 		sqlTable.setColumns(columns);
 
 		sqlTables.add(sqlTable);

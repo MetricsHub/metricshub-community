@@ -30,12 +30,10 @@ class PasswordEncryptTest {
 	void testGetKeyStoreFileWindows() throws IOException {
 		{
 			try (final MockedStatic<PasswordEncrypt> mockedPasswordEncrypt = mockStatic(PasswordEncrypt.class)) {
-				mockedPasswordEncrypt
-					.when(() -> PasswordEncrypt.getSecurityFolderOnWindows())
+				mockedPasswordEncrypt.when(() -> PasswordEncrypt.getSecurityFolderOnWindows())
 					.thenAnswer(_ -> Files.createDirectories(tempDir.resolve("metricshub/security")));
 
-				mockedPasswordEncrypt
-					.when(() -> PasswordEncrypt.resolveKeyStoreFile(any(Path.class), any(Boolean.class)))
+				mockedPasswordEncrypt.when(() -> PasswordEncrypt.resolveKeyStoreFile(any(Path.class), any(Boolean.class)))
 					.thenCallRealMethod();
 
 				mockedPasswordEncrypt.when(() -> PasswordEncrypt.getKeyStoreFile(true)).thenCallRealMethod();
@@ -58,8 +56,7 @@ class PasswordEncryptTest {
 	void testGetKeyStoreFileLinux() {
 		{
 			try (final MockedStatic<ResourceHelper> mockedResourceHelper = mockStatic(ResourceHelper.class)) {
-				mockedResourceHelper
-					.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
+				mockedResourceHelper.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
 					.thenAnswer(_ -> Files.createDirectories(tempDir.resolve("metricshub/lib/app/jar")).toFile());
 
 				final File actual = PasswordEncrypt.getKeyStoreFile(true);
@@ -70,8 +67,7 @@ class PasswordEncryptTest {
 
 		{
 			try (final MockedStatic<ResourceHelper> mockedResourceHelper = mockStatic(ResourceHelper.class)) {
-				mockedResourceHelper
-					.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
+				mockedResourceHelper.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
 					.thenAnswer(_ -> tempDir.resolve("metricshub/lib/app/jar").toFile());
 
 				final File keyStoreFile = PasswordEncrypt.getKeyStoreFile(false);
@@ -90,8 +86,7 @@ class PasswordEncryptTest {
 				final MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class);
 				final MockedStatic<ResourceHelper> mockedResourceHelper = mockStatic(ResourceHelper.class)
 			) {
-				mockedResourceHelper
-					.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
+				mockedResourceHelper.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
 					.thenAnswer(_ -> tempDir.resolve("metricshub/app/jar").toFile());
 
 				mockedConfigHelper.when(() -> ConfigHelper.getProgramDataPath()).thenReturn(Optional.empty());

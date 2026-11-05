@@ -98,52 +98,48 @@ public class WinRmConfiguration implements IWinConfiguration {
 		StringHelper.validateConfigurationAttribute(
 			port,
 			attr -> attr == null || attr < 1 || attr > 65535,
-			() ->
-				String.format(
-					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-						" This resource will not be monitored. Please verify the configured port value.",
-					resourceKey,
-					WINRM_DESCRIPTION,
-					port
-				)
+			() -> String.format(
+				"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
+					" This resource will not be monitored. Please verify the configured port value.",
+				resourceKey,
+				WINRM_DESCRIPTION,
+				port
+			)
 		);
 
 		// Basic sends the credentials in clear text with every request: only acceptable under TLS
 		StringHelper.validateConfigurationAttribute(
 			authentications,
 			attr -> attr != null && attr.contains(AuthenticationEnum.BASIC) && TransportProtocols.HTTP.equals(protocol),
-			() ->
-				String.format(
-					"Resource %s - Basic authentication is configured for protocol %s over HTTP, which would send the" +
-						" credentials in clear text. This resource will not be monitored. Please set the protocol to HTTPS.",
-					resourceKey,
-					WINRM_DESCRIPTION
-				)
+			() -> String.format(
+				"Resource %s - Basic authentication is configured for protocol %s over HTTP, which would send the" +
+					" credentials in clear text. This resource will not be monitored. Please set the protocol to HTTPS.",
+				resourceKey,
+				WINRM_DESCRIPTION
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			timeout,
 			attr -> attr == null || attr < 0L,
-			() ->
-				String.format(
-					"Resource %s - Timeout value is invalid for protocol %s." +
-						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
-					resourceKey,
-					WINRM_DESCRIPTION,
-					timeout
-				)
+			() -> String.format(
+				"Resource %s - Timeout value is invalid for protocol %s." +
+					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+				resourceKey,
+				WINRM_DESCRIPTION,
+				timeout
+			)
 		);
 
 		StringHelper.validateConfigurationAttribute(
 			username,
 			attr -> attr == null || attr.isBlank(),
-			() ->
-				String.format(
-					"Resource %s - No username configured for protocol %s." +
-						" This resource will not be monitored. Please verify the configured username.",
-					resourceKey,
-					WINRM_DESCRIPTION
-				)
+			() -> String.format(
+				"Resource %s - No username configured for protocol %s." +
+					" This resource will not be monitored. Please verify the configured username.",
+				resourceKey,
+				WINRM_DESCRIPTION
+			)
 		);
 	}
 

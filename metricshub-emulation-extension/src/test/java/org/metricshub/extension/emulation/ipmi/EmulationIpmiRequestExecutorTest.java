@@ -38,15 +38,11 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testExecuteIpmiDetectionMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: IpmiDetection
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "System power state is up.", StandardCharsets.UTF_8);
 
 		final String result = executor.executeIpmiDetection(
@@ -60,15 +56,11 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testExecuteIpmiGetSensorsMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSensors
 			    response: sensors.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("sensors.txt"), "FRU data here", StandardCharsets.UTF_8);
 
 		final String result = executor.executeIpmiGetSensors(
@@ -82,17 +74,13 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testRoundRobin(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSensors
 			    response: r1.txt
 			  - request: GetSensors
 			    response: r2.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "first", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r2.txt"), "second", StandardCharsets.UTF_8);
 
@@ -110,15 +98,11 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testNoMatch(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSensors
 			    response: r1.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "data", StandardCharsets.UTF_8);
 
 		final String result = executor.executeIpmiDetection(
@@ -196,15 +180,11 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testReturnsNullWhenResponseIsBlank(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSensors
 			    response: " "
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final String result = executor.executeIpmiGetSensors(
 			HOSTNAME,
@@ -217,15 +197,11 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testReturnsNullWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSensors
 			    response: missing.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final String result = executor.executeIpmiGetSensors(
 			HOSTNAME,
@@ -264,9 +240,7 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testExecuteIpmiRawMatchesQuery(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: Raw
 			    query: 06 01
@@ -274,9 +248,7 @@ class EmulationIpmiRequestExecutorTest {
 			  - request: Raw
 			    query: 0A 40
 			    response: selInfo.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("deviceId.txt"), "00;20 01 03", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("selInfo.txt"), "00;51 10 00", StandardCharsets.UTF_8);
 
@@ -298,15 +270,11 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testExecuteIpmiSel(@TempDir final Path tempDir) throws Exception {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request: GetSel
 			    response: sel.txt
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("sel.txt"), "5;1593835520;PowerSupply;", StandardCharsets.UTF_8);
 
 		assertEquals(

@@ -122,8 +122,7 @@ class UiConfigServiceTest {
 			"metricshub-ui.yaml, COMPUTERNAME, true",
 			"metricshub-ui.yaml, HOSTNAME, true",
 			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, true",
-			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, false"
-		}
+			"metricshub-ui.yaml, METRICSHUB_TEST_UNSET_HOST_41A793, false" }
 	)
 	void testSnapshotResolvesHostnamesWithoutChangingFilesOrOtherFields(
 		String filename,
@@ -177,8 +176,7 @@ class UiConfigServiceTest {
 		}
 		final boolean uiFile = filename.equals("metricshub-ui.yaml");
 		final var resource = snapshot.path(uiFile ? "resources" : "externalResources").path("localhost");
-		final var grouped = snapshot
-			.path(uiFile ? "resourceGroups" : "externalResourceGroups")
+		final var grouped = snapshot.path(uiFile ? "resourceGroups" : "externalResourceGroups")
 			.path("local")
 			.path("resources")
 			.path("localhost");
@@ -199,10 +197,8 @@ class UiConfigServiceTest {
 		);
 		assertEquals(
 			List.of(expression, "remote-protocol"),
-			JsonHelper.buildYamlMapper().convertValue(
-				grouped.path("originalHostnames").path("protocols").path("winrm"),
-				List.class
-			)
+			JsonHelper.buildYamlMapper()
+				.convertValue(grouped.path("originalHostnames").path("protocols").path("winrm"), List.class)
 		);
 		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("attributes").path("custom.attribute").asText());
 		assertEquals("${env::COMPUTERNAME:-unchanged}", resource.path("attributes").path("hostname").asText());
@@ -213,9 +209,7 @@ class UiConfigServiceTest {
 	@Test
 	void testExternalConfigIsFreshAndExcludesItemsDeletedFromUiYaml() throws Exception {
 		// A resource group and a standalone resource defined in another YAML file (not metricshub-ui.yaml).
-		Files.writeString(
-			tempDir.resolve("metricshub-other.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("metricshub-other.yaml"), """
 			resourceGroups:
 			  OtherFileGroup:
 			    resources:
@@ -226,8 +220,7 @@ class UiConfigServiceTest {
 			  external-host:
 			    attributes:
 			      host.name: external-host
-			"""
-		);
+			""");
 
 		// Wire a context whose extension manager actually reads the YAML files on disk.
 		final AgentContext agentContext = Mockito.mock(AgentContext.class, Mockito.RETURNS_DEEP_STUBS);

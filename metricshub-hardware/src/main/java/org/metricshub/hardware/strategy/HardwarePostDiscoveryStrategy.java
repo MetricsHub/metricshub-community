@@ -109,8 +109,7 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	@Override
 	public final void run() {
 		// Filter monitors, set present/missing metrics
-		telemetryManager
-			.getMonitors()
+		telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)

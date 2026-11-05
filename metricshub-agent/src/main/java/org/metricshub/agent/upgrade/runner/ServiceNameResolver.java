@@ -210,13 +210,11 @@ public class ServiceNameResolver {
 	 */
 	private boolean isRunning(final String serviceName) {
 		if (windows.getAsBoolean()) {
-			return outputReader
-				.readLines(List.of("sc", "query", serviceName))
+			return outputReader.readLines(List.of("sc", "query", serviceName))
 				.stream()
 				.anyMatch(line -> line.toUpperCase(Locale.ROOT).contains("RUNNING"));
 		}
-		return outputReader
-			.readLines(List.of("systemctl", "is-active", serviceName))
+		return outputReader.readLines(List.of("systemctl", "is-active", serviceName))
 			.stream()
 			.anyMatch(line -> "active".equalsIgnoreCase(line.trim()));
 	}

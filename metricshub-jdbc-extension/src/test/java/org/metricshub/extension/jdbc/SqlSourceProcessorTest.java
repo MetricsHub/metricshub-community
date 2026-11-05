@@ -66,8 +66,7 @@ class SqlSourceProcessorTest {
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
 		final TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
-		doThrow(new RuntimeException("SQL execution error"))
-			.when(sqlRequestExecutor)
+		doThrow(new RuntimeException("SQL execution error")).when(sqlRequestExecutor)
 			.executeSql(
 				eq("hostname"),
 				any(JdbcConfiguration.class),

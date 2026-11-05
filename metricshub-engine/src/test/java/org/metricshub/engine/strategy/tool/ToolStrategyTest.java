@@ -65,8 +65,7 @@ class ToolStrategyTest {
 		// The session token fetched in beforeAll reached the tool's source
 		assertEquals(List.of(List.of("token-123-used")), strategy.getResult().getTable());
 		// And afterAll ran once the tool was done
-		final SourceTable logout = telemetryManager
-			.getHostProperties()
+		final SourceTable logout = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getSourceTable("${source::afterAll.logout}");
 		assertEquals(List.of(List.of("bye")), logout.getTable());

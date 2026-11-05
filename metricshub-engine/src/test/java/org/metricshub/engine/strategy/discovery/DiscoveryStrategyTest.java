@@ -122,8 +122,7 @@ class DiscoveryStrategyTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
@@ -132,9 +131,9 @@ class DiscoveryStrategyTest {
 			.build();
 
 		// Mock detection criteria result
-		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
-			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
+		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test")).when(
+			protocolExtensionMock
+		).processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
@@ -147,9 +146,7 @@ class DiscoveryStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
 		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
@@ -168,9 +165,7 @@ class DiscoveryStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
 		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
@@ -185,9 +180,7 @@ class DiscoveryStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
 		// Check discovered monitors
@@ -235,9 +228,9 @@ class DiscoveryStrategyTest {
 		);
 
 		// Mock detection criteria result to switch to a failing criterion processing case
-		doReturn(CriterionTestResult.failure(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
-			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
+		doReturn(CriterionTestResult.failure(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test")).when(
+			protocolExtensionMock
+		).processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
@@ -266,8 +259,7 @@ class DiscoveryStrategyTest {
 
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -276,8 +268,7 @@ class DiscoveryStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -286,8 +277,7 @@ class DiscoveryStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -296,8 +286,7 @@ class DiscoveryStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -352,8 +341,7 @@ class DiscoveryStrategyTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
@@ -362,9 +350,9 @@ class DiscoveryStrategyTest {
 			.build();
 
 		// Mock detection criteria result
-		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
-			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
+		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test")).when(
+			protocolExtensionMock
+		).processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
@@ -377,9 +365,7 @@ class DiscoveryStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
@@ -438,8 +424,7 @@ class DiscoveryStrategyTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
@@ -448,9 +433,9 @@ class DiscoveryStrategyTest {
 			.build();
 
 		// Mock detection criteria result
-		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
-			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
+		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test")).when(
+			protocolExtensionMock
+		).processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Physical Disk Source
 		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
@@ -469,9 +454,7 @@ class DiscoveryStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
 		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
@@ -486,9 +469,7 @@ class DiscoveryStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
 		// Check discovered monitors
@@ -501,8 +482,7 @@ class DiscoveryStrategyTest {
 		assertEquals(1, discoveredMonitors.get(LOGICAL_DISK.getKey()).size());
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -511,8 +491,7 @@ class DiscoveryStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -566,8 +545,8 @@ class DiscoveryStrategyTest {
 		);
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doAnswer(invocation ->
-			SourceTable.builder()
+		doAnswer(
+			invocation -> SourceTable.builder()
 				.table(
 					SourceTable.csvToTable(
 						sourceTables.get(invocation.<Source>getArgument(0).getKey()),
@@ -575,9 +554,7 @@ class DiscoveryStrategyTest {
 					)
 				)
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(any(Source.class), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		new DiscoveryStrategy(telemetryManager, strategyTime, clientsExecutorMock, extensionManager).run();
 		assertEquals(Set.of(volume1Id, volume2Id), telemetryManager.getMonitors().get("volume").keySet());
