@@ -88,6 +88,16 @@ class AwkComputeStructuredIoTest {
 		assertEquals(ContentType.TABLE, sourceTable.getContentType());
 	}
 
+	@Test
+	void textOutputOfTableInputHasNoCrlf() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("x"));
+		processor(sourceTable).process(
+			Awk.builder().script("BEGIN { print \"a\\r\\nb\" }").input(ContentType.TABLE).build()
+		);
+		assertEquals(table("a", "b"), sourceTable.getTable());
+		assertEquals("a;\nb;", sourceTable.getRawData());
+	}
+
 	/**
 	 * With table input, an empty text result must not leave the source's raw text behind: a later text consumer
 	 * would read the rows the script dropped.

@@ -387,6 +387,21 @@ class JawkSourceExtensionTest {
 				.getTable()
 		);
 
+		// The text written from a table input never holds CRLF
+		final JawkSource crlf = JawkSource.builder()
+			.input(inputRef)
+			.inputFormat(ContentType.TABLE)
+			.script("BEGIN { print \"a\\r\\nb\" }")
+			.build();
+		final SourceTable crlfResult = new JawkSourceExtension().processSource(
+			crlf,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+		assertEquals("a\nb\n", crlfResult.getRawData());
+		assertEquals(List.of(List.of("a"), List.of("b")), crlfResult.getTable());
+
 		// An unknown input source gives no record
 		final JawkSource unknown = JawkSource.builder()
 			.input("${source::monitors.enclosure.discovery.sources.missing}")

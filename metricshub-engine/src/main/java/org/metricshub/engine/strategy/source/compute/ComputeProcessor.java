@@ -442,13 +442,14 @@ public class ComputeProcessor implements IComputeProcessor {
 				return;
 			}
 
+			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			String awkResult = tableInput
 				? AwkExecutor.executeAwk(
 					awkScript,
 					new TableInputSource(sourceTable.getTable()),
 					AwkExecutor.getUtilityEngine(),
 					variables
-				)
+				).replace(WINDOWS_NEW_LINE, NEW_LINE)
 				: AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 
 			if (awkResult == null || awkResult.isEmpty()) {

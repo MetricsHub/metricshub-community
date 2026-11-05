@@ -179,8 +179,10 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 				sourceTable.setContentType(ContentType.TABLE);
 				return sourceTable;
 			}
+			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			String result = tableInput
 				? AwkExecutor.executeAwk(awkScript, new TableInputSource(inputTable), awkEngine, variables)
+					.replace(WINDOWS_NEW_LINE, NEW_LINE)
 				: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables);
 			sourceTable.setRawData(result);
 			sourceTable.setTable(SourceTable.csvToTable(result, TABLE_SEP));
