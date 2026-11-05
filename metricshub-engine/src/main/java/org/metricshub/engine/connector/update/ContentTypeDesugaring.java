@@ -196,13 +196,20 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 					} else {
 						report.add(new ContentTypeReportEntry(key, Kind.TEXT_COMPUTE_ON_TABLE_SOURCE, where));
 					}
-				} else if (producer == TextProducer.PURE) {
+				} else if (producer == TextProducer.PURE && !(compute instanceof Awk)) {
 					report.add(new ContentTypeReportEntry(key, Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, where));
-				} else if (producer == TextProducer.EXPLICIT) {
-					// An explicit toText left text only: a real conversion is needed to get a table back
+				} else if (producer == TextProducer.PURE || producer == TextProducer.EXPLICIT) {
+					// Text only (a pure text source before an awk reading a table, an explicit toText): a real
+					// conversion is needed to get a table
 					desugared.add(ToTable.builder().type("toTable").build());
 					report.add(
-						new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where + " (after an explicit toText)")
+						new ContentTypeReportEntry(
+							key,
+							Kind.TO_TABLE_INSERTED,
+							"before " +
+								where +
+								(producer == TextProducer.PURE ? " (on a text source)" : " (after an explicit toText)")
+						)
 					);
 				} else {
 					desugared.add(ToTable.implicit());
@@ -350,10 +357,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
 	 * Whether a slash after the given (last non-blank) character starts a regex literal rather than a division:
-	 * at the start of the script or after an operator, a separator or an opening bracket.
+	 * at the start of the script or of a rule (after the closing brace of the previous action), after an operator,
+	 * a separator or an opening bracket.
 	 */
 	private static boolean regexCanStart(final char previous, final CharSequence code) {
-		if ("\n(,~!{;&|=?:[".indexOf(previous) >= 0) {
+		if ("\n(,~!{};&|=?:[".indexOf(previous) >= 0) {
 			return true;
 		}
 		// After a keyword taking an expression, such as "print /re/" or "return /re/"

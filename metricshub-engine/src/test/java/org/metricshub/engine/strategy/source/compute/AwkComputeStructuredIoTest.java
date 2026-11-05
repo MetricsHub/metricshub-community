@@ -69,6 +69,16 @@ class AwkComputeStructuredIoTest {
 	}
 
 	@Test
+	void tableOutputRawTextHasNoCrlf() {
+		final SourceTable sourceTable = SourceTable.ofText("");
+		processor(sourceTable).process(
+			Awk.builder().script("BEGIN { print \"a\\r\\nb\", \"c\" }").output(ContentType.TABLE).build()
+		);
+		assertEquals(table("a\r\nb|c"), sourceTable.getTable());
+		assertEquals("a\nb;c;", sourceTable.getRawData());
+	}
+
+	@Test
 	void emptyTableOutputEmptiesTheTable() {
 		final SourceTable sourceTable = SourceTable.builder().rawData("stale").table(table("a")).build();
 		processor(sourceTable).process(Awk.builder().script("BEGIN { }").output(ContentType.TABLE).build());

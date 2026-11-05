@@ -463,6 +463,25 @@ class ContentTypeDesugaringTest {
 	 * <code>output: table</code> ends the chain in a table, so nothing is appended either. A printf in a script
 	 * producing a table is reported.
 	 */
+	/**
+	 * An awk reading a table after a pure text source gets a real toTable: it opted into a table, which the source
+	 * does not produce.
+	 */
+	@Test
+	void awkWithTableInputAfterPureTextSourceGetsARealToTable() {
+		final Source source = HttpSource.builder()
+			.url("/")
+			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+			.build();
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+
+		// The awk still writes text: the chain ends with the usual implicit toTable
+		assertEquals(List.of("toTable", "awk", "toTable"), types(source));
+		assertFalse(((ToTable) source.getComputes().get(0)).isImplicit());
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
 	@Test
 	void awkWithTableInputAndOutputNeedsNoConversion() {
 		final Source source = SnmpTableSource.builder()
@@ -524,6 +543,9 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(regexPrintfConnector);
 		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(regexPrintfConnector));
 		final String code = ContentTypeDesugaring.code("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }");
+		// The pattern of a rule after the action of the previous one is a regex too
+		final String nextRule = ContentTypeDesugaring.code("/foo/ { print }\n/printf/ { print }");
+		assertFalse(nextRule.contains("printf"), nextRule);
 		// A regex operand after a keyword is a literal too
 		final String afterKeyword = ContentTypeDesugaring.code("{ print /printf/; return /foo#bar/; printf \"%s\", $1 }");
 		assertFalse(afterKeyword.contains("/printf/"), afterKeyword);
