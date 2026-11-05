@@ -81,6 +81,15 @@ public class ToTable extends Compute {
 	private boolean implicit;
 
 	/**
+	 * Whether the compute was inserted by the content-type desugaring step at all: every implicit one, and the
+	 * executable one inserted after an explicit <code>toText</code>. A later pass of the step removes them before
+	 * desugaring the chain as written again. Never set from YAML.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean generated;
+
+	/**
 	 * Construct a new instance of ToTable.
 	 *
 	 * @param type          The type of the computation task.
@@ -111,8 +120,20 @@ public class ToTable extends Compute {
 	 * @return a new implicit instance
 	 */
 	public static ToTable implicit() {
-		final ToTable toTable = ToTable.builder().type("toTable").build();
+		final ToTable toTable = generated();
 		toTable.setImplicit(true);
+		return toTable;
+	}
+
+	/**
+	 * An executable <code>toTable(";")</code> inserted by the content-type desugaring step: it converts the text
+	 * like a written one, and a later pass of the step removes it like an implicit one.
+	 *
+	 * @return a new generated, executable instance
+	 */
+	public static ToTable generated() {
+		final ToTable toTable = ToTable.builder().type("toTable").build();
+		toTable.setGenerated(true);
 		return toTable;
 	}
 
@@ -135,6 +156,7 @@ public class ToTable extends Compute {
 		addNonNull(stringJoiner, "- exclude=", exclude);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
 		addNonNull(stringJoiner, "- implicit=", implicit ? Boolean.TRUE : null);
+		addNonNull(stringJoiner, "- generated=", generated ? Boolean.TRUE : null);
 		return stringJoiner.toString();
 	}
 
@@ -148,6 +170,7 @@ public class ToTable extends Compute {
 			.selectColumns(selectColumns)
 			.build();
 		copy.setImplicit(implicit);
+		copy.setGenerated(generated);
 		return copy;
 	}
 
