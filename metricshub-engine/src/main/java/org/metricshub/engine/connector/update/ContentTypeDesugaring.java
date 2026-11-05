@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -45,6 +46,7 @@ import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -77,7 +79,9 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>)
  * finds an empty table today and keeps doing so: nothing is inserted, the case is reported;</li>
  * <li>a text compute reading the raw text only (<code>json2Csv</code>, <code>xml2Csv</code>) fed by a table
- * producer keeps reading whatever raw text the producer left: nothing is inserted, the case is reported.</li>
+ * producer keeps reading whatever raw text the producer left: nothing is inserted, the case is reported;</li>
+ * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
+ * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
  * The implicit computes are flagged ({@link ToText#isImplicit()}, {@link ToTable#isImplicit()}) and leave the
  * results of the existing connectors byte for byte identical.
@@ -108,7 +112,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	@Override
 	void doUpdate(final Connector connector) {
 		final List<ContentTypeReportEntry> report = new ArrayList<>();
-		forEachSource(connector, source -> desugar(connector, source, report));
+		// Every source by key, to resolve what a copy source copies
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		forEachSource(connector, source -> sources.put(source.getKey(), source));
+		sources.values().forEach(source -> desugar(connector, source, sources, report));
 		connector.setContentTypeReport(report);
 	}
 
@@ -119,7 +126,12 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * @param source    The source
 	 * @param report    The report to add the findings to
 	 */
-	void desugar(final Connector connector, final Source source, final List<ContentTypeReportEntry> report) {
+	void desugar(
+		final Connector connector,
+		final Source source,
+		final Map<String, Source> sources,
+		final List<ContentTypeReportEntry> report
+	) {
 		final String key = source.getKey();
 		if (source instanceof TableJoinSource tableJoin && contains(tableJoin.getDefaultRightLine(), TABLE_SEP)) {
 			report.add(
@@ -135,10 +147,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 		// Start again from the chain as written: a previous pass may have inserted implicit conversions
 		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
-		ContentType current = source.getOutputContentType();
-		TextProducer producer = current != ContentType.TEXT
-			? TextProducer.NONE
-			: isPureTextSource(source) ? TextProducer.PURE : TextProducer.LEGACY_DUAL;
+		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
+		final State start = source instanceof CopySource copy ? effectiveOutput(copy, sources, 0) : startOf(source);
+		ContentType current = start.type();
+		TextProducer producer = start.producer();
 
 		final List<Compute> desugared = new ArrayList<>();
 		for (int index = 0; index < computes.size(); index++) {
@@ -280,6 +292,54 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static boolean isImplicit(final Compute compute) {
 		return (compute instanceof ToTable toTable && toTable.isImplicit()) ||
 			(compute instanceof ToText toText && toText.isImplicit());
+	}
+
+	/**
+	 * The content type and the producer of a chain at some point.
+	 */
+	private record State(ContentType type, TextProducer producer) {}
+
+	/**
+	 * What a source produces before its computes run.
+	 */
+	private static State startOf(final Source source) {
+		final ContentType type = source.getOutputContentType();
+		return new State(
+			type,
+			type != ContentType.TEXT
+				? TextProducer.NONE
+				: isPureTextSource(source) ? TextProducer.PURE : TextProducer.LEGACY_DUAL
+		);
+	}
+
+	/**
+	 * What a copy source produces: the result of its origin's chain, as written. An origin that cannot be resolved
+	 * leaves the copy to its declared type (a table).
+	 */
+	private static State effectiveOutput(final CopySource copy, final Map<String, Source> sources, final int depth) {
+		final Source origin = copy.getFrom() == null ? null : sources.get(copy.getFrom().trim());
+		if (origin == null || depth > 5) {
+			return startOf(copy);
+		}
+		State state = origin instanceof CopySource nested ? effectiveOutput(nested, sources, depth + 1) : startOf(origin);
+		for (final Compute compute : origin.getComputes()) {
+			if (isImplicit(compute)) {
+				continue;
+			}
+			final ContentType type = compute.getOutputContentType();
+			final TextProducer producer;
+			if (type != ContentType.TEXT) {
+				producer = TextProducer.NONE;
+			} else if (compute instanceof Awk) {
+				producer = TextProducer.LEGACY_DUAL;
+			} else if (compute instanceof ToText) {
+				producer = TextProducer.EXPLICIT;
+			} else {
+				producer = state.producer();
+			}
+			state = new State(type, producer);
+		}
+		return state;
 	}
 
 	private static boolean isPureTextSource(final Source source) {
