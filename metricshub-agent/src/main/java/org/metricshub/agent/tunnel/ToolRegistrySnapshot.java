@@ -29,7 +29,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
 import org.metricshub.agent.tunnel.protocol.TunnelJson;
@@ -64,13 +63,13 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 	 *
 	 * @param provider      the Spring AI tool callbacks
 	 * @param excludedTools names never advertised nor invokable
-	 * @param context       the running agent context, which the host lookup reads at each call
+	 * @param context       the agent context the provider's tools were built from, which the host lookup answers from
 	 * @return the snapshot
 	 */
 	public static ToolRegistrySnapshot from(
 		final ToolCallbackProvider provider,
 		final Collection<String> excludedTools,
-		final Supplier<AgentContext> context
+		final AgentContext context
 	) {
 		final Map<String, ToolCallback> callbacks = new TreeMap<>();
 		final Map<String, ToolCallback> hostScoped = new TreeMap<>();

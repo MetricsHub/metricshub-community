@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -78,10 +77,11 @@ final class HostToolsLookup {
 
 	/**
 	 * @param hostScoped the protocol-extension and connector tools of this snapshot, by name
-	 * @param context    the running agent context, read at each call
+	 * @param context    the agent context those tools were built from: the lookup answers from it, so that a tool
+	 *                   it lists is one the snapshot's callback can run, until the next snapshot replaces both
 	 * @return the lookup, a read tool
 	 */
-	static ToolCallback callback(final Map<String, ToolCallback> hostScoped, final Supplier<AgentContext> context) {
+	static ToolCallback callback(final Map<String, ToolCallback> hostScoped, final AgentContext context) {
 		// Matched ignoring case, as the tool provider deduplicates names: a connector identifier may be spelled
 		// differently in the host's store and in the store the tool was built from
 		final Map<String, ToolCallback> byName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -95,7 +95,7 @@ final class HostToolsLookup {
 			.inputSchema(SCHEMA)
 			.build();
 		return new ProductToolCallback(
-			new DynamicToolCallback(definition, arguments -> lookUp(hostnameOf(arguments), context.get(), byName)),
+			new DynamicToolCallback(definition, arguments -> lookUp(hostnameOf(arguments), context, byName)),
 			Access.READ
 		);
 	}
@@ -127,7 +127,14 @@ final class HostToolsLookup {
 			for (final IProtocolExtension extension : context.getExtensionManager().getProtocolExtensions()) {
 				if (configurations.stream().anyMatch(extension::isToolConfiguration)) {
 					extension.getTools()
-						.forEach(tool -> listIfCarried(listed, byName, HostTools.toolName(extension.getIdentifier(), tool.name())));
+						.forEach(
+							tool -> listIfCarried(
+								listed,
+								byName,
+								extension.getIdentifier(),
+								HostTools.toolName(extension.getIdentifier(), tool.name())
+							)
+						);
 				}
 			}
 		}
@@ -144,7 +151,10 @@ final class HostToolsLookup {
 						// The host's own declaration, through its connector variables, must be the one the callback
 						// advertises: the callback refuses to run any other
 						final ToolCallback callback = byName.get(HostTools.toolName(connectorId, tool));
-						if (callback != null && ConnectorToolCallbacks.runsAsAdvertised(manager, connectorId, tool, callback)) {
+						if (
+							ownedBy(callback, connectorId) &&
+								ConnectorToolCallbacks.runsAsAdvertised(manager, connectorId, tool, callback)
+						) {
 							listed.put(callback.getToolDefinition().name(), callback);
 						}
 					});
@@ -157,12 +167,22 @@ final class HostToolsLookup {
 	private static void listIfCarried(
 		final Map<String, ToolCallback> listed,
 		final Map<String, ToolCallback> byName,
+		final String owner,
 		final String name
 	) {
 		final ToolCallback callback = byName.get(name);
-		if (callback != null) {
+		if (ownedBy(callback, owner)) {
 			listed.put(callback.getToolDefinition().name(), callback);
 		}
+	}
+
+	/**
+	 * @param callback a host-scoped tool, possibly {@code null}
+	 * @param owner    the extension or connector the host has
+	 * @return whether the callback is that owner's: two owners may yield the same name, and the provider kept one
+	 */
+	private static boolean ownedBy(final ToolCallback callback, final String owner) {
+		return callback instanceof final DynamicToolCallback dynamic && owner.equalsIgnoreCase(dynamic.getOwner());
 	}
 
 	private static String hostnameOf(final JsonNode arguments) {

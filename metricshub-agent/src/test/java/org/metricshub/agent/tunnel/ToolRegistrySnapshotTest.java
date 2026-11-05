@@ -46,7 +46,7 @@ class ToolRegistrySnapshotTest {
 		final ToolCallback ping = callback("PingHost", "Pings hosts", HOST_SCHEMA);
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
 
-		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ping, list), Set.of(), () -> null);
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ping, list), Set.of(), null);
 
 		assertEquals(
 			List.of("ListHostTools", "ListHosts", "PingHost"),
@@ -62,7 +62,7 @@ class ToolRegistrySnapshotTest {
 		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(
 			provider(callback("ListHosts", "", "")),
 			Set.of(),
-			() -> null
+			null
 		);
 
 		final ToolDescriptor tool = snapshot.tools()
@@ -82,12 +82,8 @@ class ToolRegistrySnapshotTest {
 			callback("ListHosts", "Lists hosts", "")
 		);
 
-		final ToolRegistrySnapshot all = ToolRegistrySnapshot.from(provider, Set.of(), () -> null);
-		final ToolRegistrySnapshot filtered = ToolRegistrySnapshot.from(
-			provider,
-			Set.of("ExecuteSshCommandline"),
-			() -> null
-		);
+		final ToolRegistrySnapshot all = ToolRegistrySnapshot.from(provider, Set.of(), null);
+		final ToolRegistrySnapshot filtered = ToolRegistrySnapshot.from(provider, Set.of("ExecuteSshCommandline"), null);
 
 		assertEquals(List.of("ListHostTools", "ListHosts"), filtered.tools().stream().map(ToolDescriptor::name).toList());
 		assertTrue(filtered.callbacks().containsKey("ListHosts"));
@@ -101,8 +97,8 @@ class ToolRegistrySnapshotTest {
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
 
 		assertEquals(
-			ToolRegistrySnapshot.from(provider(ping, list), Set.of(), () -> null).revision(),
-			ToolRegistrySnapshot.from(provider(list, ping), Set.of(), () -> null).revision()
+			ToolRegistrySnapshot.from(provider(ping, list), Set.of(), null).revision(),
+			ToolRegistrySnapshot.from(provider(list, ping), Set.of(), null).revision()
 		);
 	}
 
@@ -111,14 +107,14 @@ class ToolRegistrySnapshotTest {
 		final ToolRegistrySnapshot v1 = ToolRegistrySnapshot.from(
 			provider(callback("PingHost", "Pings", HOST_SCHEMA)),
 			Set.of(),
-			() -> null
+			null
 		);
 		final ToolRegistrySnapshot v2 = ToolRegistrySnapshot.from(
 			provider(
 				callback("PingHost", "Pings", "{\"type\":\"object\",\"properties\":{\"hostname\":{\"type\":\"array\"}}}")
 			),
 			Set.of(),
-			() -> null
+			null
 		);
 
 		assertNotEquals(v1.revision(), v2.revision());
@@ -128,7 +124,7 @@ class ToolRegistrySnapshotTest {
 	void shouldRejectInvalidSchema() {
 		final ToolCallbackProvider provider = provider(callback("Broken", "Broken", "{not json"));
 
-		assertThrows(IllegalStateException.class, () -> ToolRegistrySnapshot.from(provider, Set.of(), () -> null));
+		assertThrows(IllegalStateException.class, () -> ToolRegistrySnapshot.from(provider, Set.of(), null));
 	}
 
 	@Test
@@ -138,11 +134,7 @@ class ToolRegistrySnapshotTest {
 		final ToolCallback unknown = ((ProductToolCallback) callback("Unknown", "Of no known kind", "")).delegate();
 		final ToolCallback list = callback("ListHosts", "Lists hosts", "");
 
-		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(
-			provider(ssh, snmp, unknown, list),
-			Set.of(),
-			() -> null
-		);
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(provider(ssh, snmp, unknown, list), Set.of(), null);
 
 		// The host-scoped tools are not advertised: Central learns them per host, with their access, from ListHostTools
 		assertEquals(

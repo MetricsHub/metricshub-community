@@ -30,6 +30,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.web.mcp.tool.ConnectorToolCallbacks;
+import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.ProtocolToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -100,7 +101,7 @@ class HostToolsLookupTest {
 		callbacks.addAll(ConnectorToolCallbacks.from(agentContext));
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
 		when(provider.getToolCallbacks()).thenReturn(callbacks.toArray(ToolCallback[]::new));
-		return ToolRegistrySnapshot.from(provider, Set.of("ipmi_chassis"), () -> agentContext);
+		return ToolRegistrySnapshot.from(provider, Set.of("ipmi_chassis"), agentContext);
 	}
 
 	private List<String> toolsOf(final ToolRegistrySnapshot snapshot, final String hostname) throws Exception {
@@ -162,7 +163,7 @@ class HostToolsLookupTest {
 		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(
 			provider,
 			Set.of(HostToolsLookup.NAME),
-			() -> agentContext
+			agentContext
 		);
 
 		assertEquals(List.of(), snapshot.tools());
@@ -173,8 +174,8 @@ class HostToolsLookupTest {
 	void aConnectorToolDeclaredOtherwiseOnAHostIsNotListedThere() throws Exception {
 		final ConnectorStore connectorStore = agentContext.getConnectorStore();
 		// The same additional connector on two hosts, its variables giving its tool another default on host-03
-		final TelemetryManager omega = host("host-01", resolved(connectorStore, "omega"), Map.of());
-		final TelemetryManager delta = host("host-03", resolved(connectorStore, "delta"), Map.of());
+		final TelemetryManager omega = host("host-01", resolved(connectorStore, Map.of("myThing", "omega")), Map.of());
+		final TelemetryManager delta = host("host-03", resolved(connectorStore, Map.of("myThing", "delta")), Map.of());
 		omega.getHostProperties().getConnectorNamespace("myThing").setStatusOk(true);
 		delta.getHostProperties().getConnectorNamespace("myThing").setStatusOk(true);
 		final Map<String, TelemetryManager> resources = new LinkedHashMap<>();
@@ -189,19 +190,50 @@ class HostToolsLookupTest {
 		assertEquals(List.of(), toolsOf(snapshot, "host-03"));
 	}
 
+	@Test
+	void aToolIsListedOnlyForTheConnectorThatDeclaresIt() throws Exception {
+		// foo.bar and foo_bar yield the same tool name, and the snapshot keeps one callback for it
+		final ConnectorStore both = resolved(
+			agentContext.getConnectorStore(),
+			Map.of("foo.bar", "omega", "foo_bar", "omega")
+		);
+		final TelemetryManager dotted = host("host-01", both, Map.of());
+		final TelemetryManager underscored = host("host-03", both, Map.of());
+		dotted.getHostProperties().getConnectorNamespace("foo.bar").setStatusOk(true);
+		underscored.getHostProperties().getConnectorNamespace("foo_bar").setStatusOk(true);
+		final Map<String, TelemetryManager> resources = new LinkedHashMap<>();
+		resources.put("resource-0", dotted);
+		resources.put("resource-1", underscored);
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", resources));
+
+		final ToolRegistrySnapshot snapshot = snapshot();
+		final String owner = ((DynamicToolCallback) snapshot.callbacks().get("foo_bar_showThing")).getOwner();
+
+		// Only the host whose detected connector owns the kept callback is offered it: on the other, it would run
+		// another connector than the one detected there
+		final String ownersHost = "foo.bar".equals(owner) ? "host-01" : "host-03";
+		final String otherHost = "foo.bar".equals(owner) ? "host-03" : "host-01";
+		assertEquals(List.of("foo_bar_showThing=read"), toolsOf(snapshot, ownersHost));
+		assertEquals(List.of(), toolsOf(snapshot, otherHost));
+	}
+
 	/**
-	 * @return a copy of the store with an additional connector myThing using the template with the given thing
+	 * @return a copy of the store with additional connectors using the template, each with its thing
 	 */
-	private static ConnectorStore resolved(final ConnectorStore connectorStore, final String thing) {
+	private static ConnectorStore resolved(final ConnectorStore connectorStore, final Map<String, String> things) {
 		final ConnectorStore resourceConnectorStore = connectorStore.newConnectorStore();
 		resourceConnectorStore.setConnectorsWithVariables(List.of("TestTemplateWithTool"));
+		final Map<String, AdditionalConnector> additional = new LinkedHashMap<>();
+		things.forEach(
+			(id, thing) -> additional.put(
+				id,
+				AdditionalConnector.builder().uses("TestTemplateWithTool").variables(Map.of("thing", thing)).build()
+			)
+		);
 		resourceConnectorStore.addMany(
 			ConfigHelper.buildAdditionalConnectors(
 				resourceConnectorStore,
-				Map.of(
-					"myThing",
-					AdditionalConnector.builder().uses("TestTemplateWithTool").variables(Map.of("thing", thing)).build()
-				),
+				additional,
 				resourceConnectorStore.getRawConnectorStore()
 			).getCustomConnectorsMap()
 		);

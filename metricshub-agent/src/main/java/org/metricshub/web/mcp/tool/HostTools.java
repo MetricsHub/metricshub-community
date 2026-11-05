@@ -110,6 +110,7 @@ public final class HostTools {
 	/**
 	 * Builds the MCP tool.
 	 *
+	 * @param owner      the extension or connector identifier that declares the tool
 	 * @param name       the advertised tool name
 	 * @param definition what the tool takes and does
 	 * @param perHost    the body, run once per host with the resolved arguments; it returns the host's result or
@@ -117,6 +118,7 @@ public final class HostTools {
 	 * @return the callback
 	 */
 	public static ToolCallback perHost(
+		final String owner,
 		final String name,
 		final ToolDefinition definition,
 		final BiFunction<String, Map<String, String>, Object> perHost
@@ -142,7 +144,8 @@ public final class HostTools {
 		return new DynamicToolCallback(
 			springDefinition,
 			arguments -> call(definition, perHost, arguments),
-			definition.destructive()
+			definition.destructive(),
+			owner
 		);
 	}
 

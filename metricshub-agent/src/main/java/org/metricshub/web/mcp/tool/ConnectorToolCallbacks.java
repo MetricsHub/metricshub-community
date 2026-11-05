@@ -107,6 +107,7 @@ public final class ConnectorToolCallbacks {
 				final ToolDefinition definition = tool.toDefinition(toolName);
 				callbacks.add(
 					HostTools.perHost(
+						connectorId,
 						HostTools.toolName(connectorId, toolName),
 						definition,
 						(hostname, arguments) -> run(agentContext, connectorId, toolName, definition, hostname, arguments)

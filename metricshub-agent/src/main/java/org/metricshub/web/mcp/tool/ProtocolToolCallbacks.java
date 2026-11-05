@@ -70,6 +70,7 @@ public final class ProtocolToolCallbacks {
 				try {
 					callbacks.add(
 						HostTools.perHost(
+							extension.getIdentifier(),
 							HostTools.toolName(extension.getIdentifier(), definition.name()),
 							withTimeout(definition),
 							(hostname, arguments) -> execute(extension, definition, hostname, arguments, agentContext)
