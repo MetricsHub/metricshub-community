@@ -40,6 +40,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.ToolAccess;
+import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -119,6 +120,51 @@ class TunnelServiceTest {
 
 	private void configure(final TunnelConfig tunnel) {
 		agentConfig = AgentConfig.builder().central(CentralConfig.builder().enabled(true).tunnel(tunnel).build()).build();
+	}
+
+	@Test
+	void aReloadThatDeclaresAHostToolOtherwiseReconnects() {
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		final String[] description = { "Reads the SEL." };
+		final ToolCallback listHosts = callback("ListHosts");
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenAnswer(
+			invocation -> new ToolCallback[] {
+				listHosts,
+				new DynamicToolCallback(
+					org.springframework.ai.tool.definition.ToolDefinition.builder()
+						.name("ipmi_sel")
+						.description(description[0])
+						.inputSchema("{\"type\":\"object\"}")
+						.build(),
+					arguments -> "",
+					false,
+					"ipmi"
+				) }
+		);
+		final List<TunnelClient> clients = new ArrayList<>();
+		final TunnelService reconnecting = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			final TunnelClient client = mock(TunnelClient.class);
+			when(client.isConnected()).thenReturn(true);
+			clients.add(client);
+			return client;
+		}, () -> UID);
+		try {
+			reconnecting.supervise();
+
+			// The same declarations rebuilt by a reload: the bridge takes the new callbacks, the session stays
+			generation = 2;
+			reconnecting.supervise();
+			assertEquals(1, clients.size());
+
+			// Another declaration: what Central was told about the host is stale, so the session goes
+			description[0] = "Reads the System Event Log.";
+			generation = 3;
+			reconnecting.supervise();
+			assertEquals(2, clients.size());
+		} finally {
+			reconnecting.shutdown();
+		}
 	}
 
 	@Test

@@ -24,6 +24,7 @@ import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -215,6 +216,23 @@ class HostToolsLookupTest {
 		final String otherHost = "foo.bar".equals(owner) ? "host-03" : "host-01";
 		assertEquals(List.of("foo_bar_showThing=read"), toolsOf(snapshot, ownersHost));
 		assertEquals(List.of(), toolsOf(snapshot, otherHost));
+	}
+
+	@Test
+	void aConnectorToolSpelledOtherwiseOnAHostIsNotListedThere() throws Exception {
+		// host-03's store has its own copy of the connector, whose tool is spelled ListThings: a connector's tools are
+		// looked up by exact name, so the callback, built for listThings, finds nothing to run there
+		final ConnectorStore otherSpelling = new ConnectorStore(Paths.get("src", "test", "resources", "mcp", "tool"));
+		final Map<String, ConnectorTool> tools = otherSpelling.getStore().get(CONNECTOR).getTools();
+		final Map<String, ConnectorTool> respelled = new LinkedHashMap<>();
+		tools.forEach((name, tool) -> respelled.put("listThings".equals(name) ? "ListThings" : name, tool));
+		tools.clear();
+		tools.putAll(respelled);
+		final TelemetryManager host03 = host("host-03", otherSpelling, Map.of());
+		host03.getHostProperties().getConnectorNamespace(CONNECTOR).setStatusOk(true);
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", Map.of("host-03", host03)));
+
+		assertEquals(List.of("TestConnectorWithTool_reboot=write"), toolsOf(snapshot(), "host-03"));
 	}
 
 	/**

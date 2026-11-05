@@ -153,6 +153,7 @@ final class HostToolsLookup {
 						final ToolCallback callback = byName.get(HostTools.toolName(connectorId, tool));
 						if (
 							ownedBy(callback, connectorId) &&
+								spelledAs(callback, tool) &&
 								ConnectorToolCallbacks.runsAsAdvertised(manager, connectorId, tool, callback)
 						) {
 							listed.put(callback.getToolDefinition().name(), callback);
@@ -174,6 +175,17 @@ final class HostToolsLookup {
 		if (ownedBy(callback, owner)) {
 			listed.put(callback.getToolDefinition().name(), callback);
 		}
+	}
+
+	/**
+	 * @param callback a connector tool the host's connector owns
+	 * @param tool     the tool's name in the host's connector
+	 * @return whether the callback runs the tool under that very name: a connector's tools are looked up by exact
+	 *         name, while the advertised names were matched ignoring case
+	 */
+	private static boolean spelledAs(final ToolCallback callback, final String tool) {
+		final String owner = ((DynamicToolCallback) callback).getOwner();
+		return callback.getToolDefinition().name().equals(HostTools.toolName(owner, tool));
 	}
 
 	/**

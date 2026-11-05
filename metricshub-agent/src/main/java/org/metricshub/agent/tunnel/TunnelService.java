@@ -58,9 +58,9 @@ import org.springframework.ai.tool.ToolCallbackProvider;
  * {@code hosts.updated} when a configuration reload changed the monitored hosts.
  * <p>
  * The registry snapshot is built per configuration and re-advertised on every (re)connection. The connector and
- * protocol tools follow the agent context but are not advertised (Central asks {@code ListHostTools} per host), so
- * a reload that changes only them refreshes the bridge's callbacks without reconnecting; a reload that changes the
- * advertised tools restarts the tunnel, the protocol advertising tools at registration only.
+ * protocol tools follow the agent context but are not advertised (Central asks {@code ListHostTools} per host). A
+ * reload that changes the advertised tools, or the declaration of a host tool Central may have been told about,
+ * restarts the tunnel; one that only rebuilds the same tools refreshes the bridge's callbacks without reconnecting.
  * </p>
  */
 @Slf4j
@@ -175,7 +175,11 @@ public class TunnelService {
 			// (Central asks ListHostTools per host), so they only need the bridge's callbacks refreshed; a
 			// changed advertised set means a new bridge and a new registration: the same as a configuration change.
 			final ToolRegistrySnapshot current = snapshotOf(config.getExcludedTools());
-			if (!current.revision().equals(snapshot.revision())) {
+			// A host tool declared otherwise counts too: Central would invoke it with what ListHostTools told it
+			if (
+				!current.revision().equals(snapshot.revision()) ||
+					!current.hostToolsRevision().equals(snapshot.hostToolsRevision())
+			) {
 				log.info(
 					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
 					current.tools().size()

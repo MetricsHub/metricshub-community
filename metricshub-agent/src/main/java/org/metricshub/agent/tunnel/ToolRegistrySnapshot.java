@@ -48,11 +48,18 @@ import org.springframework.ai.tool.definition.ToolDefinition;
  * same tool set always yields the same revision and the server can skip a registry rewrite on reconnect.
  * </p>
  *
- * @param tools     advertised tools, sorted by name
- * @param callbacks the callback executing each tool Central may invoke, the host-scoped ones included, by name
- * @param revision  fingerprint of {@code tools}
+ * @param tools             advertised tools, sorted by name
+ * @param callbacks         the callback executing each tool Central may invoke, the host-scoped ones included, by name
+ * @param revision          fingerprint of {@code tools}
+ * @param hostToolsRevision fingerprint of the host-scoped tools' descriptors: Central keeps what ListHostTools
+ *                          answered for the session, so a change to it needs a new session
  */
-public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolCallback> callbacks, String revision) {
+public record ToolRegistrySnapshot(
+	List<ToolDescriptor> tools,
+	Map<String, ToolCallback> callbacks,
+	String revision,
+	String hostToolsRevision
+) {
 	/**
 	 * Schema advertised for a tool without arguments.
 	 */
@@ -95,7 +102,13 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 			.forEach(callback -> tools.add(describe(callback)));
 		tools.sort(Comparator.comparing(ToolDescriptor::name));
 
-		return new ToolRegistrySnapshot(List.copyOf(tools), Map.copyOf(callbacks), TunnelJson.fingerprint(tools));
+		final List<ToolDescriptor> hostTools = hostScoped.values().stream().map(ToolRegistrySnapshot::describe).toList();
+		return new ToolRegistrySnapshot(
+			List.copyOf(tools),
+			Map.copyOf(callbacks),
+			TunnelJson.fingerprint(tools),
+			TunnelJson.fingerprint(hostTools)
+		);
 	}
 
 	/**
