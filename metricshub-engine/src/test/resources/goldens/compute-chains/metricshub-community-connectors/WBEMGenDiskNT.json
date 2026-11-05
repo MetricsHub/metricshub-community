@@ -1,0 +1,75 @@
+{
+  "connector" : "WBEMGenDiskNT",
+  "sources" : {
+    "${source::monitors.disk_controller.discovery.sources.source(2)}" : {
+      "source" : "wmi",
+      "computes" : [ "extract" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.disk_controller.discovery.sources.source(4)}" : {
+      "source" : "wmi",
+      "computes" : [ "extract", "extract", "replace", "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "", "b", "c" ], [ "", "", "z", "" ], [ "", "2.5", "3" ], [ "", "", "" ], [ "" ] ],
+          "rawData" : ";b;c;\n;;z;;\n;2.5;3;\n;;;\n;"
+        }
+      }
+    },
+    "${source::monitors.disk_controller.discovery.sources.source(5)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;"
+        }
+      }
+    },
+    "${source::monitors.disk_controller.discovery.sources.source(6)}" : {
+      "source" : "wmi",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.physical_disk.collect.sources.source(4)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "duplicateColumn", "duplicateColumn", "translate", "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "UNKNWON", "Unknown", "c" ], [ "x", "", "UNKNWON", "Unknown", "z", "" ], [ "1", "2.5", "UNKNWON", "Unknown", "3" ], [ "cell;with;sep", "", "UNKNWON", "Unknown", "" ], [ "only" ] ],
+          "rawData" : "a;b;UNKNWON;Unknown;c;\nx;;UNKNWON;Unknown;z;;\n1;2.5;UNKNWON;Unknown;3;\ncell;with;sep;;UNKNWON;Unknown;;\nonly;"
+        }
+      }
+    }
+  }
+}

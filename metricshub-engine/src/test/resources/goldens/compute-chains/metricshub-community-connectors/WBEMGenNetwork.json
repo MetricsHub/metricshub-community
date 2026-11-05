@@ -1,0 +1,117 @@
+{
+  "connector" : "WBEMGenNetwork",
+  "sources" : {
+    "${source::monitors.network.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "duplicateColumn", "translate", "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "b", "c" ], [ "x", "", "", "z", "" ], [ "1", "2.5", "2.5", "3" ], [ "cell;with;sep", "", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;b;c;\nx;;;z;;\n1;2.5;2.5;3;\ncell;with;sep;;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(11)}" : {
+      "source" : "wmi",
+      "computes" : [ "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5E-4", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5E-4;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(13)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "replace", "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell", "with", "sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(14)}" : {
+      "source" : "wmi",
+      "computes" : [ "replace", "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell", "with", "sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(2)}" : {
+      "source" : "wmi",
+      "computes" : [ "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(9)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "add", "add", "add" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.discovery.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "keepOnlyMatchingLines", "excludeMatchingLines", "excludeMatchingLines", "excludeMatchingLines", "excludeMatchingLines", "keepColumns" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.network.discovery.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "PnP Device Id: c" ], [ "x", "", "PnP Device Id: z", "" ], [ "1", "2.5", "PnP Device Id: 3" ], [ "cell;with;sep", "", "PnP Device Id: " ], [ "only" ] ],
+          "rawData" : "a;b;PnP Device Id: c;\nx;;PnP Device Id: z;;\n1;2.5;PnP Device Id: 3;\ncell;with;sep;;PnP Device Id: ;\nonly;"
+        }
+      }
+    }
+  }
+}

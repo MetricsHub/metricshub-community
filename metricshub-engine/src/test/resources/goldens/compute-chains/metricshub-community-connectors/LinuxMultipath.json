@@ -1,0 +1,33 @@
+{
+  "connector" : "LinuxMultipath",
+  "sources" : {
+    "${source::monitors.lun.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "val", "val", "with,comma", "0" ], [ "only", "0", "", "" ] ],
+          "rawData" : "val;val;with,comma;0;\nonly;0;;;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.lun.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "val", "with,comma", "with,comma" ], [ "only", "only" ] ],
+          "rawData" : "val;with,comma;with,comma;\nonly;only;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "connector" : "Linux",
+  "sources" : {
+    "${source::monitors.cpu.simple.sources.cpuInfo}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.file_system.simple.sources.fileSystemInfo}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.memory.simple.sources.memoryInfo}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "0", "0", "0", "0", "0", "0", "0", "0", "0" ] ],
+          "rawData" : "0;0;0;0;0;0;0;0;0;"
+        },
+        "empty" : {
+          "table" : [ [ "0", "0", "0", "0", "0", "0", "0", "0", "0" ] ],
+          "rawData" : "0;0;0;0;0;0;0;0;0;"
+        }
+      }
+    },
+    "${source::monitors.network.simple.sources.ipLink}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.network.simple.sources.linkSpeed}" : {
+      "source" : "copy",
+      "computes" : [ "awk", "multiply" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.network.simple.sources.sysClassNet}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.paging.simple.sources.swaps}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.paging_activity.simple.sources.swapActivity}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "0", "0", "0", "0" ] ],
+          "rawData" : "0;0;0;0;"
+        },
+        "empty" : {
+          "table" : [ [ "0", "0", "0", "0" ] ],
+          "rawData" : "0;0;0;0;"
+        }
+      }
+    },
+    "${source::monitors.physical_disk.simple.sources.physicalDiskActivity}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.system.simple.sources.osInformation}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

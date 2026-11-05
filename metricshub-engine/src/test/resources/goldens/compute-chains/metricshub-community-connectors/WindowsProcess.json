@@ -1,0 +1,33 @@
+{
+  "connector" : "WindowsProcess",
+  "sources" : {
+    "${source::monitors.process.simple.sources.joinedLogonSessionAndLoggedOnUser}" : {
+      "source" : "tableJoin",
+      "computes" : [ "duplicateColumn", "extractPropertyFromWbemPath", "extractPropertyFromWbemPath", "keepOnlyMatchingLines", "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.process.simple.sources.processQuery}" : {
+      "source" : "wmi",
+      "computes" : [ "keepOnlyMatchingLines", "keepOnlyMatchingLines", "add", "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    }
+  }
+}

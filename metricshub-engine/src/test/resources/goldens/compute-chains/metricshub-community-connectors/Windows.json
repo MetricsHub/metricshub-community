@@ -1,0 +1,117 @@
+{
+  "connector" : "Windows",
+  "sources" : {
+    "${source::monitors.cpu.simple.sources.processorInformation}" : {
+      "source" : "wmi",
+      "computes" : [ "excludeMatchingLines", "extract", "divide", "divide", "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "", "b", "c" ], [ "", "", "z", "" ], [ "", "2.5E-7", "3.0E-7" ], [ "", "", "" ], [ "" ] ],
+          "rawData" : ";b;c;\n;;z;;\n;2.5E-7;3.0E-7;\n;;;\n;"
+        }
+      }
+    },
+    "${source::monitors.file_system.simple.sources.fileSystemInformation}" : {
+      "source" : "wmi",
+      "computes" : [ "subtract", "duplicateColumn", "divide", "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.memory.simple.sources.calculatedMemoryInformation}" : {
+      "source" : "wmi",
+      "computes" : [ "prepend", "multiply", "duplicateColumn", "subtract", "duplicateColumn", "divide", "divide", "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.simple.sources.Win32_PerfRawData_Tcpip_NetworkInterface}" : {
+      "source" : "wmi",
+      "computes" : [ "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.paging.simple.sources.Win32_PageFileUsage}" : {
+      "source" : "wmi",
+      "computes" : [ "duplicateColumn", "subtract", "duplicateColumn", "duplicateColumn", "divide", "divide", "multiply", "multiply", "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "b", "b", "c", "c" ], [ "x", "", "", "", "z", "z", "" ], [ "1", "2621440.0", "-524288.0", "-0.2", "3145728.0", "1.2" ], [ "cell;with;sep", "", "", "", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;b;b;c;c;\nx;;;;z;z;;\n1;2621440.0;-524288.0;-0.2;3145728.0;1.2;\ncell;with;sep;;;;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.paging_activity.simple.sources.pagingActivity}" : {
+      "source" : "wmi",
+      "computes" : [ "subtract" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.physical_disk.simple.sources.physicalDiskInformation}" : {
+      "source" : "wmi",
+      "computes" : [ "divide", "divide", "divide" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.system.simple.sources.osInformation}" : {
+      "source" : "wmi",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    }
+  }
+}

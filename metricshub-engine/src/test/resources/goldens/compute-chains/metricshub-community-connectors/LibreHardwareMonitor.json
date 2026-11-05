@@ -1,0 +1,215 @@
+{
+  "connector" : "LibreHardwareMonitor",
+  "sources" : {
+    "${source::monitors.cpu.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "", "0" ], [ "b", "0" ], [ "2.5", "3" ] ],
+          "rawData" : ";0;\nb;0;\n2.5;3;"
+        }
+      }
+    },
+    "${source::monitors.cpu.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.cpu.discovery.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "extract", "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell", "with", "sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.fan.discovery.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "x", "", "z", "" ] ],
+          "rawData" : "x;;z;;"
+        }
+      }
+    },
+    "${source::monitors.fan.discovery.sources.source(2)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "prepend", "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.gpu.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.gpu.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.memory.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.memory.discovery.sources.source(3)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.memory.discovery.sources.source(4)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.memory.discovery.sources.source(5)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns", "add", "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "5632.0", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;5632.0;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.physical_disk.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.temperature.discovery.sources.source(2)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "  - b", "" ], [ "1", "  - 2.5", "" ], [ "cell,with,sep", " ", "" ], [ "x", " ", "" ], [ "only", " ", "" ] ],
+          "rawData" : "a;  - b;;\n1;  - 2.5;;\ncell,with,sep; ;;\nx; ;;\nonly; ;;"
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2500.0", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2500.0;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "x", "", "z", "" ] ],
+          "rawData" : "x;;z;;"
+        }
+      }
+    }
+  }
+}

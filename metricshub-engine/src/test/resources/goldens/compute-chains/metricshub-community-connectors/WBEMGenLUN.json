@@ -1,0 +1,89 @@
+{
+  "connector" : "WBEMGenLUN",
+  "sources" : {
+    "${source::monitors.lun.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "only", "", "naa." ] ],
+          "rawData" : "only;;naa.;"
+        }
+      }
+    },
+    "${source::monitors.lun.discovery.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "only", "", "naa." ] ],
+          "rawData" : "only;;naa.;"
+        }
+      }
+    },
+    "${source::monitors.lun.discovery.sources.source(10)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.lun.discovery.sources.source(11)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "append", "append" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a - ", "b", "c" ], [ "x - ", "", "z", "" ], [ "1 - ", "2.5", "3" ], [ "cell;with;sep - ", "", "" ], [ "only - " ] ],
+          "rawData" : "a - ;b;c;\nx - ;;z;;\n1 - ;2.5;3;\ncell;with;sep - ;;;\nonly - ;"
+        }
+      }
+    },
+    "${source::monitors.lun.discovery.sources.source(5)}" : {
+      "source" : "wmi",
+      "computes" : [ "append" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c_0" ], [ "x", "", "z_0", "" ], [ "1", "2.5", "3_0" ], [ "cell;with;sep", "", "_0" ], [ "only" ] ],
+          "rawData" : "a;b;c_0;\nx;;z_0;;\n1;2.5;3_0;\ncell;with;sep;;_0;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.lun.discovery.sources.source(6)}" : {
+      "source" : "wmi",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

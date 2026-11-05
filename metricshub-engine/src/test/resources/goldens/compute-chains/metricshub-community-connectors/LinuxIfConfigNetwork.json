@@ -1,0 +1,61 @@
+{
+  "connector" : "LinuxIfConfigNetwork",
+  "sources" : {
+    "${source::monitors.network.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "", "", "", "0", "", "", " " ] ],
+          "rawData" : ";;;0;;; ;"
+        },
+        "empty" : {
+          "table" : [ [ "", "", "", "0", "", "" ] ],
+          "rawData" : ";;;0;;;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(2)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "translate", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c", "", "", "", "", "", "", "" ], [ "x", "", "z", "", "", "", "", "", "", "" ], [ "1", "2.5", "3", "", "", "", "", "", "", "" ], [ "cell", "with", "sep", "", "", "", "", "", "", "" ], [ "only", "", "", "", "", "", "", "", "", "" ] ],
+          "rawData" : "a;b;c;;;;;;;;\nx;;z;;;;;;;;\n1;2.5;3;;;;;;;;\ncell;with;sep;;;;;;;;\nonly;;;;;;;;;;"
+        }
+      }
+    },
+    "${source::monitors.network.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

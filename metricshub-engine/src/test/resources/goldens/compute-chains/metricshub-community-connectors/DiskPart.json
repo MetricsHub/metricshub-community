@@ -1,0 +1,33 @@
+{
+  "connector" : "DiskPart",
+  "sources" : {
+    "${source::monitors.logical_disk.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk", "duplicateColumn", "translate" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.logical_disk.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk", "excludeMatchingLines", "prepend", "prepend" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

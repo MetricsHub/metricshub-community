@@ -1,0 +1,263 @@
+{
+  "connector" : "LinuxIpmiTool",
+  "sources" : {
+    "${source::monitors.battery.simple.sources.batteries}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "prepend", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.blade.simple.sources.blades}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.cpu.simple.sources.processors}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "prepend", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.enclosure.simple.sources.allFrus}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "FRU", "a", "b", "c", "x", "", "z", "", "", "1", "2.5", "3", "val", "with,comma", "only" ] ],
+          "rawData" : "FRU;a;b;c;x;;z;;;1;2.5;3;val;with,comma;only;"
+        },
+        "empty" : {
+          "table" : [ [ "FRU" ] ],
+          "rawData" : "FRU;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.simple.sources.chassisStatus}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.enclosure.simple.sources.enclosures}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.enclosure.simple.sources.interpretedSensors}" : {
+      "source" : "tableUnion",
+      "computes" : [ "awk", "awk" ],
+      "outputs" : {
+        "awkSource" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "commandLine" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "csv" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "csvReplaceSeparator" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "empty" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "table" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "text" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.simple.sources.sdr}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "SDR", "a", "b", "c", "x", "", "z", "", "", "1", "2.5", "3", "val", "with,comma", "only" ] ],
+          "rawData" : "SDR;a;b;c;x;;z;;;1;2.5;3;val;with,comma;only;"
+        },
+        "empty" : {
+          "table" : [ [ "SDR" ] ],
+          "rawData" : "SDR;"
+        }
+      }
+    },
+    "${source::monitors.fan.simple.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "append", "append" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.fan.simple.sources.source(2)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "keepColumns", "convert", "append" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.led.simple.sources.leds}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.memory.simple.sources.memories}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "duplicateColumn", "extract", "extract", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.other_device.simple.sources.otherDevices}" : {
+      "source" : "copy",
+      "computes" : [ "excludeMatchingLines", "prepend", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.physical_disk.simple.sources.physicalDisks}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.power_supply.simple.sources.powerSupplySensors}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "prepend", "prepend", "convert" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.temperature.simple.sources.temperatures}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.voltage.simple.sources.voltages}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

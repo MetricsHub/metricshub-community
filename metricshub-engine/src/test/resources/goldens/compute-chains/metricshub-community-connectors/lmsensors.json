@@ -1,0 +1,117 @@
+{
+  "connector" : "lmsensors",
+  "sources" : {
+    "${source::monitors.enclosure.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.enclosure.discovery.sources.source(2)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.fan.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.fan.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.temperature.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.temperature.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ ],
+          "rawData" : "a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

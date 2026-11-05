@@ -1,0 +1,243 @@
+{
+  "connector" : "MIB2Switch",
+  "sources" : {
+    "${source::monitors.enclosure.collect.sources.source(1)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "translate", "divide", "duplicateColumn" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "1" ], [ "x", "", "1", "" ], [ "1", "2.5", "1000" ], [ "cell;with;sep", "", "1" ], [ "only" ] ],
+          "rawData" : "a;b;1;\nx;;1;;\n1;2.5;1000;\ncell;with;sep;;1;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.collect.sources.source(2)}" : {
+      "source" : "copy",
+      "computes" : [ "translate", "translate" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.enclosure.discovery.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.enclosure.discovery.sources.source(4)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.fan.collect.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ [ "-11", "b", "c", "", "", "", "", "", "", "", "", "", "", "a" ], [ "-11", "", "z", "", "", "", "", "", "", "", "", "", "", "x" ], [ "-10", "2.5", "3", "", "", "", "", "", "", "", "", "", "", "1" ], [ "-11", "with", "sep", "", "", "", "", "", "", "", "", "", "", "cell" ], [ "-11", "", "", "", "", "", "", "", "", "", "", "", "", "only" ] ],
+          "rawData" : "-11;b;c;;;;;;;;;;;a;\n-11;;z;;;;;;;;;;;x;\n-10;2.5;3;;;;;;;;;;;1;\n-11;with;sep;;;;;;;;;;;cell;\n-11;;;;;;;;;;;;;only;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.fan.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "awk" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.fan.discovery.sources.source(2)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "", "a", "Manufacturer: c Serial Number: b" ], [ "", "x", "Manufacturer: z" ], [ "", "1", "Manufacturer: 3 Serial Number: 2.5" ], [ "", "cell,with,sep" ], [ "", "only" ] ],
+          "rawData" : ";a;Manufacturer: c Serial Number: b;\n;x;Manufacturer: z;\n;1;Manufacturer: 3 Serial Number: 2.5;\n;cell,with,sep;\n;only;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(1)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "duplicateColumn", "duplicateColumn", "translate", "translate", "translate", "divide", "add", "add", "add" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "UNKNOWN", "Unknown Status", "ok" ], [ "1", "2.5", "3.0E-6" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;UNKNOWN;Unknown Status;ok;\n1;2.5;3.0E-6;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(2)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "add", "add", "add", "add", "keepColumns" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "prepend", "append", "replace", "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell", "with", "sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(4)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines", "replace", "replace", "replace", "replace" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.network.collect.sources.source(5)}" : {
+      "source" : "copy",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.network.discovery.sources.source(1)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "keepOnlyMatchingLines", "keepOnlyMatchingLines", "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.network.discovery.sources.source(4)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;"
+        }
+      }
+    },
+    "${source::monitors.temperature.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "multiply" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "csv" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "connector" : "LinuxProcess",
+  "sources" : {
+    "${source::monitors.process.simple.sources.process}" : {
+      "source" : "commandLine",
+      "computes" : [ "awk", "keepOnlyMatchingLines", "keepOnlyMatchingLines", "keepOnlyMatchingLines" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "a", "b", "c", "", "", "", "", "", "0", "0", "", "" ], [ "x", "", "z", "", "", "", "", "", "", "0", "0", "", "" ], [ "1", "2.5", "3", "", "", "", "", "", "0", "0", "", "" ], [ "val", "with,comma", "", "", "", "", "", "0", "0", "", "" ] ],
+          "rawData" : "a;b;c;;;;;;0;0;;;\nx;;z;;;;;;;0;0;;;\n1;2.5;3;;;;;;0;0;;;\nval;with,comma;;;;;;0;0;;;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

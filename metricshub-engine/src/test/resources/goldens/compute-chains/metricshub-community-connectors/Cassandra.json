@@ -1,0 +1,109 @@
+{
+  "connector" : "Cassandra",
+  "sources" : {
+    "${source::beforeAll.dbServerName}" : {
+      "source" : "jmx",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "" ], [ "" ], [ "" ], [ "" ], [ "" ] ],
+          "rawData" : ";\n;\n;\n;\n;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.cache.simple.sources.cacheMetrics}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.cassandra.simple.sources.dbMetrics}" : {
+      "source" : "tableUnion",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "awkSource" : {
+          "table" : [ [ "a", "b", "cx", "", "z", "1", "2.5", "3val", "with,commaonly" ] ],
+          "rawData" : "a;b;cx;;z;1;2.5;3val;with,commaonly;"
+        },
+        "commandLine" : {
+          "table" : [ [ "a", "b", "cx", "", "z", "1", "2.5", "3val", "with,commaonly" ] ],
+          "rawData" : "a;b;cx;;z;1;2.5;3val;with,commaonly;"
+        },
+        "csv" : {
+          "table" : [ [ "a", "b", "c", "x", "", "z", "", "1", "2.5", "3", "cell", "with", "sep", "", "", "only" ] ],
+          "rawData" : "a;b;c;x;;z;;1;2.5;3;cell;with;sep;;;only;"
+        },
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c", "x", "", "z", "", "1", "2.5", "3", "cell,with,sep", "", "", "only" ] ],
+          "rawData" : "a;b;c;x;;z;;1;2.5;3;cell,with,sep;;;only;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c", "x", "", "z", "", "1", "2.5", "3", "cell,with,sep", "", "", "only" ] ],
+          "rawData" : "a;b;c;x;;z;;1;2.5;3;cell,with,sep;;;only;"
+        },
+        "text" : {
+          "table" : [ [ "a", "b", "cx", "", "z", "1", "2.5", "3val", "with,commaonly" ] ],
+          "rawData" : "a;b;cx;;z;1;2.5;3val;with,commaonly;"
+        }
+      }
+    },
+    "${source::monitors.cassandra.simple.sources.uptime}" : {
+      "source" : "jmx",
+      "computes" : [ "divide" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "0.001", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n0.001;2.5;3;\ncell;with;sep;;;\nonly;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.cassandra_cluster.simple.sources.clusterNodes}" : {
+      "source" : "jmx",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "csvReplaceSeparator" : {
+          "table" : [ [ "7", "2", "3", "0", "0" ] ],
+          "rawData" : "7;2;3;0;0;"
+        },
+        "empty" : {
+          "table" : [ [ "0", "0", "0", "0", "0" ] ],
+          "rawData" : "0;0;0;0;0;"
+        }
+      }
+    },
+    "${source::monitors.thread.simple.sources.threadMetrics}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : null
+        }
+      }
+    }
+  }
+}

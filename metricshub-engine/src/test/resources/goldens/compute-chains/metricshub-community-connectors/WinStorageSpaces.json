@@ -1,0 +1,145 @@
+{
+  "connector" : "WinStorageSpaces",
+  "sources" : {
+    "${source::monitors.disk_controller.discovery.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "keepOnlyMatchingLines", "keepOnlyMatchingLines", "translate", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.disk_controller.discovery.sources.source(11)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.disk_controller.discovery.sources.source(2)}" : {
+      "source" : "wmi",
+      "computes" : [ "replace" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell", "with", "sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.disk_controller.discovery.sources.source(7)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : null
+        }
+      }
+    },
+    "${source::monitors.logical_disk.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "duplicateColumn", "translate", "translate", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "UNKNOWN", "Unknown" ], [ "x", "UNKNOWN", "Unknown" ], [ "1", "failed", "Full Repair Needed" ], [ "cell", "sep", "", "UNKNOWN" ], [ "only", "", "" ] ],
+          "rawData" : "a;UNKNOWN;Unknown;\nx;UNKNOWN;Unknown;\n1;failed;Full Repair Needed;\ncell;sep;;UNKNOWN;\nonly;;;"
+        }
+      }
+    },
+    "${source::monitors.logical_disk.discovery.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "keepOnlyMatchingLines", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "1", "", "File System: " ] ],
+          "rawData" : "1;;File System: ;"
+        }
+      }
+    },
+    "${source::monitors.physical_disk.collect.sources.source(1)}" : {
+      "source" : "wmi",
+      "computes" : [ "duplicateColumn", "duplicateColumn", "arrayTranslate", "convert", "arrayTranslate", "arrayTranslate", "extract" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "UNKNOWN", "c", "c" ], [ "x", "", "UNKNOWN", "z", "z", "" ], [ "1", "2.5", "UNKNOWN", "3", "3" ], [ "cell;with;sep", "", "UNKNOWN", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;UNKNOWN;c;c;\nx;;UNKNOWN;z;z;;\n1;2.5;UNKNOWN;3;3;\ncell;with;sep;;UNKNOWN;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.physical_disk.collect.sources.source(2)}" : {
+      "source" : "wmi",
+      "computes" : [ "add", "multiply", "add" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "97.0" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;97.0;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.temperature.discovery.sources.source(1)}" : {
+      "source" : "copy",
+      "computes" : [ "excludeMatchingLines" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.temperature.discovery.sources.source(2)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "keepColumns", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "c", "", "b" ], [ "x", "z", "41", "50" ], [ "1", "3", "", "2.5" ], [ "cell,with,sep", "", "41", "50" ], [ "only", "", "41", "50" ] ],
+          "rawData" : "a;c;;b;\nx;z;41;50;\n1;3;;2.5;\ncell,with,sep;;41;50;\nonly;;41;50;"
+        }
+      }
+    }
+  }
+}

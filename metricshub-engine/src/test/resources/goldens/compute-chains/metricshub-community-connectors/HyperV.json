@@ -1,0 +1,33 @@
+{
+  "connector" : "HyperV",
+  "sources" : {
+    "${source::monitors.vm.collect.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "replace", "replace", "replace", "translate" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "a", "b", "off" ], [ "x", "", "off" ], [ "" ], [ "1", "2.5", "off" ], [ "val", "with,comma" ], [ "only" ] ],
+          "rawData" : "a;b;off;\nx;;off;\n;\n1;2.5;off;\nval;with,comma;\nonly;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    },
+    "${source::monitors.vm.discovery.sources.source(1)}" : {
+      "source" : "commandLine",
+      "computes" : [ "replace", "replace", "prepend" ],
+      "outputs" : {
+        "commandLine" : {
+          "table" : [ [ "a", "GUID: b", "c" ], [ "x", "GUID: ", "z" ], [ "" ], [ "1", "GUID: 2.5", "3" ], [ "val", "GUID: with,comma" ], [ "only" ] ],
+          "rawData" : "a;GUID: b;c;\nx;GUID: ;z;\n;\n1;GUID: 2.5;3;\nval;GUID: with,comma;\nonly;"
+        },
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        }
+      }
+    }
+  }
+}

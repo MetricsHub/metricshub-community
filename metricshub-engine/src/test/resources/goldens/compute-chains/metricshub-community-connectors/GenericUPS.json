@@ -1,0 +1,257 @@
+{
+  "connector" : "GenericUPS",
+  "sources" : {
+    "${source::monitors.battery.collect.sources.source(1)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "a", "b", "c" ], [ "MSHW", "x", "", "z", "" ], [ "MSHW", "1", "2.5", "3" ], [ "MSHW", "cell", "with", "sep", "", "" ], [ "MSHW", "only" ] ],
+          "rawData" : "MSHW;a;b;c;\nMSHW;x;;z;;\nMSHW;1;2.5;3;\nMSHW;cell;with;sep;;;\nMSHW;only;"
+        }
+      }
+    },
+    "${source::monitors.battery.collect.sources.source(2)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "a", "b", "c" ], [ "MSHW", "x", "", "z", "" ], [ "MSHW", "1", "2.5", "3" ], [ "MSHW", "cell", "with", "sep", "", "" ], [ "MSHW", "only" ] ],
+          "rawData" : "MSHW;a;b;c;\nMSHW;x;;z;;\nMSHW;1;2.5;3;\nMSHW;cell;with;sep;;;\nMSHW;only;"
+        }
+      }
+    },
+    "${source::monitors.battery.collect.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "duplicateColumn", "translate", "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "b", "c" ], [ "x", "", "", "z", "" ], [ "1", "2.5", "2.5", "3" ], [ "cell;with;sep", "", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;b;c;\nx;;;z;;\n1;2.5;2.5;3;\ncell;with;sep;;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.battery.collect.sources.source(4)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "a", "b", "c" ], [ "MSHW", "x", "", "z", "" ], [ "MSHW", "1", "2.5", "3" ], [ "MSHW", "cell", "with", "sep", "", "" ], [ "MSHW", "only" ] ],
+          "rawData" : "MSHW;a;b;c;\nMSHW;x;;z;;\nMSHW;1;2.5;3;\nMSHW;cell;with;sep;;;\nMSHW;only;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.collect.sources.source(1)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "a", "b", "c" ], [ "MSHW", "x", "", "z", "" ], [ "MSHW", "1", "2.5", "3" ], [ "MSHW", "cell", "with", "sep", "", "" ], [ "MSHW", "only" ] ],
+          "rawData" : "MSHW;a;b;c;\nMSHW;x;;z;;\nMSHW;1;2.5;3;\nMSHW;cell;with;sep;;;\nMSHW;only;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.collect.sources.source(2)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ [ "MSHW", "0" ] ],
+          "rawData" : "MSHW;0;"
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "0.111111" ] ],
+          "rawData" : "MSHW;0.111111;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.collect.sources.source(3)}" : {
+      "source" : "tableJoin",
+      "computes" : [ "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "failed", "c" ], [ "x", "failed", "z", "" ], [ "1", "failed", "3" ], [ "cell;with;sep", "failed", "" ], [ "only" ] ],
+          "rawData" : "a;failed;c;\nx;failed;z;;\n1;failed;3;\ncell;with;sep;failed;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.enclosure.collect.sources.source(4)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "a", "b", "c" ], [ "MSHW", "x", "", "z", "" ], [ "MSHW", "1", "2.5", "3" ], [ "MSHW", "cell", "with", "sep", "", "" ], [ "MSHW", "only" ] ],
+          "rawData" : "MSHW;a;b;c;\nMSHW;x;;z;;\nMSHW;1;2.5;3;\nMSHW;cell;with;sep;;;\nMSHW;only;"
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(1)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "prepend", "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Battery Voltage", "a", "b", "c" ], [ "MSHW", "Battery Voltage", "x", "", "z", "" ], [ "MSHW", "Battery Voltage", "100.0", "2.5", "3" ], [ "MSHW", "Battery Voltage", "cell", "with", "sep", "", "" ], [ "MSHW", "Battery Voltage", "only" ] ],
+          "rawData" : "MSHW;Battery Voltage;a;b;c;\nMSHW;Battery Voltage;x;;z;;\nMSHW;Battery Voltage;100.0;2.5;3;\nMSHW;Battery Voltage;cell;with;sep;;;\nMSHW;Battery Voltage;only;"
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(2)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend", "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Input a", "b", "c" ], [ "MSHW", "Input x", "", "z", "" ], [ "MSHW", "Input 1", "2500.0", "3" ], [ "MSHW", "Input cell", "with", "sep", "", "" ], [ "MSHW", "Input only" ] ],
+          "rawData" : "MSHW;Input a;b;c;\nMSHW;Input x;;z;;\nMSHW;Input 1;2500.0;3;\nMSHW;Input cell;with;sep;;;\nMSHW;Input only;"
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(3)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend", "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Output a", "b", "c" ], [ "MSHW", "Output x", "", "z", "" ], [ "MSHW", "Output 1", "2500.0", "3" ], [ "MSHW", "Output cell", "with", "sep", "", "" ], [ "MSHW", "Output only" ] ],
+          "rawData" : "MSHW;Output a;b;c;\nMSHW;Output x;;z;;\nMSHW;Output 1;2500.0;3;\nMSHW;Output cell;with;sep;;;\nMSHW;Output only;"
+        }
+      }
+    },
+    "${source::monitors.voltage.collect.sources.source(4)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend", "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Bypass a", "b", "c" ], [ "MSHW", "Bypass x", "", "z", "" ], [ "MSHW", "Bypass 1", "2500.0", "3" ], [ "MSHW", "Bypass cell", "with", "sep", "", "" ], [ "MSHW", "Bypass only" ] ],
+          "rawData" : "MSHW;Bypass a;b;c;\nMSHW;Bypass x;;z;;\nMSHW;Bypass 1;2500.0;3;\nMSHW;Bypass cell;with;sep;;;\nMSHW;Bypass only;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(1)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1000.0", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1000.0;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(2)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend", "append", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Input a", "b", "0", "0" ], [ "MSHW", "Input x", "", "", "" ], [ "MSHW", "Input 1", "2.5", "2.75", "2.25" ], [ "MSHW", "Input cell", "with", "0", "0" ], [ "MSHW", "Input only", "", "", "" ] ],
+          "rawData" : "MSHW;Input a;b;0;0;\nMSHW;Input x;;;;\nMSHW;Input 1;2.5;2.75;2.25;\nMSHW;Input cell;with;0;0;\nMSHW;Input only;;;;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(3)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "multiply" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1000.0", "2.5", "3" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1000.0;2.5;3;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(4)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend", "append", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Output a", "b", "0", "0" ], [ "MSHW", "Output x", "", "", "" ], [ "MSHW", "Output 1", "2.5", "2.75", "2.25" ], [ "MSHW", "Output cell", "with", "0", "0" ], [ "MSHW", "Output only", "", "", "" ] ],
+          "rawData" : "MSHW;Output a;b;0;0;\nMSHW;Output x;;;;\nMSHW;Output 1;2.5;2.75;2.25;\nMSHW;Output cell;with;0;0;\nMSHW;Output only;;;;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(5)}" : {
+      "source" : "snmpGet",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Battery Voltage", "a", "b", "c" ], [ "MSHW", "Battery Voltage", "x", "", "z", "" ], [ "MSHW", "Battery Voltage", "1", "2.5", "3" ], [ "MSHW", "Battery Voltage", "cell", "with", "sep", "", "" ], [ "MSHW", "Battery Voltage", "only" ] ],
+          "rawData" : "MSHW;Battery Voltage;a;b;c;\nMSHW;Battery Voltage;x;;z;;\nMSHW;Battery Voltage;1;2.5;3;\nMSHW;Battery Voltage;cell;with;sep;;;\nMSHW;Battery Voltage;only;"
+        }
+      }
+    },
+    "${source::monitors.voltage.discovery.sources.source(6)}" : {
+      "source" : "snmpTable",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "MSHW", "Bypass a", "b", "c" ], [ "MSHW", "Bypass x", "", "z", "" ], [ "MSHW", "Bypass 1", "2.5", "3" ], [ "MSHW", "Bypass cell", "with", "sep", "", "" ], [ "MSHW", "Bypass only" ] ],
+          "rawData" : "MSHW;Bypass a;b;c;\nMSHW;Bypass x;;z;;\nMSHW;Bypass 1;2.5;3;\nMSHW;Bypass cell;with;sep;;;\nMSHW;Bypass only;"
+        }
+      }
+    }
+  }
+}
