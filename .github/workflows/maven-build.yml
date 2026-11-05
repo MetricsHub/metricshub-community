@@ -161,10 +161,16 @@ jobs:
 
     # The compute-chain golden corpus (metricshub-engine, ComputeChainGoldenCorpusTest) verifies the committed
     # goldens against the connectors of the repositories found next to this checkout, and is skipped when none
-    # is there. The community repository is public: check it out so that pull requests and main verify its goldens.
-    # The enterprise repository is private and is verified locally only.
+    # is there. The community repository is public: check it out, at the revision the goldens were generated from
+    # (goldens/compute-chains/revisions.properties, written with the goldens), so that pull requests and main verify
+    # its goldens. The enterprise repository is private and is verified locally only.
     - name: Checkout the community connectors for the golden corpus
-      run: git clone --depth 1 --branch main https://github.com/MetricsHub/community-connectors.git ../metricshub-community-connectors
+      shell: bash
+      run: |
+        rev=$(grep '^metricshub-community-connectors=' metricshub-engine/src/test/resources/goldens/compute-chains/revisions.properties | cut -d= -f2 | tr -d '\r')
+        git init -q ../metricshub-community-connectors
+        git -C ../metricshub-community-connectors fetch -q --depth 1 https://github.com/MetricsHub/community-connectors.git "$rev"
+        git -C ../metricshub-community-connectors checkout -q FETCH_HEAD
 
     - name: Build with Maven
       run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml ${{ inputs.mavenPhases }} ${{ inputs.mavenOptions }}

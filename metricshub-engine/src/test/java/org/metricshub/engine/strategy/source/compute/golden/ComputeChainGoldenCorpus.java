@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -308,6 +309,61 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
+	 * The file recording the revision of each connector repository the goldens were generated from, as
+	 * <code>&lt;root directory name&gt;=&lt;commit&gt;</code> lines. CI checks out these revisions.
+	 */
+	public static final Path REVISIONS_FILE = GOLDEN_DIRECTORY.resolve("revisions.properties");
+
+	/**
+	 * Records the revision (<code>git rev-parse HEAD</code>) of a repository in {@link #REVISIONS_FILE}, keeping
+	 * the other repositories' lines. Nothing is written when the root is not a git checkout.
+	 *
+	 * @param root The repository root
+	 * @throws IOException when the file cannot be read or written
+	 */
+	public static void recordRevision(final Path root) throws IOException {
+		final String revision = gitHead(root);
+		if (revision == null) {
+			return;
+		}
+		final String name = root.toAbsolutePath().normalize().getFileName().toString();
+		final Map<String, String> revisions = new TreeMap<>();
+		if (Files.exists(REVISIONS_FILE)) {
+			for (final String line : Files.readAllLines(REVISIONS_FILE)) {
+				final int equal = line.indexOf('=');
+				if (equal > 0 && !line.startsWith("#")) {
+					revisions.put(line.substring(0, equal).trim(), line.substring(equal + 1).trim());
+				}
+			}
+		}
+		revisions.put(name, revision);
+		final StringBuilder content = new StringBuilder(
+			"# Revision of each connector repository the goldens were generated from (written by the update mode)"
+		);
+		revisions.forEach(
+			(repository, commit) -> content.append(System.lineSeparator()).append(repository).append('=').append(commit)
+		);
+		content.append(System.lineSeparator());
+		Files.createDirectories(REVISIONS_FILE.getParent());
+		Files.writeString(REVISIONS_FILE, content.toString());
+	}
+
+	private static String gitHead(final Path root) {
+		try {
+			final Process process = new ProcessBuilder("git", "-C", root.toAbsolutePath().toString(), "rev-parse", "HEAD")
+				.redirectErrorStream(true)
+				.start();
+			final String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+			return process.waitFor() == 0 && output.matches("[0-9a-f]{40}") ? output : null;
+		} catch (IOException e) {
+			return null;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return null;
+		}
+	}
+
+	/**
 	 * Writes the golden of a connector.
 	 *
 	 * @param file   The golden file
@@ -345,6 +401,11 @@ public class ComputeChainGoldenCorpus {
 				return;
 			}
 			final JsonNode generatedSource = generatedSources.get(key);
+			if (!storedSource.path("source").equals(generatedSource.path("source"))) {
+				differences.add(
+					key + ": source type changed " + storedSource.path("source") + " -> " + generatedSource.path("source")
+				);
+			}
 			if (!storedSource.path("computes").equals(generatedSource.path("computes"))) {
 				differences.add(
 					key + ": compute chain changed " + storedSource.path("computes") + " -> " + generatedSource.path("computes")
@@ -564,7 +625,8 @@ public class ComputeChainGoldenCorpus {
 			final boolean rootEntry = keySegments.isEmpty() || keySegments.equals(List.of("*"));
 			final JsonNode root = buildJson(keySegments, 0, new ArrayList<>(), properties, rootEntry);
 			try {
-				return MAPPER.writeValueAsString(root);
+				// Compact: a pretty-printed document would carry the platform line separator into the goldens
+				return MAPPER.writer().without(SerializationFeature.INDENT_OUTPUT).writeValueAsString(root);
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}
@@ -649,9 +711,20 @@ public class ComputeChainGoldenCorpus {
 				final ObjectNode target = climb == 0 ? entry : chain.get(chain.size() - climb);
 				final String leaf = INDEXED.matcher(path.get(path.size() - 1)).replaceAll("$1");
 				// A value on an enclosing object is shared by the entries: the first entry sets it
-				final String value = climb > 0 ? leaf + "-up" : valueOf(leaf, entryIndex);
+				final JsonNode value = climb > 0
+					? MAPPER.getNodeFactory().textNode(leaf + "-up")
+					: jsonValueOf(leaf, entryIndex);
 				setValue(target, path, value, climb > 0);
 			}
+		}
+
+		/**
+		 * The JSON value of an entry: a text, but a real number for the numeric entry.
+		 */
+		static JsonNode jsonValueOf(final String leaf, final int entryIndex) {
+			return entryIndex == 3
+				? MAPPER.getNodeFactory().numberNode(42)
+				: MAPPER.getNodeFactory().textNode(valueOf(leaf, entryIndex));
 		}
 
 		static String valueOf(final String leaf, final int entryIndex) {
@@ -666,7 +739,7 @@ public class ComputeChainGoldenCorpus {
 		private static void setValue(
 			final ObjectNode target,
 			final List<String> path,
-			final String value,
+			final JsonNode value,
 			final boolean keepExisting
 		) {
 			JsonNode current = target;
@@ -682,7 +755,7 @@ public class ComputeChainGoldenCorpus {
 					if (last) {
 						if (!keepExisting || !object.has(name)) {
 							if (!object.has(name) || object.get(name).isValueNode()) {
-								object.put(name, value);
+								object.set(name, value);
 							}
 						}
 						return;
