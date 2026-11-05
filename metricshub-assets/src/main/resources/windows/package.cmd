@@ -106,7 +106,7 @@ REM argument such as --password "a\"b" reaches the application broken.
 REM win.norestart=true (read from the [Application] section) disables the restart.
 echo Disabling launcher restart in the app-image .cfg files...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "Get-ChildItem '%DEST_DIR%\MetricsHub\app\*.cfg' | ForEach-Object { $c = (Get-Content -Raw $_.FullName) -replace '\[Application\]\r?\n', ('[Application]' + [Environment]::NewLine + 'win.norestart=true' + [Environment]::NewLine); [IO.File]::WriteAllText($_.FullName, $c) }"
+ "Get-ChildItem -LiteralPath (Join-Path $env:DEST_DIR 'MetricsHub\app') -Filter *.cfg | ForEach-Object { $c = (Get-Content -Raw $_.FullName) -replace '\[Application\]\r?\n', ('[Application]' + [Environment]::NewLine + 'win.norestart=true' + [Environment]::NewLine); [IO.File]::WriteAllText($_.FullName, $c) }"
 if errorlevel 1 (
     echo Failed to update the launcher .cfg files.
     exit /b 1
