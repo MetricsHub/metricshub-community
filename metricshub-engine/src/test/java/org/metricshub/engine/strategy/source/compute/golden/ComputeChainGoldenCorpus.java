@@ -88,6 +88,10 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * community and enterprise repositories checked out next to this repository. A missing root is skipped.</li>
  * <li>{@value #UPDATE_PROPERTY}: when <code>true</code>, the goldens are (re)written instead of verified.</li>
  * </ul>
+ * The goldens are written into each connector repository (<code>src/test/goldens/compute-chains</code>) and
+ * committed there; this module records the revision of each repository they were generated from. After committing
+ * regenerated goldens in a repository, set its line of the revision pin to that commit: CI checks the community
+ * repository out at the pinned revision.
  */
 @NoArgsConstructor
 public class ComputeChainGoldenCorpus {
@@ -96,8 +100,15 @@ public class ComputeChainGoldenCorpus {
 	public static final String ROOTS_ENV = "METRICSHUB_CONNECTORS_ROOTS";
 	public static final String UPDATE_PROPERTY = "metricshub.goldens.update";
 
-	/** Where the goldens live, relative to the module directory. */
+	/**
+	 * The corpus directory of this module, relative to the module directory: it holds the revision pin only. The
+	 * goldens themselves live in the connector repository they describe (see {@link #REPOSITORY_GOLDEN_DIRECTORY}):
+	 * the enterprise repository is private, so its goldens never leave it.
+	 */
 	public static final Path GOLDEN_DIRECTORY = Path.of("src", "test", "resources", "goldens", "compute-chains");
+
+	/** Where the goldens of a connector repository live, relative to that repository's root. */
+	public static final Path REPOSITORY_GOLDEN_DIRECTORY = Path.of("src", "test", "goldens", "compute-chains");
 
 	private static final List<String> DEFAULT_ROOTS = List.of(
 		"../../metricshub-community-connectors",
@@ -149,13 +160,14 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * The directory holding the goldens of a repository root.
+	 * The directory holding the goldens of a repository root: inside that repository, so that the goldens of a
+	 * private repository stay private.
 	 *
 	 * @param root The repository root
-	 * @return the golden directory, named after the root
+	 * @return <code>root/src/test/goldens/compute-chains</code>
 	 */
 	public static Path goldenDirectory(final Path root) {
-		return GOLDEN_DIRECTORY.resolve(root.toAbsolutePath().normalize().getFileName().toString());
+		return root.resolve(REPOSITORY_GOLDEN_DIRECTORY);
 	}
 
 	/**
