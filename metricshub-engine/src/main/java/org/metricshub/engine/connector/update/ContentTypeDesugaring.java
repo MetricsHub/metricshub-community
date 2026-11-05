@@ -347,7 +347,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 				code.append(' ');
 			} else {
 				code.append(c);
-				if (!Character.isWhitespace(c)) {
+				// A line feed ends a rule or a statement: what follows can start a regex (a pattern-only rule after
+				// another one); other blanks are skipped
+				if (c == '\n' || !Character.isWhitespace(c)) {
 					previous = c;
 				}
 			}

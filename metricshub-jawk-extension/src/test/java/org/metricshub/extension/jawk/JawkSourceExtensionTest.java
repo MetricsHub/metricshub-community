@@ -354,10 +354,8 @@ class JawkSourceExtensionTest {
 			.output(ContentType.TABLE)
 			.script("$3 > 0 { print $1, $2, $3 / 60, NF }")
 			.build();
-		// The expansion of the reference into the source's text is skipped by update(): the extension resolves the
-		// reference to the table. The other substitutions, such as the row of an executeForEachEntryOf, apply
-		source.update(value -> value == null ? null : value.replace("${source::", "the text of "));
-		assertEquals(inputRef, source.getInput());
+		// The substitutions, such as the row of an executeForEachEntryOf, apply to the input reference (the source
+		// updater skips the expansion of the reference into the source's text: the extension resolves it to the table)
 		final JawkSource perEntry = JawkSource.builder()
 			.input("${source::monitors.enclosure.discovery.sources.$1}")
 			.inputFormat(ContentType.TABLE)

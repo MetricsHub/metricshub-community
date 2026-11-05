@@ -546,6 +546,9 @@ class ContentTypeDesugaringTest {
 		// The pattern of a rule after the action of the previous one is a regex too
 		final String nextRule = ContentTypeDesugaring.code("/foo/ { print }\n/printf/ { print }");
 		assertFalse(nextRule.contains("printf"), nextRule);
+		// ... and after a pattern-only rule
+		final String patternOnly = ContentTypeDesugaring.code("/foo/\n/printf/\n$1 == \"x\"\n/printf/");
+		assertFalse(patternOnly.contains("printf"), patternOnly);
 		// A regex operand after a keyword is a literal too
 		final String afterKeyword = ContentTypeDesugaring.code("{ print /printf/; return /foo#bar/; printf \"%s\", $1 }");
 		assertFalse(afterKeyword.contains("/printf/"), afterKeyword);
