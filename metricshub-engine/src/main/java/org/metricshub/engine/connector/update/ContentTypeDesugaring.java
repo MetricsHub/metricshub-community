@@ -86,7 +86,9 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
  * The implicit computes are flagged ({@link ToText#isImplicit()}, {@link ToTable#isImplicit()}) and leave the
- * results of the existing connectors byte for byte identical.
+ * results of the existing connectors byte for byte identical. Every inserted compute, the executable toTable
+ * included, is flagged as generated ({@link ToTable#isGenerated()}): a later pass removes them first, so the
+ * chain and the report are rebuilt from what is written.
  * <p>
  * The findings are stored on the connector ({@link Connector#getContentTypeReport()}).
  */
@@ -148,7 +150,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return;
 		}
 		// Start again from the chain as written: a previous pass may have inserted implicit conversions
-		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
+		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
 		final State start = source instanceof CopySource copy
 			? effectiveOutput(copy, sources, new HashSet<>())
@@ -178,7 +180,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 					report.add(new ContentTypeReportEntry(key, Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, where));
 				} else if (producer == TextProducer.EXPLICIT) {
 					// An explicit toText left text only: a real conversion is needed to get a table back
-					desugared.add(ToTable.builder().type("toTable").build());
+					desugared.add(ToTable.generated());
 					report.add(
 						new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where + " (after an explicit toText)")
 					);
@@ -293,8 +295,12 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		return "inline script" + (FS_SEMICOLON.matcher(content).find() ? " (sets FS to \";\")" : "");
 	}
 
-	private static boolean isImplicit(final Compute compute) {
-		return (compute instanceof ToTable toTable && toTable.isImplicit()) ||
+	/**
+	 * Whether the compute was inserted by this step: an implicit conversion, or the executable toTable inserted
+	 * after an explicit toText. A later pass starts from the chain without them.
+	 */
+	private static boolean isGenerated(final Compute compute) {
+		return (compute instanceof ToTable toTable && toTable.isGenerated()) ||
 			(compute instanceof ToText toText && toText.isImplicit());
 	}
 
@@ -331,7 +337,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 		State state = origin instanceof CopySource nested ? effectiveOutput(nested, sources, visited) : startOf(origin);
 		for (final Compute compute : origin.getComputes()) {
-			if (isImplicit(compute)) {
+			if (isGenerated(compute)) {
 				continue;
 			}
 			final ContentType type = compute.getOutputContentType();

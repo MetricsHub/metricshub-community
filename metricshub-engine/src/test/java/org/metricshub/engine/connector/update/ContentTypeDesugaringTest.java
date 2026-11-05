@@ -396,6 +396,12 @@ class ContentTypeDesugaringTest {
 
 		assertEquals(List.of("toText", "toTable", "keepColumns"), types(source));
 		assertFalse(((ToTable) source.getComputes().get(1)).isImplicit());
+		assertTrue(((ToTable) source.getComputes().get(1)).isGenerated());
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+
+		// A second pass starts again from what is written: the same chain, the same finding
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("toText", "toTable", "keepColumns"), types(source));
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 
 		// Run the desugared chain: the rows survive, with "," for ";" inside a cell as toText serializes
