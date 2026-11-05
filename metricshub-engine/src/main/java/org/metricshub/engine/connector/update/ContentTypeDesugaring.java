@@ -165,6 +165,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (source instanceof StaticSource staticSource && contains(staticSource.getValue(), TABLE_SEP)) {
 			report.add(new ContentTypeReportEntry(key, Kind.STATIC_CSV, "value=" + staticSource.getValue()));
 		}
+		// An awk source writing a table: each printf is a single-cell row, as for the compute
+		if (
+			source instanceof JawkSource jawk &&
+				jawk.getOutputContentType() == ContentType.TABLE &&
+				PRINTF.matcher(code(scriptContent(connector, jawk.getScript()))).find()
+		) {
+			report.add(new ContentTypeReportEntry(key, Kind.PRINTF_IN_TABLE_OUTPUT, "the source"));
+		}
 
 		if (source.getComputes() == null) {
 			return;
@@ -257,7 +265,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	) {
 		if (compute instanceof Awk awk) {
 			if (
-				awk.getOutputContentType() == ContentType.TABLE && PRINTF.matcher(code(scriptContent(connector, awk))).find()
+				awk.getOutputContentType() == ContentType.TABLE &&
+					PRINTF.matcher(code(scriptContent(connector, awk.getScript()))).find()
 			) {
 				report.add(new ContentTypeReportEntry(key, Kind.PRINTF_IN_TABLE_OUTPUT, where));
 			}
@@ -314,7 +323,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (script == null) {
 			return "script=null";
 		}
-		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, awk)).find() ? " (sets FS to \";\")" : "";
+		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, script)).find() ? " (sets FS to \";\")" : "";
 		return (FILE_PATTERN.matcher(script).find() ? "script=" + script : "inline script") + fs;
 	}
 
@@ -363,7 +372,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * a separator or an opening bracket.
 	 */
 	private static boolean regexCanStart(final char previous, final CharSequence code) {
-		if ("\n(,~!{};&|=?:[".indexOf(previous) >= 0) {
+		if ("\n(,~!{};&|=?:[+-*%<>".indexOf(previous) >= 0) {
 			return true;
 		}
 		// After a keyword taking an expression, such as "print /re/" or "return /re/"
@@ -381,8 +390,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	/**
 	 * The text of the script of an <code>awk</code> compute: the embedded file it references, or the script itself.
 	 */
-	private static String scriptContent(final Connector connector, final Awk awk) {
-		final String script = awk.getScript();
+	private static String scriptContent(final Connector connector, final String script) {
 		if (script == null) {
 			return "";
 		}

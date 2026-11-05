@@ -24,6 +24,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -549,6 +550,27 @@ class ContentTypeDesugaringTest {
 		// ... and after a pattern-only rule
 		final String patternOnly = ContentTypeDesugaring.code("/foo/\n/printf/\n$1 == \"x\"\n/printf/");
 		assertFalse(patternOnly.contains("printf"), patternOnly);
+		// ... and after an arithmetic or comparison operator
+		final String operand = ContentTypeDesugaring.code(
+			"BEGIN { x = 1 + /printf/; y = a * /printf/ - /printf/ % /printf/; z = b < /printf/ }"
+		);
+		assertFalse(operand.contains("printf"), operand);
+
+		// The same lint applies to an awk source writing a table, inline or from an embedded file
+		final Source inlineSource = JawkSource.builder().output(ContentType.TABLE).script("{ printf \"%s\", $1 }").build();
+		final Connector inlineConnector = connectorWith(inlineSource);
+		new ContentTypeDesugaring().update(inlineConnector);
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(inlineConnector));
+		final Source fileSource = JawkSource.builder().output(ContentType.TABLE).script("${file::1}").build();
+		final Connector fileConnector = connectorWith(fileSource);
+		fileConnector.getEmbeddedFiles().put(1, EmbeddedFile.builder().id(1).content("{ printf $1 }".getBytes()).build());
+		new ContentTypeDesugaring().update(fileConnector);
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(fileConnector));
+		// Not for a text output (a legacy dual producer: only the usual toTable appended)
+		final Source textSource = JawkSource.builder().script("{ printf \"%s\", $1 }").build();
+		final Connector textConnector = connectorWith(textSource);
+		new ContentTypeDesugaring().update(textConnector);
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(textConnector));
 		// A regex operand after a keyword is a literal too
 		final String afterKeyword = ContentTypeDesugaring.code("{ print /printf/; return /foo#bar/; printf \"%s\", $1 }");
 		assertFalse(afterKeyword.contains("/printf/"), afterKeyword);
