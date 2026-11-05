@@ -53,6 +53,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Exclude
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -1315,11 +1316,14 @@ class ComputeProcessorTest {
 			.properties("id;name;monitorType;hostId")
 			.build();
 
+		// A text marker left by an explicit conversion does not survive a result
+		sourceTable.setContentType(ContentType.TEXT);
 		computeProcessor.process(jsonToCsv);
 
 		final String expectedRawDataResult = "/monitors[0];enclosure-1;enclosure-1;ENCLOSURE;hostId;\n" +
 			"/monitors[1];enclosure-2;enclosure-2;ENCLOSURE;hostId;\n";
 		assertEquals(expectedRawDataResult, sourceTable.getRawData());
+		assertEquals(ContentType.TABLE, sourceTable.getContentType());
 
 		// The events parsing mode gives the same result
 		sourceTable.setRawData(rawData);
@@ -1966,7 +1970,10 @@ class ComputeProcessorTest {
 		assertEquals(Collections.emptyList(), sourceTable.getTable());
 		assertEquals(xml, sourceTable.getRawData());
 
+		// A text marker left by an explicit conversion does not survive a result
+		sourceTable.setContentType(ContentType.TEXT);
 		computeProcessor.process(Xml2Csv.builder().properties(properties).recordTag(recordTag).build());
+		assertEquals(ContentType.TABLE, sourceTable.getContentType());
 
 		final List<List<String>> expected = List.of(
 			List.of(

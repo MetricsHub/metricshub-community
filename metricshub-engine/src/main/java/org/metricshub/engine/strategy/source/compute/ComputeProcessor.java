@@ -1105,6 +1105,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			if (json2csvResult != null && !json2csvResult.isEmpty()) {
 				sourceTable.setRawData(json2csvResult);
 				sourceTable.setTable(SourceTable.csvToTable(json2csvResult, json2csv.getSeparator()));
+				sourceTable.setContentType(ContentType.TABLE);
 			}
 		} catch (Exception e) {
 			logComputeError(
@@ -1861,13 +1862,19 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
+	 * The last column a closed range of a <code>toTable</code> selection can pad up to: a range such as
+	 * <code>1-2147483647</code> must not materialize billions of empty cells.
+	 */
+	static final int MAX_SELECTED_COLUMN = 1000;
+
+	/**
 	 * Keeps the cells of the selected columns, in selection order: an absent column of a closed range gives an empty
-	 * cell, an open range stops at the last cell.
+	 * cell (up to column {@link #MAX_SELECTED_COLUMN}), an open range stops at the last cell.
 	 */
 	private static List<String> selectCells(final List<String> cells, final List<int[]> ranges) {
 		final List<String> selected = new ArrayList<>();
 		for (final int[] range : ranges) {
-			final int to = range[1] == 0 ? cells.size() : range[1];
+			final int to = range[1] == 0 ? cells.size() : Math.min(range[1], MAX_SELECTED_COLUMN);
 			for (int column = Math.max(range[0], 1); column <= to; column++) {
 				selected.add(column <= cells.size() ? cells.get(column - 1) : EMPTY);
 			}
@@ -2006,6 +2013,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			if (xmlResult != null && !xmlResult.isEmpty()) {
 				sourceTable.setTable(xmlResult);
 				sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+				sourceTable.setContentType(ContentType.TABLE);
 			}
 		} catch (Exception e) {
 			logComputeError(

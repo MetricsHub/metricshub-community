@@ -241,6 +241,53 @@ class ContentTypeDesugaringTest {
 		);
 	}
 
+	/**
+	 * A chain of copies of any depth resolves to its origin; a cycle of copies leaves each copy to its declared
+	 * table.
+	 */
+	@Test
+	void copyChainsResolveWithoutDepthLimitAndCyclesEnd() {
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		final Source http = HttpSource.builder().url("/").build();
+		http.setKey(KEY);
+		sources.put("source(1)", http);
+		String previous = KEY;
+		Source last = null;
+		for (int i = 0; i < 10; i++) {
+			last = CopySource.builder().from(previous).build();
+			last.setKey("${source::monitors.enclosure.discovery.sources.copy" + i + "}");
+			sources.put("copy" + i, last);
+			previous = last.getKey();
+		}
+		last.setComputes(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build()));
+		final Source loopA = CopySource.builder()
+			.from("${source::monitors.enclosure.discovery.sources.loopB}")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		loopA.setKey("${source::monitors.enclosure.discovery.sources.loopA}");
+		final Source loopB = CopySource.builder()
+			.from("${source::monitors.enclosure.discovery.sources.loopA}")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		loopB.setKey("${source::monitors.enclosure.discovery.sources.loopB}");
+		sources.put("loopA", loopA);
+		sources.put("loopB", loopB);
+		final Connector connector = Connector.builder().build();
+		connector.getMonitors()
+			.put(
+				"enclosure",
+				StandardMonitorJob.standardBuilder().discovery(Discovery.builder().sources(sources).build()).build()
+			);
+		new ContentTypeDesugaring().update(connector);
+
+		// The tenth copy is still the http text: the table compute is reported, nothing inserted
+		assertEquals(List.of("keepColumns"), types(last));
+		// The cycle ends where it closes: each copy sees the text its peer's awk produces
+		assertEquals(List.of("awk", "toTable"), types(loopA));
+		assertEquals(List.of("awk", "toTable"), types(loopB));
+		assertEquals(1, kinds(connector).stream().filter(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE::equals).count());
+	}
+
 	@Test
 	void legacyIdiomsAreReported() {
 		final TranslationTable table = TranslationTable.builder().translations(orderedTranslations()).build();
