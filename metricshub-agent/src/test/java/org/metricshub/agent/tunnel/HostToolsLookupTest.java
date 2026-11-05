@@ -169,6 +169,8 @@ class HostToolsLookupTest {
 
 		assertEquals(List.of(), snapshot.tools());
 		assertFalse(snapshot.callbacks().containsKey(HostToolsLookup.NAME));
+		// Nor is any tool it would have listed: a name learned before cannot reach them
+		assertFalse(snapshot.callbacks().containsKey("ipmi_sel"));
 	}
 
 	@Test

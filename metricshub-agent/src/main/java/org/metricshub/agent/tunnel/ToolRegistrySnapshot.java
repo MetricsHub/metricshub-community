@@ -90,8 +90,12 @@ public record ToolRegistrySnapshot(
 				}
 			}
 		}
-		// Excluded like any other tool: without it, Central reaches none of the host-scoped tools
-		if (!excludedTools.contains(HostToolsLookup.NAME)) {
+		// Excluded like any other tool, and with it every host-scoped tool: Central learns them only through it, so
+		// none stays invokable by a name it learned before
+		if (excludedTools.contains(HostToolsLookup.NAME)) {
+			hostScoped.keySet().forEach(callbacks::remove);
+			hostScoped.clear();
+		} else {
 			callbacks.put(HostToolsLookup.NAME, HostToolsLookup.callback(hostScoped, context));
 		}
 

@@ -137,7 +137,7 @@ No payload. Sent by the agent every `heartbeatIntervalSeconds`; the server answe
 { "type": "hosts.updated", "hosts": [ … ] }
 ```
 
-Full replacement of the inventory, same element shape as `agent.register.hosts`. Sent when the agent configuration changed and the resulting inventory differs. The tool registry is refreshed on reconnection only: an agent whose advertised tools changed on a configuration reload reconnects to re-register (`tools.updated` is reserved for a future version). The connector and protocol tools follow the loaded connectors and extensions but are not in the registry: a reload that changes any of their declarations reconnects too, so that what `ListHostTools` answered never outlives its session; one that leaves them as they were does not reconnect.
+Full replacement of the inventory, same element shape as `agent.register.hosts`. Sent when the agent configuration changed and the resulting inventory differs. The tool registry is refreshed on reconnection only: an agent whose advertised tools changed on a configuration reload reconnects to re-register (`tools.updated` is reserved for a future version). The connector and protocol tools follow the loaded connectors and extensions but are not in the registry: a reload that changes one of their declarations reconnects too, and one that leaves them as they were does not. Which of them apply to a host also changes without any reload, as detection runs: Central asks `ListHostTools` again for each conversation turn and keeps no answer longer, and a call the host no longer supports is answered with the tool's error.
 
 ### 3.5 `tool.invoke` (Central → agent)
 
