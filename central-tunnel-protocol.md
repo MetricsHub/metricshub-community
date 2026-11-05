@@ -166,7 +166,7 @@ An advertised `read` tool Central invokes like any other, to learn which protoco
 { "type": "tool.result", "requestId": "c7d2…", "result": { "hostname": "server-01", "tools": [ { "name": "ipmi_sel", "description": "…", "inputSchema": { … }, "access": "read" } ] }, "durationMs": 4 }
 ```
 
-A host the agent does not monitor, or a missing `hostname`, is answered `EXECUTION_ERROR`.
+A host the agent does not monitor is answered `EXECUTION_ERROR`, a missing `hostname` `INVALID_ARGUMENTS`. Listing `ListHostTools` in `excludedTools` withdraws every protocol-extension and connector tool from Central.
 
 ### 3.6 `tool.result` (agent → Central)
 

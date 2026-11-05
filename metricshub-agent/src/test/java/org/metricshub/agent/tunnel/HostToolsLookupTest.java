@@ -11,13 +11,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
@@ -140,12 +143,69 @@ class HostToolsLookupTest {
 	void aHostThisAgentDoesNotMonitorIsRefused() {
 		final ToolCallback lookup = snapshot().callbacks().get(HostToolsLookup.NAME);
 
-		final IllegalArgumentException refused = assertThrows(
-			IllegalArgumentException.class,
+		// An unknown host is an execution error, a missing name an invalid argument: the bridge maps them so
+		final IllegalStateException refused = assertThrows(
+			IllegalStateException.class,
 			() -> lookup.call("{\"hostname\":\"host-99\"}")
 		);
 		assertEquals("Host host-99 is not configured.", refused.getMessage());
 		assertThrows(IllegalArgumentException.class, () -> lookup.call("{}"));
+	}
+
+	@Test
+	void theLookupCanBeExcludedLikeAnyTool() {
+		// Built first: a mock may not be called while another is being stubbed
+		final ToolCallback[] callbacks = ProtocolToolCallbacks.from(agentContext).toArray(ToolCallback[]::new);
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenReturn(callbacks);
+
+		final ToolRegistrySnapshot snapshot = ToolRegistrySnapshot.from(
+			provider,
+			Set.of(HostToolsLookup.NAME),
+			() -> agentContext
+		);
+
+		assertEquals(List.of(), snapshot.tools());
+		assertFalse(snapshot.callbacks().containsKey(HostToolsLookup.NAME));
+	}
+
+	@Test
+	void aConnectorToolDeclaredOtherwiseOnAHostIsNotListedThere() throws Exception {
+		final ConnectorStore connectorStore = agentContext.getConnectorStore();
+		// The same additional connector on two hosts, its variables giving its tool another default on host-03
+		final TelemetryManager omega = host("host-01", resolved(connectorStore, "omega"), Map.of());
+		final TelemetryManager delta = host("host-03", resolved(connectorStore, "delta"), Map.of());
+		omega.getHostProperties().getConnectorNamespace("myThing").setStatusOk(true);
+		delta.getHostProperties().getConnectorNamespace("myThing").setStatusOk(true);
+		final Map<String, TelemetryManager> resources = new LinkedHashMap<>();
+		resources.put("resource-0", omega);
+		resources.put("resource-1", delta);
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", resources));
+
+		final ToolRegistrySnapshot snapshot = snapshot();
+
+		// The tool was built from host-01's declaration, the first one: host-03 would be refused every call
+		assertEquals(List.of("myThing_showThing=read"), toolsOf(snapshot, "host-01"));
+		assertEquals(List.of(), toolsOf(snapshot, "host-03"));
+	}
+
+	/**
+	 * @return a copy of the store with an additional connector myThing using the template with the given thing
+	 */
+	private static ConnectorStore resolved(final ConnectorStore connectorStore, final String thing) {
+		final ConnectorStore resourceConnectorStore = connectorStore.newConnectorStore();
+		resourceConnectorStore.setConnectorsWithVariables(List.of("TestTemplateWithTool"));
+		resourceConnectorStore.addMany(
+			ConfigHelper.buildAdditionalConnectors(
+				resourceConnectorStore,
+				Map.of(
+					"myThing",
+					AdditionalConnector.builder().uses("TestTemplateWithTool").variables(Map.of("thing", thing)).build()
+				),
+				resourceConnectorStore.getRawConnectorStore()
+			).getCustomConnectorsMap()
+		);
+		return resourceConnectorStore;
 	}
 
 	@Test

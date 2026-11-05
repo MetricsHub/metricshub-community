@@ -192,6 +192,37 @@ public final class ConnectorToolCallbacks {
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
 	}
 
+	/**
+	 * Whether a host's own declaration of a connector tool, through its connector variables, is the one a callback
+	 * advertises: the only one the callback runs there.
+	 *
+	 * @param telemetryManager the host's telemetry manager
+	 * @param connectorId      the connector identifier in the host's store
+	 * @param toolName         the tool name within the connector
+	 * @param callback         the callback built for the tool
+	 * @return whether the callback runs the tool on that host
+	 */
+	public static boolean runsAsAdvertised(
+		final TelemetryManager telemetryManager,
+		final String connectorId,
+		final String toolName,
+		final ToolCallback callback
+	) {
+		final ConnectorTool tool = toolOf(telemetryManager, connectorId, toolName);
+		if (tool == null) {
+			return false;
+		}
+		try {
+			final ToolDefinition declared = tool.toDefinition(toolName);
+			final org.springframework.ai.tool.definition.ToolDefinition advertised = callback.getToolDefinition();
+			return HostTools.description(declared).equals(advertised.description()) &&
+				HostTools.inputSchema(declared).toString().equals(advertised.inputSchema());
+		} catch (IllegalArgumentException e) {
+			// Variables that make the declaration invalid
+			return false;
+		}
+	}
+
 	private static ConnectorTool toolOf(
 		final TelemetryManager telemetryManager,
 		final String connectorId,

@@ -24,10 +24,8 @@ package org.metricshub.agent.tunnel;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Supplier;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
@@ -37,6 +35,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.mcp.MCPConfigHelper;
 import org.metricshub.web.mcp.ToolAccess.Access;
+import org.metricshub.web.mcp.tool.ConnectorToolCallbacks;
 import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.HostTools;
 import org.metricshub.web.mcp.tool.ProductToolCallback;
@@ -106,7 +105,7 @@ final class HostToolsLookup {
 	 * @param context  the running agent context
 	 * @param byName   the host-scoped tools, by name ignoring case
 	 * @return the tools that apply to the host
-	 * @throws IllegalArgumentException when the host is not configured
+	 * @throws IllegalStateException when the host is not configured: answered EXECUTION_ERROR
 	 */
 	static HostToolList lookUp(
 		final String hostname,
@@ -117,15 +116,18 @@ final class HostToolsLookup {
 			? List.of()
 			: MCPConfigHelper.findTelemetryManagerByHostname(hostname, context);
 		if (managers.isEmpty()) {
-			throw new IllegalArgumentException("Host %s is not configured.".formatted(hostname));
+			throw new IllegalStateException("Host %s is not configured.".formatted(hostname));
 		}
-		final Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		// Only what this snapshot carries: a tool excluded from the tunnel, or one whose declaration was refused,
+		// is not offered through the host either
+		final Map<String, ToolCallback> listed = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		// The protocols configured on the host: an extension's tools need one of its configurations there
 		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationCopies(hostname, context);
 		if (context.getExtensionManager() != null) {
 			for (final IProtocolExtension extension : context.getExtensionManager().getProtocolExtensions()) {
 				if (configurations.stream().anyMatch(extension::isToolConfiguration)) {
-					extension.getTools().forEach(tool -> names.add(HostTools.toolName(extension.getIdentifier(), tool.name())));
+					extension.getTools()
+						.forEach(tool -> listIfCarried(listed, byName, HostTools.toolName(extension.getIdentifier(), tool.name())));
 				}
 			}
 		}
@@ -138,18 +140,29 @@ final class HostToolsLookup {
 			manager.getHostProperties().getConnectorNamespaces().forEach((connectorId, namespace) -> {
 				final Connector connector = store == null ? null : store.get(connectorId);
 				if (namespace.isStatusOk() && connector != null) {
-					connector.getTools().keySet().forEach(tool -> names.add(HostTools.toolName(connectorId, tool)));
+					connector.getTools().keySet().forEach(tool -> {
+						// The host's own declaration, through its connector variables, must be the one the callback
+						// advertises: the callback refuses to run any other
+						final ToolCallback callback = byName.get(HostTools.toolName(connectorId, tool));
+						if (callback != null && ConnectorToolCallbacks.runsAsAdvertised(manager, connectorId, tool, callback)) {
+							listed.put(callback.getToolDefinition().name(), callback);
+						}
+					});
 				}
 			});
 		}
-		// Only what this snapshot carries: a tool excluded from the tunnel, or one whose declaration was refused,
-		// is not offered through the host either
-		final List<ToolDescriptor> tools = names.stream()
-			.map(byName::get)
-			.filter(Objects::nonNull)
-			.map(ToolRegistrySnapshot::describe)
-			.toList();
-		return new HostToolList(hostname, tools);
+		return new HostToolList(hostname, listed.values().stream().map(ToolRegistrySnapshot::describe).toList());
+	}
+
+	private static void listIfCarried(
+		final Map<String, ToolCallback> listed,
+		final Map<String, ToolCallback> byName,
+		final String name
+	) {
+		final ToolCallback callback = byName.get(name);
+		if (callback != null) {
+			listed.put(callback.getToolDefinition().name(), callback);
+		}
 	}
 
 	private static String hostnameOf(final JsonNode arguments) {

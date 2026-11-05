@@ -84,7 +84,10 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 				}
 			}
 		}
-		callbacks.put(HostToolsLookup.NAME, HostToolsLookup.callback(hostScoped, context));
+		// Excluded like any other tool: without it, Central reaches none of the host-scoped tools
+		if (!excludedTools.contains(HostToolsLookup.NAME)) {
+			callbacks.put(HostToolsLookup.NAME, HostToolsLookup.callback(hostScoped, context));
+		}
 
 		final List<ToolDescriptor> tools = new ArrayList<>();
 		callbacks.values()
