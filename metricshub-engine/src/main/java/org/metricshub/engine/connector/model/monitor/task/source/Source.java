@@ -144,8 +144,8 @@ public abstract class Source implements Serializable {
 
 	/**
 	 * The content type this source produces, before its computes run: text for <code>http</code>, <code>file</code>,
-	 * <code>commandLine</code> and the <code>awk</code> source, a table for every other source (<code>ipmiRaw</code>
-	 * included: its result is one row holding the request and the response).
+	 * <code>ipmi</code>, <code>commandLine</code> and the <code>awk</code> source, a table for every other source
+	 * (<code>ipmiRaw</code> included: its result is one row holding the request and the response).
 	 * A static property of the class, never a YAML field.
 	 *
 	 * @return the output content type

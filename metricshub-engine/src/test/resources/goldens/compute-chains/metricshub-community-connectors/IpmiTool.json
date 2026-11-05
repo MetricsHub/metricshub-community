@@ -93,7 +93,11 @@
           "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
           "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
         },
-        "table" : {
+        "text" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "textNoTrailingNewline" : {
           "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
           "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
         }
@@ -121,7 +125,11 @@
           "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
           "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
         },
-        "table" : {
+        "text" : {
+          "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
+          "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
+        },
+        "textNoTrailingNewline" : {
           "table" : [ [ "Enclosure", "", "", "", "", "", "", "Monitored by sensors: " ] ],
           "rawData" : "Enclosure;;;;;;;Monitored by sensors: ;"
         }

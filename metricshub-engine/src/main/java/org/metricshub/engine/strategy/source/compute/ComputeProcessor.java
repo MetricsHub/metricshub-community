@@ -1916,7 +1916,10 @@ public class ComputeProcessor implements IComputeProcessor {
 			);
 			return;
 		}
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true));
+		// A text result never carries CRLF, whatever the cells hold
+		sourceTable.setRawData(
+			SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
+		);
 		sourceTable.setTable(new ArrayList<>());
 		sourceTable.setContentType(ContentType.TEXT);
 	}

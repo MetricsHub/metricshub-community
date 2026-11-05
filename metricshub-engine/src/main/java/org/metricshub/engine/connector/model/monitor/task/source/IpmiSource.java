@@ -30,6 +30,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -88,6 +89,12 @@ public class IpmiSource extends Source {
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		// For now, there is nothing to update
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		// The IPMI tool output, as text: the ipmiSel and ipmiRaw sources give tables
+		return ContentType.TEXT;
 	}
 
 	@Override

@@ -140,6 +140,104 @@
           "rawData" : "a;c;;b;\nx;z;41;50;\n1;3;;2.5;\ncell,with,sep;;41;50;\nonly;;41;50;"
         }
       }
+    },
+    "${source::tools.physicalDisks.sources.counters}" : {
+      "source" : "wmi",
+      "computes" : [ "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "ida", "b", "c" ], [ "idx", "", "z", "" ], [ "id1", "2.5", "3" ], [ "idcell;with;sep", "", "" ], [ "idonly" ] ],
+          "rawData" : "ida;b;c;\nidx;;z;;\nid1;2.5;3;\nidcell;with;sep;;;\nidonly;"
+        }
+      }
+    },
+    "${source::tools.physicalDisks.sources.disks}" : {
+      "source" : "wmi",
+      "computes" : [ "replace", "replace", "translate", "translate", "translate", "translate", "arrayTranslate", "prepend" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "idb", "c" ], [ "x", "id", "z", "" ], [ "1", "id2.5", "3" ], [ "cell", "idwith", "sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;idb;c;\nx;id;z;;\n1;id2.5;3;\ncell;idwith;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::tools.physicalDisks.sources.table}" : {
+      "source" : "tableJoin",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "", "c", "", "", "", "0", "", "", "", "", "", "", "", "" ], [ "", "z", "", "", "", "0", "", "", "", "", "", "", "", "" ], [ "5", "3", "", "", "", "0", "", "", "", "", "", "", "", "" ], [ "", "", "", "", "", "0", "", "", "", "", "", "", "", "" ], [ "", "", "", "", "", "0", "", "", "", "", "", "", "", "" ] ],
+          "rawData" : ";c;;;;0;;;;;;;;;\n;z;;;;0;;;;;;;;;\n5;3;;;;0;;;;;;;;;\n;;;;;0;;;;;;;;;\n;;;;;0;;;;;;;;;"
+        }
+      }
+    },
+    "${source::tools.virtualDisks.sources.jobsElapsed}" : {
+      "source" : "tableJoin",
+      "computes" : [ "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : null
+        },
+        "table" : {
+          "table" : [ [ "job", "b", "", "", "", "", "", "", "", "", "", "", "c", "", "", "", "" ], [ "job", "", "", "", "", "", "", "", "", "", "", "", "z", "", "", "", "" ], [ "job", "2.5", "", "", "", "", "", "", "", "", "", "", "3", "", "", "", "" ], [ "job", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ], [ "job", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ] ],
+          "rawData" : "job;b;;;;;;;;;;;c;;;;;\njob;;;;;;;;;;;;z;;;;;\njob;2.5;;;;;;;;;;;3;;;;;\njob;;;;;;;;;;;;;;;;;\njob;;;;;;;;;;;;;;;;;"
+        }
+      }
+    },
+    "${source::tools.virtualDisks.sources.jobs}" : {
+      "source" : "wmi",
+      "computes" : [ "translate" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "a", "b", "c" ], [ "x", "", "z", "" ], [ "1", "2.5", "Starting" ], [ "cell;with;sep", "", "" ], [ "only" ] ],
+          "rawData" : "a;b;c;\nx;;z;;\n1;2.5;Starting;\ncell;with;sep;;;\nonly;"
+        }
+      }
+    },
+    "${source::tools.virtualDisks.sources.pools}" : {
+      "source" : "wmi",
+      "computes" : [ "translate", "arrayTranslate", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "pool", "a", "c", "", "", "", "b", "", "", "", "", "", "", "", "", "", "" ], [ "pool", "x", "z", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ], [ "pool", "1", "3", "", "", "", "2.5", "", "", "", "", "", "", "", "", "", "" ], [ "pool", "cell", "sep", "", "", "", "with", "", "", "", "", "", "", "", "", "", "" ], [ "pool", "only", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ] ],
+          "rawData" : "pool;a;c;;;;b;;;;;;;;;;;\npool;x;z;;;;;;;;;;;;;;;\npool;1;3;;;;2.5;;;;;;;;;;;\npool;cell;sep;;;;with;;;;;;;;;;;\npool;only;;;;;;;;;;;;;;;;"
+        }
+      }
+    },
+    "${source::tools.virtualDisks.sources.virtualDisks}" : {
+      "source" : "wmi",
+      "computes" : [ "translate", "arrayTranslate", "translate", "awk" ],
+      "outputs" : {
+        "empty" : {
+          "table" : [ ],
+          "rawData" : ""
+        },
+        "table" : {
+          "table" : [ [ "virtualDisk", "a", "", "", "", "", "", "", "b", "c", "", "", "", "", "", "", "" ], [ "virtualDisk", "x", "", "", "", "", "", "", "", "z", "", "", "", "", "", "", "" ], [ "virtualDisk", "1", "", "", "", "", "", "", "2.5", "3", "", "", "", "", "", "", "" ], [ "virtualDisk", "cell", "", "", "", "", "", "", "with", "sep", "", "", "", "", "", "", "" ], [ "virtualDisk", "only", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" ] ],
+          "rawData" : "virtualDisk;a;;;;;;;b;c;;;;;;;;\nvirtualDisk;x;;;;;;;;z;;;;;;;;\nvirtualDisk;1;;;;;;;2.5;3;;;;;;;;\nvirtualDisk;cell;;;;;;;with;sep;;;;;;;;\nvirtualDisk;only;;;;;;;;;;;;;;;;"
+        }
+      }
     }
   }
 }

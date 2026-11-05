@@ -23,6 +23,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSour
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -322,6 +323,21 @@ class ContentTypeDesugaringTest {
 	 * ipmiRaw produces a table (one row holding the request and the response), not text: a table compute after it
 	 * needs no conversion and is not reported.
 	 */
+	/**
+	 * The ipmi source gives the ipmi tool output as text: an awk after it reads that text, nothing is inserted.
+	 */
+	@Test
+	void ipmiIsATextProducer() {
+		final Source source = IpmiSource.builder()
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		assertEquals(ContentType.TEXT, source.getOutputContentType());
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("awk", "toTable"), types(source));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
 	@Test
 	void ipmiRawIsATableProducer() {
 		final Source source = IpmiRawSource.builder()

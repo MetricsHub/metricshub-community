@@ -57,6 +57,13 @@ class ComputeChainGoldenCorpusTest {
 	}
 
 	private Stream<DynamicTest> goldens(final Repository repository) {
+		if (ComputeChainGoldenCorpus.isUpdateMode()) {
+			try {
+				ComputeChainGoldenCorpus.recordRevision(repository.getRoot());
+			} catch (IOException e) {
+				throw new IllegalStateException(e);
+			}
+		}
 		final ConnectorStore store = ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory());
 		final Set<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		connectorIds.addAll(store.getStore().keySet());
@@ -165,6 +172,8 @@ class ComputeChainGoldenCorpusTest {
 			"host"
 		);
 		// json2Csv does not escape the separator: a value containing ";" shifts the columns (legacy behavior)
+		// The fourth entry is a JSON number, not a text
+		assertTrue(json.contains("\"Health\":42"), json);
 		assertEquals(
 			"/Entry/Value/Members[0];@odata.id-0;Health-0;@odata.id-0;Count-up;\n" +
 				"/Entry/Value/Members[1];@odata.id;1;Health;1;@odata.id;1;Count-up;\n" +
