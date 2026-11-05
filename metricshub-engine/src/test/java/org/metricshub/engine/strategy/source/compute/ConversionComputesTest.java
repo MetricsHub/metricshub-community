@@ -189,6 +189,24 @@ class ConversionComputesTest {
 		final SourceTable last = SourceTable.ofText("a;b");
 		processor(last).process(ToTable.builder().selectColumns("2147483647,2147483640-2147483647").build());
 		assertEquals(List.of("", "", "", "", "", "", "", "", ""), firstRow(last));
+
+		// Columns are 1-based: 0 and a range ending at 0 select nothing, unlike an open range
+		final SourceTable zero = SourceTable.ofText("a;b");
+		processor(zero).process(ToTable.builder().selectColumns("0,1-0,2-").build());
+		assertEquals(List.of("b"), firstRow(zero));
+	}
+
+	@Test
+	void toTableCollapsesABlankSeparator() {
+		final SourceTable sourceTable = SourceTable.ofText("  a   b  \nc\td e");
+		processor(sourceTable).process(ToTable.builder().separator(" ").selectColumns("2,1").build());
+		// Runs of the separator are one separator and leading ones give no cell, as the commandLine selection
+		assertEquals(table("b|a", "e|c\td"), sourceTable.getTable());
+
+		// A line of separators only gives no row, as a blank line
+		final SourceTable blank = SourceTable.ofText("   \nx");
+		processor(blank).process(ToTable.builder().separator(" ").build());
+		assertEquals(table("x"), blank.getTable());
 	}
 
 	private static List<String> firstRow(final SourceTable sourceTable) {
