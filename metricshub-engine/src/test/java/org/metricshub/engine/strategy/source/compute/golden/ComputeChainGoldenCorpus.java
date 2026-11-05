@@ -1,5 +1,6 @@
 package org.metricshub.engine.strategy.source.compute.golden;
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -48,7 +49,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSour
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -225,6 +226,12 @@ public class ComputeChainGoldenCorpus {
 		}
 		if (connector.getAfterAll() != null) {
 			connector.getAfterAll().values().forEach(source -> sources.put(source.getKey(), source));
+		}
+		// The tools run their sources through the same compute processor
+		if (connector.getTools() != null) {
+			connector.getTools()
+				.values()
+				.forEach(tool -> tool.getSources().values().forEach(source -> sources.put(source.getKey(), source)));
 		}
 		return sources;
 	}
@@ -478,7 +485,7 @@ public class ComputeChainGoldenCorpus {
 	 * </ul>
 	 * Each source type gets the shapes its legacy processor produces:
 	 * <ul>
-	 * <li><code>http</code>, <code>file</code>, <code>ipmiRaw</code>: raw text only, with and without a trailing
+	 * <li><code>http</code>, <code>file</code>, <code>ipmi</code>: raw text only, with and without a trailing
 	 * line feed;</li>
 	 * <li><code>commandLine</code>: the raw lines joined with line feeds (no trailing <code>;</code>) and the table
 	 * built with <code>String.split(";")</code>;</li>
@@ -568,7 +575,7 @@ public class ComputeChainGoldenCorpus {
 			final Map<String, Source> sources,
 			final int depth
 		) {
-			if (source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiRawSource) {
+			if (source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiSource) {
 				inputs.put("text", () -> text(TEXT));
 				inputs.put("textNoTrailingNewline", () -> text(TEXT.substring(0, TEXT.length() - 1)));
 			} else if (source instanceof CommandLineSource) {
@@ -579,7 +586,12 @@ public class ComputeChainGoldenCorpus {
 				inputs.put("csvReplaceSeparator", () -> csv(table(), true));
 			} else if (source instanceof StaticSource staticSource) {
 				final String value = staticSource.getValue() == null ? "" : staticSource.getValue();
-				inputs.put("static", () -> csv(SourceTable.csvToTable(value, TABLE_SEP), false));
+				if (SOURCE_REF_PATTERN.matcher(value).find()) {
+					// The processor copies the referenced source's table and serializes it
+					inputs.put("csv", () -> csv(table(), false));
+				} else {
+					inputs.put("static", () -> csv(SourceTable.csvToTable(value, TABLE_SEP), false));
+				}
 			} else if (source instanceof CopySource copySource) {
 				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom());
 				if (origin == null || depth > 5) {
