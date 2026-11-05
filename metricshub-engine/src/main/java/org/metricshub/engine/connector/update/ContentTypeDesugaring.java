@@ -28,9 +28,11 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -148,7 +150,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		// Start again from the chain as written: a previous pass may have inserted implicit conversions
 		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
 		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
-		final State start = source instanceof CopySource copy ? effectiveOutput(copy, sources, 0) : startOf(source);
+		final State start = source instanceof CopySource copy
+			? effectiveOutput(copy, sources, new HashSet<>())
+			: startOf(source);
 		ContentType current = start.type();
 		TextProducer producer = start.producer();
 
@@ -313,15 +317,19 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * What a copy source produces: the result of its origin's chain, as written. An origin that cannot be resolved
-	 * leaves the copy to its declared type (a table).
+	 * What a copy source produces: the result of its origin's chain, as written. An origin that cannot be resolved,
+	 * or a cycle of copies, leaves the copy to its declared type (a table).
 	 */
-	private static State effectiveOutput(final CopySource copy, final Map<String, Source> sources, final int depth) {
+	private static State effectiveOutput(
+		final CopySource copy,
+		final Map<String, Source> sources,
+		final Set<Source> visited
+	) {
 		final Source origin = copy.getFrom() == null ? null : sources.get(copy.getFrom().trim());
-		if (origin == null || depth > 5) {
+		if (origin == null || !visited.add(copy)) {
 			return startOf(copy);
 		}
-		State state = origin instanceof CopySource nested ? effectiveOutput(nested, sources, depth + 1) : startOf(origin);
+		State state = origin instanceof CopySource nested ? effectiveOutput(nested, sources, visited) : startOf(origin);
 		for (final Compute compute : origin.getComputes()) {
 			if (isImplicit(compute)) {
 				continue;

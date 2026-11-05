@@ -173,6 +173,14 @@ class ConversionComputesTest {
 	}
 
 	@Test
+	void toTableBoundsAClosedRange() {
+		final SourceTable sourceTable = SourceTable.ofText("a;b");
+		processor(sourceTable).process(ToTable.builder().selectColumns("1-2147483647").build());
+		assertEquals(ComputeProcessor.MAX_SELECTED_COLUMN, sourceTable.getTable().get(0).size());
+		assertEquals("b", sourceTable.getTable().get(0).get(1));
+	}
+
+	@Test
 	void explicitConversionsTypeAnEmptyResult() {
 		final SourceTable fromEmptyText = SourceTable.ofText("");
 		processor(fromEmptyText).process(ToTable.builder().build());
