@@ -1864,20 +1864,23 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
-	 * The last column a closed range of a <code>toTable</code> selection can pad up to: a range such as
-	 * <code>1-2147483647</code> must not materialize billions of empty cells.
+	 * The most cells a closed range of a <code>toTable</code> selection can pad with: a range such as
+	 * <code>1-2147483647</code> must not materialize billions of empty cells. The cells present are always kept.
 	 */
-	static final int MAX_SELECTED_COLUMN = 1000;
+	static final int MAX_RANGE_PADDING = 1000;
 
 	/**
 	 * Keeps the cells of the selected columns, in selection order: an absent column of a closed range gives an empty
-	 * cell (up to column {@link #MAX_SELECTED_COLUMN}), an open range stops at the last cell.
+	 * cell (at most {@link #MAX_RANGE_PADDING} cells past the ones present), an open range stops at the last cell.
 	 */
 	private static List<String> selectCells(final List<String> cells, final List<int[]> ranges) {
 		final List<String> selected = new ArrayList<>();
 		for (final int[] range : ranges) {
-			final int to = range[1] == 0 ? cells.size() : Math.min(range[1], MAX_SELECTED_COLUMN);
-			for (int column = Math.max(range[0], 1); column <= to; column++) {
+			final int from = Math.max(range[0], 1);
+			final int to = range[1] == 0
+				? cells.size()
+				: (int) Math.min(range[1], Math.max(cells.size(), (long) from + MAX_RANGE_PADDING - 1));
+			for (int column = from; column <= to; column++) {
 				selected.add(column <= cells.size() ? cells.get(column - 1) : EMPTY);
 			}
 		}
