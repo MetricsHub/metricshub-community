@@ -107,6 +107,7 @@ public final class ConnectorToolCallbacks {
 				final ToolDefinition definition = tool.toDefinition(toolName);
 				callbacks.add(
 					HostTools.perHost(
+						connectorId,
 						HostTools.toolName(connectorId, toolName),
 						definition,
 						(hostname, arguments) -> run(agentContext, connectorId, toolName, definition, hostname, arguments)
@@ -190,6 +191,36 @@ public final class ConnectorToolCallbacks {
 		strategy.run();
 
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
+	}
+
+	/**
+	 * Whether a host's own declaration of a connector tool, through its connector variables, is the one a callback
+	 * advertises: the only one the callback runs there.
+	 *
+	 * @param telemetryManager the host's telemetry manager
+	 * @param connectorId      the connector identifier in the host's store
+	 * @param toolName         the tool name within the connector
+	 * @param callback         the callback built for the tool
+	 * @return whether the callback runs the tool on that host
+	 */
+	public static boolean runsAsAdvertised(
+		final TelemetryManager telemetryManager,
+		final String connectorId,
+		final String toolName,
+		final ToolCallback callback
+	) {
+		final ConnectorTool tool = toolOf(telemetryManager, connectorId, toolName);
+		if (tool == null) {
+			return false;
+		}
+		try {
+			// The very predicate run() applies: the declarations equal, whatever order the parameters come in
+			return callback instanceof final DynamicToolCallback dynamic &&
+				tool.toDefinition(toolName).equals(dynamic.getDeclaration());
+		} catch (IllegalArgumentException e) {
+			// Variables that make the declaration invalid
+			return false;
+		}
 	}
 
 	private static ConnectorTool toolOf(
