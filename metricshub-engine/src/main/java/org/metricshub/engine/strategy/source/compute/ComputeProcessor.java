@@ -1782,6 +1782,10 @@ public class ComputeProcessor implements IComputeProcessor {
 				continue;
 			}
 			final List<String> cells = splitLine(line, toTable.getSeparator());
+			// A line of blank separators only gives no cell: no row either
+			if (cells.isEmpty()) {
+				continue;
+			}
 			table.add(columns == null ? cells : selectCells(cells, columns));
 		}
 
@@ -1796,8 +1800,8 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * Parses a column selection such as <code>1,3-5,8-</code> into 1-based ranges.
 	 *
 	 * @param selectColumns The selection, blank for every column
-	 * @return the ranges as <code>{from, to}</code> pairs, <code>to</code> being 0 for an open range, or null for
-	 *         every column
+	 * @return the ranges as <code>{from, to}</code> pairs, <code>to</code> being {@link #OPEN_RANGE} for an open
+	 *         range, or null for every column; a range ending at 0 or below selects nothing
 	 */
 	static List<int[]> columnRanges(final String selectColumns) {
 		if (selectColumns == null || selectColumns.isBlank()) {
@@ -1815,7 +1819,7 @@ public class ComputeProcessor implements IComputeProcessor {
 					ranges.add(new int[] { column, column });
 				} else {
 					final int from = dash == 0 ? 1 : Integer.parseInt(token.substring(0, dash));
-					final int to = dash == token.length() - 1 ? 0 : Integer.parseInt(token.substring(dash + 1));
+					final int to = dash == token.length() - 1 ? OPEN_RANGE : Integer.parseInt(token.substring(dash + 1));
 					ranges.add(new int[] { from, to });
 				}
 			} catch (NumberFormatException e) {
@@ -1832,6 +1836,11 @@ public class ComputeProcessor implements IComputeProcessor {
 	static final int MAX_RANGE_PADDING = 1000;
 
 	/**
+	 * The end of an open range such as <code>3-</code>: distinct from any column number, 0 included.
+	 */
+	private static final int OPEN_RANGE = -1;
+
+	/**
 	 * Keeps the cells of the selected columns, in selection order: an absent column of a closed range gives an empty
 	 * cell (at most {@link #MAX_RANGE_PADDING} cells past the ones present), an open range stops at the last cell.
 	 */
@@ -1839,7 +1848,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final List<String> selected = new ArrayList<>();
 		for (final int[] range : ranges) {
 			final int from = Math.max(range[0], 1);
-			final int to = range[1] == 0
+			final int to = range[1] == OPEN_RANGE
 				? cells.size()
 				: (int) Math.min(range[1], Math.max(cells.size(), (long) from + MAX_RANGE_PADDING - 1));
 			// A long counter: a range ending at Integer.MAX_VALUE must not wrap around
@@ -1852,7 +1861,8 @@ public class ComputeProcessor implements IComputeProcessor {
 
 	/**
 	 * Splits a line into cells on a literal separator, keeping the empty cells but the one after a trailing
-	 * separator, as {@link SourceTable#lineToList(String, String)} does. An empty line gives no cell.
+	 * separator, as {@link SourceTable#lineToList(String, String)} does. A blank separator (a space, a tab) splits on
+	 * runs of it and keeps no empty cell, as the <code>commandLine</code> selection does. An empty line gives no cell.
 	 *
 	 * @param line      The line
 	 * @param separator The literal separator
@@ -1863,6 +1873,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			return new ArrayList<>();
 		}
 		final String[] cells = line.split(Pattern.quote(separator), -1);
+		if (separator.isBlank()) {
+			return Stream.of(cells).filter(cell -> !cell.isEmpty()).collect(Collectors.toCollection(ArrayList::new));
+		}
 		final int count = line.endsWith(separator) ? cells.length - 1 : cells.length;
 		return Stream.of(cells).limit(count).collect(Collectors.toCollection(ArrayList::new));
 	}

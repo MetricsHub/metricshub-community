@@ -194,9 +194,11 @@ public abstract class AbstractStrategy implements IStrategy {
 					connectorId,
 					monitorType
 				);
-				// This ensures that the internal table (List<List<String>>) is not null and rawData integrity is maintained
+				// This ensures that the internal table (List<List<String>>) is not null and rawData integrity is maintained;
+				// an explicit content type (an empty table set by a conversion) is kept
 				sourceTable = SourceTable.builder()
 					.rawData(sourceTable != null ? sourceTable.getRawData() : null)
+					.contentType(sourceTable != null ? sourceTable.getExplicitContentType() : null)
 					.table(new ArrayList<>())
 					.build();
 			}
