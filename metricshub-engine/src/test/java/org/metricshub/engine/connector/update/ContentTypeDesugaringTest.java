@@ -556,6 +556,10 @@ class ContentTypeDesugaringTest {
 		// ... and after a pattern-only rule
 		final String patternOnly = ContentTypeDesugaring.code("/foo/\n/printf/\n$1 == \"x\"\n/printf/");
 		assertFalse(patternOnly.contains("printf"), patternOnly);
+		// A typed regexp (@/re/) is a literal: its "#" does not start a comment
+		final String typed = ContentTypeDesugaring.code("BEGIN { r = @/foo#bar/; printf \"%s\", $1 }");
+		assertFalse(typed.contains("foo#bar"), typed);
+		assertTrue(typed.contains("printf"), typed);
 		// ... and after an arithmetic or comparison operator
 		final String operand = ContentTypeDesugaring.code(
 			"BEGIN { x = 1 + /printf/; y = a * /printf/ - /printf/ % /printf/; z = b < /printf/ }"

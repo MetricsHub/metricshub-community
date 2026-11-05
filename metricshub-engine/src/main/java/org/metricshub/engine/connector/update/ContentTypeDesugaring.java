@@ -374,7 +374,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * a separator or an opening bracket.
 	 */
 	private static boolean regexCanStart(final char previous, final CharSequence code) {
-		if ("\n(,~!{};&|=?:[+-*%<>".indexOf(previous) >= 0) {
+		// "@" opens a typed regexp (@/re/) in Jawk 7
+		if ("\n(,~!{};&|=?:[+-*%<>@".indexOf(previous) >= 0) {
 			return true;
 		}
 		// After a keyword taking an expression, such as "print /re/" or "return /re/"
