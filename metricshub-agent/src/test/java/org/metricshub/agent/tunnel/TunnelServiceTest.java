@@ -122,6 +122,30 @@ class TunnelServiceTest {
 	}
 
 	@Test
+	void aSnapshotIsRebuiltWhenAReloadLandsWhileItIsBuilt() {
+		// The first build sees a reload published mid-way: its callbacks and the context its host lookup answers
+		// from could be two configurations', so it is built again from one
+		final ToolCallback[] callbacks = { callback("ListHosts") };
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenAnswer(invocation -> {
+			if (generation == 1) {
+				generation = 2;
+			}
+			return callbacks;
+		});
+		final TunnelService rebuilding = new TunnelService(
+			agentContextHolder,
+			provider,
+			(settings, listener) -> null,
+			() -> UID
+		);
+
+		rebuilding.snapshotOf(Set.of());
+
+		verify(provider, times(2)).getToolCallbacks();
+	}
+
+	@Test
 	void shouldNotStartWhenDisabled() {
 		service.supervise();
 

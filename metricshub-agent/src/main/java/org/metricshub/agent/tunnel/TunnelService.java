@@ -24,6 +24,7 @@ package org.metricshub.agent.tunnel;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -173,12 +174,7 @@ public class TunnelService {
 			// A configuration reload may have changed the connector and protocol tools. They are not advertised
 			// (Central asks ListHostTools per host), so they only need the bridge's callbacks refreshed; a
 			// changed advertised set means a new bridge and a new registration: the same as a configuration change.
-			snapshotGeneration = agentContextHolder.getGeneration();
-			final ToolRegistrySnapshot current = ToolRegistrySnapshot.from(
-				toolCallbackProvider,
-				config.getExcludedTools(),
-				agentContextHolder.getAgentContext()
-			);
+			final ToolRegistrySnapshot current = snapshotOf(config.getExcludedTools());
 			if (!current.revision().equals(snapshot.revision())) {
 				log.info(
 					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
@@ -271,12 +267,7 @@ public class TunnelService {
 
 		TunnelClient newClient = null;
 		try {
-			snapshotGeneration = agentContextHolder.getGeneration();
-			snapshot = ToolRegistrySnapshot.from(
-				toolCallbackProvider,
-				newConfig.getExcludedTools(),
-				agentContextHolder.getAgentContext()
-			);
+			snapshot = snapshotOf(newConfig.getExcludedTools());
 			final TunnelSettings settings = new TunnelSettings(
 				URI.create(endpoint.trim()),
 				FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel"),
@@ -411,5 +402,24 @@ public class TunnelService {
 			// with a request the next session never made must never reach it.
 			tunnelBridge.invoke(invoke, generation);
 		}
+	}
+
+	/**
+	 * Builds the snapshot from one context generation: the callbacks the provider builds and the context
+	 * {@code ListHostTools} answers from must be the same configuration's, or the lookup could list a tool its
+	 * callback cannot run. A reload published while it is built is caught by the generation and the snapshot rebuilt.
+	 *
+	 * @param excludedTools the tools never advertised nor invokable
+	 * @return the snapshot, its generation recorded in {@code snapshotGeneration}
+	 */
+	ToolRegistrySnapshot snapshotOf(final Collection<String> excludedTools) {
+		long generation;
+		ToolRegistrySnapshot built;
+		do {
+			generation = agentContextHolder.getGeneration();
+			built = ToolRegistrySnapshot.from(toolCallbackProvider, excludedTools, agentContextHolder.getAgentContext());
+		} while (generation != agentContextHolder.getGeneration());
+		snapshotGeneration = generation;
+		return built;
 	}
 }
