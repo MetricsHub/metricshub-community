@@ -19,6 +19,7 @@ import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
+import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -62,6 +63,27 @@ class ContentTypeDesugaringTest {
 		return connector;
 	}
 
+	/**
+	 * A connector holding two discovery sources, the first under {@link #KEY}, the second as source(2), and the
+	 * given mapping (null for none).
+	 */
+	private static Connector connectorWith(final Source first, final Source second, final Mapping mapping) {
+		first.setKey(KEY);
+		second.setKey("${source::monitors.enclosure.discovery.sources.source(2)}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("source(1)", first);
+		sources.put("source(2)", second);
+		final Connector connector = Connector.builder().build();
+		connector.getMonitors()
+			.put(
+				"enclosure",
+				StandardMonitorJob.standardBuilder()
+					.discovery(Discovery.builder().sources(sources).mapping(mapping).build())
+					.build()
+			);
+		return connector;
+	}
+
 	private static List<String> types(final Source source) {
 		return source.getComputes().stream().map(Compute::getType).collect(Collectors.toList());
 	}
@@ -100,6 +122,44 @@ class ContentTypeDesugaringTest {
 
 		assertEquals(List.of("toTable"), types(source));
 		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
+	/**
+	 * A text source read only through copies (the copies run their own awk) keeps its text: no toTable is appended
+	 * to it and nothing is reported for it; the copy, mapped, gets the conversion.
+	 */
+	@Test
+	void textSourceReadThroughCopiesOnlyKeepsItsText() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source copy = CopySource.builder()
+			.from(KEY)
+			.computes(List.of(Awk.builder().type("awk").script("/^##CPU##$/ { print }").build()))
+			.build();
+		final Connector connector = connectorWith(snapshot, copy, null);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(snapshot));
+		assertEquals(List.of("awk", "toTable"), types(copy));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+		assertEquals(copy.getKey(), connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * The same source mapped as well is read as a table: it gets the toTable appended.
+	 */
+	@Test
+	void textSourceCopiedAndMappedGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source copy = CopySource.builder()
+			.from(KEY)
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		final Connector connector = connectorWith(snapshot, copy, Mapping.builder().source(KEY).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+		assertEquals(List.of("awk", "toTable"), types(copy));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
 	@Test
@@ -231,13 +291,8 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("keepColumns"), types(copyToTable));
 		assertEquals(List.of("toTable", "keepColumns"), types(copyOfAwk));
 		assertEquals(
-			List.of(
-				Kind.TABLE_COMPUTE_ON_TEXT_SOURCE,
-				Kind.TO_TEXT_INSERTED,
-				Kind.AWK_ON_TABLE,
-				Kind.TO_TABLE_APPENDED,
-				Kind.TO_TABLE_INSERTED
-			),
+			// The awk chain is read through its copy only: it keeps its text, no toTable is appended to it
+			List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED),
 			kinds(connector)
 		);
 	}
@@ -283,9 +338,10 @@ class ContentTypeDesugaringTest {
 
 		// The tenth copy is still the http text: the table compute is reported, nothing inserted
 		assertEquals(List.of("keepColumns"), types(last));
-		// The cycle ends where it closes: each copy sees the text its peer's awk produces
-		assertEquals(List.of("awk", "toTable"), types(loopA));
-		assertEquals(List.of("awk", "toTable"), types(loopB));
+		// The cycle ends where it closes: each copy sees the text its peer's awk produces, and each one is read
+		// through its peer's copy only, so neither gets a toTable appended
+		assertEquals(List.of("awk"), types(loopA));
+		assertEquals(List.of("awk"), types(loopB));
 		assertEquals(1, kinds(connector).stream().filter(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE::equals).count());
 	}
 

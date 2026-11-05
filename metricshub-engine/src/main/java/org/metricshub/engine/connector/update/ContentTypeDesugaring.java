@@ -24,6 +24,7 @@ package org.metricshub.engine.connector.update;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
@@ -77,7 +79,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * the <code>awk</code> compute, which all build their table as well) gets an implicit <code>toTable</code>
  * before it (a no-op on the table those producers already built);</li>
  * <li>a chain ending in text from a legacy dual producer gets an implicit <code>toTable</code> appended, so that
- * the mapping reads a table;</li>
+ * the mapping reads a table, unless the source is read as text only (referenced by <code>copy</code> sources and
+ * by nothing else, see {@link #textOnlySources(Connector, Map)});</li>
  * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>)
  * finds an empty table today and keeps doing so: nothing is inserted, the case is reported;</li>
  * <li>a text compute reading the raw text only (<code>json2Csv</code>, <code>xml2Csv</code>) fed by a table
@@ -141,8 +144,78 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		// Every source by key, to resolve what a copy source copies
 		final Map<String, Source> sources = new LinkedHashMap<>();
 		forEachSource(connector, source -> sources.put(source.getKey(), source));
-		sources.values().forEach(source -> desugar(connector, source, sources, report));
+		final Set<String> textOnly = textOnlySources(connector, sources);
+		sources.values().forEach(source -> desugar(connector, source, sources, textOnly, report));
 		connector.setContentTypeReport(report);
+	}
+
+	/**
+	 * The sources that are read as text only: referenced by <code>copy</code> sources and by nothing else (no
+	 * mapping, no tool result, no <code>${source::...}</code> reference in another source or in a compute, no
+	 * <code>awk</code> variable). A legacy dual producer among them keeps its text: an explicit <code>toTable</code>
+	 * would re-serialize every line with a trailing <code>;</code>, which the <code>awk</code> scripts reading the
+	 * copies do not expect, and the copies get their own conversion where they need one.
+	 *
+	 * @param connector The connector
+	 * @param sources   Every source by key
+	 * @return the keys of the sources read as text only
+	 */
+	static Set<String> textOnlySources(final Connector connector, final Map<String, Source> sources) {
+		final Set<String> copied = new HashSet<>();
+		final Set<String> readAsTable = new HashSet<>();
+		for (final Source source : sources.values()) {
+			if (source instanceof CopySource copy) {
+				if (copy.getFrom() != null) {
+					copied.add(copy.getFrom().trim());
+				}
+			} else {
+				source.copy().update(value -> collectReferences(value, readAsTable));
+			}
+			for (final Compute compute : source.getComputes()) {
+				compute.copy().update(value -> collectReferences(value, readAsTable));
+				if (compute instanceof Awk awk && awk.getVariables() != null) {
+					awk.getVariables().values().forEach(value -> collectReferences(value, readAsTable));
+				}
+			}
+		}
+		if (connector.getMonitors() != null) {
+			for (final MonitorJob job : connector.getMonitors().values()) {
+				if (job instanceof StandardMonitorJob standard) {
+					addMappingSource(standard.getDiscovery(), readAsTable);
+					addMappingSource(standard.getCollect(), readAsTable);
+				} else if (job instanceof SimpleMonitorJob simple) {
+					addMappingSource(simple.getSimple(), readAsTable);
+				}
+			}
+		}
+		if (connector.getTools() != null) {
+			connector.getTools().values().forEach(tool -> {
+				if (tool.getResult() != null) {
+					collectReferences(tool.getResult().source(), readAsTable);
+				}
+			});
+		}
+		copied.removeAll(readAsTable);
+		return copied;
+	}
+
+	private static void addMappingSource(final AbstractMonitorTask task, final Set<String> readAsTable) {
+		if (task != null && task.getMapping() != null) {
+			collectReferences(task.getMapping().getSource(), readAsTable);
+		}
+	}
+
+	/**
+	 * Adds every <code>${source::...}</code> reference of the value to the set, and returns the value unchanged.
+	 */
+	private static String collectReferences(final String value, final Set<String> references) {
+		if (value != null) {
+			final Matcher matcher = SOURCE_REF_PATTERN.matcher(value);
+			while (matcher.find()) {
+				references.add(matcher.group().trim());
+			}
+		}
+		return value;
 	}
 
 	/**
@@ -156,6 +229,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Connector connector,
 		final Source source,
 		final Map<String, Source> sources,
+		final Set<String> textOnly,
 		final List<ContentTypeReportEntry> report
 	) {
 		final String key = source.getKey();
@@ -238,7 +312,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 		}
 
-		if (current == ContentType.TEXT && producer == TextProducer.LEGACY_DUAL) {
+		if (current == ContentType.TEXT && producer == TextProducer.LEGACY_DUAL && !textOnly.contains(key)) {
 			desugared.add(ToTable.implicit());
 			report.add(
 				new ContentTypeReportEntry(
