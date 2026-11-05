@@ -3,6 +3,7 @@ package org.metricshub.extension.jawk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -389,6 +390,23 @@ class JawkSourceExtensionTest {
 			List.of(List.of("end")),
 			new JawkSourceExtension().processSource(unknown, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
 		);
+
+		// An empty table output stays a table: no raw text
+		final JawkSource empty = JawkSource.builder()
+			.input(inputRef)
+			.inputFormat(ContentType.TABLE)
+			.output(ContentType.TABLE)
+			.script("BEGIN { }")
+			.build();
+		final SourceTable emptyResult = new JawkSourceExtension().processSource(
+			empty,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+		assertEquals(List.of(), emptyResult.getTable());
+		assertNull(emptyResult.getRawData());
+		assertEquals(ContentType.TABLE, emptyResult.getContentType());
 	}
 
 	@Test

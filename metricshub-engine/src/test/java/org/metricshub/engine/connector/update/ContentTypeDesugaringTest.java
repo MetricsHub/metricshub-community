@@ -383,6 +383,29 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(noPrintfConnector);
 		assertTrue(noPrintfConnector.getContentTypeReport().isEmpty());
 
+		// A "#" inside a regex literal does not start a comment: the printf after it is seen
+		final Source regexPrintf = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					Awk.builder()
+						.type("awk")
+						.script("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }")
+						.input(ContentType.TABLE)
+						.output(ContentType.TABLE)
+						.build()
+				)
+			)
+			.build();
+		final Connector regexPrintfConnector = connectorWith(regexPrintf);
+		new ContentTypeDesugaring().update(regexPrintfConnector);
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(regexPrintfConnector));
+		final String code = ContentTypeDesugaring.code("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }");
+		assertTrue(code.contains("printf"), code);
+		assertFalse(code.contains("foo#bar"), code);
+		assertTrue(code.contains("a / b / 2"), code);
+
 		// Text output after a table input: the following table compute needs a toTable, and the chain ends typed
 		final Source textOut = CommandLineSource.builder()
 			.commandLine("ls")

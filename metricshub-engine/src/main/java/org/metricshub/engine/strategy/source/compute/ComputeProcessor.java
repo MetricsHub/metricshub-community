@@ -433,8 +433,10 @@ public class ComputeProcessor implements IComputeProcessor {
 					)
 					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 				sourceTable.setTable(rows);
-				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator
-				sourceTable.setRawData(SourceTable.tableToCsv(rows, TABLE_SEP, true));
+				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator;
+				// no raw text at all for an empty table, which stays a table
+				sourceTable.setRawData(rows.isEmpty() ? null : SourceTable.tableToCsv(rows, TABLE_SEP, true));
+				sourceTable.setContentType(ContentType.TABLE);
 				return;
 			}
 
@@ -455,6 +457,11 @@ public class ComputeProcessor implements IComputeProcessor {
 					(awkResult == null ? "null" : "empty")
 				);
 				sourceTable.setTable(Collections.emptyList());
+				if (tableInput) {
+					// The structured input was consumed: the raw text of the source is not this script's output
+					sourceTable.setRawData(EMPTY);
+					sourceTable.setContentType(ContentType.TEXT);
+				}
 				return;
 			}
 

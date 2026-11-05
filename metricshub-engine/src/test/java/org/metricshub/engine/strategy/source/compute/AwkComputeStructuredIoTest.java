@@ -1,6 +1,7 @@
 package org.metricshub.engine.strategy.source.compute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 
@@ -72,6 +73,27 @@ class AwkComputeStructuredIoTest {
 		final SourceTable sourceTable = SourceTable.builder().rawData("stale").table(table("a")).build();
 		processor(sourceTable).process(Awk.builder().script("BEGIN { }").output(ContentType.TABLE).build());
 		assertEquals(List.of(), sourceTable.getTable());
+		// An empty table stays a table: no raw text, and typed as such
+		assertNull(sourceTable.getRawData());
+		assertEquals(ContentType.TABLE, sourceTable.getContentType());
+	}
+
+	/**
+	 * With table input, an empty text result must not leave the source's raw text behind: a later text consumer
+	 * would read the rows the script dropped.
+	 */
+	@Test
+	void emptyTextOutputOfTableInputClearsTheRawText() {
+		final SourceTable sourceTable = SourceTable.builder().rawData("a;b").table(table("a|b")).build();
+		processor(sourceTable).process(Awk.builder().script("BEGIN { }").input(ContentType.TABLE).build());
+		assertEquals(List.of(), sourceTable.getTable());
+		assertEquals("", sourceTable.getRawData());
+		assertEquals(ContentType.TEXT, sourceTable.getContentType());
+
+		// The legacy text input keeps the stale raw text, as pinned by the edge-case tests
+		final SourceTable legacy = SourceTable.builder().rawData("a;b").table(table("a|b")).build();
+		processor(legacy).process(Awk.builder().script("BEGIN { }").build());
+		assertEquals("a;b", legacy.getRawData());
 	}
 
 	@Test

@@ -169,8 +169,10 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 					? AwkExecutor.executeAwkToTable(awkScript, new TableInputSource(inputTable), awkEngine, variables)
 					: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables);
 				sourceTable.setTable(rows);
-				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator
-				sourceTable.setRawData(SourceTable.tableToCsv(rows, TABLE_SEP, true));
+				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator;
+				// no raw text at all for an empty table, which stays a table
+				sourceTable.setRawData(rows.isEmpty() ? null : SourceTable.tableToCsv(rows, TABLE_SEP, true));
+				sourceTable.setContentType(ContentType.TABLE);
 				return sourceTable;
 			}
 			String result = tableInput

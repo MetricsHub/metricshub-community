@@ -96,11 +96,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
 
 	/**
-	 * A string literal (escapes included) or a comment up to the end of the line in an AWK script.
-	 */
-	private static final Pattern STRING_OR_COMMENT = Pattern.compile("\"(?:[^\"\\\\\\n]|\\\\.)*\"|#[^\\n]*");
-
-	/**
 	 * Who produced the current text of a chain.
 	 */
 	private enum TextProducer {
@@ -283,14 +278,48 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * The code of an AWK script without its string literals and comments, so that a word inside them is not taken
-	 * for a statement.
+	 * The code of an AWK script without its string literals, regex literals and comments, so that a word inside
+	 * them is not taken for a statement.
 	 *
 	 * @param script The script
 	 * @return the script with every string literal and comment replaced by a space
 	 */
 	static String code(final String script) {
-		return STRING_OR_COMMENT.matcher(script).replaceAll(" ");
+		final StringBuilder code = new StringBuilder(script.length());
+		char previous = '\n';
+		for (int i = 0; i < script.length(); i++) {
+			final char c = script.charAt(i);
+			if (c == '"' || (c == '/' && regexCanStart(previous))) {
+				// A string or a regex literal: skipped up to its unescaped closing delimiter
+				int end = i + 1;
+				while (end < script.length() && script.charAt(end) != c && script.charAt(end) != '\n') {
+					end += script.charAt(end) == '\\' ? 2 : 1;
+				}
+				i = Math.min(end, script.length() - 1);
+				code.append(' ');
+				previous = c == '"' ? '"' : ')';
+			} else if (c == '#') {
+				// A comment up to the end of the line
+				while (i + 1 < script.length() && script.charAt(i + 1) != '\n') {
+					i++;
+				}
+				code.append(' ');
+			} else {
+				code.append(c);
+				if (!Character.isWhitespace(c)) {
+					previous = c;
+				}
+			}
+		}
+		return code.toString();
+	}
+
+	/**
+	 * Whether a slash after the given (last non-blank) character starts a regex literal rather than a division:
+	 * at the start of the script or after an operator, a separator or an opening bracket.
+	 */
+	private static boolean regexCanStart(final char previous) {
+		return "\n(,~!{;&|=?:[".indexOf(previous) >= 0;
 	}
 
 	/**
