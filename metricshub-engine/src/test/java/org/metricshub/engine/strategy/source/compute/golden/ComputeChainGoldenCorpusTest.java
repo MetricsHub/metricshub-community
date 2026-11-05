@@ -129,26 +129,12 @@ class ComputeChainGoldenCorpusTest {
 	 * Every stored golden must belong to a connector that still exists (a deleted connector leaves no golden behind).
 	 */
 	private void checkInventory(final Repository repository, final Set<String> connectorIds) throws IOException {
-		if (!Files.isDirectory(repository.getGoldenDirectory())) {
+		final List<String> orphans = ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds);
+		if (ComputeChainGoldenCorpus.isUpdateMode()) {
+			for (final String connectorId : orphans) {
+				Files.delete(repository.getGoldenDirectory().resolve(connectorId + ".json"));
+			}
 			return;
-		}
-		final List<String> orphans = new ArrayList<>();
-		try (Stream<Path> files = Files.list(repository.getGoldenDirectory())) {
-			files.map(file -> file.getFileName().toString())
-				.filter(name -> name.endsWith(".json"))
-				.map(name -> name.substring(0, name.length() - ".json".length()))
-				.filter(connectorId -> !connectorIds.contains(connectorId))
-				.forEach(connectorId -> {
-					if (ComputeChainGoldenCorpus.isUpdateMode()) {
-						try {
-							Files.delete(repository.getGoldenDirectory().resolve(connectorId + ".json"));
-						} catch (IOException e) {
-							throw new IllegalStateException(e);
-						}
-					} else {
-						orphans.add(connectorId);
-					}
-				});
 		}
 		assertTrue(orphans.isEmpty(), "Stored goldens without a connector: " + orphans);
 	}
@@ -437,6 +423,15 @@ class ComputeChainGoldenCorpusTest {
 			.filter(d -> !ComputeChainGoldenCorpus.isIntended(d))
 			.toList();
 		assertEquals(3, failing.size(), failing.toString());
+		// A chain that now throws on the separator-in-cell input is a regression, not an intended difference
+		generated.getSources().get("s").getOutputs().put("tableSeparatorInCell", new Output(null, null, null, "Boom: y"));
+		final List<String> withError = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
+		assertEquals(
+			4,
+			withError.stream().filter(d -> !ComputeChainGoldenCorpus.isIntended(d)).count(),
+			withError.toString()
+		);
+		assertEquals(0, withError.stream().filter(ComputeChainGoldenCorpus::isIntended).count(), withError.toString());
 	}
 
 	private static ConnectorGolden golden(
@@ -511,6 +506,18 @@ class ComputeChainGoldenCorpusTest {
 			System.clearProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY);
 			assertTrue(ComputeChainGoldenCorpus.isSelected("GoldenB"));
 			assertEquals(1, GoldenCheck.run(List.of(root), false), "GoldenB has no stored golden");
+			// A golden of a connector that no longer exists: reported, then deleted in update mode
+			Files.copy(goldens.resolve("GoldenA.json"), goldens.resolve("Zombie.json"));
+			assertEquals(
+				List.of("Zombie"),
+				ComputeChainGoldenCorpus.orphanGoldens(Repository.of(root), List.of("GoldenA", "GoldenB"))
+			);
+			assertEquals(2, GoldenCheck.run(List.of(root), false), "GoldenB has no stored golden, Zombie no connector");
+			System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
+			assertEquals(0, GoldenCheck.run(List.of(root), false));
+			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
+			assertTrue(!Files.exists(goldens.resolve("Zombie.json")), "deleted by the update mode");
+			assertEquals(0, GoldenCheck.run(List.of(root), false));
 		} finally {
 			previous.forEach((property, value) -> {
 				if (value == null) {

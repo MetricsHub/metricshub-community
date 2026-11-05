@@ -111,4 +111,27 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 		);
 		assertTrue(e.getMessage().contains("defaultRightLine"), e.getMessage());
 	}
+
+	@Test
+	void testDeserializeTableJoinEmptyList() {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  join:
+			    type: tableJoin
+			    leftTable: testLeft
+			    rightTable: testRight
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			    defaultRightLine: []
+			""";
+		// An empty list is no row at all
+		final Exception e = Assertions.assertThrows(
+			MismatchedInputException.class,
+			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
+		);
+		assertTrue(e.getMessage().contains("defaultRightLine"), e.getMessage());
+	}
 }

@@ -121,6 +121,17 @@ public final class GoldenCheck {
 					}
 				}
 			}
+			// A golden of a deleted or renamed connector: removed in update mode, a failure otherwise (as the
+			// inventory check of the Maven test does)
+			for (final String orphan : ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds)) {
+				if (ComputeChainGoldenCorpus.isUpdateMode()) {
+					Files.delete(repository.getGoldenDirectory().resolve(orphan + ".json"));
+					System.out.println(orphan + ": stale golden deleted");
+				} else {
+					System.out.println(orphan + ": stored golden without a connector");
+					failing++;
+				}
+			}
 		}
 		// A misspelt --connectors id selects nothing: say so instead of passing silently
 		for (final String unknown : ComputeChainGoldenCorpus.unknownSelection(allConnectorIds)) {

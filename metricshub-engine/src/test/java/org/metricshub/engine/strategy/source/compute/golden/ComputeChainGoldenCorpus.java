@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -453,6 +454,30 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
+	 * The stored goldens that belong to no connector of the repository (a deleted or renamed connector).
+	 *
+	 * @param repository   The repository
+	 * @param connectorIds The ids of the connectors of the repository
+	 * @return the ids of the orphan goldens, in file order; empty when the golden directory does not exist
+	 * @throws IOException when the golden directory cannot be listed
+	 */
+	public static List<String> orphanGoldens(final Repository repository, final Collection<String> connectorIds)
+		throws IOException {
+		if (!Files.isDirectory(repository.getGoldenDirectory())) {
+			return List.of();
+		}
+		final Set<String> known = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		known.addAll(connectorIds);
+		try (Stream<Path> files = Files.list(repository.getGoldenDirectory())) {
+			return files.map(file -> file.getFileName().toString())
+				.filter(name -> name.endsWith(".json"))
+				.map(name -> name.substring(0, name.length() - ".json".length()))
+				.filter(connectorId -> !known.contains(connectorId))
+				.toList();
+		}
+	}
+
+	/**
 	 * The file recording the revision of each connector repository the goldens were generated from, as
 	 * <code>&lt;root directory name&gt;=&lt;commit&gt;</code> lines. CI checks out these revisions.
 	 */
@@ -623,9 +648,12 @@ public class ComputeChainGoldenCorpus {
 					? generatedOutput.equals(storedOutput)
 					: sameForConsumers(storedOutput, generatedOutput, ending);
 				if (!same) {
-					final String prefix = mode == CompareMode.TYPED && input.endsWith(SEPARATOR_IN_CELL_SUFFIX)
-						? INTENDED_PREFIX
-						: "";
+					// Only a content difference on a separator-in-cell input is intended: a chain that now throws or
+					// hangs on that input, or an input without a stored output, is a regression like any other
+					final String prefix = mode == CompareMode.TYPED &&
+						input.endsWith(SEPARATOR_IN_CELL_SUFFIX) &&
+						storedOutput != null &&
+						sameFlags(storedOutput, generatedOutput) ? INTENDED_PREFIX : "";
 					differences.add(prefix + key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
 				}
 			});
@@ -640,6 +668,18 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
+	 * Whether two outputs failed the same way: same <code>error</code>, same <code>timedOut</code>.
+	 *
+	 * @param stored    The stored output
+	 * @param generated The generated output
+	 * @return <code>true</code> when both flags are equal
+	 */
+	static boolean sameFlags(final JsonNode stored, final JsonNode generated) {
+		return stored.path("error").equals(generated.path("error")) &&
+			stored.path("timedOut").equals(generated.path("timedOut"));
+	}
+
+	/**
 	 * Whether two outputs are the same for the consumers of the chain (see {@link CompareMode#TYPED}).
 	 *
 	 * @param stored    The stored output, null when the stored golden has none for the input
@@ -648,13 +688,7 @@ public class ComputeChainGoldenCorpus {
 	 * @return <code>true</code> when the consumers see the same result
 	 */
 	static boolean sameForConsumers(final JsonNode stored, final JsonNode generated, final ContentType ending) {
-		if (stored == null) {
-			return false;
-		}
-		if (
-			!stored.path("error").equals(generated.path("error")) ||
-				!stored.path("timedOut").equals(generated.path("timedOut"))
-		) {
+		if (stored == null || !sameFlags(stored, generated)) {
 			return false;
 		}
 		return ending == ContentType.TEXT

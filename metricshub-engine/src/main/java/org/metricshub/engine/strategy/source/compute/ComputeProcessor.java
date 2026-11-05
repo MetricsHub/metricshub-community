@@ -460,11 +460,10 @@ public class ComputeProcessor implements IComputeProcessor {
 					(awkResult == null ? "null" : "empty")
 				);
 				sourceTable.setTable(Collections.emptyList());
-				if (tableInput) {
-					// The structured input was consumed: the raw text of the source is not this script's output
-					sourceTable.setRawData(EMPTY);
-					sourceTable.setContentType(ContentType.TEXT);
-				}
+				// The script's output is empty text: the input of the script is not its result, so no stale raw text
+				// is left for a later consumer (an explicit toTable would turn the input back into rows)
+				sourceTable.setRawData(EMPTY);
+				sourceTable.setContentType(ContentType.TEXT);
 				return;
 			}
 

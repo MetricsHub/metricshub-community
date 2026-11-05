@@ -94,4 +94,23 @@ class StaticSourceDeserializerTest extends DeserializerTest {
 		);
 		assertTrue(e.getMessage().contains("value"), e.getMessage());
 	}
+
+	@Test
+	void testDeserializeStaticEmptyList() {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  row:
+			    type: static
+			    value: []
+			""";
+		// An empty list is no row at all
+		final Exception e = assertThrows(
+			MismatchedInputException.class,
+			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
+		);
+		assertTrue(e.getMessage().contains("value"), e.getMessage());
+	}
 }

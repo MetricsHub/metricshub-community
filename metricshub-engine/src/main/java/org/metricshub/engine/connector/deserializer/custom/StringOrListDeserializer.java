@@ -48,6 +48,10 @@ public class StringOrListDeserializer extends JsonDeserializer<Object> {
 				}
 				cells.add(parser.getText());
 			}
+			if (cells.isEmpty()) {
+				// An empty list is no row at all: a static source needs at least one cell
+				return context.reportInputMismatch(List.class, "Expected at least one cell, got an empty list");
+			}
 			return cells;
 		}
 		if (parser.currentToken().isScalarValue()) {
