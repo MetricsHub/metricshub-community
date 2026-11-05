@@ -176,8 +176,18 @@ class ConversionComputesTest {
 	void toTableBoundsAClosedRange() {
 		final SourceTable sourceTable = SourceTable.ofText("a;b");
 		processor(sourceTable).process(ToTable.builder().selectColumns("1-2147483647").build());
-		assertEquals(ComputeProcessor.MAX_SELECTED_COLUMN, sourceTable.getTable().get(0).size());
+		assertEquals(ComputeProcessor.MAX_RANGE_PADDING, sourceTable.getTable().get(0).size());
 		assertEquals("b", sourceTable.getTable().get(0).get(1));
+
+		// A column past the padding limit is still selected when present
+		final SourceTable wide = SourceTable.ofText(";".repeat(1000) + "w;x");
+		processor(wide).process(ToTable.builder().selectColumns("1001,1002-2147483647").build());
+		assertEquals(List.of("w", "x"), firstRow(wide).subList(0, 2));
+		assertEquals(1 + ComputeProcessor.MAX_RANGE_PADDING, firstRow(wide).size());
+	}
+
+	private static List<String> firstRow(final SourceTable sourceTable) {
+		return sourceTable.getTable().get(0);
 	}
 
 	@Test
