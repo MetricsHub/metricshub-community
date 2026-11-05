@@ -33,6 +33,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -1757,7 +1758,10 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		final String rawData = sourceTable.getRawData();
-		final List<String> lines = rawData == null ? List.of() : SourceTable.lineToList(rawData, NEW_LINE);
+		// The text may come with CRLF line endings: the result must not depend on them
+		final List<String> lines = rawData == null
+			? List.of()
+			: SourceTable.lineToList(rawData.replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE);
 		final List<String> filteredLines = FilterResultHelper.filterLines(
 			lines,
 			null,
@@ -1856,7 +1860,11 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 		final int columnIndex = column - 1;
-		for (final List<String> row : sourceTable.getTable()) {
+		// Fresh rows: a source may hand out fixed-size rows (Arrays.asList)
+		final List<List<String>> table = new ArrayList<>();
+		for (final List<String> original : sourceTable.getTable()) {
+			final List<String> row = new ArrayList<>(original);
+			table.add(row);
 			if (columnIndex > row.size()) {
 				log.warn(
 					"Hostname {} - Cannot insert column {} in the {}-cell row {}, the row remains unchanged.",
@@ -1871,15 +1879,15 @@ public class ComputeProcessor implements IComputeProcessor {
 			final StringBuilder resolved = new StringBuilder();
 			while (matcher.find()) {
 				final int referenced = Integer.parseInt(matcher.group(1)) - 1;
-				matcher.appendReplacement(
-					resolved,
-					Matcher.quoteReplacement(referenced < row.size() ? row.get(referenced) : EMPTY)
-				);
+				// An absent column, or a null cell, is an empty value
+				final String cell = referenced < row.size() ? row.get(referenced) : null;
+				matcher.appendReplacement(resolved, Matcher.quoteReplacement(cell == null ? EMPTY : cell));
 			}
 			matcher.appendTail(resolved);
 			row.add(columnIndex, resolved.toString());
 		}
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+		sourceTable.setTable(table);
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, false));
 	}
 
 	@Override

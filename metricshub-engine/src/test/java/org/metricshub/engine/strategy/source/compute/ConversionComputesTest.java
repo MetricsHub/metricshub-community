@@ -160,6 +160,28 @@ class ConversionComputesTest {
 	}
 
 	@Test
+	void toTableNormalizesCrlf() {
+		final SourceTable sourceTable = SourceTable.ofText("a;b\r\nc;d\r\n");
+		processor(sourceTable).process(ToTable.builder().build());
+		assertEquals(table("a|b", "c|d"), sourceTable.getTable());
+		assertEquals("a;b;\nc;d;", sourceTable.getRawData());
+	}
+
+	/**
+	 * A source may hand out fixed-size rows (ipmiRaw builds its row with Arrays.asList) or null cells: the compute
+	 * builds fresh rows and treats a null cell as empty.
+	 */
+	@Test
+	void insertColumnCopesWithFixedSizeRowsAndNullCells() {
+		final SourceTable sourceTable = SourceTable.ofTable(
+			new ArrayList<>(List.of(Arrays.asList("a", null), Arrays.asList("c", "d")))
+		);
+		processor(sourceTable).process(InsertColumn.builder().column(3).value("[$2]").build());
+		assertEquals(List.of(Arrays.asList("a", null, "[]"), List.of("c", "d", "[d]")), sourceTable.getTable());
+		assertEquals("a;;[];\nc;d;[d];", sourceTable.getRawData());
+	}
+
+	@Test
 	void insertColumnLeavesShortRowsAndInvalidArgumentsAlone() {
 		final SourceTable sourceTable = SourceTable.ofTable(table("a|b", "c"));
 		processor(sourceTable).process(InsertColumn.builder().column(3).value("x").build());
