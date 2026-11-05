@@ -129,10 +129,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			report.add(new ContentTypeReportEntry(key, Kind.STATIC_CSV, "value=" + staticSource.getValue()));
 		}
 
-		final List<Compute> computes = source.getComputes();
-		if (computes == null) {
+		if (source.getComputes() == null) {
 			return;
 		}
+		// Start again from the chain as written: a previous pass may have inserted implicit conversions
+		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
 		ContentType current = source.getOutputContentType();
 		TextProducer producer = current != ContentType.TEXT
 			? TextProducer.NONE
@@ -195,9 +196,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			);
 		}
 
-		if (desugared.size() != computes.size()) {
-			source.setComputes(desugared);
-		}
+		source.setComputes(desugared);
 	}
 
 	/**
@@ -275,6 +274,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return "script=" + script + (FS_SEMICOLON.matcher(content).find() ? " (sets FS to \";\")" : "");
 		}
 		return "inline script" + (FS_SEMICOLON.matcher(content).find() ? " (sets FS to \";\")" : "");
+	}
+
+	private static boolean isImplicit(final Compute compute) {
+		return (compute instanceof ToTable toTable && toTable.isImplicit()) ||
+			(compute instanceof ToText toText && toText.isImplicit());
 	}
 
 	private static boolean isPureTextSource(final Source source) {

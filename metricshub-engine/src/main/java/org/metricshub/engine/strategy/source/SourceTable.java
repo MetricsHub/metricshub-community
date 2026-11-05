@@ -37,8 +37,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -64,13 +66,22 @@ public class SourceTable {
 	private String rawData;
 
 	/**
+	 * The content type set by an explicit conversion or factory, null when the content type is inferred from the
+	 * payload. Needed because an empty text and an empty table hold the same payload.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private ContentType contentType;
+
+	/**
 	 * A source table holding text only.
 	 *
 	 * @param text The text, null meaning empty
 	 * @return a new source table whose content type is {@link ContentType#TEXT}
 	 */
 	public static SourceTable ofText(final String text) {
-		return SourceTable.builder().rawData(text == null ? EMPTY : text).build();
+		return SourceTable.builder().rawData(text == null ? EMPTY : text).contentType(ContentType.TEXT).build();
 	}
 
 	/**
@@ -80,17 +91,24 @@ public class SourceTable {
 	 * @return a new source table whose content type is {@link ContentType#TABLE}
 	 */
 	public static SourceTable ofTable(final List<List<String>> table) {
-		return SourceTable.builder().table(table == null ? new ArrayList<>() : table).build();
+		return SourceTable.builder()
+			.table(table == null ? new ArrayList<>() : table)
+			.contentType(ContentType.TABLE)
+			.build();
 	}
 
 	/**
-	 * The content type of this source table: text when it holds a raw text and no table, a table otherwise. The
-	 * source table still carries both internally; the type tells which one a typed consumer reads.
+	 * The content type of this source table: the one an explicit conversion or factory set, else inferred from
+	 * the payload (text when it holds a raw text and no table, a table otherwise). The source table still carries
+	 * both internally; the type tells which one a typed consumer reads.
 	 *
 	 * @return the content type
 	 */
 	@JsonIgnore
 	public ContentType getContentType() {
+		if (contentType != null) {
+			return contentType;
+		}
 		return rawData != null && (table == null || table.isEmpty()) ? ContentType.TEXT : ContentType.TABLE;
 	}
 

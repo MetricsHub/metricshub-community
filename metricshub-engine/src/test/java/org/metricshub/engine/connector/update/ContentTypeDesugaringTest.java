@@ -75,12 +75,6 @@ class ContentTypeDesugaringTest {
 		return translations;
 	}
 
-	private static Source desugar(final Source source) {
-		final Connector connector = connectorWith(source);
-		new ContentTypeDesugaring().update(connector);
-		return source;
-	}
-
 	@Test
 	void tableComputeAfterCommandLineGetsImplicitToTable() {
 		final Source source = CommandLineSource.builder()
@@ -262,11 +256,16 @@ class ContentTypeDesugaringTest {
 				)
 			)
 			.build();
-		desugar(source);
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
 		final List<String> once = types(source);
-		desugar(source);
+		final List<ContentTypeReportEntry> report = List.copyOf(connector.getContentTypeReport());
+		new ContentTypeDesugaring().update(connector);
 		assertEquals(once, types(source));
 		assertEquals(List.of("toText", "awk", "toTable", "keepColumns"), once);
+		// The report is rebuilt from the chain as written, so a second pass loses no finding
+		assertEquals(report, connector.getContentTypeReport());
+		assertEquals(List.of(Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED), kinds(connector));
 	}
 
 	/**
