@@ -145,7 +145,8 @@ public final class HostTools {
 			springDefinition,
 			arguments -> call(definition, perHost, arguments),
 			definition.destructive(),
-			owner
+			owner,
+			definition
 		);
 	}
 

@@ -30,6 +30,7 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolParameter;
 import org.metricshub.web.mcp.tool.ConnectorToolCallbacks;
 import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.ProtocolToolCallbacks;
@@ -235,6 +236,30 @@ class HostToolsLookupTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", Map.of("host-03", host03)));
 
 		assertEquals(List.of("TestConnectorWithTool_reboot=write"), toolsOf(snapshot(), "host-03"));
+	}
+
+	@Test
+	void aConnectorToolDeclaredWithItsParametersInAnotherOrderIsListed() throws Exception {
+		// host-03's copy of the connector declares listThings' parameters the other way round: the same tool,
+		// which the callback runs there
+		final ConnectorStore reordered = new ConnectorStore(Paths.get("src", "test", "resources", "mcp", "tool"));
+		final Map<String, ToolParameter> parameters = reordered.getStore()
+			.get(CONNECTOR)
+			.getTools()
+			.get("listThings")
+			.getParameters();
+		final List<Map.Entry<String, ToolParameter>> entries = new ArrayList<>(parameters.entrySet());
+		java.util.Collections.reverse(entries);
+		parameters.clear();
+		entries.forEach(entry -> parameters.put(entry.getKey(), entry.getValue()));
+		final TelemetryManager host03 = host("host-03", reordered, Map.of());
+		host03.getHostProperties().getConnectorNamespace(CONNECTOR).setStatusOk(true);
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", Map.of("host-03", host03)));
+
+		assertEquals(
+			List.of("TestConnectorWithTool_listThings=read", "TestConnectorWithTool_reboot=write"),
+			toolsOf(snapshot(), "host-03")
+		);
 	}
 
 	/**

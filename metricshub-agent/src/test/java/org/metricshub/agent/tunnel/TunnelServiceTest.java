@@ -139,7 +139,8 @@ class TunnelServiceTest {
 						.build(),
 					arguments -> "",
 					false,
-					"ipmi"
+					"ipmi",
+					null
 				) }
 		);
 		final List<TunnelClient> clients = new ArrayList<>();

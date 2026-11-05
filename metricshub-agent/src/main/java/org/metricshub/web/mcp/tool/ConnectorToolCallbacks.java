@@ -214,10 +214,9 @@ public final class ConnectorToolCallbacks {
 			return false;
 		}
 		try {
-			final ToolDefinition declared = tool.toDefinition(toolName);
-			final org.springframework.ai.tool.definition.ToolDefinition advertised = callback.getToolDefinition();
-			return HostTools.description(declared).equals(advertised.description()) &&
-				HostTools.inputSchema(declared).toString().equals(advertised.inputSchema());
+			// The very predicate run() applies: the declarations equal, whatever order the parameters come in
+			return callback instanceof final DynamicToolCallback dynamic &&
+				tool.toDefinition(toolName).equals(dynamic.getDeclaration());
 		} catch (IllegalArgumentException e) {
 			// Variables that make the declaration invalid
 			return false;
