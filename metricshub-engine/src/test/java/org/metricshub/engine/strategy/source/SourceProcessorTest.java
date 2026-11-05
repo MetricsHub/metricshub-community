@@ -1,6 +1,7 @@
 package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.constants.Constants.AUTOMATIC;
 import static org.metricshub.engine.constants.Constants.ECS1_01;
@@ -37,6 +38,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.SqlColumn;
 import org.metricshub.engine.connector.model.common.SqlTable;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
@@ -571,8 +573,11 @@ class SourceProcessorTest {
 		);
 
 		SourceTable table = SourceTable.builder().table(expectedTable).rawData("rawData").build();
+		final String emptyTableRef = "${source::monitors.cpu.discovery.sources.emptyTable}";
 
-		ConnectorNamespace namespace = ConnectorNamespace.builder().sourceTables(Map.of(TAB1_REF, table)).build();
+		ConnectorNamespace namespace = ConnectorNamespace.builder()
+			.sourceTables(Map.of(TAB1_REF, table, emptyTableRef, SourceTable.ofTable(new ArrayList<>())))
+			.build();
 		Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, namespace);
 		HostProperties hostProperties = HostProperties.builder().connectorNamespaces(connectorNamespaces).build();
@@ -597,9 +602,17 @@ class SourceProcessorTest {
 
 		copySource = CopySource.builder().from(TAB1_REF).build();
 
-		final List<List<String>> tableResult = sourceProcessor.process(copySource).getTable();
+		final SourceTable copy = sourceProcessor.process(copySource);
+		final List<List<String>> tableResult = copy.getTable();
 
 		assertEquals(expectedTable, tableResult);
+		// No explicit marker on the origin, none on the copy
+		assertNull(copy.getExplicitContentType());
+
+		// An empty table typed by its marker only stays a table once copied
+		final SourceTable emptyCopy = sourceProcessor.process(CopySource.builder().from(emptyTableRef).build());
+		assertEquals(List.of(), emptyCopy.getTable());
+		assertEquals(ContentType.TABLE, emptyCopy.getContentType());
 
 		tableResult.get(0).add(VALUE_VAL3);
 

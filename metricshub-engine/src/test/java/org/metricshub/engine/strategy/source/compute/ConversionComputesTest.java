@@ -184,6 +184,11 @@ class ConversionComputesTest {
 		processor(wide).process(ToTable.builder().selectColumns("1001,1002-2147483647").build());
 		assertEquals(List.of("w", "x"), firstRow(wide).subList(0, 2));
 		assertEquals(1 + ComputeProcessor.MAX_RANGE_PADDING, firstRow(wide).size());
+
+		// A selection ending at the largest column number terminates
+		final SourceTable last = SourceTable.ofText("a;b");
+		processor(last).process(ToTable.builder().selectColumns("2147483647,2147483640-2147483647").build());
+		assertEquals(List.of("", "", "", "", "", "", "", "", ""), firstRow(last));
 	}
 
 	private static List<String> firstRow(final SourceTable sourceTable) {

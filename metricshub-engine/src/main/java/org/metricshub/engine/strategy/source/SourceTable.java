@@ -113,6 +113,16 @@ public class SourceTable {
 	}
 
 	/**
+	 * The content type an explicit conversion or factory set, to carry over when the payload is copied.
+	 *
+	 * @return the explicit content type, null when the type is inferred from the payload
+	 */
+	@JsonIgnore
+	public ContentType getExplicitContentType() {
+		return contentType;
+	}
+
+	/**
 	 * Transform the {@link List} table to a {@link String} representation
 	 * [[a1,b1,c2],[a1,b1,c1]]
 	 * =>
