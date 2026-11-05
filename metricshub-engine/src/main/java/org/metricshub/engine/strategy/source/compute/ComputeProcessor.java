@@ -95,6 +95,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Exclude
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.InsertColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -106,6 +107,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -1728,6 +1731,157 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * This method processes {@link Xml2Csv} compute
 	 * @param xml2csv {@link Xml2Csv} instance
 	 */
+	/**
+	 * Converts the raw text into a table: one row per line, split on the separator, after the line filters and the
+	 * column selection of the compute (the <code>commandLine</code> semantics).
+	 * <p>
+	 * An implicit <code>toTable</code> (inserted by the content-type desugaring after <code>commandLine</code>, the
+	 * <code>awk</code> source or the <code>awk</code> compute) leaves the source table unchanged: those producers
+	 * build their table themselves.
+	 *
+	 * @param toTable The {@link ToTable} compute
+	 */
+	@Override
+	@WithSpan("Compute ToTable Exec")
+	public void process(@SpanAttribute("compute.definition") final ToTable toTable) {
+		if (toTable == null) {
+			log.warn("Hostname {} - Compute Operation (ToTable) is null, the table remains unchanged.", hostname);
+			return;
+		}
+		if (toTable.isImplicit()) {
+			log.debug(
+				"Hostname {} - Implicit toTable: the table is already built, the source table remains unchanged.",
+				hostname
+			);
+			return;
+		}
+
+		final String rawData = sourceTable.getRawData();
+		final List<String> lines = rawData == null ? List.of() : SourceTable.lineToList(rawData, NEW_LINE);
+		final List<String> filteredLines = FilterResultHelper.filterLines(
+			lines,
+			null,
+			null,
+			toTable.getExclude(),
+			toTable.getKeep()
+		);
+		final String selectColumns = toTable.getSelectColumns() == null
+			? EMPTY
+			: toTable.getSelectColumns().replaceAll("\\s+", EMPTY);
+		final List<String> selectedLines = FilterResultHelper.selectedColumns(
+			filteredLines,
+			toTable.getSeparator(),
+			selectColumns
+		);
+		// selectedColumns joins the selected columns with the table separator; otherwise the lines keep their own
+		final String separator = selectColumns.isEmpty() ? toTable.getSeparator() : TABLE_SEP;
+
+		final List<List<String>> table = selectedLines.stream()
+			.map(line -> splitLine(line, separator))
+			.filter(row -> !row.isEmpty())
+			.collect(Collectors.toList()); // NOSONAR
+
+		sourceTable.setTable(table);
+		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, false));
+	}
+
+	/**
+	 * Splits a line into cells on a literal separator, keeping the empty cells but the one after a trailing
+	 * separator, as {@link SourceTable#lineToList(String, String)} does. An empty line gives no cell.
+	 *
+	 * @param line      The line
+	 * @param separator The literal separator
+	 * @return the cells, mutable
+	 */
+	private static List<String> splitLine(final String line, final String separator) {
+		if (line == null || line.isEmpty()) {
+			return new ArrayList<>();
+		}
+		final String[] cells = line.split(Pattern.quote(separator), -1);
+		final int count = line.endsWith(separator) ? cells.length - 1 : cells.length;
+		return Stream.of(cells).limit(count).collect(Collectors.toCollection(ArrayList::new));
+	}
+
+	/**
+	 * Converts the table into text: one line per row, cells joined with <code>;</code> and a trailing
+	 * <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code> (what the <code>awk</code> compute
+	 * read from a table so far).
+	 * <p>
+	 * An implicit <code>toText</code> (inserted by the content-type desugaring before an <code>awk</code> compute
+	 * fed by a table producer) leaves the source table unchanged: the <code>awk</code> compute serializes the table
+	 * itself when it finds no raw text, and an empty <code>awk</code> result must keep leaving the raw text as it was.
+	 *
+	 * @param toText The {@link ToText} compute
+	 */
+	@Override
+	@WithSpan("Compute ToText Exec")
+	public void process(@SpanAttribute("compute.definition") final ToText toText) {
+		if (toText == null) {
+			log.warn("Hostname {} - Compute Operation (ToText) is null, the table remains unchanged.", hostname);
+			return;
+		}
+		if (toText.isImplicit()) {
+			log.debug(
+				"Hostname {} - Implicit toText: the awk compute serializes the table itself, the source table remains unchanged.",
+				hostname
+			);
+			return;
+		}
+		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true));
+		sourceTable.setTable(new ArrayList<>());
+	}
+
+	/**
+	 * Inserts a column at the given 1-based position in every row. The value is a literal where <code>$n</code> is
+	 * replaced by the content of column <em>n</em> of the row (an absent column gives an empty string). A row
+	 * shorter than <em>column - 1</em> is left unchanged.
+	 *
+	 * @param insertColumn The {@link InsertColumn} compute
+	 */
+	@Override
+	@WithSpan("Compute InsertColumn Exec")
+	public void process(@SpanAttribute("compute.definition") final InsertColumn insertColumn) {
+		if (insertColumn == null) {
+			log.warn("Hostname {} - Compute Operation (InsertColumn) is null, the table remains unchanged.", hostname);
+			return;
+		}
+		final Integer column = insertColumn.getColumn();
+		final String value = insertColumn.getValue();
+		if (column == null || column < 1 || value == null) {
+			log.warn(
+				"Hostname {} - Arguments in Compute Operation (InsertColumn): {} are wrong, the table remains unchanged.",
+				hostname,
+				insertColumn
+			);
+			return;
+		}
+		final int columnIndex = column - 1;
+		for (final List<String> row : sourceTable.getTable()) {
+			if (columnIndex > row.size()) {
+				log.warn(
+					"Hostname {} - Cannot insert column {} in the {}-cell row {}, the row remains unchanged.",
+					hostname,
+					column,
+					row.size(),
+					row
+				);
+				continue;
+			}
+			final Matcher matcher = COLUMN_REFERENCE_PATTERN.matcher(value);
+			final StringBuilder resolved = new StringBuilder();
+			while (matcher.find()) {
+				final int referenced = Integer.parseInt(matcher.group(1)) - 1;
+				matcher.appendReplacement(
+					resolved,
+					Matcher.quoteReplacement(referenced < row.size() ? row.get(referenced) : EMPTY)
+				);
+			}
+			matcher.appendTail(resolved);
+			row.add(columnIndex, resolved.toString());
+		}
+		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+	}
+
 	@Override
 	@WithSpan("Compute Xml2Csv Exec")
 	public void process(@SpanAttribute("compute.definition") final Xml2Csv xml2csv) {

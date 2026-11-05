@@ -36,6 +36,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -118,6 +119,11 @@ public class IpmiRawSource extends Source {
 		netFn = updater.apply(netFn);
 		command = updater.apply(command);
 		data = updater.apply(data);
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TEXT;
 	}
 
 	@Override

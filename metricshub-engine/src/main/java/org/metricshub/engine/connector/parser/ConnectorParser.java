@@ -48,6 +48,7 @@ import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.update.AvailableSourceUpdate;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
+import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 import org.metricshub.engine.connector.update.MonitorTaskSourceDepUpdate;
 import org.metricshub.engine.connector.update.PowerMeasurementStatusUpdate;
 import org.metricshub.engine.connector.update.SurroundingSourceDepUpdate;
@@ -169,11 +170,13 @@ public class ConnectorParser {
 		final ConnectorUpdateChain surroundingSourceDepUpdate = new SurroundingSourceDepUpdate();
 		final ConnectorUpdateChain monitorTaskSourceDepUpdate = new MonitorTaskSourceDepUpdate();
 		final ConnectorUpdateChain powerMeasurementStatusUpdate = new PowerMeasurementStatusUpdate();
+		final ConnectorUpdateChain contentTypeDesugaring = new ContentTypeDesugaring();
 
 		// Create the chain
 		availableSource.setNextUpdateChain(surroundingSourceDepUpdate);
 		surroundingSourceDepUpdate.setNextUpdateChain(monitorTaskSourceDepUpdate);
 		monitorTaskSourceDepUpdate.setNextUpdateChain(powerMeasurementStatusUpdate);
+		powerMeasurementStatusUpdate.setNextUpdateChain(contentTypeDesugaring);
 
 		return availableSource;
 	}

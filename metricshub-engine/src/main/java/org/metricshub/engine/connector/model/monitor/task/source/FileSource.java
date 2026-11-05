@@ -40,6 +40,7 @@ import lombok.EqualsAndHashCode;
 import org.metricshub.engine.connector.deserializer.custom.FileSourceModeDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.LinkedHashSetDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.SizeDeserializer;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -145,6 +146,11 @@ public class FileSource extends Source {
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		paths = paths.stream().map(updater).collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TEXT;
 	}
 
 	@Override

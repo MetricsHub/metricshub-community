@@ -25,6 +25,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +40,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -60,6 +62,37 @@ public class SourceTable {
 	private List<String> headers = new ArrayList<>();
 
 	private String rawData;
+
+	/**
+	 * A source table holding text only.
+	 *
+	 * @param text The text, null meaning empty
+	 * @return a new source table whose content type is {@link ContentType#TEXT}
+	 */
+	public static SourceTable ofText(final String text) {
+		return SourceTable.builder().rawData(text == null ? EMPTY : text).build();
+	}
+
+	/**
+	 * A source table holding a table only.
+	 *
+	 * @param table The table, null meaning empty
+	 * @return a new source table whose content type is {@link ContentType#TABLE}
+	 */
+	public static SourceTable ofTable(final List<List<String>> table) {
+		return SourceTable.builder().table(table == null ? new ArrayList<>() : table).build();
+	}
+
+	/**
+	 * The content type of this source table: text when it holds a raw text and no table, a table otherwise. The
+	 * source table still carries both internally; the type tells which one a typed consumer reads.
+	 *
+	 * @return the content type
+	 */
+	@JsonIgnore
+	public ContentType getContentType() {
+		return rawData != null && (table == null || table.isEmpty()) ? ContentType.TEXT : ContentType.TABLE;
+	}
 
 	/**
 	 * Transform the {@link List} table to a {@link String} representation

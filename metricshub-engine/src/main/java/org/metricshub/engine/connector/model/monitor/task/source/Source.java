@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -40,6 +41,7 @@ import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -138,6 +140,18 @@ public abstract class Source implements Serializable {
 	 */
 	public static <T extends Source> T fromMap(Class<T> clazz, Map<Object, Object> map) {
 		return SMALL_USER_FRIENDLY_MAPPER.convertValue(map, clazz);
+	}
+
+	/**
+	 * The content type this source produces, before its computes run: text for <code>http</code>, <code>file</code>,
+	 * <code>ipmiRaw</code>, <code>commandLine</code> and the <code>awk</code> source, a table for every other source.
+	 * A static property of the class, never a YAML field.
+	 *
+	 * @return the output content type
+	 */
+	@JsonIgnore
+	public ContentType getOutputContentType() {
+		return ContentType.TABLE;
 	}
 
 	/**
