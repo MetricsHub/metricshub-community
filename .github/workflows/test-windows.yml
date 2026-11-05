@@ -73,8 +73,8 @@ jobs:
             }
           ]
 
-    # Community connectors next to the checkout, so that the compute-chain golden corpus is verified on a CRLF
-    # checkout as well (see maven-build.yml)
+    # Community connectors (with their goldens) next to the checkout, so that the compute-chain golden corpus is
+    # verified on a CRLF checkout as well (see maven-build.yml)
     - name: Checkout the community connectors for the golden corpus
       shell: bash
       run: |
