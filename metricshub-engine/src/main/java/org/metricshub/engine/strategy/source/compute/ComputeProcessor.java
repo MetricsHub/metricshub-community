@@ -69,6 +69,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.awk.AwkVariableHelper;
+import org.metricshub.engine.awk.TableInputSource;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.NumberHelper;
@@ -394,9 +395,14 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		final String input = (sourceTable.getRawData() == null || sourceTable.getRawData().isEmpty())
-			? SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true)
-			: sourceTable.getRawData();
+		// Table input: the rows are the records, nothing is serialized. Text input (the default, what every script
+		// written so far expects): the raw text, else the table serialized with "," for ";" inside cells
+		final boolean tableInput = awk.getInputContentType() == ContentType.TABLE;
+		final String input = tableInput
+			? null
+			: (sourceTable.getRawData() == null || sourceTable.getRawData().isEmpty())
+				? SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true)
+				: sourceTable.getRawData();
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
 
@@ -416,7 +422,35 @@ public class ComputeProcessor implements IComputeProcessor {
 		);
 
 		try {
-			String awkResult = AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
+			if (awk.getOutputContentType() == ContentType.TABLE) {
+				// Each print is a row: no re-parsing, the text filters and column selection do not apply
+				final List<List<String>> rows = tableInput
+					? AwkExecutor.executeAwkToTable(
+						awkScript,
+						new TableInputSource(sourceTable.getTable()),
+						AwkExecutor.getUtilityEngine(),
+						variables
+					)
+					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
+				sourceTable.setTable(rows);
+				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator,
+				// and never with CRLF; no raw text at all for an empty table, which stays a table
+				sourceTable.setRawData(
+					rows.isEmpty() ? null : SourceTable.tableToCsv(rows, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
+				);
+				sourceTable.setContentType(ContentType.TABLE);
+				return;
+			}
+
+			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
+			String awkResult = tableInput
+				? AwkExecutor.executeAwk(
+					awkScript,
+					new TableInputSource(sourceTable.getTable()),
+					AwkExecutor.getUtilityEngine(),
+					variables
+				).replace(WINDOWS_NEW_LINE, NEW_LINE)
+				: AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 
 			if (awkResult == null || awkResult.isEmpty()) {
 				log.warn(
@@ -426,6 +460,11 @@ public class ComputeProcessor implements IComputeProcessor {
 					(awkResult == null ? "null" : "empty")
 				);
 				sourceTable.setTable(Collections.emptyList());
+				if (tableInput) {
+					// The structured input was consumed: the raw text of the source is not this script's output
+					sourceTable.setRawData(EMPTY);
+					sourceTable.setContentType(ContentType.TEXT);
+				}
 				return;
 			}
 

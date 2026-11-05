@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
 import io.jawk.AwkProgram;
+import io.jawk.jrt.InputSource;
 import io.jawk.util.AwkSettings;
 import java.io.IOException;
 import java.util.List;
@@ -221,6 +222,113 @@ public class AwkExecutor {
 		// Interpret. Jawk already swallows a zero exit code, so any exception reaching us is a real failure
 		try {
 			return runBuilder.execute();
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+	}
+
+	/**
+	 * Execute the given <code>awkScript</code> on structured records (a table) and return the printed text.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The result of the AWK script
+	 * @throws AwkException if execution fails
+	 */
+	public static String executeAwk(
+		final String awkScript,
+		final InputSource input,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine)).input(input);
+		if (awkVariables != null && !awkVariables.isEmpty()) {
+			runBuilder.variables(awkVariables);
+		}
+		try {
+			return runBuilder.execute();
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+	}
+
+	/**
+	 * Execute the given <code>awkScript</code> on the <code>awkInput</code> text and collect its output as a
+	 * table: each <code>print</code> is one row holding its values, each <code>printf</code> one single-cell row.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param awkInput     The input to modify via the AWK script
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The rows printed by the script
+	 * @throws AwkException if execution fails
+	 */
+	public static List<List<String>> executeAwkToTable(
+		final String awkScript,
+		final String awkInput,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine))
+			.input(awkInput == null ? EMPTY : awkInput);
+		return executeToTable(runBuilder, awkVariables);
+	}
+
+	/**
+	 * Execute the given <code>awkScript</code> on structured records (a table) and collect its output as a table:
+	 * each <code>print</code> is one row holding its values, each <code>printf</code> one single-cell row.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The rows printed by the script
+	 * @throws AwkException if execution fails
+	 */
+	public static List<List<String>> executeAwkToTable(
+		final String awkScript,
+		final InputSource input,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine)).input(input);
+		return executeToTable(runBuilder, awkVariables);
+	}
+
+	private static List<List<String>> executeToTable(
+		final Awk.AwkRunBuilder runBuilder,
+		final Map<String, Object> awkVariables
+	) {
+		if (awkVariables != null && !awkVariables.isEmpty()) {
+			runBuilder.variables(awkVariables);
+		}
+		final TableSink sink = new TableSink();
+		try {
+			runBuilder.execute(sink);
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+		return sink.getRows();
+	}
+
+	/**
+	 * Evaluate the given <code>awkExpression</code> on one table row: the cells are <code>$1..$NF</code>, whatever
+	 * they contain, and <code>$0</code> is the row joined with the table separator, as it has always been.
+	 *
+	 * @param awkExpression The AWK expression to process and interpret
+	 * @param row           The row exposed to the expression
+	 * @return The result of the Awk expression
+	 * @throws AwkException if evaluation fails
+	 */
+	public static String evalAwk(final String awkExpression, final List<String> row) throws AwkException {
+		final AwkExpression expression = getAwkExpression(awkExpression);
+		if (expression == null) {
+			throw new AwkException("Failed to compile Awk expression: " + awkExpression);
+		}
+		try {
+			return String.valueOf(AWK_FOR_EVAL.eval(expression, TableInputSource.ofRow(row, TABLE_SEP)));
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
 		}

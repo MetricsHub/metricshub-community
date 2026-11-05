@@ -49,6 +49,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.EscapeType;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -479,7 +480,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		return (source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
-			source instanceof TableJoinSource);
+			source instanceof TableJoinSource ||
+			// An awk source reading a table resolves its input reference to the table itself when the script runs
+			(source instanceof JawkSource jawk && jawk.getInputFormat() == ContentType.TABLE));
 	}
 
 	/**

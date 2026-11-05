@@ -22,7 +22,9 @@ package org.metricshub.extension.jawk;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.jawk.Awk;
 import java.util.List;
@@ -32,8 +34,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
+import org.metricshub.engine.awk.TableInputSource;
 import org.metricshub.engine.awk.UtilityExtensionForJawk;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -53,6 +57,37 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	@Override
 	public boolean isValidSource(final Source source) {
 		return source instanceof JawkSource;
+	}
+
+	/**
+	 * The table of the source referenced by <code>input</code> when the script reads a table. A missing reference or
+	 * an unknown source gives an empty table (and a warning).
+	 */
+	private static List<List<String>> lookupInputTable(
+		final JawkSource jawkSource,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		final String input = jawkSource.getInput();
+		if (input == null || input.isBlank()) {
+			log.warn(
+				"Hostname {} - Awk source {} reads its input as a table but declares no input source, the script reads no record.",
+				telemetryManager.getHostname(),
+				jawkSource.getKey()
+			);
+			return List.of();
+		}
+		return SourceTable.lookupSourceTable(input.trim(), connectorId, telemetryManager)
+			.map(SourceTable::getTable)
+			.orElseGet(() -> {
+				log.warn(
+					"Hostname {} - Awk source {} reads the table of {} but that source is not available, the script reads no record.",
+					telemetryManager.getHostname(),
+					jawkSource.getKey(),
+					input
+				);
+				return List.of();
+			});
 	}
 
 	@Override
@@ -105,8 +140,13 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		log.debug("Hostname {} - Awk Operation. Awk Script:\n{}\n", hostname, awkScript);
 
-		// The input has already been resolved by SourceUpdaterProcessor, like every other source field
-		final String inputContent = jawkSource.getInput();
+		// The input has already been resolved by SourceUpdaterProcessor, like every other source field, unless the
+		// script reads it as a table: the reference is then resolved to the table itself
+		final boolean tableInput = jawkSource.getInputFormat() == ContentType.TABLE;
+		final String inputContent = tableInput ? null : jawkSource.getInput();
+		final List<List<String>> inputTable = tableInput
+			? lookupInputTable(jawkSource, connectorId, telemetryManager)
+			: null;
 
 		// Resolve the variables declared on the source, in one pass: every textual reference is substituted and a
 		// variable referencing a source is exposed to the script as an array holding that source's table
@@ -124,8 +164,26 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// Execute
 		try {
 			Awk awkEngine = new Awk(List.of(extension, UtilityExtensionForJawk.INSTANCE), AwkExecutor.newAwkSettings(null));
-			String result = AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables);
 			final SourceTable sourceTable = new SourceTable();
+			if (jawkSource.getOutput() == ContentType.TABLE) {
+				// Each print is a row
+				final List<List<String>> rows = tableInput
+					? AwkExecutor.executeAwkToTable(awkScript, new TableInputSource(inputTable), awkEngine, variables)
+					: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables);
+				sourceTable.setTable(rows);
+				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator,
+				// and never with CRLF; no raw text at all for an empty table, which stays a table
+				sourceTable.setRawData(
+					rows.isEmpty() ? null : SourceTable.tableToCsv(rows, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
+				);
+				sourceTable.setContentType(ContentType.TABLE);
+				return sourceTable;
+			}
+			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
+			String result = tableInput
+				? AwkExecutor.executeAwk(awkScript, new TableInputSource(inputTable), awkEngine, variables)
+					.replace(WINDOWS_NEW_LINE, NEW_LINE)
+				: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables);
 			sourceTable.setRawData(result);
 			sourceTable.setTable(SourceTable.csvToTable(result, TABLE_SEP));
 			return sourceTable;

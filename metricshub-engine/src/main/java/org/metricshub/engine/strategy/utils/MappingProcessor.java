@@ -1130,7 +1130,7 @@ public class MappingProcessor {
 	private String evalAwkExpression(String value, String key) {
 		final String function = value.trim().replace("${awk::", "").replace("}", "");
 		try {
-			return AwkExecutor.evalAwk(function, String.join(";", row));
+			return AwkExecutor.evalAwk(function, row);
 		} catch (Exception e) {
 			log.error(
 				"Hostname {} - Error while evaluating awk expression {} for parameter {}.",

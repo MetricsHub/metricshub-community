@@ -24,6 +24,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -462,6 +463,142 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 		assertEquals(List.of("keepColumns"), types(source));
 		assertTrue(connector.getContentTypeReport().isEmpty());
+	}
+
+	/**
+	 * An awk compute declaring <code>input: table</code> reads the table itself: no toText is inserted, and its
+	 * <code>output: table</code> ends the chain in a table, so nothing is appended either. A printf in a script
+	 * producing a table is reported.
+	 */
+	/**
+	 * An awk reading a table after a pure text source gets a real toTable: it opted into a table, which the source
+	 * does not produce.
+	 */
+	@Test
+	void awkWithTableInputAfterPureTextSourceGetsARealToTable() {
+		final Source source = HttpSource.builder()
+			.url("/")
+			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+			.build();
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+
+		// The awk still writes text: the chain ends with the usual implicit toTable
+		assertEquals(List.of("toTable", "awk", "toTable"), types(source));
+		assertFalse(((ToTable) source.getComputes().get(0)).isImplicit());
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
+	@Test
+	void awkWithTableInputAndOutputNeedsNoConversion() {
+		final Source source = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					Awk.builder()
+						.type("awk")
+						.script("{ printf \"%s\", $1 }")
+						.input(ContentType.TABLE)
+						.output(ContentType.TABLE)
+						.build(),
+					KeepColumns.builder().type("keepColumns").columnNumbers("1").build()
+				)
+			)
+			.build();
+		final Connector connector = connectorWith(source);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("awk", "keepColumns"), types(source));
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(connector));
+
+		// The word in a comment or a string literal is not a printf statement
+		final Source noPrintf = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					Awk.builder()
+						.type("awk")
+						.script("# avoid printf here\n{ print \"printf\", \"a \\\"quoted\\\" printf\" } # printf")
+						.input(ContentType.TABLE)
+						.output(ContentType.TABLE)
+						.build()
+				)
+			)
+			.build();
+		final Connector noPrintfConnector = connectorWith(noPrintf);
+		new ContentTypeDesugaring().update(noPrintfConnector);
+		assertTrue(noPrintfConnector.getContentTypeReport().isEmpty());
+
+		// A "#" inside a regex literal does not start a comment: the printf after it is seen
+		final Source regexPrintf = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("ID,1")
+			.computes(
+				List.of(
+					Awk.builder()
+						.type("awk")
+						.script("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }")
+						.input(ContentType.TABLE)
+						.output(ContentType.TABLE)
+						.build()
+				)
+			)
+			.build();
+		final Connector regexPrintfConnector = connectorWith(regexPrintf);
+		new ContentTypeDesugaring().update(regexPrintfConnector);
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(regexPrintfConnector));
+		final String code = ContentTypeDesugaring.code("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }");
+		// The pattern of a rule after the action of the previous one is a regex too
+		final String nextRule = ContentTypeDesugaring.code("/foo/ { print }\n/printf/ { print }");
+		assertFalse(nextRule.contains("printf"), nextRule);
+		// ... and after a pattern-only rule
+		final String patternOnly = ContentTypeDesugaring.code("/foo/\n/printf/\n$1 == \"x\"\n/printf/");
+		assertFalse(patternOnly.contains("printf"), patternOnly);
+		// A typed regexp (@/re/) is a literal: its "#" does not start a comment
+		final String typed = ContentTypeDesugaring.code("BEGIN { r = @/foo#bar/; printf \"%s\", $1 }");
+		assertFalse(typed.contains("foo#bar"), typed);
+		assertTrue(typed.contains("printf"), typed);
+		// ... and after an arithmetic or comparison operator
+		final String operand = ContentTypeDesugaring.code(
+			"BEGIN { x = 1 + /printf/; y = a * /printf/ - /printf/ % /printf/; z = b < /printf/ }"
+		);
+		assertFalse(operand.contains("printf"), operand);
+
+		// The same lint applies to an awk source writing a table, inline or from an embedded file
+		final Source inlineSource = JawkSource.builder().output(ContentType.TABLE).script("{ printf \"%s\", $1 }").build();
+		final Connector inlineConnector = connectorWith(inlineSource);
+		new ContentTypeDesugaring().update(inlineConnector);
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(inlineConnector));
+		final Source fileSource = JawkSource.builder().output(ContentType.TABLE).script("${file::1}").build();
+		final Connector fileConnector = connectorWith(fileSource);
+		fileConnector.getEmbeddedFiles().put(1, EmbeddedFile.builder().id(1).content("{ printf $1 }".getBytes()).build());
+		new ContentTypeDesugaring().update(fileConnector);
+		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(fileConnector));
+		// Not for a text output (a legacy dual producer: only the usual toTable appended)
+		final Source textSource = JawkSource.builder().script("{ printf \"%s\", $1 }").build();
+		final Connector textConnector = connectorWith(textSource);
+		new ContentTypeDesugaring().update(textConnector);
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(textConnector));
+		// A regex operand after a keyword is a literal too
+		final String afterKeyword = ContentTypeDesugaring.code("{ print /printf/; return /foo#bar/; printf \"%s\", $1 }");
+		assertFalse(afterKeyword.contains("/printf/"), afterKeyword);
+		assertFalse(afterKeyword.contains("foo#bar"), afterKeyword);
+		assertTrue(afterKeyword.endsWith("printf  , $1 }"), afterKeyword);
+		assertTrue(code.contains("printf"), code);
+		assertFalse(code.contains("foo#bar"), code);
+		assertTrue(code.contains("a / b / 2"), code);
+
+		// Text output after a table input: the following table compute needs a toTable, and the chain ends typed
+		final Source textOut = CommandLineSource.builder()
+			.commandLine("ls")
+			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+			.build();
+		final Connector textOutConnector = connectorWith(textOut);
+		new ContentTypeDesugaring().update(textOutConnector);
+		assertEquals(List.of("toTable", "awk", "toTable"), types(textOut));
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(textOutConnector));
 	}
 
 	@Test
