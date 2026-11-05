@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -95,6 +96,23 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * A <code>printf</code> call in an AWK script, looked for once the comments and the string literals are gone.
 	 */
 	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
+
+	/**
+	 * The AWK keywords an expression, so a regex literal, can follow.
+	 */
+	private static final Set<String> REGEX_KEYWORDS = Set.of(
+		"print",
+		"printf",
+		"return",
+		"if",
+		"while",
+		"for",
+		"do",
+		"else",
+		"in",
+		"case",
+		"getline"
+	);
 
 	/**
 	 * Who produced the current text of a chain.
@@ -290,7 +308,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		char previous = '\n';
 		for (int i = 0; i < script.length(); i++) {
 			final char c = script.charAt(i);
-			if (c == '"' || (c == '/' && regexCanStart(previous))) {
+			if (c == '"' || (c == '/' && regexCanStart(previous, code))) {
 				// A string or a regex literal: skipped up to its unescaped closing delimiter
 				int end = i + 1;
 				while (end < script.length() && script.charAt(end) != c && script.charAt(end) != '\n') {
@@ -319,8 +337,20 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * Whether a slash after the given (last non-blank) character starts a regex literal rather than a division:
 	 * at the start of the script or after an operator, a separator or an opening bracket.
 	 */
-	private static boolean regexCanStart(final char previous) {
-		return "\n(,~!{;&|=?:[".indexOf(previous) >= 0;
+	private static boolean regexCanStart(final char previous, final CharSequence code) {
+		if ("\n(,~!{;&|=?:[".indexOf(previous) >= 0) {
+			return true;
+		}
+		// After a keyword taking an expression, such as "print /re/" or "return /re/"
+		int end = code.length();
+		while (end > 0 && Character.isWhitespace(code.charAt(end - 1))) {
+			end--;
+		}
+		int start = end;
+		while (start > 0 && Character.isLetter(code.charAt(start - 1))) {
+			start--;
+		}
+		return REGEX_KEYWORDS.contains(code.subSequence(start, end).toString());
 	}
 
 	/**

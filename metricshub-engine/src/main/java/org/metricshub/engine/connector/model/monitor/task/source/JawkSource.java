@@ -24,6 +24,7 @@ package org.metricshub.engine.connector.model.monitor.task.source;
 import static com.fasterxml.jackson.annotation.Nulls.FAIL;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -162,9 +163,11 @@ public class JawkSource extends Source {
 	public void update(UnaryOperator<String> updater) {
 		// The script is deliberately left out: it is code, not data. It is normally a ${file::...} reference already
 		// resolved at parse time, and running the reference substitutions over a script body would rewrite AWK syntax.
-		// A table input is a source reference resolved to the table itself when the script runs, not substituted
-		if (inputFormat != ContentType.TABLE) {
-			input = updater.apply(input);
+		// A table input is a source reference resolved to the table itself when the script runs: the row, attribute
+		// and protocol substitutions apply to it, but not the expansion of the reference into the source's text
+		final String updated = updater.apply(input);
+		if (inputFormat != ContentType.TABLE || updated == null || SOURCE_REF_PATTERN.matcher(updated).find()) {
+			input = updated;
 		}
 		separators = updater.apply(separators);
 		// The variables are deliberately not updated here: every reference they hold, source references included,

@@ -418,6 +418,11 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(regexPrintfConnector);
 		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(regexPrintfConnector));
 		final String code = ContentTypeDesugaring.code("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }");
+		// A regex operand after a keyword is a literal too
+		final String afterKeyword = ContentTypeDesugaring.code("{ print /printf/; return /foo#bar/; printf \"%s\", $1 }");
+		assertFalse(afterKeyword.contains("/printf/"), afterKeyword);
+		assertFalse(afterKeyword.contains("foo#bar"), afterKeyword);
+		assertTrue(afterKeyword.endsWith("printf  , $1 }"), afterKeyword);
 		assertTrue(code.contains("printf"), code);
 		assertFalse(code.contains("foo#bar"), code);
 		assertTrue(code.contains("a / b / 2"), code);
