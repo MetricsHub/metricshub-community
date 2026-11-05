@@ -73,6 +73,16 @@ jobs:
             }
           ]
 
+    # Community connectors (with their goldens) next to the checkout, so that the compute-chain golden corpus is
+    # verified on a CRLF checkout as well (see maven-build.yml)
+    - name: Checkout the community connectors for the golden corpus
+      shell: bash
+      run: |
+        rev=$(grep '^metricshub-community-connectors=' metricshub-engine/src/test/resources/goldens/compute-chains/revisions.properties | cut -d= -f2 | tr -d '\r')
+        git init -q ../metricshub-community-connectors
+        git -C ../metricshub-community-connectors fetch -q --depth 1 https://github.com/MetricsHub/community-connectors.git "$rev"
+        git -C ../metricshub-community-connectors checkout -q FETCH_HEAD
+
     - name: Verify with Maven
       run: mvn --batch-mode --file pom.xml clean verify
       env:

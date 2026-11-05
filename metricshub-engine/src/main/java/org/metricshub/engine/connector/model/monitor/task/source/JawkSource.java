@@ -41,6 +41,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -145,6 +146,11 @@ public class JawkSource extends Source {
 	@Override
 	public SourceTable accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TEXT;
 	}
 
 	@Override

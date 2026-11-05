@@ -45,6 +45,7 @@ import org.metricshub.engine.connector.deserializer.custom.BooleanDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.PositiveIntegerDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.TimeoutDeserializer;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -191,6 +192,11 @@ public class CommandLineSource extends Source {
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);
 		selectColumns = updater.apply(selectColumns);
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TEXT;
 	}
 
 	@Override

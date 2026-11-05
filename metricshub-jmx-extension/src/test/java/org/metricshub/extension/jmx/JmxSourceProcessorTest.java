@@ -98,4 +98,29 @@ class JmxSourceProcessorTest {
 		assertNotNull(resultTable, "SourceTable should not be null even if exception occurs");
 		assertTrue(resultTable.getTable().isEmpty(), "Expected empty table if fetchBeanInfo fails");
 	}
+
+	/**
+	 * Legacy shape pinned for #1509: the raw text is serialized with <code>replaceSeparator=true</code>, so a
+	 * <code>;</code> inside a cell shows as <code>,</code> in the raw text while the table keeps it.
+	 */
+	@Test
+	void testRawTextReplacesSeparatorInsideCellsWhileTableKeepsIt() throws Exception {
+		final JmxConfiguration jmxConfig = JmxConfiguration.builder().hostname("localhost").build();
+		final HostConfiguration hostConfig = mock(HostConfiguration.class);
+		when(hostConfig.getConfigurations()).thenReturn(Map.of(JmxConfiguration.class, jmxConfig));
+		when(telemetryManager.getHostConfiguration()).thenReturn(hostConfig);
+
+		final JmxSource source = new JmxSource();
+		source.setObjectName("java.lang:type=Memory");
+		source.setAttributes(List.of("Name"));
+		source.setKeyProperties(List.of());
+		when(jmxExecutor.fetchMBean(jmxConfig, "java.lang:type=Memory", List.of("Name"), List.of(), null, null)).thenReturn(
+			List.of(List.of("a;b", "c"), List.of("", "d"))
+		);
+
+		final SourceTable result = processor.process(source, telemetryManager);
+
+		assertEquals(List.of(List.of("a;b", "c"), List.of("", "d")), result.getTable());
+		assertEquals("a,b;c;\n;d;", result.getRawData());
+	}
 }
