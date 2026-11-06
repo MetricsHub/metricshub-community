@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.TreeSet;
 import org.metricshub.engine.connector.model.ConnectorStore;
@@ -87,6 +88,18 @@ public final class GoldenCheck {
 			final List<Path> invalid = roots.stream().filter(root -> ComputeChainGoldenCorpus.gitHead(root) == null).toList();
 			if (!invalid.isEmpty()) {
 				invalid.forEach(root -> System.err.println("Not a git checkout, nothing pinned: " + root));
+				System.exit(1);
+			}
+			// The pin is keyed by the repository directory name, and CI reads known keys only: a renamed checkout would
+			// write a key nobody reads
+			final Set<String> known = ComputeChainGoldenCorpus.pinnedRepositories();
+			final List<Path> unknown = roots.stream()
+				.filter(root -> !known.isEmpty() && !known.contains(root.toAbsolutePath().normalize().getFileName().toString()))
+				.toList();
+			if (!unknown.isEmpty()) {
+				unknown.forEach(
+					root -> System.err.println("Unknown repository name, nothing pinned: " + root + " (known: " + known + ")")
+				);
 				System.exit(1);
 			}
 			for (final Path root : roots) {

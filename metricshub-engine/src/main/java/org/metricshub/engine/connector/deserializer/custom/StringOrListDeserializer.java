@@ -46,6 +46,10 @@ public class StringOrListDeserializer extends JsonDeserializer<Object> {
 				if (!parser.currentToken().isScalarValue() || parser.hasToken(JsonToken.VALUE_NULL)) {
 					return context.handleUnexpectedToken(String.class, parser);
 				}
+				// A line break would split the single row into several records of the raw text
+				if (parser.getText().indexOf('\n') >= 0 || parser.getText().indexOf('\r') >= 0) {
+					return context.reportInputMismatch(String.class, "A cell of the list form cannot hold a line break");
+				}
 				cells.add(parser.getText());
 			}
 			if (cells.isEmpty()) {

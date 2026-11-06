@@ -551,7 +551,7 @@ public class ComputeChainGoldenCorpus {
 		}
 		revisions.put(name, revision);
 		final StringBuilder content = new StringBuilder(
-			"# Revision of each connector repository the goldens were generated from (written by the update mode)"
+			"# Revision of each connector repository the goldens were generated from (written by GoldenCheck --pin)"
 		);
 		revisions.forEach(
 			(repository, commit) -> content.append(System.lineSeparator()).append(repository).append('=').append(commit)
@@ -559,6 +559,25 @@ public class ComputeChainGoldenCorpus {
 		content.append(System.lineSeparator());
 		Files.createDirectories(REVISIONS_FILE.getParent());
 		Files.writeString(REVISIONS_FILE, content.toString());
+	}
+
+	/**
+	 * The repository names the revision pin knows (the keys CI reads), or an empty set when there is no pin yet.
+	 *
+	 * @return the names, as written in {@link #REVISIONS_FILE}
+	 * @throws IOException when the file cannot be read
+	 */
+	static Set<String> pinnedRepositories() throws IOException {
+		final Set<String> names = new TreeSet<>();
+		if (Files.exists(REVISIONS_FILE)) {
+			for (final String line : Files.readAllLines(REVISIONS_FILE)) {
+				final int equal = line.indexOf('=');
+				if (equal > 0 && !line.startsWith("#")) {
+					names.add(line.substring(0, equal).trim());
+				}
+			}
+		}
+		return names;
 	}
 
 	/**

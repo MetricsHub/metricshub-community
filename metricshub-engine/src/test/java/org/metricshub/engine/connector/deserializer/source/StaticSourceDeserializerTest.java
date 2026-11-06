@@ -113,4 +113,23 @@ class StaticSourceDeserializerTest extends DeserializerTest {
 		);
 		assertTrue(e.getMessage().contains("value"), e.getMessage());
 	}
+
+	@Test
+	void testDeserializeStaticLineBreakInCell() {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  row:
+			    type: static
+			    value: [ "a\\nb", "c" ]
+			""";
+		// A line break in a cell would split the single row into several records of the raw text
+		final Exception e = assertThrows(
+			MismatchedInputException.class,
+			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
+		);
+		assertTrue(e.getMessage().contains("value"), e.getMessage());
+	}
 }
