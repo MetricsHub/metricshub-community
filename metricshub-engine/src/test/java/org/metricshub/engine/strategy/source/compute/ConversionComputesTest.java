@@ -275,6 +275,10 @@ class ConversionComputesTest {
 		processor(sourceTable).process(InsertColumn.builder().column(0).value("x").build());
 		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 
+		// A column beyond the padding limit is a mistake: rejected rather than padding every row up to it
+		processor(sourceTable).process(InsertColumn.builder().column(1_000_000_000).value("x").build());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
+
 		processor(sourceTable).process((InsertColumn) null);
 		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 	}

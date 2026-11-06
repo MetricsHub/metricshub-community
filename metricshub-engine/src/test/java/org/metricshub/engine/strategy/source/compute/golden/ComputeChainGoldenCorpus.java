@@ -495,7 +495,8 @@ public class ComputeChainGoldenCorpus {
 		if (Files.isDirectory(repository.getConnectorDirectory())) {
 			try (Stream<Path> files = Files.walk(repository.getConnectorDirectory())) {
 				files.map(file -> file.getFileName().toString())
-					.filter(name -> name.endsWith(".yaml"))
+					// The loader accepts the extension in any case
+					.filter(name -> name.toLowerCase(Locale.ROOT).endsWith(".yaml"))
 					.forEach(name -> ids.add(name.substring(0, name.length() - ".yaml".length())));
 			}
 		}

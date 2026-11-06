@@ -1955,7 +1955,8 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * Inserts a column at the given 1-based position in every row. The value is a literal where <code>$n</code> is
 	 * replaced by the content of column <em>n</em> of the row (an absent column gives an empty string). A row
 	 * shorter than <em>column - 1</em> is padded with empty cells first, so the new cell always lands at
-	 * <em>column</em> (an awk whose last printed field is empty gives such rows).
+	 * <em>column</em> (an awk whose last printed field is empty gives such rows). A column beyond
+	 * {@value #MAX_RANGE_PADDING} is rejected and the table left unchanged.
 	 *
 	 * @param insertColumn The {@link InsertColumn} compute
 	 */
@@ -1968,7 +1969,8 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 		final Integer column = insertColumn.getColumn();
 		final String value = insertColumn.getValue();
-		if (column == null || column < 1 || value == null) {
+		// A column beyond MAX_RANGE_PADDING is a mistake in the connector: padding up to it would exhaust the memory
+		if (column == null || column < 1 || column > MAX_RANGE_PADDING || value == null) {
 			log.warn(
 				"Hostname {} - Arguments in Compute Operation (InsertColumn): {} are wrong, the table remains unchanged.",
 				hostname,
