@@ -646,6 +646,11 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(), types(addr));
 		assertTrue(tool.isTextResult());
 		assertEquals(List.of(), kinds(connector));
+
+		// The same union with a table compute of its own returns that table
+		union.setComputes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())));
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(!tool.isTextResult());
 	}
 
 	/**

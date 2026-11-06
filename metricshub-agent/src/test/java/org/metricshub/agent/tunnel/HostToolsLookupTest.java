@@ -122,7 +122,12 @@ class HostToolsLookupTest {
 
 		// ipmi_chassis is excluded from the tunnel, so not offered through the host either
 		assertEquals(
-			List.of("ipmi_sel=read", "TestConnectorWithTool_listThings=read", "TestConnectorWithTool_reboot=write"),
+			List.of(
+				"ipmi_sel=read",
+				"TestConnectorWithTool_listThings=read",
+				"TestConnectorWithTool_readNotes=read",
+				"TestConnectorWithTool_reboot=write"
+			),
 			toolsOf(snapshot, "host-01")
 		);
 		assertEquals(List.of(), toolsOf(snapshot, "host-02"), "no protocol of its, no connector detected");
@@ -235,7 +240,10 @@ class HostToolsLookupTest {
 		host03.getHostProperties().getConnectorNamespace(CONNECTOR).setStatusOk(true);
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", Map.of("host-03", host03)));
 
-		assertEquals(List.of("TestConnectorWithTool_reboot=write"), toolsOf(snapshot(), "host-03"));
+		assertEquals(
+			List.of("TestConnectorWithTool_readNotes=read", "TestConnectorWithTool_reboot=write"),
+			toolsOf(snapshot(), "host-03")
+		);
 	}
 
 	@Test
@@ -257,7 +265,11 @@ class HostToolsLookupTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("group", Map.of("host-03", host03)));
 
 		assertEquals(
-			List.of("TestConnectorWithTool_listThings=read", "TestConnectorWithTool_reboot=write"),
+			List.of(
+				"TestConnectorWithTool_listThings=read",
+				"TestConnectorWithTool_readNotes=read",
+				"TestConnectorWithTool_reboot=write"
+			),
 			toolsOf(snapshot(), "host-03")
 		);
 	}

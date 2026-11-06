@@ -204,6 +204,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (hasColumns(tool) || !(toolResultSource(tool) instanceof TableUnionSource union) || union.getTables() == null) {
 			return null;
 		}
+		// A union with computes of its own returns what they produce: a table, or text through its own ending
+		if (union.getComputes() != null && union.getComputes().stream().anyMatch(compute -> !isGenerated(compute))) {
+			return null;
+		}
 		final List<Source> members = new ArrayList<>();
 		for (final String table : union.getTables()) {
 			final Source member = toolSource(tool, table);
