@@ -61,6 +61,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractConcat;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -68,6 +69,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
 
 /**
  * Makes the content-type conversions of every compute chain explicit, and reports what it did and the legacy idioms
@@ -150,11 +152,104 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Set<String> textOnly = textOnlySources(connector, sources);
 		sources.values().forEach(source -> desugar(connector, source, sources, textOnly, report));
 		connector.setContentTypeReport(report);
+		// A tool without columns whose result source ends in text returns that text as it is
+		if (connector.getTools() != null) {
+			connector.getTools().forEach((name, tool) -> {
+				final Source result = toolResultSource(tool);
+				tool.setTextResult(
+					!hasColumns(tool) && result != null && (endsInText(result, sources) || textUnionMembers(tool) != null)
+				);
+			});
+		}
 	}
 
 	/**
-	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources and
-	 * nowhere else. A legacy dual producer among them keeps its text: an explicit <code>toTable</code> would
+	 * The source a tool returns: its result reference, short (<code>${source::name}</code>, a source of the tool) or
+	 * full.
+	 *
+	 * @param tool The tool
+	 * @return the source, null when the reference resolves to none of the tool's sources
+	 */
+	static Source toolResultSource(final ConnectorTool tool) {
+		if (tool.getResult() == null || tool.getResult().source() == null) {
+			return null;
+		}
+		return toolSource(tool, tool.getResult().source());
+	}
+
+	/**
+	 * A source of the tool, from a short (<code>${source::name}</code>) or full reference.
+	 */
+	private static Source toolSource(final ConnectorTool tool, final String ref) {
+		if (tool.getSources() == null || ref == null) {
+			return null;
+		}
+		final String reference = ref.trim();
+		for (final Map.Entry<String, Source> entry : tool.getSources().entrySet()) {
+			if (reference.equals("${source::" + entry.getKey() + "}") || reference.equals(entry.getValue().getKey())) {
+				return entry.getValue();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The members of a tool's result when it declares no columns and returns a tableUnion of sources that all end in
+	 * text, as written (command outputs glued together): the union joins their raw texts, which the tool returns.
+	 *
+	 * @param tool The tool
+	 * @return the member sources, null when the result is no such union
+	 */
+	static List<Source> textUnionMembers(final ConnectorTool tool) {
+		if (hasColumns(tool) || !(toolResultSource(tool) instanceof TableUnionSource union) || union.getTables() == null) {
+			return null;
+		}
+		final List<Source> members = new ArrayList<>();
+		for (final String table : union.getTables()) {
+			final Source member = toolSource(tool, table);
+			if (member == null || !endsInTextAsWritten(member)) {
+				return null;
+			}
+			members.add(member);
+		}
+		return members.isEmpty() ? null : members;
+	}
+
+	/**
+	 * Whether the source ends in text as written: its last written compute writes text, or it has none and produces
+	 * text itself (a copy is not followed: it is never a member of such a union).
+	 */
+	private static boolean endsInTextAsWritten(final Source source) {
+		final List<Compute> written = source.getComputes() == null
+			? List.of()
+			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
+		if (!written.isEmpty()) {
+			return written.get(written.size() - 1).getOutputContentType() == ContentType.TEXT;
+		}
+		return !(source instanceof CopySource) && source.getOutputContentType() == ContentType.TEXT;
+	}
+
+	private static boolean hasColumns(final ConnectorTool tool) {
+		return tool.getResult() != null && tool.getResult().columns() != null && !tool.getResult().columns().isEmpty();
+	}
+
+	/**
+	 * Whether the source, as desugared, ends in text: its last compute writes text, or it has no compute and produces
+	 * text (a copy: what its origin's chain produces).
+	 */
+	private static boolean endsInText(final Source source, final Map<String, Source> sources) {
+		if (source.getComputes() != null && !source.getComputes().isEmpty()) {
+			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
+		}
+		final State state = source instanceof CopySource copy
+			? effectiveOutput(copy, sources, new HashSet<>())
+			: startOf(source);
+		return state.type() == ContentType.TEXT;
+	}
+
+	/**
+	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources or
+	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text: an explicit <code>toTable</code> would
 	 * re-serialize every line with a trailing <code>;</code>, which the <code>awk</code> scripts reading the copies
 	 * do not expect, and the copies get their own conversion where they need one.
 	 * <p>
@@ -171,7 +266,22 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Set<String> copied = new HashSet<>();
 		final Set<String> readAsTable = new HashSet<>();
 		final ObjectMapper mapper = JsonHelper.buildObjectMapper();
+		// A tool without columns returning a union of text sources returns their joined text: the members are read as
+		// text, and the union's references to them are no table read
+		final Set<String> textUnions = new HashSet<>();
+		if (connector.getTools() != null) {
+			connector.getTools().values().forEach(tool -> {
+				final List<Source> members = textUnionMembers(tool);
+				if (members != null) {
+					textUnions.add(toolResultSource(tool).getKey());
+					members.forEach(member -> copied.add(member.getKey()));
+				}
+			});
+		}
 		for (final Source source : sources.values()) {
+			if (textUnions.contains(source.getKey())) {
+				continue;
+			}
 			final Source scanned = source.copy();
 			scanned.setKey(null);
 			if (scanned instanceof CopySource copy) {
@@ -196,10 +306,13 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 				}
 			}
 		}
+		// A tool returns its result source's text when it declares no columns (that source is read as text), its
+		// table otherwise
 		if (connector.getTools() != null) {
 			connector.getTools().values().forEach(tool -> {
-				if (tool.getResult() != null) {
-					collectReferences(tool.getResult().source(), readAsTable);
+				final Source result = toolResultSource(tool);
+				if (result != null) {
+					(hasColumns(tool) ? readAsTable : copied).add(result.getKey());
 				}
 			});
 		}

@@ -42,6 +42,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
+import org.metricshub.engine.connector.model.tool.ToolResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 
@@ -576,6 +577,75 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("toTable", "keepColumns"), types(source));
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 		assertEquals("${source::tools.list.sources.raw}", connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * A tool without columns returns the text of a result source that ends in text (a command output): no toTable is
+	 * appended, nothing is reported. With columns, the tool returns a table: the toTable is appended as before.
+	 */
+	@Test
+	void toolWithoutColumnsReturnsText() {
+		final Source ping = CommandLineSource.builder().commandLine("ping -c 4 host").build();
+		ping.setKey("${source::tools.ping.sources.ping}");
+		final Map<String, Source> pingSources = new LinkedHashMap<>();
+		pingSources.put("ping", ping);
+		final ConnectorTool pingTool = ConnectorTool.builder()
+			.sources(pingSources)
+			.result(new ToolResult("${source::ping}", null))
+			.build();
+
+		final Source processes = CommandLineSource.builder().commandLine("ps").build();
+		processes.setKey("${source::tools.processes.sources.ps}");
+		final Map<String, Source> processSources = new LinkedHashMap<>();
+		processSources.put("ps", processes);
+		final ConnectorTool processTool = ConnectorTool.builder()
+			.sources(processSources)
+			.result(new ToolResult("${source::ps}", List.of("pid", "name")))
+			.build();
+
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("ping", pingTool);
+		connector.getTools().put("processes", processTool);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(ping));
+		assertTrue(pingTool.isTextResult());
+		assertEquals(List.of("toTable"), types(processes));
+		assertTrue(!processTool.isTextResult());
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+		assertEquals("${source::tools.processes.sources.ps}", connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * A tool without columns returning a union of two command outputs returns their joined text: the commands keep
+	 * their text, nothing is reported.
+	 */
+	@Test
+	void toolWithoutColumnsReturnsTheTextOfAUnionOfCommands() {
+		final Source link = CommandLineSource.builder().commandLine("ip link").build();
+		link.setKey("${source::tools.details.sources.link}");
+		final Source addr = CommandLineSource.builder().commandLine("ip addr").build();
+		addr.setKey("${source::tools.details.sources.addr}");
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of("${source::link}", "${source::addr}")))
+			.build();
+		union.setKey("${source::tools.details.sources.all}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("link", link);
+		sources.put("addr", addr);
+		sources.put("all", union);
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(sources)
+			.result(new ToolResult("${source::all}", null))
+			.build();
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("details", tool);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(link));
+		assertEquals(List.of(), types(addr));
+		assertTrue(tool.isTextResult());
+		assertEquals(List.of(), kinds(connector));
 	}
 
 	/**
