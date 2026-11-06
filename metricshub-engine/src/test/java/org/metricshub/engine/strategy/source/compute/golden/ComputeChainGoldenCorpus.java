@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -303,6 +304,16 @@ public class ComputeChainGoldenCorpus {
 		final Map<String, Source> sources = sourcesOf(connector);
 		final ConnectorGolden golden = new ConnectorGolden();
 		golden.setConnector(connectorId);
+		// A copy and a tableUnion pass both the table and the raw text of their origins downstream (a copy followed by
+		// an awk reads the raw text): the chains they read are compared on both
+		final Set<String> readThrough = new HashSet<>();
+		sources.values().forEach(source -> {
+			if (source instanceof CopySource copy && copy.getFrom() != null) {
+				readThrough.add(copy.getFrom().trim());
+			} else if (source instanceof TableUnionSource union && union.getTables() != null) {
+				union.getTables().forEach(table -> readThrough.add(table.trim()));
+			}
+		});
 		sources.forEach((key, source) -> {
 			// The chain as written in the connector; the implicit conversions inserted by the desugaring step run too,
 			// but they are not part of the golden's identity: the goldens pin the results of the written chains
@@ -314,10 +325,12 @@ public class ComputeChainGoldenCorpus {
 			sourceGolden.setSource(source.getType());
 			sourceGolden.setComputes(explicitComputes.stream().map(Compute::getType).toList());
 			sourceGolden.setEnding(explicitComputes.get(explicitComputes.size() - 1).getOutputContentType());
-			// A chain ending in text from a legacy dual producer gets an implicit toTable: its consumers read both the
-			// text and the table
+			// A chain ending in text from a legacy dual producer gets an implicit toTable, and a chain read through a copy
+			// or a tableUnion hands both payloads on: their consumers read both the text and the table
 			final Compute last = source.getComputes().get(source.getComputes().size() - 1);
-			sourceGolden.setImplicitTable(last instanceof ToTable toTable && toTable.isImplicit());
+			sourceGolden.setReadAsBoth(
+				(last instanceof ToTable toTable && toTable.isImplicit()) || readThrough.contains(key.trim())
+			);
 			Inputs.inputsFor(source, sources)
 				.forEach(
 					(name, input) -> sourceGolden.getOutputs().put(name, run(connectorStore, connectorId, source, input.get()))
@@ -709,7 +722,7 @@ public class ComputeChainGoldenCorpus {
 				}
 			}
 			final ContentType ending = golden.getSources().get(key).getEnding();
-			final boolean implicitTable = golden.getSources().get(key).isImplicitTable();
+			final boolean readAsBoth = golden.getSources().get(key).isReadAsBoth();
 			final JsonNode storedOutputs = storedSource.path("outputs");
 			final JsonNode generatedOutputs = generatedSource.path("outputs");
 			generatedOutputs.fieldNames().forEachRemaining(input -> {
@@ -717,7 +730,7 @@ public class ComputeChainGoldenCorpus {
 				final JsonNode generatedOutput = generatedOutputs.get(input);
 				final boolean same = mode == CompareMode.EXACT
 					? generatedOutput.equals(storedOutput)
-					: sameForConsumers(storedOutput, generatedOutput, ending, implicitTable);
+					: sameForConsumers(storedOutput, generatedOutput, ending, readAsBoth);
 				if (!same) {
 					// Only a content difference on a separator-in-cell input is intended: a chain that now throws or
 					// hangs on that input, or an input without a stored output, is a regression like any other
@@ -756,7 +769,8 @@ public class ComputeChainGoldenCorpus {
 	 * @param stored    The stored output, null when the stored golden has none for the input
 	 * @param generated The generated output
 	 * @param ending    The content type the generated chain ends in
-	 * @param both      Whether the text ending is followed by an implicit <code>toTable</code>: both are then read
+	 * @param both      Whether the consumers read both payloads (an implicit <code>toTable</code> after a text ending,
+	 *                  or a copy or a tableUnion reading the chain)
 	 * @return <code>true</code> when the consumers see the same result
 	 */
 	static boolean sameForConsumers(
@@ -807,8 +821,9 @@ public class ComputeChainGoldenCorpus {
 		final List<List<String>> rows = new ArrayList<>();
 		for (final JsonNode row : table) {
 			final List<String> cells = new ArrayList<>();
-			row.forEach(cell -> cells.add(cell.asText()));
-			while (!cells.isEmpty() && cells.get(cells.size() - 1).isEmpty()) {
+			// A null cell stays null: consumers tell it from the "null" text (insertColumn substitutes it as empty)
+			row.forEach(cell -> cells.add(cell.isNull() ? null : cell.asText()));
+			while (!cells.isEmpty() && "".equals(cells.get(cells.size() - 1))) {
 				cells.remove(cells.size() - 1);
 			}
 			rows.add(cells);
@@ -881,11 +896,12 @@ public class ComputeChainGoldenCorpus {
 		private ContentType ending;
 
 		/**
-		 * Whether the chain as desugared ends with an implicit <code>toTable</code> (a text ending from a legacy dual
-		 * producer, read as text and as a table). Not stored.
+		 * Whether the consumers of the chain read both its table and its raw text: a text ending from a legacy dual
+		 * producer (followed by an implicit <code>toTable</code>), or a chain read through a copy or a tableUnion. Not
+		 * stored.
 		 */
 		@JsonIgnore
-		private boolean implicitTable;
+		private boolean readAsBoth;
 	}
 
 	/**

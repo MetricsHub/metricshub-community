@@ -39,8 +39,16 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * mvn -pl metricshub-engine dependency:build-classpath -Dmdep.includeScope=test -Dmdep.outputFile=target/cp.txt
  * </pre>
  *
- * then run from <code>metricshub-engine</code> (after <code>mvn -pl metricshub-engine test-compile</code>), with
- * <code>;</code> as the path separator on Windows and <code>:</code> elsewhere:
+ * then run from <code>metricshub-engine</code> (after <code>mvn -pl metricshub-engine test-compile</code>). On
+ * Linux and macOS (<code>cp.txt</code> is written with <code>:</code>):
+ *
+ * <pre>
+ * java -cp "target/classes:target/test-classes:$(cat target/cp.txt)" \
+ *   org.metricshub.engine.strategy.source.compute.golden.GoldenCheck \
+ *   --root ../../metricshub-community-connectors --connectors LinuxService --compare typed --report
+ * </pre>
+ *
+ * On Windows, from Git Bash (<code>cp.txt</code> is written with <code>;</code>):
  *
  * <pre>
  * java -cp "target/classes;target/test-classes;$(cat target/cp.txt)" \

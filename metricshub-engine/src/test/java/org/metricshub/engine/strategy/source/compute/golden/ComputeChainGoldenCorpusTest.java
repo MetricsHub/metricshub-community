@@ -359,6 +359,22 @@ class ComputeChainGoldenCorpusTest {
 	}
 
 	/**
+	 * A null cell and the "null" text are different cells for the consumers: the typed comparison keeps them apart.
+	 */
+	@Test
+	void typedComparisonKeepsNullCellsApartFromTheNullText() throws IOException {
+		final com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+		final List<List<String>> withNull = ComputeChainGoldenCorpus.stripTrailingEmptyCells(
+			mapper.readTree("[[\"a\", null, \"\"]]")
+		);
+		final List<List<String>> withText = ComputeChainGoldenCorpus.stripTrailingEmptyCells(
+			mapper.readTree("[[\"a\", \"null\"]]")
+		);
+		assertEquals(java.util.Arrays.asList("a", null), withNull.get(0));
+		assertTrue(!withNull.equals(withText));
+	}
+
+	/**
 	 * The typed comparison checks what the consumers of the chain see: the stripped table when the generated chain
 	 * ends in a table, the raw text when it ends in text; the chain itself is not compared, and a difference on a
 	 * separator-in-cell input is intended.
@@ -430,10 +446,10 @@ class ComputeChainGoldenCorpusTest {
 				.stream()
 				.noneMatch(d -> d.startsWith("s [text]"))
 		);
-		generated.getSources().get("s").setImplicitTable(true);
+		generated.getSources().get("s").setReadAsBoth(true);
 		final List<String> both = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
 		assertTrue(both.stream().anyMatch(d -> d.startsWith("s [text]")), both.toString());
-		generated.getSources().get("s").setImplicitTable(false);
+		generated.getSources().get("s").setReadAsBoth(false);
 		generated.getSources().get("s").getOutputs().put("text", new Output(List.of(List.of("a")), "a\n", null, null));
 
 		// An error, a time-out and a missing stored output are differences
