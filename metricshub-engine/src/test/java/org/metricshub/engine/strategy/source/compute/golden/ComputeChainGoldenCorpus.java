@@ -518,7 +518,13 @@ public class ComputeChainGoldenCorpus {
 		Files.writeString(REVISIONS_FILE, content.toString());
 	}
 
-	private static String gitHead(final Path root) {
+	/**
+	 * The current commit of a repository.
+	 *
+	 * @param root The repository root
+	 * @return <code>git rev-parse HEAD</code>, null when the root is missing or not a git checkout
+	 */
+	static String gitHead(final Path root) {
 		try {
 			final Process process = new ProcessBuilder("git", "-C", root.toAbsolutePath().toString(), "rev-parse", "HEAD")
 				.redirectErrorStream(true)

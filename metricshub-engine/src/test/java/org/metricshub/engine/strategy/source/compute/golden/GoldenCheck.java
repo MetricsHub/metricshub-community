@@ -82,7 +82,13 @@ public final class GoldenCheck {
 			System.exit(2);
 		}
 		if (pin) {
-			// A separate step, after the regenerated goldens are committed: the pin must name a commit that holds them
+			// A separate step, after the regenerated goldens are committed: the pin must name a commit that holds them.
+			// Every root is checked first, so that a wrong root leaves the whole pin untouched instead of stale
+			final List<Path> invalid = roots.stream().filter(root -> ComputeChainGoldenCorpus.gitHead(root) == null).toList();
+			if (!invalid.isEmpty()) {
+				invalid.forEach(root -> System.err.println("Not a git checkout, nothing pinned: " + root));
+				System.exit(1);
+			}
 			for (final Path root : roots) {
 				ComputeChainGoldenCorpus.recordRevision(root);
 			}
