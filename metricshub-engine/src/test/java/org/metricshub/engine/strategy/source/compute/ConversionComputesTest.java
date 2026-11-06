@@ -266,16 +266,28 @@ class ConversionComputesTest {
 	}
 
 	@Test
-	void insertColumnLeavesShortRowsAndInvalidArgumentsAlone() {
+	void insertColumnPadsShortRowsAndLeavesInvalidArgumentsAlone() {
+		// A short row (an awk whose last field is empty, split by toTable) is padded: the cell lands at its column
 		final SourceTable sourceTable = SourceTable.ofTable(table("a|b", "c"));
 		processor(sourceTable).process(InsertColumn.builder().column(3).value("x").build());
-		assertEquals(table("a|b|x", "c"), sourceTable.getTable());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 
 		processor(sourceTable).process(InsertColumn.builder().column(0).value("x").build());
-		assertEquals(table("a|b|x", "c"), sourceTable.getTable());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
+
+		// A column far past the rows is a mistake: the rows are left unchanged rather than padded up to it
+		processor(sourceTable).process(InsertColumn.builder().column(1_000_000_000).value("x").build());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
+
+		// A wide row is no mistake: column 1001 appends to a 1000-cell row
+		final List<String> wide = new ArrayList<>(java.util.Collections.nCopies(1000, "v"));
+		final SourceTable wideTable = SourceTable.ofTable(new ArrayList<>(List.of(wide)));
+		processor(wideTable).process(InsertColumn.builder().column(1001).value("x").build());
+		assertEquals(1001, wideTable.getTable().get(0).size());
+		assertEquals("x", wideTable.getTable().get(0).get(1000));
 
 		processor(sourceTable).process((InsertColumn) null);
-		assertEquals(table("a|b|x", "c"), sourceTable.getTable());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------

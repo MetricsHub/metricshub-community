@@ -402,6 +402,20 @@ class SourceProcessorTest {
 		assertEquals(expectedResult.getHeaders(), sourceProcessor.process(tableJoinExample).getHeaders());
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 
+		// list form of the default right line: the exact cells, not split on ';'
+		final List<List<String>> listJoin = List.of(List.of("joined"));
+		doReturn(listJoin).when(clientsExecutorMock)
+			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, List.of("", "a;b", ""), false, true);
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB2_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(List.of("", "a;b", ""))
+			.build();
+		assertEquals(listJoin, sourceProcessor.process(tableJoinExample).getTable());
+
 		// no matches
 		SourceTable tabl3 = SourceTable.builder()
 			.table(
@@ -657,6 +671,19 @@ class SourceProcessorTest {
 		staticSource = StaticSource.builder().value(VALUE_LIST).build();
 
 		assertEquals(expectedTable, sourceProcessor.process(staticSource).getTable());
+
+		// list form: the single row of exactly these cells, a ';' in a cell included
+		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1, "", "b;1")).build();
+		final SourceTable listResult = sourceProcessor.process(staticSource);
+		assertEquals(List.of(List.of(LOWERCASE_A1, "", "b;1")), listResult.getTable());
+		// The raw text is separator-safe (as toText writes it): a legacy awk reading it sees the three cells
+		assertEquals("a1;;b,1;", listResult.getRawData());
+
+		// A line break a reference resolved into at run time stays in the cell, but never splits the raw text row
+		staticSource = StaticSource.builder().value(List.of("x\r\ny", "z")).build();
+		final SourceTable breakResult = sourceProcessor.process(staticSource);
+		assertEquals(List.of(List.of("x\r\ny", "z")), breakResult.getTable());
+		assertEquals("x y;z;", breakResult.getRawData());
 	}
 
 	@Test
