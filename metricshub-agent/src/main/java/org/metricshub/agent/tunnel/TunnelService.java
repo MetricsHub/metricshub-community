@@ -24,6 +24,7 @@ package org.metricshub.agent.tunnel;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -57,8 +58,9 @@ import org.springframework.ai.tool.ToolCallbackProvider;
  * {@code hosts.updated} when a configuration reload changed the monitored hosts.
  * <p>
  * The registry snapshot is built per configuration and re-advertised on every (re)connection. The connector and
- * protocol tools follow the agent context, so a reload that changes the tool set restarts the tunnel: the
- * protocol advertises tools at registration only.
+ * protocol tools follow the agent context but are not advertised (Central asks {@code ListHostTools} per host). A
+ * reload that changes the advertised tools, or the declaration of a host tool Central may have been told about,
+ * restarts the tunnel; one that only rebuilds the same tools refreshes the bridge's callbacks without reconnecting.
  * </p>
  */
 @Slf4j
@@ -169,12 +171,15 @@ public class TunnelService {
 			return;
 		}
 		if (client != null && agentContextHolder.getGeneration() != snapshotGeneration) {
-			// A configuration reload may have changed the connector and protocol tools. The bridge answers
-			// from the snapshot it was built with and Central learns the tools at registration, so a
-			// changed set means a new bridge and a new registration: the same as a configuration change.
-			snapshotGeneration = agentContextHolder.getGeneration();
-			final ToolRegistrySnapshot current = ToolRegistrySnapshot.from(toolCallbackProvider, config.getExcludedTools());
-			if (!current.revision().equals(snapshot.revision())) {
+			// A configuration reload may have changed the connector and protocol tools. They are not advertised
+			// (Central asks ListHostTools per host), so they only need the bridge's callbacks refreshed; a
+			// changed advertised set means a new bridge and a new registration: the same as a configuration change.
+			final ToolRegistrySnapshot current = snapshotOf(config.getExcludedTools());
+			// A host tool declared otherwise counts too: Central would invoke it with what ListHostTools told it
+			if (
+				!current.revision().equals(snapshot.revision()) ||
+					!current.hostToolsRevision().equals(snapshot.hostToolsRevision())
+			) {
 				log.info(
 					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
 					current.tools().size()
@@ -266,8 +271,7 @@ public class TunnelService {
 
 		TunnelClient newClient = null;
 		try {
-			snapshotGeneration = agentContextHolder.getGeneration();
-			snapshot = ToolRegistrySnapshot.from(toolCallbackProvider, newConfig.getExcludedTools());
+			snapshot = snapshotOf(newConfig.getExcludedTools());
 			final TunnelSettings settings = new TunnelSettings(
 				URI.create(endpoint.trim()),
 				FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel"),
@@ -402,5 +406,24 @@ public class TunnelService {
 			// with a request the next session never made must never reach it.
 			tunnelBridge.invoke(invoke, generation);
 		}
+	}
+
+	/**
+	 * Builds the snapshot from one context generation: the callbacks the provider builds and the context
+	 * {@code ListHostTools} answers from must be the same configuration's, or the lookup could list a tool its
+	 * callback cannot run. A reload published while it is built is caught by the generation and the snapshot rebuilt.
+	 *
+	 * @param excludedTools the tools never advertised nor invokable
+	 * @return the snapshot, its generation recorded in {@code snapshotGeneration}
+	 */
+	ToolRegistrySnapshot snapshotOf(final Collection<String> excludedTools) {
+		long generation;
+		ToolRegistrySnapshot built;
+		do {
+			generation = agentContextHolder.getGeneration();
+			built = ToolRegistrySnapshot.from(toolCallbackProvider, excludedTools, agentContextHolder.getAgentContext());
+		} while (generation != agentContextHolder.getGeneration());
+		snapshotGeneration = generation;
+		return built;
 	}
 }

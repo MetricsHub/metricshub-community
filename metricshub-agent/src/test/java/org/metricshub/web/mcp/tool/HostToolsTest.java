@@ -39,7 +39,7 @@ class HostToolsTest {
 
 		final IllegalArgumentException exception = assertThrows(
 			IllegalArgumentException.class,
-			() -> HostTools.perHost("Test_bad", definition, (hostname, arguments) -> Map.of())
+			() -> HostTools.perHost("Test", "Test_bad", definition, (hostname, arguments) -> Map.of())
 		);
 
 		assertTrue(exception.getMessage().contains(HostTools.HOSTNAME), exception.getMessage());
@@ -51,7 +51,7 @@ class HostToolsTest {
 
 		final IllegalArgumentException exception = assertThrows(
 			IllegalArgumentException.class,
-			() -> HostTools.perHost(name, definition(false), (hostname, arguments) -> Map.of())
+			() -> HostTools.perHost("Test", name, definition(false), (hostname, arguments) -> Map.of())
 		);
 
 		assertTrue(exception.getMessage().contains("64"), exception.getMessage());
@@ -122,6 +122,7 @@ class HostToolsTest {
 			false
 		);
 		final ToolCallback callback = HostTools.perHost(
+			"Test",
 			"Test_tail",
 			definition,
 			(hostname, arguments) -> Map.of("value", arguments.get("lines"))
@@ -157,7 +158,7 @@ class HostToolsTest {
 			Map.of("count", new ToolParameter("integer", "How many pings", true, null)),
 			false
 		);
-		final ToolCallback callback = HostTools.perHost("Test_ping", definition, (hostname, arguments) -> {
+		final ToolCallback callback = HostTools.perHost("Test", "Test_ping", definition, (hostname, arguments) -> {
 			throw new IllegalStateException("Must not run");
 		});
 
@@ -175,6 +176,7 @@ class HostToolsTest {
 	@Test
 	void testPerHostRunsOncePerHostWithResolvedArguments() throws Exception {
 		final ToolCallback callback = HostTools.perHost(
+			"Test",
 			"Test_listThings",
 			definition(false),
 			(hostname, arguments) -> Map.of("value", hostname + ":" + arguments.get("owner") + ":" + arguments.get("pattern"))
@@ -196,6 +198,7 @@ class HostToolsTest {
 	@Test
 	void testPerHostAcceptsASingleHostname() throws Exception {
 		final ToolCallback callback = HostTools.perHost(
+			"Test",
 			"Test_listThings",
 			definition(false),
 			(hostname, arguments) -> Map.of("value", hostname)
@@ -210,6 +213,7 @@ class HostToolsTest {
 	@Test
 	void testPerHostReportsMissingHostnameAndArguments() throws Exception {
 		final ToolCallback callback = HostTools.perHost(
+			"Test",
 			"Test_listThings",
 			definition(false),
 			(hostname, arguments) -> Map.of()
@@ -224,9 +228,14 @@ class HostToolsTest {
 
 	@Test
 	void testPerHostTurnsAFailureIntoAnError() throws Exception {
-		final ToolCallback callback = HostTools.perHost("Test_listThings", definition(false), (hostname, arguments) -> {
-			throw new IllegalStateException("BMC unreachable");
-		});
+		final ToolCallback callback = HostTools.perHost(
+			"Test",
+			"Test_listThings",
+			definition(false),
+			(hostname, arguments) -> {
+				throw new IllegalStateException("BMC unreachable");
+			}
+		);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"a\"],\"owner\":\"me\"}"));
 
