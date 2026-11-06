@@ -233,7 +233,7 @@ Informational; never closes the connection by itself.
 
 ## 5. Tool invocation
 
-Server-side checks happen **before** anything is sent, in this order: a session for that agent on this server → tool present in the *runtime* registry of that session → arguments valid against the advertised schema → policy (deny list, then approval list) → the `tool.invoke` message within `maxPayloadBytes` → fewer than `maxInFlight` invocations open on that agent. Only then does `tool.invoke` leave the server. The agent re-validates: exact tool name, in-flight cap, timeout, payload cap.
+Server-side checks happen **before** anything is sent, in this order: a session for that agent on this server → tool present in the *runtime* registry of that session, or listed for the host by `ListHostTools` through that same session → arguments valid against the advertised (or listed) schema → the tool's class: the MetricsHub team's, else the `access` the agent declares, refused when there is neither → the caller's permission for that class (`tools:read` or `tools:write`) and an unexpired token → an approval for a `write` tool → the `tool.invoke` message within `maxPayloadBytes` → fewer than `maxInFlight` invocations open on that agent. Only then does `tool.invoke` leave the server. The agent re-validates: exact tool name, in-flight cap, timeout, payload cap.
 
 Both sides bound the invocation with the same `timeoutMs`; there is no cancel message. A `tool.result` or `tool.error` whose `requestId` is unknown (already timed out, or from a superseded session) is logged and dropped.
 
