@@ -1954,7 +1954,8 @@ public class ComputeProcessor implements IComputeProcessor {
 	/**
 	 * Inserts a column at the given 1-based position in every row. The value is a literal where <code>$n</code> is
 	 * replaced by the content of column <em>n</em> of the row (an absent column gives an empty string). A row
-	 * shorter than <em>column - 1</em> is left unchanged.
+	 * shorter than <em>column - 1</em> is padded with empty cells first, so the new cell always lands at
+	 * <em>column</em> (an awk whose last printed field is empty gives such rows).
 	 *
 	 * @param insertColumn The {@link InsertColumn} compute
 	 */
@@ -1981,15 +1982,9 @@ public class ComputeProcessor implements IComputeProcessor {
 		for (final List<String> original : sourceTable.getTable()) {
 			final List<String> row = new ArrayList<>(original);
 			table.add(row);
-			if (columnIndex > row.size()) {
-				log.warn(
-					"Hostname {} - Cannot insert column {} in the {}-cell row {}, the row remains unchanged.",
-					hostname,
-					column,
-					row.size(),
-					row
-				);
-				continue;
+			// A short row (its trailing empty cells dropped by a split) gets empty cells up to the new column
+			while (row.size() < columnIndex) {
+				row.add(EMPTY);
 			}
 			final Matcher matcher = COLUMN_REFERENCE_PATTERN.matcher(value);
 			final StringBuilder resolved = new StringBuilder();

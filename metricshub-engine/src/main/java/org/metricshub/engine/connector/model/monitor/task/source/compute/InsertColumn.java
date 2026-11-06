@@ -51,7 +51,7 @@ public class InsertColumn extends Compute {
 
 	/**
 	 * The 1-based position of the new column: 1 inserts before the first column, <em>size + 1</em> appends after
-	 * the last one.
+	 * the last one. A row shorter than <em>column - 1</em> is padded with empty cells first.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)

@@ -266,16 +266,17 @@ class ConversionComputesTest {
 	}
 
 	@Test
-	void insertColumnLeavesShortRowsAndInvalidArgumentsAlone() {
+	void insertColumnPadsShortRowsAndLeavesInvalidArgumentsAlone() {
+		// A short row (an awk whose last field is empty, split by toTable) is padded: the cell lands at its column
 		final SourceTable sourceTable = SourceTable.ofTable(table("a|b", "c"));
 		processor(sourceTable).process(InsertColumn.builder().column(3).value("x").build());
-		assertEquals(table("a|b|x", "c"), sourceTable.getTable());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 
 		processor(sourceTable).process(InsertColumn.builder().column(0).value("x").build());
-		assertEquals(table("a|b|x", "c"), sourceTable.getTable());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 
 		processor(sourceTable).process((InsertColumn) null);
-		assertEquals(table("a|b|x", "c"), sourceTable.getTable());
+		assertEquals(table("a|b|x", "c||x"), sourceTable.getTable());
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------
