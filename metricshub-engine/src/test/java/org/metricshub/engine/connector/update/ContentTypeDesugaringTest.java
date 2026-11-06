@@ -172,6 +172,32 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
+	 * A source copied and referenced by an awk source's variables is read as a table (the variable is exposed as
+	 * the source's table): it gets the toTable appended.
+	 */
+	@Test
+	void textSourceCopiedAndUsedAsAwkSourceVariableGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final JawkSource awkSource = JawkSource.builder().script("BEGIN { print length(rows) }").build();
+		awkSource.getVariables().put("rows", KEY);
+		final Source copy = CopySource.builder().from(KEY).build();
+		final Connector connector = connectorWith(snapshot, awkSource, null);
+		copy.setKey("${source::monitors.enclosure.discovery.sources.copy}");
+		((StandardMonitorJob) connector.getMonitors().get("enclosure")).getDiscovery().getSources().put("copy", copy);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED),
+			connector.getContentTypeReport()
+				.stream()
+				.filter(entry -> KEY.equals(entry.sourceKey()))
+				.map(ContentTypeReportEntry::kind)
+				.toList()
+		);
+	}
+
+	/**
 	 * The same source mapped as well is read as a table: it gets the toTable appended.
 	 */
 	@Test

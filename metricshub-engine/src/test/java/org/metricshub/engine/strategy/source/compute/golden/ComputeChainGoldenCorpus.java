@@ -105,9 +105,10 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * </ul>
  * {@link GoldenCheck} runs the same checks outside Maven.
  * The goldens are written into each connector repository (<code>src/test/goldens/compute-chains</code>) and
- * committed there; this module records the revision of each repository they were generated from. After committing
- * regenerated goldens in a repository, set its line of the revision pin to that commit: CI checks the community
- * repository out at the pinned revision.
+ * committed there; this module records the revision of each repository they were generated from. The update mode
+ * does not touch that pin (the regenerated goldens are not committed yet): after committing them, run
+ * <code>GoldenCheck --root &lt;repository&gt; --pin</code>, which records the repository's new commit. CI checks the
+ * community repository out at the pinned revision.
  */
 @NoArgsConstructor
 public class ComputeChainGoldenCorpus {

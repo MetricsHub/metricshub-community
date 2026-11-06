@@ -174,6 +174,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			// executeForEachEntryOf lives on the base class, which the subclasses' update() does not visit: the
 			// strategy iterates the rows of the referenced source, a table consumer
 			collectReferences(source.getExecuteForEachEntryOf(), readAsTable);
+			// The variables of an awk source are not visited by its update() either: a source reference in them is
+			// exposed to the script as that source's table
+			if (source instanceof JawkSource jawk && jawk.getVariables() != null) {
+				jawk.getVariables().values().forEach(value -> collectReferences(value, readAsTable));
+			}
 			for (final Compute compute : source.getComputes()) {
 				compute.copy().update(value -> collectReferences(value, readAsTable));
 				if (compute instanceof Awk awk && awk.getVariables() != null) {

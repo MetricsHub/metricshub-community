@@ -83,13 +83,6 @@ class ComputeChainGoldenCorpusTest {
 	private final Set<String> loadedConnectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
 	private Stream<DynamicTest> goldens(final Repository repository) {
-		if (ComputeChainGoldenCorpus.isUpdateMode()) {
-			try {
-				ComputeChainGoldenCorpus.recordRevision(repository.getRoot());
-			} catch (IOException e) {
-				throw new IllegalStateException(e);
-			}
-		}
 		final ConnectorStore store = ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory());
 		final Set<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		connectorIds.addAll(store.getStore().keySet());

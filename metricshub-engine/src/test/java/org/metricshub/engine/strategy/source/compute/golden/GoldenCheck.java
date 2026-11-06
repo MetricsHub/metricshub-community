@@ -18,14 +18,17 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * <code>target</code> directory. It runs the same code as {@link ComputeChainGoldenCorpusTest}.
  * <p>
  * Usage: <code>GoldenCheck --root &lt;repository&gt; [--root ...] [--connectors A,B] [--compare typed|exact]
- * [--update] [--report]</code>
+ * [--update] [--report] [--pin]</code>
  * <ul>
  * <li><code>--root</code>: a connector repository root (repeatable);</li>
  * <li><code>--connectors</code>: the connector ids to check, case-insensitive (default: every connector); an id no
  * connector carries is a failing difference;</li>
  * <li><code>--compare</code>: the comparison mode, see {@link CompareMode} (default: exact);</li>
- * <li><code>--update</code>: rewrite the goldens of the selected connectors and record the repository revision;</li>
- * <li><code>--report</code>: print the content-type desugaring report of the selected connectors.</li>
+ * <li><code>--update</code>: rewrite the goldens of the selected connectors (the revision pin is left alone: the
+ * rewritten goldens are not committed yet);</li>
+ * <li><code>--report</code>: print the content-type desugaring report of the selected connectors;</li>
+ * <li><code>--pin</code>: once the regenerated goldens are committed, record the current commit of each root in the
+ * revision pin ({@link ComputeChainGoldenCorpus#REVISIONS_FILE}) and check nothing.</li>
  * </ul>
  * One line is printed per difference; the exit code is 1 when any failing difference exists, 0 otherwise.
  * <p>
@@ -57,6 +60,7 @@ public final class GoldenCheck {
 	public static void main(final String[] args) throws IOException {
 		final List<Path> roots = new ArrayList<>();
 		boolean report = false;
+		boolean pin = false;
 		for (int i = 0; i < args.length; i++) {
 			switch (args[i]) {
 				case "--root" -> roots.add(Path.of(args[++i]));
@@ -64,6 +68,7 @@ public final class GoldenCheck {
 				case "--compare" -> System.setProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY, args[++i]);
 				case "--update" -> System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
 				case "--report" -> report = true;
+				case "--pin" -> pin = true;
 				default -> {
 					System.err.println("Unknown argument: " + args[i]);
 					System.exit(2);
@@ -72,9 +77,17 @@ public final class GoldenCheck {
 		}
 		if (roots.isEmpty()) {
 			System.err.println(
-				"Usage: GoldenCheck --root <repository> [--connectors A,B] [--compare typed|exact] [--update] [--report]"
+				"Usage: GoldenCheck --root <repository> [--connectors A,B] [--compare typed|exact] [--update] [--report] [--pin]"
 			);
 			System.exit(2);
+		}
+		if (pin) {
+			// A separate step, after the regenerated goldens are committed: the pin must name a commit that holds them
+			for (final Path root : roots) {
+				ComputeChainGoldenCorpus.recordRevision(root);
+			}
+			System.out.println("Revision pin written to " + ComputeChainGoldenCorpus.REVISIONS_FILE.toAbsolutePath());
+			System.exit(0);
 		}
 		System.exit(run(roots, report) > 0 ? 1 : 0);
 	}
@@ -137,12 +150,6 @@ public final class GoldenCheck {
 		}
 		if (report) {
 			System.out.println(ComputeChainGoldenCorpus.contentTypeReport(stores));
-		}
-		// The revision pins drive the CI checkouts: recorded only once every golden was rewritten without a failure
-		if (ComputeChainGoldenCorpus.isUpdateMode() && failing == 0) {
-			for (final Repository repository : stores.keySet()) {
-				ComputeChainGoldenCorpus.recordRevision(repository.getRoot());
-			}
 		}
 		System.out.println(failing + " failing difference(s)");
 		return failing;
