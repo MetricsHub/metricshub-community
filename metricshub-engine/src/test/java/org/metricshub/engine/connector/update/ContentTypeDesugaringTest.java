@@ -217,6 +217,23 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
+	 * A source copied and mapped with the usual short reference is read as a table: the mapping's reference is
+	 * resolved within its task.
+	 */
+	@Test
+	void textSourceCopiedAndMappedByShortReferenceGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source copy = CopySource.builder()
+			.from("${source::source(1)}")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		final Connector connector = connectorWith(snapshot, copy, Mapping.builder().source("${source::source(1)}").build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+	}
+
+	/**
 	 * The same source mapped as well is read as a table: it gets the toTable appended.
 	 */
 	@Test

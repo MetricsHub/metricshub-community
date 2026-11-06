@@ -75,6 +75,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
+import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeUpdaterProcessor;
@@ -309,9 +310,11 @@ public class ComputeChainGoldenCorpus {
 		final Set<String> readThrough = new HashSet<>();
 		sources.values().forEach(source -> {
 			if (source instanceof CopySource copy && copy.getFrom() != null) {
-				readThrough.add(copy.getFrom().trim());
+				readThrough.add(ContentTypeDesugaring.resolveReference(copy.getFrom(), source.getKey(), sources));
 			} else if (source instanceof TableUnionSource union && union.getTables() != null) {
-				union.getTables().forEach(table -> readThrough.add(table.trim()));
+				// A short reference designates a source of the same task, as at run time
+				union.getTables()
+					.forEach(table -> readThrough.add(ContentTypeDesugaring.resolveReference(table, source.getKey(), sources)));
 			}
 		});
 		sources.forEach((key, source) -> {

@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -315,10 +316,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (connector.getMonitors() != null) {
 			for (final MonitorJob job : connector.getMonitors().values()) {
 				if (job instanceof StandardMonitorJob standard) {
-					addMappingSource(standard.getDiscovery(), readAsTable);
-					addMappingSource(standard.getCollect(), readAsTable);
+					addMappingSource(standard.getDiscovery(), readAsTable, sources);
+					addMappingSource(standard.getCollect(), readAsTable, sources);
 				} else if (job instanceof SimpleMonitorJob simple) {
-					addMappingSource(simple.getSimple(), readAsTable);
+					addMappingSource(simple.getSimple(), readAsTable, sources);
 				}
 			}
 		}
@@ -336,10 +337,21 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		return copied;
 	}
 
-	private static void addMappingSource(final AbstractMonitorTask task, final Set<String> readAsTable) {
-		if (task != null && task.getMapping() != null) {
-			collectReferences(task.getMapping().getSource(), readAsTable);
+	private static void addMappingSource(
+		final AbstractMonitorTask task,
+		final Set<String> readAsTable,
+		final Map<String, Source> sources
+	) {
+		if (task == null || task.getMapping() == null) {
+			return;
 		}
+		// A short reference designates a source of the same task: any of them gives the context
+		final String context = task.getSources() == null
+			? null
+			: task.getSources().values().stream().map(Source::getKey).filter(Objects::nonNull).findFirst().orElse(null);
+		final Set<String> references = new HashSet<>();
+		collectReferences(task.getMapping().getSource(), references);
+		references.forEach(reference -> readAsTable.add(resolveReference(reference, context, sources)));
 	}
 
 	/**
@@ -354,7 +366,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * @param sources    Every source by key
 	 * @return the full key of the designated source, or the reference itself when it designates none
 	 */
-	static String resolveReference(final String reference, final String contextKey, final Map<String, Source> sources) {
+	public static String resolveReference(
+		final String reference,
+		final String contextKey,
+		final Map<String, Source> sources
+	) {
 		final String trimmed = reference.trim();
 		if (sources.containsKey(trimmed) || contextKey == null) {
 			return trimmed;
