@@ -18,6 +18,7 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -142,6 +143,32 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("awk", "toTable"), types(copy));
 		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 		assertEquals(copy.getKey(), connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * A source copied and iterated by another source's executeForEachEntryOf is read as a table: it gets the
+	 * toTable appended.
+	 */
+	@Test
+	void textSourceCopiedAndIteratedGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source iterating = CopySource.builder()
+			.from("${source::monitors.enclosure.discovery.sources.other}")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		iterating.setExecuteForEachEntryOf(ExecuteForEachEntryOf.builder().source(KEY).build());
+		final Connector connector = connectorWith(snapshot, iterating, null);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED),
+			connector.getContentTypeReport()
+				.stream()
+				.filter(entry -> KEY.equals(entry.sourceKey()))
+				.map(ContentTypeReportEntry::kind)
+				.toList()
+		);
 	}
 
 	/**

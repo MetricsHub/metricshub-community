@@ -940,8 +940,9 @@ public class ComputeChainGoldenCorpus {
 				final String value = staticSource.getValue() == null ? "" : staticSource.getValue();
 				if (staticSource.getCells() != null) {
 					// The list form is the single row of exactly these cells
-					inputs.put("static", () -> csv(List.of(staticSource.getCells()), false));
-					twins(inputs, "static", table -> csv(table, false));
+					// A fresh row (the chain mutates it), serialized separator-safe as the processor does for the list form
+					inputs.put("static", () -> csv(List.of(new ArrayList<>(staticSource.getCells())), true));
+					twins(inputs, "static", table -> csv(table, true));
 				} else if (SOURCE_REF_PATTERN.matcher(value).find()) {
 					// The processor copies the referenced source's table and serializes it
 					tableShape(inputs, "csv", table -> csv(table, false));

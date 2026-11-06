@@ -99,9 +99,6 @@ public final class GoldenCheck {
 				continue;
 			}
 			final Repository repository = Repository.of(root);
-			if (ComputeChainGoldenCorpus.isUpdateMode()) {
-				ComputeChainGoldenCorpus.recordRevision(root);
-			}
 			final ConnectorStore store = ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory());
 			stores.put(repository, store);
 			final TreeSet<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -140,6 +137,12 @@ public final class GoldenCheck {
 		}
 		if (report) {
 			System.out.println(ComputeChainGoldenCorpus.contentTypeReport(stores));
+		}
+		// The revision pins drive the CI checkouts: recorded only once every golden was rewritten without a failure
+		if (ComputeChainGoldenCorpus.isUpdateMode() && failing == 0) {
+			for (final Repository repository : stores.keySet()) {
+				ComputeChainGoldenCorpus.recordRevision(repository.getRoot());
+			}
 		}
 		System.out.println(failing + " failing difference(s)");
 		return failing;

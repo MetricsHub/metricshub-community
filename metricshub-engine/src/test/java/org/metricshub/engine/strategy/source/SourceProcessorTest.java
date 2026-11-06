@@ -676,7 +676,8 @@ class SourceProcessorTest {
 		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1, "", "b;1")).build();
 		final SourceTable listResult = sourceProcessor.process(staticSource);
 		assertEquals(List.of(List.of(LOWERCASE_A1, "", "b;1")), listResult.getTable());
-		assertEquals("a1;;b;1;", listResult.getRawData());
+		// The raw text is separator-safe (as toText writes it): a legacy awk reading it sees the three cells
+		assertEquals("a1;;b,1;", listResult.getRawData());
 	}
 
 	@Test
