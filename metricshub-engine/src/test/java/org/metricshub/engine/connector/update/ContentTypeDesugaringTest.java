@@ -647,6 +647,14 @@ class ContentTypeDesugaringTest {
 		assertTrue(tool.isTextResult());
 		assertEquals(List.of(), kinds(connector));
 
+		// A compute-free copy of a command output is a text member too: it hands on the command's text
+		final Source copy = CopySource.builder().from("${source::link}").build();
+		copy.setKey("${source::tools.details.sources.copy}");
+		sources.put("copy", copy);
+		((TableUnionSource) union).setTables(new ArrayList<>(List.of("${source::copy}", "${source::addr}")));
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(tool.isTextResult());
+
 		// The same union with a table compute of its own returns that table
 		union.setComputes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())));
 		new ContentTypeDesugaring().update(connector);

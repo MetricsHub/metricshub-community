@@ -289,8 +289,21 @@ public class SourceProcessor implements ISourceProcessor {
 
 		sourceTable.setTable(table);
 		// The list form promises exactly its cells: a ';' inside one must not split it for a text consumer reading
-		// the raw text (a legacy awk), so it is serialized as toText does; the string form keeps its legacy text
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, staticSource.getCells() != null));
+		// the raw text (a legacy awk), so it is serialized as toText does, and a line break a reference resolved into
+		// at run time becomes a space (the row stays one line); the string form keeps its legacy text
+		if (staticSource.getCells() != null) {
+			sourceTable.setRawData(
+				SourceTable.tableToCsv(
+					table.stream()
+						.map(row -> row.stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList())
+						.toList(),
+					SEMICOLON,
+					true
+				)
+			);
+		} else {
+			sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, false));
+		}
 
 		return sourceTable;
 	}

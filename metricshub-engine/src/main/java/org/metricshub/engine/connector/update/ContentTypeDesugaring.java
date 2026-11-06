@@ -113,6 +113,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
 
 	/**
+	 * A short source reference, <code>${source::name}</code>, with no dot: a source of the same tool or job.
+	 */
+	private static final Pattern SHORT_SOURCE_REFERENCE = Pattern.compile("^\\$\\{source::([^.}]+)\\}$");
+
+	/**
 	 * The AWK keywords an expression, so a regex literal, can follow.
 	 */
 	private static final Set<String> REGEX_KEYWORDS = Set.of(
@@ -157,7 +162,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			connector.getTools().forEach((name, tool) -> {
 				final Source result = toolResultSource(tool);
 				tool.setTextResult(
-					!hasColumns(tool) && result != null && (endsInText(result, sources) || textUnionMembers(tool) != null)
+					!hasColumns(tool) &&
+						result != null &&
+						(endsInText(result, sources) || textUnionMembers(tool, sources) != null)
 				);
 			});
 		}
@@ -200,7 +207,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * @param tool The tool
 	 * @return the member sources, null when the result is no such union
 	 */
-	static List<Source> textUnionMembers(final ConnectorTool tool) {
+	static List<Source> textUnionMembers(final ConnectorTool tool, final Map<String, Source> sources) {
 		if (hasColumns(tool) || !(toolResultSource(tool) instanceof TableUnionSource union) || union.getTables() == null) {
 			return null;
 		}
@@ -211,7 +218,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final List<Source> members = new ArrayList<>();
 		for (final String table : union.getTables()) {
 			final Source member = toolSource(tool, table);
-			if (member == null || !endsInTextAsWritten(member)) {
+			if (member == null || !endsInTextAsWritten(member, sources)) {
 				return null;
 			}
 			members.add(member);
@@ -221,16 +228,19 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
 	 * Whether the source ends in text as written: its last written compute writes text, or it has none and produces
-	 * text itself (a copy is not followed: it is never a member of such a union).
+	 * text itself (a copy: what its origin's chain produces).
 	 */
-	private static boolean endsInTextAsWritten(final Source source) {
+	private static boolean endsInTextAsWritten(final Source source, final Map<String, Source> sources) {
 		final List<Compute> written = source.getComputes() == null
 			? List.of()
 			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 		if (!written.isEmpty()) {
 			return written.get(written.size() - 1).getOutputContentType() == ContentType.TEXT;
 		}
-		return !(source instanceof CopySource) && source.getOutputContentType() == ContentType.TEXT;
+		// A copy hands on what its origin's chain produces
+		return source instanceof CopySource copy
+			? effectiveOutput(copy, sources, new HashSet<>()).type() == ContentType.TEXT
+			: source.getOutputContentType() == ContentType.TEXT;
 	}
 
 	private static boolean hasColumns(final ConnectorTool tool) {
@@ -275,7 +285,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Set<String> textUnions = new HashSet<>();
 		if (connector.getTools() != null) {
 			connector.getTools().values().forEach(tool -> {
-				final List<Source> members = textUnionMembers(tool);
+				final List<Source> members = textUnionMembers(tool, sources);
 				if (members != null) {
 					textUnions.add(toolResultSource(tool).getKey());
 					members.forEach(member -> copied.add(member.getKey()));
@@ -290,12 +300,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			scanned.setKey(null);
 			if (scanned instanceof CopySource copy) {
 				if (copy.getFrom() != null) {
-					copied.add(copy.getFrom().trim());
+					copied.add(resolveReference(copy.getFrom(), source.getKey(), sources));
 				}
 				copy.setFrom("");
 			}
 			try {
-				collectReferences(mapper.writeValueAsString(scanned), readAsTable);
+				final Set<String> references = new HashSet<>();
+				collectReferences(mapper.writeValueAsString(scanned), references);
+				references.forEach(reference -> readAsTable.add(resolveReference(reference, source.getKey(), sources)));
 			} catch (JsonProcessingException e) {
 				return Set.of();
 			}
@@ -333,6 +345,31 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	/**
 	 * Adds every <code>${source::...}</code> reference of the value to the set, and returns the value unchanged.
 	 */
+	/**
+	 * The full key a source reference designates. A short reference (<code>${source::name}</code>, as written inside a
+	 * tool or a job) designates the source of that name next to the referencing source, as at run time.
+	 *
+	 * @param reference  The reference, short or full
+	 * @param contextKey The key of the referencing source, null when unknown
+	 * @param sources    Every source by key
+	 * @return the full key of the designated source, or the reference itself when it designates none
+	 */
+	static String resolveReference(final String reference, final String contextKey, final Map<String, Source> sources) {
+		final String trimmed = reference.trim();
+		if (sources.containsKey(trimmed) || contextKey == null) {
+			return trimmed;
+		}
+		final Matcher matcher = SHORT_SOURCE_REFERENCE.matcher(trimmed);
+		final int dot = contextKey.lastIndexOf('.');
+		if (matcher.matches() && dot > 0) {
+			final String sibling = contextKey.substring(0, dot + 1) + matcher.group(1) + "}";
+			if (sources.containsKey(sibling)) {
+				return sibling;
+			}
+		}
+		return trimmed;
+	}
+
 	private static String collectReferences(final String value, final Set<String> references) {
 		if (value != null) {
 			final Matcher matcher = SOURCE_REF_PATTERN.matcher(value);
@@ -647,7 +684,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources,
 		final Set<Source> visited
 	) {
-		final Source origin = copy.getFrom() == null ? null : sources.get(copy.getFrom().trim());
+		final Source origin = copy.getFrom() == null
+			? null
+			: sources.get(resolveReference(copy.getFrom(), copy.getKey(), sources));
 		if (origin == null || !visited.add(copy)) {
 			return startOf(copy);
 		}
