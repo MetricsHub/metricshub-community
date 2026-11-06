@@ -34,7 +34,7 @@ import java.util.Collection;
  * <p>Two kinds of providers are expected in practice:
  * <ul>
  *   <li>A <em>built-in provider</em> shipped inside {@code metricshub-jdbc-extension.jar} that
- *       advertises the shaded drivers (MariaDB, PostgreSQL, MySQL, H2) with
+ *       advertises the shaded drivers (MariaDB, PostgreSQL, MySQL, ClickHouse, H2) with
  *       {@link DriverOrigin#BUILT_IN}.</li>
  *   <li><em>Descriptor-only providers</em> (also shipped in the JDBC extension) that advertise
  *       well-known external drivers (Oracle, SQL Server, JTOpen, ...) without bundling the JAR.

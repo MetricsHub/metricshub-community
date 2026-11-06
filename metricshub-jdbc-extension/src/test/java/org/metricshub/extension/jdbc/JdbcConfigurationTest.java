@@ -214,6 +214,31 @@ class JdbcConfigurationTest {
 	}
 
 	@Test
+	void testGenerateUrlClickHouse() {
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
+			.type("clickhouse")
+			.hostname("localhost")
+			.port(8123)
+			.database("metrics")
+			.build();
+
+		assertEquals("jdbc:clickhouse://localhost:8123/metrics", String.valueOf(jdbcConfiguration.generateUrl()));
+	}
+
+	@Test
+	void testValidateConfigurationAssignsClickHouseDefaults() {
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
+			.username("default")
+			.type("clickhouse")
+			.hostname("localhost")
+			.build();
+
+		assertDoesNotThrow(() -> jdbcConfiguration.validateConfiguration("resourceKey"));
+		assertEquals(8123, jdbcConfiguration.getPort());
+		assertEquals("jdbc:clickhouse://localhost:8123/default", String.valueOf(jdbcConfiguration.getUrl()));
+	}
+
+	@Test
 	void testGetProperty() {
 		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("myUsername")

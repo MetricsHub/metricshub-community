@@ -51,6 +51,7 @@ public class JdbcConfiguration implements IConfiguration {
 	private static final int DEFAULT_MSSQL_PORT = 1433;
 	private static final int DEFAULT_INFORMIX_PORT = 9088;
 	private static final int DEFAULT_H2_PORT = 9092;
+	private static final int DEFAULT_CLICKHOUSE_PORT = 8123;
 	private static final int INVALID_PORT = -1;
 
 	private String username;
@@ -177,6 +178,7 @@ public class JdbcConfiguration implements IConfiguration {
 			case "mssql" -> DEFAULT_MSSQL_PORT;
 			case "informix" -> DEFAULT_INFORMIX_PORT;
 			case "h2" -> DEFAULT_H2_PORT;
+			case "clickhouse" -> DEFAULT_CLICKHOUSE_PORT;
 			default -> INVALID_PORT;
 		};
 	}
@@ -206,6 +208,12 @@ public class JdbcConfiguration implements IConfiguration {
 				hostname,
 				port,
 				database != null ? database : "postgres"
+			).toCharArray();
+			case "clickhouse" -> String.format(
+				"jdbc:clickhouse://%s:%d/%s",
+				hostname,
+				port,
+				database != null ? database : "default"
 			).toCharArray();
 			case "mssql" -> String.format(
 				"jdbc:sqlserver://%s:%d;decrypt=true;trustServerCertificate=true",

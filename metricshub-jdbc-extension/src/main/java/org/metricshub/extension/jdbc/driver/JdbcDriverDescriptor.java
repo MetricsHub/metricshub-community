@@ -31,7 +31,7 @@ import java.util.Objects;
  * It is the recipe used by {@link JdbcDriverRegistry} to locate and load a driver on first use.
  *
  * <p>Descriptors are returned by {@link IJdbcDriverProvider} implementations discovered through
- * {@link java.util.ServiceLoader}. Built-in drivers (MariaDB, PostgreSQL, MySQL, H2) are advertised
+ * {@link java.util.ServiceLoader}. Built-in drivers (MariaDB, PostgreSQL, MySQL, ClickHouse, H2) are advertised
  * by the shipped {@code BuiltInJdbcDriverProvider}; external drivers (JTOpen, Oracle, etc.) are
  * advertised by descriptor-only providers and resolved against the operator-default drivers
  * directory at runtime — {@code /opt/metricshub/lib/extensions/jdbc/} on Linux,

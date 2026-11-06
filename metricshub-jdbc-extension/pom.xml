@@ -82,6 +82,12 @@
 			<version>3.5.10</version>
 		</dependency>
 		<dependency>
+			<groupId>com.clickhouse</groupId>
+			<artifactId>clickhouse-jdbc</artifactId>
+			<version>0.11.0</version>
+			<classifier>all</classifier>
+		</dependency>
+		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
@@ -182,6 +188,7 @@
 									<include>org.postgresql:postgresql</include>
 									<include>com.h2database:*</include>
 									<include>org.mariadb.jdbc:mariadb-java-client</include>
+									<include>com.clickhouse:clickhouse-jdbc</include>
 								</includes>
 							</artifactSet>
 							<filters>

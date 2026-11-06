@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class JdbcDriverProvidersTest {
 
 	@Test
-	void builtInProviderListsTheFourShadedDrivers() {
+	void builtInProviderListsTheFiveShadedDrivers() {
 		final Set<String> classes = new HashSet<>();
 		for (final JdbcDriverDescriptor d : new BuiltInJdbcDriverProvider().provide()) {
 			assertEquals(DriverOrigin.BUILT_IN, d.origin(), "Built-in descriptors must be BUILT_IN");
@@ -23,6 +23,7 @@ class JdbcDriverProvidersTest {
 		assertTrue(classes.contains("org.mariadb.jdbc.Driver"));
 		assertTrue(classes.contains("org.postgresql.Driver"));
 		assertTrue(classes.contains("com.mysql.cj.jdbc.Driver"));
+		assertTrue(classes.contains("com.clickhouse.jdbc.ClickHouseDriver"));
 		assertTrue(classes.contains("org.h2.Driver"));
 	}
 
@@ -43,6 +44,7 @@ class JdbcDriverProvidersTest {
 		assertTrue(classes.contains("org.apache.derby.jdbc.EmbeddedDriver"));
 		assertTrue(classes.contains("com.ibm.as400.access.AS400JDBCDriver"));
 		assertTrue(classes.contains("com.ibm.db2.jcc.DB2Driver"));
+		assertFalse(classes.contains("com.clickhouse.jdbc.ClickHouseDriver"));
 	}
 
 	@Test
