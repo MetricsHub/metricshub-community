@@ -397,7 +397,7 @@ public class JdbcExtension implements IProtocolExtension {
 	 *
 	 * <p>When {@code selection} is non-null the supplied driver is used. Otherwise the URL prefix is
 	 * matched against the built-in driver inference table; this keeps zero-config liveness checks
-	 * working for built-in drivers (MariaDB, PostgreSQL, MySQL, H2).
+	 * working for built-in drivers (MariaDB, PostgreSQL, MySQL, ClickHouse, H2).
 	 *
 	 * @param jdbcUrl   The JDBC URL of the database
 	 * @param username  The database username

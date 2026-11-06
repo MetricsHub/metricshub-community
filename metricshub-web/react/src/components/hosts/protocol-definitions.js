@@ -828,6 +828,7 @@ export const PROTOCOL_FIELDS = {
 				{ value: "DB2", label: "DB2" },
 				{ value: "H2", label: "H2" },
 				{ value: "SQLite", label: "SQLite" },
+				{ value: "ClickHouse", label: "ClickHouse" },
 			],
 		},
 		// Manual mode fields

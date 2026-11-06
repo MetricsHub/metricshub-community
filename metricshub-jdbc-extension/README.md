@@ -4,7 +4,7 @@ This module contains the MetricsHub JDBC extension.
 
 ## External JDBC drivers
 
-MetricsHub ships built-in JDBC drivers for MariaDB, PostgreSQL, MySQL, and H2.
+MetricsHub ships built-in JDBC drivers for MariaDB, PostgreSQL, MySQL, ClickHouse, and H2.
 
 Additional JDBC drivers can be provided externally.
 
