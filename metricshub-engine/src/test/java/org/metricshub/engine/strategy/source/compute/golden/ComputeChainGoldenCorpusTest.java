@@ -122,6 +122,9 @@ class ComputeChainGoldenCorpusTest {
 	 * Every stored golden must belong to a connector that still exists (a deleted connector leaves no golden behind).
 	 */
 	private void checkInventory(final Repository repository, final Set<String> connectorIds) throws IOException {
+		// A connector whose file exists but did not load keeps its golden, in both modes, and fails the test
+		final List<String> unloaded = ComputeChainGoldenCorpus.unloadedGoldens(repository, connectorIds);
+		assertTrue(unloaded.isEmpty(), "Connectors that failed to load (goldens kept): " + unloaded);
 		final List<String> orphans = ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds);
 		if (ComputeChainGoldenCorpus.isUpdateMode()) {
 			for (final String connectorId : orphans) {
@@ -406,6 +409,20 @@ class ComputeChainGoldenCorpusTest {
 		assertEquals(1, text.size(), text.toString());
 		assertTrue(!ComputeChainGoldenCorpus.isIntended(text.get(0)) && text.get(0).startsWith("s [table]"), text.get(0));
 
+		// Same text, different table: a text ending ignores the table, unless an implicit toTable follows it (the
+		// mapping then reads that table too)
+		generated.getSources().get("s").getOutputs().put("text", new Output(List.of(List.of("b")), "a\n", null, null));
+		assertTrue(
+			ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED)
+				.stream()
+				.noneMatch(d -> d.startsWith("s [text]"))
+		);
+		generated.getSources().get("s").setImplicitTable(true);
+		final List<String> both = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
+		assertTrue(both.stream().anyMatch(d -> d.startsWith("s [text]")), both.toString());
+		generated.getSources().get("s").setImplicitTable(false);
+		generated.getSources().get("s").getOutputs().put("text", new Output(List.of(List.of("a")), "a\n", null, null));
+
 		// An error, a time-out and a missing stored output are differences
 		generated.getSources().get("s").setEnding(ContentType.TABLE);
 		generated.getSources().get("s").getOutputs().put("text", new Output(null, null, null, "Boom: x"));
@@ -510,6 +527,18 @@ class ComputeChainGoldenCorpusTest {
 			assertEquals(0, GoldenCheck.run(List.of(root), false));
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
 			assertTrue(!Files.exists(goldens.resolve("Zombie.json")), "deleted by the update mode");
+
+			// A connector whose file exists but does not parse keeps its golden, even in update mode, and fails. Here the
+			// broken file empties the whole store: no golden is deleted, each one is reported
+			Files.writeString(root.resolve("Broken.yaml"), "connector: [ not: a valid: connector");
+			Files.copy(goldens.resolve("GoldenA.json"), goldens.resolve("Broken.json"));
+			System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
+			assertEquals(3, GoldenCheck.run(List.of(root), false), "Broken, GoldenA and GoldenB did not load");
+			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
+			assertTrue(Files.exists(goldens.resolve("Broken.json")), "kept by the update mode");
+			assertTrue(Files.exists(goldens.resolve("GoldenA.json")), "kept by the update mode");
+			Files.delete(root.resolve("Broken.yaml"));
+			Files.delete(goldens.resolve("Broken.json"));
 			assertEquals(0, GoldenCheck.run(List.of(root), false));
 		} finally {
 			previous.forEach((property, value) -> {

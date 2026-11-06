@@ -313,6 +313,10 @@ public class ComputeChainGoldenCorpus {
 			sourceGolden.setSource(source.getType());
 			sourceGolden.setComputes(explicitComputes.stream().map(Compute::getType).toList());
 			sourceGolden.setEnding(explicitComputes.get(explicitComputes.size() - 1).getOutputContentType());
+			// A chain ending in text from a legacy dual producer gets an implicit toTable: its consumers read both the
+			// text and the table
+			final Compute last = source.getComputes().get(source.getComputes().size() - 1);
+			sourceGolden.setImplicitTable(last instanceof ToTable toTable && toTable.isImplicit());
 			Inputs.inputsFor(source, sources)
 				.forEach(
 					(name, input) -> sourceGolden.getOutputs().put(name, run(connectorStore, connectorId, source, input.get()))
@@ -455,15 +459,53 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * The stored goldens that belong to no connector of the repository (a deleted or renamed connector).
+	 * The stored goldens whose connector file no longer exists (a deleted or renamed connector): safe to delete.
 	 *
 	 * @param repository   The repository
-	 * @param connectorIds The ids of the connectors of the repository
-	 * @return the ids of the orphan goldens, in file order; empty when the golden directory does not exist
-	 * @throws IOException when the golden directory cannot be listed
+	 * @param connectorIds The ids of the connectors loaded from the repository
+	 * @return the ids of the orphan goldens, in file order
+	 * @throws IOException when a directory cannot be listed
 	 */
 	public static List<String> orphanGoldens(final Repository repository, final Collection<String> connectorIds)
 		throws IOException {
+		final Set<String> files = connectorFiles(repository);
+		return goldensWithoutConnector(repository, connectorIds).stream().filter(id -> !files.contains(id)).toList();
+	}
+
+	/**
+	 * The stored goldens whose connector file exists but did not load (a parse error): never deleted, a failure.
+	 *
+	 * @param repository   The repository
+	 * @param connectorIds The ids of the connectors loaded from the repository
+	 * @return the ids of the connectors that failed to load, in file order
+	 * @throws IOException when a directory cannot be listed
+	 */
+	public static List<String> unloadedGoldens(final Repository repository, final Collection<String> connectorIds)
+		throws IOException {
+		final Set<String> files = connectorFiles(repository);
+		return goldensWithoutConnector(repository, connectorIds).stream().filter(files::contains).toList();
+	}
+
+	/**
+	 * The ids of the connector files of the repository: the base names of the YAML files under its connector
+	 * directory, case-insensitive.
+	 */
+	private static Set<String> connectorFiles(final Repository repository) throws IOException {
+		final Set<String> ids = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		if (Files.isDirectory(repository.getConnectorDirectory())) {
+			try (Stream<Path> files = Files.walk(repository.getConnectorDirectory())) {
+				files.map(file -> file.getFileName().toString())
+					.filter(name -> name.endsWith(".yaml"))
+					.forEach(name -> ids.add(name.substring(0, name.length() - ".yaml".length())));
+			}
+		}
+		return ids;
+	}
+
+	private static List<String> goldensWithoutConnector(
+		final Repository repository,
+		final Collection<String> connectorIds
+	) throws IOException {
 		if (!Files.isDirectory(repository.getGoldenDirectory())) {
 			return List.of();
 		}
@@ -646,6 +688,7 @@ public class ComputeChainGoldenCorpus {
 				}
 			}
 			final ContentType ending = golden.getSources().get(key).getEnding();
+			final boolean implicitTable = golden.getSources().get(key).isImplicitTable();
 			final JsonNode storedOutputs = storedSource.path("outputs");
 			final JsonNode generatedOutputs = generatedSource.path("outputs");
 			generatedOutputs.fieldNames().forEachRemaining(input -> {
@@ -653,7 +696,7 @@ public class ComputeChainGoldenCorpus {
 				final JsonNode generatedOutput = generatedOutputs.get(input);
 				final boolean same = mode == CompareMode.EXACT
 					? generatedOutput.equals(storedOutput)
-					: sameForConsumers(storedOutput, generatedOutput, ending);
+					: sameForConsumers(storedOutput, generatedOutput, ending, implicitTable);
 				if (!same) {
 					// Only a content difference on a separator-in-cell input is intended: a chain that now throws or
 					// hangs on that input, or an input without a stored output, is a regression like any other
@@ -692,15 +735,26 @@ public class ComputeChainGoldenCorpus {
 	 * @param stored    The stored output, null when the stored golden has none for the input
 	 * @param generated The generated output
 	 * @param ending    The content type the generated chain ends in
+	 * @param both      Whether the text ending is followed by an implicit <code>toTable</code>: both are then read
 	 * @return <code>true</code> when the consumers see the same result
 	 */
-	static boolean sameForConsumers(final JsonNode stored, final JsonNode generated, final ContentType ending) {
+	static boolean sameForConsumers(
+		final JsonNode stored,
+		final JsonNode generated,
+		final ContentType ending,
+		final boolean both
+	) {
 		if (stored == null || !sameFlags(stored, generated)) {
 			return false;
 		}
-		return ending == ContentType.TEXT
-			? stored.path("rawData").equals(generated.path("rawData"))
-			: stripTrailingEmptyCells(stored.path("table")).equals(stripTrailingEmptyCells(generated.path("table")));
+		final boolean sameText = stored.path("rawData").equals(generated.path("rawData"));
+		final boolean sameTable = stripTrailingEmptyCells(stored.path("table")).equals(
+			stripTrailingEmptyCells(generated.path("table"))
+		);
+		if (both) {
+			return sameText && sameTable;
+		}
+		return ending == ContentType.TEXT ? sameText : sameTable;
 	}
 
 	/**
@@ -786,6 +840,13 @@ public class ComputeChainGoldenCorpus {
 		 */
 		@JsonIgnore
 		private ContentType ending;
+
+		/**
+		 * Whether the chain as desugared ends with an implicit <code>toTable</code> (a text ending from a legacy dual
+		 * producer, read as text and as a table). Not stored.
+		 */
+		@JsonIgnore
+		private boolean implicitTable;
 	}
 
 	/**

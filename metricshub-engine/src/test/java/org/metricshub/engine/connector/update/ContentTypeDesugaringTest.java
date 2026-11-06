@@ -31,6 +31,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -195,6 +196,23 @@ class ContentTypeDesugaringTest {
 				.map(ContentTypeReportEntry::kind)
 				.toList()
 		);
+	}
+
+	/**
+	 * A source copied and listed in the tables of a union is read as a table: the generic scan finds the reference
+	 * in any field, here one that the source's update() does not visit.
+	 */
+	@Test
+	void textSourceCopiedAndInATableUnionGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source union = TableUnionSource.builder().tables(new ArrayList<>(List.of(KEY))).build();
+		final Source copy = CopySource.builder().from(KEY).build();
+		final Connector connector = connectorWith(snapshot, union, null);
+		copy.setKey("${source::monitors.enclosure.discovery.sources.copy}");
+		((StandardMonitorJob) connector.getMonitors().get("enclosure")).getDiscovery().getSources().put("copy", copy);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
 	}
 
 	/**

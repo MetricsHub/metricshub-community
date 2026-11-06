@@ -27,6 +27,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -37,6 +39,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
@@ -150,11 +153,15 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * The sources that are read as text only: referenced by <code>copy</code> sources and by nothing else (no
-	 * mapping, no tool result, no <code>${source::...}</code> reference in another source or in a compute, no
-	 * <code>awk</code> variable). A legacy dual producer among them keeps its text: an explicit <code>toTable</code>
-	 * would re-serialize every line with a trailing <code>;</code>, which the <code>awk</code> scripts reading the
-	 * copies do not expect, and the copies get their own conversion where they need one.
+	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources and
+	 * nowhere else. A legacy dual producer among them keeps its text: an explicit <code>toTable</code> would
+	 * re-serialize every line with a trailing <code>;</code>, which the <code>awk</code> scripts reading the copies
+	 * do not expect, and the copies get their own conversion where they need one.
+	 * <p>
+	 * "Nowhere else" is checked on the JSON form of every source (its own key and a copy's <code>from</code> left
+	 * out), computes included, plus the mappings and the tool results: a <code>${source::...}</code> reference in any
+	 * field (a variable, <code>executeForEachEntryOf</code>, the tables of a union, an internal database query...)
+	 * counts as a table consumer. When a source cannot be serialized, no source is text only: the legacy behavior.
 	 *
 	 * @param connector The connector
 	 * @param sources   Every source by key
@@ -163,27 +170,20 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	static Set<String> textOnlySources(final Connector connector, final Map<String, Source> sources) {
 		final Set<String> copied = new HashSet<>();
 		final Set<String> readAsTable = new HashSet<>();
+		final ObjectMapper mapper = JsonHelper.buildObjectMapper();
 		for (final Source source : sources.values()) {
-			if (source instanceof CopySource copy) {
+			final Source scanned = source.copy();
+			scanned.setKey(null);
+			if (scanned instanceof CopySource copy) {
 				if (copy.getFrom() != null) {
 					copied.add(copy.getFrom().trim());
 				}
-			} else {
-				source.copy().update(value -> collectReferences(value, readAsTable));
+				copy.setFrom("");
 			}
-			// executeForEachEntryOf lives on the base class, which the subclasses' update() does not visit: the
-			// strategy iterates the rows of the referenced source, a table consumer
-			collectReferences(source.getExecuteForEachEntryOf(), readAsTable);
-			// The variables of an awk source are not visited by its update() either: a source reference in them is
-			// exposed to the script as that source's table
-			if (source instanceof JawkSource jawk && jawk.getVariables() != null) {
-				jawk.getVariables().values().forEach(value -> collectReferences(value, readAsTable));
-			}
-			for (final Compute compute : source.getComputes()) {
-				compute.copy().update(value -> collectReferences(value, readAsTable));
-				if (compute instanceof Awk awk && awk.getVariables() != null) {
-					awk.getVariables().values().forEach(value -> collectReferences(value, readAsTable));
-				}
+			try {
+				collectReferences(mapper.writeValueAsString(scanned), readAsTable);
+			} catch (JsonProcessingException e) {
+				return Set.of();
 			}
 		}
 		if (connector.getMonitors() != null) {

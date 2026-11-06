@@ -139,6 +139,11 @@ public final class GoldenCheck {
 			}
 			// A golden of a deleted or renamed connector: removed in update mode, a failure otherwise (as the
 			// inventory check of the Maven test does)
+			// A connector whose file exists but did not load: its golden is kept, and that is a failure
+			for (final String unloaded : ComputeChainGoldenCorpus.unloadedGoldens(repository, connectorIds)) {
+				System.out.println(unloaded + ": connector file did not load, golden kept");
+				failing++;
+			}
 			for (final String orphan : ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds)) {
 				if (ComputeChainGoldenCorpus.isUpdateMode()) {
 					Files.delete(repository.getGoldenDirectory().resolve(orphan + ".json"));
