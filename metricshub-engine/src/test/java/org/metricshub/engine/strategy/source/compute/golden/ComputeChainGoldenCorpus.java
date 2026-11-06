@@ -133,7 +133,8 @@ public class ComputeChainGoldenCorpus {
 		EXACT,
 		/**
 		 * What the chain produces for its consumers: the table (trailing empty cells stripped from every row on both
-		 * sides, raw text ignored) when the generated chain ends in a table, the raw text only when it ends in text;
+		 * sides, but a generated row may never be shorter than its stored row; raw text ignored) when the generated
+		 * chain ends in a table, the raw text only when it ends in text;
 		 * error and time-out as they are. A changed compute list or source type is not a difference, and the
 		 * differences on the {@value #SEPARATOR_IN_CELL_SUFFIX} inputs are intended ones.
 		 */
@@ -770,11 +771,29 @@ public class ComputeChainGoldenCorpus {
 		final boolean sameText = stored.path("rawData").equals(generated.path("rawData"));
 		final boolean sameTable = stripTrailingEmptyCells(stored.path("table")).equals(
 			stripTrailingEmptyCells(generated.path("table"))
-		);
+		) && noShorterRow(stored.path("table"), generated.path("table"));
 		if (both) {
 			return sameText && sameTable;
 		}
 		return ending == ContentType.TEXT ? sameText : sameTable;
+	}
+
+	/**
+	 * Whether no generated row has fewer cells than its stored row. A trailing empty cell may be gained (an explicit
+	 * <code>toTable</code> keeps the one <code>commandLine</code> dropped) but never lost: a consumer indexing it
+	 * (<code>$n</code> of <code>executeForEachEntryOf</code>, a later <code>insertColumn</code>) would break.
+	 *
+	 * @param stored    The stored JSON table
+	 * @param generated The generated JSON table, with as many rows (checked by the caller's comparison)
+	 * @return <code>true</code> when every generated row is at least as long as its stored row
+	 */
+	static boolean noShorterRow(final JsonNode stored, final JsonNode generated) {
+		for (int i = 0; i < stored.size() && i < generated.size(); i++) {
+			if (generated.get(i).size() < stored.get(i).size()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**

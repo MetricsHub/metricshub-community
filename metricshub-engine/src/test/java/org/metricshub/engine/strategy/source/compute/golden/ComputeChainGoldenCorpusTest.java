@@ -381,13 +381,13 @@ class ComputeChainGoldenCorpusTest {
 				)
 			)
 		);
-		// Same for the consumers of a table: trailing empty cells, raw text, source type and chain all differ
+		// Same for the consumers of a table: trailing empty cells gained, raw text, source type and chain all differ
 		final ConnectorGolden generated = golden(
 			"commandLine",
 			List.of("toTable", "insertColumn"),
 			Map.of(
 				"table",
-				new Output(List.of(List.of("a", "b"), List.of()), "a;b;", null, null),
+				new Output(List.of(List.of("a", "b", "", ""), List.of("", "")), "a;b;", null, null),
 				"tableSeparatorInCell",
 				new Output(List.of(List.of("cell;with;sep")), null, null, null),
 				"text",
@@ -402,6 +402,19 @@ class ComputeChainGoldenCorpusTest {
 		// The exact mode sees every one of them: source type, chain, table, tableSeparatorInCell
 		assertEquals(4, ComputeChainGoldenCorpus.diff(file, generated, CompareMode.EXACT).size());
 		assertEquals(4, ComputeChainGoldenCorpus.diff(file, generated).size());
+
+		// A trailing empty cell lost is a difference: a consumer indexing it would break
+		final Output gained = generated.getSources().get("s").getOutputs().get("table");
+		generated.getSources()
+			.get("s")
+			.getOutputs()
+			.put("table", new Output(List.of(List.of("a", "b"), List.of("")), "a;b;", null, null));
+		assertTrue(
+			ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED)
+				.stream()
+				.anyMatch(d -> d.startsWith("s [table]"))
+		);
+		generated.getSources().get("s").getOutputs().put("table", gained);
 
 		// A chain ending in text: the raw text only
 		generated.getSources().get("s").setEnding(ContentType.TEXT);
