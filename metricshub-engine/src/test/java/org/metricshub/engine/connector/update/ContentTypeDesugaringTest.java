@@ -18,7 +18,9 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
+import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -29,6 +31,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -39,6 +42,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
+import org.metricshub.engine.connector.model.tool.ToolResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 
@@ -58,6 +62,27 @@ class ContentTypeDesugaringTest {
 			.put(
 				"enclosure",
 				StandardMonitorJob.standardBuilder().discovery(Discovery.builder().sources(sources).build()).build()
+			);
+		return connector;
+	}
+
+	/**
+	 * A connector holding two discovery sources, the first under {@link #KEY}, the second as source(2), and the
+	 * given mapping (null for none).
+	 */
+	private static Connector connectorWith(final Source first, final Source second, final Mapping mapping) {
+		first.setKey(KEY);
+		second.setKey("${source::monitors.enclosure.discovery.sources.source(2)}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("source(1)", first);
+		sources.put("source(2)", second);
+		final Connector connector = Connector.builder().build();
+		connector.getMonitors()
+			.put(
+				"enclosure",
+				StandardMonitorJob.standardBuilder()
+					.discovery(Discovery.builder().sources(sources).mapping(mapping).build())
+					.build()
 			);
 		return connector;
 	}
@@ -100,6 +125,130 @@ class ContentTypeDesugaringTest {
 
 		assertEquals(List.of("toTable"), types(source));
 		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
+	/**
+	 * A text source read only through copies (the copies run their own awk) keeps its text: no toTable is appended
+	 * to it and nothing is reported for it; the copy, mapped, gets the conversion.
+	 */
+	@Test
+	void textSourceReadThroughCopiesOnlyKeepsItsText() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source copy = CopySource.builder()
+			.from(KEY)
+			.computes(List.of(Awk.builder().type("awk").script("/^##CPU##$/ { print }").build()))
+			.build();
+		final Connector connector = connectorWith(snapshot, copy, null);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(snapshot));
+		assertEquals(List.of("awk", "toTable"), types(copy));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+		assertEquals(copy.getKey(), connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * A source copied and iterated by another source's executeForEachEntryOf is read as a table: it gets the
+	 * toTable appended.
+	 */
+	@Test
+	void textSourceCopiedAndIteratedGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source iterating = CopySource.builder()
+			.from("${source::monitors.enclosure.discovery.sources.other}")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		iterating.setExecuteForEachEntryOf(ExecuteForEachEntryOf.builder().source(KEY).build());
+		final Connector connector = connectorWith(snapshot, iterating, null);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED),
+			connector.getContentTypeReport()
+				.stream()
+				.filter(entry -> KEY.equals(entry.sourceKey()))
+				.map(ContentTypeReportEntry::kind)
+				.toList()
+		);
+	}
+
+	/**
+	 * A source copied and referenced by an awk source's variables is read as a table (the variable is exposed as
+	 * the source's table): it gets the toTable appended.
+	 */
+	@Test
+	void textSourceCopiedAndUsedAsAwkSourceVariableGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final JawkSource awkSource = JawkSource.builder().script("BEGIN { print length(rows) }").build();
+		awkSource.getVariables().put("rows", KEY);
+		final Source copy = CopySource.builder().from(KEY).build();
+		final Connector connector = connectorWith(snapshot, awkSource, null);
+		copy.setKey("${source::monitors.enclosure.discovery.sources.copy}");
+		((StandardMonitorJob) connector.getMonitors().get("enclosure")).getDiscovery().getSources().put("copy", copy);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED),
+			connector.getContentTypeReport()
+				.stream()
+				.filter(entry -> KEY.equals(entry.sourceKey()))
+				.map(ContentTypeReportEntry::kind)
+				.toList()
+		);
+	}
+
+	/**
+	 * A source copied and listed in the tables of a union is read as a table: the generic scan finds the reference
+	 * in any field, here one that the source's update() does not visit.
+	 */
+	@Test
+	void textSourceCopiedAndInATableUnionGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source union = TableUnionSource.builder().tables(new ArrayList<>(List.of(KEY))).build();
+		final Source copy = CopySource.builder().from(KEY).build();
+		final Connector connector = connectorWith(snapshot, union, null);
+		copy.setKey("${source::monitors.enclosure.discovery.sources.copy}");
+		((StandardMonitorJob) connector.getMonitors().get("enclosure")).getDiscovery().getSources().put("copy", copy);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+	}
+
+	/**
+	 * A source copied and mapped with the usual short reference is read as a table: the mapping's reference is
+	 * resolved within its task.
+	 */
+	@Test
+	void textSourceCopiedAndMappedByShortReferenceGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source copy = CopySource.builder()
+			.from("${source::source(1)}")
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		final Connector connector = connectorWith(snapshot, copy, Mapping.builder().source("${source::source(1)}").build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+	}
+
+	/**
+	 * The same source mapped as well is read as a table: it gets the toTable appended.
+	 */
+	@Test
+	void textSourceCopiedAndMappedGetsItsToTable() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final Source copy = CopySource.builder()
+			.from(KEY)
+			.computes(List.of(Awk.builder().type("awk").script("{ print }").build()))
+			.build();
+		final Connector connector = connectorWith(snapshot, copy, Mapping.builder().source(KEY).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(snapshot));
+		assertEquals(List.of("awk", "toTable"), types(copy));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
 	@Test
@@ -231,13 +380,8 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("keepColumns"), types(copyToTable));
 		assertEquals(List.of("toTable", "keepColumns"), types(copyOfAwk));
 		assertEquals(
-			List.of(
-				Kind.TABLE_COMPUTE_ON_TEXT_SOURCE,
-				Kind.TO_TEXT_INSERTED,
-				Kind.AWK_ON_TABLE,
-				Kind.TO_TABLE_APPENDED,
-				Kind.TO_TABLE_INSERTED
-			),
+			// The awk chain is read through its copy only: it keeps its text, no toTable is appended to it
+			List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED),
 			kinds(connector)
 		);
 	}
@@ -283,9 +427,10 @@ class ContentTypeDesugaringTest {
 
 		// The tenth copy is still the http text: the table compute is reported, nothing inserted
 		assertEquals(List.of("keepColumns"), types(last));
-		// The cycle ends where it closes: each copy sees the text its peer's awk produces
-		assertEquals(List.of("awk", "toTable"), types(loopA));
-		assertEquals(List.of("awk", "toTable"), types(loopB));
+		// The cycle ends where it closes: each copy sees the text its peer's awk produces, and each one is read
+		// through its peer's copy only, so neither gets a toTable appended
+		assertEquals(List.of("awk"), types(loopA));
+		assertEquals(List.of("awk"), types(loopB));
 		assertEquals(1, kinds(connector).stream().filter(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE::equals).count());
 	}
 
@@ -348,6 +493,25 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(Kind.STATIC_CSV), kinds(connector));
 
 		connector = connectorWith(StaticSource.builder().value("single").build());
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(connector.getContentTypeReport().isEmpty());
+
+		// The list forms are not reported, even with a ';' in a cell
+		connector = connectorWith(
+			TableJoinSource.builder()
+				.leftTable("a")
+				.rightTable("b")
+				.leftKeyColumn(1)
+				.rightKeyColumn(1)
+				.defaultRightLine(List.of("", "a;b"))
+				.build()
+		);
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(connector.getContentTypeReport().isEmpty());
+
+		connector = connectorWith(
+			StaticSource.builder().value(List.of("DDN", "Data Direct Networks", "Disk;Array")).build()
+		);
 		new ContentTypeDesugaring().update(connector);
 		assertTrue(connector.getContentTypeReport().isEmpty());
 	}
@@ -430,6 +594,88 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("toTable", "keepColumns"), types(source));
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 		assertEquals("${source::tools.list.sources.raw}", connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * A tool without columns returns the text of a result source that ends in text (a command output): no toTable is
+	 * appended, nothing is reported. With columns, the tool returns a table: the toTable is appended as before.
+	 */
+	@Test
+	void toolWithoutColumnsReturnsText() {
+		final Source ping = CommandLineSource.builder().commandLine("ping -c 4 host").build();
+		ping.setKey("${source::tools.ping.sources.ping}");
+		final Map<String, Source> pingSources = new LinkedHashMap<>();
+		pingSources.put("ping", ping);
+		final ConnectorTool pingTool = ConnectorTool.builder()
+			.sources(pingSources)
+			.result(new ToolResult("${source::ping}", null))
+			.build();
+
+		final Source processes = CommandLineSource.builder().commandLine("ps").build();
+		processes.setKey("${source::tools.processes.sources.ps}");
+		final Map<String, Source> processSources = new LinkedHashMap<>();
+		processSources.put("ps", processes);
+		final ConnectorTool processTool = ConnectorTool.builder()
+			.sources(processSources)
+			.result(new ToolResult("${source::ps}", List.of("pid", "name")))
+			.build();
+
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("ping", pingTool);
+		connector.getTools().put("processes", processTool);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(ping));
+		assertTrue(pingTool.isTextResult());
+		assertEquals(List.of("toTable"), types(processes));
+		assertTrue(!processTool.isTextResult());
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+		assertEquals("${source::tools.processes.sources.ps}", connector.getContentTypeReport().get(0).sourceKey());
+	}
+
+	/**
+	 * A tool without columns returning a union of two command outputs returns their joined text: the commands keep
+	 * their text, nothing is reported.
+	 */
+	@Test
+	void toolWithoutColumnsReturnsTheTextOfAUnionOfCommands() {
+		final Source link = CommandLineSource.builder().commandLine("ip link").build();
+		link.setKey("${source::tools.details.sources.link}");
+		final Source addr = CommandLineSource.builder().commandLine("ip addr").build();
+		addr.setKey("${source::tools.details.sources.addr}");
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of("${source::link}", "${source::addr}")))
+			.build();
+		union.setKey("${source::tools.details.sources.all}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("link", link);
+		sources.put("addr", addr);
+		sources.put("all", union);
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(sources)
+			.result(new ToolResult("${source::all}", null))
+			.build();
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("details", tool);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(link));
+		assertEquals(List.of(), types(addr));
+		assertTrue(tool.isTextResult());
+		assertEquals(List.of(), kinds(connector));
+
+		// A compute-free copy of a command output is a text member too: it hands on the command's text
+		final Source copy = CopySource.builder().from("${source::link}").build();
+		copy.setKey("${source::tools.details.sources.copy}");
+		sources.put("copy", copy);
+		((TableUnionSource) union).setTables(new ArrayList<>(List.of("${source::copy}", "${source::addr}")));
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(tool.isTextResult());
+
+		// The same union with a table compute of its own returns that table
+		union.setComputes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())));
+		new ContentTypeDesugaring().update(connector);
+		assertTrue(!tool.isTextResult());
 	}
 
 	/**

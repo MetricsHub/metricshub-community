@@ -460,11 +460,10 @@ public class ComputeProcessor implements IComputeProcessor {
 					(awkResult == null ? "null" : "empty")
 				);
 				sourceTable.setTable(Collections.emptyList());
-				if (tableInput) {
-					// The structured input was consumed: the raw text of the source is not this script's output
-					sourceTable.setRawData(EMPTY);
-					sourceTable.setContentType(ContentType.TEXT);
-				}
+				// The script's output is empty text: the input of the script is not its result, so no stale raw text
+				// is left for a later consumer (an explicit toTable would turn the input back into rows)
+				sourceTable.setRawData(EMPTY);
+				sourceTable.setContentType(ContentType.TEXT);
 				return;
 			}
 
@@ -1955,7 +1954,9 @@ public class ComputeProcessor implements IComputeProcessor {
 	/**
 	 * Inserts a column at the given 1-based position in every row. The value is a literal where <code>$n</code> is
 	 * replaced by the content of column <em>n</em> of the row (an absent column gives an empty string). A row
-	 * shorter than <em>column - 1</em> is left unchanged.
+	 * shorter than <em>column - 1</em> is padded with empty cells first, so the new cell always lands at
+	 * <em>column</em> (an awk whose last printed field is empty gives such rows). A row that would need more than
+	 * {@value #MAX_RANGE_PADDING} empty cells is left unchanged (a mistyped column).
 	 *
 	 * @param insertColumn The {@link InsertColumn} compute
 	 */
@@ -1979,18 +1980,19 @@ public class ComputeProcessor implements IComputeProcessor {
 		final int columnIndex = column - 1;
 		// Fresh rows: a source may hand out fixed-size rows (Arrays.asList)
 		final List<List<String>> table = new ArrayList<>();
+		boolean tooFar = false;
 		for (final List<String> original : sourceTable.getTable()) {
 			final List<String> row = new ArrayList<>(original);
 			table.add(row);
-			if (columnIndex > row.size()) {
-				log.warn(
-					"Hostname {} - Cannot insert column {} in the {}-cell row {}, the row remains unchanged.",
-					hostname,
-					column,
-					row.size(),
-					row
-				);
+			// More than MAX_RANGE_PADDING missing cells is a mistake in the connector (a mistyped column): padding up to
+			// it would exhaust the memory, so the row is left unchanged
+			if (columnIndex - row.size() > MAX_RANGE_PADDING) {
+				tooFar = true;
 				continue;
+			}
+			// A short row (its trailing empty cells dropped by a split) gets empty cells up to the new column
+			while (row.size() < columnIndex) {
+				row.add(EMPTY);
 			}
 			final Matcher matcher = COLUMN_REFERENCE_PATTERN.matcher(value);
 			final StringBuilder resolved = new StringBuilder();
@@ -2007,6 +2009,15 @@ public class ComputeProcessor implements IComputeProcessor {
 			}
 			matcher.appendTail(resolved);
 			row.add(columnIndex, resolved.toString());
+		}
+		if (tooFar) {
+			log.warn(
+				"Hostname {} - Compute Operation (InsertColumn) {}: column {} is more than {} cells past some rows, which remain unchanged.",
+				hostname,
+				insertColumn,
+				column,
+				MAX_RANGE_PADDING
+			);
 		}
 		sourceTable.setTable(table);
 		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never

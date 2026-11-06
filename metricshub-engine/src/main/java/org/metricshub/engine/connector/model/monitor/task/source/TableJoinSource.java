@@ -33,12 +33,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.PositiveIntegerDeserializer;
+import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -83,9 +85,17 @@ public class TableJoinSource extends Source {
 	private Integer rightKeyColumn;
 
 	/**
-	 * The default line for right table entries when there is no match.
+	 * The default line for right table entries when there is no match, in its legacy string form: split on
+	 * <code>;</code> when the join runs. Null when the line is written as a list (see {@link #defaultRightLineCells}).
 	 */
 	private String defaultRightLine;
+
+	/**
+	 * The cells of the default line for right table entries when there is no match, when the line is written as a
+	 * YAML list: exactly these cells, <code>[ "", "" ]</code> being two empty cells. Null in the string form.
+	 */
+	private List<String> defaultRightLineCells;
+
 	/**
 	 * The type of key used for the join.
 	 */
@@ -101,7 +111,8 @@ public class TableJoinSource extends Source {
 	 * @param rightTable           The name of the right table to join.
 	 * @param leftKeyColumn        The column index from the left table to use as the key for the join.
 	 * @param rightKeyColumn       The column index from the right table to use as the key for the join.
-	 * @param defaultRightLine     The default line for right table entries when there is no match.
+	 * @param defaultRightLine     The default line for right table entries when there is no match: a {@link String}
+	 *                             split on <code>;</code> when the join runs (legacy form) or a {@link List} of cells.
 	 * @param keyType              The type of key used for the join.
 	 * @param key                  The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
@@ -116,7 +127,7 @@ public class TableJoinSource extends Source {
 		@JsonProperty(value = "rightTable", required = true) String rightTable,
 		@JsonProperty(value = "leftKeyColumn", required = true) Integer leftKeyColumn,
 		@JsonProperty(value = "rightKeyColumn", required = true) Integer rightKeyColumn,
-		@JsonProperty("defaultRightLine") String defaultRightLine,
+		@JsonProperty("defaultRightLine") @JsonDeserialize(using = StringOrListDeserializer.class) Object defaultRightLine,
 		@JsonProperty("keyType") String keyType,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
@@ -126,7 +137,13 @@ public class TableJoinSource extends Source {
 		this.rightTable = rightTable;
 		this.leftKeyColumn = leftKeyColumn;
 		this.rightKeyColumn = rightKeyColumn;
-		this.defaultRightLine = defaultRightLine;
+		if (defaultRightLine instanceof List<?> cells) {
+			this.defaultRightLineCells = cells.stream()
+				.map(String.class::cast)
+				.collect(Collectors.toCollection(ArrayList::new));
+		} else {
+			this.defaultRightLine = (String) defaultRightLine;
+		}
 		this.keyType = keyType;
 	}
 
@@ -142,7 +159,7 @@ public class TableJoinSource extends Source {
 			.rightTable(rightTable)
 			.leftKeyColumn(leftKeyColumn)
 			.rightKeyColumn(rightKeyColumn)
-			.defaultRightLine(defaultRightLine)
+			.defaultRightLine(defaultRightLineCells != null ? defaultRightLineCells : defaultRightLine)
 			.keyType(keyType)
 			.build();
 	}
@@ -153,6 +170,9 @@ public class TableJoinSource extends Source {
 		rightTable = updater.apply(rightTable);
 		keyType = updater.apply(keyType);
 		defaultRightLine = updater.apply(defaultRightLine);
+		if (defaultRightLineCells != null) {
+			defaultRightLineCells.replaceAll(updater);
+		}
 	}
 
 	@Override
@@ -166,6 +186,7 @@ public class TableJoinSource extends Source {
 		addNonNull(stringJoiner, "- leftKeyColumn=", leftKeyColumn);
 		addNonNull(stringJoiner, "- rightKeyColumn=", rightKeyColumn);
 		addNonNull(stringJoiner, "- defaultRightLine=", defaultRightLine);
+		addNonNull(stringJoiner, "- defaultRightLine=", defaultRightLineCells);
 		addNonNull(stringJoiner, "- keyType=", keyType);
 
 		return stringJoiner.toString();

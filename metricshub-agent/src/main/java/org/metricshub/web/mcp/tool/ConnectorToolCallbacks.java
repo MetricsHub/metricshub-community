@@ -66,6 +66,13 @@ public final class ConnectorToolCallbacks {
 	public record ToolTable(List<String> columns, List<List<String>> rows) {}
 
 	/**
+	 * What a tool returns when its result is text (a command output): the text as it is, for the LLM to read.
+	 *
+	 * @param text the text of the result source
+	 */
+	public record ToolText(String text) {}
+
+	/**
 	 * @param agentContext the agent context to build the tools from, the one every callback stays on
 	 * @return the tools of every connector in the store and in the resources' stores, destructive ones included
 	 */
@@ -190,6 +197,10 @@ public final class ConnectorToolCallbacks {
 			.build();
 		strategy.run();
 
+		if (tool.isTextResult()) {
+			final String text = strategy.getResult().getRawData();
+			return new ToolText(text == null ? "" : text.replace("\r\n", "\n"));
+		}
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
 	}
 

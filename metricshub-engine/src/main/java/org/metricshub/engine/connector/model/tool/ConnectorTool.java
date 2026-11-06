@@ -23,6 +23,7 @@ package org.metricshub.engine.connector.model.tool;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.LinkedHashMap;
@@ -84,6 +85,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 	 * The source whose table the tool returns.
 	 */
 	private ToolResult result;
+
+	/**
+	 * Whether the tool returns the text of its result source rather than its table: set when the connector is parsed,
+	 * for a tool that declares no columns and whose result source ends in text (a command output, a free-form awk).
+	 * Never set from YAML.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean textResult;
 
 	/**
 	 * Constructs a tool with its sources and description.

@@ -24,18 +24,23 @@ package org.metricshub.engine.connector.update;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
@@ -47,6 +52,7 @@ import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
@@ -56,6 +62,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractConcat;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -63,6 +70,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
 
 /**
  * Makes the content-type conversions of every compute chain explicit, and reports what it did and the legacy idioms
@@ -77,7 +85,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * the <code>awk</code> compute, which all build their table as well) gets an implicit <code>toTable</code>
  * before it (a no-op on the table those producers already built);</li>
  * <li>a chain ending in text from a legacy dual producer gets an implicit <code>toTable</code> appended, so that
- * the mapping reads a table;</li>
+ * the mapping reads a table, unless the source is read as text only (referenced by <code>copy</code> sources and
+ * by nothing else, see {@link #textOnlySources(Connector, Map)});</li>
  * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>)
  * finds an empty table today and keeps doing so: nothing is inserted, the case is reported;</li>
  * <li>a text compute reading the raw text only (<code>json2Csv</code>, <code>xml2Csv</code>) fed by a table
@@ -85,12 +94,12 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Transla
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
- * The implicit computes are flagged ({@link ToText#isImplicit()}, {@link ToTable#isImplicit()}) and leave the
+ * The implicit computes are flagged ({@code ToText#isImplicit()}, {@code ToTable#isImplicit()}) and leave the
  * results of the existing connectors byte for byte identical. Every inserted compute, the executable toTable
- * included, is flagged as generated ({@link ToTable#isGenerated()}): a later pass removes them first, so the
+ * included, is flagged as generated ({@code ToTable#isGenerated()}): a later pass removes them first, so the
  * chain and the report are rebuilt from what is written.
  * <p>
- * The findings are stored on the connector ({@link Connector#getContentTypeReport()}).
+ * The findings are stored on the connector ({@code Connector#getContentTypeReport()}).
  */
 public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
@@ -103,6 +112,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * A <code>printf</code> call in an AWK script, looked for once the comments and the string literals are gone.
 	 */
 	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
+
+	/**
+	 * A short source reference, <code>${source::name}</code>, with no dot: a source of the same tool or job.
+	 */
+	private static final Pattern SHORT_SOURCE_REFERENCE = Pattern.compile("^\\$\\{source::([^.}]+)\\}$");
 
 	/**
 	 * The AWK keywords an expression, so a regex literal, can follow.
@@ -141,8 +155,245 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		// Every source by key, to resolve what a copy source copies
 		final Map<String, Source> sources = new LinkedHashMap<>();
 		forEachSource(connector, source -> sources.put(source.getKey(), source));
-		sources.values().forEach(source -> desugar(connector, source, sources, report));
+		final Set<String> textOnly = textOnlySources(connector, sources);
+		sources.values().forEach(source -> desugar(connector, source, sources, textOnly, report));
 		connector.setContentTypeReport(report);
+		// A tool without columns whose result source ends in text returns that text as it is
+		if (connector.getTools() != null) {
+			connector.getTools().forEach((name, tool) -> {
+				final Source result = toolResultSource(tool);
+				tool.setTextResult(
+					!hasColumns(tool) &&
+						result != null &&
+						(endsInText(result, sources) || textUnionMembers(tool, sources) != null)
+				);
+			});
+		}
+	}
+
+	/**
+	 * The source a tool returns: its result reference, short (<code>${source::name}</code>, a source of the tool) or
+	 * full.
+	 *
+	 * @param tool The tool
+	 * @return the source, null when the reference resolves to none of the tool's sources
+	 */
+	static Source toolResultSource(final ConnectorTool tool) {
+		if (tool.getResult() == null || tool.getResult().source() == null) {
+			return null;
+		}
+		return toolSource(tool, tool.getResult().source());
+	}
+
+	/**
+	 * A source of the tool, from a short (<code>${source::name}</code>) or full reference.
+	 */
+	private static Source toolSource(final ConnectorTool tool, final String ref) {
+		if (tool.getSources() == null || ref == null) {
+			return null;
+		}
+		final String reference = ref.trim();
+		for (final Map.Entry<String, Source> entry : tool.getSources().entrySet()) {
+			if (reference.equals("${source::" + entry.getKey() + "}") || reference.equals(entry.getValue().getKey())) {
+				return entry.getValue();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The members of a tool's result when it declares no columns and returns a tableUnion of sources that all end in
+	 * text, as written (command outputs glued together): the union joins their raw texts, which the tool returns.
+	 *
+	 * @param tool The tool
+	 * @return the member sources, null when the result is no such union
+	 */
+	static List<Source> textUnionMembers(final ConnectorTool tool, final Map<String, Source> sources) {
+		if (hasColumns(tool) || !(toolResultSource(tool) instanceof TableUnionSource union) || union.getTables() == null) {
+			return null;
+		}
+		// A union with computes of its own returns what they produce: a table, or text through its own ending
+		if (union.getComputes() != null && union.getComputes().stream().anyMatch(compute -> !isGenerated(compute))) {
+			return null;
+		}
+		final List<Source> members = new ArrayList<>();
+		for (final String table : union.getTables()) {
+			final Source member = toolSource(tool, table);
+			if (member == null || !endsInTextAsWritten(member, sources)) {
+				return null;
+			}
+			members.add(member);
+		}
+		return members.isEmpty() ? null : members;
+	}
+
+	/**
+	 * Whether the source ends in text as written: its last written compute writes text, or it has none and produces
+	 * text itself (a copy: what its origin's chain produces).
+	 */
+	private static boolean endsInTextAsWritten(final Source source, final Map<String, Source> sources) {
+		final List<Compute> written = source.getComputes() == null
+			? List.of()
+			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
+		if (!written.isEmpty()) {
+			return written.get(written.size() - 1).getOutputContentType() == ContentType.TEXT;
+		}
+		// A copy hands on what its origin's chain produces
+		return source instanceof CopySource copy
+			? effectiveOutput(copy, sources, new HashSet<>()).type() == ContentType.TEXT
+			: source.getOutputContentType() == ContentType.TEXT;
+	}
+
+	private static boolean hasColumns(final ConnectorTool tool) {
+		return tool.getResult() != null && tool.getResult().columns() != null && !tool.getResult().columns().isEmpty();
+	}
+
+	/**
+	 * Whether the source, as desugared, ends in text: its last compute writes text, or it has no compute and produces
+	 * text (a copy: what its origin's chain produces).
+	 */
+	private static boolean endsInText(final Source source, final Map<String, Source> sources) {
+		if (source.getComputes() != null && !source.getComputes().isEmpty()) {
+			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
+		}
+		final State state = source instanceof CopySource copy
+			? effectiveOutput(copy, sources, new HashSet<>())
+			: startOf(source);
+		return state.type() == ContentType.TEXT;
+	}
+
+	/**
+	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources or
+	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text: an explicit <code>toTable</code> would
+	 * re-serialize every line with a trailing <code>;</code>, which the <code>awk</code> scripts reading the copies
+	 * do not expect, and the copies get their own conversion where they need one.
+	 * <p>
+	 * "Nowhere else" is checked on the JSON form of every source (its own key and a copy's <code>from</code> left
+	 * out), computes included, plus the mappings and the tool results: a <code>${source::...}</code> reference in any
+	 * field (a variable, <code>executeForEachEntryOf</code>, the tables of a union, an internal database query...)
+	 * counts as a table consumer. When a source cannot be serialized, no source is text only: the legacy behavior.
+	 *
+	 * @param connector The connector
+	 * @param sources   Every source by key
+	 * @return the keys of the sources read as text only
+	 */
+	static Set<String> textOnlySources(final Connector connector, final Map<String, Source> sources) {
+		final Set<String> copied = new HashSet<>();
+		final Set<String> readAsTable = new HashSet<>();
+		final ObjectMapper mapper = JsonHelper.buildObjectMapper();
+		// A tool without columns returning a union of text sources returns their joined text: the members are read as
+		// text, and the union's references to them are no table read
+		final Set<String> textUnions = new HashSet<>();
+		if (connector.getTools() != null) {
+			connector.getTools().values().forEach(tool -> {
+				final List<Source> members = textUnionMembers(tool, sources);
+				if (members != null) {
+					textUnions.add(toolResultSource(tool).getKey());
+					members.forEach(member -> copied.add(member.getKey()));
+				}
+			});
+		}
+		for (final Source source : sources.values()) {
+			if (textUnions.contains(source.getKey())) {
+				continue;
+			}
+			final Source scanned = source.copy();
+			scanned.setKey(null);
+			if (scanned instanceof CopySource copy) {
+				if (copy.getFrom() != null) {
+					copied.add(resolveReference(copy.getFrom(), source.getKey(), sources));
+				}
+				copy.setFrom("");
+			}
+			try {
+				final Set<String> references = new HashSet<>();
+				collectReferences(mapper.writeValueAsString(scanned), references);
+				references.forEach(reference -> readAsTable.add(resolveReference(reference, source.getKey(), sources)));
+			} catch (JsonProcessingException e) {
+				return Set.of();
+			}
+		}
+		if (connector.getMonitors() != null) {
+			for (final MonitorJob job : connector.getMonitors().values()) {
+				if (job instanceof StandardMonitorJob standard) {
+					addMappingSource(standard.getDiscovery(), readAsTable, sources);
+					addMappingSource(standard.getCollect(), readAsTable, sources);
+				} else if (job instanceof SimpleMonitorJob simple) {
+					addMappingSource(simple.getSimple(), readAsTable, sources);
+				}
+			}
+		}
+		// A tool returns its result source's text when it declares no columns (that source is read as text), its
+		// table otherwise
+		if (connector.getTools() != null) {
+			connector.getTools().values().forEach(tool -> {
+				final Source result = toolResultSource(tool);
+				if (result != null) {
+					(hasColumns(tool) ? readAsTable : copied).add(result.getKey());
+				}
+			});
+		}
+		copied.removeAll(readAsTable);
+		return copied;
+	}
+
+	private static void addMappingSource(
+		final AbstractMonitorTask task,
+		final Set<String> readAsTable,
+		final Map<String, Source> sources
+	) {
+		if (task == null || task.getMapping() == null) {
+			return;
+		}
+		// A short reference designates a source of the same task: any of them gives the context
+		final String context = task.getSources() == null
+			? null
+			: task.getSources().values().stream().map(Source::getKey).filter(Objects::nonNull).findFirst().orElse(null);
+		final Set<String> references = new HashSet<>();
+		collectReferences(task.getMapping().getSource(), references);
+		references.forEach(reference -> readAsTable.add(resolveReference(reference, context, sources)));
+	}
+
+	/**
+	 * Adds every <code>${source::...}</code> reference of the value to the set, and returns the value unchanged.
+	 */
+	/**
+	 * The full key a source reference designates. A short reference (<code>${source::name}</code>, as written inside a
+	 * tool or a job) designates the source of that name next to the referencing source, as at run time.
+	 *
+	 * @param reference  The reference, short or full
+	 * @param contextKey The key of the referencing source, null when unknown
+	 * @param sources    Every source by key
+	 * @return the full key of the designated source, or the reference itself when it designates none
+	 */
+	public static String resolveReference(
+		final String reference,
+		final String contextKey,
+		final Map<String, Source> sources
+	) {
+		final String trimmed = reference.trim();
+		if (sources.containsKey(trimmed) || contextKey == null) {
+			return trimmed;
+		}
+		final Matcher matcher = SHORT_SOURCE_REFERENCE.matcher(trimmed);
+		final int dot = contextKey.lastIndexOf('.');
+		if (matcher.matches() && dot > 0) {
+			final String sibling = contextKey.substring(0, dot + 1) + matcher.group(1) + "}";
+			if (sources.containsKey(sibling)) {
+				return sibling;
+			}
+		}
+		return trimmed;
+	}
+
+	private static String collectReferences(final String value, final Set<String> references) {
+		if (value != null) {
+			final Matcher matcher = SOURCE_REF_PATTERN.matcher(value);
+			while (matcher.find()) {
+				references.add(matcher.group().trim());
+			}
+		}
+		return value;
 	}
 
 	/**
@@ -156,6 +407,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Connector connector,
 		final Source source,
 		final Map<String, Source> sources,
+		final Set<String> textOnly,
 		final List<ContentTypeReportEntry> report
 	) {
 		final String key = source.getKey();
@@ -238,7 +490,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 		}
 
-		if (current == ContentType.TEXT && producer == TextProducer.LEGACY_DUAL) {
+		if (current == ContentType.TEXT && producer == TextProducer.LEGACY_DUAL && !textOnly.contains(key)) {
 			desugared.add(ToTable.implicit());
 			report.add(
 				new ContentTypeReportEntry(
@@ -448,7 +700,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources,
 		final Set<Source> visited
 	) {
-		final Source origin = copy.getFrom() == null ? null : sources.get(copy.getFrom().trim());
+		final Source origin = copy.getFrom() == null
+			? null
+			: sources.get(resolveReference(copy.getFrom(), copy.getKey(), sources));
 		if (origin == null || !visited.add(copy)) {
 			return startOf(copy);
 		}

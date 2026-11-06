@@ -189,20 +189,21 @@ class LegacySourceTableBehaviorTest {
 	}
 
 	/**
-	 * When the script prints nothing, the table is emptied but the raw text is left as it was: a later consumer
-	 * reading the raw text first (another <code>awk</code>, <code>json2Csv</code>) sees the input of this compute.
+	 * When the script prints nothing, the table and the raw text are both empty (since stage 2 of #1508: the engine
+	 * used to leave the raw text as it was, and an explicit <code>toTable</code> would turn the input of the script
+	 * back into rows). A later consumer reading the raw text first (another <code>awk</code>) sees nothing.
 	 */
 	@Test
-	void awkComputeEmptyResultKeepsStaleRawText() {
+	void awkComputeEmptyResultLeavesNoRawText() {
 		final SourceTable sourceTable = SourceTable.builder().rawData("stale").table(table("a|b")).build();
 		computeProcessor(sourceTable).process(Awk.builder().script("BEGIN { }").build());
 		assertEquals(List.of(), sourceTable.getTable());
-		assertEquals("stale", sourceTable.getRawData());
+		assertEquals("", sourceTable.getRawData());
 
-		// A second awk compute runs on the stale text
+		// A second awk compute has nothing to read
 		computeProcessor(sourceTable).process(Awk.builder().script("{ print }").build());
-		assertEquals("stale;", sourceTable.getRawData());
-		assertEquals(table("stale"), sourceTable.getTable());
+		assertEquals("", sourceTable.getRawData());
+		assertEquals(List.of(), sourceTable.getTable());
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------

@@ -43,6 +43,17 @@ tools:
     result:
       source: ${source::owned}
       columns: [ name, value ]
+  readNotes:
+    description: Reads the notes, a text that is no table.
+    sources:
+      notes:
+        type: static
+        value: unused
+        computes:
+        - type: awk
+          script: 'BEGIN { print "first note"; print "second, then a semicolon; here" }'
+    result:
+      source: ${source::notes}
   reboot:
     description: Pretends to reboot.
     destructive: true
