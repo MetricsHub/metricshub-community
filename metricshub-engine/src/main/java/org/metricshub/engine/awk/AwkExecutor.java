@@ -256,7 +256,8 @@ public class AwkExecutor {
 
 	/**
 	 * Execute the given <code>awkScript</code> on the <code>awkInput</code> text and collect its output as a
-	 * table: each <code>print</code> is one row holding its values, each <code>printf</code> one single-cell row.
+	 * table: each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into
+	* rows on <code>ORS</code> and into cells on <code>OFS</code>.
 	 *
 	 * @param awkScript    The AWK script to process and interpret
 	 * @param awkInput     The input to modify via the AWK script
@@ -278,7 +279,8 @@ public class AwkExecutor {
 
 	/**
 	 * Execute the given <code>awkScript</code> on structured records (a table) and collect its output as a table:
-	 * each <code>print</code> is one row holding its values, each <code>printf</code> one single-cell row.
+	 * each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into rows on
+	* <code>ORS</code> and into cells on <code>OFS</code>.
 	 *
 	 * @param awkScript    The AWK script to process and interpret
 	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>

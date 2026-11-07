@@ -44,7 +44,7 @@ public class TableSink extends AwkSink {
 	/** Text written by <code>printf</code> since the last <code>ORS</code>. */
 	private final StringBuilder pending = new StringBuilder();
 
-	/** The <code>OFS</code> in force when the pending text was written. */
+	/** The <code>OFS</code> in force when the pending text began. */
 	private String pendingOfs = " ";
 
 	@Override
@@ -57,10 +57,18 @@ public class TableSink extends AwkSink {
 		}
 		if (pending.length() == 0) {
 			rows.add(row);
-		} else {
-			// The record started by a printf continues with this print, as it would in a text stream
-			append(String.join(ofs, row) + ors, ofs, ors);
+			return;
 		}
+		// The record started by a printf ends with this print: its text completes the last pending cell, the other
+		// values stay cells of their own, whatever they contain
+		final List<String> cells = split(pending.toString(), pendingOfs);
+		pending.setLength(0);
+		if (!row.isEmpty()) {
+			final int last = cells.size() - 1;
+			cells.set(last, cells.get(last) + row.get(0));
+			cells.addAll(row.subList(1, row.size()));
+		}
+		rows.add(cells);
 	}
 
 	@Override
@@ -87,16 +95,26 @@ public class TableSink extends AwkSink {
 	}
 
 	private void append(final String text, final String ofs, final String ors) {
-		pending.append(text);
-		pendingOfs = ofs;
+		if (pending.length() == 0) {
+			pendingOfs = ofs;
+		}
 		if (ors == null || ors.isEmpty()) {
+			pending.append(text);
 			return;
 		}
+		// The text already scanned holds no ORS: resume just before its end, where an ORS may straddle the two
+		int from = Math.max(0, pending.length() - ors.length() + 1);
+		pending.append(text);
+		int start = 0;
 		int end;
-		while ((end = pending.indexOf(ors)) >= 0) {
-			rows.add(split(pending.substring(0, end), ofs));
-			pending.delete(0, end + ors.length());
+		while ((end = pending.indexOf(ors, from)) >= 0) {
+			rows.add(split(pending.substring(start, end), pendingOfs));
+			start = end + ors.length();
+			from = start;
+			// Whatever follows began in this append
+			pendingOfs = ofs;
 		}
+		pending.delete(0, start);
 	}
 
 	private static List<String> split(final String record, final String ofs) {

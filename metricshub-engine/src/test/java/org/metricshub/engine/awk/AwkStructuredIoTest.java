@@ -111,6 +111,39 @@ class AwkStructuredIoTest {
 			)
 		);
 
+		// The print values stay cells of their own: the OFS or ORS they contain is not split
+		assertEquals(
+			List.of(List.of("x", "y;z", "1\n2")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \";\"; printf \"x;\"; print \"y;z\", \"1\\n2\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// The OFS in force when the pending text began is the one it is split on
+		assertEquals(
+			List.of(List.of("a", "b"), List.of("c", "d"), List.of("e", "f")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \",\"; printf \"a,b\"; OFS = \";\"; printf \"\"; printf \"\\nc;d\\ne\"; printf \";f\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// A multi-character ORS straddling two printf calls, and a long record built piecewise
+		assertEquals(
+			List.of(List.of("1"), List.of("2"), List.of("x".repeat(5000))),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { ORS = \"\\r\\n\"; printf \"1\\r\"; printf \"\\n2\"; printf \"\\r\\n\"; for (i = 0; i < 5000; i++) printf \"x\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
 		// Empty OFS or ORS: nothing to split on
 		assertEquals(
 			List.of(List.of("a b\nc")),
