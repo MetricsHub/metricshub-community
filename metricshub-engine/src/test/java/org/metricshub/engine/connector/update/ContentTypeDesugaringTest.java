@@ -200,13 +200,16 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
-	 * A source copied and listed in the tables of a union is read as a table: the generic scan finds the reference
-	 * in any field, here one that the source's update() does not visit.
+	 * A source copied and listed in the tables of a union that is no text union (a member does not resolve) is read
+	 * as a table: the generic scan finds the reference in any field, here one that the source's update() does not
+	 * visit.
 	 */
 	@Test
 	void textSourceCopiedAndInATableUnionGetsItsToTable() {
 		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
-		final Source union = TableUnionSource.builder().tables(new ArrayList<>(List.of(KEY))).build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(KEY, "${source::monitors.other.discovery.sources.source(9)}")))
+			.build();
 		final Source copy = CopySource.builder().from(KEY).build();
 		final Connector connector = connectorWith(snapshot, union, null);
 		copy.setKey("${source::monitors.enclosure.discovery.sources.copy}");
@@ -854,5 +857,156 @@ class ContentTypeDesugaringTest {
 		assertFalse(ToTable.builder().type("toTable").build().isImplicit());
 		assertTrue(ToTable.implicit().copy().isImplicit());
 		assertTrue(ToText.implicit().copy().isImplicit());
+	}
+
+	/**
+	 * A connector holding the given discovery sources, keyed by name, and the given mapping (null for none).
+	 */
+	private static Connector connectorWithSources(final Map<String, Source> sources, final Mapping mapping) {
+		sources.forEach((name, source) -> source.setKey("${source::monitors.enclosure.discovery.sources." + name + "}"));
+		final Connector connector = Connector.builder().build();
+		connector.getMonitors()
+			.put(
+				"enclosure",
+				StandardMonitorJob.standardBuilder()
+					.discovery(Discovery.builder().sources(sources).mapping(mapping).build())
+					.build()
+			);
+		return connector;
+	}
+
+	private static String ref(final String name) {
+		return "${source::monitors.enclosure.discovery.sources." + name + "}";
+	}
+
+	private static Awk awk() {
+		return Awk.builder().type("awk").script("{ print $NF }").build();
+	}
+
+	private static ToTable toTable() {
+		return ToTable.builder().type("toTable").build();
+	}
+
+	/**
+	 * Command outputs glued by a union and parsed by an awk through a copy: the union is text, its members are read as
+	 * text, nothing is inserted.
+	 */
+	@Test
+	void textUnionOfCommandsReadByAwkThroughACopyNeedsNoConversion() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source union = TableUnionSource.builder().tables(new ArrayList<>(List.of(ref("show"), ref("env")))).build();
+		final Source copy = CopySource.builder()
+			.from(ref("union"))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("union", union);
+		sources.put("copy", copy);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("copy")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of(), types(show));
+		assertEquals(List.of(), types(env));
+		assertEquals(List.of("awk", "toTable"), types(copy));
+	}
+
+	/**
+	 * A text union with an awk of its own, and a union of a text union: nothing is inserted.
+	 */
+	@Test
+	void textUnionWithItsOwnAwkAndNestedTextUnionsNeedNoConversion() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source inner = TableUnionSource.builder().tables(new ArrayList<>(List.of(ref("show")))).build();
+		final Source outer = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("inner"), ref("env"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("inner", inner);
+		sources.put("outer", outer);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("outer")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of("awk", "toTable"), types(outer));
+	}
+
+	/**
+	 * A union that reads a copy of its own result (the previous run's rows): the copy is resolved by its origin's
+	 * last written compute, the resolution ends and the union is text.
+	 */
+	@Test
+	void textUnionReadingACopyOfItselfEnds() {
+		final Source show = CommandLineSource.builder().commandLine("getall").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("previous"))))
+			.computes(new ArrayList<>(List.of(awk())))
+			.build();
+		final Source previous = CopySource.builder().from(ref("union")).build();
+		final Source rows = CopySource.builder().from(ref("union")).computes(new ArrayList<>(List.of(toTable()))).build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("union", union);
+		sources.put("previous", previous);
+		sources.put("rows", rows);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("rows")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of("awk"), types(union));
+	}
+
+	/**
+	 * A union mixing a command output and a table stays a table union: the command gets its toTable, the awk on the
+	 * union its toText, as before.
+	 */
+	@Test
+	void mixedUnionStaysATableUnion() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source snmp = SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("snmp"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("snmp", snmp);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE), kinds(connector));
+		assertEquals(List.of("toTable"), types(show));
+		assertEquals(List.of("toText", "awk", "toTable"), types(union));
+	}
+
+	/**
+	 * A text union read by a table compute gets the implicit toTable before it, like any legacy text producer.
+	 */
+	@Test
+	void textUnionReadByATableComputeGetsItsToTable() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("env"))))
+			.computes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+		assertEquals(List.of("toTable", "keepColumns"), types(union));
+		assertEquals(List.of(), types(show));
 	}
 }

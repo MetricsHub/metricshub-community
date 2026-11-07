@@ -232,16 +232,62 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text itself (a copy: what its origin's chain produces).
 	 */
 	private static boolean endsInTextAsWritten(final Source source, final Map<String, Source> sources) {
+		return endsInTextAsWritten(source, sources, new HashSet<>());
+	}
+
+	private static boolean endsInTextAsWritten(
+		final Source source,
+		final Map<String, Source> sources,
+		final Set<Source> visited
+	) {
 		final List<Compute> written = source.getComputes() == null
 			? List.of()
 			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 		if (!written.isEmpty()) {
 			return written.get(written.size() - 1).getOutputContentType() == ContentType.TEXT;
 		}
-		// A copy hands on what its origin's chain produces
-		return source instanceof CopySource copy
-			? effectiveOutput(copy, sources, new HashSet<>()).type() == ContentType.TEXT
-			: source.getOutputContentType() == ContentType.TEXT;
+		// A copy hands on what its origin's chain produces, a union of text sources joins their texts
+		if (source instanceof CopySource copy) {
+			return effectiveOutput(copy, sources, visited).type() == ContentType.TEXT;
+		}
+		if (source instanceof TableUnionSource union) {
+			return isTextUnion(union, sources, visited);
+		}
+		return source.getOutputContentType() == ContentType.TEXT;
+	}
+
+	/**
+	 * Whether the union joins text: every member ends in text as written (a text producer without computes, a source
+	 * whose last written compute writes text, a copy of such a chain, another text union). The union's raw text is
+	 * then its members' texts joined with a line feed, which is what an <code>awk</code> on the union reads: no
+	 * conversion can be written in between without changing those bytes. An unresolved member or a cycle makes it no
+	 * text union.
+	 *
+	 * @param union   The union
+	 * @param sources Every source by key
+	 * @param visited The unions and copies being resolved, to stop on a cycle
+	 * @return whether the union is a text union
+	 */
+	static boolean isTextUnion(
+		final TableUnionSource union,
+		final Map<String, Source> sources,
+		final Set<Source> visited
+	) {
+		if (union.getTables() == null || union.getTables().isEmpty() || !visited.add(union)) {
+			return false;
+		}
+		try {
+			for (final String table : union.getTables()) {
+				final Source member = table == null ? null : sources.get(resolveReference(table, union.getKey(), sources));
+				if (member == null || !endsInTextAsWritten(member, sources, visited)) {
+					return false;
+				}
+			}
+			return true;
+		} finally {
+			// A member read twice is no cycle: only the unions being resolved count
+			visited.remove(union);
+		}
 	}
 
 	private static boolean hasColumns(final ConnectorTool tool) {
@@ -258,7 +304,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 		final State state = source instanceof CopySource copy
 			? effectiveOutput(copy, sources, new HashSet<>())
-			: startOf(source);
+			: startOf(source, sources, new HashSet<>());
 		return state.type() == ContentType.TEXT;
 	}
 
@@ -299,6 +345,13 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 			final Source scanned = source.copy();
 			scanned.setKey(null);
+			// A text union reads its members' texts: its tables are no table read (its computes still count)
+			if (
+				scanned instanceof TableUnionSource union && isTextUnion((TableUnionSource) source, sources, new HashSet<>())
+			) {
+				union.getTables().forEach(table -> copied.add(resolveReference(table, source.getKey(), sources)));
+				union.setTables(List.of());
+			}
 			if (scanned instanceof CopySource copy) {
 				if (copy.getFrom() != null) {
 					copied.add(resolveReference(copy.getFrom(), source.getKey(), sources));
@@ -436,7 +489,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
 		final State start = source instanceof CopySource copy
 			? effectiveOutput(copy, sources, new HashSet<>())
-			: startOf(source);
+			: startOf(source, sources, new HashSet<>());
 		ContentType current = start.type();
 		TextProducer producer = start.producer();
 
@@ -682,6 +735,17 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * What a source produces before its computes run.
 	 */
 	private static State startOf(final Source source) {
+		return startOf(source, Map.of(), new HashSet<>());
+	}
+
+	/**
+	 * What a source produces before its computes run; a text union produces its members' joined texts, like a legacy
+	 * dual producer (the engine fills its table too).
+	 */
+	private static State startOf(final Source source, final Map<String, Source> sources, final Set<Source> visited) {
+		if (source instanceof TableUnionSource union && isTextUnion(union, sources, visited)) {
+			return new State(ContentType.TEXT, TextProducer.LEGACY_DUAL);
+		}
 		final ContentType type = source.getOutputContentType();
 		return new State(
 			type,
@@ -706,8 +770,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (origin == null || !visited.add(copy)) {
 			return startOf(copy);
 		}
-		State state = origin instanceof CopySource nested ? effectiveOutput(nested, sources, visited) : startOf(origin);
-		for (final Compute compute : origin.getComputes()) {
+		State state = origin instanceof CopySource nested
+			? effectiveOutput(nested, sources, visited)
+			: startOf(origin, sources, visited);
+		for (final Compute compute : origin.getComputes() == null ? List.<Compute>of() : origin.getComputes()) {
 			if (isGenerated(compute)) {
 				continue;
 			}
