@@ -419,7 +419,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (source instanceof StaticSource staticSource && contains(staticSource.getValue(), TABLE_SEP)) {
 			report.add(new ContentTypeReportEntry(key, Kind.STATIC_CSV, "value=" + staticSource.getValue()));
 		}
-		// An awk source writing a table: each printf is a single-cell row, as for the compute
+		// An awk source writing a table: printf text is split back on ORS and OFS, slower than print, as for the compute
 		if (
 			source instanceof JawkSource jawk &&
 				jawk.getOutputContentType() == ContentType.TABLE &&

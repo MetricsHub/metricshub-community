@@ -71,7 +71,8 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		STATIC_CSV,
 		/**
 		 * An <code>awk</code> compute producing a table (<code>output: table</code>) calls <code>printf</code>:
-		 * each call gives a single-cell row, which is rarely what the script means.
+		 * its text is split back into rows and cells on <code>ORS</code> and <code>OFS</code>, which is slower than
+		 * <code>print a, b, c</code> and depends on the separators matching the format string.
 		 */
 		PRINTF_IN_TABLE_OUTPUT
 	}

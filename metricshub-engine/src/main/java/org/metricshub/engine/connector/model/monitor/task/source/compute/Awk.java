@@ -94,7 +94,8 @@ public class Awk extends Compute {
 
 	/**
 	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
-	 * {@link ContentType#TABLE} (each <code>print</code> is one row, each <code>printf</code> one single-cell row).
+	 * {@link ContentType#TABLE} (each <code>print</code> is one row, the text of <code>printf</code> is split into rows
+	* on <code>ORS</code> and into cells on <code>OFS</code>).
 	 * Default text.
 	 */
 	@JsonSetter(nulls = SKIP)

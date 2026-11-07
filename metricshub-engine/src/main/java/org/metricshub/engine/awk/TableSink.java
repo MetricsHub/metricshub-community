@@ -23,21 +23,29 @@ package org.metricshub.engine.awk;
 
 import io.jawk.jrt.AwkSink;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import lombok.Getter;
+import java.util.regex.Pattern;
 
 /**
  * Collects the output of an AWK script as a table: each <code>print a, b, c</code> appends the row
- * <code>[a, b, c]</code>, each <code>printf</code> appends a row holding the formatted text as its single cell.
- * <code>OFS</code> and <code>ORS</code> play no part: the values are the cells, nothing is serialized.
+ * <code>[a, b, c]</code> without serializing anything. <code>printf</code> writes text, so its output is split the
+ * way the script serialized it: <code>ORS</code> ends a row and <code>OFS</code> separates its cells, exactly as the
+ * text would be read back. Text written after the last <code>ORS</code> stays pending until the next <code>print</code>
+ * or <code>printf</code> completes it; {@link #getRows()} turns whatever is still pending into the last row.
  * <p>
  * The values are rendered as <code>print</code> renders them: a string as is, an integral number without decimals,
  * any other number through <code>OFMT</code>.
  */
 public class TableSink extends AwkSink {
 
-	@Getter
 	private final List<List<String>> rows = new ArrayList<>();
+
+	/** Text written by <code>printf</code> since the last <code>ORS</code>. */
+	private final StringBuilder pending = new StringBuilder();
+
+	/** The <code>OFS</code> in force when the pending text began. */
+	private String pendingOfs = " ";
 
 	@Override
 	public void print(final String ofs, final String ors, final String ofmt, final Object... values) {
@@ -47,7 +55,20 @@ public class TableSink extends AwkSink {
 				row.add(formatPrintArgument(value, ofmt));
 			}
 		}
-		rows.add(row);
+		if (pending.length() == 0) {
+			rows.add(row);
+			return;
+		}
+		// The record started by a printf ends with this print: its text completes the last pending cell, the other
+		// values stay cells of their own, whatever they contain
+		final List<String> cells = split(pending.toString(), pendingOfs);
+		pending.setLength(0);
+		if (!row.isEmpty()) {
+			final int last = cells.size() - 1;
+			cells.set(last, cells.get(last) + row.get(0));
+			cells.addAll(row.subList(1, row.size()));
+		}
+		rows.add(cells);
 	}
 
 	@Override
@@ -59,8 +80,47 @@ public class TableSink extends AwkSink {
 		final String format,
 		final Object... values
 	) {
-		final List<String> row = new ArrayList<>(1);
-		row.add(sprintf(convfmt, format, values));
-		rows.add(row);
+		append(sprintf(convfmt, format, values), ofs, ors);
+	}
+
+	/**
+	 * @return the rows collected so far, the pending text (if any) completing the last one
+	 */
+	public List<List<String>> getRows() {
+		if (pending.length() > 0) {
+			rows.add(split(pending.toString(), pendingOfs));
+			pending.setLength(0);
+		}
+		return rows;
+	}
+
+	private void append(final String text, final String ofs, final String ors) {
+		if (pending.length() == 0) {
+			pendingOfs = ofs;
+		}
+		if (ors == null || ors.isEmpty()) {
+			pending.append(text);
+			return;
+		}
+		// The text already scanned holds no ORS: resume just before its end, where an ORS may straddle the two
+		int from = Math.max(0, pending.length() - ors.length() + 1);
+		pending.append(text);
+		int start = 0;
+		int end;
+		while ((end = pending.indexOf(ors, from)) >= 0) {
+			rows.add(split(pending.substring(start, end), pendingOfs));
+			start = end + ors.length();
+			from = start;
+			// Whatever follows began in this append
+			pendingOfs = ofs;
+		}
+		pending.delete(0, start);
+	}
+
+	private static List<String> split(final String record, final String ofs) {
+		if (ofs == null || ofs.isEmpty()) {
+			return new ArrayList<>(List.of(record));
+		}
+		return new ArrayList<>(Arrays.asList(record.split(Pattern.quote(ofs), -1)));
 	}
 }

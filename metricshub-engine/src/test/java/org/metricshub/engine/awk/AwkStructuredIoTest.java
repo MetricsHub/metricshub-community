@@ -65,12 +65,12 @@ class AwkStructuredIoTest {
 	@Test
 	void tableSinkMakesOneRowPerPrint() throws Exception {
 		final List<List<String>> rows = AwkExecutor.executeAwkToTable(
-			"{ print $1, $2 * 2, 1.5, 2.0, \"x;y\"; printf \"%s-%d\", $1, 7; print }",
+			"{ print $1, $2 * 2, 1.5, 2.0, \"x;y\"; print }",
 			"a 21\n",
 			AwkExecutor.getUtilityEngine(),
 			null
 		);
-		assertEquals(List.of(List.of("a", "42", "1.5", "2", "x;y"), List.of("a-7"), List.of("a 21")), rows);
+		assertEquals(List.of(List.of("a", "42", "1.5", "2", "x;y"), List.of("a 21")), rows);
 
 		// Empty output: no row
 		assertEquals(List.of(), AwkExecutor.executeAwkToTable("BEGIN { }", "in", AwkExecutor.getUtilityEngine(), null));
@@ -81,6 +81,86 @@ class AwkStructuredIoTest {
 			AwkExecutor.executeAwkToTable(
 				"{ print $1, toupper($2) }",
 				new TableInputSource(table("a;b|c")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+	}
+
+	@Test
+	void tableSinkSplitsPrintfOnOrsAndOfs() throws Exception {
+		// printf output is split as the script serialized it: ORS ends a row, OFS separates the cells
+		assertEquals(
+			List.of(List.of("a", "1", ""), List.of("b", "2"), List.of("c")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \";\" } { printf \"%s;%d;\\n\", $1, 1; printf \"%s%s%d%s%s\", \"b\", OFS, 2, ORS, \"c\" }",
+				"a\n",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// A record started by printf is completed by the next print, as in a text stream
+		assertEquals(
+			List.of(List.of("x", "y", "z"), List.of("")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { printf \"x\" OFS; print \"y\", \"z\"; printf \"\\n\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// The print values stay cells of their own: the OFS or ORS they contain is not split
+		assertEquals(
+			List.of(List.of("x", "y;z", "1\n2")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \";\"; printf \"x;\"; print \"y;z\", \"1\\n2\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// The OFS in force when the pending text began is the one it is split on
+		assertEquals(
+			List.of(List.of("a", "b"), List.of("c", "d"), List.of("e", "f")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \",\"; printf \"a,b\"; OFS = \";\"; printf \"\"; printf \"\\nc;d\\ne\"; printf \";f\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// A multi-character ORS straddling two printf calls, and a long record built piecewise
+		assertEquals(
+			List.of(List.of("1"), List.of("2"), List.of("x".repeat(5000))),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { ORS = \"\\r\\n\"; printf \"1\\r\"; printf \"\\n2\"; printf \"\\r\\n\"; for (i = 0; i < 5000; i++) printf \"x\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// Empty OFS or ORS: nothing to split on
+		assertEquals(
+			List.of(List.of("a b\nc")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \"\"; ORS = \"\"; printf \"a b\\nc\" }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// Multi-character separators
+		assertEquals(
+			List.of(List.of("1", "2"), List.of("3")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \"<>\"; ORS = \"\\r\\n\"; printf \"1<>2\\r\\n3\\r\\n\" }",
+				"",
 				AwkExecutor.getUtilityEngine(),
 				null
 			)
