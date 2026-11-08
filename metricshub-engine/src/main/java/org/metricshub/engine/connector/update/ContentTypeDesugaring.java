@@ -112,31 +112,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static final Pattern FS_SEMICOLON = Pattern.compile("\\bFS\\s*=\\s*\"\\s*;\\s*\"");
 
 	/**
-	 * A <code>printf</code> call in an AWK script, looked for once the comments and the string literals are gone.
-	 */
-	private static final Pattern PRINTF = Pattern.compile("\\bprintf\\b");
-
-	/**
 	 * A short source reference, <code>${source::name}</code>, with no dot: a source of the same tool or job.
 	 */
 	private static final Pattern SHORT_SOURCE_REFERENCE = Pattern.compile("^\\$\\{source::([^.}]+)\\}$");
-
-	/**
-	 * The AWK keywords an expression, so a regex literal, can follow.
-	 */
-	private static final Set<String> REGEX_KEYWORDS = Set.of(
-		"print",
-		"printf",
-		"return",
-		"if",
-		"while",
-		"for",
-		"do",
-		"else",
-		"in",
-		"case",
-		"getline"
-	);
 
 	/**
 	 * Who produced the current text of a chain.
@@ -548,14 +526,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (source instanceof StaticSource staticSource && contains(staticSource.getValue(), TABLE_SEP)) {
 			report.add(new ContentTypeReportEntry(key, Kind.STATIC_CSV, "value=" + staticSource.getValue()));
 		}
-		// An awk source writing a table: printf text is split back on ORS and OFS, slower than print, as for the compute
-		if (
-			source instanceof JawkSource jawk &&
-				jawk.getOutputContentType() == ContentType.TABLE &&
-				PRINTF.matcher(code(scriptContent(connector, jawk.getScript()))).find()
-		) {
-			report.add(new ContentTypeReportEntry(key, Kind.PRINTF_IN_TABLE_OUTPUT, "the source"));
-		}
 
 		if (source.getComputes() == null) {
 			return;
@@ -646,14 +616,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final String where,
 		final List<ContentTypeReportEntry> report
 	) {
-		if (compute instanceof Awk awk) {
-			if (
-				awk.getOutputContentType() == ContentType.TABLE &&
-					PRINTF.matcher(code(scriptContent(connector, awk.getScript()))).find()
-			) {
-				report.add(new ContentTypeReportEntry(key, Kind.PRINTF_IN_TABLE_OUTPUT, where));
-			}
-		} else if (compute instanceof AbstractConcat concat) {
+		if (compute instanceof AbstractConcat concat) {
 			// A pure $n reference never round-trips, whatever the referenced cell holds
 			if (concat.getValue() != null && !COLUMN_PATTERN.matcher(concat.getValue()).matches()) {
 				lintValue(key, where, "value", concat.getValue(), report);
@@ -708,67 +671,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, script)).find() ? " (sets FS to \";\")" : "";
 		return (FILE_PATTERN.matcher(script).find() ? "script=" + script : "inline script") + fs;
-	}
-
-	/**
-	 * The code of an AWK script without its string literals, regex literals and comments, so that a word inside
-	 * them is not taken for a statement.
-	 *
-	 * @param script The script
-	 * @return the script with every string literal and comment replaced by a space
-	 */
-	static String code(final String script) {
-		final StringBuilder code = new StringBuilder(script.length());
-		char previous = '\n';
-		for (int i = 0; i < script.length(); i++) {
-			final char c = script.charAt(i);
-			if (c == '"' || (c == '/' && regexCanStart(previous, code))) {
-				// A string or a regex literal: skipped up to its unescaped closing delimiter
-				int end = i + 1;
-				while (end < script.length() && script.charAt(end) != c && script.charAt(end) != '\n') {
-					end += script.charAt(end) == '\\' ? 2 : 1;
-				}
-				i = Math.min(end, script.length() - 1);
-				code.append(' ');
-				previous = c == '"' ? '"' : ')';
-			} else if (c == '#') {
-				// A comment up to the end of the line
-				while (i + 1 < script.length() && script.charAt(i + 1) != '\n') {
-					i++;
-				}
-				code.append(' ');
-			} else {
-				code.append(c);
-				// A line feed ends a rule or a statement: what follows can start a regex (a pattern-only rule after
-				// another one); other blanks are skipped
-				if (c == '\n' || !Character.isWhitespace(c)) {
-					previous = c;
-				}
-			}
-		}
-		return code.toString();
-	}
-
-	/**
-	 * Whether a slash after the given (last non-blank) character starts a regex literal rather than a division:
-	 * at the start of the script or of a rule (after the closing brace of the previous action), after an operator,
-	 * a separator or an opening bracket.
-	 */
-	private static boolean regexCanStart(final char previous, final CharSequence code) {
-		// "@" opens a typed regexp (@/re/) in Jawk 7
-		if ("\n(,~!{};&|=?:[+-*%<>@".indexOf(previous) >= 0) {
-			return true;
-		}
-		// After a keyword taking an expression, such as "print /re/" or "return /re/"
-		int end = code.length();
-		while (end > 0 && Character.isWhitespace(code.charAt(end - 1))) {
-			end--;
-		}
-		int start = end;
-		while (start > 0 && Character.isLetter(code.charAt(start - 1))) {
-			start--;
-		}
-		return REGEX_KEYWORDS.contains(code.subSequence(start, end).toString());
 	}
 
 	/**
