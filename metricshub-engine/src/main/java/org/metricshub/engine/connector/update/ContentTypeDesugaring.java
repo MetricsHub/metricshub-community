@@ -232,28 +232,43 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text itself (a copy: what its origin's chain produces).
 	 */
 	private static boolean endsInTextAsWritten(final Source source, final Map<String, Source> sources) {
-		return endsInTextAsWritten(source, sources, new HashSet<>());
+		return chainEnd(source, sources, new HashSet<>()).type() == ContentType.TEXT;
 	}
 
-	private static boolean endsInTextAsWritten(
-		final Source source,
-		final Map<String, Source> sources,
-		final Set<Source> visited
-	) {
-		final List<Compute> written = source.getComputes() == null
-			? List.of()
-			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
-		if (!written.isEmpty()) {
-			return written.get(written.size() - 1).getOutputContentType() == ContentType.TEXT;
+	/**
+	 * What the source's chain produces, as written: what the source (or, for a copy, its origin's chain) produces,
+	 * through the source's written computes.
+	 */
+	private static State chainEnd(final Source source, final Map<String, Source> sources, final Set<Source> visited) {
+		final State start = source instanceof CopySource copy
+			? effectiveOutput(copy, sources, visited)
+			: startOf(source, sources, visited);
+		return throughWrittenComputes(start, source);
+	}
+
+	/**
+	 * The state after the source's written computes, from the given state.
+	 */
+	private static State throughWrittenComputes(final State start, final Source source) {
+		State state = start;
+		for (final Compute compute : source.getComputes() == null ? List.<Compute>of() : source.getComputes()) {
+			if (isGenerated(compute)) {
+				continue;
+			}
+			final ContentType type = compute.getOutputContentType();
+			final TextProducer producer;
+			if (type != ContentType.TEXT) {
+				producer = TextProducer.NONE;
+			} else if (compute instanceof Awk) {
+				producer = TextProducer.LEGACY_DUAL;
+			} else if (compute instanceof ToText) {
+				producer = TextProducer.EXPLICIT;
+			} else {
+				producer = state.producer();
+			}
+			state = new State(type, producer);
 		}
-		// A copy hands on what its origin's chain produces, a union of text sources joins their texts
-		if (source instanceof CopySource copy) {
-			return effectiveOutput(copy, sources, visited).type() == ContentType.TEXT;
-		}
-		if (source instanceof TableUnionSource union) {
-			return isTextUnion(union, sources, visited);
-		}
-		return source.getOutputContentType() == ContentType.TEXT;
+		return state;
 	}
 
 	/**
@@ -273,17 +288,42 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources,
 		final Set<Source> visited
 	) {
+		return textUnionProducer(union, sources, visited) != null;
+	}
+
+	/**
+	 * Who produced the text of a text union, which tells whether its table is complete: the engine concatenates the
+	 * members' tables, so only legacy dual members (command outputs, awk results) bring their rows. A pure text member
+	 * (<code>http</code>, <code>file</code>, <code>ipmi</code>) brings none, as a pure text source on its own; an
+	 * explicit <code>toText</code> member brings none either and needs a real conversion.
+	 *
+	 * @return {@link TextProducer#PURE} when a member is pure text, else {@link TextProducer#EXPLICIT} when a member
+	 *         ends in an explicit <code>toText</code>, else {@link TextProducer#LEGACY_DUAL}; null when the union is no
+	 *         text union
+	 */
+	private static TextProducer textUnionProducer(
+		final TableUnionSource union,
+		final Map<String, Source> sources,
+		final Set<Source> visited
+	) {
 		if (union.getTables() == null || union.getTables().isEmpty() || !visited.add(union)) {
-			return false;
+			return null;
 		}
 		try {
+			TextProducer producer = TextProducer.LEGACY_DUAL;
 			for (final String table : union.getTables()) {
 				final Source member = table == null ? null : sources.get(resolveReference(table, union.getKey(), sources));
-				if (member == null || !endsInTextAsWritten(member, sources, visited)) {
-					return false;
+				final State end = member == null ? null : chainEnd(member, sources, visited);
+				if (end == null || end.type() != ContentType.TEXT) {
+					return null;
+				}
+				if (end.producer() == TextProducer.PURE) {
+					producer = TextProducer.PURE;
+				} else if (end.producer() == TextProducer.EXPLICIT && producer == TextProducer.LEGACY_DUAL) {
+					producer = TextProducer.EXPLICIT;
 				}
 			}
-			return true;
+			return producer;
 		} finally {
 			// A member read twice is no cycle: only the unions being resolved count
 			visited.remove(union);
@@ -739,12 +779,15 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * What a source produces before its computes run; a text union produces its members' joined texts, like a legacy
-	 * dual producer (the engine fills its table too).
+	 * What a source produces before its computes run; a text union produces its members' joined texts, its producer
+	 * telling whether the engine built its table too (see {@link #textUnionProducer}).
 	 */
 	private static State startOf(final Source source, final Map<String, Source> sources, final Set<Source> visited) {
-		if (source instanceof TableUnionSource union && isTextUnion(union, sources, visited)) {
-			return new State(ContentType.TEXT, TextProducer.LEGACY_DUAL);
+		if (source instanceof TableUnionSource union) {
+			final TextProducer producer = textUnionProducer(union, sources, visited);
+			if (producer != null) {
+				return new State(ContentType.TEXT, producer);
+			}
 		}
 		final ContentType type = source.getOutputContentType();
 		return new State(
@@ -770,27 +813,12 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (origin == null || !visited.add(copy)) {
 			return startOf(copy);
 		}
-		State state = origin instanceof CopySource nested
-			? effectiveOutput(nested, sources, visited)
-			: startOf(origin, sources, visited);
-		for (final Compute compute : origin.getComputes() == null ? List.<Compute>of() : origin.getComputes()) {
-			if (isGenerated(compute)) {
-				continue;
-			}
-			final ContentType type = compute.getOutputContentType();
-			final TextProducer producer;
-			if (type != ContentType.TEXT) {
-				producer = TextProducer.NONE;
-			} else if (compute instanceof Awk) {
-				producer = TextProducer.LEGACY_DUAL;
-			} else if (compute instanceof ToText) {
-				producer = TextProducer.EXPLICIT;
-			} else {
-				producer = state.producer();
-			}
-			state = new State(type, producer);
+		try {
+			return chainEnd(origin, sources, visited);
+		} finally {
+			// A copy read through two members is no cycle: only the copies being resolved count
+			visited.remove(copy);
 		}
-		return state;
 	}
 
 	private static boolean isPureTextSource(final Source source) {

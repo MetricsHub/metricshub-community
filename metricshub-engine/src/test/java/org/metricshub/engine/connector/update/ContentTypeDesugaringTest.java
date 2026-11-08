@@ -988,6 +988,60 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
+	 * The same copy read by two members of a union is no cycle: the union stays text.
+	 */
+	@Test
+	void copyReadTwiceInATextUnionIsNoCycle() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source copy = CopySource.builder().from(ref("show")).build();
+		final Source again = CopySource.builder().from(ref("copy")).build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("copy"), ref("again"), ref("copy"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("copy", copy);
+		sources.put("again", again);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of("awk", "toTable"), types(union));
+	}
+
+	/**
+	 * A text union with a pure text member has no complete table (the member brings no rows): a table compute on it
+	 * is reported and left alone, as on a pure text source, and an awk reading a table gets a real toTable.
+	 */
+	@Test
+	void textUnionWithAPureTextMemberHasNoTable() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source api = HttpSource.builder().url("/api").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("api"))))
+			.computes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("api", api);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
+		assertEquals(List.of("keepColumns"), types(union));
+
+		union.setComputes(
+			new ArrayList<>(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+		);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("toTable", "awk", "toTable"), types(union));
+		assertFalse(((ToTable) union.getComputes().get(0)).isImplicit());
+	}
+
+	/**
 	 * A text union read by a table compute gets the implicit toTable before it, like any legacy text producer.
 	 */
 	@Test
