@@ -41,6 +41,7 @@ import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ReferenceResolverProcessor;
 import org.metricshub.engine.connector.parser.SourceKeyProcessor;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
+import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 
 /**
  * Custom JSON deserializer for mapping monitor jobs from JSON to a {@code Map<String, MonitorJob>} using Jackson.
@@ -79,6 +80,9 @@ public class MonitorJobsDeserializer extends JsonDeserializer<Map<String, Monito
 		if (connectorUpdateChain != null) {
 			connectorUpdateChain.update(connector);
 		}
+
+		// Tell the author of these monitors what the desugaring did
+		ContentTypeDesugaring.logReport(connector, "(monitors of a resource)");
 
 		// Here we are going to get the parsing context to get the parent object (ResourceConfig)
 		// Once the parent is retrieved, the connector is set in this parent instance.

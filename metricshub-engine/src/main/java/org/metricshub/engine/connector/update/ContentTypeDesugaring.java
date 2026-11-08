@@ -40,12 +40,14 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ITranslationTable;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
@@ -101,6 +103,7 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * <p>
  * The findings are stored on the connector ({@code Connector#getContentTypeReport()}).
  */
+@Slf4j
 public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
@@ -147,6 +150,20 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		LEGACY_DUAL,
 		/** An explicit <code>toText</code> compute. */
 		EXPLICIT
+	}
+
+	/**
+	 * Logs every entry of the content-type report of a connector at WARN: what the desugaring inserted, and the legacy
+	 * idioms it found, so that the author of a connector learns what the engine does on its behalf.
+	 *
+	 * @param connector   The desugared connector
+	 * @param connectorId The identifier of the connector in the messages
+	 */
+	public static void logReport(final Connector connector, final String connectorId) {
+		final List<ContentTypeReportEntry> report = connector.getContentTypeReport();
+		if (report != null) {
+			report.forEach(entry -> log.warn("Connector {} - Content type: {}", connectorId, entry));
+		}
 	}
 
 	@Override
@@ -232,18 +249,36 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text itself (a copy: what its origin's chain produces).
 	 */
 	private static boolean endsInTextAsWritten(final Source source, final Map<String, Source> sources) {
-		return chainEnd(source, sources, new HashSet<>()).type() == ContentType.TEXT;
+		return chainEnd(source, sources, new HashSet<>(), null).type() == ContentType.TEXT;
 	}
 
 	/**
 	 * What the source's chain produces, as written: what the source (or, for a copy, its origin's chain) produces,
-	 * through the source's written computes.
+	 * through the source's written computes. Once the sources read as text only are known, a legacy dual chain that is
+	 * not among them produces a table: {@link #desugar} appends its <code>toTable</code>, so that what reads it (a copy,
+	 * a union) gets a table, and its own conversion where it needs text.
+	 *
+	 * @param textOnly The sources read as text only, null while they are being determined
 	 */
-	private static State chainEnd(final Source source, final Map<String, Source> sources, final Set<Source> visited) {
+	private static State chainEnd(
+		final Source source,
+		final Map<String, Source> sources,
+		final Set<Source> visited,
+		final Set<String> textOnly
+	) {
 		final State start = source instanceof CopySource copy
-			? effectiveOutput(copy, sources, visited)
-			: startOf(source, sources, visited);
-		return throughWrittenComputes(start, source);
+			? effectiveOutput(copy, sources, visited, textOnly)
+			: startOf(source, sources, visited, textOnly);
+		final State end = throughWrittenComputes(start, source);
+		if (
+			textOnly != null &&
+				end.type() == ContentType.TEXT &&
+				end.producer() == TextProducer.LEGACY_DUAL &&
+				!textOnly.contains(source.getKey())
+		) {
+			return new State(ContentType.TABLE, TextProducer.NONE);
+		}
+		return end;
 	}
 
 	/**
@@ -288,7 +323,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources,
 		final Set<Source> visited
 	) {
-		return textUnionProducer(union, sources, visited) != null;
+		return textUnionProducer(union, sources, visited, null) != null;
 	}
 
 	/**
@@ -304,7 +339,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static TextProducer textUnionProducer(
 		final TableUnionSource union,
 		final Map<String, Source> sources,
-		final Set<Source> visited
+		final Set<Source> visited,
+		final Set<String> textOnly
 	) {
 		if (union.getTables() == null || union.getTables().isEmpty() || !visited.add(union)) {
 			return null;
@@ -313,7 +349,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			TextProducer producer = TextProducer.LEGACY_DUAL;
 			for (final String table : union.getTables()) {
 				final Source member = table == null ? null : sources.get(resolveReference(table, union.getKey(), sources));
-				final State end = member == null ? null : chainEnd(member, sources, visited);
+				final State end = member == null ? null : chainEnd(member, sources, visited, textOnly);
 				if (end == null || end.type() != ContentType.TEXT) {
 					return null;
 				}
@@ -343,8 +379,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
 		}
 		final State state = source instanceof CopySource copy
-			? effectiveOutput(copy, sources, new HashSet<>())
-			: startOf(source, sources, new HashSet<>());
+			? effectiveOutput(copy, sources, new HashSet<>(), null)
+			: startOf(source, sources, new HashSet<>(), null);
 		return state.type() == ContentType.TEXT;
 	}
 
@@ -528,8 +564,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
 		final State start = source instanceof CopySource copy
-			? effectiveOutput(copy, sources, new HashSet<>())
-			: startOf(source, sources, new HashSet<>());
+			? effectiveOutput(copy, sources, new HashSet<>(), textOnly)
+			: startOf(source, sources, new HashSet<>(), textOnly);
 		ContentType current = start.type();
 		TextProducer producer = start.producer();
 
@@ -775,19 +811,30 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * What a source produces before its computes run.
 	 */
 	private static State startOf(final Source source) {
-		return startOf(source, Map.of(), new HashSet<>());
+		return startOf(source, Map.of(), new HashSet<>(), null);
 	}
 
 	/**
 	 * What a source produces before its computes run; a text union produces its members' joined texts, its producer
-	 * telling whether the engine built its table too (see {@link #textUnionProducer}).
+	 * telling whether the engine built its table too (see {@link #textUnionProducer}); a source run for each entry
+	 * of another and concatenated as JSON or custom text produces that text only.
+	 *
+	 * @param textOnly The sources read as text only, null while they are being determined (see {@link #chainEnd})
 	 */
-	private static State startOf(final Source source, final Map<String, Source> sources, final Set<Source> visited) {
+	private static State startOf(
+		final Source source,
+		final Map<String, Source> sources,
+		final Set<Source> visited,
+		final Set<String> textOnly
+	) {
 		if (source instanceof TableUnionSource union) {
-			final TextProducer producer = textUnionProducer(union, sources, visited);
+			final TextProducer producer = textUnionProducer(union, sources, visited, textOnly);
 			if (producer != null) {
 				return new State(ContentType.TEXT, producer);
 			}
+		}
+		if (source.isExecuteForEachEntryOf() && source.getEntryConcatMethod() != EntryConcatMethod.LIST) {
+			return new State(ContentType.TEXT, TextProducer.PURE);
 		}
 		final ContentType type = source.getOutputContentType();
 		return new State(
@@ -805,7 +852,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	private static State effectiveOutput(
 		final CopySource copy,
 		final Map<String, Source> sources,
-		final Set<Source> visited
+		final Set<Source> visited,
+		final Set<String> textOnly
 	) {
 		final Source origin = copy.getFrom() == null
 			? null
@@ -814,7 +862,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return startOf(copy);
 		}
 		try {
-			return chainEnd(origin, sources, visited);
+			return chainEnd(origin, sources, visited, textOnly);
 		} finally {
 			// A copy read through two members is no cycle: only the copies being resolved count
 			visited.remove(copy);

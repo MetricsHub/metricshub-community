@@ -18,6 +18,7 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
@@ -237,7 +238,8 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
-	 * The same source mapped as well is read as a table: it gets the toTable appended.
+	 * The same source mapped as well is read as a table: it gets the toTable appended, so its copy gets a table and
+	 * the copy's awk its toText.
 	 */
 	@Test
 	void textSourceCopiedAndMappedGetsItsToTable() {
@@ -250,8 +252,36 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 
 		assertEquals(List.of("toTable"), types(snapshot));
-		assertEquals(List.of("awk", "toTable"), types(copy));
-		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TABLE_APPENDED), kinds(connector));
+		assertEquals(List.of("toText", "awk", "toTable"), types(copy));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_APPENDED),
+			kinds(connector)
+		);
+	}
+
+	/**
+	 * A table source run for each entry of another and concatenated as a JSON array produces that JSON text: its
+	 * json2Csv reads text, nothing is reported.
+	 */
+	@Test
+	void sourceConcatenatedAsJsonProducesText() {
+		final Source entries = StaticSource.builder().value("a").build();
+		final Source perEntry = SnmpTableSource.builder()
+			.oid("1.3.6.1")
+			.selectColumns("1,2")
+			.executeForEachEntryOf(
+				ExecuteForEachEntryOf.builder().source(ref("entries")).concatMethod(EntryConcatMethod.JSON_ARRAY).build()
+			)
+			.computes(new ArrayList<>(List.of(Json2Csv.builder().type("json2Csv").entryKey("/").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("entries", entries);
+		sources.put("perEntry", perEntry);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("perEntry")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of("json2Csv"), types(perEntry));
 	}
 
 	@Test
