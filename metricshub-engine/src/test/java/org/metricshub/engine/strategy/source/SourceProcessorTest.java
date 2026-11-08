@@ -569,6 +569,42 @@ class SourceProcessorTest {
 		assertEquals(LOWERCASE_A1 + "\n" + TAB1_REF, sourceProcessor.process(tableUnionExample).getRawData());
 	}
 
+	/**
+	 * The text of a union of text sources, which the awk scripts parsing glued command outputs read: the members'
+	 * texts joined with a line feed, a member without text skipped, every pair of line feeds collapsed once (three in
+	 * a row give two), and an empty first member leaving a leading line feed. Stage 4 of #1508 keeps this text.
+	 */
+	@Test
+	void testProcessTableUnionSourceText() {
+		final String empty = "${source::monitors.cpu.discovery.sources.empty}";
+		final String lines = "${source::monitors.cpu.discovery.sources.lines}";
+		final String tableOnly = "${source::monitors.cpu.discovery.sources.tableOnly}";
+		final String last = "${source::monitors.cpu.discovery.sources.last}";
+		final Map<String, SourceTable> mapSources = new HashMap<>();
+		mapSources.put(empty, SourceTable.builder().rawData("").build());
+		mapSources.put(lines, SourceTable.builder().rawData("x\n\n\ny\n").build());
+		mapSources.put(tableOnly, SourceTable.ofTable(List.of(List.of("t"))));
+		mapSources.put(last, SourceTable.builder().rawData("z").build());
+
+		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
+		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(ECS1_01).hostId(ECS1_01).build())
+			.hostProperties(HostProperties.builder().connectorNamespaces(connectorNamespaces).build())
+			.build();
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutorMock)
+			.connectorId(MY_CONNECTOR_1_NAME)
+			.build();
+
+		final SourceTable result = sourceProcessor.process(
+			TableUnionSource.builder().tables(Arrays.asList(empty, lines, tableOnly, last)).build()
+		);
+		assertEquals("\nx\n\ny\nz", result.getRawData());
+		assertEquals(List.of(List.of("t")), result.getTable());
+	}
+
 	@Test
 	void testProcessCopySource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
