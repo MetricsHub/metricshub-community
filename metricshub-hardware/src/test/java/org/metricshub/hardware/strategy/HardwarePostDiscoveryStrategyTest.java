@@ -382,9 +382,9 @@ class HardwarePostDiscoveryStrategyTest {
 			Map.of(enclosureSource, "enclosure-1", temperatureSource, "temperature-1")
 		);
 		doAnswer(
-			invocation -> SourceTable.builder()
-				.table(SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), TABLE_SEP))
-				.build()
+			invocation -> SourceTable.ofTable(
+				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), TABLE_SEP)
+			)
 		).when(protocolExtension).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		new DiscoveryStrategy(telemetryManager, firstDiscoveryTime, clientsExecutor, extensionManager).run();

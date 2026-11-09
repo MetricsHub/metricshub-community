@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -635,10 +634,7 @@ class OsCommandExtensionTest {
 				eq(Map.of())
 			);
 
-		final SourceTable expected = SourceTable.builder()
-			.rawData("1;ext_bus;3;4;5")
-			.table(List.of(List.of("1", "ext_bus", "3", "4", "5")))
-			.build();
+		final SourceTable expected = SourceTable.ofText("1;ext_bus;3;4;5");
 		assertEquals(expected, osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager));
 	}
 

@@ -130,7 +130,7 @@ public class HttpSourceProcessor {
 			);
 
 			if (result != null && !result.isEmpty()) {
-				return SourceTable.builder().rawData(result).build();
+				return SourceTable.ofText(result);
 			}
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(

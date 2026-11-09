@@ -179,7 +179,7 @@ public class IpmiExtension implements IProtocolExtension {
 
 			if (result != null) {
 				record(telemetryManager, IpmiRecorder.GET_SENSORS_REQUEST, null, result);
-				return SourceTable.builder().rawData(result).build();
+				return SourceTable.ofText(result);
 			} else {
 				log.error("Hostname {} - IPMI-over-LAN request returned <null> result. Returning an empty table.", hostname);
 			}
@@ -207,7 +207,7 @@ public class IpmiExtension implements IProtocolExtension {
 	) {
 		final String result = ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiConfiguration, source);
 		record(telemetryManager, IpmiRecorder.RAW_REQUEST, IpmiRequestExecutor.rawQuery(source), result);
-		return SourceTable.builder().table(List.of(IpmiResultConverter.rawRow(result))).build();
+		return SourceTable.ofTable(List.of(IpmiResultConverter.rawRow(result)));
 	}
 
 	/**
@@ -278,7 +278,7 @@ public class IpmiExtension implements IProtocolExtension {
 
 		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
 		record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, SourceTable.tableToCsv(rows, ";", true));
-		return SourceTable.builder().table(rows).build();
+		return SourceTable.ofTable(rows);
 	}
 
 	/**

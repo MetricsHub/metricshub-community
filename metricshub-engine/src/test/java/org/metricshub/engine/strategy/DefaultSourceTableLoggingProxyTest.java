@@ -37,7 +37,7 @@ class DefaultSourceTableLoggingProxyTest {
 
 	@Test
 	void formatForLogReturnsFullMessageWithRawData() {
-		SourceTable sourceTable = SourceTable.builder().rawData("full raw content").build();
+		SourceTable sourceTable = SourceTable.ofText("full raw content");
 
 		String result = proxy.formatForLog(OPERATION_TAG, "OtherSource", "key1", CONNECTOR_ID, sourceTable, HOSTNAME);
 

@@ -294,24 +294,18 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		final SourceTable sourceTable = maybeSourceTable.get();
 
-		// Try the table
-		final List<List<String>> table = sourceTable.getTable();
 		String value = null;
-		if (table != null && !table.isEmpty()) {
+		if (sourceTable.getContentType() == ContentType.TEXT) {
+			// A text: up to the first separator
+			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
+			value = sourceTable.getText().split(";")[0];
+		} else if (!sourceTable.getTable().isEmpty()) {
+			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);
-			final List<String> firstRow = table.get(0);
+			final List<String> firstRow = sourceTable.getTable().get(0);
 			if (firstRow != null && !firstRow.isEmpty()) {
-				// First column
 				value = firstRow.get(0);
 			}
-		}
-
-		// Try raw data
-		final String rawData = sourceTable.getRawData();
-		if (value == null && rawData != null) {
-			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			// First column
-			value = rawData.split(";")[0];
 		}
 
 		if (value == null) {
@@ -331,7 +325,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final SourceTable result = processExecuteForEachEntryOf(copy, copy.getExecuteForEachEntryOf());
 
 		if (result != null && isEntryConcatMethodJsonArrayOrExtended(copy)) {
-			result.setRawData(String.format("[%s]", result.getRawData()));
+			result.setText(String.format("[%s]", result.getText()));
 		}
 
 		return result;
@@ -560,55 +554,29 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return EMPTY;
 		}
 
-		String sourceReferenceContent = null;
-
-		// Try the table
-		final List<List<String>> table = sourceTable.getTable();
-		if (table != null && !table.isEmpty()) {
-			log.debug(
-				"Hostname {} - Get {} referenced in {} ({}) from list table.",
-				hostname,
-				sourceRefKey,
-				operationType,
-				operationKey
-			);
-			sourceReferenceContent = SourceTable.tableToCsv(table, SEMICOLON, false);
-		}
-
-		// Try raw data
-		final String rawData = sourceTable.getRawData();
-		if (sourceReferenceContent == null && rawData != null) {
-			log.debug(
-				"Hostname {} - Get {} referenced in {} ({}) from raw data.",
-				hostname,
-				sourceRefKey,
-				operationType,
-				operationKey
-			);
-			sourceReferenceContent = rawData;
-		}
-
-		if (sourceReferenceContent != null) {
-			// Remove last semicolon from the rows containing only one cell.
-			// For instance the last semicolon leads to HTTP Errors when the reference is defined in the Header attribute
-			return Stream.of(sourceReferenceContent.split(NEW_LINE)).map(val -> {
-				final int indexOfSemicolon = val.indexOf(SEMICOLON);
-				if (indexOfSemicolon == val.length() - 1) {
-					return val.replace(SEMICOLON, EMPTY);
-				}
-				return val;
-			}).collect(Collectors.joining(NEW_LINE));
-		}
-
-		log.error(
-			"Hostname {} - Neither the raw data nor the table is available. Couldn't extract {} referenced in {} ({}). The source reference will be replaced with an empty value.",
+		// A table is serialized with ';' as is, a text is taken as is
+		final boolean text = sourceTable.getContentType() == ContentType.TEXT;
+		log.debug(
+			"Hostname {} - Get {} referenced in {} ({}) from {}.",
 			hostname,
 			sourceRefKey,
 			operationType,
-			operationKey
+			operationKey,
+			text ? "raw data" : "list table"
 		);
+		final String sourceReferenceContent = text
+			? sourceTable.getText()
+			: SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, false);
 
-		return EMPTY;
+		// Remove last semicolon from the rows containing only one cell.
+		// For instance the last semicolon leads to HTTP Errors when the reference is defined in the Header attribute
+		return Stream.of(sourceReferenceContent.split(NEW_LINE)).map(val -> {
+			final int indexOfSemicolon = val.indexOf(SEMICOLON);
+			if (indexOfSemicolon == val.length() - 1) {
+				return val.replace(SEMICOLON, EMPTY);
+			}
+			return val;
+		}).collect(Collectors.joining(NEW_LINE));
 	}
 
 	/**
@@ -635,7 +603,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final SourceTable result = SourceTable.builder().rawData(EMPTY).build();
+		// A text for a text source or a text concatenation (JSON, custom), a table otherwise
+		final SourceTable result = source.getResultContentType() == ContentType.TEXT
+			? SourceTable.ofText(EMPTY)
+			: SourceTable.empty();
 
 		final Integer sleep = source.getSleepExecuteForEachEntryOf();
 		final List<List<String>> table = maybeSourceTable.get().getTable();
@@ -779,55 +750,50 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final SourceTable sourceTableToConcat
 	) {
 		final IEntryConcatMethod iEntryConcatMethod = source.getEntryConcatMethod();
-		final String rawData = sourceTableToConcat.getRawData();
+
+		if (iEntryConcatMethod == null || iEntryConcatMethod == EntryConcatMethod.LIST) {
+			// LIST keeps the result type the source declares: an entry of the other type is converted, never dropped
+			if (currentResult.getContentType() == ContentType.TEXT) {
+				final String text = sourceTableToConcat.asText();
+				if (!text.isBlank()) {
+					joinStringValue(currentResult, text, "\n");
+				}
+			} else {
+				final List<List<String>> rows = currentResult.getTable();
+				sourceTableToConcat.asTable().stream().filter(line -> line != null && !line.isEmpty()).forEach(rows::add);
+			}
+			return;
+		}
+
+		// The text concatenations read each entry as a text (a table is serialized) and skip a failed entry: an empty
+		// table, what a processor returns on a failure (an empty text is an answer, which the custom method wraps)
+		if (sourceTableToConcat.getContentType() == ContentType.TABLE && sourceTableToConcat.isEmpty()) {
+			return;
+		}
 
 		if (iEntryConcatMethod instanceof CustomConcatMethod customConcatMethod) {
-			appendCustomEntryResult(customConcatMethod, currentResult, row, rawData);
+			appendCustomEntryResult(customConcatMethod, currentResult, row, sourceTableToConcat.asText());
+		} else if (iEntryConcatMethod == EntryConcatMethod.JSON_ARRAY) {
+			appendJsonToArray(currentResult, sourceTableToConcat.asText());
 		} else {
-			final EntryConcatMethod entryConcatMethod = iEntryConcatMethod != null
-				? (EntryConcatMethod) iEntryConcatMethod
-				: EntryConcatMethod.LIST;
-
-			switch (entryConcatMethod) {
-				case JSON_ARRAY:
-					appendJsonToArray(currentResult, rawData);
-					break;
-				case JSON_ARRAY_EXTENDED:
-					appendExtendedJsonToArray(currentResult, row, sourceTableToConcat);
-					break;
-				default:
-					if (rawData != null && !rawData.isBlank()) {
-						joinStringValue(currentResult, rawData, "\n");
-					}
-
-					final List<List<String>> table = sourceTableToConcat.getTable();
-
-					if (table != null && !table.isEmpty()) {
-						currentResult.getTable()
-							.addAll(table.stream().filter(line -> !line.isEmpty()).collect(Collectors.toCollection(ArrayList::new)));
-					}
-					break;
-			}
+			appendExtendedJsonToArray(currentResult, row, sourceTableToConcat);
 		}
 	}
 
 	/**
-	 * Append the custom entry result <em>rawData</em> to the given <em>currentResult</em> {@link SourceTable}.
+	 * Append the custom entry result <em>text</em> to the given <em>currentResult</em> {@link SourceTable}.
 	 *
 	 * @param customConcatMethod The {@link CustomConcatMethod} instance.
 	 * @param currentResult      The {@link SourceTable} result to update.
 	 * @param row                The row to concatenate in case we have the JSON_ARRAY_EXTENDED concatenation method.
-	 * @param rawData            The rawData to append.
+	 * @param text               The text to append.
 	 */
 	private void appendCustomEntryResult(
 		final CustomConcatMethod customConcatMethod,
 		final SourceTable currentResult,
 		final List<String> row,
-		final String rawData
+		final String text
 	) {
-		if (rawData == null) {
-			return;
-		}
 		String entryConcatStart = customConcatMethod.getConcatStart() != null
 			? replaceDynamicEntry(customConcatMethod.getConcatStart(), row)
 			: EMPTY;
@@ -835,9 +801,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			? replaceDynamicEntry(customConcatMethod.getConcatEnd(), row)
 			: EMPTY;
 
-		currentResult.setRawData(
-			currentResult.getRawData().concat(entryConcatStart).concat(rawData).concat(entryConcatEnd)
-		);
+		currentResult.setText(currentResult.getText().concat(entryConcatStart).concat(text).concat(entryConcatEnd));
 	}
 
 	/**
@@ -845,7 +809,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 *
 	 * @param currentResult       The {@link SourceTable} result to update
 	 * @param row                 The row used to build the Extended JSON
-	 * @param sourceTableToConcat The {@link SourceTable} defining the <em>rawData</em> to concatenate.
+	 * @param sourceTableToConcat The {@link SourceTable} defining the <em>text</em> to concatenate.
 	 */
 	private void appendExtendedJsonToArray(
 		final SourceTable currentResult,
@@ -886,8 +850,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @param separator     Separator of the appended values
 	 */
 	private void joinStringValue(final SourceTable currentResult, final String string, @NonNull String separator) {
-		currentResult.setRawData(
-			(currentResult.getRawData().isBlank() ? EMPTY : currentResult.getRawData().concat(separator)).concat(string)
+		currentResult.setText(
+			(currentResult.getText().isBlank() ? EMPTY : currentResult.getText().concat(separator)).concat(string)
 		);
 	}
 

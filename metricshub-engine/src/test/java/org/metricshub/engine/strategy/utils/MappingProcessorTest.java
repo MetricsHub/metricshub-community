@@ -49,11 +49,11 @@ class MappingProcessorTest {
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME);
 		connectorNamespace.addSourceTable(
 			vendorSource1Ref,
-			SourceTable.builder().table(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP)).build()
+			SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
 		);
 		connectorNamespace.addSourceTable(
 			vendorIdSource1Ref,
-			SourceTable.builder().table(SourceTable.csvToTable("1", MetricsHubConstants.TABLE_SEP)).build()
+			SourceTable.ofTable(SourceTable.csvToTable("1", MetricsHubConstants.TABLE_SEP))
 		);
 
 		// Value conversion tests, basic value and invalid value

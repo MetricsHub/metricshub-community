@@ -168,11 +168,9 @@ class CollectStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.collect.sources.source(1)}")
 			.build();
-		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
-				.build()
-		).when(protocolExtensionMock).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
+			protocolExtensionMock
+		).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -181,9 +179,9 @@ class CollectStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.builder().table(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP)).build())
-			.when(protocolExtensionMock)
-			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
+			protocolExtensionMock
+		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		collectStrategy.run();
 

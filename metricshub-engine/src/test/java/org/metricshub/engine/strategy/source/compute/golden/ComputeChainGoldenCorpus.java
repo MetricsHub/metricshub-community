@@ -3,7 +3,6 @@ package org.metricshub.engine.strategy.source.compute.golden;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,8 +24,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -86,10 +85,10 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Golden corpus of the compute chains defined in the connector repositories (epic #1508, issue #1509).
  * <p>
  * For every connector of every configured repository, every source holding at least one compute is run through
- * {@link ComputeProcessor} on a small deterministic set of inputs, and the resulting {@link SourceTable} (table and
- * raw text) is recorded in one golden file per connector. The inputs mirror the shapes the legacy source processors
- * produce (text only, table only, or both, see {@link Inputs}) plus a JSON or XML document for the chains starting
- * with <code>json2Csv</code> or <code>xml2Csv</code>.
+ * {@link ComputeProcessor} on a small deterministic set of inputs, and the resulting {@link SourceTable} (its text or
+ * its table) is recorded in one golden file per connector. The inputs mirror the shapes the legacy source processors
+ * produced (text only, table only, or both, see {@link Inputs}), each one read on the side of the type the source
+ * produces, plus a JSON or XML document for the chains starting with <code>json2Csv</code> or <code>xml2Csv</code>.
  * <p>
  * The corpus pins what the engine does today. Stage 1 of the epic must reproduce it byte for byte, stage 2 compares
  * each rewritten chain with its old chain on the same inputs, and stage 4 regenerates it once.
@@ -100,8 +99,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * path separator. A root is used as is when it has no <code>src/main/connector</code> directory. Default: the
  * community and enterprise repositories checked out next to this repository. A missing root is skipped.</li>
  * <li>{@value #UPDATE_PROPERTY}: when <code>true</code>, the goldens are (re)written instead of verified.</li>
- * <li>{@value #COMPARE_PROPERTY}: <code>exact</code> (default) compares the whole output, <code>typed</code> compares
- * what the chain produces for its consumers, see {@link CompareMode#TYPED}.</li>
+ * <li>{@value #COMPARE_PROPERTY}: <code>typed</code> (default during stage 4 of #1508, until the goldens are
+ * regenerated) compares what the chain produces for its consumers, see {@link CompareMode#TYPED}; <code>exact</code>
+ * compares the whole output.</li>
  * <li>{@value #CONNECTORS_PROPERTY}: a comma-separated list of connector ids (case-insensitive) restricting the
  * connectors checked and reported. Default: every connector.</li>
  * </ul>
@@ -134,22 +134,23 @@ public class ComputeChainGoldenCorpus {
 		/** The whole output (table, raw text, error, time-out), the source type and the compute list. */
 		EXACT,
 		/**
-		 * What the chain produces for its consumers: the table (trailing empty cells stripped from every row on both
-		 * sides, but a generated row may never be shorter than its stored row; raw text ignored) when the generated
-		 * chain ends in a table, the raw text only when it ends in text;
-		 * error and time-out as they are. A changed compute list or source type is not a difference, and the
-		 * differences on the {@value #SEPARATOR_IN_CELL_SUFFIX} inputs are intended ones.
+		 * What the chain produces for its consumers, on the side of the generated output's type: the table (trailing
+		 * empty cells stripped from every row on both sides, but a generated row may never be shorter than its stored
+		 * row) when the generated output is a table, the stored raw text when it is a text; error and time-out as they
+		 * are. A changed compute list or source type is not a difference, and some differences are intended ones
+		 * (see {@link ComputeChainGoldenCorpus#isIntendedChange}).
 		 */
 		TYPED;
 
 		/**
 		 * Parses a mode name, case-insensitively.
 		 *
-		 * @param name The name, null or blank for the default (exact)
+		 * @param name The name, null or blank for the default (typed, while the goldens stored before stage 4 of #1508
+		 *             still hold both a table and a raw text)
 		 * @return the mode
 		 */
 		public static CompareMode parse(final String name) {
-			return name == null || name.isBlank() ? EXACT : valueOf(name.trim().toUpperCase(Locale.ROOT));
+			return name == null || name.isBlank() ? TYPED : valueOf(name.trim().toUpperCase(Locale.ROOT));
 		}
 	}
 
@@ -204,7 +205,7 @@ public class ComputeChainGoldenCorpus {
 	/**
 	 * The configured comparison mode.
 	 *
-	 * @return the mode, exact unless {@value #COMPARE_PROPERTY} says otherwise
+	 * @return the mode, typed unless {@value #COMPARE_PROPERTY} says otherwise
 	 */
 	public static CompareMode compareMode() {
 		return CompareMode.parse(System.getProperty(COMPARE_PROPERTY));
@@ -305,21 +306,9 @@ public class ComputeChainGoldenCorpus {
 		final Map<String, Source> sources = sourcesOf(connector);
 		final ConnectorGolden golden = new ConnectorGolden();
 		golden.setConnector(connectorId);
-		// A copy and a tableUnion pass both the table and the raw text of their origins downstream (a copy followed by
-		// an awk reads the raw text): the chains they read are compared on both
-		final Set<String> readThrough = new HashSet<>();
-		sources.values().forEach(source -> {
-			if (source instanceof CopySource copy && copy.getFrom() != null) {
-				readThrough.add(ContentTypeDesugaring.resolveReference(copy.getFrom(), source.getKey(), sources));
-			} else if (source instanceof TableUnionSource union && union.getTables() != null) {
-				// A short reference designates a source of the same task, as at run time
-				union.getTables()
-					.forEach(table -> readThrough.add(ContentTypeDesugaring.resolveReference(table, source.getKey(), sources)));
-			}
-		});
 		sources.forEach((key, source) -> {
-			// The chain as written in the connector; the implicit conversions inserted by the desugaring step run too,
-			// but they are not part of the golden's identity: the goldens pin the results of the written chains
+			// The chain as written in the connector; the conversions inserted by the desugaring step run too, but they
+			// are not part of the golden's identity: the goldens pin the results of the written chains
 			final List<Compute> explicitComputes = explicitComputes(source);
 			if (explicitComputes.isEmpty()) {
 				return;
@@ -327,13 +316,6 @@ public class ComputeChainGoldenCorpus {
 			final SourceGolden sourceGolden = new SourceGolden();
 			sourceGolden.setSource(source.getType());
 			sourceGolden.setComputes(explicitComputes.stream().map(Compute::getType).toList());
-			sourceGolden.setEnding(explicitComputes.get(explicitComputes.size() - 1).getOutputContentType());
-			// A chain ending in text from a legacy dual producer gets an implicit toTable, and a chain read through a copy
-			// or a tableUnion hands both payloads on: their consumers read both the text and the table
-			final Compute last = source.getComputes().get(source.getComputes().size() - 1);
-			sourceGolden.setReadAsBoth(
-				(last instanceof ToTable toTable && toTable.isImplicit()) || readThrough.contains(key.trim())
-			);
 			Inputs.inputsFor(source, sources)
 				.forEach(
 					(name, input) -> sourceGolden.getOutputs().put(name, run(connectorStore, connectorId, source, input.get()))
@@ -344,8 +326,7 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * The computes written in the connector, without the implicit conversions inserted by the content-type
-	 * desugaring step.
+	 * The computes written in the connector, without the conversions inserted by the content-type desugaring step.
 	 *
 	 * @param source The source
 	 * @return the explicit computes
@@ -353,12 +334,12 @@ public class ComputeChainGoldenCorpus {
 	public static List<Compute> explicitComputes(final Source source) {
 		return source.getComputes() == null
 			? List.of()
-			: source.getComputes().stream().filter(compute -> !isImplicit(compute)).toList();
+			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 	}
 
-	private static boolean isImplicit(final Compute compute) {
-		return ((compute instanceof ToTable toTable && toTable.isImplicit()) ||
-			(compute instanceof ToText toText && toText.isImplicit()));
+	private static boolean isGenerated(final Compute compute) {
+		return ((compute instanceof ToTable toTable && toTable.isGenerated()) ||
+			(compute instanceof ToText toText && toText.isGenerated()));
 	}
 
 	/**
@@ -472,7 +453,9 @@ public class ComputeChainGoldenCorpus {
 			computeProcessor.setIndex(index);
 			computes.get(index).accept(updater);
 		}
-		return new Output(input.getTable(), input.getRawData(), null, null);
+		return input.getContentType() == ContentType.TEXT
+			? new Output(null, input.getText(), null, null)
+			: new Output(input.getTable(), null, null, null);
 	}
 
 	/**
@@ -724,8 +707,6 @@ public class ComputeChainGoldenCorpus {
 					);
 				}
 			}
-			final ContentType ending = golden.getSources().get(key).getEnding();
-			final boolean readAsBoth = golden.getSources().get(key).isReadAsBoth();
 			final JsonNode storedOutputs = storedSource.path("outputs");
 			final JsonNode generatedOutputs = generatedSource.path("outputs");
 			generatedOutputs.fieldNames().forEachRemaining(input -> {
@@ -733,14 +714,14 @@ public class ComputeChainGoldenCorpus {
 				final JsonNode generatedOutput = generatedOutputs.get(input);
 				final boolean same = mode == CompareMode.EXACT
 					? generatedOutput.equals(storedOutput)
-					: sameForConsumers(storedOutput, generatedOutput, ending, readAsBoth);
+					: sameForConsumers(storedOutput, generatedOutput);
 				if (!same) {
-					// Only a content difference on a separator-in-cell input is intended: a chain that now throws or
-					// hangs on that input, or an input without a stored output, is a regression like any other
+					// Only a content difference is intended, see isIntendedChange: a chain that now throws or hangs, or an
+					// input without a stored output, is a regression like any other
 					final String prefix = mode == CompareMode.TYPED &&
-						input.endsWith(SEPARATOR_IN_CELL_SUFFIX) &&
 						storedOutput != null &&
-						sameFlags(storedOutput, generatedOutput) ? INTENDED_PREFIX : "";
+						sameFlags(storedOutput, generatedOutput) &&
+						isIntendedChange(golden.getSources().get(key).getComputes(), input) ? INTENDED_PREFIX : "";
 					differences.add(prefix + key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
 				}
 			});
@@ -752,6 +733,30 @@ public class ComputeChainGoldenCorpus {
 			});
 		});
 		return differences;
+	}
+
+	/**
+	 * Whether a content difference is an intended change of the content-type migration (#1508):
+	 * <ul>
+	 * <li>on an input holding <code>;</code> inside a cell: a {@value #SEPARATOR_IN_CELL_SUFFIX} input (stage 4: no
+	 * serialization round trip splits such a cell any more);</li>
+	 * <li>on a chain parsing a document (<code>json2Csv</code>, <code>xml2Csv</code> first): its own document holds a
+	 * value containing <code>;</code>, which now stays one cell (the following computes may shift columns, so the
+	 * difference cannot be narrowed further); any other input does not parse, and the stored result was what the
+	 * table of a legacy dual input left behind the failed parse, which a single-typed input no longer carries.</li>
+	 * </ul>
+	 * The JSON and XML documents fed to any other chain are compared like every other input.
+	 *
+	 * @param computes The written compute types of the chain
+	 * @param input    The input name
+	 * @return <code>true</code> when the difference is intended
+	 */
+	static boolean isIntendedChange(final List<String> computes, final String input) {
+		if (input.endsWith(SEPARATOR_IN_CELL_SUFFIX)) {
+			return true;
+		}
+		final String first = computes == null || computes.isEmpty() ? "" : computes.get(0).toLowerCase(Locale.ROOT);
+		return first.equals("json2csv") || first.equals("xml2csv");
 	}
 
 	/**
@@ -767,32 +772,33 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * Whether two outputs are the same for the consumers of the chain (see {@link CompareMode#TYPED}).
+	 * Whether two outputs are the same for the consumers of the chain (see {@link CompareMode#TYPED}): the side of
+	 * the generated output's type. A stored output written before stage 4 of #1508 holds both a table and a raw text
+	 * (<code>rawData</code>, a missing or null one read as an empty text); a stored output written since holds the
+	 * side of its type only (<code>table</code> or <code>text</code>).
 	 *
 	 * @param stored    The stored output, null when the stored golden has none for the input
 	 * @param generated The generated output
-	 * @param ending    The content type the generated chain ends in
-	 * @param both      Whether the consumers read both payloads (an implicit <code>toTable</code> after a text ending,
-	 *                  or a copy or a tableUnion reading the chain)
 	 * @return <code>true</code> when the consumers see the same result
 	 */
-	static boolean sameForConsumers(
-		final JsonNode stored,
-		final JsonNode generated,
-		final ContentType ending,
-		final boolean both
-	) {
+	static boolean sameForConsumers(final JsonNode stored, final JsonNode generated) {
 		if (stored == null || !sameFlags(stored, generated)) {
 			return false;
 		}
-		final boolean sameText = stored.path("rawData").equals(generated.path("rawData"));
-		final boolean sameTable = stripTrailingEmptyCells(stored.path("table")).equals(
-			stripTrailingEmptyCells(generated.path("table"))
-		) && noShorterRow(stored.path("table"), generated.path("table"));
-		if (both) {
-			return sameText && sameTable;
+		if (generated.has("text")) {
+			final JsonNode storedText = stored.has("text") ? stored.get("text") : stored.path("rawData");
+			// A stored table without a raw text was a table: a text now is a type flip
+			if (!storedText.isTextual() && !stored.path("table").isEmpty()) {
+				return false;
+			}
+			return (storedText.isTextual() ? storedText.asText() : "").equals(generated.get("text").asText());
 		}
-		return ending == ContentType.TEXT ? sameText : sameTable;
+		if (generated.has("table")) {
+			return stripTrailingEmptyCells(stored.path("table")).equals(stripTrailingEmptyCells(generated.path("table"))) &&
+				noShorterRow(stored.path("table"), generated.path("table"));
+		}
+		// No payload: a time-out or an error, compared by the flags
+		return true;
 	}
 
 	/**
@@ -890,38 +896,26 @@ public class ComputeChainGoldenCorpus {
 		private String source;
 		private List<String> computes;
 		private Map<String, Output> outputs = new TreeMap<>();
-
-		/**
-		 * The content type the chain ends in: that of the last explicit compute. Not stored: the typed comparison
-		 * reads it from the generated golden.
-		 */
-		@JsonIgnore
-		private ContentType ending;
-
-		/**
-		 * Whether the consumers of the chain read both its table and its raw text: a text ending from a legacy dual
-		 * producer (followed by an implicit <code>toTable</code>), or a chain read through a copy or a tableUnion. Not
-		 * stored.
-		 */
-		@JsonIgnore
-		private boolean readAsBoth;
 	}
 
 	/**
-	 * The result of a chain: the table and the raw text of the {@link SourceTable}, null raw text preserved.
+	 * The result of a chain: the table or the text of the {@link SourceTable}, as its type tells. The key present
+	 * tells the type: <code>table: []</code> and <code>text: ""</code> stay distinct.
 	 */
 	@Value
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public static class Output {
 
+		/** The table, null (left out) for a text. */
 		List<List<String>> table;
-		String rawData;
+
+		/** The text, null (left out) for a table. */
+		String text;
 
 		/** <code>true</code> when the chain did not finish within {@link #RUN_TIMEOUT}, else null (left out). */
-		@JsonInclude(JsonInclude.Include.NON_NULL)
 		Boolean timedOut;
 
 		/** The exception thrown by the chain (class and message), else null (left out). */
-		@JsonInclude(JsonInclude.Include.NON_NULL)
 		String error;
 	}
 
@@ -938,7 +932,7 @@ public class ComputeChainGoldenCorpus {
 	 * <code>;</code>, the lines with a line feed), so that a compute indexing a high column runs in the regime of a
 	 * real table.
 	 * <p>
-	 * Each source type gets the shapes its legacy processor produces:
+	 * Each source type gets the shapes its legacy processor produced (a {@link Shape}: a table and a raw text):
 	 * <ul>
 	 * <li><code>http</code>, <code>file</code>, <code>ipmi</code>: raw text only, with and without a trailing
 	 * line feed;</li>
@@ -952,7 +946,9 @@ public class ComputeChainGoldenCorpus {
 	 * <li><code>tableUnion</code>: every dual shape;</li>
 	 * <li>every other source: the table only.</li>
 	 * </ul>
-	 * Every source also gets the empty input. A chain starting with <code>json2Csv</code> or <code>xml2Csv</code>
+	 * A source table holds one type since stage 4 of #1508: each shape is read on the side of the type the source
+	 * produces (see {@link #resultType}), the side its typed consumers read before. Every source also gets the empty
+	 * input of its type. A chain starting with <code>json2Csv</code> or <code>xml2Csv</code>
 	 * additionally gets a document generated from the compute's entry key, record tag and properties.
 	 */
 	public static final class Inputs {
@@ -999,32 +995,83 @@ public class ComputeChainGoldenCorpus {
 		}
 
 		static SourceTable text(final String text) {
-			return SourceTable.builder().rawData(text).build();
+			return SourceTable.ofText(text);
 		}
 
-		static SourceTable tableOnly(final List<List<String>> table) {
-			return SourceTable.builder().table(table).build();
+		/**
+		 * What a legacy producer filled: a table and a raw text, either one possibly absent.
+		 *
+		 * @param table The table, never null
+		 * @param text  The raw text, null when absent
+		 */
+		record Shape(List<List<String>> table, String text) {
+			/**
+			 * The shape read on the side of a type: the raw text, else the table serialized as the legacy
+			 * <code>awk</code> compute read it, for a text; the table for a table.
+			 *
+			 * @param type The type the source produces
+			 * @return a new source table of that type
+			 */
+			SourceTable as(final ContentType type) {
+				if (type == ContentType.TEXT) {
+					return SourceTable.ofText(
+						text != null && !text.isEmpty() ? text : SourceTable.tableToCsv(table, TABLE_SEP, true)
+					);
+				}
+				return SourceTable.ofTable(table);
+			}
 		}
 
-		static SourceTable csv(final List<List<String>> table, final boolean replaceSeparator) {
-			return SourceTable.builder()
-				.table(table)
-				.rawData(SourceTable.tableToCsv(table, TABLE_SEP, replaceSeparator))
-				.build();
+		static Shape textOnly(final String text) {
+			return new Shape(new ArrayList<>(), text);
 		}
 
-		static SourceTable commandLine(final String text) {
+		static Shape tableOnly(final List<List<String>> table) {
+			return new Shape(table, null);
+		}
+
+		static Shape csv(final List<List<String>> table, final boolean replaceSeparator) {
+			return new Shape(table, SourceTable.tableToCsv(table, TABLE_SEP, replaceSeparator));
+		}
+
+		static Shape commandLine(final String text) {
 			final List<String> lines = SourceTable.lineToList(text, "\n");
-			return SourceTable.builder()
-				.rawData(String.join("\n", lines))
-				.table(
-					lines.stream().map(line -> (List<String>) new ArrayList<>(Arrays.asList(line.split(TABLE_SEP)))).toList()
-				)
-				.build();
+			return new Shape(
+				lines.stream().map(line -> (List<String>) new ArrayList<>(Arrays.asList(line.split(TABLE_SEP)))).toList(),
+				String.join("\n", lines)
+			);
 		}
 
-		static SourceTable awkSource(final String text) {
-			return SourceTable.builder().rawData(text).table(SourceTable.csvToTable(text, TABLE_SEP)).build();
+		static Shape awkSource(final String text) {
+			return new Shape(SourceTable.csvToTable(text, TABLE_SEP), text);
+		}
+
+		/**
+		 * The type a source produces before its computes run, as the engine types it at run time: a copy produces
+		 * what the chain of its origin ends in, a tableUnion a text when the desugaring finds a text union.
+		 *
+		 * @param source  The source
+		 * @param sources Every source of the connector
+		 * @param depth   The number of copies followed so far, to stop on a cycle
+		 * @return the type
+		 */
+		static ContentType resultType(final Source source, final Map<String, Source> sources, final int depth) {
+			if (source instanceof CopySource copySource) {
+				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom());
+				if (origin == null || depth > 5) {
+					return ContentType.TABLE;
+				}
+				final List<Compute> computes = origin.getComputes();
+				return computes == null || computes.isEmpty()
+					? resultType(origin, sources, depth + 1)
+					: computes.get(computes.size() - 1).getOutputContentType();
+			}
+			if (source instanceof TableUnionSource union) {
+				return ContentTypeDesugaring.isTextUnion(union, sources, new HashSet<>())
+					? ContentType.TEXT
+					: ContentType.TABLE;
+			}
+			return source.getResultContentType();
 		}
 
 		/**
@@ -1035,9 +1082,12 @@ public class ComputeChainGoldenCorpus {
 		 * @return the inputs, in a stable order
 		 */
 		public static Map<String, Supplier<SourceTable>> inputsFor(final Source source, final Map<String, Source> sources) {
+			final Map<String, Supplier<Shape>> shapes = new LinkedHashMap<>();
+			addShapes(shapes, source, sources, 0);
+			final ContentType type = resultType(source, sources, 0);
 			final Map<String, Supplier<SourceTable>> inputs = new LinkedHashMap<>();
-			addShapes(inputs, source, sources, 0);
-			inputs.put("empty", SourceTable::empty);
+			shapes.forEach((name, shape) -> inputs.put(name, () -> shape.get().as(type)));
+			inputs.put("empty", () -> type == ContentType.TEXT ? SourceTable.ofText("") : SourceTable.empty());
 			final Compute first = explicitComputes(source).get(0);
 			if (first instanceof Json2Csv json2Csv) {
 				inputs.put("json", () -> text(json(json2Csv)));
@@ -1048,14 +1098,14 @@ public class ComputeChainGoldenCorpus {
 		}
 
 		private static void addShapes(
-			final Map<String, Supplier<SourceTable>> inputs,
+			final Map<String, Supplier<Shape>> inputs,
 			final Source source,
 			final Map<String, Source> sources,
 			final int depth
 		) {
 			if (source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiSource) {
-				textShape(inputs, "text", Inputs::text, true);
-				textShape(inputs, "textNoTrailingNewline", Inputs::text, false);
+				textShape(inputs, "text", Inputs::textOnly, true);
+				textShape(inputs, "textNoTrailingNewline", Inputs::textOnly, false);
 			} else if (source instanceof CommandLineSource) {
 				textShape(inputs, "commandLine", Inputs::commandLine, true);
 			} else if (source instanceof JawkSource) {
@@ -1092,8 +1142,8 @@ public class ComputeChainGoldenCorpus {
 			}
 		}
 
-		private static void addDualShapes(final Map<String, Supplier<SourceTable>> inputs) {
-			textShape(inputs, "text", Inputs::text, true);
+		private static void addDualShapes(final Map<String, Supplier<Shape>> inputs) {
+			textShape(inputs, "text", Inputs::textOnly, true);
 			tableShape(inputs, "table", Inputs::tableOnly);
 			textShape(inputs, "commandLine", Inputs::commandLine, true);
 			textShape(inputs, "awkSource", Inputs::awkSource, true);
@@ -1110,9 +1160,9 @@ public class ComputeChainGoldenCorpus {
 		 * @param trailingNewline Whether the text ends with a line feed
 		 */
 		private static void textShape(
-			final Map<String, Supplier<SourceTable>> inputs,
+			final Map<String, Supplier<Shape>> inputs,
 			final String name,
-			final Function<String, SourceTable> builder,
+			final Function<String, Shape> builder,
 			final boolean trailingNewline
 		) {
 			inputs.put(name, () -> builder.apply(trailingNewline ? TEXT : TEXT.substring(0, TEXT.length() - 1)));
@@ -1130,9 +1180,9 @@ public class ComputeChainGoldenCorpus {
 		 * @param builder Builds the source table from a table
 		 */
 		private static void tableShape(
-			final Map<String, Supplier<SourceTable>> inputs,
+			final Map<String, Supplier<Shape>> inputs,
 			final String name,
-			final Function<List<List<String>>, SourceTable> builder
+			final Function<List<List<String>>, Shape> builder
 		) {
 			inputs.put(name, () -> builder.apply(table()));
 			twins(inputs, name, builder);
@@ -1146,9 +1196,9 @@ public class ComputeChainGoldenCorpus {
 		 * @param builder Builds the source table from a table
 		 */
 		private static void twins(
-			final Map<String, Supplier<SourceTable>> inputs,
+			final Map<String, Supplier<Shape>> inputs,
 			final String name,
-			final Function<List<List<String>>, SourceTable> builder
+			final Function<List<List<String>>, Shape> builder
 		) {
 			inputs.put(name + SEPARATOR_IN_CELL_SUFFIX, () -> builder.apply(separatorInCellTable()));
 			inputs.put(name + "Wide", () -> builder.apply(wideTable()));

@@ -84,11 +84,7 @@ public class InternalDbExtension implements ISourceComputationExtension {
 			query
 		);
 
-		SourceTable sourceTable = new SourceTable();
-
-		if (!executeSqlQuery.isEmpty()) {
-			sourceTable.setTable(executeSqlQuery);
-		}
+		final SourceTable sourceTable = SourceTable.ofTable(executeSqlQuery);
 
 		LoggingHelper.debug(
 			() -> log.trace(

@@ -70,20 +70,9 @@ public class ToTable extends Compute {
 	private String selectColumns;
 
 	/**
-	 * Whether the compute was inserted by the content-type desugaring step rather than written in the connector.
-	 * <p>
-	 * An implicit conversion only materializes the content type the legacy producer already filled: the
-	 * <code>commandLine</code> source, the <code>awk</code> source and the <code>awk</code> compute already build
-	 * their table, so the implicit <code>toTable</code> leaves the source table unchanged. Never set from YAML.
-	 */
-	@JsonIgnore
-	@EqualsAndHashCode.Exclude
-	private boolean implicit;
-
-	/**
-	 * Whether the compute was inserted by the content-type desugaring step at all: every implicit one, and the
-	 * executable one inserted after an explicit <code>toText</code>. A later pass of the step removes them before
-	 * desugaring the chain as written again. Never set from YAML.
+	 * Whether the compute was inserted by the content-type desugaring step rather than written in the connector. It
+	 * converts like a written one; a later pass of the step removes it before desugaring the chain as written again.
+	 * Never set from YAML.
 	 */
 	@JsonIgnore
 	@EqualsAndHashCode.Exclude
@@ -115,21 +104,10 @@ public class ToTable extends Compute {
 	}
 
 	/**
-	 * An implicit <code>toTable(";")</code>, as inserted by the content-type desugaring step.
+	 * A <code>toTable(";")</code> inserted by the content-type desugaring step: it converts the text like a written
+	 * one, and a later pass of the step removes it.
 	 *
-	 * @return a new implicit instance
-	 */
-	public static ToTable implicit() {
-		final ToTable toTable = generated();
-		toTable.setImplicit(true);
-		return toTable;
-	}
-
-	/**
-	 * An executable <code>toTable(";")</code> inserted by the content-type desugaring step: it converts the text
-	 * like a written one, and a later pass of the step removes it like an implicit one.
-	 *
-	 * @return a new generated, executable instance
+	 * @return a new generated instance
 	 */
 	public static ToTable generated() {
 		final ToTable toTable = ToTable.builder().type("toTable").build();
@@ -155,7 +133,6 @@ public class ToTable extends Compute {
 		addNonNull(stringJoiner, "- keep=", keep);
 		addNonNull(stringJoiner, "- exclude=", exclude);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
-		addNonNull(stringJoiner, "- implicit=", implicit ? Boolean.TRUE : null);
 		addNonNull(stringJoiner, "- generated=", generated ? Boolean.TRUE : null);
 		return stringJoiner.toString();
 	}
@@ -169,7 +146,6 @@ public class ToTable extends Compute {
 			.exclude(exclude)
 			.selectColumns(selectColumns)
 			.build();
-		copy.setImplicit(implicit);
 		copy.setGenerated(generated);
 		return copy;
 	}

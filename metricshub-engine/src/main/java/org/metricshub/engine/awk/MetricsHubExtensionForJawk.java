@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -148,8 +149,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		final SourceTable sourceTableResult = source.accept(sourceProcessor);
 
 		if (sourceTableResult != null && !sourceTableResult.isEmpty()) {
-			return sourceTableResult.getRawData() != null
-				? sourceTableResult.getRawData()
+			return sourceTableResult.getContentType() == ContentType.TEXT
+				? sourceTableResult.getText()
 				: SourceTable.tableToCsv(sourceTableResult.getTable(), TABLE_SEP, false);
 		} else {
 			return "";

@@ -20,15 +20,16 @@ import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Pins the legacy shape of a <code>commandLine</code> source result (issue #1509): the raw text is the filtered
- * command output joined with line feeds, with no trailing <code>;</code> added, and the table is each line split
- * with <code>String.split(";")</code>, which drops the trailing empty cells and turns a blank line into a row holding
- * one empty cell. Deleted in stage 4 of #1508 with the behavior it pins.
+ * Pins the shape of a <code>commandLine</code> source result: a text, the filtered command output joined with line
+ * feeds, with no trailing <code>;</code> added. A reader of it as a table gets the canonical conversion, which keeps
+ * the empty cells but the one after a trailing <code>;</code> and drops the blank lines (before stage 4 of #1508, the
+ * source also held a table split with <code>String.split(";")</code>, which dropped every trailing empty cell and
+ * turned a blank line into a row holding one empty cell).
  */
-class CommandLineSourceProcessorLegacyTest {
+class CommandLineSourceProcessorTest {
 
 	@Test
-	void rawTextKeepsLinesAsIsAndTableDropsTrailingEmptyCells() throws Exception {
+	void textKeepsLinesAsIsAndTableIsTheCanonicalConversion() throws Exception {
 		final String connectorId = "connector";
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.addOne(connectorId, Connector.builder().embeddedFiles(Map.of()).build());
@@ -50,7 +51,7 @@ class CommandLineSourceProcessorLegacyTest {
 			telemetryManager
 		);
 
-		assertEquals("a;b;;\n\nc;d\n;e", result.getRawData());
-		assertEquals(List.of(List.of("a", "b"), List.of(""), List.of("c", "d"), List.of("", "e")), result.getTable());
+		assertEquals(SourceTable.ofText("a;b;;\n\nc;d\n;e"), result);
+		assertEquals(List.of(List.of("a", "b", ""), List.of("c", "d"), List.of("", "e")), result.asTable());
 	}
 }

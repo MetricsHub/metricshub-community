@@ -112,7 +112,7 @@ public class WmiSourceProcessor {
 				telemetryManager.getRecordOutputDirectory()
 			);
 
-			return SourceTable.builder().table(table).build();
+			return SourceTable.ofTable(table);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,

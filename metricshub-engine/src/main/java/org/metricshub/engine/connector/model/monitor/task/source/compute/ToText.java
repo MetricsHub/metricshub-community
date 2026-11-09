@@ -49,15 +49,13 @@ public class ToText extends Compute {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Whether the compute was inserted by the content-type desugaring step rather than written in the connector.
-	 * <p>
-	 * An implicit conversion leaves the source table unchanged: the <code>awk</code> compute it precedes serializes
-	 * the table itself when it finds no raw text. It makes the chain typed without changing its result. Never set
-	 * from YAML.
+	 * Whether the compute was inserted by the content-type desugaring step rather than written in the connector. It
+	 * converts like a written one; a later pass of the step removes it before desugaring the chain as written again.
+	 * Never set from YAML.
 	 */
 	@JsonIgnore
 	@EqualsAndHashCode.Exclude
-	private boolean implicit;
+	private boolean generated;
 
 	/**
 	 * Construct a new instance of ToText.
@@ -71,13 +69,14 @@ public class ToText extends Compute {
 	}
 
 	/**
-	 * An implicit <code>toText</code>, as inserted by the content-type desugaring step.
+	 * A <code>toText</code> inserted by the content-type desugaring step: it converts the table like a written one,
+	 * and a later pass of the step removes it.
 	 *
-	 * @return a new implicit instance
+	 * @return a new generated instance
 	 */
-	public static ToText implicit() {
+	public static ToText generated() {
 		final ToText toText = ToText.builder().type("toText").build();
-		toText.setImplicit(true);
+		toText.setGenerated(true);
 		return toText;
 	}
 
@@ -95,14 +94,14 @@ public class ToText extends Compute {
 	public String toString() {
 		final StringJoiner stringJoiner = new StringJoiner(NEW_LINE);
 		stringJoiner.add(super.toString());
-		addNonNull(stringJoiner, "- implicit=", implicit ? Boolean.TRUE : null);
+		addNonNull(stringJoiner, "- generated=", generated ? Boolean.TRUE : null);
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public ToText copy() {
 		final ToText copy = ToText.builder().type(type).build();
-		copy.setImplicit(implicit);
+		copy.setGenerated(generated);
 		return copy;
 	}
 

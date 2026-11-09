@@ -221,8 +221,8 @@ class ConnectorStoreComposerTest {
 			.get("process")
 			.getComputes()
 			.stream()
-			// The content-type desugaring inserts implicit conversions: the test addresses the written computes
-			.filter(compute -> !(compute instanceof ToTable toTable && toTable.isImplicit()))
+			// The content-type desugaring inserts conversions: the test addresses the written computes
+			.filter(compute -> !(compute instanceof ToTable toTable && toTable.isGenerated()))
 			.toList();
 	}
 }

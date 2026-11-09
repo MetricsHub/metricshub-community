@@ -460,12 +460,12 @@ class FileSourceProcessorTest {
 		// Iteration 1: First read
 		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
-		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getText());
 
 		// Iteration 2: Second read with new content
 		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
-		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 
 		// One SSH connection per poll, closed at its end, and no command run on the host
 		verify(sshClient, times(2)).close();
@@ -500,7 +500,7 @@ class FileSourceProcessorTest {
 		// Iteration 1: First read - should set cursor and return an empty log block
 		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
-		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 		final Map<String, Long> cursors = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
@@ -510,7 +510,7 @@ class FileSourceProcessorTest {
 		// Iteration 2: Second read with new content
 		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
-		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 		assertEquals(newFileSize, cursors.get(resolvedPath));
 
 		// The sizes come from the listings: no stat round trip
@@ -543,12 +543,12 @@ class FileSourceProcessorTest {
 		// Iteration 1: First read
 		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
-		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getText());
 
 		// Iteration 2: Second read with new content
 		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
-		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 
 		verify(sshClient, times(2)).close();
 		verifyNoCommandRun();
@@ -581,7 +581,7 @@ class FileSourceProcessorTest {
 		// Iteration 1: First read - should set cursor and return an empty log block
 		final SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result1);
-		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 		final Map<String, Long> cursors = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
@@ -591,7 +591,7 @@ class FileSourceProcessorTest {
 		// Iteration 2: Second read with new content
 		final SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 		assertNotNull(result2);
-		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 		assertEquals(newFileSize, cursors.get(resolvedPath));
 
 		verify(sshClient, never()).fileSize(anyString());
@@ -654,11 +654,11 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			assertEquals(expectedMarkedLogCell(resolvedPath, content), result1.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result1.getText());
 
 			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result2);
-			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getText());
 		}
 	}
 
@@ -705,7 +705,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
@@ -714,7 +714,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result2);
-			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -762,7 +762,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
@@ -771,7 +771,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result2);
-			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -815,7 +815,7 @@ class FileSourceProcessorTest {
 			final SourceTable result = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
 			assertNotNull(result);
-			assertEquals(expectedMarkedLogCell(path1, content1), result.getRawData());
+			assertEquals(expectedMarkedLogCell(path1, content1), result.getText());
 		}
 	}
 

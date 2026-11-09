@@ -22,12 +22,9 @@ package org.metricshub.extension.win.source;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,14 +103,7 @@ public class WinCommandLineSourceProcessor {
 				commandLineSource.getSelectColumns()
 			);
 
-			return SourceTable.builder()
-				.rawData(selectedColumnsLines.stream().collect(Collectors.joining(NEW_LINE)))
-				.table(
-					selectedColumnsLines.stream()
-						.map(line -> Stream.of(line.split(TABLE_SEP)).collect(Collectors.toList()))
-						.collect(Collectors.toList())
-				)
-				.build();
+			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,

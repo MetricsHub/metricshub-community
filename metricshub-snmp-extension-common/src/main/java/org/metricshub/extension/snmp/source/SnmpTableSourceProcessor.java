@@ -21,7 +21,6 @@ package org.metricshub.extension.snmp.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
@@ -73,9 +72,6 @@ public class SnmpTableSourceProcessor {
 			return SourceTable.empty();
 		}
 
-		// run the Client in order to execute the snmpTable
-		// receives a List structure
-		final SourceTable sourceTable = new SourceTable();
 		final String selectedColumns = snmpTableSource.getSelectColumns();
 
 		if (selectedColumns.isBlank()) {
@@ -110,10 +106,7 @@ public class SnmpTableSourceProcessor {
 				telemetryManager.getHostname()
 			);
 
-			sourceTable.setHeaders(Arrays.asList(selectedColumnArray));
-			sourceTable.setTable(result);
-
-			return sourceTable;
+			return SourceTable.ofTable(result);
 		} catch (Exception e) {
 			// NOSONAR on interruption
 			LoggingHelper.logSourceError(

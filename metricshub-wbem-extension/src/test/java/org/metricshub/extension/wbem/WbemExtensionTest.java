@@ -591,7 +591,7 @@ class WbemExtensionTest {
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.builder().table(EXECUTE_WBEM_RESULT).build();
+		final SourceTable expected = SourceTable.ofTable(EXECUTE_WBEM_RESULT);
 		assertEquals(expected, actual);
 	}
 
@@ -652,7 +652,7 @@ class WbemExtensionTest {
 				telemetryManager
 			);
 
-			final SourceTable expected = SourceTable.builder().rawData(null).build();
+			final SourceTable expected = SourceTable.empty();
 			assertEquals(expected, actual);
 		}
 	}

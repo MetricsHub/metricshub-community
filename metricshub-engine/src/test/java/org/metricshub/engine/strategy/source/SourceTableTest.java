@@ -39,7 +39,7 @@ class SourceTableTest {
 	void testLookupSourceTableFromReferencedSource() {
 		final HostProperties hostProperties = HostProperties.builder().build();
 
-		final SourceTable expected = SourceTable.builder().table(List.of(List.of("value"))).build();
+		final SourceTable expected = SourceTable.ofTable(List.of(List.of("value")));
 
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(SOURCE_REF_KEY, expected);
 

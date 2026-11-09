@@ -33,6 +33,7 @@ import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ConversionType;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -53,7 +54,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Exclude
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
-import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -274,7 +274,7 @@ class ComputeProcessorTest {
 	@BeforeEach
 	void setUp() {
 		computeProcessor = new ComputeProcessor();
-		sourceTable = new SourceTable();
+		sourceTable = SourceTable.empty();
 		computeProcessor.setSourceTable(sourceTable);
 		computeProcessor.setHostname(LOCALHOST);
 		telemetryManager = TelemetryManager.builder()
@@ -830,8 +830,11 @@ class ComputeProcessorTest {
 		assertEquals(new ArrayList<>(Arrays.asList(ID3, NAME3, "_ID3MANUFACTURER3", NUMBER_OF_DISKS3)), table.get(2));
 	}
 
+	/**
+	 * A <code>;</code> in the value is a character of the cell: no new column.
+	 */
 	@Test
-	void testProcessPrependNewColumn() {
+	void testProcessPrependSeparatorStaysInTheCell() {
 		initializeSourceTable();
 
 		final Prepend prepend = Prepend.builder().column(3).value("new,Column;prefix_").build();
@@ -841,21 +844,24 @@ class ComputeProcessorTest {
 		final List<List<String>> table = sourceTable.getTable();
 
 		assertEquals(
-			new ArrayList<>(Arrays.asList(ID1, NAME1, NEW_COMMA_COLUMN, PREFIX_MANUFACTURER1, NUMBER_OF_DISKS1)),
+			new ArrayList<>(Arrays.asList(ID1, NAME1, NEW_COMMA_COLUMN + ";" + PREFIX_MANUFACTURER1, NUMBER_OF_DISKS1)),
 			table.get(0)
 		);
 		assertEquals(
-			new ArrayList<>(Arrays.asList(ID2, NAME2, NEW_COMMA_COLUMN, PREFIX_MANUFACTURER2, NUMBER_OF_DISKS2)),
+			new ArrayList<>(Arrays.asList(ID2, NAME2, NEW_COMMA_COLUMN + ";" + PREFIX_MANUFACTURER2, NUMBER_OF_DISKS2)),
 			table.get(1)
 		);
 		assertEquals(
-			new ArrayList<>(Arrays.asList(ID3, NAME3, NEW_COMMA_COLUMN, PREFIX_MANUFACTURER3, NUMBER_OF_DISKS3)),
+			new ArrayList<>(Arrays.asList(ID3, NAME3, NEW_COMMA_COLUMN + ";" + PREFIX_MANUFACTURER3, NUMBER_OF_DISKS3)),
 			table.get(2)
 		);
 	}
 
+	/**
+	 * Two <code>;</code> in the value, a column reference among them: one cell.
+	 */
 	@Test
-	void testProcessPrependTwoNewColumns() {
+	void testProcessPrependTwoSeparatorsStayInTheCell() {
 		initializeSourceTable();
 
 		final Prepend prepend = Prepend.builder().column(1).value("new,$4;AnotherNew.Column;prefix_").build();
@@ -867,9 +873,7 @@ class ComputeProcessorTest {
 		assertEquals(
 			new ArrayList<>(
 				Arrays.asList(
-					NEW_COMMA_NUMBER_OF_DISKS1,
-					ANOTHER_NEW_COLUMN,
-					PREFIX_ID1,
+					String.join(";", NEW_COMMA_NUMBER_OF_DISKS1, ANOTHER_NEW_COLUMN, PREFIX_ID1),
 					NAME1,
 					MANUFACTURER1,
 					NUMBER_OF_DISKS1
@@ -880,9 +884,7 @@ class ComputeProcessorTest {
 		assertEquals(
 			new ArrayList<>(
 				Arrays.asList(
-					NEW_COMMA_NUMBER_OF_DISKS2,
-					ANOTHER_NEW_COLUMN,
-					PREFIX_ID2,
+					String.join(";", NEW_COMMA_NUMBER_OF_DISKS2, ANOTHER_NEW_COLUMN, PREFIX_ID2),
 					NAME2,
 					MANUFACTURER2,
 					NUMBER_OF_DISKS2
@@ -893,9 +895,7 @@ class ComputeProcessorTest {
 		assertEquals(
 			new ArrayList<>(
 				Arrays.asList(
-					NEW_COMMA_NUMBER_OF_DISKS3,
-					ANOTHER_NEW_COLUMN,
-					PREFIX_ID3,
+					String.join(";", NEW_COMMA_NUMBER_OF_DISKS3, ANOTHER_NEW_COLUMN, PREFIX_ID3),
 					NAME3,
 					MANUFACTURER3,
 					NUMBER_OF_DISKS3
@@ -1076,8 +1076,11 @@ class ComputeProcessorTest {
 		assertEquals(new ArrayList<>(Arrays.asList(ID3, NAME3, "MANUFACTURER3_ID3", NUMBER_OF_DISKS3)), table.get(2));
 	}
 
+	/**
+	 * A <code>;</code> in the value is a character of the cell: no new column.
+	 */
 	@Test
-	void testProcessAppendNewColumn() {
+	void testProcessAppendSeparatorStaysInTheCell() {
 		initializeSourceTable();
 
 		final Append append = Append.builder().column(3).value("_suffix;new,Column").build();
@@ -1087,21 +1090,24 @@ class ComputeProcessorTest {
 		final List<List<String>> table = sourceTable.getTable();
 
 		assertEquals(
-			new ArrayList<>(Arrays.asList(ID1, NAME1, MANUFACTURER1_SUFFIX, NEW_COMMA_COLUMN, NUMBER_OF_DISKS1)),
+			new ArrayList<>(Arrays.asList(ID1, NAME1, MANUFACTURER1_SUFFIX + ";" + NEW_COMMA_COLUMN, NUMBER_OF_DISKS1)),
 			table.get(0)
 		);
 		assertEquals(
-			new ArrayList<>(Arrays.asList(ID2, NAME2, MANUFACTURER2_SUFFIX, NEW_COMMA_COLUMN, NUMBER_OF_DISKS2)),
+			new ArrayList<>(Arrays.asList(ID2, NAME2, MANUFACTURER2_SUFFIX + ";" + NEW_COMMA_COLUMN, NUMBER_OF_DISKS2)),
 			table.get(1)
 		);
 		assertEquals(
-			new ArrayList<>(Arrays.asList(ID3, NAME3, MANUFACTURER3_SUFFIX, NEW_COMMA_COLUMN, NUMBER_OF_DISKS3)),
+			new ArrayList<>(Arrays.asList(ID3, NAME3, MANUFACTURER3_SUFFIX + ";" + NEW_COMMA_COLUMN, NUMBER_OF_DISKS3)),
 			table.get(2)
 		);
 	}
 
+	/**
+	 * Two <code>;</code> in the value, a column reference among them: one cell.
+	 */
 	@Test
-	void testProcessAppendTwoNewColumns() {
+	void testProcessAppendTwoSeparatorsStayInTheCell() {
 		initializeSourceTable();
 
 		final Append append = Append.builder().column(1).value("_suffix;new,$4;AnotherNew.Column").build();
@@ -1113,9 +1119,7 @@ class ComputeProcessorTest {
 		assertEquals(
 			new ArrayList<>(
 				Arrays.asList(
-					ID1_SUFFIX,
-					NEW_COMMA_NUMBER_OF_DISKS1,
-					ANOTHER_NEW_COLUMN,
+					String.join(";", ID1_SUFFIX, NEW_COMMA_NUMBER_OF_DISKS1, ANOTHER_NEW_COLUMN),
 					NAME1,
 					MANUFACTURER1,
 					NUMBER_OF_DISKS1
@@ -1126,9 +1130,7 @@ class ComputeProcessorTest {
 		assertEquals(
 			new ArrayList<>(
 				Arrays.asList(
-					ID2_SUFFIX,
-					NEW_COMMA_NUMBER_OF_DISKS2,
-					ANOTHER_NEW_COLUMN,
+					String.join(";", ID2_SUFFIX, NEW_COMMA_NUMBER_OF_DISKS2, ANOTHER_NEW_COLUMN),
 					NAME2,
 					MANUFACTURER2,
 					NUMBER_OF_DISKS2
@@ -1139,9 +1141,7 @@ class ComputeProcessorTest {
 		assertEquals(
 			new ArrayList<>(
 				Arrays.asList(
-					ID3_SUFFIX,
-					NEW_COMMA_NUMBER_OF_DISKS3,
-					ANOTHER_NEW_COLUMN,
+					String.join(";", ID3_SUFFIX, NEW_COMMA_NUMBER_OF_DISKS3, ANOTHER_NEW_COLUMN),
 					NAME3,
 					MANUFACTURER3,
 					NUMBER_OF_DISKS3
@@ -1177,10 +1177,10 @@ class ComputeProcessorTest {
 
 		// Append is not null, Append.getColumn() is not null, Append.getValue() is not null,
 		// Append.getColumn() > 0,
-		// computeProcessor.getSourceTable() is not null, computeProcessor.getSourceTable().getTable() is null
-		computeProcessor.setSourceTable(SourceTable.builder().table(null).build());
+		// computeProcessor.getSourceTable() is not null, computeProcessor.getSourceTable().getTable() is empty
+		computeProcessor.setSourceTable(SourceTable.ofTable(null));
 		computeProcessor.process(append);
-		assertNull(computeProcessor.getSourceTable().getTable());
+		assertEquals(List.of(), computeProcessor.getSourceTable().getTable());
 
 		// Append is not null, Append.getColumn() is not null, Append.getValue() is not null,
 		// Append.getColumn() > 0,
@@ -1195,9 +1195,7 @@ class ComputeProcessorTest {
 		// computeProcessor.getSourceTable() is not null, computeProcessor.getSourceTable().getTable() is not null,
 		// computeProcessor.getSourceTable().getTable() is not empty,
 		// Append.getColumn() > sourceTable.getTable().get(0).size()
-		computeProcessor.setSourceTable(
-			SourceTable.builder().table(Collections.singletonList(Collections.singletonList(FOO))).build()
-		);
+		computeProcessor.setSourceTable(SourceTable.ofTable(Collections.singletonList(Collections.singletonList(FOO))));
 		append.setColumn(5);
 		computeProcessor.process(append);
 		assertEquals(1, computeProcessor.getSourceTable().getTable().size());
@@ -1297,17 +1295,18 @@ class ComputeProcessorTest {
 		).replaceAll("\\s", "");
 
 		// Set the extracted rawData in the source table
-		sourceTable.setRawData(rawData);
+		sourceTable.setText(rawData);
 
 		// Check the case of a null {@link Json2Csv} instance
 		Json2Csv jsonToCsv = null;
 		computeProcessor.process(jsonToCsv);
-		assertEquals(rawData, sourceTable.getRawData());
+		assertEquals(SourceTable.ofText(rawData), sourceTable);
 
-		// Check the case of an empty {@link Json2Csv} instance
+		// Check the case of an empty {@link Json2Csv} instance: no properties, no rows, a table as for xml2Csv
 		jsonToCsv = Json2Csv.builder().build();
 		computeProcessor.process(jsonToCsv);
-		assertEquals(rawData, sourceTable.getRawData());
+		assertEquals(SourceTable.empty(), sourceTable);
+		sourceTable.setText(rawData);
 
 		// Check the case of a non-null {@link Json2Csv} instance
 		jsonToCsv = Json2Csv.builder()
@@ -1316,20 +1315,25 @@ class ComputeProcessorTest {
 			.properties("id;name;monitorType;hostId")
 			.build();
 
-		// A text marker left by an explicit conversion does not survive a result
-		sourceTable.setContentType(ContentType.TEXT);
 		computeProcessor.process(jsonToCsv);
 
-		final String expectedRawDataResult = "/monitors[0];enclosure-1;enclosure-1;ENCLOSURE;hostId;\n" +
-			"/monitors[1];enclosure-2;enclosure-2;ENCLOSURE;hostId;\n";
-		assertEquals(expectedRawDataResult, sourceTable.getRawData());
-		assertEquals(ContentType.TABLE, sourceTable.getContentType());
+		final SourceTable expectedResult = SourceTable.ofTable(
+			List.of(
+				List.of("/monitors[0]", "enclosure-1", "enclosure-1", "ENCLOSURE", "hostId"),
+				List.of("/monitors[1]", "enclosure-2", "enclosure-2", "ENCLOSURE", "hostId")
+			)
+		);
+		assertEquals(expectedResult, sourceTable);
 
 		// The events parsing mode gives the same result
-		sourceTable.setRawData(rawData);
+		sourceTable.setText(rawData);
 		jsonToCsv.setParsingMode(Json2Csv.ParsingMode.EVENTS);
 		computeProcessor.process(jsonToCsv);
-		assertEquals(expectedRawDataResult, sourceTable.getRawData());
+		assertEquals(expectedResult, sourceTable);
+
+		// A table has nothing to parse: it remains unchanged
+		computeProcessor.process(jsonToCsv);
+		assertEquals(expectedResult, sourceTable);
 		Mockito.verify(clientsExecutorMock)
 			.executeJson2Csv(rawData, "/monitors", List.of("id", "name", "monitorType", "hostId"), ";", true);
 	}
@@ -1908,11 +1912,12 @@ class ComputeProcessorTest {
 		replace.setExistingValue("lv");
 		replace.setNewValue("val1;val2");
 		computeProcessor.process(replace);
+		// The ";" of the new value is a character of the cell: no new column
 		assertEquals(
 			Arrays.asList(
-				Arrays.asList("ID1", "v1", "fvaval1", "val21f"),
-				Arrays.asList("ID2", "v2", "fvaval1", "val22ff"),
-				Arrays.asList("ID3", "v3", "vafval1", "val23f2")
+				Arrays.asList("ID1", "v1", "fvaval1;val21f"),
+				Arrays.asList("ID2", "v2", "fvaval1;val22ff"),
+				Arrays.asList("ID3", "v3", "vafval1;val23f2")
 			),
 			sourceTable.getTable()
 		);
@@ -1923,9 +1928,9 @@ class ComputeProcessorTest {
 		computeProcessor.process(replace);
 		assertEquals(
 			Arrays.asList(
-				Arrays.asList("ID1", "v1", "v1v2", "val21f"),
-				Arrays.asList("ID2", "v2", "v1v2", "val22ff"),
-				Arrays.asList("ID3", "v3", "v1v2", "val23f2")
+				Arrays.asList("ID1", "v1", "v1v2"),
+				Arrays.asList("ID2", "v2", "v1v2"),
+				Arrays.asList("ID3", "v3", "v1v2")
 			),
 			sourceTable.getTable()
 		);
@@ -1936,9 +1941,9 @@ class ComputeProcessorTest {
 		computeProcessor.process(replace);
 		assertEquals(
 			Arrays.asList(
-				Arrays.asList("ID1", "v1", "ID1v2", "val21f"),
-				Arrays.asList("ID2", "v2", "v1ID2", "val22ff"),
-				Arrays.asList("ID3", "v3", "v1v2", "val23f2")
+				Arrays.asList("ID1", "v1", "ID1v2"),
+				Arrays.asList("ID2", "v2", "v1ID2"),
+				Arrays.asList("ID3", "v3", "v1v2")
 			),
 			sourceTable.getTable()
 		);
@@ -1947,7 +1952,7 @@ class ComputeProcessorTest {
 	@Test
 	void testXml2Csv() {
 		final String xml = ResourceHelper.getResourceAsString("/test-files/compute/xml2Csv/xml2Csv.xml", this.getClass());
-		sourceTable.setRawData(xml);
+		sourceTable.setText(xml);
 
 		final String properties = ">classId;" +
 			"outConfigs/equipmentFan>dn;" +
@@ -1959,19 +1964,18 @@ class ComputeProcessorTest {
 		final String recordTag = "/configResolveClass";
 
 		computeProcessor.process((Xml2Csv) null);
-		assertEquals(Collections.emptyList(), sourceTable.getTable());
-		assertEquals(xml, sourceTable.getRawData());
+		assertEquals(SourceTable.ofText(xml), sourceTable);
 
+		// Nothing parsed: an empty table
 		computeProcessor.process(Xml2Csv.builder().build());
-		assertEquals(Collections.emptyList(), sourceTable.getTable());
-		assertEquals(xml, sourceTable.getRawData());
+		assertEquals(SourceTable.empty(), sourceTable);
 
+		sourceTable.setText(xml);
 		computeProcessor.process(Xml2Csv.builder().recordTag(recordTag).build());
-		assertEquals(Collections.emptyList(), sourceTable.getTable());
-		assertEquals(xml, sourceTable.getRawData());
+		assertEquals(SourceTable.empty(), sourceTable);
 
-		// A text marker left by an explicit conversion does not survive a result
-		sourceTable.setContentType(ContentType.TEXT);
+		sourceTable.setText(xml);
+
 		computeProcessor.process(Xml2Csv.builder().properties(properties).recordTag(recordTag).build());
 		assertEquals(ContentType.TABLE, sourceTable.getContentType());
 
@@ -2202,41 +2206,11 @@ class ComputeProcessorTest {
 			)
 		);
 
-		assertEquals(expected, sourceTable.getTable());
-		assertNotNull(sourceTable.getRawData());
+		assertEquals(SourceTable.ofTable(expected), sourceTable);
 
-		final String expectedCsvResult = "equipmentFan;sys/switch-A/fan-module-1-1/fan-1;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-1/fan-2;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-1/fan-3;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-1/fan-4;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-1/fan-5;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-1/fan-6;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-2/fan-1;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-2/fan-2;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-2/fan-3;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-2/fan-4;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-2/fan-5;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/switch-A/fan-module-1-2/fan-6;N/A;N10-FAN1;Cisco Systems, Inc.;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-1/fan-1;NWG15030613;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-1/fan-2;NWG15030613;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-2/fan-1;NWG150305AQ;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-2/fan-2;NWG150305AQ;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-3/fan-1;NWG15030653;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-3/fan-2;NWG15030653;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-4/fan-1;NWG1503055C;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-4/fan-2;NWG1503055C;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-5/fan-1;NWG150305CM;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-5/fan-2;NWG150305CM;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-6/fan-1;NWG150306ZR;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-6/fan-2;NWG150306ZR;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-7/fan-1;NWG150305QP;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-7/fan-2;NWG150305QP;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-8/fan-1;NWG150306VZ;N20-FAN5;Cisco Systems Inc;operable;\n" +
-			"equipmentFan;sys/chassis-1/fan-module-1-8/fan-2;NWG150306VZ;N20-FAN5;Cisco Systems Inc;operable;";
-
+		// A table has nothing to parse: it remains unchanged
 		computeProcessor.process(Xml2Csv.builder().properties(properties).build());
-		assertEquals(expected, sourceTable.getTable());
-		assertEquals(expectedCsvResult, sourceTable.getRawData());
+		assertEquals(SourceTable.ofTable(expected), sourceTable);
 	}
 
 	@Test
@@ -2268,10 +2242,10 @@ class ComputeProcessorTest {
 
 		// KeepOnlyMatchingLines is not null, keepOnlyMatchingLines.getColumn() is not null,
 		// keepOnlyMatchingLines.getColumn() > 0,
-		// computeVisitor.getSourceTable() is not null, computeVisitor.getSourceTable().getTable() is null
-		computeProcessor.setSourceTable(SourceTable.builder().table(null).build());
+		// computeVisitor.getSourceTable() is not null, computeVisitor.getSourceTable().getTable() is empty
+		computeProcessor.setSourceTable(SourceTable.ofTable(null));
 		computeProcessor.process(keepOnlyMatchingLines);
-		assertNull(computeProcessor.getSourceTable().getTable());
+		assertEquals(List.of(), computeProcessor.getSourceTable().getTable());
 
 		// KeepOnlyMatchingLines is not null, keepOnlyMatchingLines.getColumn() is not null,
 		// keepOnlyMatchingLines.getColumn() > 0,
@@ -2286,9 +2260,7 @@ class ComputeProcessorTest {
 		// computeVisitor.getSourceTable() is not null, computeVisitor.getSourceTable().getTable() is not null,
 		// computeVisitor.getSourceTable().getTable() is not empty,
 		// keepOnlyMatchingLines.getColumn() > sourceTable.getTable().get(0).size()
-		computeProcessor.setSourceTable(
-			SourceTable.builder().table(Collections.singletonList(Collections.singletonList(FOO))).build()
-		);
+		computeProcessor.setSourceTable(SourceTable.ofTable(Collections.singletonList(Collections.singletonList(FOO))));
 		keepOnlyMatchingLines.setColumn(2);
 		computeProcessor.process(keepOnlyMatchingLines);
 		assertTrue(computeProcessor.getSourceTable().getTable().isEmpty());
@@ -2302,7 +2274,7 @@ class ComputeProcessorTest {
 	 * <li>Line 2: ["BAR", "10", "20", "30"]</li>
 	 * <li>Line 3: ["BAZ", "100", "200", "300"]</li>
 	 * </ol>
-	 * The source table is then set in the compute processor using {@code SourceTable.builder().table(table).build()}.
+	 * The source table is then set in the compute processor using {@code SourceTable.ofTable(table)}.
 	 *
 	 * @return A new source table represented as a list of lists of strings.
 	 *         Each inner list corresponds to a line in the source table.
@@ -2313,7 +2285,7 @@ class ComputeProcessorTest {
 		final List<String> line3 = Arrays.asList(BAZ, "100", "200", "300");
 		final List<List<String>> table = Arrays.asList(line1, line2, line3);
 
-		computeProcessor.setSourceTable(SourceTable.builder().table(table).build());
+		computeProcessor.setSourceTable(SourceTable.ofTable(table));
 
 		return table;
 	}
@@ -2405,7 +2377,7 @@ class ComputeProcessorTest {
 		List<String> line4 = Arrays.asList(BAZ + FOO, FOO, "2000", "3000");
 		List<List<String>> table = Arrays.asList(line1, line2, line3, line4);
 
-		computeProcessor.setSourceTable(SourceTable.builder().table(table).build());
+		computeProcessor.setSourceTable(SourceTable.ofTable(table));
 		KeepOnlyMatchingLines keepOnlyMatchingLines = KeepOnlyMatchingLines.builder()
 			.column(1)
 			.regExp("^B")
@@ -2446,7 +2418,7 @@ class ComputeProcessorTest {
 
 		table = Arrays.asList(line1, line2, line3, line4);
 
-		computeProcessor.setSourceTable(SourceTable.builder().table(table).build());
+		computeProcessor.setSourceTable(SourceTable.ofTable(table));
 		final ExcludeMatchingLines excludeMatchingLines = ExcludeMatchingLines.builder().column(1).regExp("^B").build();
 		// exclude lines starting with B
 		computeProcessor.process(excludeMatchingLines);
@@ -2458,7 +2430,7 @@ class ComputeProcessorTest {
 		table = Arrays.asList(line1, line2, line3, line4);
 
 		// exclude lines with column 2 is numeric value
-		computeProcessor.setSourceTable(SourceTable.builder().table(table).build());
+		computeProcessor.setSourceTable(SourceTable.ofTable(table));
 		excludeMatchingLines.setRegExp("[1-9]");
 		excludeMatchingLines.setColumn(2);
 		computeProcessor.process(excludeMatchingLines);
@@ -2479,7 +2451,7 @@ class ComputeProcessorTest {
 		line4 = Arrays.asList("B", "fan", "fan2");
 		table = Arrays.asList(line1, line2, line3, line4);
 
-		computeProcessor.setSourceTable(SourceTable.builder().table(table).build());
+		computeProcessor.setSourceTable(SourceTable.ofTable(table));
 		keepOnlyMatchingLines = KeepOnlyMatchingLines.builder().column(2).regExp("fan").build();
 		computeProcessor.process(keepOnlyMatchingLines);
 		final List<List<String>> expectedTableResult = Arrays.asList(line2, line4);
@@ -2487,7 +2459,7 @@ class ComputeProcessorTest {
 
 		// check valueSet ignoreCase
 		table = Arrays.asList(line1, line2, line3, line4);
-		computeProcessor.setSourceTable(SourceTable.builder().table(table).build());
+		computeProcessor.setSourceTable(SourceTable.ofTable(table));
 		keepOnlyMatchingLines = KeepOnlyMatchingLines.builder().column(2).valueList("fan,Fan").build();
 		computeProcessor.process(keepOnlyMatchingLines);
 		assertEquals(expectedTableResult, computeProcessor.getSourceTable().getTable());
@@ -2517,7 +2489,6 @@ class ComputeProcessorTest {
 		assertEquals(table, sourceTable.getTable());
 
 		sourceTable.setTable(null);
-		sourceTable.setRawData(null);
 
 		final String embeddedFileName = "${file::1}";
 
@@ -2539,15 +2510,15 @@ class ComputeProcessorTest {
 				);
 
 			computeProcessor.process(awkOK);
+			// The awk writes text: the table is what the toTable the desugaring appends gives
 			String expectedRawData = "FOO;ID1;NAME1;";
 			List<List<String>> expectedTable = Arrays.asList(Arrays.asList(FOO, ID1, NAME1));
-			assertEquals(expectedTable, sourceTable.getTable());
-			assertEquals(expectedRawData, sourceTable.getRawData());
+			assertEquals(SourceTable.ofText(expectedRawData), sourceTable);
+			assertEquals(expectedTable, sourceTable.asTable());
 
 			// 2) Return null
 			final List<List<String>> osCommandResultTable = List.of(List.of("OS command result"));
 			sourceTable.setTable(osCommandResultTable);
-			sourceTable.setRawData(null);
 
 			awkOK = Awk.builder()
 				.script(embeddedFileName)
@@ -2560,11 +2531,10 @@ class ComputeProcessorTest {
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any())).thenReturn(null);
 
 			computeProcessor.process(awkOK);
-			assertEquals(Collections.emptyList(), sourceTable.getTable());
+			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
 
 			// 3) Return EMPTY
 			sourceTable.setTable(osCommandResultTable);
-			sourceTable.setRawData(null);
 
 			awkOK = Awk.builder()
 				.script(embeddedFileName)
@@ -2577,10 +2547,9 @@ class ComputeProcessorTest {
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any())).thenReturn(EMPTY);
 
 			computeProcessor.process(awkOK);
-			assertEquals(Collections.emptyList(), sourceTable.getTable());
+			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
 
 			// 4) Return CSV matching `table`, then filter/select
-			sourceTable.setRawData(null);
 			sourceTable.setTable(table);
 
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
@@ -2589,8 +2558,8 @@ class ComputeProcessorTest {
 			computeProcessor.process(
 				Awk.builder().script(embeddedFileName).exclude(ID1).keep(ID2).separators(TABLE_SEP).selectColumns("2,3").build()
 			);
-			assertEquals("NAME2;MANUFACTURER2;", sourceTable.getRawData());
-			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
+			assertEquals(SourceTable.ofText("NAME2;MANUFACTURER2;"), sourceTable);
+			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.asTable());
 
 			// 5) Same but with space in selectColumns
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
@@ -2605,8 +2574,8 @@ class ComputeProcessorTest {
 					.selectColumns("2, 3")
 					.build()
 			);
-			assertEquals("NAME2;MANUFACTURER2;", sourceTable.getRawData());
-			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
+			assertEquals(SourceTable.ofText("NAME2;MANUFACTURER2;"), sourceTable);
+			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.asTable());
 		} // static mock automatically closed here
 	}
 
@@ -2614,8 +2583,8 @@ class ComputeProcessorTest {
 	void testProcessInlineAwk() throws Exception {
 		List<List<String>> table = Arrays.asList(LINE_1, LINE_2, LINE_3);
 
-		sourceTable.setTable(table);
-		sourceTable.setRawData(null);
+		// The text the toText the desugaring inserts gives
+		sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 		final Awk awkOK = Awk.builder().script("""
 				BEGIN { FS = ";"; }
@@ -2627,8 +2596,8 @@ class ComputeProcessorTest {
 		computeProcessor.process(awkOK);
 		final List<List<String>> expectedTable = Arrays.asList(Arrays.asList(ID1, NAME1, MANUFACTURER1));
 		String expectedRawData = SourceTable.tableToCsv(expectedTable, ";", false);
-		assertEquals(expectedTable, sourceTable.getTable());
-		assertEquals(expectedRawData, sourceTable.getRawData());
+		assertEquals(SourceTable.ofText(expectedRawData), sourceTable);
+		assertEquals(expectedTable, sourceTable.asTable());
 	}
 
 	/**
@@ -2639,7 +2608,6 @@ class ComputeProcessorTest {
 	@Test
 	void testProcessInlineAwkWithVariables() {
 		sourceTable.setTable(Arrays.asList(new ArrayList<>(LINE_1)));
-		sourceTable.setRawData(null);
 
 		final String sourceRef = "${source::monitors.enclosure.discovery.sources.other}";
 		final String connectorId = "awkVariablesConnector";
@@ -2648,9 +2616,7 @@ class ComputeProcessorTest {
 			.getConnectorNamespace(connectorId)
 			.addSourceTable(
 				sourceRef,
-				SourceTable.builder()
-					.table(Arrays.asList(Arrays.asList("alpha", "beta"), Arrays.asList("gamma", "delta")))
-					.build()
+				SourceTable.ofTable(Arrays.asList(Arrays.asList("alpha", "beta"), Arrays.asList("gamma", "delta")))
 			);
 
 		computeProcessor.setTelemetryManager(telemetryManager);
@@ -2666,9 +2632,10 @@ class ComputeProcessorTest {
 
 		computeProcessor.process(awk);
 
+		// The awk writes text: the table is what the toTable the desugaring appends gives
 		assertEquals(
 			Arrays.asList(Arrays.asList("alpha", "beta", "42"), Arrays.asList("gamma", "delta", "42")),
-			sourceTable.getTable()
+			sourceTable.asTable()
 		);
 	}
 
@@ -3058,11 +3025,12 @@ class ComputeProcessorTest {
 			.translationTable(TranslationTable.builder().translations(translationMapSemiColon).build())
 			.build();
 		computeProcessor.process(translate);
+		// The ";" of the translation is a character of the cell: no new column
 		assertEquals(
 			Arrays.asList(
-				Arrays.asList("ID1", "NAME1", "MANUFACTURER1", "NUMBER_OF_DISKS1_resolved", "new_column_1"),
-				Arrays.asList("ID2", "NAME2", "MANUFACTURER2", "NUMBER_OF_DISKS2_resolved", "new_column_2"),
-				Arrays.asList("ID3", "NAME3", "MANUFACTURER3", "NUMBER_OF_DISKS3_resolved", "new_column_3")
+				Arrays.asList("ID1", "NAME1", "MANUFACTURER1", "NUMBER_OF_DISKS1_resolved;new_column_1"),
+				Arrays.asList("ID2", "NAME2", "MANUFACTURER2", "NUMBER_OF_DISKS2_resolved;new_column_2"),
+				Arrays.asList("ID3", "NAME3", "MANUFACTURER3", "NUMBER_OF_DISKS3_resolved;new_column_3")
 			),
 			sourceTable.getTable()
 		);
@@ -3102,9 +3070,9 @@ class ComputeProcessorTest {
 		computeProcessor.process(translate);
 		assertEquals(
 			Arrays.asList(
-				Arrays.asList("ID1", "NAME1", "MANUFACTURER1", "NUMBER_OF_DISKS1_resolved", "new_column_1"),
-				Arrays.asList("ID2", "NAME2", "MANUFACTURER2", "NUMBER_OF_DISKS2_resolved", "new_column_2"),
-				Arrays.asList("ID3", "NAME3", "MANUFACTURER3", "NUMBER_OF_DISKS3_resolved", "new_column_3")
+				Arrays.asList("ID1", "NAME1", "MANUFACTURER1", "NUMBER_OF_DISKS1_resolved;new_column_1"),
+				Arrays.asList("ID2", "NAME2", "MANUFACTURER2", "NUMBER_OF_DISKS2_resolved;new_column_2"),
+				Arrays.asList("ID3", "NAME3", "MANUFACTURER3", "NUMBER_OF_DISKS3_resolved;new_column_3")
 			),
 			sourceTable.getTable()
 		);
@@ -3349,8 +3317,7 @@ class ComputeProcessorTest {
 		sourceTable.setTable(table);
 		computeProcessor.process(Head.builder().lines("2").build());
 		final List<List<String>> head = List.of(List.of("a", "1"), List.of("b", "2"));
-		assertEquals(head, sourceTable.getTable());
-		assertEquals(SourceTable.tableToCsv(head, TABLE_SEP, false), sourceTable.getRawData());
+		assertEquals(SourceTable.ofTable(head), sourceTable);
 
 		sourceTable.setTable(table);
 		computeProcessor.process(Tail.builder().lines("2").build());
@@ -3389,11 +3356,7 @@ class ComputeProcessorTest {
 		// Numeric: equal values keep their order, the lines without a number go last in their order
 		sourceTable.setTable(table);
 		computeProcessor.process(Sort.builder().column(2).numeric(true).build());
-		assertEquals(List.of(alpha, zeta, beta, error, gamma), sourceTable.getTable());
-		assertEquals(
-			SourceTable.tableToCsv(List.of(alpha, zeta, beta, error, gamma), TABLE_SEP, false),
-			sourceTable.getRawData()
-		);
+		assertEquals(SourceTable.ofTable(List.of(alpha, zeta, beta, error, gamma)), sourceTable);
 
 		sourceTable.setTable(table);
 		computeProcessor.process(Sort.builder().column(2).numeric(true).descending(true).build());

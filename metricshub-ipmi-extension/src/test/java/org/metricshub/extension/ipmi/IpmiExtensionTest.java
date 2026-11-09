@@ -294,7 +294,7 @@ class IpmiExtensionTest {
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.builder().rawData(RESULT).build();
+		final SourceTable expected = SourceTable.ofText(RESULT);
 		assertEquals(expected, actual);
 	}
 
@@ -346,7 +346,7 @@ class IpmiExtensionTest {
 				telemetryManager
 			);
 
-			final SourceTable expected = SourceTable.builder().rawData("").build();
+			final SourceTable expected = SourceTable.ofText("");
 			assertEquals(expected, actual);
 		}
 	}
@@ -405,7 +405,7 @@ class IpmiExtensionTest {
 
 		doReturn("00;20 01").when(ipmiRequestExecutorMock).executeIpmiRaw(HOST_NAME, configuration, source);
 		assertEquals(
-			SourceTable.builder().table(List.of(List.of("00", "20 01"))).build(),
+			SourceTable.ofTable(List.of(List.of("00", "20 01"))),
 			ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)
 		);
 

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +25,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
@@ -49,10 +47,7 @@ class ForceSerializationHelperTest {
 
 	private static final String HOST_NAME = "host.test.force.serialization";
 	private static final String SELECT_COLUMNS = "ID,1,3";
-	private static final SourceTable EXPECTED_SOURCE_TABLE = SourceTable.builder()
-		.table(EXPECTED_SNMP_TABLE_DATA)
-		.headers(Arrays.asList(SELECT_COLUMNS.split(MetricsHubConstants.COMMA)))
-		.build();
+	private static final SourceTable EXPECTED_SOURCE_TABLE = SourceTable.ofTable(EXPECTED_SNMP_TABLE_DATA);
 	private static final String DESCRIPTION = "source";
 	private static final String CONNECTOR_ID = "connector";
 
@@ -139,7 +134,7 @@ class ForceSerializationHelperTest {
 		assertEquals(
 			SourceTable.empty(),
 			ForceSerializationHelper.forceSerialization(
-				() -> SourceTable.builder().table(List.of(List.of("a", "b", "c"))),
+				() -> SourceTable.ofTable(List.of(List.of("a", "b", "c"))),
 				telemetryManager,
 				CONNECTOR_ID,
 				snmpTableSource,
@@ -190,7 +185,7 @@ class ForceSerializationHelperTest {
 		assertEquals(
 			SourceTable.empty(),
 			ForceSerializationHelper.forceSerialization(
-				() -> SourceTable.builder().table(List.of(List.of("a", "b", "c"))),
+				() -> SourceTable.ofTable(List.of(List.of("a", "b", "c"))),
 				telemetryManager,
 				CONNECTOR_ID,
 				snmpTableSource,

@@ -2,7 +2,6 @@ package org.metricshub.extension.jmx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -73,7 +72,7 @@ class JmxSourceProcessorTest {
 		final SourceTable resultTable = processor.process(source, telemetryManager);
 
 		assertNotNull(resultTable, "SourceTable should not be null");
-		assertTrue(resultTable.getTable().isEmpty(), "Expected empty table when no attributes are returned");
+		assertEquals(SourceTable.empty(), resultTable, "Expected an empty table when no attributes are returned");
 	}
 
 	@Test
@@ -96,15 +95,14 @@ class JmxSourceProcessorTest {
 		final SourceTable resultTable = processor.process(source, telemetryManager);
 
 		assertNotNull(resultTable, "SourceTable should not be null even if exception occurs");
-		assertTrue(resultTable.getTable().isEmpty(), "Expected empty table if fetchBeanInfo fails");
+		assertEquals(SourceTable.empty(), resultTable, "Expected an empty table if fetchBeanInfo fails");
 	}
 
 	/**
-	 * Legacy shape pinned for #1509: the raw text is serialized with <code>replaceSeparator=true</code>, so a
-	 * <code>;</code> inside a cell shows as <code>,</code> in the raw text while the table keeps it.
+	 * A <code>;</code> inside a cell is just a character of the cell: the result is a table, never serialized.
 	 */
 	@Test
-	void testRawTextReplacesSeparatorInsideCellsWhileTableKeepsIt() throws Exception {
+	void testTableKeepsSeparatorInsideCells() throws Exception {
 		final JmxConfiguration jmxConfig = JmxConfiguration.builder().hostname("localhost").build();
 		final HostConfiguration hostConfig = mock(HostConfiguration.class);
 		when(hostConfig.getConfigurations()).thenReturn(Map.of(JmxConfiguration.class, jmxConfig));
@@ -120,7 +118,6 @@ class JmxSourceProcessorTest {
 
 		final SourceTable result = processor.process(source, telemetryManager);
 
-		assertEquals(List.of(List.of("a;b", "c"), List.of("", "d")), result.getTable());
-		assertEquals("a,b;c;\n;d;", result.getRawData());
+		assertEquals(SourceTable.ofTable(List.of(List.of("a;b", "c"), List.of("", "d"))), result);
 	}
 }

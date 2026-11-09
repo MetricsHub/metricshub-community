@@ -101,10 +101,7 @@ class WmiSourceProcessorTest {
 		doReturn(expected).when(winRequestExecutorMock)
 			.executeWmi(HOST_NAME, wmiConfiguration, WMI_QUERY, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
 
-		assertEquals(
-			SourceTable.builder().table(expected).build(),
-			wmiSourceProcessor.process(wmiSource, telemetryManager)
-		);
+		assertEquals(SourceTable.ofTable(expected), wmiSourceProcessor.process(wmiSource, telemetryManager));
 	}
 
 	@Test

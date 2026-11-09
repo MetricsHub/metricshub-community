@@ -17,7 +17,6 @@ import static org.metricshub.engine.constants.Constants.MONITOR_ID_ATTRIBUTE_VAL
 import static org.metricshub.engine.constants.Constants.MY_CONNECTOR_1_NAME;
 import static org.metricshub.engine.constants.Constants.OID;
 import static org.metricshub.engine.constants.Constants.SNMP_SELECTED_COLUMNS;
-import static org.metricshub.engine.constants.Constants.SNMP_SELECTED_COLUMNS_LIST;
 import static org.metricshub.engine.constants.Constants.TAB1_REF;
 import static org.metricshub.engine.constants.Constants.URL;
 import static org.metricshub.engine.constants.Constants.VALUE_A1;
@@ -29,7 +28,6 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -47,13 +45,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -114,11 +112,9 @@ class SourceUpdaterProcessorTest {
 		final HttpSource httpSource = HttpSource.builder().url(URL).build();
 		httpSource.setExecuteForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build());
 
-		final SourceTable sourceTable = SourceTable.builder()
-			.table(
-				Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
-			)
-			.build();
+		final SourceTable sourceTable = SourceTable.ofTable(
+			Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
+		);
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
@@ -126,8 +122,8 @@ class SourceUpdaterProcessorTest {
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		final SourceTable expected1 = SourceTable.builder().rawData(EXPECTED_VAL_1).build();
-		final SourceTable expected2 = SourceTable.builder().rawData(EXPECTED_VAL_2).build();
+		final SourceTable expected1 = SourceTable.ofText(EXPECTED_VAL_1);
+		final SourceTable expected2 = SourceTable.ofText(EXPECTED_VAL_2);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
 		SourceTable result = new SourceUpdaterProcessor(
 			sourceProcessor,
@@ -136,7 +132,7 @@ class SourceUpdaterProcessorTest {
 			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 			extensionManager
 		).process(httpSource);
-		assertEquals(EXPECTED_VAL_1_AND_2, result.getRawData());
+		assertEquals(EXPECTED_VAL_1_AND_2, result.getText());
 
 		httpSource.setExecuteForEachEntryOf(
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(EntryConcatMethod.LIST).build()
@@ -149,7 +145,7 @@ class SourceUpdaterProcessorTest {
 			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 			extensionManager
 		).process(httpSource);
-		assertEquals(EXPECTED_VAL_1_AND_2, result.getRawData());
+		assertEquals(EXPECTED_VAL_1_AND_2, result.getText());
 
 		httpSource.setExecuteForEachEntryOf(
 			ExecuteForEachEntryOf.builder()
@@ -165,7 +161,7 @@ class SourceUpdaterProcessorTest {
 			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 			extensionManager
 		).process(httpSource);
-		assertEquals(EXPECTED_VAL_1_AND_2_ARRAY, result.getRawData());
+		assertEquals(EXPECTED_VAL_1_AND_2_ARRAY, result.getText());
 
 		httpSource.setExecuteForEachEntryOf(
 			ExecuteForEachEntryOf.builder()
@@ -182,7 +178,7 @@ class SourceUpdaterProcessorTest {
 			extensionManager
 		).process(httpSource);
 
-		assertEquals(EXPECTED_RESULT, result.getRawData());
+		assertEquals(EXPECTED_RESULT, result.getText());
 	}
 
 	@Test
@@ -205,11 +201,9 @@ class SourceUpdaterProcessorTest {
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(customConcatMethod).build()
 		);
 
-		final SourceTable sourceTable = SourceTable.builder()
-			.table(
-				Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
-			)
-			.build();
+		final SourceTable sourceTable = SourceTable.ofTable(
+			Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
+		);
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
@@ -217,8 +211,8 @@ class SourceUpdaterProcessorTest {
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		final SourceTable expected1 = SourceTable.builder().rawData(EXPECTED_VAL_1).build();
-		final SourceTable expected2 = SourceTable.builder().rawData(EXPECTED_VAL_2).build();
+		final SourceTable expected1 = SourceTable.ofText(EXPECTED_VAL_1);
+		final SourceTable expected2 = SourceTable.ofText(EXPECTED_VAL_2);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
 
 		SourceTable result = new SourceUpdaterProcessor(
@@ -229,7 +223,40 @@ class SourceUpdaterProcessorTest {
 			extensionManager
 		).process(httpSource);
 		final String expectedResult = "concatStart:{expectedVal1}concatEnd;concatStart:{expectedVal2}concatEnd;";
-		assertEquals(expectedResult, result.getRawData());
+		assertEquals(expectedResult, result.getText());
+
+		// An empty or failed entry adds nothing; a table entry is read as its text
+		final SourceTable threeRows = SourceTable.ofTable(
+			Arrays.asList(Arrays.asList("1"), Arrays.asList("2"), Arrays.asList("3"))
+		);
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(ENCLOSURE_COLLECT_SOURCE_1, threeRows);
+		doReturn(SourceTable.ofText("a"), SourceTable.empty(), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
+			sourceProcessor
+		).process(any(HttpSource.class));
+		final SourceTable custom = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(),
+			extensionManager
+		).process(httpSource);
+		assertEquals(SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{b;c;}concatEnd;"), custom);
+
+		// LIST keeps the text type of an http source: a table entry is converted, never dropped
+		httpSource.setExecuteForEachEntryOf(
+			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(EntryConcatMethod.LIST).build()
+		);
+		doReturn(SourceTable.ofText("a"), SourceTable.empty(), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
+			sourceProcessor
+		).process(any(HttpSource.class));
+		final SourceTable list = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(),
+			extensionManager
+		).process(httpSource);
+		assertEquals(SourceTable.ofText("a\nb;c;"), list);
 	}
 
 	@Test
@@ -297,7 +324,7 @@ class SourceUpdaterProcessorTest {
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 			.addSourceTable(
 				ENCLOSURE_COLLECT_SOURCE_1,
-				SourceTable.builder().table(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d"))).build()
+				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
 			);
 		telemetryManager.setHostProperties(hostProperties);
 
@@ -329,7 +356,7 @@ class SourceUpdaterProcessorTest {
 			maxConcurrent.accumulateAndGet(current.incrementAndGet(), Math::max);
 			Thread.sleep(20);
 			current.decrementAndGet();
-			return SourceTable.builder().rawData("result-" + invocation.<HttpSource>getArgument(0).getPath()).build();
+			return SourceTable.ofText("result-" + invocation.<HttpSource>getArgument(0).getPath());
 		};
 	}
 
@@ -345,7 +372,7 @@ class SourceUpdaterProcessorTest {
 				notConcurrent.add(entry);
 			}
 			Thread.sleep(('e' - entry.charAt(0)) * 30L);
-			return SourceTable.builder().rawData("result-" + entry).table(List.of(List.of(entry, "x"))).build();
+			return SourceTable.ofText("result-" + entry);
 		};
 
 		final SourceTable parallel = runForEachEntry(
@@ -363,12 +390,49 @@ class SourceUpdaterProcessorTest {
 			false,
 			concurrencyRecordingAnswer(new AtomicInteger())
 		);
-		assertEquals("result-a\nresult-b\nresult-c\nresult-d", parallel.getRawData());
-		assertEquals(sequential.getRawData(), parallel.getRawData());
-		assertEquals(
-			List.of(List.of("a", "x"), List.of("b", "x"), List.of("c", "x"), List.of("d", "x")),
-			parallel.getTable()
-		);
+		assertEquals(SourceTable.ofText("result-a\nresult-b\nresult-c\nresult-d"), parallel);
+		assertEquals(sequential, parallel);
+	}
+
+	/**
+	 * LIST keeps the type of the entries: a table source concatenates the rows of its entries, dropping the rows of no
+	 * cell, in the entry order.
+	 */
+	@Test
+	void testProcessExecuteForEachEntryListOfTables() {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
+			)
+			.hostProperties(HostProperties.builder().build())
+			.build();
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+			.addSourceTable(
+				ENCLOSURE_COLLECT_SOURCE_1,
+				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
+			);
+		final SnmpGetSource snmpGetSource = SnmpGetSource.builder()
+			.oid("$1")
+			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build())
+			.build();
+		doAnswer(invocation -> {
+			final String entry = invocation.<SnmpGetSource>getArgument(0).getOid();
+			if ("c".equals(entry)) {
+				return SourceTable.ofTable(new ArrayList<>(List.of(new ArrayList<>(), new ArrayList<>(List.of("")))));
+			}
+			return "d".equals(entry) ? SourceTable.empty() : SourceTable.ofTable(List.of(List.of(entry, "x")));
+		}).when(sourceProcessor).process(any(SnmpGetSource.class));
+
+		final SourceTable result = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(),
+			extensionManager
+		).process(snmpGetSource);
+
+		assertEquals(SourceTable.ofTable(List.of(List.of("a", "x"), List.of("b", "x"), List.of(""))), result);
 	}
 
 	@Test
@@ -384,10 +448,10 @@ class SourceUpdaterProcessorTest {
 			invocation -> {
 				final String entry = invocation.<HttpSource>getArgument(0).getPath();
 				Thread.sleep(('e' - entry.charAt(0)) * 20L);
-				return SourceTable.builder().rawData("{\"id\":\"" + entry + "\"}").build();
+				return SourceTable.ofText("{\"id\":\"" + entry + "\"}");
 			}
 		);
-		assertEquals("[{\"id\":\"a\"},\n{\"id\":\"b\"},\n{\"id\":\"c\"},\n{\"id\":\"d\"}]", result.getRawData());
+		assertEquals("[{\"id\":\"a\"},\n{\"id\":\"b\"},\n{\"id\":\"c\"},\n{\"id\":\"d\"}]", result.getText());
 	}
 
 	@Test
@@ -431,7 +495,7 @@ class SourceUpdaterProcessorTest {
 			concurrencyRecordingAnswer(maxConcurrent)
 		);
 		assertEquals(1, maxConcurrent.get());
-		assertEquals("result-a\nresult-b\nresult-c\nresult-d", result.getRawData());
+		assertEquals("result-a\nresult-b\nresult-c\nresult-d", result.getText());
 	}
 
 	@Test
@@ -472,7 +536,7 @@ class SourceUpdaterProcessorTest {
 			).process(SnmpGetSource.builder().oid(OID).build())
 		);
 
-		final SourceTable expected1 = SourceTable.builder().rawData(EXPECTED_VAL_1).build();
+		final SourceTable expected1 = SourceTable.ofText(EXPECTED_VAL_1);
 
 		doReturn(expected1).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
@@ -509,10 +573,7 @@ class SourceUpdaterProcessorTest {
 			).process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
 		);
 
-		SourceTable expected = SourceTable.builder()
-			.table(EXPECTED_SNMP_TABLE_DATA)
-			.headers(SNMP_SELECTED_COLUMNS_LIST)
-			.build();
+		SourceTable expected = SourceTable.ofTable(EXPECTED_SNMP_TABLE_DATA);
 		doReturn(expected).when(sourceProcessor).process(any(SnmpTableSource.class));
 		assertEquals(
 			expected,
@@ -596,12 +657,12 @@ class SourceUpdaterProcessorTest {
 
 		CopySource copySource = CopySource.builder().from(TAB1_REF).build();
 		final List<List<String>> result = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expected = SourceTable.builder().table(result).build();
+		final SourceTable expected = SourceTable.ofTable(result);
 
 		final SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid(OID).build();
 
 		final List<List<String>> resultSnmp = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expectedSnmp = SourceTable.builder().table(resultSnmp).build();
+		final SourceTable expectedSnmp = SourceTable.ofTable(resultSnmp);
 		doReturn(expectedSnmp).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
 			expectedSnmp,
@@ -640,7 +701,7 @@ class SourceUpdaterProcessorTest {
 
 		StaticSource staticSource = StaticSource.builder().value(VALUE_VAL1).build();
 		final List<List<String>> resultTable = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expected = SourceTable.builder().table(resultTable).build();
+		final SourceTable expected = SourceTable.ofTable(resultTable);
 		doReturn(expected).when(sourceProcessor).process(any(StaticSource.class));
 		assertEquals(
 			expected,
@@ -829,7 +890,7 @@ class SourceUpdaterProcessorTest {
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
-					SourceTable.builder().table(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP)).build()
+					SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
 				);
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
@@ -848,7 +909,7 @@ class SourceUpdaterProcessorTest {
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
-					SourceTable.builder().table(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP)).build()
+					SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
 				);
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
@@ -866,7 +927,7 @@ class SourceUpdaterProcessorTest {
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
-					SourceTable.builder().table(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP)).build()
+					SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
 				);
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
@@ -891,7 +952,7 @@ class SourceUpdaterProcessorTest {
 			.keyProperties(new LinkedList<>(List.of("scope")))
 			.build();
 
-		final SourceTable sourceTable = SourceTable.builder().table(List.of(List.of("12345"))).build();
+		final SourceTable sourceTable = SourceTable.ofTable(List.of(List.of("12345")));
 		doReturn(sourceTable).when(sourceProcessor).process(any(JmxSource.class));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
@@ -981,7 +1042,7 @@ class SourceUpdaterProcessorTest {
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 			.addSourceTable(
 				inputRef,
-				SourceTable.builder().table(List.of(List.of("${source::monitors.enclosure.discovery.sources.other}"))).build()
+				SourceTable.ofTable(List.of(List.of("${source::monitors.enclosure.discovery.sources.other}")))
 			);
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(JawkSource.class));
 		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(

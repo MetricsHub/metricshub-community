@@ -23,7 +23,6 @@ package org.metricshub.engine.awk;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -32,6 +31,7 @@ import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -142,17 +142,13 @@ public class AwkVariableHelper {
 			return Collections.emptyList();
 		}
 
-		final List<List<String>> table = sourceTable.getTable();
+		// A text (e.g. an HTTP source returning a body) is exposed as the table it converts to
+		final List<List<String>> table = sourceTable.getContentType() == ContentType.TEXT
+			? sourceTable.asTable()
+			: sourceTable.getTable();
 
-		if (table != null && !table.isEmpty()) {
+		if (!table.isEmpty()) {
 			return table;
-		}
-
-		// Fall back to the raw data when the source holds no table. E.g. an HTTP source returning a body
-		final String rawData = sourceTable.getRawData();
-
-		if (rawData != null && !rawData.isEmpty()) {
-			return SourceTable.csvToTable(rawData, TABLE_SEP);
 		}
 
 		log.debug(

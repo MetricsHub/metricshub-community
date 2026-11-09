@@ -24,102 +24,210 @@ package org.metricshub.engine.strategy.source;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Builder.Default;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * The {@code SourceTable} class represents a table of data obtained from monitor sources.
- * It includes methods for transforming the table to and from CSV format and performing other related operations.
+ * The result of a source or of a compute: either a text or a table, as its {@link ContentType} tells.
+ * <p>
+ * A reader of the other type sees an empty value: a table reader of a text sees no rows, a text reader of a table
+ * sees an empty text. {@link #asText()} and {@link #asTable()} are the conversions.
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
+@EqualsAndHashCode
+@ToString
 public class SourceTable {
 
 	private static final String ALTERNATE_COLUMN_SEPARATOR = ",";
 
-	@Default
-	private List<List<String>> table = new ArrayList<>();
-
-	@Default
-	private List<String> headers = new ArrayList<>();
-
-	private String rawData;
-
 	/**
-	 * The content type set by an explicit conversion or factory, null when the content type is inferred from the
-	 * payload. Needed because an empty text and an empty table hold the same payload.
+	 * Never null: tells whether {@link #text} or {@link #table} holds the value.
 	 */
-	@JsonIgnore
-	@EqualsAndHashCode.Exclude
-	@ToString.Exclude
 	private ContentType contentType;
 
 	/**
-	 * A source table holding text only.
+	 * The text, non-null only when the content type is {@link ContentType#TEXT}.
+	 */
+	private String text;
+
+	/**
+	 * The table, non-null only when the content type is {@link ContentType#TABLE}.
+	 */
+	private List<List<String>> table;
+
+	private SourceTable() {}
+
+	/**
+	 * A source table holding a text.
 	 *
 	 * @param text The text, null meaning empty
 	 * @return a new source table whose content type is {@link ContentType#TEXT}
 	 */
 	public static SourceTable ofText(final String text) {
-		return SourceTable.builder().rawData(text == null ? EMPTY : text).contentType(ContentType.TEXT).build();
+		final SourceTable sourceTable = new SourceTable();
+		sourceTable.setText(text);
+		return sourceTable;
 	}
 
 	/**
-	 * A source table holding a table only.
+	 * A source table holding a table.
 	 *
 	 * @param table The table, null meaning empty
 	 * @return a new source table whose content type is {@link ContentType#TABLE}
 	 */
 	public static SourceTable ofTable(final List<List<String>> table) {
-		return SourceTable.builder()
-			.table(table == null ? new ArrayList<>() : table)
-			.contentType(ContentType.TABLE)
-			.build();
+		final SourceTable sourceTable = new SourceTable();
+		sourceTable.setTable(table);
+		return sourceTable;
 	}
 
 	/**
-	 * The content type of this source table: the one an explicit conversion or factory set, else inferred from
-	 * the payload (text when it holds a raw text and no table, a table otherwise). The source table still carries
-	 * both internally; the type tells which one a typed consumer reads.
+	 * Creates an empty table. A new instance on every call: the strategies compare it by identity.
 	 *
-	 * @return the content type
+	 * @return a new empty {@code SourceTable} whose content type is {@link ContentType#TABLE}
 	 */
-	@JsonIgnore
+	public static SourceTable empty() {
+		return ofTable(null);
+	}
+
+	/**
+	 * The content type of this source table, never null.
+	 *
+	 * @return {@link ContentType#TEXT} or {@link ContentType#TABLE}
+	 */
 	public ContentType getContentType() {
-		if (contentType != null) {
-			return contentType;
-		}
-		return rawData != null && (table == null || table.isEmpty()) ? ContentType.TEXT : ContentType.TABLE;
+		return contentType;
 	}
 
 	/**
-	 * The content type an explicit conversion or factory set, to carry over when the payload is copied.
+	 * The text of this source table.
 	 *
-	 * @return the explicit content type, null when the type is inferred from the payload
+	 * @return the text, an empty text for a table
 	 */
-	@JsonIgnore
-	public ContentType getExplicitContentType() {
-		return contentType;
+	public String getText() {
+		return text == null ? EMPTY : text;
+	}
+
+	/**
+	 * The table of this source table, which the table computes change in place.
+	 *
+	 * @return the table, an empty table for a text (the legacy rule: a table reader of a text sees no rows)
+	 */
+	public List<List<String>> getTable() {
+		return table == null ? new ArrayList<>() : table;
+	}
+
+	/**
+	 * Makes this source table a text, dropping its table.
+	 *
+	 * @param text The text, null meaning empty
+	 */
+	public void setText(final String text) {
+		this.contentType = ContentType.TEXT;
+		this.text = text == null ? EMPTY : text;
+		this.table = null;
+	}
+
+	/**
+	 * Makes this source table a table, dropping its text.
+	 *
+	 * @param table The table, null meaning empty
+	 */
+	public void setTable(final List<List<String>> table) {
+		this.contentType = ContentType.TABLE;
+		this.table = table == null ? new ArrayList<>() : table;
+		this.text = null;
+	}
+
+	/**
+	 * Whether the value of this source table is empty.
+	 *
+	 * @return true for an empty text or a table with no rows
+	 */
+	public boolean isEmpty() {
+		return contentType == ContentType.TEXT ? text.isEmpty() : table.isEmpty();
+	}
+
+	/**
+	 * This source table as a text: the text itself, or the table with one line per row, cells joined with
+	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code>, and
+	 * never a CRLF. This source table is not changed.
+	 *
+	 * @return the text
+	 */
+	public String asText() {
+		if (contentType == ContentType.TEXT) {
+			return text;
+		}
+		return tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE);
+	}
+
+	/**
+	 * This source table as a table: a copy of the table itself, or the text split on <code>;</code> by
+	 * {@link #textToTable(String, String)}. This source table is not changed.
+	 *
+	 * @return a new table
+	 */
+	public List<List<String>> asTable() {
+		if (contentType == ContentType.TABLE) {
+			return table.stream().map(row -> row == null ? null : new ArrayList<>(row)).collect(Collectors.toList()); //NOSONAR
+		}
+		return textToTable(text, TABLE_SEP);
+	}
+
+	/**
+	 * Splits a text into a table: one row per line, CRLF or LF, split on a literal separator. The empty cells are
+	 * kept but the one after a trailing separator; a blank separator (a space, a tab) splits on runs of it and keeps
+	 * no empty cell. A blank line, or a line that gives no cell, gives no row.
+	 *
+	 * @param text      The text, null meaning empty
+	 * @param separator The literal separator
+	 * @return a new table
+	 */
+	public static List<List<String>> textToTable(final String text, final String separator) {
+		final List<List<String>> rows = new ArrayList<>();
+		if (text == null) {
+			return rows;
+		}
+		for (final String line : lineToList(text.replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE)) {
+			final List<String> cells = splitLine(line, separator);
+			if (!cells.isEmpty()) {
+				rows.add(cells);
+			}
+		}
+		return rows;
+	}
+
+	/**
+	 * Splits a line into cells on a literal separator, as described in {@link #textToTable(String, String)}.
+	 *
+	 * @param line      The line
+	 * @param separator The literal separator
+	 * @return the cells, mutable, none for an empty line
+	 */
+	private static List<String> splitLine(final String line, final String separator) {
+		if (line == null || line.isEmpty()) {
+			return new ArrayList<>();
+		}
+		final String[] cells = line.split(Pattern.quote(separator), -1);
+		if (separator.isBlank()) {
+			return Stream.of(cells).filter(cell -> !cell.isEmpty()).collect(Collectors.toCollection(ArrayList::new));
+		}
+		final int count = line.endsWith(separator) ? cells.length - 1 : cells.length;
+		return Stream.of(cells).limit(count).collect(Collectors.toCollection(ArrayList::new));
 	}
 
 	/**
@@ -234,27 +342,8 @@ public class SourceTable {
 	}
 
 	/**
-	 * Creates an empty {@code SourceTable} instance.
-	 *
-	 * @return An empty {@code SourceTable} instance.
-	 */
-	public static SourceTable empty() {
-		return SourceTable.builder().build();
-	}
-
-	/**
-	 * Whether the current source table is empty or not
-	 *
-	 * @return boolean value
-	 */
-	public boolean isEmpty() {
-		return (rawData == null || rawData.isEmpty()) && (table == null || table.isEmpty());
-	}
-
-	/**
 	 * Find the source table instance from the connector namespace.<br>
-	 * If we have a hard-coded source then we will create a source wrapping the
-	 * csv input.
+	 * A hard-coded source gives a new table parsed from the csv input.
 	 * @param sourceKey The reference of the source or hard-coded source information
 	 * @param connectorId The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
 	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
@@ -274,11 +363,6 @@ public class SourceTable {
 		}
 
 		// Hard-coded source
-		return Optional.of(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable(sourceKey, MetricsHubConstants.TABLE_SEP))
-				.rawData(sourceKey)
-				.build()
-		);
+		return Optional.of(ofTable(csvToTable(sourceKey, TABLE_SEP)));
 	}
 }

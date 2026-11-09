@@ -99,13 +99,11 @@ public class SnmpGetSourceProcessor {
 			);
 
 			if (result != null) {
-				return SourceTable.builder()
-					.table(
-						Stream.of(
-							Stream.of(result).collect(Collectors.toList()) // NOSONAR
-						).collect(Collectors.toList()) // NOSONAR
-					)
-					.build();
+				return SourceTable.ofTable(
+					Stream.of(
+						Stream.of(result).collect(Collectors.toList()) // NOSONAR
+					).collect(Collectors.toList()) // NOSONAR
+				);
 			}
 		} catch (Exception e) {
 			// NOSONAR on interruption

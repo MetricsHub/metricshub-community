@@ -15,11 +15,11 @@ import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.connector.model.common.EntryConcatMethod;
+import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
-import org.metricshub.engine.connector.model.common.EntryConcatMethod;
-import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -104,7 +104,7 @@ class ContentTypeDesugaringTest {
 	}
 
 	@Test
-	void tableComputeAfterCommandLineGetsImplicitToTable() {
+	void tableComputeAfterCommandLineGetsGeneratedToTable() {
 		final Source source = CommandLineSource.builder()
 			.commandLine("ls")
 			.computes(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build()))
@@ -113,13 +113,13 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 
 		assertEquals(List.of("toTable", "keepColumns"), types(source));
-		assertTrue(((ToTable) source.getComputes().get(0)).isImplicit());
+		assertTrue(((ToTable) source.getComputes().get(0)).isGenerated());
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 		assertEquals(KEY, connector.getContentTypeReport().get(0).sourceKey());
 	}
 
 	@Test
-	void commandLineWithoutComputeGetsImplicitToTableAppended() {
+	void commandLineWithoutComputeGetsGeneratedToTableAppended() {
 		final Source source = CommandLineSource.builder().commandLine("ls").build();
 		final Connector connector = connectorWith(source);
 		new ContentTypeDesugaring().update(connector);
@@ -298,7 +298,7 @@ class ContentTypeDesugaringTest {
 	}
 
 	@Test
-	void awkAfterTableSourceGetsImplicitToTextAndIsReported() {
+	void awkAfterTableSourceGetsGeneratedToTextAndIsReported() {
 		final Source source = SnmpTableSource.builder()
 			.oid("1.3")
 			.selectColumns("ID,1")
@@ -316,7 +316,7 @@ class ContentTypeDesugaringTest {
 
 		// toText before the awk (fed a table), toTable after it (text into a table compute)
 		assertEquals(List.of("toText", "awk", "toTable", "keepColumns"), types(source));
-		assertTrue(((ToText) source.getComputes().get(0)).isImplicit());
+		assertTrue(((ToText) source.getComputes().get(0)).isGenerated());
 		assertEquals(List.of(Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED), kinds(connector));
 		assertTrue(connector.getContentTypeReport().get(1).detail().contains("sets FS to \";\""));
 	}
@@ -467,8 +467,12 @@ class ContentTypeDesugaringTest {
 		assertEquals(1, kinds(connector).stream().filter(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE::equals).count());
 	}
 
+	/**
+	 * A <code>;</code> or a line feed in an append, prepend, replace or translate value is a character of the cell:
+	 * nothing to report, nothing to insert.
+	 */
 	@Test
-	void legacyIdiomsAreReported() {
+	void valuesHoldingSeparatorsOrLineFeedsAreNotReported() {
 		final TranslationTable table = TranslationTable.builder().translations(orderedTranslations()).build();
 		final Source source = SnmpTableSource.builder()
 			.oid("1.3")
@@ -491,18 +495,7 @@ class ContentTypeDesugaringTest {
 		connector.getTranslations().put("statuses", table);
 		new ContentTypeDesugaring().update(connector);
 
-		assertEquals(
-			List.of(
-				Kind.SEPARATOR_IN_VALUE,
-				Kind.LINE_FEED_IN_VALUE,
-				Kind.SEPARATOR_IN_VALUE,
-				Kind.LINE_FEED_IN_VALUE,
-				Kind.SEPARATOR_IN_VALUE,
-				Kind.LINE_FEED_IN_VALUE
-			),
-			kinds(connector)
-		);
-		assertEquals("append #0 value='MSHW;'", connector.getContentTypeReport().get(0).detail());
+		assertEquals(List.of(), kinds(connector));
 		// Nothing inserted: every compute is table to table
 		assertEquals(5, source.getComputes().size());
 	}
@@ -574,8 +567,8 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
-	 * An explicit toText leaves text only, so the table compute that follows gets a real toTable, not the no-op
-	 * implicit one: the chain keeps its rows end to end.
+	 * An explicit toText leaves text only, so the table compute that follows gets a generated toTable: the chain
+	 * keeps its rows end to end.
 	 */
 	@Test
 	void tableComputeAfterExplicitToTextGetsAnExecutableToTable() {
@@ -593,7 +586,6 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 
 		assertEquals(List.of("toText", "toTable", "keepColumns"), types(source));
-		assertFalse(((ToTable) source.getComputes().get(1)).isImplicit());
 		assertTrue(((ToTable) source.getComputes().get(1)).isGenerated());
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 
@@ -762,9 +754,9 @@ class ContentTypeDesugaringTest {
 		final Connector connector = connectorWith(source);
 		new ContentTypeDesugaring().update(connector);
 
-		// The awk still writes text: the chain ends with the usual implicit toTable
+		// The awk still writes text: the chain ends with the usual generated toTable
 		assertEquals(List.of("toTable", "awk", "toTable"), types(source));
-		assertFalse(((ToTable) source.getComputes().get(0)).isImplicit());
+		assertTrue(((ToTable) source.getComputes().get(0)).isGenerated());
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
@@ -803,12 +795,13 @@ class ContentTypeDesugaringTest {
 	}
 
 	@Test
-	void implicitFlagIsNotPartOfEqualityNorYaml() {
-		assertEquals(ToTable.implicit(), ToTable.builder().type("toTable").build());
-		assertEquals(ToText.implicit(), ToText.builder().type("toText").build());
-		assertFalse(ToTable.builder().type("toTable").build().isImplicit());
-		assertTrue(ToTable.implicit().copy().isImplicit());
-		assertTrue(ToText.implicit().copy().isImplicit());
+	void generatedFlagIsNotPartOfEqualityNorYaml() {
+		assertEquals(ToTable.generated(), ToTable.builder().type("toTable").build());
+		assertEquals(ToText.generated(), ToText.builder().type("toText").build());
+		assertFalse(ToTable.builder().type("toTable").build().isGenerated());
+		assertFalse(ToText.builder().type("toText").build().isGenerated());
+		assertTrue(ToTable.generated().copy().isGenerated());
+		assertTrue(ToText.generated().copy().isGenerated());
 	}
 
 	/**
@@ -990,11 +983,11 @@ class ContentTypeDesugaringTest {
 		);
 		new ContentTypeDesugaring().update(connector);
 		assertEquals(List.of("toTable", "awk", "toTable"), types(union));
-		assertFalse(((ToTable) union.getComputes().get(0)).isImplicit());
+		assertTrue(((ToTable) union.getComputes().get(0)).isGenerated());
 	}
 
 	/**
-	 * A text union read by a table compute gets the implicit toTable before it, like any legacy text producer.
+	 * A text union read by a table compute gets a generated toTable before it, like any legacy text producer.
 	 */
 	@Test
 	void textUnionReadByATableComputeGetsItsToTable() {

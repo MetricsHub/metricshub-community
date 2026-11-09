@@ -168,11 +168,9 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.simple.sources.source(1)}")
 			.build();
-		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
-				.build()
-		).when(protocolExtensionMock).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
+			protocolExtensionMock
+		).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -181,9 +179,9 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.simple.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.builder().table(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP)).build())
-			.when(protocolExtensionMock)
-			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
+			protocolExtensionMock
+		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		simpleStrategy.run();
 
@@ -345,11 +343,9 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.simple.sources.source(1)}")
 			.build();
-		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
-				.build()
-		).when(protocolExtensionMock).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
+			protocolExtensionMock
+		).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -358,9 +354,9 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.simple.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.builder().table(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP)).build())
-			.when(protocolExtensionMock)
-			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
+			protocolExtensionMock
+		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// First collect cycle: both simple jobs collect their metrics
 		final long firstCollectTime = strategyTime;
@@ -534,7 +530,7 @@ class SimpleStrategyTest {
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
 				nullSourceKey,
-				SourceTable.builder().table(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP)).build()
+				SourceTable.ofTable(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP))
 			);
 		lenient().doReturn(null)
 			.when(protocolExtensionMock)
@@ -551,7 +547,7 @@ class SimpleStrategyTest {
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
 				"${source::beforeAll.partB}",
-				SourceTable.builder().table(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP)).build()
+				SourceTable.ofTable(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP))
 			);
 
 		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up
@@ -559,7 +555,7 @@ class SimpleStrategyTest {
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
 				"${source::monitors.failed_source.simple.sources.source(2)}",
-				SourceTable.builder().table(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP)).build()
+				SourceTable.ofTable(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP))
 			);
 
 		collect(telemetryManager, strategyTime);
@@ -694,14 +690,12 @@ class SimpleStrategyTest {
 			.when(protocolExtensionMock)
 			.getSupportedSources();
 		lenient().doAnswer(
-			invocation -> SourceTable.builder()
-				.table(
-					SourceTable.csvToTable(
-						sourceTables.get(invocation.<Source>getArgument(0).getKey()),
-						MetricsHubConstants.TABLE_SEP
-					)
+			invocation -> SourceTable.ofTable(
+				SourceTable.csvToTable(
+					sourceTables.get(invocation.<Source>getArgument(0).getKey()),
+					MetricsHubConstants.TABLE_SEP
 				)
-				.build()
+			)
 		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		return TelemetryManager.builder()

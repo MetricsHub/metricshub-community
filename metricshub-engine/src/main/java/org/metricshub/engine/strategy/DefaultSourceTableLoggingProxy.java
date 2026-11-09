@@ -23,10 +23,11 @@ package org.metricshub.engine.strategy;
 
 import java.util.List;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
- * Default {@link SourceTableLoggingProxy}: logs the full raw data and/or table representation.
+ * Default {@link SourceTableLoggingProxy}: logs the full text or table representation.
  */
 public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
 
@@ -71,24 +72,11 @@ public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final String hostname
 	) {
 		final String header = buildLogHeader(operationTag, executionClassName, executionKey, connectorId, hostname) + "\n";
-		final String rawData = sourceTable.getRawData();
+		if (sourceTable.getContentType() == ContentType.TEXT) {
+			return header + RAW_RESULT_LABEL + sourceTable.getText() + "\n";
+		}
 		final List<List<String>> table = sourceTable.getTable();
-		final boolean hasRaw = rawData != null;
-		final boolean hasTable = table != null && !table.isEmpty();
-
-		if (hasRaw && !hasTable) {
-			return header + RAW_RESULT_LABEL + rawData + "\n";
-		}
-		if (!hasRaw) {
-			String tableStr = hasTable ? TextTableHelper.generateTextTable(table) : "<empty>";
-			return header + TABLE_RESULT_LABEL + tableStr + "\n";
-		}
-		return (header +
-			RAW_RESULT_LABEL +
-			rawData +
-			"\n" +
-			TABLE_RESULT_LABEL +
-			TextTableHelper.generateTextTable(table) +
-			"\n");
+		final String tableStr = table.isEmpty() ? "<empty>" : TextTableHelper.generateTextTable(table);
+		return header + TABLE_RESULT_LABEL + tableStr + "\n";
 	}
 }

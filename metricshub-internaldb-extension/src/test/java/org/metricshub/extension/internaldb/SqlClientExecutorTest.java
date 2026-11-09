@@ -74,26 +74,22 @@ class SqlClientExecutorTest {
 			.build();
 
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		SourceTable tabl1 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
-					Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
-					Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE),
-					Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
-				)
+		SourceTable tabl1 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
+				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
+				Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE),
+				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
 			)
-			.build();
-		final SourceTable tabl2 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
-					Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
-					Arrays.asList(ONE, LOWERCASE_C, UPPERCASE_V3, TRUE),
-					Arrays.asList(TWO, LOWERCASE_D, UPPERCASE_V4, FALSE)
-				)
+		);
+		final SourceTable tabl2 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
+				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
+				Arrays.asList(ONE, LOWERCASE_C, UPPERCASE_V3, TRUE),
+				Arrays.asList(TWO, LOWERCASE_D, UPPERCASE_V4, FALSE)
 			)
-			.build();
+		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 
@@ -284,16 +280,14 @@ class SqlClientExecutorTest {
 
 		expectedResult = Arrays.asList(Arrays.asList(LOWERCASE_B, ""), Arrays.asList(LOWERCASE_D, ""));
 
-		tabl1 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
-					Arrays.asList(LOWERCASE_B, "", TRUE, TWO),
-					Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE),
-					Arrays.asList(LOWERCASE_D, null, FALSE, FOUR)
-				)
+		tabl1 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
+				Arrays.asList(LOWERCASE_B, "", TRUE, TWO),
+				Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE),
+				Arrays.asList(LOWERCASE_D, null, FALSE, FOUR)
 			)
-			.build();
+		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 		connectorNamespace.setSourceTables(mapSources);
@@ -318,26 +312,22 @@ class SqlClientExecutorTest {
 			.build();
 
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		SourceTable tabl1 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE, DATE, TIME, TIMESTAMP),
-					Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO, DATE, TIME, TIMESTAMP),
-					Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE, DATE, TIME, TIMESTAMP),
-					Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR, DATE, TIME, TIMESTAMP)
-				)
+		SourceTable tabl1 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE, DATE, TIME, TIMESTAMP),
+				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO, DATE, TIME, TIMESTAMP),
+				Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE, DATE, TIME, TIMESTAMP),
+				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR, DATE, TIME, TIMESTAMP)
 			)
-			.build();
-		final SourceTable tabl2 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
-					Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
-					Arrays.asList(ONE, LOWERCASE_C, UPPERCASE_V3, TRUE),
-					Arrays.asList(TWO, LOWERCASE_D, UPPERCASE_V4, FALSE)
-				)
+		);
+		final SourceTable tabl2 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
+				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
+				Arrays.asList(ONE, LOWERCASE_C, UPPERCASE_V3, TRUE),
+				Arrays.asList(TWO, LOWERCASE_D, UPPERCASE_V4, FALSE)
 			)
-			.build();
+		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 
@@ -404,7 +394,7 @@ class SqlClientExecutorTest {
 	 */
 	private static SqlClientExecutor executorWithSource(final List<List<String>> rows) {
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		mapSources.put(TAB1_REF, SourceTable.builder().table(rows).build());
+		mapSources.put(TAB1_REF, SourceTable.ofTable(rows));
 
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(CONNECTOR_ID, ConnectorNamespace.builder().sourceTables(mapSources).build());

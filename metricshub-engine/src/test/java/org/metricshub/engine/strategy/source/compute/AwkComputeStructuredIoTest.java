@@ -1,7 +1,6 @@
 package org.metricshub.engine.strategy.source.compute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 
@@ -38,9 +37,8 @@ class AwkComputeStructuredIoTest {
 		processor(sourceTable).process(
 			Awk.builder().script("{ print $1 \";\" NF \";\" $2 }").input(ContentType.TABLE).build()
 		);
-		// Text output: the printed lines are re-parsed on ";", so the ";" inside the first cell adds a column here
-		assertEquals(table("a|b|2|c", "|2|d"), sourceTable.getTable());
-		assertEquals("a;b;2;c;\n;2;d;", sourceTable.getRawData());
+		// Text output: the ";" inside the first cell is a field separator for whoever splits the text
+		assertEquals(SourceTable.ofText("a;b;2;c;\n;2;d;"), sourceTable);
 	}
 
 	@Test
@@ -49,10 +47,8 @@ class AwkComputeStructuredIoTest {
 		processor(sourceTable).process(
 			Awk.builder().script("$2 > 1 { print $1, $2 * 2, \"x;y\" }").output(ContentType.TABLE).build()
 		);
-		assertEquals(table("a|42|x;y"), sourceTable.getTable());
-		// The raw text is serialized as toText does: the cell keeps its ";" in the table, "," in the text
-		assertEquals("a;42;x,y;", sourceTable.getRawData());
-		assertEquals(ContentType.TABLE, sourceTable.getContentType());
+		// The cell keeps its ";"
+		assertEquals(SourceTable.ofTable(table("a|42|x;y")), sourceTable);
 	}
 
 	@Test
@@ -69,23 +65,22 @@ class AwkComputeStructuredIoTest {
 	}
 
 	@Test
-	void tableOutputRawTextHasNoCrlf() {
+	void tableOutputKeepsCrlfInACell() {
 		final SourceTable sourceTable = SourceTable.ofText("");
 		processor(sourceTable).process(
 			Awk.builder().script("BEGIN { print \"a\\r\\nb\", \"c\" }").output(ContentType.TABLE).build()
 		);
-		assertEquals(table("a\r\nb|c"), sourceTable.getTable());
-		assertEquals("a\nb;c;", sourceTable.getRawData());
+		assertEquals(SourceTable.ofTable(table("a\r\nb|c")), sourceTable);
+		// Its text never has a CRLF
+		assertEquals("a\nb;c;", sourceTable.asText());
 	}
 
 	@Test
 	void emptyTableOutputEmptiesTheTable() {
-		final SourceTable sourceTable = SourceTable.builder().rawData("stale").table(table("a")).build();
+		final SourceTable sourceTable = SourceTable.ofText("stale");
 		processor(sourceTable).process(Awk.builder().script("BEGIN { }").output(ContentType.TABLE).build());
-		assertEquals(List.of(), sourceTable.getTable());
-		// An empty table stays a table: no raw text, and typed as such
-		assertNull(sourceTable.getRawData());
-		assertEquals(ContentType.TABLE, sourceTable.getContentType());
+		// An empty table stays a table
+		assertEquals(SourceTable.empty(), sourceTable);
 	}
 
 	@Test
@@ -94,26 +89,21 @@ class AwkComputeStructuredIoTest {
 		processor(sourceTable).process(
 			Awk.builder().script("BEGIN { print \"a\\r\\nb\" }").input(ContentType.TABLE).build()
 		);
-		assertEquals(table("a", "b"), sourceTable.getTable());
-		assertEquals("a;\nb;", sourceTable.getRawData());
+		assertEquals(SourceTable.ofText("a;\nb;"), sourceTable);
 	}
 
 	/**
-	 * With table input, an empty text result must not leave the source's raw text behind: a later text consumer
-	 * would read the rows the script dropped.
+	 * An empty text result is an empty text, whatever the input: the input of the script is not its result.
 	 */
 	@Test
-	void emptyTextOutputOfTableInputClearsTheRawText() {
-		final SourceTable sourceTable = SourceTable.builder().rawData("a;b").table(table("a|b")).build();
+	void emptyTextOutputIsAnEmptyText() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("a|b"));
 		processor(sourceTable).process(Awk.builder().script("BEGIN { }").input(ContentType.TABLE).build());
-		assertEquals(List.of(), sourceTable.getTable());
-		assertEquals("", sourceTable.getRawData());
-		assertEquals(ContentType.TEXT, sourceTable.getContentType());
+		assertEquals(SourceTable.ofText(""), sourceTable);
 
-		// The text input clears it as well (since stage 2 of #1508: it used to keep the stale raw text)
-		final SourceTable text = SourceTable.builder().rawData("a;b").table(table("a|b")).build();
+		final SourceTable text = SourceTable.ofText("a;b");
 		processor(text).process(Awk.builder().script("BEGIN { }").build());
-		assertEquals("", text.getRawData());
+		assertEquals(SourceTable.ofText(""), text);
 	}
 
 	@Test

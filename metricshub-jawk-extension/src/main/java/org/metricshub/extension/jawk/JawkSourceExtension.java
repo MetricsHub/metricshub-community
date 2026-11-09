@@ -23,7 +23,6 @@ package org.metricshub.extension.jawk;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.jawk.Awk;
@@ -164,29 +163,21 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// Execute
 		try {
 			Awk awkEngine = new Awk(List.of(extension, UtilityExtensionForJawk.INSTANCE), AwkExecutor.newAwkSettings(null));
-			final SourceTable sourceTable = new SourceTable();
 			if (jawkSource.getOutput() == ContentType.TABLE) {
 				// Each print is a row
-				final List<List<String>> rows = tableInput
-					? AwkExecutor.executeAwkToTable(awkScript, new TableInputSource(inputTable), awkEngine, variables)
-					: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables);
-				sourceTable.setTable(rows);
-				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator,
-				// and never with CRLF; no raw text at all for an empty table, which stays a table
-				sourceTable.setRawData(
-					rows.isEmpty() ? null : SourceTable.tableToCsv(rows, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
+				return SourceTable.ofTable(
+					tableInput
+						? AwkExecutor.executeAwkToTable(awkScript, new TableInputSource(inputTable), awkEngine, variables)
+						: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables)
 				);
-				sourceTable.setContentType(ContentType.TABLE);
-				return sourceTable;
 			}
 			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
-			String result = tableInput
-				? AwkExecutor.executeAwk(awkScript, new TableInputSource(inputTable), awkEngine, variables)
-					.replace(WINDOWS_NEW_LINE, NEW_LINE)
-				: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables);
-			sourceTable.setRawData(result);
-			sourceTable.setTable(SourceTable.csvToTable(result, TABLE_SEP));
-			return sourceTable;
+			return SourceTable.ofText(
+				tableInput
+					? AwkExecutor.executeAwk(awkScript, new TableInputSource(inputTable), awkEngine, variables)
+						.replace(WINDOWS_NEW_LINE, NEW_LINE)
+					: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables)
+			);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);
 			return SourceTable.empty();

@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
@@ -40,6 +39,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
@@ -111,8 +111,6 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final SourceTable sourceTable = new SourceTable();
-
 		final Optional<SourceTable> maybeOrigin = SourceTable.lookupSourceTable(copyFrom, connectorId, telemetryManager);
 
 		if (maybeOrigin.isEmpty()) {
@@ -121,20 +119,12 @@ public class SourceProcessor implements ISourceProcessor {
 
 		final SourceTable origin = maybeOrigin.get();
 
-		final List<List<String>> table = origin.getTable()
-			.stream()
-			// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
-			.map(ArrayList::new)
-			.filter(row -> !row.isEmpty())
-			.collect(Collectors.toList()); // NOSONAR
-
-		sourceTable.setTable(table);
-
-		if (origin.getRawData() != null) {
-			sourceTable.setRawData(origin.getRawData());
-		}
-		// An empty converted result is typed by its marker only: the copy keeps it
-		sourceTable.setContentType(origin.getExplicitContentType());
+		// A text is copied as is, a table row by row (a deep copy), without its rows of no cell
+		final SourceTable sourceTable = origin.getContentType() == ContentType.TEXT
+			? SourceTable.ofText(origin.getText())
+			: SourceTable.ofTable(
+				origin.getTable().stream().map(ArrayList::new).filter(row -> !row.isEmpty()).collect(Collectors.toList()) // NOSONAR
+			);
 
 		logSourceCopy(connectorId, copyFrom, copySource.getKey(), sourceTable, hostname);
 
@@ -248,8 +238,11 @@ public class SourceProcessor implements ISourceProcessor {
 		final List<List<String>> rows;
 
 		if (staticSource.getCells() != null) {
-			// The list form is the single row of exactly these cells
-			rows = List.of(staticSource.getCells());
+			// The list form is the single row of exactly these cells. A line break a reference resolved into at run time
+			// becomes a space, so the row stays one line for a text consumer (an awk reads it through toText)
+			rows = List.of(
+				staticSource.getCells().stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList()
+			);
 		} else if (staticValue == null || staticValue.isEmpty()) {
 			log.error(
 				"Hostname {} - Static Source reference cannot be null. Returning an empty table for source {}.",
@@ -279,33 +272,13 @@ public class SourceProcessor implements ISourceProcessor {
 			rows = maybeStaticTable.get().getTable();
 		}
 
-		final SourceTable sourceTable = new SourceTable();
-
-		final List<List<String>> table = rows.stream()
-			// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
-			.map(ArrayList::new)
-			.filter(row -> !row.isEmpty())
-			.collect(Collectors.toList());
-
-		sourceTable.setTable(table);
-		// The list form promises exactly its cells: a ';' inside one must not split it for a text consumer reading
-		// the raw text (a legacy awk), so it is serialized as toText does, and a line break a reference resolved into
-		// at run time becomes a space (the row stays one line); the string form keeps its legacy text
-		if (staticSource.getCells() != null) {
-			sourceTable.setRawData(
-				SourceTable.tableToCsv(
-					table.stream()
-						.map(row -> row.stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList())
-						.toList(),
-					SEMICOLON,
-					true
-				)
-			);
-		} else {
-			sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, false));
-		}
-
-		return sourceTable;
+		return SourceTable.ofTable(
+			rows.stream()
+				// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
+				.map(ArrayList::new)
+				.filter(row -> !row.isEmpty())
+				.collect(Collectors.toList())
+		);
 	}
 
 	@WithSpan("Source TableJoin Exec")
@@ -401,12 +374,7 @@ public class SourceProcessor implements ISourceProcessor {
 			true
 		);
 
-		SourceTable sourceTable = new SourceTable();
-
-		if (executeTableJoin != null) {
-			sourceTable.setTable(executeTableJoin);
-		}
-		return sourceTable;
+		return SourceTable.ofTable(executeTableJoin);
 	}
 
 	/**
@@ -435,9 +403,9 @@ public class SourceProcessor implements ISourceProcessor {
 			hostname,
 			sourceKey,
 			leftSourceKey,
-			TextTableHelper.generateTextTable(leftTable.getHeaders(), leftTable.getTable()),
+			TextTableHelper.generateTextTable(leftTable.getTable()),
 			rightSourceKey,
-			TextTableHelper.generateTextTable(rightTable.getHeaders(), rightTable.getTable())
+			TextTableHelper.generateTextTable(rightTable.getTable())
 		);
 	}
 
@@ -470,23 +438,28 @@ public class SourceProcessor implements ISourceProcessor {
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
-		final SourceTable sourceTable = new SourceTable();
-		final List<List<String>> executeTableUnion = sourceTablesToConcat.stream()
-			.map(SourceTable::getTable)
-			.flatMap(Collection::stream)
-			.collect(Collectors.toList()); //NOSONAR
+		// A text union when every member that holds something is a text: the texts joined with a line feed, a blank
+		// line collapsed once. Otherwise the rows of the members, copied (a compute on the union must not change them)
+		final boolean textUnion = sourceTablesToConcat.stream()
+			.anyMatch(member -> member.getContentType() == ContentType.TEXT) &&
+			sourceTablesToConcat.stream().allMatch(member -> member.getContentType() == ContentType.TEXT || member.isEmpty());
+		if (textUnion) {
+			return SourceTable.ofText(
+				sourceTablesToConcat.stream()
+					.filter(member -> member.getContentType() == ContentType.TEXT)
+					.map(SourceTable::getText)
+					.collect(Collectors.joining(NEW_LINE))
+					.replace("\n\n", NEW_LINE)
+			);
+		}
 
-		sourceTable.setTable(executeTableUnion);
-
-		String rawData = sourceTablesToConcat.stream()
-			.map(SourceTable::getRawData)
-			.filter(Objects::nonNull)
-			.collect(Collectors.joining(NEW_LINE))
-			.replace("\n\n", NEW_LINE);
-
-		sourceTable.setRawData(rawData);
-
-		return sourceTable;
+		return SourceTable.ofTable(
+			sourceTablesToConcat.stream()
+				.map(SourceTable::getTable)
+				.flatMap(Collection::stream)
+				.map(row -> row == null ? null : new ArrayList<>(row))
+				.collect(Collectors.toList()) //NOSONAR
+		);
 	}
 
 	/**
@@ -532,38 +505,24 @@ public class SourceProcessor implements ISourceProcessor {
 			return;
 		}
 
-		// Is there any raw data to log?
-		if (sourceTable.getRawData() != null && (sourceTable.getTable() == null || sourceTable.getTable().isEmpty())) {
+		if (sourceTable.getContentType() == ContentType.TEXT) {
 			log.debug(
 				"Hostname {} - Got Source [{}] referenced in Source [{}]. Connector: [{}].\nRaw result:\n{}\n",
 				hostname,
 				parentSourceKey,
 				childSourceKey,
 				connectorId,
-				sourceTable.getRawData()
-			);
-			return;
-		}
-
-		if (sourceTable.getRawData() == null) {
-			log.debug(
-				"Hostname {} - Got Source [{}] referenced in Source [{}]. Connector: [{}].\nTable result:\n{}\n",
-				hostname,
-				parentSourceKey,
-				childSourceKey,
-				connectorId,
-				TextTableHelper.generateTextTable(sourceTable.getTable())
+				sourceTable.getText()
 			);
 			return;
 		}
 
 		log.debug(
-			"Hostname {} - Got Source [{}] referenced in Source [{}]. Connector: [{}].\nRaw result:\n{}\nTable result:\n{}\n",
+			"Hostname {} - Got Source [{}] referenced in Source [{}]. Connector: [{}].\nTable result:\n{}\n",
 			hostname,
 			parentSourceKey,
 			childSourceKey,
 			connectorId,
-			sourceTable.getRawData(),
 			TextTableHelper.generateTextTable(sourceTable.getTable())
 		);
 	}

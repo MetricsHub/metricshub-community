@@ -1,12 +1,11 @@
 package org.metricshub.extension.snmp.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,9 +84,7 @@ class SnmpGetSourceProcessorTest {
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
 
-		assertNotNull(result);
-		assertTrue(result.getTable().size() == 1);
-		assertEquals("result", result.getTable().get(0).get(0));
+		assertEquals(SourceTable.ofTable(List.of(List.of("result"))), result);
 	}
 
 	/**

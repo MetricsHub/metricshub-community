@@ -200,7 +200,7 @@ public class EventLogSourceProcessor {
 			// Store the new marker in the telemetry manager to use in the next iteration.
 			connectorNamespace.setEventLogCursor(sourceKey, postProcessingResult.getCursor());
 
-			return SourceTable.builder().table(postProcessingResult.getResults()).build();
+			return SourceTable.ofTable(postProcessingResult.getResults());
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,

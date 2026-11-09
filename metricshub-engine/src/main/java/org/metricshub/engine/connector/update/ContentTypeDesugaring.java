@@ -21,9 +21,7 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
@@ -48,30 +46,22 @@ import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
-import org.metricshub.engine.connector.model.common.ITranslationTable;
-import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
-import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
-import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
-import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractConcat;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 
 /**
@@ -81,25 +71,23 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * The chain of a source is walked while tracking the current content type, starting from the type the source
  * produces ({@link Source#getOutputContentType()}):
  * <ul>
- * <li>an <code>awk</code> compute fed a table gets an implicit <code>toText</code> before it (the compute keeps
- * serializing the table itself, the implicit conversion only types the chain);</li>
- * <li>a table compute fed text by a legacy dual producer (<code>commandLine</code>, the <code>awk</code> source,
- * the <code>awk</code> compute, which all build their table as well) gets an implicit <code>toTable</code>
- * before it (a no-op on the table those producers already built);</li>
- * <li>a chain ending in text from a legacy dual producer gets an implicit <code>toTable</code> appended, so that
- * the mapping reads a table, unless the source is read as text only (referenced by <code>copy</code> sources and
- * by nothing else, see {@link #textOnlySources(Connector, Map)});</li>
+ * <li>an <code>awk</code> compute fed a table gets a <code>toText</code> before it;</li>
+ * <li>a table compute fed text by a legacy text producer (<code>commandLine</code>, the <code>awk</code> source,
+ * the <code>awk</code> compute, which built their table as well before the content types) gets a
+ * <code>toTable</code> before it;</li>
+ * <li>a chain ending in text from a legacy text producer gets a <code>toTable</code> appended, so that the mapping
+ * reads a table, unless the source is read as text only (referenced by <code>copy</code> sources and by nothing
+ * else, see {@link #textOnlySources(Connector, Map)});</li>
  * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>)
- * finds an empty table today and keeps doing so: nothing is inserted, the case is reported;</li>
- * <li>a text compute reading the raw text only (<code>json2Csv</code>, <code>xml2Csv</code>) fed by a table
- * producer keeps reading whatever raw text the producer left: nothing is inserted, the case is reported;</li>
+ * reads no rows and gives an empty table: nothing is inserted, the case is reported;</li>
+ * <li>a text compute that parses a text (<code>json2Csv</code>, <code>xml2Csv</code>) fed by a table producer
+ * finds nothing to parse and leaves the table unchanged: nothing is inserted, the case is reported;</li>
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
- * The implicit computes are flagged ({@code ToText#isImplicit()}, {@code ToTable#isImplicit()}) and leave the
- * results of the existing connectors byte for byte identical. Every inserted compute, the executable toTable
- * included, is flagged as generated ({@code ToTable#isGenerated()}): a later pass removes them first, so the
- * chain and the report are rebuilt from what is written.
+ * The inserted computes convert like written ones. They are flagged as generated ({@code ToText#isGenerated()},
+ * {@code ToTable#isGenerated()}): a later pass removes them first, so the chain and the report are rebuilt from
+ * what is written.
  * <p>
  * The findings are stored on the connector ({@code Connector#getContentTypeReport()}).
  */
@@ -124,7 +112,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		NONE,
 		/** A pure text source: <code>http</code>, <code>file</code>, <code>ipmi</code>. */
 		PURE,
-		/** A legacy producer filling both the text and the table: <code>commandLine</code>, <code>awk</code>. */
+		/**
+		 * A legacy text producer that used to build its table as well: <code>commandLine</code>, <code>awk</code>. Its
+		 * table readers get a generated <code>toTable</code>.
+		 */
 		LEGACY_DUAL,
 		/** An explicit <code>toText</code> compute. */
 		EXPLICIT
@@ -296,7 +287,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * @param visited The unions and copies being resolved, to stop on a cycle
 	 * @return whether the union is a text union
 	 */
-	static boolean isTextUnion(
+	public static boolean isTextUnion(
 		final TableUnionSource union,
 		final Map<String, Source> sources,
 		final Set<Source> visited
@@ -305,10 +296,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * Who produced the text of a text union, which tells whether its table is complete: the engine concatenates the
-	 * members' tables, so only legacy dual members (command outputs, awk results) bring their rows. A pure text member
-	 * (<code>http</code>, <code>file</code>, <code>ipmi</code>) brings none, as a pure text source on its own; an
-	 * explicit <code>toText</code> member brings none either and needs a real conversion.
+	 * Who produced the text of a text union, which tells which conversion its table readers need: a union of legacy
+	 * text members only (command outputs, awk results) gets a generated <code>toTable</code>, as a legacy text
+	 * producer on its own. A pure text member (<code>http</code>, <code>file</code>, <code>ipmi</code>) makes it a pure
+	 * text source, whose table readers are reported; an explicit <code>toText</code> member is reported likewise.
 	 *
 	 * @return {@link TextProducer#PURE} when a member is pure text, else {@link TextProducer#EXPLICIT} when a member
 	 *         ends in an explicit <code>toText</code>, else {@link TextProducer#LEGACY_DUAL}; null when the union is no
@@ -364,9 +355,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
 	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources or
-	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text: an explicit <code>toTable</code> would
-	 * re-serialize every line with a trailing <code>;</code>, which the <code>awk</code> scripts reading the copies
-	 * do not expect, and the copies get their own conversion where they need one.
+	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text: a <code>toTable</code> then the
+	 * <code>toText</code> generated before an <code>awk</code> would add a trailing <code>;</code> to every line, which
+	 * the <code>awk</code> scripts reading the copies do not expect, and the copies get their own conversion where
+	 * they need one.
 	 * <p>
 	 * "Nowhere else" is checked on the JSON form of every source (its own key and a copy's <code>from</code> left
 	 * out), computes included, plus the mappings and the tool results: a <code>${source::...}</code> reference in any
@@ -530,7 +522,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (source.getComputes() == null) {
 			return;
 		}
-		// Start again from the chain as written: a previous pass may have inserted implicit conversions
+		// Start again from the chain as written: a previous pass may have inserted conversions
 		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
 		final State start = source instanceof CopySource copy
@@ -543,13 +535,12 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		for (int index = 0; index < computes.size(); index++) {
 			final Compute compute = computes.get(index);
 			final String where = compute.getType() + " #" + index;
-			lint(connector, key, compute, where, report);
 
 			final ContentType input = compute.getInputContentType();
 			if (input != current) {
 				if (input == ContentType.TEXT) {
 					if (compute instanceof Awk awk) {
-						desugared.add(ToText.implicit());
+						desugared.add(ToText.generated());
 						report.add(new ContentTypeReportEntry(key, Kind.TO_TEXT_INSERTED, "before " + where));
 						report.add(
 							new ContentTypeReportEntry(key, Kind.AWK_ON_TABLE, where + " " + describeScript(connector, awk))
@@ -573,7 +564,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 						)
 					);
 				} else {
-					desugared.add(ToTable.implicit());
+					desugared.add(ToTable.generated());
 					report.add(new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where));
 				}
 			}
@@ -590,7 +581,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 
 		if (current == ContentType.TEXT && producer == TextProducer.LEGACY_DUAL && !textOnly.contains(key)) {
-			desugared.add(ToTable.implicit());
+			desugared.add(ToTable.generated());
 			report.add(
 				new ContentTypeReportEntry(
 					key,
@@ -604,60 +595,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 
 		source.setComputes(desugared);
-	}
-
-	/**
-	 * Records the legacy idioms a compute relies on: a value containing the separator or a line feed.
-	 */
-	private static void lint(
-		final Connector connector,
-		final String key,
-		final Compute compute,
-		final String where,
-		final List<ContentTypeReportEntry> report
-	) {
-		if (compute instanceof AbstractConcat concat) {
-			// A pure $n reference never round-trips, whatever the referenced cell holds
-			if (concat.getValue() != null && !COLUMN_PATTERN.matcher(concat.getValue()).matches()) {
-				lintValue(key, where, "value", concat.getValue(), report);
-			}
-		} else if (compute instanceof Replace replace) {
-			lintValue(key, where, "newValue", replace.getNewValue(), report);
-		} else if (compute instanceof Translate translate) {
-			final Map<String, String> translations = translations(connector, translate.getTranslationTable());
-			if (translations != null) {
-				translations.forEach((from, to) -> lintValue(key, where, from, to, report));
-			}
-		}
-	}
-
-	private static void lintValue(
-		final String key,
-		final String where,
-		final String name,
-		final String value,
-		final List<ContentTypeReportEntry> report
-	) {
-		if (contains(value, TABLE_SEP)) {
-			report.add(new ContentTypeReportEntry(key, Kind.SEPARATOR_IN_VALUE, where + " " + name + "=" + quote(value)));
-		}
-		if (contains(value, NEW_LINE)) {
-			report.add(new ContentTypeReportEntry(key, Kind.LINE_FEED_IN_VALUE, where + " " + name + "=" + quote(value)));
-		}
-	}
-
-	/**
-	 * The translations of a translation table, resolved in the connector when referenced.
-	 */
-	private static Map<String, String> translations(final Connector connector, final ITranslationTable table) {
-		if (table instanceof TranslationTable inline) {
-			return inline.getTranslations();
-		}
-		if (table instanceof ReferenceTranslationTable reference && connector.getTranslations() != null) {
-			final TranslationTable referenced = connector.getTranslations().get(reference.getTableId());
-			return referenced == null ? null : referenced.getTranslations();
-		}
-		return null;
 	}
 
 	/**
@@ -696,12 +633,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * Whether the compute was inserted by this step: an implicit conversion, or the executable toTable inserted
-	 * after an explicit toText. A later pass starts from the chain without them.
+	 * Whether the compute was inserted by this step. A later pass starts from the chain without them.
 	 */
 	private static boolean isGenerated(final Compute compute) {
 		return (compute instanceof ToTable toTable && toTable.isGenerated()) ||
-			(compute instanceof ToText toText && toText.isImplicit());
+			(compute instanceof ToText toText && toText.isGenerated());
 	}
 
 	/**
@@ -775,22 +711,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		return source instanceof HttpSource || source instanceof FileSource || source instanceof IpmiSource;
 	}
 
-	/**
-	 * Whether the source is a legacy producer filling both the raw text and the table.
-	 *
-	 * @param source The source
-	 * @return <code>true</code> for <code>commandLine</code> and the <code>awk</code> source
-	 */
-	public static boolean isLegacyDualSource(final Source source) {
-		return source instanceof CommandLineSource || source instanceof JawkSource;
-	}
-
 	private static boolean contains(final String value, final String token) {
 		return value != null && value.contains(token);
-	}
-
-	private static String quote(final String value) {
-		return "'" + value.replace("\n", "\\n") + "'";
 	}
 
 	/**

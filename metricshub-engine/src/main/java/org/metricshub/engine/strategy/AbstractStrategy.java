@@ -27,7 +27,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +45,7 @@ import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -194,13 +194,11 @@ public abstract class AbstractStrategy implements IStrategy {
 					connectorId,
 					monitorType
 				);
-				// This ensures that the internal table (List<List<String>>) is not null and rawData integrity is maintained;
-				// an explicit content type (an empty table set by a conversion) is kept
-				sourceTable = SourceTable.builder()
-					.rawData(sourceTable != null ? sourceTable.getRawData() : null)
-					.contentType(sourceTable != null ? sourceTable.getExplicitContentType() : null)
-					.table(new ArrayList<>())
-					.build();
+				// An empty result is typed by the source, whatever failed (an extension, the retry, an internal source):
+				// an empty text for a text source, so that an awk still runs its BEGIN and END blocks, else an empty table
+				sourceTable = source.getResultContentType() == ContentType.TEXT
+					? SourceTable.ofText(null)
+					: SourceTable.empty();
 			}
 
 			// log the source table

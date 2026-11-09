@@ -162,7 +162,7 @@ class FileSourceProcessorTest {
 		);
 		final SourceTable result = processor.process(fileSource, telemetryManager);
 
-		assertEquals(expectedMarkedLogCell(resolvedPath, "content"), result.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, "content"), result.getText());
 		// One instance serves the poll and is closed at its end
 		verify(nativeFileOperations).close();
 		verify(mockWinRequestExecutor, never()).executeWinRemoteCommand(any(), any(), any(), any());
@@ -249,7 +249,7 @@ class FileSourceProcessorTest {
 		SourceTable result1 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result1);
-		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getText());
 
 		// Iteration 2: Second read with new content (mock again for next two calls)
 		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
@@ -258,7 +258,7 @@ class FileSourceProcessorTest {
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
-		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 	}
 
 	@Test
@@ -312,7 +312,7 @@ class FileSourceProcessorTest {
 		SourceTable result1 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result1);
-		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 		Map<String, Long> cursors = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
@@ -323,7 +323,7 @@ class FileSourceProcessorTest {
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
-		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 		assertEquals(newFileSize, cursors.get(resolvedPath));
 	}
 
@@ -373,11 +373,11 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			assertEquals(expectedMarkedLogCell(resolvedPath, content), result1.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result1.getText());
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getText());
 		}
 	}
 
@@ -429,7 +429,7 @@ class FileSourceProcessorTest {
 			// First Iteration, empty results are returned.
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
@@ -439,7 +439,7 @@ class FileSourceProcessorTest {
 			// Second iteration, a log block is returned.
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -491,7 +491,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getText());
 
 			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
@@ -500,7 +500,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -650,12 +650,12 @@ class FileSourceProcessorTest {
 		SourceTable result = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result);
-		final String rawData = result.getRawData();
-		assertNotNull(rawData);
-		assertTrue(rawData.contains("<<<LOG:file=\"" + path1 + "\">>>"), rawData);
-		assertTrue(rawData.contains("<<<LOG:file=\"" + path2 + "\">>>"), rawData);
-		assertTrue(rawData.contains(FileHelper.escapeSemiColon(content1)), rawData);
-		assertTrue(rawData.contains(FileHelper.escapeSemiColon(content2)), rawData);
+		final String text = result.getText();
+		assertNotNull(text);
+		assertTrue(text.contains("<<<LOG:file=\"" + path1 + "\">>>"), text);
+		assertTrue(text.contains("<<<LOG:file=\"" + path2 + "\">>>"), text);
+		assertTrue(text.contains(FileHelper.escapeSemiColon(content1)), text);
+		assertTrue(text.contains(FileHelper.escapeSemiColon(content2)), text);
 	}
 
 	@Test
@@ -703,7 +703,7 @@ class FileSourceProcessorTest {
 
 			final SourceTable result = processor.process(fileSource, telemetryManager);
 			assertNotNull(result);
-			assertEquals(expectedMarkedLogCell(path1, content1), result.getRawData());
+			assertEquals(expectedMarkedLogCell(path1, content1), result.getText());
 		}
 	}
 
