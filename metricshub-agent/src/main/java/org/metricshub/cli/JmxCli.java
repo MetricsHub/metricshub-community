@@ -36,6 +36,7 @@ import org.metricshub.cli.service.ConsoleService;
 import org.metricshub.cli.service.MetricsHubCliService;
 import org.metricshub.cli.service.MetricsHubCliService.CliPasswordReader;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
+import org.metricshub.cli.util.WindowsCommandLine;
 import org.metricshub.engine.common.IQuery;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -237,7 +238,7 @@ public class JmxCli implements IQuery, Callable<Integer> {
 		cli.setOptionsCaseInsensitive(true);
 
 		// Execute the command
-		final int exitCode = cli.execute(args);
+		final int exitCode = cli.execute(WindowsCommandLine.args(args));
 
 		// Cleanup Windows terminal settings
 		AnsiConsole.systemUninstall();
