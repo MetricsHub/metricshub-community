@@ -35,7 +35,7 @@ Agent                                              Central
 
 * **Transport:** WebSocket over TLS (`wss://`). Plain `ws://` is tolerated for loopback development only; an agent configured with `central.insecure` uses it toward any host.
 * **Authentication:** `Authorization: Bearer <secret>`; the secret is one of Central's configured agent secrets (`central.headers` on the agent side). A bad or missing secret is refused at the handshake with `401`.
-* **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`opamp-instance-uid`) — so Central sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
+* **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`metricshub-agent-uid`) — so Central sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
 * **First message:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`. A message of any other type before then is answered with `error` `REGISTRATION_REQUIRED` and closed `1002`: nothing may drive a session that has not said who it is.
 * **Capacity:** a server already holding its maximum number of tunnels refuses the handshake with `503`; the agent retries with backoff.
 
