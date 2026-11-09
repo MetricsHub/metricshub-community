@@ -84,7 +84,8 @@ public class RawConnectorLibraryParser {
 		private final Map<String, RawConnector> connectorsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 		/**
-		 * Parent connector files parsed during this walk, so that a parent extended by many connectors is parsed once.
+		 * Files parsed during this walk by absolute path: the parents read by the connectors that extend them, and the
+		 * files visited that are not connectors. A parent is then parsed once, whichever is read first.
 		 */
 		private final Map<Path, JsonNode> parentCache = new HashMap<>();
 
@@ -106,8 +107,13 @@ public class RawConnectorLibraryParser {
 				return FileVisitResult.CONTINUE;
 			}
 
-			final JsonNode connectorNode = OBJECT_MAPPER.readTree(file.toFile());
+			// A file already read as a parent is not parsed again; the cached node stays intact for the next readers
+			final Path key = file.toAbsolutePath().normalize();
+			final JsonNode cachedNode = parentCache.get(key);
+			final JsonNode connectorNode = cachedNode != null ? cachedNode.deepCopy() : OBJECT_MAPPER.readTree(file.toFile());
 			if (!isConnector(connectorNode)) {
+				// Not a connector, likely a parent: keep it for the connectors that extend it
+				parentCache.putIfAbsent(key, connectorNode);
 				return FileVisitResult.CONTINUE;
 			}
 			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(
