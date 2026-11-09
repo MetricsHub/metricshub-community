@@ -97,7 +97,7 @@ public class OpampHttpTransport implements OpampTransport {
 	 * @param value the raw header value
 	 * @return the corresponding delay, or an empty optional when the value cannot be parsed
 	 */
-	static Optional<Duration> parseRetryAfter(final String value) {
+	public static Optional<Duration> parseRetryAfter(final String value) {
 		final String trimmed = value.trim();
 		try {
 			return Optional.of(Duration.ofSeconds(Long.parseLong(trimmed)));

@@ -16,6 +16,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -88,6 +90,7 @@ class CentralTokenProviderTest {
 	private final List<String> authorizations = Collections.synchronizedList(new ArrayList<>());
 	private volatile long lifetime = 900;
 	private volatile long answerDelayMs;
+	private volatile Duration clockAdvanceBeforeAnswer = Duration.ZERO;
 
 	@BeforeEach
 	void startServer() throws IOException {
@@ -117,6 +120,7 @@ class CentralTokenProviderTest {
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
+			clock.advance(clockAdvanceBeforeAnswer);
 			final Answer answer = script.poll();
 			if (answer != null) {
 				respond(exchange, answer.status(), answer.body(), answer.retryAfter());
@@ -291,6 +295,51 @@ class CentralTokenProviderTest {
 
 		assertEquals(1, tokenRequests.get());
 		assertFalse(failure.getMessage().contains("notjson"), failure.getMessage());
+	}
+
+	@Test
+	void aCleartextIssuerShouldBeRefused() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new CentralTokenProvider(
+				"http://issuer.example.com",
+				() -> new Credential(AGENT_UID, SECRET.toCharArray()),
+				CentralTokenProvider.httpClient(null),
+				clock,
+				new Random(),
+				CentralTokenProvider.DEFAULT_MARGIN
+			)
+		);
+	}
+
+	@Test
+	void aRetryAfterDateShouldBeHonoured() throws Exception {
+		final String inThirtySeconds = DateTimeFormatter.RFC_1123_DATE_TIME.format(
+			ZonedDateTime.now(ZoneOffset.UTC).plusSeconds(30)
+		);
+		script.add(new Answer(503, "{}", inThirtySeconds));
+		final CentralTokenProvider provider = provider();
+
+		assertThrows(IOException.class, provider::currentToken);
+		clock.advance(Duration.ofSeconds(20));
+		assertThrows(IOException.class, provider::currentToken);
+		assertEquals(1, tokenRequests.get());
+
+		clock.advance(Duration.ofSeconds(15));
+		provider.currentToken();
+		assertEquals(2, tokenRequests.get());
+	}
+
+	@Test
+	void aTokenThatExpiredDuringAFailedRenewalShouldNotBeReturned() throws Exception {
+		lifetime = 120;
+		final CentralTokenProvider provider = provider();
+		provider.currentToken();
+		clock.advance(Duration.ofSeconds(60));
+		script.add(new Answer(503, "{}", null));
+		clockAdvanceBeforeAnswer = Duration.ofSeconds(61);
+
+		assertThrows(IOException.class, provider::currentToken);
 	}
 
 	@Test

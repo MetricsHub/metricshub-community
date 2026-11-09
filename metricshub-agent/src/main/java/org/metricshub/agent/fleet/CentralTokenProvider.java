@@ -24,7 +24,6 @@ package org.metricshub.agent.fleet;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -41,6 +40,7 @@ import java.util.Base64;
 import java.util.Random;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.tunnel.client.TunnelSettings;
 import org.metricshub.opamp.client.http.OpampHttpTransport;
 import org.metricshub.opamp.client.retry.RetrySchedule;
 
@@ -121,7 +121,9 @@ public class CentralTokenProvider {
 	 * @param credentials     supplies the agent's credential at each request
 	 * @param certificateFile the PEM file that verifies Central's certificate, or {@code null} for the system trust
 	 *                        store
-	 * @throws IOException when the certificate file cannot be read
+	 * @throws IOException              when the certificate file cannot be read
+	 * @throws IllegalArgumentException when the issuer is neither {@code https} nor {@code http} on a loopback
+	 *                                  literal: its metadata names where the credential goes
 	 */
 	public CentralTokenProvider(final String issuer, final Supplier<Credential> credentials, final String certificateFile)
 		throws IOException {
@@ -146,6 +148,11 @@ public class CentralTokenProvider {
 		final Random random,
 		final Duration margin
 	) {
+		if (!isAcceptable(URI.create(issuer))) {
+			throw new IllegalArgumentException(
+				"The issuer URL " + issuer + " must use https:// (http:// is accepted for a loopback address only)."
+			);
+		}
 		this.issuer = issuer;
 		this.credentials = credentials;
 		this.httpClient = httpClient;
@@ -214,7 +221,8 @@ public class CentralTokenProvider {
 			lastFailure = classified ? e.getMessage() : "an unreadable answer (" + e.getClass().getSimpleName() + ")";
 			final Duration floor = classified ? ((RetryableException) e).floor : null;
 			nextAttemptAt = clock.instant().plus(retrySchedule.nextDelayAfterFailure(floor));
-			if (valid) {
+			// Checked again: the token may have expired while the request was waiting for Central
+			if (token != null && clock.instant().isBefore(expiresAt)) {
 				log.debug(
 					"Token renewal failed: {}. The current token is kept; next attempt at {}.",
 					lastFailure,
@@ -377,15 +385,7 @@ public class CentralTokenProvider {
 		if (!"http".equalsIgnoreCase(endpoint.getScheme())) {
 			return false;
 		}
-		final String host = endpoint.getHost().replace("[", "").replace("]", "");
-		if (!host.matches("[0-9.]+|[0-9a-fA-F:]+")) {
-			return false;
-		}
-		try {
-			return InetAddress.getByName(host).isLoopbackAddress();
-		} catch (IOException e) {
-			return false;
-		}
+		return TunnelSettings.isLiteralLoopback(endpoint.getHost());
 	}
 
 	private HttpResponse<String> send(final HttpRequest request) throws IOException, InterruptedException {
@@ -439,12 +439,6 @@ public class CentralTokenProvider {
 	}
 
 	private static Duration retryAfter(final HttpResponse<String> response) {
-		return response.headers().firstValue("Retry-After").map(value -> {
-			try {
-				return Duration.ofSeconds(Long.parseLong(value.trim()));
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		}).orElse(null);
+		return response.headers().firstValue("Retry-After").flatMap(OpampHttpTransport::parseRetryAfter).orElse(null);
 	}
 }
