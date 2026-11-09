@@ -25,11 +25,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
+import java.util.Map;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -251,11 +257,93 @@ public class SecurityManager {
 			ks.setEntry(MASTER_KEY_ALIAS, skEntry, new PasswordProtection(password));
 
 			// Finally commit
-			ks.store(new FileOutputStream(keyStoreFile), password);
+			try (FileOutputStream stream = new FileOutputStream(keyStoreFile)) {
+				ks.store(stream, password);
+			}
 
 			return secretKey;
 		} catch (Exception e) {
 			throw new MetricsHubSecurityException("Error detected when generating the master key", e);
+		}
+	}
+
+	/**
+	 * Reads a secret stored with {@link #updateSecrets(File, Map)}.
+	 *
+	 * @param keyStoreFile The KeyStore file.
+	 * @param alias        The alias of the secret.
+	 * @return the secret's bytes, or {@code null} when the KeyStore file or the alias does not exist.
+	 * @throws MetricsHubSecurityException If the KeyStore cannot be read.
+	 */
+	public static byte[] readSecret(@NonNull final File keyStoreFile, @NonNull final String alias)
+		throws MetricsHubSecurityException {
+		if (!keyStoreFile.exists()) {
+			return null;
+		}
+		final KeyStore ks = loadKeyStore(keyStoreFile);
+		try {
+			final Key key = ks.getKey(alias, KEY_STORE_PASSWORD);
+			return key == null ? null : key.getEncoded();
+		} catch (Exception e) {
+			throw new MetricsHubSecurityException(
+				"Error detected when reading an entry of " + METRICSHUB_KEY_STORE_FILE_NAME,
+				e
+			);
+		}
+	}
+
+	/**
+	 * Sets or removes secrets, then replaces the KeyStore file atomically: the new KeyStore is written to a
+	 * temporary file in the same directory, forced to disk, then moved over the old one. Every other entry,
+	 * the master key included, is kept, and a crash leaves either the old KeyStore or the new one.
+	 *
+	 * @param keyStoreFile The KeyStore file, created when it does not exist.
+	 * @param secrets      The secrets by alias; a {@code null} value removes the alias.
+	 * @throws MetricsHubSecurityException If the KeyStore cannot be read or written.
+	 */
+	public static void updateSecrets(@NonNull final File keyStoreFile, @NonNull final Map<String, byte[]> secrets)
+		throws MetricsHubSecurityException {
+		Path temporaryFile = null;
+		try {
+			final KeyStore ks;
+			if (keyStoreFile.exists()) {
+				ks = loadKeyStore(keyStoreFile);
+			} else {
+				ks = KeyStore.getInstance("PKCS12");
+				ks.load(null, null);
+			}
+			for (final Map.Entry<String, byte[]> secret : secrets.entrySet()) {
+				if (secret.getValue() == null) {
+					if (ks.containsAlias(secret.getKey())) {
+						ks.deleteEntry(secret.getKey());
+					}
+				} else {
+					ks.setEntry(
+						secret.getKey(),
+						new KeyStore.SecretKeyEntry(new SecretKeySpec(secret.getValue(), "AES")),
+						new PasswordProtection(KEY_STORE_PASSWORD)
+					);
+				}
+			}
+			final Path target = keyStoreFile.toPath().toAbsolutePath();
+			temporaryFile = Files.createTempFile(target.getParent(), METRICSHUB_KEY_STORE_FILE_NAME, ".tmp");
+			try (FileOutputStream stream = new FileOutputStream(temporaryFile.toFile())) {
+				ks.store(stream, KEY_STORE_PASSWORD);
+				stream.getFD().sync();
+			}
+			Files.move(temporaryFile, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (MetricsHubSecurityException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new MetricsHubSecurityException("Error detected when updating " + METRICSHUB_KEY_STORE_FILE_NAME, e);
+		} finally {
+			if (temporaryFile != null) {
+				try {
+					Files.deleteIfExists(temporaryFile);
+				} catch (Exception e) {
+					// Nothing more to do: a leftover temporary file holds no more than the KeyStore itself
+				}
+			}
 		}
 	}
 
