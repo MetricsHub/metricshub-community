@@ -170,4 +170,17 @@ class SourceTest {
 		final Source source = MAPPER.readValue(wmiYaml, Source.class);
 		assertEquals(Set.of(SOURCE_REF1, SOURCE_REF2), source.getReferences());
 	}
+
+	@Test
+	void testReferencesRequireSourcePrefix() throws IOException {
+		final String wmiYaml = """
+			type: wmi
+			forceSerialization: false
+			query: SELECT afterAll.Name FROM tools.x.sources.y} WHERE 1
+			namespace: ${source::monitors.cpu.discovery.sources.source1}
+			""";
+
+		final Source source = MAPPER.readValue(wmiYaml, Source.class);
+		assertEquals(Set.of(SOURCE_REF1), source.getReferences());
+	}
 }

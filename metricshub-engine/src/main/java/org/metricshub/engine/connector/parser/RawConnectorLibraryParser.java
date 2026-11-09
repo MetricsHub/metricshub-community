@@ -50,6 +50,28 @@ public class RawConnectorLibraryParser {
 	public static final ObjectMapper OBJECT_MAPPER = JsonHelper.buildYamlMapper();
 
 	/**
+	 * Whether each parsed connector is flagged with {@code patched: true}.
+	 */
+	private final boolean patched;
+
+	/**
+	 * Creates a parser for connectors that are not flagged as patched.
+	 */
+	public RawConnectorLibraryParser() {
+		this(false);
+	}
+
+	/**
+	 * Creates a parser.
+	 *
+	 * @param patched whether each parsed connector is flagged with {@code patched: true}, as the connectors of the
+	 *                patch directory are
+	 */
+	public RawConnectorLibraryParser(final boolean patched) {
+		this.patched = patched;
+	}
+
+	/**
 	 * This inner class allows to visit the files contained within the Yaml
 	 * directory
 	 */
@@ -85,7 +107,7 @@ public class RawConnectorLibraryParser {
 			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(file.getParent());
 
 			try {
-				final RawConnector connector = connectorParser.parseRaw(file.toFile());
+				final RawConnector connector = connectorParser.parseRaw(file.toFile(), patched);
 				connectorsMap.put(filename.substring(0, filename.lastIndexOf('.')), connector);
 			} catch (Exception e) {
 				log.error(CONNECTOR_PARSING_ERROR, filename, e.getMessage());

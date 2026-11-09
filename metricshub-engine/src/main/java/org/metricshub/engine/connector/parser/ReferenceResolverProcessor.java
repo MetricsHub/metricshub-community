@@ -23,7 +23,6 @@ package org.metricshub.engine.connector.parser;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -122,7 +121,8 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 	protected JsonNode processNode(final JsonNode node) throws IOException {
 		JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 			.withJsonNode(node)
-			.withPredicate(Objects::nonNull)
+			// Only a value holding a source reference can be rewritten
+			.withPredicate(value -> value != null && value.contains("${source::"))
 			.withUpdater(this::updateSourceReferences)
 			.build()
 			.update();

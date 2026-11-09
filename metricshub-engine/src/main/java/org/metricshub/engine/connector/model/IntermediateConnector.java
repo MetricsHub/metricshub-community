@@ -54,6 +54,11 @@ public class IntermediateConnector {
 	private static final String CONNECTOR_VARIABLE_PATTERN = "${var::";
 
 	/**
+	 * Mapper reading the raw connector bytes, shared because building a mapper for each connector is costly.
+	 */
+	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
+
+	/**
 	 * The Id of the Intermediate Connector
 	 */
 	private String connectorId;
@@ -78,14 +83,13 @@ public class IntermediateConnector {
 	 */
 	public IntermediateConnector(final String connectorId, final RawConnector rawConnector) {
 		this.connectorId = connectorId;
-		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = rawConnector.getEmbeddedFiles();
 		if (connectorEmbeddedFiles != null) {
 			this.embeddedFiles.putAll(connectorEmbeddedFiles);
 		}
 
 		try {
-			this.connectorNode = mapper.readTree(rawConnector.getByteConnector());
+			this.connectorNode = YAML_MAPPER.readTree(rawConnector.getByteConnector());
 		} catch (IOException e) {
 			log.error("Error while reading Raw Connector {} from Raw Connector Store.", connectorId);
 			log.debug("Exception: ", e);

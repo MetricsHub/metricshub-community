@@ -40,14 +40,20 @@ import org.metricshub.engine.connector.deserializer.custom.CustomDeserializer;
 public class PostDeserializeHelper {
 
 	/**
+	 * Name of the post-deserialization module. Jackson ignores a second registration of a module with the same name.
+	 */
+	private static final String MODULE_NAME = "metricshub-connector-post-deserialize";
+
+	/**
 	 * Add the {@link CustomDeserializer} as Post deserializer to the given
-	 * {@link ObjectMapper}
+	 * {@link ObjectMapper}. Calling it again on the same mapper does nothing: the named module is registered once,
+	 * so the {@link CustomDeserializer} wrappers never stack up.
 	 *
 	 * @param objectMapper provides functionality for reading and writing JSON
 	 * @return the updated {@link ObjectMapper}
 	 */
 	public static ObjectMapper addPostDeserializeSupport(final ObjectMapper objectMapper) {
-		final SimpleModule module = new SimpleModule();
+		final SimpleModule module = new SimpleModule(MODULE_NAME);
 		module.setDeserializerModifier(new BeanDeserializerModifier() {
 			private static final long serialVersionUID = 1L;
 

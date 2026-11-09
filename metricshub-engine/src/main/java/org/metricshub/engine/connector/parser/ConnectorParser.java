@@ -24,6 +24,7 @@ package org.metricshub.engine.connector.parser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -75,6 +76,18 @@ public class ConnectorParser {
 	 * @throws IOException If an error occurs while reading or parsing the file.
 	 */
 	public RawConnector parseRaw(final File file) throws IOException {
+		return parseRaw(file, false);
+	}
+
+	/**
+	 * Parses the given connector file into a {@link RawConnector}
+	 * @param file    connector file to be parsed
+	 * @param patched whether the connector is flagged with {@code patched: true}, as a connector of the patch
+	 *                directory is
+	 * @return a new {@link RawConnector} Object
+	 * @throws IOException If an error occurs while reading or parsing the file.
+	 */
+	public RawConnector parseRaw(final File file, final boolean patched) throws IOException {
 		JsonNode node = deserializer.getMapper().readTree(file);
 
 		Map<Integer, EmbeddedFile> embeddedFiles = null;
@@ -94,6 +107,11 @@ public class ConnectorParser {
 			);
 			embeddedFilesResolver.process();
 			embeddedFiles = embeddedFilesResolver.collectEmbeddedFiles();
+		}
+
+		// Flag the node before it is serialized, so the flag costs no extra YAML round trip
+		if (patched && node instanceof ObjectNode objectNode) {
+			objectNode.put("patched", true);
 		}
 
 		return new RawConnector(node, embeddedFiles);

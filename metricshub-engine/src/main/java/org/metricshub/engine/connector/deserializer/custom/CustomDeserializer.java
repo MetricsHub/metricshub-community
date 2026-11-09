@@ -43,11 +43,16 @@ public class CustomDeserializer extends DelegatingDeserializer {
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	/**
+	 * Prefix of every source reference. The references are only ever resolved with this exact prefix.
+	 */
+	private static final String SOURCE_REFERENCE_PREFIX = "${source::";
+
+	/**
 	 * Source reference pattern: a monitor job, surrounding or tool source
 	 */
 	private static final Pattern REFERENCE_PATTERN = Pattern.compile(
-		"\\s*(\\$\\{source::((monitors)\\.(.*)\\.(.*)\\.sources\\.(.*))|((beforeAll|afterAll)\\.(.*))|((tools)\\.(.*)\\.sources\\.(.*))\\})\\s*",
-		Pattern.MULTILINE | Pattern.CASE_INSENSITIVE
+		"\\$\\{source::(?:monitors\\..*\\..*\\.sources\\..*|(?:beforeAll|afterAll)\\..*|tools\\..*\\.sources\\..*)\\}",
+		Pattern.CASE_INSENSITIVE
 	);
 
 	private static final long serialVersionUID = 1L;
@@ -93,7 +98,8 @@ public class CustomDeserializer extends DelegatingDeserializer {
 			references(
 				OBJECT_MAPPER.convertValue(deserializedObject, JsonNode.class),
 				refs,
-				val -> REFERENCE_PATTERN.matcher(val).find()
+				// The contains check skips the regex for the many values without a reference, such as AWK scripts
+				val -> val.contains(SOURCE_REFERENCE_PREFIX) && REFERENCE_PATTERN.matcher(val).find()
 			);
 
 			// Set the source key

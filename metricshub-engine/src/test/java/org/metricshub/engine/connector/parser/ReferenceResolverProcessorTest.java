@@ -1,6 +1,7 @@
 package org.metricshub.engine.connector.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -247,5 +248,31 @@ class ReferenceResolverProcessorTest {
 			listDisks.get("sources").get("joined").get("rightTable").asText()
 		);
 		assertEquals("${source::tools.listDisks.sources.joined}", listDisks.get("result").get("source").asText());
+	}
+
+	@Test
+	void testProcessNodeOnlyRewritesReferences() throws IOException {
+		final String yaml = """
+			monitors:
+			  enclosure:
+			    discovery:
+			      sources:
+			        source1:
+			          type: snmpTable
+			          selectColumns: 1
+			          forceSerialization: false
+			          table: ${source::source0}
+			""";
+
+		final JsonNode source = ReferenceResolverProcessor.builder()
+			.build()
+			.processNode(new ObjectMapper(new YAMLFactory()).readTree(yaml))
+			.at("/monitors/enclosure/discovery/sources/source1");
+
+		assertEquals("${source::monitors.enclosure.discovery.sources.source0}", source.get("table").asText());
+		// A value without a reference keeps its node type
+		assertTrue(source.get("selectColumns").isInt());
+		assertTrue(source.get("forceSerialization").isBoolean());
+		assertTrue(source.get("type").isTextual());
 	}
 }

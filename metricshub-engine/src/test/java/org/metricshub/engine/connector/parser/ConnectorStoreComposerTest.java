@@ -93,6 +93,28 @@ class ConnectorStoreComposerTest {
 	}
 
 	@Test
+	void testPatchedRawConnectorStore() throws Exception {
+		final Path yamlTestPath = Paths.get("src", "test", "resources", "connectorStoreComposer");
+		for (final boolean patched : new boolean[] { true, false }) {
+			final RawConnectorStore rawConnectorStore = new RawConnectorStore(yamlTestPath, patched);
+
+			// Every raw connector, template ones included, carries the flag in its definition
+			final ObjectMapper mapper = JsonHelper.buildYamlMapper();
+			for (final var rawConnector : rawConnectorStore.getStore().values()) {
+				assertEquals(patched, mapper.readTree(rawConnector.getByteConnector()).path("patched").asBoolean());
+			}
+
+			final ConnectorStore connectorStore = ConnectorStoreComposer.builder()
+				.withRawConnectorStore(rawConnectorStore)
+				.withUpdateChain(ConnectorParser.createUpdateChain())
+				.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
+				.build()
+				.generateStaticConnectorStore();
+			assertEquals(patched, connectorStore.getStore().get("NoConnectorVariables").isPatched());
+		}
+	}
+
+	@Test
 	void testResolveConnectorStoreVariables() {
 		final AdditionalConnector linuxProcessGeneric = AdditionalConnector.builder().uses("ConnectorVariables").build();
 

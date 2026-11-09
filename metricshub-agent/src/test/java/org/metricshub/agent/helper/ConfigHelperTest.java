@@ -724,4 +724,19 @@ class ConfigHelperTest {
 		assertNotNull(result);
 		assertTrue(result.getCustomConnectorsMap().isEmpty());
 	}
+
+	@Test
+	void testBuildConnectorStoreFlagsPatchConnectors(@TempDir Path patchDirectory) throws IOException {
+		Files.writeString(
+			patchDirectory.resolve("PatchConnector.yaml"),
+			"connector:\n  displayName: Patch Connector\n  detection:\n    appliesTo: [ Linux ]\n"
+		);
+
+		final ConnectorStore connectorStore = ConfigHelper.buildConnectorStore(
+			ExtensionManager.empty(),
+			patchDirectory.toString()
+		);
+
+		assertTrue(connectorStore.getStore().get("PatchConnector").isPatched());
+	}
 }
