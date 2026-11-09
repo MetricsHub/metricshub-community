@@ -470,10 +470,13 @@ public class SecurityManager {
 		} catch (AtomicMoveNotSupportedException e) {
 			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
 		}
+		// A directory cannot be opened on Windows, where the move is already durable once it returns. Anywhere
+		// else, a failed sync is reported: the caller must not take the move as durable
+		if (!target.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+			return;
+		}
 		try (FileChannel directory = FileChannel.open(target.toAbsolutePath().getParent(), StandardOpenOption.READ)) {
 			directory.force(true);
-		} catch (IOException e) {
-			// A directory cannot be opened on Windows, where the move is already durable once it returns
 		}
 	}
 
