@@ -1015,4 +1015,57 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("toTable", "keepColumns"), types(union));
 		assertEquals(List.of(), types(show));
 	}
+
+	/**
+	 * A copy run for each entry of another source and concatenated as JSON produces pure text, whatever its origin
+	 * produces: a table compute reading it reads no rows, and is reported.
+	 */
+	@Test
+	void copyConcatenatedAsJsonProducesText() {
+		final Source entries = StaticSource.builder().value("a").build();
+		final Source table = SnmpTableSource.builder().oid("1.3.6.1").selectColumns("1,2").build();
+		final Source copy = CopySource.builder()
+			.from(ref("table"))
+			.executeForEachEntryOf(
+				ExecuteForEachEntryOf.builder().source(ref("entries")).concatMethod(EntryConcatMethod.JSON_ARRAY).build()
+			)
+			.computes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("entries", entries);
+		sources.put("table", table);
+		sources.put("copy", copy);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("copy")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("keepColumns"), types(copy));
+		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
+	}
+
+	/**
+	 * A union of command outputs run for each entry of another source and concatenated as JSON produces that text
+	 * only, no table: a table compute reading it reads no rows, and is reported (no implicit toTable, which would
+	 * read the table of the members).
+	 */
+	@Test
+	void textUnionConcatenatedAsJsonProducesPureText() {
+		final Source entries = StaticSource.builder().value("a").build();
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"))))
+			.executeForEachEntryOf(
+				ExecuteForEachEntryOf.builder().source(ref("entries")).concatMethod(EntryConcatMethod.JSON_ARRAY).build()
+			)
+			.computes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("entries", entries);
+		sources.put("show", show);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("keepColumns"), types(union));
+		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
+	}
 }

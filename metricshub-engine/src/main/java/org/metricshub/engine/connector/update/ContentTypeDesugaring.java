@@ -132,7 +132,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
 	 * Logs every entry of the content-type report of a connector at WARN: what the desugaring inserted, and the legacy
-	 * idioms it found, so that the author of a connector learns what the engine does on its behalf.
+	 * idioms it found, so that the author of a connector learns what the engine does on its behalf. The detail, which
+	 * may quote a value of the connector or of the configuration, is logged at DEBUG only.
 	 *
 	 * @param connector   The desugared connector
 	 * @param connectorId The identifier of the connector in the messages
@@ -140,7 +141,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	public static void logReport(final Connector connector, final String connectorId) {
 		final List<ContentTypeReportEntry> report = connector.getContentTypeReport();
 		if (report != null) {
-			report.forEach(entry -> log.warn("Connector {} - Content type: {}", connectorId, entry));
+			report.forEach(entry -> {
+				log.warn("Connector {} - Content type: {} [{}]", connectorId, entry.sourceKey(), entry.kind());
+				log.debug("Connector {} - Content type: {}", connectorId, entry);
+			});
 		}
 	}
 
@@ -244,9 +248,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Set<Source> visited,
 		final Set<String> textOnly
 	) {
-		final State start = source instanceof CopySource copy
-			? effectiveOutput(copy, sources, visited, textOnly)
-			: startOf(source, sources, visited, textOnly);
+		final State start = start(source, sources, visited, textOnly);
 		final State end = throughWrittenComputes(start, source);
 		if (
 			textOnly != null &&
@@ -356,9 +358,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (source.getComputes() != null && !source.getComputes().isEmpty()) {
 			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
 		}
-		final State state = source instanceof CopySource copy
-			? effectiveOutput(copy, sources, new HashSet<>(), null)
-			: startOf(source, sources, new HashSet<>(), null);
+		final State state = start(source, sources, new HashSet<>(), null);
 		return state.type() == ContentType.TEXT;
 	}
 
@@ -533,9 +533,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		// Start again from the chain as written: a previous pass may have inserted implicit conversions
 		final List<Compute> computes = source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
 		// A copy source produces what it copies: the type and the producer at the end of its origin's chain
-		final State start = source instanceof CopySource copy
-			? effectiveOutput(copy, sources, new HashSet<>(), textOnly)
-			: startOf(source, sources, new HashSet<>(), textOnly);
+		final State start = start(source, sources, new HashSet<>(), textOnly);
 		ContentType current = start.type();
 		TextProducer producer = start.producer();
 
@@ -729,14 +727,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Set<Source> visited,
 		final Set<String> textOnly
 	) {
+		if (isConcatenatedAsText(source)) {
+			return new State(ContentType.TEXT, TextProducer.PURE);
+		}
 		if (source instanceof TableUnionSource union) {
 			final TextProducer producer = textUnionProducer(union, sources, visited, textOnly);
 			if (producer != null) {
 				return new State(ContentType.TEXT, producer);
 			}
-		}
-		if (source.isExecuteForEachEntryOf() && source.getEntryConcatMethod() != EntryConcatMethod.LIST) {
-			return new State(ContentType.TEXT, TextProducer.PURE);
 		}
 		final ContentType type = source.getOutputContentType();
 		return new State(
@@ -745,6 +743,29 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 				? TextProducer.NONE
 				: isPureTextSource(source) ? TextProducer.PURE : TextProducer.LEGACY_DUAL
 		);
+	}
+
+	/**
+	 * What a source produces before its computes run: a copy produces what its origin's chain produces, unless it is
+	 * run for each entry of another source and concatenated as text.
+	 */
+	private static State start(
+		final Source source,
+		final Map<String, Source> sources,
+		final Set<Source> visited,
+		final Set<String> textOnly
+	) {
+		return source instanceof CopySource copy && !isConcatenatedAsText(copy)
+			? effectiveOutput(copy, sources, visited, textOnly)
+			: startOf(source, sources, visited, textOnly);
+	}
+
+	/**
+	 * Whether the source is run for each entry of another source and its results concatenated as JSON or custom text,
+	 * which produces text whatever the source produces.
+	 */
+	private static boolean isConcatenatedAsText(final Source source) {
+		return source.isExecuteForEachEntryOf() && source.getEntryConcatMethod() != EntryConcatMethod.LIST;
 	}
 
 	/**
