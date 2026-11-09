@@ -37,10 +37,9 @@ import org.metricshub.opamp.client.state.UuidV7;
 public final class AgentInstanceUid {
 
 	/**
-	 * Name of the file holding the uid. Kept for compatibility with agents that created it through
-	 * OpAMP before the central tunnel existed.
+	 * Name of the file holding the uid.
 	 */
-	public static final String FILENAME = "opamp-instance-uid";
+	public static final String FILENAME = "metricshub-agent-uid";
 
 	private AgentInstanceUid() {}
 
