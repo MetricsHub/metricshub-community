@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -99,6 +100,51 @@ class AgentCredentialStoreTest {
 
 		assertFalse(Files.exists(store.uidFile()));
 		assertEquals(Status.PENDING, store.read().status());
+	}
+
+	@Test
+	void beginAttemptShouldNeverReplaceAnAttempt() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt(ATTEMPT_ID, RECOVERY);
+
+		assertThrows(IOException.class, () -> store.beginAttempt("b5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", new byte[] { 1 }));
+
+		final LocalIdentity pending = store.read();
+		assertEquals(ATTEMPT_ID, pending.attemptId());
+		assertArrayEquals(RECOVERY, pending.recoverySecret());
+	}
+
+	@Test
+	void restrictShouldKeepTheDenyEntriesOnWindows() throws Exception {
+		final Path file = Files.createFile(directory.resolve("denied"));
+		final AclFileAttributeView view = Files.getFileAttributeView(file, AclFileAttributeView.class);
+		assumeTrue(view != null && Files.getFileAttributeView(file, PosixFileAttributeView.class) == null);
+		final UserPrincipal users = FileSystems.getDefault()
+			.getUserPrincipalLookupService()
+			.lookupPrincipalByName("BUILTIN\\Users");
+		final List<AclEntry> entries = new ArrayList<>();
+		entries.add(
+			AclEntry.newBuilder()
+				.setType(AclEntryType.DENY)
+				.setPrincipal(users)
+				.setPermissions(EnumSet.of(AclEntryPermission.READ_DATA))
+				.build()
+		);
+		entries.addAll(view.getAcl());
+		entries.add(
+			AclEntry.newBuilder()
+				.setType(AclEntryType.ALLOW)
+				.setPrincipal(users)
+				.setPermissions(EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.READ_DATA))
+				.build()
+		);
+		view.setAcl(entries);
+
+		AgentCredentialStore.restrict(file);
+
+		assertTrue(
+			view.getAcl().stream().anyMatch(entry -> entry.type() == AclEntryType.DENY && entry.principal().equals(users))
+		);
 	}
 
 	@Test

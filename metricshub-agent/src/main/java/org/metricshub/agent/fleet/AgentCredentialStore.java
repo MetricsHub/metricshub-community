@@ -240,32 +240,40 @@ public final class AgentCredentialStore {
 				if (agentUid != null && secret != null) {
 					return new LocalIdentity(Status.READY, null, agentUid, toChars(secret), null);
 				}
+				wipe(secret);
 				return new LocalIdentity(Status.INCOMPLETE, null, agentUid, null, null);
 			}
+			final boolean secretStored = secret != null;
+			wipe(secret);
 			final String attemptId = state.path(ATTEMPT_ID).asText(null);
 			final byte[] recoverySecret = readSecret(RECOVERY_ALIAS);
 			if (!PENDING.equals(name) || !isCanonicalUuid(attemptId) || recoverySecret == null) {
+				wipe(recoverySecret);
 				throw new IOException("The enrollment state in " + directory.resolve(STATE_FILENAME) + " is not valid.");
 			}
-			final Status status = agentUid == null && secret == null ? Status.PENDING : Status.INCOMPLETE;
+			final Status status = agentUid == null && !secretStored ? Status.PENDING : Status.INCOMPLETE;
 			return new LocalIdentity(status, attemptId, null, null, recoverySecret);
 		});
 	}
 
 	/**
 	 * Records a new enrollment attempt, before its first request: the recovery proof first, then the
-	 * {@code pending} state, which is what makes the attempt exist. A uid or a secret left by an earlier identity
-	 * is removed, so no uid file exists before {@code ready}.
+	 * {@code pending} state, which is what makes the attempt exist. A uid or a secret left without a state (an agent
+	 * that ran without enrollment) is removed, so no uid file exists before {@code ready}. It never replaces an
+	 * attempt or an identity: an interrupted replacement would pair the old attempt with the new proof.
 	 *
 	 * @param attemptId      the attempt id, a canonical UUID
 	 * @param recoverySecret the recovery proof
-	 * @throws IOException when a write fails
+	 * @throws IOException when a state already exists, or a write fails
 	 */
 	public void beginAttempt(final String attemptId, final byte[] recoverySecret) throws IOException {
 		if (!isCanonicalUuid(attemptId)) {
 			throw new IllegalArgumentException("The attempt id is not a canonical UUID.");
 		}
 		locked(() -> {
+			if (readState() != null) {
+				throw new IOException("An enrollment attempt or identity already exists in " + directory + ".");
+			}
 			final Map<String, byte[]> secrets = new HashMap<>();
 			secrets.put(RECOVERY_ALIAS, recoverySecret);
 			secrets.put(SECRET_ALIAS, null);
@@ -321,7 +329,9 @@ public final class AgentCredentialStore {
 	 */
 	public void clearRecovery() throws IOException {
 		locked(() -> {
-			if (readSecret(RECOVERY_ALIAS) != null) {
+			final byte[] recoverySecret = readSecret(RECOVERY_ALIAS);
+			if (recoverySecret != null) {
+				wipe(recoverySecret);
 				final Map<String, byte[]> secrets = new HashMap<>();
 				secrets.put(RECOVERY_ALIAS, null);
 				updateSecrets(secrets);
@@ -404,9 +414,10 @@ public final class AgentCredentialStore {
 
 	/**
 	 * Restricts a path to its owner: {@code 0700} for a directory and {@code 0600} for a file on POSIX systems. On
-	 * Windows, the access list keeps only the entries of principals that may already change it (the owner, SYSTEM,
-	 * Administrators), plus the owner's own, so no other user or group keeps any access; entries inherit to the
-	 * files of a directory. Names are never looked up, so this holds whatever the system's language.
+	 * Windows, the access list keeps its deny entries, first, then allows full control to the owner and to the
+	 * principals that may already change it (SYSTEM, Administrators), so no other user or group keeps any access and
+	 * a denied principal stays denied; entries inherit to the files of a directory. Names are never looked up, so
+	 * this holds whatever the system's language.
 	 *
 	 * @param path a file or directory
 	 * @throws IOException when the permissions cannot be set
@@ -427,6 +438,11 @@ public final class AgentCredentialStore {
 			: EnumSet.noneOf(AclEntryFlag.class);
 		final UserPrincipal owner = acl.getOwner();
 		final List<AclEntry> entries = new ArrayList<>();
+		for (final AclEntry entry : acl.getAcl()) {
+			if (entry.type() == AclEntryType.DENY) {
+				entries.add(entry);
+			}
+		}
 		entries.add(fullControl(owner, flags));
 		for (final AclEntry entry : acl.getAcl()) {
 			if (
@@ -458,6 +474,12 @@ public final class AgentCredentialStore {
 			return UUID.fromString(value).toString().equals(value);
 		} catch (IllegalArgumentException e) {
 			return false;
+		}
+	}
+
+	private static void wipe(final byte[] secret) {
+		if (secret != null) {
+			Arrays.fill(secret, (byte) 0);
 		}
 	}
 
