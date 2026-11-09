@@ -156,10 +156,50 @@ public class OpampClientSettings {
 	}
 
 	/**
-	 * @return the headers of the request about to be sent: the supplier's current value when one is set, the static
-	 *         headers otherwise
+	 * Creates the settings without a headers supplier nor a {@code 401} hook, as before they existed.
+	 *
+	 * @param endpoint        the OpAMP server endpoint
+	 * @param headers         the headers sent with every request; {@code null} means none
+	 * @param certificateFile the trusted certificate (PEM) path, or {@code null}
+	 * @param pollInterval    the interval between two polls
+	 * @param requestTimeout  the timeout of one HTTP exchange
+	 * @param maxBackoff      the maximum backoff delay
+	 * @param instanceUidFile the file persisting the agent instance UID
+	 * @param reportHealth    whether the agent health is reported
+	 */
+	public OpampClientSettings(
+		@NonNull final URI endpoint,
+		final Map<String, String> headers,
+		final String certificateFile,
+		final Duration pollInterval,
+		final Duration requestTimeout,
+		final Duration maxBackoff,
+		@NonNull final Path instanceUidFile,
+		final boolean reportHealth
+	) {
+		this(
+			endpoint,
+			headers,
+			null,
+			null,
+			certificateFile,
+			pollInterval,
+			requestTimeout,
+			maxBackoff,
+			instanceUidFile,
+			reportHealth
+		);
+	}
+
+	/**
+	 * @return the headers of the request about to be sent, an immutable snapshot: the supplier's current value when
+	 *         one is set ({@code null} meaning none), the static headers otherwise
 	 */
 	public Map<String, String> currentHeaders() {
-		return headersSupplier == null ? headers : headersSupplier.get();
+		if (headersSupplier == null) {
+			return headers;
+		}
+		final Map<String, String> current = headersSupplier.get();
+		return current == null ? Map.of() : Map.copyOf(current);
 	}
 }

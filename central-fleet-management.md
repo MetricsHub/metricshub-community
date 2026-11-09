@@ -66,6 +66,7 @@ Three properties drive the whole design:
 | Server set the `ReportFullState` flag | Immediately, with the full state |
 | Terminal package status reached (`Installed` / `InstallFailed`) | Immediately, via `OpampClient.pollNow()` |
 | Transport failure or HTTP != 200 | Exponential backoff with jitter, capped at 10 min, floored by `Retry-After` |
+| HTTP 401, the first in a row | The client's `onUnauthorized` hook runs (the owner of the credential drops it), then the next attempt waits exactly `Retry-After`, or not at all without one, and the backoff does not grow. A second 401 in a row follows the backoff above |
 | Server answered `ServerErrorResponse(Unavailable)` | Same backoff, floored by `RetryInfo.retry_after_nanoseconds` |
 | Server answered `ServerErrorResponse(BadRequest / Unknown)` | Normal interval — the message is *not* retried |
 
@@ -273,9 +274,9 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | Method / content type | `POST`, `Content-Type: application/x-protobuf` |
 | Client | JDK `HttpClient` ([`OpampHttpTransport`](metricshub-opamp-client/src/main/java/org/metricshub/opamp/client/http/OpampHttpTransport.java)) |
 | Success | HTTP 200 only; anything else is a transport failure |
-| `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor |
+| `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor; after a first 401, as the exact delay ([§1.2](#12-poll-cadence)) |
 | TLS | System trust store, or a PEM pinned via `central.certificateFile` |
-| Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore |
+| Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore; or, through `OpampClientSettings.headersSupplier`, headers computed for each POST (a credential renewed while the client runs) |
 
 ### 3.4 Not implemented
 
