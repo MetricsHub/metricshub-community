@@ -24,8 +24,6 @@ package org.metricshub.cli.service;
 import static org.metricshub.agent.helper.AgentConstants.API_KEY_PREFIX;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
@@ -162,7 +160,7 @@ public class ApiKeyCliService {
 				throw new IllegalStateException("An API key with alias '" + apiKeyAlias + "' already exists.");
 			}
 
-			return createApiKey(apiKeyAlias, expirationDateTime, ks, keyStoreFile);
+			return createApiKey(apiKeyAlias, expirationDateTime, keyStoreFile);
 		}
 
 		/**
@@ -179,7 +177,6 @@ public class ApiKeyCliService {
 		 *
 		 * @param apiKeyAlias        the name of the API key to create
 		 * @param expirationDateTime the expiration date and time for the API key, or null for no expiration
-		 * @param ks                 the KeyStore where the API key will be stored
 		 * @param keyStoreFile       the file where the KeyStore is stored
 		 * @return the generated API key as a string
 		 * @throws Exception if an error occurs while creating or storing the API key
@@ -187,7 +184,6 @@ public class ApiKeyCliService {
 		private static String createApiKey(
 			final String apiKeyAlias,
 			final LocalDateTime expirationDateTime,
-			final KeyStore ks,
 			final File keyStoreFile
 		) throws Exception {
 			final var apiKey = UUID.randomUUID().toString();
@@ -197,20 +193,18 @@ public class ApiKeyCliService {
 			}
 			final byte[] apiKeyBytes = keyToStore.getBytes(StandardCharsets.UTF_8);
 
-			try (OutputStream fos = new FileOutputStream(keyStoreFile)) {
-				// Generate a SecretKeySpec with a valid algorithm.
-				final var secretKey = new SecretKeySpec(apiKeyBytes, "AES");
+			// Generate a SecretKeySpec with a valid algorithm.
+			final var secretKey = new SecretKeySpec(apiKeyBytes, "AES");
 
-				final var secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
-				final var protectionParam = new KeyStore.PasswordProtection(getKeyStoreChars());
+			final var secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
+			final var protectionParam = new KeyStore.PasswordProtection(getKeyStoreChars());
 
-				ks.setEntry(API_KEY_PREFIX + apiKeyAlias, secretKeyEntry, protectionParam);
+			SecurityManager.updateKeyStore(
+				keyStoreFile,
+				fresh -> fresh.setEntry(API_KEY_PREFIX + apiKeyAlias, secretKeyEntry, protectionParam)
+			);
 
-				// Finally commit.
-				SecurityManager.store(ks, fos);
-
-				return apiKey;
-			}
+			return apiKey;
 		}
 	}
 
@@ -306,11 +300,7 @@ public class ApiKeyCliService {
 					return CommandLine.ExitCode.SOFTWARE;
 				}
 
-				ks.deleteEntry(apiKeyAlias);
-
-				try (OutputStream fos = new FileOutputStream(keyStoreFile)) {
-					SecurityManager.store(ks, fos);
-				}
+				SecurityManager.updateKeyStore(keyStoreFile, fresh -> fresh.deleteEntry(apiKeyAlias));
 
 				printWriter.println(Ansi.ansi().a("API key '").fgGreen().a(alias).reset().a("' has been revoked.").reset());
 				return CommandLine.ExitCode.OK;
