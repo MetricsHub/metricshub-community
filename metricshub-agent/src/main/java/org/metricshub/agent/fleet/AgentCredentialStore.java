@@ -33,7 +33,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.AclEntry;
 import java.nio.file.attribute.AclEntryFlag;
@@ -270,6 +269,9 @@ public final class AgentCredentialStore {
 		if (!isCanonicalUuid(attemptId)) {
 			throw new IllegalArgumentException("The attempt id is not a canonical UUID.");
 		}
+		if (recoverySecret == null || recoverySecret.length == 0) {
+			throw new IllegalArgumentException("The recovery proof is empty.");
+		}
 		locked(() -> {
 			if (readState() != null) {
 				throw new IOException("An enrollment attempt or identity already exists in " + directory + ".");
@@ -400,12 +402,12 @@ public final class AgentCredentialStore {
 	private void writeAtomically(final Path target, final byte[] content) throws IOException {
 		final Path temporaryFile = Files.createTempFile(directory, target.getFileName().toString(), ".tmp");
 		try {
+			restrict(temporaryFile);
 			try (FileOutputStream stream = new FileOutputStream(temporaryFile.toFile())) {
 				stream.write(content);
 				stream.getFD().sync();
 			}
-			restrict(temporaryFile);
-			Files.move(temporaryFile, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			SecurityManager.moveDurably(temporaryFile, target);
 		} finally {
 			Files.deleteIfExists(temporaryFile);
 		}

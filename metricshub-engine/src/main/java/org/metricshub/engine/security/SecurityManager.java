@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -394,16 +395,38 @@ public class SecurityManager {
 		update.apply(ks);
 		final Path temporaryFile = Files.createTempFile(target.getParent(), METRICSHUB_KEY_STORE_FILE_NAME, ".tmp");
 		try {
+			// The access of the KeyStore first, so the temporary file never holds a secret under a wider access
+			if (Files.exists(target)) {
+				copyAccess(target, temporaryFile);
+			}
 			try (FileOutputStream stream = new FileOutputStream(temporaryFile.toFile())) {
 				ks.store(stream, KEY_STORE_PASSWORD);
 				stream.getFD().sync();
 			}
-			if (Files.exists(target)) {
-				copyAccess(target, temporaryFile);
-			}
-			Files.move(temporaryFile, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			moveDurably(temporaryFile, target);
 		} finally {
 			Files.deleteIfExists(temporaryFile);
+		}
+	}
+
+	/**
+	 * Moves a file over another atomically, or, where the file system cannot, by a plain replacement as an in-place
+	 * write did; then forces the directory, so a power loss cannot undo the move.
+	 *
+	 * @param source the file to move
+	 * @param target the file it replaces
+	 * @throws IOException when the move fails
+	 */
+	public static void moveDurably(final Path source, final Path target) throws IOException {
+		try {
+			Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+		}
+		try (FileChannel directory = FileChannel.open(target.toAbsolutePath().getParent(), StandardOpenOption.READ)) {
+			directory.force(true);
+		} catch (IOException e) {
+			// A directory cannot be opened on Windows, where the move is already durable once it returns
 		}
 	}
 

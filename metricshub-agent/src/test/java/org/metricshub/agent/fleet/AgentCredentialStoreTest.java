@@ -103,6 +103,15 @@ class AgentCredentialStoreTest {
 	}
 
 	@Test
+	void beginAttemptShouldRefuseAMissingRecoveryProof() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+
+		assertThrows(IllegalArgumentException.class, () -> store.beginAttempt(ATTEMPT_ID, null));
+
+		assertEquals(Status.ABSENT, store.read().status());
+	}
+
+	@Test
 	void beginAttemptShouldNeverReplaceAnAttempt() throws Exception {
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		store.beginAttempt(ATTEMPT_ID, RECOVERY);
