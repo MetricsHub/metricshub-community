@@ -32,7 +32,8 @@ class ContentTypeReportTest {
 
 		final Map<Repository, ConnectorStore> stores = new LinkedHashMap<>();
 		for (final Repository repository : repositories) {
-			stores.put(repository, ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory()));
+			// Only the repository's own connectors, its dependencies' ones resolved under them
+			stores.put(repository, ComputeChainGoldenCorpus.load(repository).store());
 		}
 		final String report = ComputeChainGoldenCorpus.contentTypeReport(stores);
 

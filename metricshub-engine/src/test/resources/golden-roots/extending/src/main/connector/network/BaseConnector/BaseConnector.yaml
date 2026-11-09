@@ -1,0 +1,8 @@
+# Has the id of a connector of the base repository: the merged tree keeps only one of them, so it does not load
+connector:
+  displayName: Base connector, again
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: deviceType
+      keep: [ linux ]

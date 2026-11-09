@@ -2,9 +2,11 @@ package org.metricshub.engine.strategy.source.compute.golden;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -35,6 +37,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.CompareMode;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.ConnectorGolden;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Inputs;
+import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.LoadedRepository;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Output;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Repository;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.SourceGolden;
@@ -82,10 +85,17 @@ class ComputeChainGoldenCorpusTest {
 	private final Set<String> loadedConnectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
 	private Stream<DynamicTest> goldens(final Repository repository) {
-		final ConnectorStore store = ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory());
+		final LoadedRepository loaded;
+		try {
+			loaded = ComputeChainGoldenCorpus.load(repository);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		final ConnectorStore store = loaded.store();
 		final Set<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		connectorIds.addAll(store.getStore().keySet());
 		loadedConnectorIds.addAll(connectorIds);
+		loadedConnectorIds.addAll(loaded.unloaded().keySet());
 		final Stream<DynamicTest> connectors = connectorIds.stream()
 			.filter(ComputeChainGoldenCorpus::isSelected)
 			.map(
@@ -98,7 +108,18 @@ class ComputeChainGoldenCorpusTest {
 			repository.getRoot().getFileName() + " / stored goldens match the connectors",
 			() -> checkInventory(repository, connectorIds)
 		);
-		return Stream.concat(connectors, Stream.of(inventory));
+		// A connector file that did not load has no golden, no check and no report: a failure, golden or not
+		final Stream<DynamicTest> unloaded = loaded.unloaded()
+			.entrySet()
+			.stream()
+			.filter(entry -> ComputeChainGoldenCorpus.isSelected(entry.getKey()))
+			.map(
+				entry -> DynamicTest.dynamicTest(
+					repository.getRoot().getFileName() + " / " + entry.getKey(),
+					() -> fail(entry.getKey() + ": connector file did not load " + entry.getValue())
+				)
+			);
+		return Stream.of(connectors, unloaded, Stream.of(inventory)).flatMap(stream -> stream);
 	}
 
 	private void checkConnector(final Repository repository, final ConnectorStore store, final String connectorId)
@@ -121,9 +142,7 @@ class ComputeChainGoldenCorpusTest {
 	 * Every stored golden must belong to a connector that still exists (a deleted connector leaves no golden behind).
 	 */
 	private void checkInventory(final Repository repository, final Set<String> connectorIds) throws IOException {
-		// A connector whose file exists but did not load keeps its golden, in both modes, and fails the test
-		final List<String> unloaded = ComputeChainGoldenCorpus.unloadedGoldens(repository, connectorIds);
-		assertTrue(unloaded.isEmpty(), "Connectors that failed to load (goldens kept): " + unloaded);
+		// A connector whose file exists but did not load keeps its golden, in both modes (its own test fails)
 		final List<String> orphans = ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds);
 		if (ComputeChainGoldenCorpus.isUpdateMode()) {
 			for (final String connectorId : orphans) {
@@ -605,6 +624,81 @@ class ComputeChainGoldenCorpusTest {
 					System.setProperty(property, value);
 				}
 			});
+		}
+	}
+
+	/**
+	 * A repository is loaded merged with the connector directories of the roots before it (theirs win on a shared
+	 * path): its connectors resolve the files they extend there, only its own connectors are kept, and a connector
+	 * file of it that does not load, or shares its id with a dependency's connector, is reported (a header file is not
+	 * a connector file, and a golden of one is an orphan).
+	 */
+	@Test
+	void dependencyRootsAndUnloadedConnectors() throws IOException {
+		final Path base = Path.of("src", "test", "resources", "golden-roots", "base");
+		final Path extending = Path.of("src", "test", "resources", "golden-roots", "extending");
+
+		// Alone, the extending repository uses its stale copy of the base header; Broken fails, the header does not
+		final LoadedRepository alone = ComputeChainGoldenCorpus.load(Repository.of(extending));
+		assertEquals(List.of("BaseConnector", "Child"), List.copyOf(alone.store().getStore().keySet()));
+		assertEquals(List.of("Broken"), List.copyOf(alone.unloaded().keySet()));
+		assertEquals(
+			Set.of("${source::monitors.thing.simple.sources.stale}"),
+			ComputeChainGoldenCorpus.generate(alone.store(), "Child").getSources().keySet()
+		);
+
+		final List<Repository> repositories = Repository.of(List.of(base, extending));
+		assertEquals(List.of(), repositories.get(0).getDependencyDirectories());
+		assertEquals(
+			List.of(ComputeChainGoldenCorpus.connectorDirectory(base)),
+			repositories.get(1).getDependencyDirectories()
+		);
+		final LoadedRepository baseLoaded = ComputeChainGoldenCorpus.load(repositories.get(0));
+		assertEquals(List.of("BaseConnector"), List.copyOf(baseLoaded.store().getStore().keySet()));
+		assertEquals(Map.of(), baseLoaded.unloaded());
+
+		// With the base repository: Child loads with the chain of the base header (not the stale copy), and the
+		// extending BaseConnector does not load, since the merged tree holds two connectors with that id
+		final LoadedRepository loaded = ComputeChainGoldenCorpus.load(repositories.get(1));
+		assertEquals(List.of("Child"), List.copyOf(loaded.store().getStore().keySet()));
+		assertEquals(
+			Set.of("${source::monitors.thing.simple.sources.s}"),
+			ComputeChainGoldenCorpus.generate(loaded.store(), "Child").getSources().keySet()
+		);
+		assertEquals(List.of("BaseConnector", "Broken"), List.copyOf(loaded.unloaded().keySet()));
+		assertTrue(loaded.unloaded().get("BaseConnector").contains("BaseConnector.yaml"), loaded.unloaded().toString());
+		assertTrue(loaded.unloaded().get("Broken").contains("../../semconv/Missing"), loaded.unloaded().toString());
+
+		// A golden of a header is an orphan; the golden of a connector file that did not load is kept
+		assertEquals(List.of("Thing"), ComputeChainGoldenCorpus.orphanGoldens(repositories.get(0), List.of()));
+		assertEquals(List.of(), ComputeChainGoldenCorpus.orphanGoldens(repositories.get(1), List.of()));
+
+		// The runner, base: BaseConnector has no stored golden, Thing.json is an orphan. Extending: Child has no stored
+		// golden, BaseConnector and Broken did not load (Broken.json kept). Nothing is written or deleted
+		final Map<String, String> previous = new HashMap<>();
+		for (final String property : List.of(
+			ComputeChainGoldenCorpus.CONNECTORS_PROPERTY,
+			ComputeChainGoldenCorpus.UPDATE_PROPERTY
+		)) {
+			previous.put(property, System.getProperty(property));
+			System.clearProperty(property);
+		}
+		try {
+			assertEquals(5, GoldenCheck.run(List.of(base, extending), false));
+			assertEquals(List.of("Thing.json"), fileNames(ComputeChainGoldenCorpus.goldenDirectory(base)));
+			assertEquals(List.of("Broken.json"), fileNames(ComputeChainGoldenCorpus.goldenDirectory(extending)));
+		} finally {
+			previous.forEach((property, value) -> {
+				if (value != null) {
+					System.setProperty(property, value);
+				}
+			});
+		}
+	}
+
+	private static List<String> fileNames(final Path directory) throws IOException {
+		try (Stream<Path> files = Files.list(directory)) {
+			return files.map(file -> file.getFileName().toString()).sorted().toList();
 		}
 	}
 

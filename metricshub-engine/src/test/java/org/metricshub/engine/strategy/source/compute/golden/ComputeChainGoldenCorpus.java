@@ -14,10 +14,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -50,6 +52,8 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
+import org.metricshub.engine.connector.model.IntermediateConnector;
+import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -74,6 +78,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
+import org.metricshub.engine.connector.parser.RawConnectorLibraryParser;
 import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
@@ -96,8 +101,12 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Configuration (system properties, or environment variables for the paths):
  * <ul>
  * <li>{@value #ROOTS_PROPERTY} (or {@value #ROOTS_ENV}): the connector repository roots, separated by the platform
- * path separator. A root is used as is when it has no <code>src/main/connector</code> directory. Default: the
- * community and enterprise repositories checked out next to this repository. A missing root is skipped.</li>
+ * path separator, community first. A root is used as is when it has no <code>src/main/connector</code> directory.
+ * Default: the community and enterprise repositories checked out next to this repository. A missing root is skipped.
+ * Each repository is loaded merged with the connector directories of the roots before it (theirs win on a shared
+ * path), the way the enterprise build merges them, so that its connectors resolve the files they extend there (<code>../../semconv/K8s</code>); only its
+ * own connectors are checked, reported and given goldens (see {@link #load(Repository)}). A connector file of a
+ * repository that does not load is a failure.</li>
  * <li>{@value #UPDATE_PROPERTY}: when <code>true</code>, the goldens are (re)written instead of verified.</li>
  * <li>{@value #COMPARE_PROPERTY}: <code>typed</code> (default during stage 4 of #1508, until the goldens are
  * regenerated) compares what the chain produces for its consumers, see {@link CompareMode#TYPED}; <code>exact</code>
@@ -284,14 +293,145 @@ public class ComputeChainGoldenCorpus {
 	 * @return the connector store
 	 */
 	public static ConnectorStore loadConnectors(final Path connectorDirectory) {
-		final ConnectorStoreComposer composer = ConnectorStoreComposer.builder()
-			.withRawConnectorStore(new RawConnectorStore(connectorDirectory))
-			.withUpdateChain(ConnectorParser.createUpdateChain())
-			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
-			.build();
+		final ConnectorStoreComposer composer = composer(new RawConnectorStore(connectorDirectory));
 		final ConnectorStore store = composer.generateStaticConnectorStore();
 		store.addMany(composer.resolveConnectorStoreVariables(store).getCustomConnectorsMap());
 		return store;
+	}
+
+	private static ConnectorStoreComposer composer(final RawConnectorStore rawConnectorStore) {
+		return ConnectorStoreComposer.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
+			.build();
+	}
+
+	/**
+	 * The connectors of a repository, and its connector files that did not load.
+	 *
+	 * @param store    The repository's own connectors (those of its dependencies left out)
+	 * @param unloaded The ids of the repository's connector files that did not load, with the reason
+	 */
+	public record LoadedRepository(ConnectorStore store, Map<String, String> unloaded) {}
+
+	/**
+	 * Loads the connectors of a repository the way the enterprise build merges the repositories: its own connector
+	 * directory, then the connector directories of its dependencies over it (the build unpacks the community
+	 * connectors last, so a stale local copy of a community header does not win), in one tree, so that a connector
+	 * extending a file of a dependency (<code>../../semconv/K8s</code>) resolves it. Only the repository's own
+	 * connectors are kept. An own connector whose id is also that of a dependency's connector does not load: the
+	 * merged tree keeps only one of them, and the golden could be made from the wrong one.
+	 *
+	 * @param repository The repository
+	 * @return its connectors and its connector files that did not load
+	 * @throws IOException when the merged tree cannot be written or a directory cannot be listed
+	 */
+	public static LoadedRepository load(final Repository repository) throws IOException {
+		final Map<String, Path> files = connectorFileIds(repository.getConnectorDirectory());
+		final Map<String, String> unloaded = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		for (final Path dependency : repository.getDependencyDirectories()) {
+			connectorFileIds(dependency).forEach((id, file) -> {
+				if (files.containsKey(id)) {
+					unloaded.putIfAbsent(id, "its id is also that of the connector " + dependency.resolve(file));
+				}
+			});
+		}
+		final Path merged = repository.getDependencyDirectories().isEmpty()
+			? repository.getConnectorDirectory()
+			: Files.createTempDirectory("golden-merged");
+		try {
+			if (!merged.equals(repository.getConnectorDirectory())) {
+				copyTree(repository.getConnectorDirectory(), merged);
+				for (final Path dependency : repository.getDependencyDirectories()) {
+					copyTree(dependency, merged);
+				}
+			}
+			final ConnectorStore store = loadConnectors(merged);
+			// The ids are file names: a dependency's connectors are not this repository's ones
+			store.getStore().keySet().retainAll(files.keySet());
+			store.getStore().keySet().removeAll(unloaded.keySet());
+			files.forEach((id, file) -> {
+				if (!store.getStore().containsKey(id) && !unloaded.containsKey(id)) {
+					unloaded.put(id, loadError(id, merged.resolve(file)));
+				}
+			});
+			return new LoadedRepository(store, unloaded);
+		} finally {
+			if (!merged.equals(repository.getConnectorDirectory())) {
+				try (Stream<Path> paths = Files.walk(merged)) {
+					for (final Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+						Files.delete(path);
+					}
+				}
+			}
+		}
+	}
+
+	private static void copyTree(final Path source, final Path target) throws IOException {
+		try (Stream<Path> paths = Files.walk(source)) {
+			for (final Path path : paths.toList()) {
+				final Path destination = target.resolve(source.relativize(path).toString());
+				if (Files.isDirectory(path)) {
+					Files.createDirectories(destination);
+				} else {
+					Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
+				}
+			}
+		}
+	}
+
+	/**
+	 * The error that stops a connector file from loading: the loader only logs it, so the file is parsed again.
+	 *
+	 * @param id   The connector id
+	 * @param file The connector file, in the tree it was loaded from
+	 * @return the exception class and message, or a pointer to the other failures when parsing the file alone succeeds
+	 */
+	private static String loadError(final String id, final Path file) {
+		try {
+			final RawConnector raw = ConnectorParser.withNodeProcessorAndUpdateChain(file.getParent())
+				.parseRaw(file.toFile());
+			composer(new RawConnectorStore()).parseConnector(new IntermediateConnector(id, raw));
+			return "(it parses alone: the loader stopped early, see the other connector files that did not load or the log)";
+		} catch (Exception e) {
+			return e.getClass().getSimpleName() + ": " + e.getMessage();
+		}
+	}
+
+	/**
+	 * The connector files under a directory, as the loader tells them (see {@link RawConnectorLibraryParser}): the
+	 * YAML files declaring <code>connector.displayName</code>. A header or semantic-convention file, only extended,
+	 * is not one. A YAML file that does not even parse counts: it may be a broken connector (and it stops the loader).
+	 *
+	 * @param connectorDirectory The directory
+	 * @return the connector ids (the base names), case-insensitive, with each file's path relative to the directory
+	 * @throws IOException when the directory cannot be listed
+	 */
+	static Map<String, Path> connectorFileIds(final Path connectorDirectory) throws IOException {
+		final Map<String, Path> files = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		if (!Files.isDirectory(connectorDirectory)) {
+			return files;
+		}
+		try (Stream<Path> paths = Files.walk(connectorDirectory)) {
+			for (final Path file : paths.filter(Files::isRegularFile).toList()) {
+				final String name = file.getFileName().toString();
+				if (name.toLowerCase(Locale.ROOT).endsWith(".yaml") && isConnectorFile(file)) {
+					files.put(name.substring(0, name.length() - ".yaml".length()), connectorDirectory.relativize(file));
+				}
+			}
+		}
+		return files;
+	}
+
+	private static boolean isConnectorFile(final Path file) {
+		try {
+			final JsonNode node = RawConnectorLibraryParser.OBJECT_MAPPER.readTree(file.toFile());
+			final JsonNode displayName = node == null ? null : node.path("connector").path("displayName");
+			return displayName != null && !displayName.isMissingNode() && !displayName.isNull();
+		} catch (IOException e) {
+			return true;
+		}
 	}
 
 	/**
@@ -459,7 +599,8 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * The stored goldens whose connector file no longer exists (a deleted or renamed connector): safe to delete.
+	 * The stored goldens whose connector file no longer exists (a deleted or renamed connector, or one turned into a
+	 * header, see {@link #connectorFileIds(Path)}): safe to delete.
 	 *
 	 * @param repository   The repository
 	 * @param connectorIds The ids of the connectors loaded from the repository
@@ -468,39 +609,8 @@ public class ComputeChainGoldenCorpus {
 	 */
 	public static List<String> orphanGoldens(final Repository repository, final Collection<String> connectorIds)
 		throws IOException {
-		final Set<String> files = connectorFiles(repository);
+		final Set<String> files = connectorFileIds(repository.getConnectorDirectory()).keySet();
 		return goldensWithoutConnector(repository, connectorIds).stream().filter(id -> !files.contains(id)).toList();
-	}
-
-	/**
-	 * The stored goldens whose connector file exists but did not load (a parse error): never deleted, a failure.
-	 *
-	 * @param repository   The repository
-	 * @param connectorIds The ids of the connectors loaded from the repository
-	 * @return the ids of the connectors that failed to load, in file order
-	 * @throws IOException when a directory cannot be listed
-	 */
-	public static List<String> unloadedGoldens(final Repository repository, final Collection<String> connectorIds)
-		throws IOException {
-		final Set<String> files = connectorFiles(repository);
-		return goldensWithoutConnector(repository, connectorIds).stream().filter(files::contains).toList();
-	}
-
-	/**
-	 * The ids of the connector files of the repository: the base names of the YAML files under its connector
-	 * directory, case-insensitive.
-	 */
-	private static Set<String> connectorFiles(final Repository repository) throws IOException {
-		final Set<String> ids = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-		if (Files.isDirectory(repository.getConnectorDirectory())) {
-			try (Stream<Path> files = Files.walk(repository.getConnectorDirectory())) {
-				files.map(file -> file.getFileName().toString())
-					// The loader accepts the extension in any case
-					.filter(name -> name.toLowerCase(Locale.ROOT).endsWith(".yaml"))
-					.forEach(name -> ids.add(name.substring(0, name.length() - ".yaml".length())));
-			}
-		}
-		return ids;
 	}
 
 	private static List<String> goldensWithoutConnector(
@@ -1488,27 +1598,49 @@ public class ComputeChainGoldenCorpus {
 		Path connectorDirectory;
 		Path goldenDirectory;
 
+		/** The connector directories this repository's connectors may extend files of, in merge order. */
+		@Builder.Default
+		List<Path> dependencyDirectories = List.of();
+
 		/**
-		 * The repositories among the configured roots that exist on this machine.
+		 * The repositories among the configured roots that exist on this machine, see {@link #of(List)}.
 		 *
 		 * @return the existing repositories
 		 */
 		public static List<Repository> existing() {
-			return configuredRoots().stream().filter(Files::isDirectory).map(Repository::of).toList();
+			return of(configuredRoots().stream().filter(Files::isDirectory).toList());
 		}
 
 		/**
-		 * The repository at a root.
+		 * The repositories at several roots, community first: each one depends on the roots before it, as the
+		 * enterprise build merges the community connectors under the enterprise ones.
+		 *
+		 * @param roots The repository roots, in merge order
+		 * @return the repositories, in the same order
+		 */
+		public static List<Repository> of(final List<Path> roots) {
+			final List<Repository> repositories = new ArrayList<>();
+			for (final Path root : roots) {
+				repositories.add(
+					Repository.builder()
+						.root(root)
+						.connectorDirectory(connectorDirectory(root))
+						.goldenDirectory(goldenDirectory(root))
+						.dependencyDirectories(repositories.stream().map(Repository::getConnectorDirectory).toList())
+						.build()
+				);
+			}
+			return repositories;
+		}
+
+		/**
+		 * The repository at a root, without dependencies.
 		 *
 		 * @param root The repository root
 		 * @return the repository
 		 */
 		public static Repository of(final Path root) {
-			return Repository.builder()
-				.root(root)
-				.connectorDirectory(connectorDirectory(root))
-				.goldenDirectory(goldenDirectory(root))
-				.build();
+			return of(List.of(root)).get(0);
 		}
 	}
 }

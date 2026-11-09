@@ -1,0 +1,10 @@
+# Extends a header of the base repository: loads only over the base repository's connector directory
+extends:
+- ../../semconv/Thing
+connector:
+  displayName: Child
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: deviceType
+      keep: [ linux ]

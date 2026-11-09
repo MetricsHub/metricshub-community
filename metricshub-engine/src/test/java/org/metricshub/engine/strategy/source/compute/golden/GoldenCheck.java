@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeSet;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.CompareMode;
+import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.LoadedRepository;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Repository;
 
 /**
@@ -21,7 +22,11 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * Usage: <code>GoldenCheck --root &lt;repository&gt; [--root ...] [--connectors A,B] [--compare typed|exact]
  * [--update] [--report] [--pin]</code>
  * <ul>
- * <li><code>--root</code>: a connector repository root (repeatable);</li>
+ * <li><code>--root</code>: a connector repository root (repeatable, community first): each repository is loaded merged
+ * with the connector directories of the roots before it (theirs win on a shared path), as the enterprise build
+ * merges them, so that an enterprise
+ * connector extending a community file (<code>../../semconv/K8s</code>) loads; only its own connectors are checked.
+ * A connector file that does not load is a failing difference, golden or not;</li>
  * <li><code>--connectors</code>: the connector ids to check, case-insensitive (default: every connector); an id no
  * connector carries is a failing difference;</li>
  * <li><code>--compare</code>: the comparison mode, see {@link CompareMode} (default: exact);</li>
@@ -132,18 +137,31 @@ public final class GoldenCheck {
 		final Map<Repository, ConnectorStore> stores = new LinkedHashMap<>();
 		final List<String> allConnectorIds = new ArrayList<>();
 		int failing = 0;
+		final List<Path> existing = new ArrayList<>();
 		for (final Path root : roots) {
-			if (!Files.isDirectory(root)) {
+			if (Files.isDirectory(root)) {
+				existing.add(root);
+			} else {
 				System.err.println("Not a directory: " + root);
 				failing++;
-				continue;
 			}
-			final Repository repository = Repository.of(root);
-			final ConnectorStore store = ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory());
+		}
+		for (final Repository repository : Repository.of(existing)) {
+			final LoadedRepository loaded = ComputeChainGoldenCorpus.load(repository);
+			final ConnectorStore store = loaded.store();
 			stores.put(repository, store);
 			final TreeSet<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			connectorIds.addAll(store.getStore().keySet());
 			allConnectorIds.addAll(connectorIds);
+			// A connector file that did not load has no golden, no check and no report: a failure, golden or not (its
+			// golden is kept, even in update mode)
+			allConnectorIds.addAll(loaded.unloaded().keySet());
+			for (final Map.Entry<String, String> unloaded : loaded.unloaded().entrySet()) {
+				if (ComputeChainGoldenCorpus.isSelected(unloaded.getKey())) {
+					System.out.println(unloaded.getKey() + ": connector file did not load " + unloaded.getValue());
+					failing++;
+				}
+			}
 			for (final String connectorId : connectorIds) {
 				if (!ComputeChainGoldenCorpus.isSelected(connectorId)) {
 					continue;
@@ -160,11 +178,6 @@ public final class GoldenCheck {
 			}
 			// A golden of a deleted or renamed connector: removed in update mode, a failure otherwise (as the
 			// inventory check of the Maven test does)
-			// A connector whose file exists but did not load: its golden is kept, and that is a failure
-			for (final String unloaded : ComputeChainGoldenCorpus.unloadedGoldens(repository, connectorIds)) {
-				System.out.println(unloaded + ": connector file did not load, golden kept");
-				failing++;
-			}
 			for (final String orphan : ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds)) {
 				if (ComputeChainGoldenCorpus.isUpdateMode()) {
 					Files.delete(repository.getGoldenDirectory().resolve(orphan + ".json"));
