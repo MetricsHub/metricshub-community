@@ -22,13 +22,16 @@ package org.metricshub.engine.security;
  */
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -362,14 +365,20 @@ public class SecurityManager {
 				return;
 			}
 			Files.createDirectories(target.getParent());
-			try (
-				FileChannel channel = FileChannel.open(
+			final FileChannel channel;
+			try {
+				channel = FileChannel.open(
 					target.resolveSibling(target.getFileName() + ".lock"),
 					StandardOpenOption.CREATE,
 					StandardOpenOption.WRITE
 				);
-				FileLock lock = channel.lock()
-			) {
+			} catch (FileSystemException e) {
+				// A directory the account cannot write to (only the KeyStore file is writable there): the threads of
+				// this process are still serialized, as every write was before the file lock existed
+				replace(target, update);
+				return;
+			}
+			try (channel; FileLock lock = channel.lock()) {
 				replace(target, update);
 			}
 		} catch (MetricsHubSecurityException e) {
@@ -393,19 +402,57 @@ public class SecurityManager {
 			ks.load(null, null);
 		}
 		update.apply(ks);
-		final Path temporaryFile = Files.createTempFile(target.getParent(), METRICSHUB_KEY_STORE_FILE_NAME, ".tmp");
+		final ByteArrayOutputStream content = new ByteArrayOutputStream();
+		ks.store(content, KEY_STORE_PASSWORD);
+		final Path temporaryFile;
+		try {
+			temporaryFile = Files.createTempFile(target.getParent(), METRICSHUB_KEY_STORE_FILE_NAME, ".tmp");
+		} catch (FileSystemException e) {
+			writeInPlace(target, content.toByteArray(), e);
+			return;
+		}
 		try {
 			// The access of the KeyStore first, so the temporary file never holds a secret under a wider access
 			if (Files.exists(target)) {
 				copyAccess(target, temporaryFile);
 			}
 			try (FileOutputStream stream = new FileOutputStream(temporaryFile.toFile())) {
-				ks.store(stream, KEY_STORE_PASSWORD);
+				content.writeTo(stream);
 				stream.getFD().sync();
 			}
-			moveDurably(temporaryFile, target);
+			try {
+				moveDurably(temporaryFile, target);
+			} catch (FileSystemException e) {
+				writeInPlace(target, content.toByteArray(), e);
+			}
 		} finally {
 			Files.deleteIfExists(temporaryFile);
+		}
+	}
+
+	/**
+	 * Rewrites an existing KeyStore in place, as every write did before atomic replacement, where it cannot be
+	 * replaced: its directory is not writable by this account, or the file is mounted on its own (a container's
+	 * single-file mount, which a rename cannot replace). Not atomic, but what worked there keeps working.
+	 *
+	 * @param target  the KeyStore file
+	 * @param content the new KeyStore
+	 * @param cause   why it could not be replaced, thrown when the file does not exist either
+	 * @throws IOException when the file cannot be written
+	 */
+	private static void writeInPlace(final Path target, final byte[] content, final FileSystemException cause)
+		throws IOException {
+		if (!Files.isRegularFile(target)) {
+			throw cause;
+		}
+		try (
+			FileChannel channel = FileChannel.open(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+		) {
+			final ByteBuffer buffer = ByteBuffer.wrap(content);
+			while (buffer.hasRemaining()) {
+				channel.write(buffer);
+			}
+			channel.force(true);
 		}
 	}
 

@@ -123,6 +123,47 @@ class SecurityManagerTest {
 	}
 
 	@Test
+	void aKeyStoreInADirectoryThatCannotBeWrittenShouldStillBeUpdated(@TempDir final Path parent) throws Exception {
+		final Path directory = Files.createDirectory(parent.resolve("security"));
+		final File keyStoreFile = directory.resolve("metricshub-keystore.p12").toFile();
+		SecurityManager.updateSecrets(keyStoreFile, Map.of("first", new byte[] { 1 }));
+		Files.deleteIfExists(directory.resolve("metricshub-keystore.p12.lock"));
+		final PosixFileAttributeView posix = Files.getFileAttributeView(directory, PosixFileAttributeView.class);
+		final AclFileAttributeView acl = Files.getFileAttributeView(directory, AclFileAttributeView.class);
+		final List<AclEntry> originalAcl = posix == null && acl != null ? acl.getAcl() : null;
+		if (posix != null) {
+			Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("r-x------"));
+		} else {
+			assumeTrue(acl != null);
+			// No file may be added to the directory: only the KeyStore file itself stays writable
+			final List<AclEntry> denied = new ArrayList<>();
+			denied.add(
+				AclEntry.newBuilder()
+					.setType(AclEntryType.DENY)
+					.setPrincipal(acl.getOwner())
+					.setPermissions(EnumSet.of(AclEntryPermission.ADD_FILE, AclEntryPermission.ADD_SUBDIRECTORY))
+					.build()
+			);
+			denied.addAll(originalAcl);
+			acl.setAcl(denied);
+		}
+		try {
+			assumeTrue(!Files.isWritable(directory) || posix == null, "Permissions are not enforced (root)");
+
+			SecurityManager.updateSecrets(keyStoreFile, Map.of("second", new byte[] { 2 }));
+
+			assertArrayEquals(new byte[] { 1 }, SecurityManager.readSecret(keyStoreFile, "first"));
+			assertArrayEquals(new byte[] { 2 }, SecurityManager.readSecret(keyStoreFile, "second"));
+		} finally {
+			if (posix != null) {
+				Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwx------"));
+			} else {
+				acl.setAcl(originalAcl);
+			}
+		}
+	}
+
+	@Test
 	void anUpdateShouldKeepThePosixPermissionsOfTheKeyStore(@TempDir final Path directory) throws Exception {
 		assumeTrue(FileSystems.getDefault().supportedFileAttributeViews().contains("posix"));
 		final File keyStoreFile = directory.resolve("metricshub-keystore.p12").toFile();
