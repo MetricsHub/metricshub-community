@@ -50,8 +50,10 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.detection.ConnectorSelection;
@@ -194,11 +196,7 @@ public abstract class AbstractStrategy implements IStrategy {
 					connectorId,
 					monitorType
 				);
-				// An empty result is typed by the source, whatever failed (an extension, the retry, an internal source):
-				// an empty text for a text source, so that an awk still runs its BEGIN and END blocks, else an empty table
-				sourceTable = source.getResultContentType() == ContentType.TEXT
-					? SourceTable.ofText(null)
-					: SourceTable.empty();
+				sourceTable = emptyResult(source, sourceAnswered ? sourceTable : null);
 			}
 
 			// log the source table
@@ -267,6 +265,24 @@ public abstract class AbstractStrategy implements IStrategy {
 		}
 
 		return allSourcesAnswered;
+	}
+
+	/**
+	 * The fresh empty result of a source, typed by the source whatever failed (an extension, the retry, an internal
+	 * source): an empty text for a text source, so that an awk still runs its BEGIN and END blocks, else an empty
+	 * table. A <code>copy</code> or a <code>tableUnion</code> produces the type of what it reads, so its empty text
+	 * stays a text, as the desugaring types it.
+	 *
+	 * @param source   The source
+	 * @param answered The empty result the source answered, null when it did not answer
+	 * @return a new empty text or empty table
+	 */
+	static SourceTable emptyResult(final Source source, final SourceTable answered) {
+		final boolean composite = source instanceof CopySource || source instanceof TableUnionSource;
+		return source.getResultContentType() == ContentType.TEXT ||
+			(composite && answered != null && answered.getContentType() == ContentType.TEXT)
+				? SourceTable.ofText(null)
+				: SourceTable.empty();
 	}
 
 	/**

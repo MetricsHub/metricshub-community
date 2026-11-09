@@ -25,6 +25,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -306,6 +307,29 @@ class ComputeChainGoldenCorpusTest {
 	 * Every shape has a wide twin built from the 3 × 16 table, every table-derived shape a separator-in-cell twin,
 	 * and the text shapes keep their trailing-newline convention.
 	 */
+	@Test
+	void copyWithShortReferenceIsTypedByItsOrigin() {
+		final HttpSource http = HttpSource.builder().url("/x").build();
+		http.setKey("${source::monitors.m.discovery.sources.raw}");
+		final CopySource copy = CopySource.builder()
+			.from("${source::raw}")
+			.computes(List.of(Append.builder().column(1).value("v").build()))
+			.build();
+		copy.setKey("${source::monitors.m.discovery.sources.copy}");
+		final Map<String, org.metricshub.engine.connector.model.monitor.task.source.Source> sources = Map.of(
+			http.getKey(),
+			http,
+			copy.getKey(),
+			copy
+		);
+
+		// The short sibling reference resolves to the http origin: the copy is fed texts, as at run time
+		assertEquals(ContentType.TEXT, Inputs.resultType(copy, sources, 0));
+		final Map<String, Supplier<SourceTable>> inputs = Inputs.inputsFor(copy, sources);
+		assertTrue(inputs.containsKey("text"), inputs.keySet().toString());
+		assertEquals(SourceTable.ofText(""), inputs.get("empty").get());
+	}
+
 	@Test
 	void wideAndSeparatorInCellTwins() {
 		final List<List<String>> wide = Inputs.wideTable();

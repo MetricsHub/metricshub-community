@@ -1167,7 +1167,9 @@ public class ComputeChainGoldenCorpus {
 		 */
 		static ContentType resultType(final Source source, final Map<String, Source> sources, final int depth) {
 			if (source instanceof CopySource copySource) {
-				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom());
+				final Source origin = copySource.getFrom() == null
+					? null
+					: sources.get(ContentTypeDesugaring.resolveReference(copySource.getFrom(), copySource.getKey(), sources));
 				if (origin == null || depth > 5) {
 					return ContentType.TABLE;
 				}
@@ -1237,7 +1239,9 @@ public class ComputeChainGoldenCorpus {
 					twins(inputs, "static", table -> csv(table, false));
 				}
 			} else if (source instanceof CopySource copySource) {
-				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom());
+				final Source origin = copySource.getFrom() == null
+					? null
+					: sources.get(ContentTypeDesugaring.resolveReference(copySource.getFrom(), copySource.getKey(), sources));
 				if (origin == null || depth > 5) {
 					addDualShapes(inputs);
 				} else if (!explicitComputes(origin).isEmpty()) {
