@@ -29,12 +29,9 @@ import static org.metricshub.agent.helper.AgentConstants.LOG_DIRECTORY_NAME;
 import static org.metricshub.agent.helper.AgentConstants.PRODUCT_WIN_DIR_NAME;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.File;
 import java.io.IOException;
@@ -1285,8 +1282,7 @@ public class ConfigHelper {
 		// Connector carries the flag through to the Web UI — for both plain and template
 		// (variable) connectors, since the flag rides through the normal deserialization.
 		if (connectorsPatchPath != null) {
-			final Map<String, RawConnector> patchStore = new RawConnectorStore(Path.of(connectorsPatchPath)).getStore();
-			patchStore.values().forEach(ConfigHelper::flagRawConnectorAsPatched);
+			final Map<String, RawConnector> patchStore = new RawConnectorStore(Path.of(connectorsPatchPath), true).getStore();
 			rawConnectorStore.addMany(patchStore);
 			log.info("Applying connectors patch directory: {}.", connectorsPatchPath);
 			log.debug(
@@ -1308,27 +1304,6 @@ public class ConfigHelper {
 		log.info("Global Raw Connector Store size: {}", connectorStore.getRawConnectorStore().getStore().size());
 
 		return connectorStore;
-	}
-
-	/**
-	 * Sets {@code patched: true} on a raw connector's node so the compiled {@link Connector}
-	 * is flagged as patched. Applied to connectors loaded from the patch directory; the flag
-	 * survives connector compilation (including variable/template resolution) because it is
-	 * carried in the connector definition itself.
-	 *
-	 * @param rawConnector the raw connector to flag; unchanged if its node cannot be read
-	 */
-	private static void flagRawConnectorAsPatched(final RawConnector rawConnector) {
-		try {
-			final ObjectMapper mapper = JsonHelper.buildYamlMapper();
-			final JsonNode node = mapper.readTree(rawConnector.getByteConnector());
-			if (node instanceof ObjectNode objectNode) {
-				objectNode.put("patched", true);
-				rawConnector.setByteConnector(mapper.writeValueAsBytes(objectNode));
-			}
-		} catch (IOException e) {
-			log.debug("Unable to flag a patch-directory connector as patched: {}", e.getMessage());
-		}
 	}
 
 	/**

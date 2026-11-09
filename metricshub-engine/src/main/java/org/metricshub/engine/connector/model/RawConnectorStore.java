@@ -23,7 +23,6 @@ package org.metricshub.engine.connector.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -67,25 +66,26 @@ public class RawConnectorStore implements Serializable {
 	 * @param connectorDirectory The path to the directory containing raw connector definitions and embedded files.
 	 */
 	public RawConnectorStore(Path connectorDirectory) {
+		this(connectorDirectory, false);
+	}
+
+	/**
+	 * Constructs a {@link RawConnectorStore} by loading and deserializing all connector
+	 * found in the given directory path.
+	 *
+	 * @param connectorDirectory The path to the directory containing raw connector definitions and embedded files.
+	 * @param patched            Whether each connector is flagged with {@code patched: true}, as the connectors of
+	 *                           the patch directory are
+	 */
+	public RawConnectorStore(final Path connectorDirectory, final boolean patched) {
 		try {
 			this.connectorDirectory = connectorDirectory;
-			store = createRawStore();
+			store = new RawConnectorLibraryParser(patched).parseConnectorsFromAllYamlFiles(connectorDirectory);
 		} catch (Exception e) {
 			log.error("Error while deserializing connectors. The RawConnectorStore is empty!");
 			log.debug("Error while deserializing connectors. The RawConnectorStore is empty!", e);
 			store = new HashMap<>();
 		}
-	}
-
-	/**
-	 * This method retrieves RawConnectors data in a Map from a given connector directory
-	 * The key of the Map will be the connector file name and Value will be the RawConnector JsonNode Object
-	 * @return a Map of all RawConnectors where the key is the connector identifier (compiled file name)
-	 * @throws IOException if an error occurs while reading the connector files
-	 */
-	private Map<String, RawConnector> createRawStore() throws IOException {
-		final RawConnectorLibraryParser rawConnectorLibraryParser = new RawConnectorLibraryParser();
-		return rawConnectorLibraryParser.parseConnectorsFromAllYamlFiles(connectorDirectory);
 	}
 
 	/**
