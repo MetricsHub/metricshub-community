@@ -66,6 +66,7 @@ Three properties drive the whole design:
 | Server set the `ReportFullState` flag | Immediately, with the full state |
 | Terminal package status reached (`Installed` / `InstallFailed`) | Immediately, via `OpampClient.pollNow()` |
 | Transport failure or HTTP != 200 | Exponential backoff with jitter, capped at 10 min, floored by `Retry-After` |
+| HTTP 401, the first in a row | The client's `onUnauthorized` hook runs (the owner of the credential drops it), then the next attempt waits exactly `Retry-After`, or not at all without one, and the backoff does not grow. A second 401 in a row follows the backoff above |
 | Server answered `ServerErrorResponse(Unavailable)` | Same backoff, floored by `RetryInfo.retry_after_nanoseconds` |
 | Server answered `ServerErrorResponse(BadRequest / Unknown)` | Normal interval — the message is *not* retried |
 
@@ -273,9 +274,9 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | Method / content type | `POST`, `Content-Type: application/x-protobuf` |
 | Client | JDK `HttpClient` ([`OpampHttpTransport`](metricshub-opamp-client/src/main/java/org/metricshub/opamp/client/http/OpampHttpTransport.java)) |
 | Success | HTTP 200 only; anything else is a transport failure |
-| `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor |
+| `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor; after a first 401, as the exact delay ([§1.2](#12-poll-cadence)) |
 | TLS | System trust store, or a PEM pinned via `central.certificateFile` |
-| Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore |
+| Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore; or, through `OpampClientSettings.headersSupplier`, headers computed for each POST (a credential renewed while the client runs) |
 
 ### 3.4 Not implemented
 
@@ -605,7 +606,7 @@ Concurrency contracts:
 
 | File | Location | Written by | Purpose |
 |---|---|---|---|
-| `opamp-instance-uid` | Security directory, next to the MetricsHub keystore | `InstanceUidStore` | Stable `instance_uid` across restarts **and upgrades**. Canonical UUID string, atomic write |
+| `metricshub-agent-uid` | Security directory, next to the MetricsHub keystore | `InstanceUidStore` | Stable `instance_uid` across restarts **and upgrades**. Canonical UUID string, atomic write |
 | `upgrade-transaction.json` | Staging directory | `UpgradeTransactionStore` | The crash-safe journal: id, from/to version, URL, hashes, deployment kind, state, `installStartedAt`, `installTimeoutSeconds` |
 | `upgrade-transaction.json.<suffix>` | Staging directory | `UpgradeTransactionStore.archive()` | Archived finished transactions (and `.corrupt` for unparseable ones) |
 | `installed-package.json` | Staging directory | `UpgradeTransactionStore` | `{version, packageHash}` of the last OpAMP-installed package — the source of `agent_has_hash` |
@@ -875,7 +876,7 @@ The payload cap and the concurrency cap are **not** configurable on the agent: t
 
 ### 13.5 On-disk state
 
-None of its own. The uid comes from `security/opamp-instance-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
+None of its own. The uid comes from `security/metricshub-agent-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
 
 One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `central:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
 

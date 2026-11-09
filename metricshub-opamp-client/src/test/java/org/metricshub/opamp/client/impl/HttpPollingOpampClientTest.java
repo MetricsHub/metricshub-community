@@ -17,13 +17,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.opamp.client.OpampClientCallbacks;
 import org.metricshub.opamp.client.OpampClientSettings;
+import org.metricshub.opamp.client.http.OpampTransport;
+import org.metricshub.opamp.client.http.TransportResponse;
 import org.metricshub.opamp.client.packages.OpampPackagesHandler;
 import org.metricshub.opamp.client.packages.PackageDownloadContext;
 import org.metricshub.opamp.client.packages.PackageStatusSink;
@@ -62,12 +68,15 @@ class HttpPollingOpampClientTest {
 	}
 
 	private OpampClientSettings settings() {
+		return settingsBuilder().build();
+	}
+
+	private OpampClientSettings.OpampClientSettingsBuilder settingsBuilder() {
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create("http://localhost:0/v1/opamp"))
 			.withPollInterval(Duration.ofMillis(50))
 			.withMaxBackoff(Duration.ofMillis(200))
-			.withInstanceUidFile(tempDir.resolve("instance-uid"))
-			.build();
+			.withInstanceUidFile(tempDir.resolve("instance-uid"));
 	}
 
 	private HttpPollingOpampClient newClient(final OpampClientCallbacks callbacks, final OpampPackagesHandler handler) {
@@ -641,5 +650,90 @@ class HttpPollingOpampClientTest {
 
 		client.stop("Test");
 		assertThrows(IllegalStateException.class, () -> client.start());
+	}
+
+	/**
+	 * Builds a client whose settings call {@code onUnauthorized} and record each delay reported after a failure.
+	 */
+	private HttpPollingOpampClient unauthorizedClient(final AtomicInteger unauthorized, final List<Duration> delays) {
+		transport = new RecordingTransport();
+		client = HttpPollingOpampClient.builder()
+			.withSettings(settingsBuilder().withOnUnauthorized(unauthorized::incrementAndGet).build())
+			.withCallbacks(new OpampClientCallbacks() {
+				@Override
+				public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
+					delays.add(nextAttemptDelay);
+				}
+			})
+			.withTransport(transport)
+			.build();
+		return client;
+	}
+
+	@Test
+	void aFirstUnauthorizedShouldCallTheHookAndRetryWithoutBackoff() throws Exception {
+		final AtomicInteger unauthorized = new AtomicInteger();
+		final List<Duration> delays = new CopyOnWriteArrayList<>();
+		unauthorizedClient(unauthorized, delays);
+		transport.enqueue(RecordingTransport.ScriptedReply.httpError(401, null));
+		client.start();
+
+		transport.awaitRequest(AWAIT);
+		transport.awaitRequest(AWAIT);
+
+		assertEquals(1, unauthorized.get());
+		assertEquals(List.of(Duration.ZERO), delays);
+	}
+
+	@Test
+	void aSecondUnauthorizedInARowShouldBackOff() throws Exception {
+		final AtomicInteger unauthorized = new AtomicInteger();
+		final List<Duration> delays = new CopyOnWriteArrayList<>();
+		unauthorizedClient(unauthorized, delays);
+		transport.enqueue(RecordingTransport.ScriptedReply.httpError(401, null));
+		transport.enqueue(RecordingTransport.ScriptedReply.httpError(401, null));
+		client.start();
+
+		transport.awaitRequest(AWAIT);
+		transport.awaitRequest(AWAIT);
+		transport.awaitRequest(AWAIT);
+
+		assertEquals(2, unauthorized.get());
+		assertEquals(Duration.ZERO, delays.get(0));
+		assertTrue(delays.get(1).compareTo(Duration.ZERO) > 0, "The second 401 must back off: " + delays);
+	}
+
+	@Test
+	void aThrowingHeadersSupplierShouldBeATransportFailure() throws Exception {
+		final AtomicInteger calls = new AtomicInteger();
+		final OpampClientSettings settings = settingsBuilder().withHeadersSupplier(() -> {
+			if (calls.incrementAndGet() == 1) {
+				throw new IllegalStateException("No token yet");
+			}
+			return Map.of("Authorization", "Bearer token");
+		}).build();
+		final CountDownLatch failureReported = new CountDownLatch(1);
+		transport = new RecordingTransport();
+		final OpampTransport evaluatingHeaders = new OpampTransport() {
+			@Override
+			public TransportResponse send(final byte[] agentToServerBytes) throws java.io.IOException {
+				settings.currentHeaders();
+				return transport.send(agentToServerBytes);
+			}
+
+			@Override
+			public void close() {}
+		};
+		client = HttpPollingOpampClient.builder().withSettings(settings).withCallbacks(new OpampClientCallbacks() {
+			@Override
+			public void onConnectFailed(final Throwable error, final Duration nextAttemptDelay) {
+				failureReported.countDown();
+			}
+		}).withTransport(evaluatingHeaders).build();
+		client.start();
+
+		assertTrue(failureReported.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
+		transport.awaitRequest(AWAIT);
+		assertEquals(2, calls.get());
 	}
 }
