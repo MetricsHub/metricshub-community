@@ -94,6 +94,12 @@ public class HttpPollingOpampClient implements OpampClient {
 	private volatile boolean stopped;
 	private volatile boolean connected;
 
+	/**
+	 * Whether the last exchange was answered {@code 401}: the first one is retried at once, after the credential is
+	 * renewed; the next ones back off. Touched by the polling thread only.
+	 */
+	private boolean lastUnauthorized;
+
 	private final AgentToServerAssembler earlyStateBuffer = new AgentToServerAssembler(ByteString.EMPTY, 0);
 
 	/**
@@ -124,7 +130,7 @@ public class HttpPollingOpampClient implements OpampClient {
 		this.downloadContext = new PackageDownloadContext() {
 			@Override
 			public Map<String, String> headers() {
-				return settings.getHeaders();
+				return settings.currentHeaders();
 			}
 
 			@Override
@@ -282,6 +288,12 @@ public class HttpPollingOpampClient implements OpampClient {
 		try {
 			final AgentToServer request = assembler.assemble();
 			final TransportResponse response = transport.send(request.toByteArray());
+			final boolean unauthorized = response.statusCode() == 401;
+			final boolean firstUnauthorized = unauthorized && !lastUnauthorized;
+			lastUnauthorized = unauthorized;
+			if (unauthorized) {
+				safely("onUnauthorized", settings.getOnUnauthorized());
+			}
 			if (response.isSuccess()) {
 				final ServerToAgent serverToAgent = ServerToAgent.parseFrom(response.body());
 				if (isForAnotherAgent(request, serverToAgent)) {
@@ -290,6 +302,14 @@ public class HttpPollingOpampClient implements OpampClient {
 				} else {
 					nextDelay = processServerToAgent(serverToAgent);
 				}
+			} else if (firstUnauthorized) {
+				// The credential was refused, probably expired: it is renewed, and the next attempt waits only for
+				// what the server asks, without growing the backoff (a second 401 in a row does)
+				nextDelay = onTransportFailure(
+					new IOException("The OpAMP server answered with HTTP status 401"),
+					response.retryAfter().orElse(Duration.ZERO),
+					false
+				);
 			} else {
 				nextDelay = onTransportFailure(
 					new IOException("The OpAMP server answered with HTTP status " + response.statusCode()),
@@ -300,6 +320,7 @@ public class HttpPollingOpampClient implements OpampClient {
 			Thread.currentThread().interrupt();
 			return;
 		} catch (IOException | RuntimeException e) {
+			lastUnauthorized = false;
 			nextDelay = onTransportFailure(e, null);
 		}
 		scheduleNext(nextDelay, generation);
@@ -445,9 +466,21 @@ public class HttpPollingOpampClient implements OpampClient {
 	 * @return the delay before the next attempt
 	 */
 	private Duration onTransportFailure(final Throwable error, final Duration floor) {
+		return onTransportFailure(error, floor, true);
+	}
+
+	/**
+	 * Handles a transport-level failure.
+	 *
+	 * @param error   the failure cause
+	 * @param floor   the server-suggested minimum delay, or {@code null}
+	 * @param backOff whether the delay grows with the backoff; when not, it is {@code floor} exactly
+	 * @return the delay before the next attempt
+	 */
+	private Duration onTransportFailure(final Throwable error, final Duration floor, final boolean backOff) {
 		assembler.requestFullState();
 		connected = false;
-		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
+		final Duration delay = backOff ? retrySchedule.nextDelayAfterFailure(floor) : floor;
 		log.warn("OpAMP exchange failed ({}); next attempt in {} seconds.", Failures.describe(error), delay.toSeconds());
 		safely("onConnectFailed", () -> callbacks.onConnectFailed(error, delay));
 		return delay;
