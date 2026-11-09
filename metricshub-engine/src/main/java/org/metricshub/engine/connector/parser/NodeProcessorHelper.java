@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.parser;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.Map;
@@ -53,9 +54,26 @@ public class NodeProcessorHelper {
 		final Path connectorDirectory,
 		final ObjectMapper mapper
 	) {
+		return withExtendsAndConstantsProcessor(connectorDirectory, mapper, null);
+	}
+
+	/**
+	 * Creates a {@link ExtendsProcessor} with a {@link ConstantsProcessor} destination.
+	 *
+	 * @param connectorDirectory The directory containing connectors YAML files.
+	 * @param mapper             The object mapper.
+	 * @param fileCache          The parsed connector files by absolute path, {@code null} to read every file again.
+	 * @return A new {@link ExtendsProcessor} instance.
+	 */
+	public static AbstractNodeProcessor withExtendsAndConstantsProcessor(
+		final Path connectorDirectory,
+		final ObjectMapper mapper,
+		final Map<Path, JsonNode> fileCache
+	) {
 		return ExtendsProcessor.builder()
 			.connectorDirectory(connectorDirectory)
 			.mapper(mapper)
+			.fileCache(fileCache)
 			.next(new ReferenceResolverProcessor(constantsProcessorWithSourceKeyProcessor()))
 			.build();
 	}

@@ -10,6 +10,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPA
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -27,6 +28,26 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 class NetworkHelperTest {
+
+	@Test
+	void testIsLocalhostWithoutResolution() throws Exception {
+		final String host = UUID.randomUUID().toString();
+		// Taken before the mock, which stubs every static method of InetAddress
+		final InetAddress loopback = InetAddress.getLoopbackAddress();
+		try (MockedStatic<InetAddress> inetAddressMock = mockStatic(InetAddress.class)) {
+			// The name resolves to the loopback: local when resolved, remote when it is not
+			inetAddressMock.when(() -> InetAddress.getByName(eq(host))).thenReturn(loopback);
+			assertTrue(NetworkHelper.isLocalhost(host, true));
+			assertFalse(NetworkHelper.isLocalhost(host, false));
+			inetAddressMock.verify(() -> InetAddress.getByName(eq(host)), times(1));
+		}
+		// The obvious local names need no resolution
+		assertTrue(NetworkHelper.isLocalhost("localhost", false));
+		assertTrue(NetworkHelper.isLocalhost(null, false));
+		// An IP literal is read without DNS
+		assertTrue(NetworkHelper.isLocalhost("127.0.0.2", false));
+		assertFalse(NetworkHelper.isLocalhost("192.0.2.1", false));
+	}
 
 	@Test
 	void testIsLocalhost() throws Exception {

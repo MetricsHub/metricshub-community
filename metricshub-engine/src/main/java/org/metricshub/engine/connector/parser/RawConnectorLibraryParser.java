@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +84,11 @@ public class RawConnectorLibraryParser {
 		private final Map<String, RawConnector> connectorsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 		/**
+		 * Parent connector files parsed during this walk, so that a parent extended by many connectors is parsed once.
+		 */
+		private final Map<Path, JsonNode> parentCache = new HashMap<>();
+
+		/**
 		 * Returns the map of connector IDs and their {@link RawConnector} instances.
 		 *
 		 * @return case-insensitive map of connectors
@@ -104,10 +110,14 @@ public class RawConnectorLibraryParser {
 			if (!isConnector(connectorNode)) {
 				return FileVisitResult.CONTINUE;
 			}
-			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(file.getParent());
+			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(
+				file.getParent(),
+				parentCache
+			);
 
 			try {
-				final RawConnector connector = connectorParser.parseRaw(file.toFile(), patched);
+				// The node read for the connector check is the one parsed: each file is parsed once
+				final RawConnector connector = connectorParser.parseRaw(connectorNode, file.toFile(), patched);
 				connectorsMap.put(filename.substring(0, filename.lastIndexOf('.')), connector);
 			} catch (Exception e) {
 				log.error(CONNECTOR_PARSING_ERROR, filename, e.getMessage());

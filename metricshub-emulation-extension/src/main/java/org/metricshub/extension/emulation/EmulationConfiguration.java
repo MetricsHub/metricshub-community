@@ -195,6 +195,17 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 		}
 	}
 
+	/**
+	 * An emulation replays recorded responses and never contacts the host, so its name is not resolved: an
+	 * unresolvable name would otherwise block the detection until the DNS lookup fails.
+	 *
+	 * @return {@code false}
+	 */
+	@Override
+	public boolean resolvesHostname() {
+		return false;
+	}
+
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
 		if (protocol == null) {

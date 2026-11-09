@@ -116,6 +116,26 @@ public class AgentContext implements AutoCloseable {
 	}
 
 	/**
+	 * Instantiate the global context with a connector store built beforehand, for instance one store shared by many
+	 * contexts in the same JVM. The connectors patch directory of the configuration is not read: the given store is
+	 * used as is.
+	 *
+	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
+	 * @param extensionManager         Manages and aggregates various types of extensions used within MetricsHub.
+	 * @param connectorStore           The connector store to use. Each resource gets its own copy of it.
+	 * @throws IOException Signals that an I/O exception has occurred
+	 */
+	public AgentContext(
+		final String alternateConfigDirectory,
+		final ExtensionManager extensionManager,
+		final ConnectorStore connectorStore
+	) throws IOException {
+		this.extensionManager = extensionManager;
+		this.connectorStore = connectorStore;
+		build(alternateConfigDirectory, false);
+	}
+
+	/**
 	 * Builds the agent context
 	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
 	 * @param createConnectorStore     Whether we should create a new connector store

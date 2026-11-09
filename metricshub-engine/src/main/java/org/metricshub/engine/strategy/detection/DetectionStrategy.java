@@ -119,7 +119,7 @@ public class DetectionStrategy extends AbstractStrategy {
 			hostConfiguration.getConfigurations()
 				.values()
 				.stream()
-				.allMatch(config -> NetworkHelper.isLocalhost(config.getHostname()))
+				.allMatch(config -> NetworkHelper.isLocalhost(config.getHostname(), config.resolvesHostname()))
 		);
 
 		// Get the configured connector

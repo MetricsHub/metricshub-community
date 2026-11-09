@@ -70,6 +70,12 @@ public class ConnectorParser {
 	private ConnectorUpdateChain connectorUpdateChain;
 
 	/**
+	 * Parsed parent connector files by absolute path, shared by the connectors of one library parse. {@code null}
+	 * reads every parent again.
+	 */
+	private Map<Path, JsonNode> parentCache;
+
+	/**
 	 * Parses the given connector file into a {@link RawConnector}
 	 * @param file connector file to be parsed
 	 * @return a new {@link RawConnector} Object
@@ -88,7 +94,21 @@ public class ConnectorParser {
 	 * @throws IOException If an error occurs while reading or parsing the file.
 	 */
 	public RawConnector parseRaw(final File file, final boolean patched) throws IOException {
-		JsonNode node = deserializer.getMapper().readTree(file);
+		return parseRaw(deserializer.getMapper().readTree(file), file, patched);
+	}
+
+	/**
+	 * Parses the given, already read, connector into a {@link RawConnector}
+	 * @param connectorNode the connector read from its file, changed by the parse
+	 * @param file          the connector file, which locates its parents and embedded files
+	 * @param patched       whether the connector is flagged with {@code patched: true}, as a connector of the
+	 *                      patch directory is
+	 * @return a new {@link RawConnector} Object
+	 * @throws IOException If an error occurs while reading a parent or an embedded file.
+	 */
+	public RawConnector parseRaw(final JsonNode connectorNode, final File file, final boolean patched)
+		throws IOException {
+		JsonNode node = connectorNode;
 
 		Map<Integer, EmbeddedFile> embeddedFiles = null;
 
@@ -167,15 +187,32 @@ public class ConnectorParser {
 	 * @return New instance of {@link ConnectorParser}.
 	 */
 	public static ConnectorParser withNodeProcessorAndUpdateChain(final Path connectorDirectory) {
-		final ConnectorParser connectorParser = withNodeProcessor(connectorDirectory);
+		return withNodeProcessorAndUpdateChain(connectorDirectory, null);
+	}
 
-		// Create the update objects
-		final ConnectorUpdateChain updateChain = createUpdateChain();
+	/**
+	 * Creates a new {@link ConnectorParser} with extends and constants
+	 * {@link AbstractNodeProcessor} and with a {@link ConnectorUpdateChain}
+	 *
+	 * @param connectorDirectory The connector files directory.
+	 * @param parentCache        The parsed parent connector files by absolute path, shared by the connectors of a
+	 *                           library parse so that a parent is parsed once; {@code null} reads every parent again.
+	 * @return New instance of {@link ConnectorParser}.
+	 */
+	public static ConnectorParser withNodeProcessorAndUpdateChain(
+		final Path connectorDirectory,
+		final Map<Path, JsonNode> parentCache
+	) {
+		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
 
-		// Set the first update chain
-		connectorParser.setConnectorUpdateChain(updateChain);
+		PostDeserializeHelper.addPostDeserializeSupport(mapper);
 
-		return connectorParser;
+		return ConnectorParser.builder()
+			.deserializer(new ConnectorDeserializer(mapper))
+			.processor(NodeProcessorHelper.withExtendsAndConstantsProcessor(connectorDirectory, mapper, parentCache))
+			.connectorUpdateChain(createUpdateChain())
+			.parentCache(parentCache)
+			.build();
 	}
 
 	/**
@@ -247,7 +284,7 @@ public class ConnectorParser {
 		if (Files.exists(connectorPath)) {
 			return new AbstractMap.SimpleEntry<>(
 				connectorPath.getParent().toUri(),
-				deserializer.getMapper().readTree(Files.newInputStream(connectorPath))
+				ExtendsProcessor.readConnectorFile(deserializer.getMapper(), connectorPath, parentCache)
 			);
 		}
 
@@ -259,7 +296,7 @@ public class ConnectorParser {
 				if (Files.exists(connectorPath)) {
 					return new AbstractMap.SimpleEntry<>(
 						connectorPath.getParent().toUri(),
-						deserializer.getMapper().readTree(Files.newInputStream(connectorPath))
+						ExtendsProcessor.readConnectorFile(deserializer.getMapper(), connectorPath, parentCache)
 					);
 				}
 			}
