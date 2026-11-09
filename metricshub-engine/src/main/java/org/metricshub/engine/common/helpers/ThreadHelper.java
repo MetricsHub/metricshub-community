@@ -220,4 +220,15 @@ public class ThreadHelper {
 				.collect(Collectors.toMap(entry -> entry.getKey().operationType(), entry -> entry.getValue().snapshot()))
 		);
 	}
+
+	/**
+	 * Clears the execution statistics of a given hostname, so that its request counters start again from zero. The
+	 * statistics are kept for the life of the JVM otherwise, for instance across the replays of a test harness that
+	 * reuses the JVM for several hosts of the same name.
+	 *
+	 * @param hostname the hostname whose statistics are cleared
+	 */
+	public static void clearStats(final String hostname) {
+		STATS_MAP.keySet().removeIf(key -> key.hostname().equals(hostname));
+	}
 }
