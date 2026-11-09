@@ -90,4 +90,18 @@ class ThreadHelperTest {
 		assertEquals(1, stats.get("wbem").getCompleted());
 		assertEquals(0, stats.get("snmp").getTimeout());
 	}
+
+	@Test
+	void testClearStats() throws Exception {
+		ThreadHelper.execute(() -> "done", 5, "host-cleared", "snmp");
+		ThreadHelper.execute(() -> "done", 5, "host-kept", "snmp");
+
+		ThreadHelper.clearStats("host-cleared");
+
+		// Only the given host starts again from zero
+		assertTrue(ThreadHelper.getStats("host-cleared").isEmpty());
+		assertEquals(1, ThreadHelper.getStats("host-kept").get("snmp").getCompleted());
+		ThreadHelper.execute(() -> "done", 5, "host-cleared", "snmp");
+		assertEquals(1, ThreadHelper.getStats("host-cleared").get("snmp").getCompleted());
+	}
 }

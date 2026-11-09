@@ -27,9 +27,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -51,11 +51,47 @@ public class ExtendsProcessor extends AbstractNodeProcessor {
 	@NonNull
 	private ObjectMapper mapper;
 
+	/**
+	 * Parsed connector files by absolute path, shared by the connectors of one library parse. {@code null} reads
+	 * every file again.
+	 */
+	private Map<Path, JsonNode> fileCache;
+
 	@Builder
-	public ExtendsProcessor(@NonNull Path connectorDirectory, @NonNull ObjectMapper mapper, AbstractNodeProcessor next) {
+	public ExtendsProcessor(
+		@NonNull Path connectorDirectory,
+		@NonNull ObjectMapper mapper,
+		AbstractNodeProcessor next,
+		Map<Path, JsonNode> fileCache
+	) {
 		super(next);
 		this.connectorDirectory = connectorDirectory;
 		this.mapper = mapper;
+		this.fileCache = fileCache;
+	}
+
+	/**
+	 * Reads a connector file, parsing it only once per cache.
+	 *
+	 * @param mapper    The mapper parsing the file
+	 * @param file      The connector file
+	 * @param fileCache The parsed files by absolute path, {@code null} to always parse the file
+	 * @return a node the caller may modify: a copy of the cached node, which the merge of the extended connectors
+	 *         would otherwise change for every later connector
+	 * @throws IOException If the file cannot be read or parsed
+	 */
+	static JsonNode readConnectorFile(final ObjectMapper mapper, final Path file, final Map<Path, JsonNode> fileCache)
+		throws IOException {
+		if (fileCache == null) {
+			return mapper.readTree(file.toFile());
+		}
+		final Path key = file.toAbsolutePath().normalize();
+		JsonNode node = fileCache.get(key);
+		if (node == null) {
+			node = mapper.readTree(file.toFile());
+			fileCache.put(key, node);
+		}
+		return node.deepCopy();
 	}
 
 	@Override
@@ -118,14 +154,14 @@ public class ExtendsProcessor extends AbstractNodeProcessor {
 			if (connectorsDirectoryPath != null) {
 				final File connectorPathFile = connectorsDirectoryPath.resolve(connectorRelativePath).normalize().toFile();
 				if (connectorPathFile != null && connectorPathFile.exists()) {
-					return mapper.readTree(connectorPathFile);
+					return readConnectorFile(mapper, connectorPathFile.toPath(), fileCache);
 				}
 			}
 		}
 
 		Path connectorPath = connectorDirectory.resolve(connectorRelativePath).normalize();
 
-		return mapper.readTree(Files.newInputStream(connectorPath));
+		return readConnectorFile(mapper, connectorPath, fileCache);
 	}
 
 	/**

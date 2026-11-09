@@ -112,6 +112,18 @@ public class NetworkHelper {
 	 * @return {@code true} if the hostname is a localhost, {@code false} otherwise.
 	 */
 	public static boolean isLocalhost(final String hostname) {
+		return isLocalhost(hostname, true);
+	}
+
+	/**
+	 * Check whether the given hostname is a localhost.
+	 *
+	 * @param hostname The hostname to check.
+	 * @param resolve  Whether a hostname that is not obviously local is resolved through DNS; without it, only an IP
+	 *                 literal can be local, any other name is remote.
+	 * @return {@code true} if the hostname is a localhost, {@code false} otherwise.
+	 */
+	public static boolean isLocalhost(final String hostname, final boolean resolve) {
 		// Empty or null hostname is assumed local
 		if (hostname == null || hostname.isBlank()) {
 			return true;
@@ -128,10 +140,13 @@ public class NetworkHelper {
 			return true;
 		}
 
-		// Try to resolve the provided hostname
+		// Try to resolve the provided hostname. Without resolution, only an IP literal is read, which needs no DNS
 		InetAddress inetAddress = null;
 		try {
-			inetAddress = InetAddress.getByName(hostname);
+			inetAddress = resolve ? InetAddress.getByName(hostname) : InetAddress.ofLiteral(hostname);
+		} catch (IllegalArgumentException e) {
+			// Not an IP literal, and not resolved: a remote host
+			return false;
 		} catch (UnknownHostException e) {
 			log.warn(
 				"Hostname {} - Could not resolve the hostname to a valid IP address. The host is considered remote.",

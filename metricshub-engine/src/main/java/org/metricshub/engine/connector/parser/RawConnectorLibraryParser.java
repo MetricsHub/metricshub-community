@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +84,12 @@ public class RawConnectorLibraryParser {
 		private final Map<String, RawConnector> connectorsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 		/**
+		 * Files parsed during this walk by absolute path: the parents read by the connectors that extend them, and the
+		 * files visited that are not connectors. A parent is then parsed once, whichever is read first.
+		 */
+		private final Map<Path, JsonNode> parentCache = new HashMap<>();
+
+		/**
 		 * Returns the map of connector IDs and their {@link RawConnector} instances.
 		 *
 		 * @return case-insensitive map of connectors
@@ -100,14 +107,23 @@ public class RawConnectorLibraryParser {
 				return FileVisitResult.CONTINUE;
 			}
 
-			final JsonNode connectorNode = OBJECT_MAPPER.readTree(file.toFile());
+			// A file already read as a parent is not parsed again; the cached node stays intact for the next readers
+			final Path key = file.toAbsolutePath().normalize();
+			final JsonNode cachedNode = parentCache.get(key);
+			final JsonNode connectorNode = cachedNode != null ? cachedNode.deepCopy() : OBJECT_MAPPER.readTree(file.toFile());
 			if (!isConnector(connectorNode)) {
+				// Not a connector, likely a parent: keep it for the connectors that extend it
+				parentCache.putIfAbsent(key, connectorNode);
 				return FileVisitResult.CONTINUE;
 			}
-			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(file.getParent());
+			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(
+				file.getParent(),
+				parentCache
+			);
 
 			try {
-				final RawConnector connector = connectorParser.parseRaw(file.toFile(), patched);
+				// The node read for the connector check is the one parsed: each file is parsed once
+				final RawConnector connector = connectorParser.parseRaw(connectorNode, file.toFile(), patched);
 				connectorsMap.put(filename.substring(0, filename.lastIndexOf('.')), connector);
 			} catch (Exception e) {
 				log.error(CONNECTOR_PARSING_ERROR, filename, e.getMessage());

@@ -84,4 +84,14 @@ public interface IConfiguration {
 	 * @return true if the protocol corresponds to the {@code IConfiguration} instance, false otherwise.
 	 */
 	boolean isCorrespondingProtocol(String protocol);
+
+	/**
+	 * Whether the host name of this configuration is resolved through DNS to tell whether the host is the local
+	 * machine. A configuration that never contacts the host, such as an emulation, does not need it.
+	 *
+	 * @return {@code true} by default
+	 */
+	default boolean resolvesHostname() {
+		return true;
+	}
 }

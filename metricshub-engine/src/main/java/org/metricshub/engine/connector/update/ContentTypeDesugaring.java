@@ -104,6 +104,12 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
 public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
+	 * Mapper serializing the sources to find their references, shared because a new mapper introspects every source
+	 * class again.
+	 */
+	private static final ObjectMapper MAPPER = JsonHelper.buildObjectMapper();
+
+	/**
 	 * <code>FS = ";"</code> in an AWK script, the sign of a script written for the <code>;</code> serialization.
 	 */
 	private static final Pattern FS_SEMICOLON = Pattern.compile("\\bFS\\s*=\\s*\"\\s*;\\s*\"");
@@ -366,7 +372,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	static Set<String> textOnlySources(final Connector connector, final Map<String, Source> sources) {
 		final Set<String> copied = new HashSet<>();
 		final Set<String> readAsTable = new HashSet<>();
-		final ObjectMapper mapper = JsonHelper.buildObjectMapper();
 		// A tool without columns returning a union of text sources returns their joined text: the members are read as
 		// text, and the union's references to them are no table read
 		final Set<String> textUnions = new HashSet<>();
@@ -400,7 +405,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 			try {
 				final Set<String> references = new HashSet<>();
-				collectReferences(mapper.writeValueAsString(scanned), references);
+				collectReferences(MAPPER.writeValueAsString(scanned), references);
 				references.forEach(reference -> readAsTable.add(resolveReference(reference, source.getKey(), sources)));
 			} catch (JsonProcessingException e) {
 				return Set.of();

@@ -37,6 +37,12 @@ import org.metricshub.extension.wmi.WmiConfiguration;
 class EmulationConfigurationTest {
 
 	@Test
+	void testResolvesHostname() {
+		// The replay never contacts the host: its name is not resolved to tell whether it is local
+		assertFalse(EmulationConfiguration.builder().hostname("anyHost").build().resolvesHostname());
+	}
+
+	@Test
 	void testValidateConfiguration() {
 		final EmulationConfiguration configuration = EmulationConfiguration.builder().hostname("test-host").build();
 		assertDoesNotThrow(() -> configuration.validateConfiguration("resource-key"));

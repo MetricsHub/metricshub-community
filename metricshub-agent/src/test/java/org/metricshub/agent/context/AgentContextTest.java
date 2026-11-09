@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.GRAFANA_DB_STATE_METRIC;
@@ -42,6 +43,7 @@ import org.metricshub.configuration.YamlConfigurationProvider;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.ConnectorVariables;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -68,6 +70,22 @@ class AgentContextTest {
 	@Test
 	void testInitialize() throws IOException {
 		try (final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager)) {
+			assertInitializedAgentContext(agentContext);
+		}
+	}
+
+	@Test
+	void testInitializeWithGivenConnectorStore() throws IOException {
+		final ConnectorStore connectorStore;
+		try (final AgentContext built = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager)) {
+			connectorStore = built.getConnectorStore();
+		}
+
+		try (
+			final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager, connectorStore)
+		) {
+			// The given store is used as is, and the context is complete
+			assertSame(connectorStore, agentContext.getConnectorStore());
 			assertInitializedAgentContext(agentContext);
 		}
 	}

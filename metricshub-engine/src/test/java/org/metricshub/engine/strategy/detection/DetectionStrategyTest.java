@@ -19,8 +19,13 @@ import static org.metricshub.engine.constants.Constants.HOSTNAME;
 import static org.metricshub.engine.constants.Constants.HOST_ID;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMAT;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -37,6 +42,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -52,6 +58,7 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.AbstractMetric;
 import org.metricshub.engine.telemetry.metric.StateSetMetric;
+import org.mockito.MockedStatic;
 
 class DetectionStrategyTest {
 
@@ -232,6 +239,40 @@ class DetectionStrategyTest {
 		// Retrieve monitor's metric value (ConnectorResult is failed)
 		metric = monitor.getMetrics().get(CONNECTOR_STATUS_METRIC_KEY);
 		assertEquals(STATE_SET_METRIC_FAILED, ((StateSetMetric) metric).getValue());
+	}
+
+	@Test
+	void testRunResolvesHostnameOnlyWhenConfigurationsDo() {
+		final String host = "resolved-to-loopback.invalid";
+		final InetAddress loopback = InetAddress.getLoopbackAddress();
+		for (final boolean resolves : new boolean[] { true, false }) {
+			final IConfiguration configuration = mock(IConfiguration.class);
+			when(configuration.getHostname()).thenReturn(host);
+			when(configuration.resolvesHostname()).thenReturn(resolves);
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
+				.hostConfiguration(
+					HostConfiguration.builder()
+						.hostId(HOST_ID)
+						.hostType(DeviceKind.LINUX)
+						.hostname(host)
+						.configurations(Map.of(TestConfiguration.class, configuration))
+						.build()
+				)
+				.connectorStore(new ConnectorStore())
+				.build();
+
+			try (MockedStatic<InetAddress> inetAddress = mockStatic(InetAddress.class, CALLS_REAL_METHODS)) {
+				// Resolved, the name is the loopback: the host is local only when its configurations resolve it
+				inetAddress.when(() -> InetAddress.getByName(host)).thenReturn(loopback);
+				new DetectionStrategy(
+					telemetryManager,
+					new Date().getTime(),
+					new ClientsExecutor(telemetryManager),
+					ExtensionManager.empty()
+				).run();
+			}
+			assertEquals(resolves, telemetryManager.getHostProperties().isLocalhost());
+		}
 	}
 
 	@Test
