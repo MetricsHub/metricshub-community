@@ -606,7 +606,7 @@ Concurrency contracts:
 
 | File | Location | Written by | Purpose |
 |---|---|---|---|
-| `opamp-instance-uid` | Security directory, next to the MetricsHub keystore | `InstanceUidStore` | Stable `instance_uid` across restarts **and upgrades**. Canonical UUID string, atomic write |
+| `metricshub-agent-uid` | Security directory, next to the MetricsHub keystore | `InstanceUidStore` | Stable `instance_uid` across restarts **and upgrades**. Canonical UUID string, atomic write |
 | `upgrade-transaction.json` | Staging directory | `UpgradeTransactionStore` | The crash-safe journal: id, from/to version, URL, hashes, deployment kind, state, `installStartedAt`, `installTimeoutSeconds` |
 | `upgrade-transaction.json.<suffix>` | Staging directory | `UpgradeTransactionStore.archive()` | Archived finished transactions (and `.corrupt` for unparseable ones) |
 | `installed-package.json` | Staging directory | `UpgradeTransactionStore` | `{version, packageHash}` of the last OpAMP-installed package — the source of `agent_has_hash` |
@@ -876,7 +876,7 @@ The payload cap and the concurrency cap are **not** configurable on the agent: t
 
 ### 13.5 On-disk state
 
-None of its own. The uid comes from `security/opamp-instance-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
+None of its own. The uid comes from `security/metricshub-agent-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
 
 One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `central:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
 

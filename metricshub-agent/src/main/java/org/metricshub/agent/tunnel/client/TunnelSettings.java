@@ -132,7 +132,7 @@ public record TunnelSettings(
 	 * @param host the host as configured
 	 * @return whether cleartext may be allowed for it
 	 */
-	private static boolean isLiteralLoopback(final String host) {
+	public static boolean isLiteralLoopback(final String host) {
 		if (host == null) {
 			return false;
 		}
