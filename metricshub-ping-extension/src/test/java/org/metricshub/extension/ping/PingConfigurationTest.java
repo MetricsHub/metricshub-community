@@ -20,11 +20,13 @@ class PingConfigurationTest {
 
 	@Test
 	void testValidateConfiguration() {
-		assertThrows(InvalidConfigurationException.class, () ->
-			PingConfiguration.builder().timeout(-60L).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> PingConfiguration.builder().timeout(-60L).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			PingConfiguration.builder().timeout(null).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> PingConfiguration.builder().timeout(null).build().validateConfiguration(RESOURCE_KEY)
 		);
 		assertDoesNotThrow(() -> PingConfiguration.builder().timeout(60L).build().validateConfiguration(RESOURCE_KEY));
 	}

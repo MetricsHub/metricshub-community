@@ -113,8 +113,10 @@ class EmbeddedFilesResolverTest {
 		);
 
 		final URI connectorDirUri = URI.create(connectorDirUriStr);
-		final EmbeddedFile result = FileHelper.fileSystemTask(connectorDirUri, Collections.emptyMap(), () ->
-			embeddedFilesResolver.processFile("diskPart.awk", Paths.get(connectorDirUri))
+		final EmbeddedFile result = FileHelper.fileSystemTask(
+			connectorDirUri,
+			Collections.emptyMap(),
+			() -> embeddedFilesResolver.processFile("diskPart.awk", Paths.get(connectorDirUri))
 		);
 
 		final String actualAwkScriptNormalized = result.getContentAsString().replace("\n", "");

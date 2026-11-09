@@ -76,9 +76,10 @@ public class WbemCriterionProcessor {
 
 	private Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider;
 
-	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER =
-		telemetryManager ->
-			(WbemConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(WbemConfiguration.class);
+	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER = telemetryManager -> (WbemConfiguration) telemetryManager
+		.getHostConfiguration()
+		.getConfigurations()
+		.get(WbemConfiguration.class);
 
 	/**
 	 * Creates a new {@link WbemCriterionProcessor} with the given executor, connector ID, and log mode,
@@ -169,8 +170,7 @@ public class WbemCriterionProcessor {
 		// If that was successful, remember it in HostMonitoring, so we don't perform this
 		// (costly) detection again
 		if (namespaceResult.getResult().isSuccess()) {
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
 				.setAutomaticWbemNamespace(namespaceResult.getNamespace());
 		}
@@ -297,15 +297,14 @@ public class WbemCriterionProcessor {
 		// Try all "interop" queries that could retrieve a list of namespaces in this CIM server
 		for (WqlQuery interopQuery : WBEM_INTEROP_QUERIES) {
 			try {
-				wbemRequestExecutor
-					.executeWbem(
-						hostname,
-						configuration,
-						interopQuery.getWql(),
-						interopQuery.getNamespace(),
-						telemetryManager,
-						telemetryManager.getHostname()
-					)
+				wbemRequestExecutor.executeWbem(
+					hostname,
+					configuration,
+					interopQuery.getWql(),
+					interopQuery.getNamespace(),
+					telemetryManager,
+					telemetryManager.getHostname()
+				)
 					.stream()
 					.filter(row -> !row.isEmpty())
 					.map(row -> row.get(0))
@@ -326,8 +325,7 @@ public class WbemCriterionProcessor {
 					// This error indicates that the CIM server will probably never respond to anything
 					// (timeout, or bad credentials), so there's no point in pursuing our efforts here.
 					Throwable cause = e.getCause();
-					final String messageFormat =
-						"Hostname %s - Does not respond to WBEM requests. %s: %s\nCancelling namespace detection.";
+					final String messageFormat = "Hostname %s - Does not respond to WBEM requests. %s: %s\nCancelling namespace detection.";
 					String message = String.format(
 						messageFormat,
 						hostname,
@@ -452,13 +450,13 @@ public class WbemCriterionProcessor {
 		}
 
 		// Retrieve the hostname from the WbemConfiguration, otherwise from the telemetryManager
-		final String hostname =
-			wbemConfiguration.getHostname() != null ? wbemConfiguration.getHostname() : telemetryManager.getHostname();
+		final String hostname = wbemConfiguration.getHostname() != null
+			? wbemConfiguration.getHostname()
+			: telemetryManager.getHostname();
 
 		// If namespace is specified as "Automatic"
 		if (AUTOMATIC_NAMESPACE.equalsIgnoreCase(wbemCriterion.getNamespace())) {
-			final String cachedNamespace = telemetryManager
-				.getHostProperties()
+			final String cachedNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
 				.getAutomaticWbemNamespace();
 

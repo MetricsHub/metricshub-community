@@ -62,8 +62,9 @@ class ForceSerializationHelperTest {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Source snmpTableSource = SnmpTableSource.builder().oid("1.2.3.4").selectColumns(SELECT_COLUMNS).build();
 
-		assertThrows(IllegalArgumentException.class, () ->
-			ForceSerializationHelper.forceSerialization(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ForceSerializationHelper.forceSerialization(
 				null,
 				telemetryManager,
 				CONNECTOR_ID,
@@ -73,8 +74,9 @@ class ForceSerializationHelperTest {
 			)
 		);
 
-		assertThrows(IllegalArgumentException.class, () ->
-			ForceSerializationHelper.forceSerialization(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ForceSerializationHelper.forceSerialization(
 				() -> emptySourceTable,
 				null,
 				CONNECTOR_ID,
@@ -84,8 +86,9 @@ class ForceSerializationHelperTest {
 			)
 		);
 
-		assertThrows(IllegalArgumentException.class, () ->
-			ForceSerializationHelper.forceSerialization(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ForceSerializationHelper.forceSerialization(
 				() -> emptySourceTable,
 				telemetryManager,
 				null,
@@ -95,8 +98,9 @@ class ForceSerializationHelperTest {
 			)
 		);
 
-		assertThrows(IllegalArgumentException.class, () ->
-			ForceSerializationHelper.forceSerialization(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ForceSerializationHelper.forceSerialization(
 				() -> emptySourceTable,
 				telemetryManager,
 				CONNECTOR_ID,
@@ -106,8 +110,9 @@ class ForceSerializationHelperTest {
 			)
 		);
 
-		assertThrows(IllegalArgumentException.class, () ->
-			ForceSerializationHelper.forceSerialization(
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ForceSerializationHelper.forceSerialization(
 				() -> emptySourceTable,
 				telemetryManager,
 				CONNECTOR_ID,
@@ -158,17 +163,10 @@ class ForceSerializationHelperTest {
 		Thread.currentThread().interrupt();
 		final boolean wasInterruptedBefore = Thread.currentThread().isInterrupted();
 
-		final SourceTable returned = ForceSerializationHelper.forceSerialization(
-			() -> {
-				assertFalse(Thread.currentThread().isInterrupted());
-				return EXPECTED_SOURCE_TABLE;
-			},
-			telemetryManager,
-			CONNECTOR_ID,
-			snmpTableSource,
-			DESCRIPTION,
-			emptySourceTable
-		);
+		final SourceTable returned = ForceSerializationHelper.forceSerialization(() -> {
+			assertFalse(Thread.currentThread().isInterrupted());
+			return EXPECTED_SOURCE_TABLE;
+		}, telemetryManager, CONNECTOR_ID, snmpTableSource, DESCRIPTION, emptySourceTable);
 
 		assertEquals(EXPECTED_SOURCE_TABLE, returned);
 		assertTrue(wasInterruptedBefore);
@@ -226,13 +224,11 @@ class ForceSerializationHelperTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		doReturn(EXPECTED_SOURCE_TABLE)
-			.when(protocolExtensionMock)
+		doReturn(EXPECTED_SOURCE_TABLE).when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
 
 		final ISourceProcessor processor = SourceProcessor.builder()
@@ -279,13 +275,11 @@ class ForceSerializationHelperTest {
 			.build();
 
 		// Mock source table information for enclosure
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		doReturn(EXPECTED_SOURCE_TABLE)
-			.when(protocolExtensionMock)
+		doReturn(EXPECTED_SOURCE_TABLE).when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
 
 		final ISourceProcessor processor = SourceProcessor.builder()
@@ -297,25 +291,23 @@ class ForceSerializationHelperTest {
 
 		final ExecutorService threadsPool = Executors.newFixedThreadPool(2);
 
-		final Callable<SourceTable> callable1 = () ->
-			ForceSerializationHelper.forceSerialization(
-				() -> snmpTableSource.accept(processor),
-				telemetryManager,
-				CONNECTOR_ID,
-				snmpTableSource,
-				DESCRIPTION,
-				SourceTable.empty()
-			);
+		final Callable<SourceTable> callable1 = () -> ForceSerializationHelper.forceSerialization(
+			() -> snmpTableSource.accept(processor),
+			telemetryManager,
+			CONNECTOR_ID,
+			snmpTableSource,
+			DESCRIPTION,
+			SourceTable.empty()
+		);
 
-		final Callable<SourceTable> callable2 = () ->
-			ForceSerializationHelper.forceSerialization(
-				() -> snmpTableSource.accept(processor),
-				telemetryManager,
-				CONNECTOR_ID,
-				snmpTableSource,
-				DESCRIPTION,
-				SourceTable.empty()
-			);
+		final Callable<SourceTable> callable2 = () -> ForceSerializationHelper.forceSerialization(
+			() -> snmpTableSource.accept(processor),
+			telemetryManager,
+			CONNECTOR_ID,
+			snmpTableSource,
+			DESCRIPTION,
+			SourceTable.empty()
+		);
 
 		// This only checks the behavior for two parallel threads to validate there is no crash.
 

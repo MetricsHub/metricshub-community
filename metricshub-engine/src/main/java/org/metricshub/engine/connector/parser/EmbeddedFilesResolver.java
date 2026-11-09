@@ -302,8 +302,7 @@ public class EmbeddedFilesResolver {
 	 *         embedded file and values as the corresponding {@link EmbeddedFile} instances.
 	 */
 	public Map<Integer, EmbeddedFile> collectEmbeddedFiles() {
-		return processedEmbeddedFiles
-			.values()
+		return processedEmbeddedFiles.values()
 			.stream()
 			.collect(Collectors.toMap(EmbeddedFile::getId, Function.identity(), (k1, _) -> k1));
 	}

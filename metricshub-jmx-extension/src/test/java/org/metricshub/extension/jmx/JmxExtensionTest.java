@@ -213,15 +213,13 @@ class JmxExtensionTest {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("testHost").build();
 
 		// JSON with correct spelling ("objecttName" as used in source)
-		final JsonNode query = objectMapper.readTree(
-			"""
+		final JsonNode query = objectMapper.readTree("""
 			    {
 			      "objectName": "myDomain:type=MyType,key1=*",
 			      "attributes": ["Attr1", "Attr2"],
 			      "keyProperties": ["key1"]
 			    }
-			"""
-		);
+			""");
 
 		final List<List<String>> rows = List.of(List.of("Key1Val", "Attr1Val", "Attr2Val"));
 
@@ -402,14 +400,12 @@ class JmxExtensionTest {
 	void testShouldExecuteQueryWithOnlyKeyProperties() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("testHost").build();
 
-		final JsonNode query = objectMapper.readTree(
-			"""
+		final JsonNode query = objectMapper.readTree("""
 			    {
 			      "objectName": "java.lang:type=GarbageCollector,name=*",
 			      "keyProperties": ["name"]
 			    }
-			"""
-		);
+			""");
 
 		final List<List<String>> rows = List.of(List.of("G1YoungGen"));
 		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any())).thenReturn(

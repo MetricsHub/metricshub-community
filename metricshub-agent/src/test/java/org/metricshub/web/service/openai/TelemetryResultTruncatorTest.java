@@ -182,12 +182,7 @@ class TelemetryResultTruncatorTest {
 		assertTrue(hasSummary(monitors.get("fan")));
 
 		// Verify truncatedEntries only contains disk
-		assertTrue(
-			result
-				.truncatedEntries()
-				.stream()
-				.allMatch(e -> e.monitorType().equals("disk"))
-		);
+		assertTrue(result.truncatedEntries().stream().allMatch(e -> e.monitorType().equals("disk")));
 	}
 
 	// ---- Truncation: multiple types ----
@@ -260,8 +255,7 @@ class TelemetryResultTruncatorTest {
 
 		assertTrue(result.wasTruncated());
 
-		final var diskList = result
-			.truncatedResponse()
+		final var diskList = result.truncatedResponse()
 			.getHosts()
 			.get(0)
 			.getResponse()
@@ -346,15 +340,13 @@ class TelemetryResultTruncatorTest {
 		assertTrue(result.wasTruncated());
 
 		// At least server1/disk should be truncated
-		final boolean server1Truncated = result
-			.truncatedEntries()
+		final boolean server1Truncated = result.truncatedEntries()
 			.stream()
 			.anyMatch(e -> e.hostname().equals("server1") && e.monitorType().equals("disk"));
 		assertTrue(server1Truncated);
 
 		// server2/disk may or may not need truncation — different truncation levels are valid
-		final var s1Entry = result
-			.truncatedEntries()
+		final var s1Entry = result.truncatedEntries()
 			.stream()
 			.filter(e -> e.hostname().equals("server1") && e.monitorType().equals("disk"))
 			.findFirst()
@@ -374,8 +366,7 @@ class TelemetryResultTruncatorTest {
 
 		assertTrue(result.wasTruncated());
 		// Should reach 0 (summary only)
-		final var diskEntry = result
-			.truncatedEntries()
+		final var diskEntry = result.truncatedEntries()
 			.stream()
 			.filter(e -> e.monitorType().equals("disk"))
 			.findFirst()
@@ -410,8 +401,7 @@ class TelemetryResultTruncatorTest {
 		final var result = TelemetryResultTruncator.truncate(response, 1, OBJECT_MAPPER);
 
 		assertTrue(result.wasTruncated());
-		final var diskEntry = result
-			.truncatedEntries()
+		final var diskEntry = result.truncatedEntries()
 			.stream()
 			.filter(e -> e.monitorType().equals("disk"))
 			.findFirst()
@@ -540,8 +530,7 @@ class TelemetryResultTruncatorTest {
 		assertTrue(result.wasTruncated());
 
 		// good-host should have truncated disk
-		final var goodHostMonitors = result
-			.truncatedResponse()
+		final var goodHostMonitors = result.truncatedResponse()
 			.getHosts()
 			.get(0)
 			.getResponse()

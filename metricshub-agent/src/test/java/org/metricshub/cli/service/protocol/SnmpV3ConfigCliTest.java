@@ -39,8 +39,7 @@ class SnmpV3ConfigCliTest {
 				.withProtocolExtensions(List.of(new SnmpV3Extension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			// Create an Snmpv3TestConfiguration and call method toProtocol

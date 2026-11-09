@@ -83,8 +83,12 @@ public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
 			String tableStr = hasTable ? TextTableHelper.generateTextTable(table) : "<empty>";
 			return header + TABLE_RESULT_LABEL + tableStr + "\n";
 		}
-		return (
-			header + RAW_RESULT_LABEL + rawData + "\n" + TABLE_RESULT_LABEL + TextTableHelper.generateTextTable(table) + "\n"
-		);
+		return (header +
+			RAW_RESULT_LABEL +
+			rawData +
+			"\n" +
+			TABLE_RESULT_LABEL +
+			TextTableHelper.generateTextTable(table) +
+			"\n");
 	}
 }

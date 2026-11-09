@@ -72,8 +72,7 @@ public class BmcHelixRuleSetLoader {
 	 * @return configured YAML object mapper
 	 */
 	private static ObjectMapper createObjectMapper() {
-		return new ObjectMapper(new YAMLFactory())
-			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+		return new ObjectMapper(new YAMLFactory()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 			.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false);
 	}
 }

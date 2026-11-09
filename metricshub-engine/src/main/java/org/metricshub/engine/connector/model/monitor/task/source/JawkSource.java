@@ -41,6 +41,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -85,6 +86,24 @@ public class JawkSource extends Source {
 	private Map<String, String> variables = new LinkedHashMap<>();
 
 	/**
+	 * How the script reads <code>input</code>: {@link ContentType#TEXT} (the referenced source as
+	 * <code>;</code>-separated lines, or the literal text) or {@link ContentType#TABLE} (<code>input</code> must be
+	 * a source reference; each row of that source's table is a record whose cells are <code>$1..$NF</code>).
+	 * Default text.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private ContentType inputFormat = ContentType.TEXT;
+
+	/**
+	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
+	 * {@link ContentType#TABLE} (each <code>print</code> is one row, the text of <code>printf</code> is split into rows
+	* on <code>ORS</code> and into cells on <code>OFS</code>).
+	 * Default text.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private ContentType output = ContentType.TEXT;
+
+	/**
 	 * Builder for creating instances of {@code JawkSource}.
 	 *
 	 * @param type                  The type of the source.
@@ -96,6 +115,8 @@ public class JawkSource extends Source {
 	 * @param input                 The input on which to execute the JAWK task.
 	 * @param separators            The separators parameter for the JAWK task.
 	 * @param variables             The variables to expose to the JAWK script.
+	 * @param inputFormat           How the script reads the input, null for text.
+	 * @param output                What the script produces, null for text.
 	 */
 	@Builder
 	@JsonCreator
@@ -108,13 +129,17 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "script") String script,
 		@JsonProperty(value = "input") final String input,
 		@JsonProperty(value = "separators") final String separators,
-		@JsonProperty(value = "variables") final Map<String, String> variables
+		@JsonProperty(value = "variables") final Map<String, String> variables,
+		@JsonProperty(value = "inputFormat") final ContentType inputFormat,
+		@JsonProperty(value = "output") final ContentType output
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
 		this.script = script;
 		this.input = input;
 		this.separators = separators;
 		this.variables = variables == null ? new LinkedHashMap<>() : variables;
+		this.inputFormat = inputFormat == null ? ContentType.TEXT : inputFormat;
+		this.output = output == null ? ContentType.TEXT : output;
 	}
 
 	@Override
@@ -129,6 +154,8 @@ public class JawkSource extends Source {
 			.input(input)
 			.separators(separators)
 			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
+			.inputFormat(inputFormat)
+			.output(output)
 			.build();
 	}
 
@@ -136,6 +163,8 @@ public class JawkSource extends Source {
 	public void update(UnaryOperator<String> updater) {
 		// The script is deliberately left out: it is code, not data. It is normally a ${file::...} reference already
 		// resolved at parse time, and running the reference substitutions over a script body would rewrite AWK syntax.
+		// A table input is a source reference resolved to the table itself when the script runs: the source updater
+		// does not expand it into the source's text (see SourceUpdaterProcessor), the other substitutions apply
 		input = updater.apply(input);
 		separators = updater.apply(separators);
 		// The variables are deliberately not updated here: every reference they hold, source references included,
@@ -145,6 +174,11 @@ public class JawkSource extends Source {
 	@Override
 	public SourceTable accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return output == null ? ContentType.TEXT : output;
 	}
 
 	@Override

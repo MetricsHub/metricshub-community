@@ -102,11 +102,9 @@ public abstract class AbstractConnectorProcessor {
 	) {
 		final String hostname = hostConfiguration.getHostname();
 
-		return (
-			hostConfiguration.isSequential()
-				? runConnectorsSequentially(connectors, hostname)
-				: runConnectorsSimultaneously(connectors, hostname)
-		).stream();
+		return (hostConfiguration.isSequential()
+			? runConnectorsSequentially(connectors, hostname)
+			: runConnectorsSimultaneously(connectors, hostname)).stream();
 	}
 
 	/**
@@ -146,9 +144,9 @@ public abstract class AbstractConnectorProcessor {
 			Math.max(1, Math.min(MAX_THREADS_COUNT, connectorList.size()))
 		);
 
-		connectorList.forEach(connector ->
-			threadsPool.execute(() ->
-				connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
+		connectorList.forEach(
+			connector -> threadsPool.execute(
+				() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
 			)
 		);
 
@@ -184,8 +182,7 @@ public abstract class AbstractConnectorProcessor {
 	 * @param connectorTestResult
 	 */
 	void updateSupersedes(@NonNull final Set<String> supersedes, @NonNull final ConnectorTestResult connectorTestResult) {
-		final Set<String> connectorSupersedes = connectorTestResult
-			.getConnector()
+		final Set<String> connectorSupersedes = connectorTestResult.getConnector()
 			.getConnectorIdentity()
 			.getDetection()
 			.getSupersedes();
@@ -209,11 +206,12 @@ public abstract class AbstractConnectorProcessor {
 		final @NonNull String hostname
 	) {
 		// Extract the list of last resort connectors from the list of matching connectors
-		final List<ConnectorTestResult> lastResortConnectorTestResultList = matchingConnectorTestResultList
-			.stream()
+		final List<ConnectorTestResult> lastResortConnectorTestResultList = matchingConnectorTestResultList.stream()
 			.filter(
-				connectorTestResult ->
-					connectorTestResult.getConnector().getConnectorIdentity().getDetection().getOnLastResort() != null
+				connectorTestResult -> connectorTestResult.getConnector()
+					.getConnectorIdentity()
+					.getDetection()
+					.getOnLastResort() != null
 			)
 			.collect(Collectors.toList());
 
@@ -222,21 +220,21 @@ public abstract class AbstractConnectorProcessor {
 		}
 
 		// Extract the list of regular connectors from the list of matching connectors
-		final List<ConnectorTestResult> regularConnectorTestResultList = matchingConnectorTestResultList
-			.stream()
+		final List<ConnectorTestResult> regularConnectorTestResultList = matchingConnectorTestResultList.stream()
 			.filter(
-				connectorTestResult ->
-					connectorTestResult.getConnector().getConnectorIdentity().getDetection().getOnLastResort() == null
+				connectorTestResult -> connectorTestResult.getConnector()
+					.getConnectorIdentity()
+					.getDetection()
+					.getOnLastResort() == null
 			)
 			.collect(Collectors.toList());
 
 		// Go through the list of last resort connectors and remove them if a regular connector discovers the same monitor type
 		final String[] connectorIdHolder = new String[1];
 		lastResortConnectorTestResultList.forEach(lastResortConnectorTestResult -> {
-			boolean hasLastResortMonitor = regularConnectorTestResultList
-				.stream()
-				.anyMatch(regularConnectorTestResult ->
-					hasLastResortMonitorJob(
+			boolean hasLastResortMonitor = regularConnectorTestResultList.stream()
+				.anyMatch(
+					regularConnectorTestResult -> hasLastResortMonitorJob(
 						hostname,
 						connectorIdHolder,
 						regularConnectorTestResult,
@@ -294,34 +292,30 @@ public abstract class AbstractConnectorProcessor {
 		}
 
 		// The monitor's job and mapping must not be empty
-		return monitorJobs
-			.entrySet()
-			.stream()
-			.anyMatch(monitorJobEntry -> {
-				final boolean hasLastResortMonitorType = lastResortConnectorTestResult
-					.getConnector()
-					.getConnectorIdentity()
-					.getDetection()
-					.getOnLastResort()
-					.equals(monitorJobEntry.getKey());
+		return monitorJobs.entrySet().stream().anyMatch(monitorJobEntry -> {
+			final boolean hasLastResortMonitorType = lastResortConnectorTestResult.getConnector()
+				.getConnectorIdentity()
+				.getDetection()
+				.getOnLastResort()
+				.equals(monitorJobEntry.getKey());
 
-				// If there is no monitor job entry having the last resort, we consider
-				// that the regular connector test result hasn't the last resort monitor job
-				if (!hasLastResortMonitorType) {
-					return false;
-				}
-
-				// Make sure we really have monitoring job discovering the last resort monitor type
-				final MonitorJob monitorJob = monitorJobEntry.getValue();
-				if (monitorJob != null) {
-					if (monitorJob instanceof SimpleMonitorJob simpleMonitorJob) {
-						return simpleMonitorJob.getSimple() != null && simpleMonitorJob.getSimple().getMapping() != null;
-					} else if (monitorJob instanceof StandardMonitorJob standardMonitorJob) {
-						return standardMonitorJob.getDiscovery() != null && standardMonitorJob.getDiscovery().getMapping() != null;
-					}
-				}
+			// If there is no monitor job entry having the last resort, we consider
+			// that the regular connector test result hasn't the last resort monitor job
+			if (!hasLastResortMonitorType) {
 				return false;
-			});
+			}
+
+			// Make sure we really have monitoring job discovering the last resort monitor type
+			final MonitorJob monitorJob = monitorJobEntry.getValue();
+			if (monitorJob != null) {
+				if (monitorJob instanceof SimpleMonitorJob simpleMonitorJob) {
+					return simpleMonitorJob.getSimple() != null && simpleMonitorJob.getSimple().getMapping() != null;
+				} else if (monitorJob instanceof StandardMonitorJob standardMonitorJob) {
+					return standardMonitorJob.getDiscovery() != null && standardMonitorJob.getDiscovery().getMapping() != null;
+				}
+			}
+			return false;
+		});
 	}
 
 	/**

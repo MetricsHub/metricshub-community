@@ -85,9 +85,9 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 			// If the context starts with the string "monitors", perform the corresponding replacement
 			if (
 				parts.length >= 4 &&
-				"monitors".equals(parts[0]) &&
-				JOBS.contains(parts[2]) &&
-				("sources".equals(parts[3]) || "mapping".equals(parts[3]))
+					"monitors".equals(parts[0]) &&
+					JOBS.contains(parts[2]) &&
+					("sources".equals(parts[3]) || "mapping".equals(parts[3]))
 			) {
 				return Matcher.quoteReplacement(
 					String.format(

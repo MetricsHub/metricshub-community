@@ -110,6 +110,7 @@ public final class HostTools {
 	/**
 	 * Builds the MCP tool.
 	 *
+	 * @param owner      the extension or connector identifier that declares the tool
 	 * @param name       the advertised tool name
 	 * @param definition what the tool takes and does
 	 * @param perHost    the body, run once per host with the resolved arguments; it returns the host's result or
@@ -117,6 +118,7 @@ public final class HostTools {
 	 * @return the callback
 	 */
 	public static ToolCallback perHost(
+		final String owner,
 		final String name,
 		final ToolDefinition definition,
 		final BiFunction<String, Map<String, String>, Object> perHost
@@ -133,24 +135,25 @@ public final class HostTools {
 				);
 			}
 		}
-		final org.springframework.ai.tool.definition.ToolDefinition springDefinition =
-			org.springframework.ai.tool.definition.ToolDefinition.builder()
-				.name(name)
-				.description(description(definition))
-				.inputSchema(inputSchema(definition).toString())
-				.build();
+		final org.springframework.ai.tool.definition.ToolDefinition springDefinition = org.springframework.ai.tool.definition.ToolDefinition
+			.builder()
+			.name(name)
+			.description(description(definition))
+			.inputSchema(inputSchema(definition).toString())
+			.build();
 		return new DynamicToolCallback(
 			springDefinition,
 			arguments -> call(definition, perHost, arguments),
-			definition.destructive()
+			definition.destructive(),
+			owner,
+			definition
 		);
 	}
 
 	static String description(final ToolDefinition definition) {
-		final String description =
-			definition.description() == null || definition.description().isBlank()
-				? definition.name()
-				: definition.description();
+		final String description = definition.description() == null || definition.description().isBlank()
+			? definition.name()
+			: definition.description();
 		return definition.destructive() ? "DESTRUCTIVE: " + description : description;
 	}
 
@@ -162,47 +165,42 @@ public final class HostTools {
 		final ObjectNode properties = NODES.objectNode();
 		final ArrayNode required = NODES.arrayNode();
 
-		properties
-			.putObject(HOSTNAME)
+		properties.putObject(HOSTNAME)
 			.put("type", "array")
 			.put("description", "The hostname(s) to run the tool on, as configured in MetricsHub.")
 			.putObject("items")
 			.put("type", "string");
 		required.add(HOSTNAME);
 
-		definition
-			.parameters()
-			.forEach((parameterName, parameter) -> {
-				final ObjectNode property = properties.putObject(parameterName).put("type", parameter.type());
-				final StringBuilder description = new StringBuilder();
-				if (parameter.description() != null) {
-					description.append(parameter.description());
-				}
-				if (parameter.defaultValue() != null) {
-					description.append(description.isEmpty() ? "" : " ").append("Default: ").append(parameter.defaultValue());
-				}
-				if (parameter.pattern() != null) {
-					// In the description rather than the schema's pattern: a Java regular expression is not always a
-					// valid ECMA-262 one, and a client could then refuse the whole tool list
-					description
-						.append(description.isEmpty() ? "" : " ")
-						.append("Must match the regular expression: ")
-						.append(parameter.pattern());
-				}
-				if (!description.isEmpty()) {
-					property.put("description", description.toString());
-				}
-				if (parameter.enumValues() != null) {
-					final ArrayNode values = property.putArray("enum");
-					parameter.enumValues().forEach(value -> values.add(typed(parameter.type(), value)));
-				}
-				if (parameter.required() && parameter.defaultValue() == null) {
-					required.add(parameterName);
-				}
-			});
+		definition.parameters().forEach((parameterName, parameter) -> {
+			final ObjectNode property = properties.putObject(parameterName).put("type", parameter.type());
+			final StringBuilder description = new StringBuilder();
+			if (parameter.description() != null) {
+				description.append(parameter.description());
+			}
+			if (parameter.defaultValue() != null) {
+				description.append(description.isEmpty() ? "" : " ").append("Default: ").append(parameter.defaultValue());
+			}
+			if (parameter.pattern() != null) {
+				// In the description rather than the schema's pattern: a Java regular expression is not always a
+				// valid ECMA-262 one, and a client could then refuse the whole tool list
+				description.append(description.isEmpty() ? "" : " ")
+					.append("Must match the regular expression: ")
+					.append(parameter.pattern());
+			}
+			if (!description.isEmpty()) {
+				property.put("description", description.toString());
+			}
+			if (parameter.enumValues() != null) {
+				final ArrayNode values = property.putArray("enum");
+				parameter.enumValues().forEach(value -> values.add(typed(parameter.type(), value)));
+			}
+			if (parameter.required() && parameter.defaultValue() == null) {
+				required.add(parameterName);
+			}
+		});
 
-		properties
-			.putObject(POOL_SIZE)
+		properties.putObject(POOL_SIZE)
 			.put("type", "integer")
 			.put("description", "Optional number of hosts run concurrently. Defaults to " + DEFAULT_POOL_SIZE + ".");
 
@@ -237,12 +235,13 @@ public final class HostTools {
 
 		return MultiHostToolExecutor.executeForHosts(
 			hostnames,
-			() ->
-				HostToolResponse.builder()
-					.response(QueryResponse.builder().error(IMCPToolService.NULL_HOSTNAME_ERROR).build())
-					.build(),
-			hostname ->
-				HostToolResponse.builder().hostname(hostname).response(runSafe(perHost, hostname, resolvedArguments)).build(),
+			() -> HostToolResponse.builder()
+				.response(QueryResponse.builder().error(IMCPToolService.NULL_HOSTNAME_ERROR).build())
+				.build(),
+			hostname -> HostToolResponse.builder()
+				.hostname(hostname)
+				.response(runSafe(perHost, hostname, resolvedArguments))
+				.build(),
 			poolSize
 		);
 	}

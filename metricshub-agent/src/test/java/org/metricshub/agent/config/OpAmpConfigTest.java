@@ -23,8 +23,7 @@ class OpAmpConfigTest {
 
 	@Test
 	void opampChannelShouldBeDeserialized() throws Exception {
-		final AgentConfig agentConfig = deserialize(
-			"""
+		final AgentConfig agentConfig = deserialize("""
 			central:
 			  enabled: true
 			  opamp:
@@ -35,8 +34,7 @@ class OpAmpConfigTest {
 			    pollInterval: 1m
 			    requestTimeout: 20
 			    reportHealth: false
-			"""
-		);
+			""");
 
 		final OpAmpConfig opamp = agentConfig.getCentral().getOpamp();
 		assertTrue(opamp.isEnabled());

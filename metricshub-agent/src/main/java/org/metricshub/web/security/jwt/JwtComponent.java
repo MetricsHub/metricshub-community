@@ -77,8 +77,7 @@ public class JwtComponent {
 	 * @return {@link Date}
 	 */
 	private static Date computeExpirationDate(final Date date, final long expirationTimeSeconds) {
-		final var localDateTime = date
-			.toInstant()
+		final var localDateTime = date.toInstant()
 			.atZone(ZoneId.systemDefault())
 			.toLocalDateTime()
 			.plusSeconds(expirationTimeSeconds);

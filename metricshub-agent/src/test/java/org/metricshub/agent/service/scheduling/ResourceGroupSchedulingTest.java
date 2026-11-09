@@ -85,12 +85,10 @@ class ResourceGroupSchedulingTest {
 		assertNotNull(resourceMetrics);
 		final Resource resource = resourceMetrics.getResource();
 		assertNotNull(resource);
-		final Map<String, String> resourceAttributes = resource
-			.getAttributesList()
+		final Map<String, String> resourceAttributes = resource.getAttributesList()
 			.stream()
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
-		final Map<String, String> trusted = resourceAttributes
-			.entrySet()
+		final Map<String, String> trusted = resourceAttributes.entrySet()
 			.stream()
 			.filter(e -> Set.of(COMPANY_ATTRIBUTE_KEY, SITE_ATTRIBUTE_KEY).contains(e.getKey()))
 			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -106,8 +104,7 @@ class ResourceGroupSchedulingTest {
 		final ScopeMetrics scopeMetrics = scopeMetricsList.get(0);
 		final List<Metric> metricsList = scopeMetrics.getMetricsList();
 		assertEquals(3, metricsList.size());
-		final Map<String, Metric> metrics = metricsList
-			.stream()
+		final Map<String, Metric> metrics = metricsList.stream()
 			.collect(Collectors.toMap(Metric::getName, Function.identity()));
 		assertTrue(metrics.containsKey(HW_SITE_CARBON_INTENSITY_METRIC));
 		assertTrue(metrics.containsKey(HW_SITE_ELECTRICITY_COST_METRIC));

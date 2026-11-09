@@ -67,20 +67,18 @@ class PingToolServiceTest {
 		assertNotNull(responses, "Ping responses should not be null");
 		assertEquals(hostnames.size(), responses.getHosts().size(), "A response should be returned for each hostname");
 
-		responses
-			.getHosts()
-			.forEach(responseWrapper -> {
-				assertNotNull(responseWrapper.getResponse(), "Each response wrapper should contain a response");
-				assertTrue(
-					hostnames.contains(responseWrapper.getHostname()),
-					"Hostname should be one of the requested hostnames"
-				);
-				assertEquals(
-					responseWrapper.getHostname(),
-					responseWrapper.getResponse().getHostname(),
-					"Response should contain the matching hostname"
-				);
-				assertTrue(responseWrapper.getResponse().getResponseTime() >= 0, "Duration should be non-negative");
-			});
+		responses.getHosts().forEach(responseWrapper -> {
+			assertNotNull(responseWrapper.getResponse(), "Each response wrapper should contain a response");
+			assertTrue(
+				hostnames.contains(responseWrapper.getHostname()),
+				"Hostname should be one of the requested hostnames"
+			);
+			assertEquals(
+				responseWrapper.getHostname(),
+				responseWrapper.getResponse().getHostname(),
+				"Response should contain the matching hostname"
+			);
+			assertTrue(responseWrapper.getResponse().getResponseTime() >= 0, "Duration should be non-negative");
+		});
 	}
 }

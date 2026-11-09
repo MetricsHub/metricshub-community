@@ -76,8 +76,7 @@ public class SecurityController {
 			"Response JSON contains encryptedPassword (same format as the encrypt CLI).",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Encrypted password returned"),
-			@ApiResponse(responseCode = "400", description = "Invalid or missing body, bad Base64, or encryption failed")
-		}
+			@ApiResponse(responseCode = "400", description = "Invalid or missing body, bad Base64, or encryption failed") }
 	)
 	@PostMapping(
 		value = "/encrypt-password",

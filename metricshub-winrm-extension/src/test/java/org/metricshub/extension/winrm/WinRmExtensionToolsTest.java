@@ -55,8 +55,7 @@ class WinRmExtensionToolsTest {
 			winRmExtension.executeTool(
 				"wql",
 				configuration,
-				JsonNodeFactory.instance
-					.objectNode()
+				JsonNodeFactory.instance.objectNode()
 					.put("query", "SELECT Name FROM Win32_Service")
 					.put("namespace", "root\\default")
 			)
@@ -108,8 +107,9 @@ class WinRmExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			winRmExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode())
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> winRmExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode())
 		);
 	}
 }

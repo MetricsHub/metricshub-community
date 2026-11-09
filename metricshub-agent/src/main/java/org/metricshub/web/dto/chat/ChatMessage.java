@@ -30,7 +30,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record ChatMessage(
 	@Schema(
 		description = "Message role. Use \"assistant\" for assistant messages; any other value is treated as a user message."
-	)
-	String role,
+	) String role,
 	@Schema(description = "Message content") String content
 ) {}

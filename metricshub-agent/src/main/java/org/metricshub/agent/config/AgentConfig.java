@@ -62,8 +62,7 @@ public class AgentConfig {
 	/**
 	 * Default problem template for alerts
 	 */
-	public static final String PROBLEM_DEFAULT_TEMPLATE =
-		"Problem on ${FQDN} with ${MONITOR_NAME}.${NEWLINE}${NEWLINE}${ALERT_DETAILS}${NEWLINE}${NEWLINE}${FULLREPORT}";
+	public static final String PROBLEM_DEFAULT_TEMPLATE = "Problem on ${FQDN} with ${MONITOR_NAME}.${NEWLINE}${NEWLINE}${ALERT_DETAILS}${NEWLINE}${NEWLINE}${FULLREPORT}";
 	/**
 	 * Default job pool size
 	 */

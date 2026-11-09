@@ -38,8 +38,7 @@ import lombok.NoArgsConstructor;
 @JsonSubTypes(
 	{
 		@JsonSubTypes.Type(value = StateSetMetric.class, name = StateSetMetric.STATE_SET_METRIC_TYPE),
-		@JsonSubTypes.Type(value = NumberMetric.class, name = NumberMetric.NUMBER_METRIC_TYPE)
-	}
+		@JsonSubTypes.Type(value = NumberMetric.class, name = NumberMetric.NUMBER_METRIC_TYPE) }
 )
 public abstract class AbstractMetric {
 

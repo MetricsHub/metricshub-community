@@ -90,8 +90,8 @@ public class InternalDbExtension implements ISourceComputationExtension {
 			sourceTable.setTable(executeSqlQuery);
 		}
 
-		LoggingHelper.debug(() ->
-			log.trace(
+		LoggingHelper.debug(
+			() -> log.trace(
 				"Executed Internal DB Query request:{}\n- Result:\n{}\n",
 				query,
 				TextTableHelper.generateTextTable(executeSqlQuery)

@@ -45,8 +45,7 @@ class AbstractProcessTest {
 			final Process process = Mockito.mock(Process.class);
 
 			try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
-				processControl
-					.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
+				processControl.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
 					.thenReturn(pb);
 
 				processControl.when(() -> ProcessControl.start(any(ProcessBuilder.class))).thenCallRealMethod();
@@ -69,12 +68,10 @@ class AbstractProcessTest {
 
 				testProcess.start();
 
-				Awaitility.await()
-					.atMost(Durations.FIVE_SECONDS)
-					.untilAsserted(() -> {
-						assertEquals("Process started.", outputProcessor.getBlocks());
-						assertEquals("Error.", errorProcessor.getBlocks());
-					});
+				Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+					assertEquals("Process started.", outputProcessor.getBlocks());
+					assertEquals("Error.", errorProcessor.getBlocks());
+				});
 
 				assertTrue(testProcess.onBeforeProcess);
 				assertTrue(testProcess.onBeforeProcessStart);
@@ -97,8 +94,7 @@ class AbstractProcessTest {
 			final Process process = Mockito.mock(Process.class);
 
 			try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
-				processControl
-					.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
+				processControl.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
 					.thenReturn(pb);
 
 				processControl.when(() -> ProcessControl.start(any(ProcessBuilder.class))).thenCallRealMethod();
@@ -119,11 +115,9 @@ class AbstractProcessTest {
 
 				testProcess.start();
 
-				Awaitility.await()
-					.atMost(Durations.FIVE_SECONDS)
-					.untilAsserted(() -> {
-						assertEquals("Process started.", outputProcessor.getBlocks());
-					});
+				Awaitility.await().atMost(Durations.FIVE_SECONDS).untilAsserted(() -> {
+					assertEquals("Process started.", outputProcessor.getBlocks());
+				});
 
 				assertTrue(testProcess.onBeforeProcess);
 				assertTrue(testProcess.onBeforeProcessStart);

@@ -48,20 +48,18 @@ public class PostDeserializeHelper {
 	 */
 	public static ObjectMapper addPostDeserializeSupport(final ObjectMapper objectMapper) {
 		final SimpleModule module = new SimpleModule();
-		module.setDeserializerModifier(
-			new BeanDeserializerModifier() {
-				private static final long serialVersionUID = 1L;
+		module.setDeserializerModifier(new BeanDeserializerModifier() {
+			private static final long serialVersionUID = 1L;
 
-				@Override
-				public JsonDeserializer<?> modifyDeserializer(
-					DeserializationConfig config,
-					BeanDescription beanDescription,
-					JsonDeserializer<?> originalDeserializer
-				) {
-					return new CustomDeserializer(originalDeserializer);
-				}
+			@Override
+			public JsonDeserializer<?> modifyDeserializer(
+				DeserializationConfig config,
+				BeanDescription beanDescription,
+				JsonDeserializer<?> originalDeserializer
+			) {
+				return new CustomDeserializer(originalDeserializer);
 			}
-		);
+		});
 
 		objectMapper.registerModule(module);
 

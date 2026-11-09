@@ -14,10 +14,10 @@ class OtherDeviceMetricNormalizerTest {
 	private static final long STRATEGY_TIME = System.currentTimeMillis();
 	private static final String HOSTNAME = "hostname";
 	private static final String HW_OTHER_DEVICE_USES_LIMIT = "hw.other_device.uses.limit";
-	public static final String HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL =
-		HW_OTHER_DEVICE_USES_LIMIT + "{limit_type=\"critical\"}";
-	public static final String HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED =
-		HW_OTHER_DEVICE_USES_LIMIT + "{limit_type=\"degraded\"}";
+	public static final String HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL = HW_OTHER_DEVICE_USES_LIMIT +
+		"{limit_type=\"critical\"}";
+	public static final String HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED = HW_OTHER_DEVICE_USES_LIMIT +
+		"{limit_type=\"degraded\"}";
 
 	@Test
 	void testNormalize() {
@@ -65,15 +65,17 @@ class OtherDeviceMetricNormalizerTest {
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwOtherDeviceUsesLimitMetric
-					.getMetric(HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL, NumberMetric.class)
-					.getValue()
+				monitorWithHwOtherDeviceUsesLimitMetric.getMetric(
+					HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwOtherDeviceUsesLimitMetric
-					.getMetric(HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED, NumberMetric.class)
-					.getValue()
+				monitorWithHwOtherDeviceUsesLimitMetric.getMetric(
+					HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 
@@ -121,15 +123,17 @@ class OtherDeviceMetricNormalizerTest {
 			);
 			assertEquals(
 				1.0,
-				monitorWithHwOtherDeviceUsesLimitMetric
-					.getMetric(HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL, NumberMetric.class)
-					.getValue()
+				monitorWithHwOtherDeviceUsesLimitMetric.getMetric(
+					HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL,
+					NumberMetric.class
+				).getValue()
 			);
 			assertEquals(
 				2.0,
-				monitorWithHwOtherDeviceUsesLimitMetric
-					.getMetric(HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED, NumberMetric.class)
-					.getValue()
+				monitorWithHwOtherDeviceUsesLimitMetric.getMetric(
+					HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 
@@ -168,9 +172,10 @@ class OtherDeviceMetricNormalizerTest {
 			);
 			assertEquals(
 				1.8,
-				monitorWithHwOtherDeviceUsesLimitMetric
-					.getMetric(HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED, NumberMetric.class)
-					.getValue()
+				monitorWithHwOtherDeviceUsesLimitMetric.getMetric(
+					HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_DEGRADED,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 
@@ -208,9 +213,10 @@ class OtherDeviceMetricNormalizerTest {
 			);
 			assertEquals(
 				2.2,
-				monitorWithHwOtherDeviceUsesLimitMetric
-					.getMetric(HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL, NumberMetric.class)
-					.getValue()
+				monitorWithHwOtherDeviceUsesLimitMetric.getMetric(
+					HW_OTHER_DEVICE_USES_LIMIT_LIMIT_TYPE_CRITICAL,
+					NumberMetric.class
+				).getValue()
 			);
 		}
 	}

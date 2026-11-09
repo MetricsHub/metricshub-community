@@ -109,42 +109,34 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 	private boolean checkAndCollectProtocolMetrics(final IProtocolExtension protocolExtension) {
 		// Record the start time before launching protocol checks
 		final long startTime = System.currentTimeMillis();
-		return protocolExtension
-			.checkProtocol(telemetryManager)
-			.map(isUp -> {
-				final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
-				final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
-				final Long strategyTime = telemetryManager.getStrategyTime();
-				final MetricFactory metricFactory = new MetricFactory(
-					telemetryManager.getHostname(),
-					telemetryManager.getConnectorStore()
-				);
-				// The protocol that was really checked: an extension handling several protocols
-				// reports the one it exercised for this host
-				final String identifier = protocolExtension.getIdentifier(telemetryManager);
+		return protocolExtension.checkProtocol(telemetryManager).map(isUp -> {
+			final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
+			final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+			final Long strategyTime = telemetryManager.getStrategyTime();
+			final MetricFactory metricFactory = new MetricFactory(
+				telemetryManager.getHostname(),
+				telemetryManager.getConnectorStore()
+			);
+			// The protocol that was really checked: an extension handling several protocols
+			// reports the one it exercised for this host
+			final String identifier = protocolExtension.getIdentifier(telemetryManager);
 
-				Double up = DOWN;
-				if (Boolean.TRUE.equals(isUp)) {
-					up = UP;
-					// Collect protocol check response time metric if response up is true
-					metricFactory.collectNumberMetric(
-						endpointHostMonitor,
-						RESPONSE_TIME_METRIC_FORMAT.formatted(identifier),
-						responseTime,
-						strategyTime
-					);
-				}
-
-				// Collect protocol check metric
+			Double up = DOWN;
+			if (Boolean.TRUE.equals(isUp)) {
+				up = UP;
+				// Collect protocol check response time metric if response up is true
 				metricFactory.collectNumberMetric(
 					endpointHostMonitor,
-					UP_METRIC_FORMAT.formatted(identifier),
-					up,
+					RESPONSE_TIME_METRIC_FORMAT.formatted(identifier),
+					responseTime,
 					strategyTime
 				);
-				return Boolean.TRUE.equals(isUp);
-			})
-			.orElse(false);
+			}
+
+			// Collect protocol check metric
+			metricFactory.collectNumberMetric(endpointHostMonitor, UP_METRIC_FORMAT.formatted(identifier), up, strategyTime);
+			return Boolean.TRUE.equals(isUp);
+		}).orElse(false);
 	}
 
 	@Override

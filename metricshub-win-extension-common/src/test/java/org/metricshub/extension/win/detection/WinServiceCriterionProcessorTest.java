@@ -84,8 +84,7 @@ class WinServiceCriterionProcessorTest {
 	void testProcessServiceCheckServiceNull() {
 		final ServiceCriterion serviceCriterion = null;
 		assertTrue(
-			winServiceCriterionProcessor
-				.process(serviceCriterion, null, CONNECTOR_ID, true)
+			winServiceCriterionProcessor.process(serviceCriterion, null, CONNECTOR_ID, true)
 				.getMessage()
 				.contains("Malformed Service criterion.")
 		);
@@ -105,8 +104,7 @@ class WinServiceCriterionProcessorTest {
 		serviceCriterion.setName(SERVICE_NAME);
 
 		assertTrue(
-			winServiceCriterionProcessor
-				.process(serviceCriterion, telemetryManager, CONNECTOR_ID, true)
+			winServiceCriterionProcessor.process(serviceCriterion, telemetryManager, CONNECTOR_ID, true)
 				.getMessage()
 				.contains("Neither WMI nor WinRM credentials are configured for this host.")
 		);
@@ -216,8 +214,7 @@ class WinServiceCriterionProcessorTest {
 			final ServiceCriterion serviceCriterion = new ServiceCriterion();
 			serviceCriterion.setName(SERVICE_NAME);
 
-			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";running"))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";running")).when(wmiDetectionServiceMock)
 				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
@@ -259,8 +256,7 @@ class WinServiceCriterionProcessorTest {
 			final ServiceCriterion serviceCriterion = new ServiceCriterion();
 			serviceCriterion.setName(SERVICE_NAME);
 
-			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";down"))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";down")).when(wmiDetectionServiceMock)
 				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
@@ -302,8 +298,7 @@ class WinServiceCriterionProcessorTest {
 			final ServiceCriterion serviceCriterion = new ServiceCriterion();
 			serviceCriterion.setName(SERVICE_NAME);
 
-			doReturn(CriterionTestResult.success(serviceCriterion, null))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.success(serviceCriterion, null)).when(wmiDetectionServiceMock)
 				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
@@ -345,8 +340,7 @@ class WinServiceCriterionProcessorTest {
 			final ServiceCriterion serviceCriterion = new ServiceCriterion();
 			serviceCriterion.setName(SERVICE_NAME);
 
-			doReturn(CriterionTestResult.error(serviceCriterion, "error"))
-				.when(wmiDetectionServiceMock)
+			doReturn(CriterionTestResult.error(serviceCriterion, "error")).when(wmiDetectionServiceMock)
 				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(

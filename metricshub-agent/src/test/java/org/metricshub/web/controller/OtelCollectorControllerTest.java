@@ -37,8 +37,7 @@ class OtelCollectorControllerTest {
 	void testRestartCollectorOk() throws Exception {
 		doNothing().when(otelCollectorService).restartCollector();
 
-		mockMvc
-			.perform(post(BASE + "/restart"))
+		mockMvc.perform(post(BASE + "/restart"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(content().string(containsString("restarted successfully")));
@@ -48,9 +47,9 @@ class OtelCollectorControllerTest {
 
 	@Test
 	void testRestartCollectorFails() throws Exception {
-		doThrow(new OtelCollectorException(OtelCollectorException.Code.RESTART_FAILED, "Restart failed"))
-			.when(otelCollectorService)
-			.restartCollector();
+		doThrow(new OtelCollectorException(OtelCollectorException.Code.RESTART_FAILED, "Restart failed")).when(
+			otelCollectorService
+		).restartCollector();
 
 		mockMvc.perform(post(BASE + "/restart")).andExpect(status().isInternalServerError());
 	}
@@ -59,8 +58,7 @@ class OtelCollectorControllerTest {
 	void testGetCollectorLogsOk() throws Exception {
 		when(otelCollectorService.getCollectorLogTail(200)).thenReturn("line1\nline2\n");
 
-		mockMvc
-			.perform(get(BASE + "/logs").accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get(BASE + "/logs").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("line1\nline2\n"));
@@ -72,8 +70,7 @@ class OtelCollectorControllerTest {
 	void testGetCollectorLogsWithTailLines() throws Exception {
 		when(otelCollectorService.getCollectorLogTail(100)).thenReturn("tail\n");
 
-		mockMvc
-			.perform(get(BASE + "/logs").param("tailLines", "100").accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get(BASE + "/logs").param("tailLines", "100").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().string("tail\n"));
 
@@ -82,8 +79,7 @@ class OtelCollectorControllerTest {
 
 	@Test
 	void testGetCollectorLogsNotFound() throws Exception {
-		doThrow(new OtelCollectorException(OtelCollectorException.Code.LOG_FILE_NOT_FOUND))
-			.when(otelCollectorService)
+		doThrow(new OtelCollectorException(OtelCollectorException.Code.LOG_FILE_NOT_FOUND)).when(otelCollectorService)
 			.getCollectorLogTail(200);
 
 		mockMvc.perform(get(BASE + "/logs")).andExpect(status().isNotFound());

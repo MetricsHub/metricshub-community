@@ -77,8 +77,7 @@ class ConfigurationFilesControllerTest {
 
 		when(configurationFilesService.getAllConfigurationFiles()).thenReturn(List.of(f2, f1));
 
-		mockMvc
-			.perform(get("/api/config-files"))
+		mockMvc.perform(get("/api/config-files"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.length()").value(2))
@@ -94,8 +93,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldReturnEmptyListWhenNoFiles() throws Exception {
 		when(configurationFilesService.getAllConfigurationFiles()).thenReturn(List.of());
 
-		mockMvc
-			.perform(get("/api/config-files"))
+		mockMvc.perform(get("/api/config-files"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(content().json("[]"));
@@ -105,8 +103,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldGetFileContent() throws Exception {
 		when(configurationFilesService.getFileContent(METRICSHUB_YAML_FILE_NAME)).thenReturn("key: value\n");
 
-		mockMvc
-			.perform(get("/api/config-files/metricshub.yaml").accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(get("/api/config-files/metricshub.yaml").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("key: value\n"));
@@ -130,16 +127,13 @@ class ConfigurationFilesControllerTest {
 			.name(METRICSHUB_YAML_FILE_NAME)
 			.size(size)
 			.build();
-		doReturn(configurationFile)
-			.when(configurationFilesService)
+		doReturn(configurationFile).when(configurationFilesService)
 			.saveOrUpdateFile(METRICSHUB_YAML_FILE_NAME, "test: noo\n");
 
-		mockMvc
-			.perform(
-				put("/api/config-files/metricshub.yaml?skipValidation=true")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content("test: noo\n".getBytes(StandardCharsets.UTF_8))
-			)
+		mockMvc.perform(
+			put("/api/config-files/metricshub.yaml?skipValidation=true").contentType(MediaType.TEXT_PLAIN)
+				.content("test: noo\n".getBytes(StandardCharsets.UTF_8))
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$.size").value(size))
@@ -157,13 +151,11 @@ class ConfigurationFilesControllerTest {
 			ConfigurationFilesService.Validation.ok(METRICSHUB_YAML_FILE_NAME)
 		);
 
-		mockMvc
-			.perform(
-				post("/api/config-files/metricshub.yaml")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content("a: 1\n")
-					.accept(MediaType.APPLICATION_JSON)
-			)
+		mockMvc.perform(
+			post("/api/config-files/metricshub.yaml").contentType(MediaType.TEXT_PLAIN)
+				.content("a: 1\n")
+				.accept(MediaType.APPLICATION_JSON)
+		)
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.fileName").value(METRICSHUB_YAML_FILE_NAME))
@@ -185,8 +177,7 @@ class ConfigurationFilesControllerTest {
 			ConfigurationFilesService.Validation.fail(METRICSHUB_YAML_FILE_NAME, failure)
 		);
 
-		mockMvc
-			.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
+		mockMvc.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.fileName").value(METRICSHUB_YAML_FILE_NAME))
@@ -217,8 +208,7 @@ class ConfigurationFilesControllerTest {
 
 		String body = mapper.writeValueAsString(new FileNewName(newName));
 
-		mockMvc
-			.perform(patch("/api/config-files/metricshub.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
+		mockMvc.perform(patch("/api/config-files/metricshub.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$.size").value(size))
@@ -231,8 +221,7 @@ class ConfigurationFilesControllerTest {
 	void testRenameFileMissingNewName() throws Exception {
 		String body = mapper.writeValueAsString(Map.of()); // empty JSON
 
-		mockMvc
-			.perform(patch("/api/config-files/old.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
+		mockMvc.perform(patch("/api/config-files/old.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isBadRequest());
 	}
 
@@ -254,14 +243,10 @@ class ConfigurationFilesControllerTest {
 			.build();
 		doReturn(savedFile).when(configurationFilesService).saveOrUpdateFile(vmFileName, vmContent);
 
-		mockMvc
-			.perform(
-				put("/api/config-files/config.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent.getBytes(StandardCharsets.UTF_8))
-			)
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name").value(vmFileName));
+		mockMvc.perform(
+			put("/api/config-files/config.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent.getBytes(StandardCharsets.UTF_8))
+		).andExpect(status().isOk()).andExpect(jsonPath("$.name").value(vmFileName));
 
 		verify(velocityTemplateService, times(1)).evaluate(vmFileName, vmContent);
 		verify(configurationFilesService, times(1)).validate(generatedYaml, vmFileName);
@@ -280,13 +265,10 @@ class ConfigurationFilesControllerTest {
 			)
 		);
 
-		mockMvc
-			.perform(
-				put("/api/config-files/bad-syntax.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent.getBytes(StandardCharsets.UTF_8))
-			)
-			.andExpect(status().isBadRequest());
+		mockMvc.perform(
+			put("/api/config-files/bad-syntax.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent.getBytes(StandardCharsets.UTF_8))
+		).andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -302,13 +284,10 @@ class ConfigurationFilesControllerTest {
 			ConfigurationFilesService.Validation.fail(vmFileName, failure)
 		);
 
-		mockMvc
-			.perform(
-				put("/api/config-files/bad-output.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent.getBytes(StandardCharsets.UTF_8))
-			)
-			.andExpect(status().isBadRequest());
+		mockMvc.perform(
+			put("/api/config-files/bad-output.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent.getBytes(StandardCharsets.UTF_8))
+		).andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -322,13 +301,11 @@ class ConfigurationFilesControllerTest {
 			ConfigurationFilesService.Validation.ok(vmFileName)
 		);
 
-		mockMvc
-			.perform(
-				post("/api/config-files/config.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent)
-					.accept(MediaType.APPLICATION_JSON)
-			)
+		mockMvc.perform(
+			post("/api/config-files/config.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent)
+				.accept(MediaType.APPLICATION_JSON)
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.fileName").value(vmFileName))
 			.andExpect(jsonPath("$.valid").value(true));
@@ -346,13 +323,11 @@ class ConfigurationFilesControllerTest {
 			)
 		);
 
-		mockMvc
-			.perform(
-				post("/api/config-files/bad-template.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent)
-					.accept(MediaType.APPLICATION_JSON)
-			)
+		mockMvc.perform(
+			post("/api/config-files/bad-template.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent)
+				.accept(MediaType.APPLICATION_JSON)
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.fileName").value(vmFileName))
 			.andExpect(jsonPath("$.valid").value(false))
@@ -367,13 +342,11 @@ class ConfigurationFilesControllerTest {
 
 		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
 
-		mockMvc
-			.perform(
-				post("/api/config-files/test/config.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent)
-					.accept(MediaType.TEXT_PLAIN)
-			)
+		mockMvc.perform(
+			post("/api/config-files/test/config.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent)
+				.accept(MediaType.TEXT_PLAIN)
+		)
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string(generatedYaml));
@@ -388,8 +361,9 @@ class ConfigurationFilesControllerTest {
 
 		when(velocityTemplateService.evaluate(vmFileName, null)).thenReturn(generatedYaml);
 
-		mockMvc
-			.perform(post("/api/config-files/test/config.vm").contentType(MediaType.TEXT_PLAIN).accept(MediaType.TEXT_PLAIN))
+		mockMvc.perform(
+			post("/api/config-files/test/config.vm").contentType(MediaType.TEXT_PLAIN).accept(MediaType.TEXT_PLAIN)
+		)
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string(generatedYaml));
@@ -397,13 +371,11 @@ class ConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldRejectTestForNonVmFile() throws Exception {
-		mockMvc
-			.perform(
-				post("/api/config-files/test/config.yaml")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content("a: 1")
-					.accept(MediaType.TEXT_PLAIN)
-			)
+		mockMvc.perform(
+			post("/api/config-files/test/config.yaml").contentType(MediaType.TEXT_PLAIN)
+				.content("a: 1")
+				.accept(MediaType.TEXT_PLAIN)
+		)
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("Only .vm files can be tested."));
@@ -421,13 +393,11 @@ class ConfigurationFilesControllerTest {
 			)
 		);
 
-		mockMvc
-			.perform(
-				post("/api/config-files/test/bad.vm")
-					.contentType(MediaType.TEXT_PLAIN)
-					.content(vmContent)
-					.accept(MediaType.TEXT_PLAIN)
-			)
+		mockMvc.perform(
+			post("/api/config-files/test/bad.vm").contentType(MediaType.TEXT_PLAIN)
+				.content(vmContent)
+				.accept(MediaType.TEXT_PLAIN)
+		)
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("Velocity template evaluation failed: Encountered unexpected token"));
@@ -437,8 +407,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldReevaluateVelocityTemplate() throws Exception {
 		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(ReEvaluationOutcome.RELOADED);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("hosts.vm"))
 			.andExpect(jsonPath("$.reloaded").value(true));
@@ -452,8 +421,7 @@ class ConfigurationFilesControllerTest {
 			ReEvaluationOutcome.NOTHING_PRODUCED
 		);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm"))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.reloaded").value(false));
 	}
@@ -463,8 +431,7 @@ class ConfigurationFilesControllerTest {
 		when(programmableReEvaluationLauncher.reevaluateTemplate("hosts.vm")).thenReturn(ReEvaluationOutcome.UNCHANGED);
 
 		// Nothing to apply is a success: the caller gets 200 with reloaded=false.
-		mockMvc
-			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.reloaded").value(false));
 	}
@@ -485,8 +452,7 @@ class ConfigurationFilesControllerTest {
 			ReEvaluationOutcome.RESTART_REQUESTED
 		);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate/hosts.vm"))
+		mockMvc.perform(post("/api/config-files/reevaluate/hosts.vm"))
 			.andExpect(status().isAccepted())
 			.andExpect(jsonPath("$.reloaded").value(false));
 	}
@@ -514,8 +480,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldReevaluateWholeConfiguration() throws Exception {
 		when(programmableReEvaluationLauncher.reloadConfiguration()).thenReturn(ReloadResult.LOCAL_ONLY);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate"))
+		mockMvc.perform(post("/api/config-files/reevaluate"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.reloaded").value(true));
 
@@ -526,8 +491,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldReportAWholeConfigurationAlreadyUpToDate() throws Exception {
 		when(programmableReEvaluationLauncher.reloadConfiguration()).thenReturn(ReloadResult.NO_CHANGE);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate"))
+		mockMvc.perform(post("/api/config-files/reevaluate"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.reloaded").value(false))
 			.andExpect(jsonPath("$.message").value("The configuration is already up to date."));
@@ -541,8 +505,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldReportARequestedRestartAsAccepted() throws Exception {
 		when(programmableReEvaluationLauncher.reloadConfiguration()).thenReturn(ReloadResult.GLOBAL_RESTART_REQUIRED);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate"))
+		mockMvc.perform(post("/api/config-files/reevaluate"))
 			.andExpect(status().isAccepted())
 			.andExpect(jsonPath("$.reloaded").value(false));
 	}
@@ -557,8 +520,7 @@ class ConfigurationFilesControllerTest {
 			new ReloadFailedException(new IllegalStateException("password: secret"))
 		);
 
-		mockMvc
-			.perform(post("/api/config-files/reevaluate"))
+		mockMvc.perform(post("/api/config-files/reevaluate"))
 			.andExpect(status().isInternalServerError())
 			.andExpect(jsonPath("$.reloaded").value(false))
 			.andExpect(

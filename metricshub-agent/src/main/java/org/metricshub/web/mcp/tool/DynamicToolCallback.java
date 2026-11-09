@@ -57,6 +57,20 @@ public final class DynamicToolCallback implements ToolCallback {
 	@Getter
 	private final boolean destructive;
 
+	/**
+	 * The protocol extension or connector that declares the tool, {@code null} for a tool of no owner: two owners
+	 * may yield the same advertised name, and only the owner tells which one a callback runs.
+	 */
+	@Getter
+	private final String owner;
+
+	/**
+	 * The engine's declaration the tool was built from, {@code null} for a tool of no owner: what a host's own
+	 * declaration must equal for this callback to run the tool there.
+	 */
+	@Getter
+	private final org.metricshub.engine.tool.ToolDefinition declaration;
+
 	private final Function<JsonNode, Object> function;
 
 	/**
@@ -79,9 +93,28 @@ public final class DynamicToolCallback implements ToolCallback {
 		final Function<JsonNode, Object> function,
 		final boolean destructive
 	) {
+		this(toolDefinition, function, destructive, null, null);
+	}
+
+	/**
+	 * @param toolDefinition the name, description and input schema advertised to the LLM
+	 * @param function       the function run on the parsed arguments, whose result is serialized to JSON
+	 * @param destructive    whether the tool changes the state of a host
+	 * @param owner          the protocol extension or connector identifier that declares the tool
+	 * @param declaration    the engine's declaration the tool was built from
+	 */
+	public DynamicToolCallback(
+		final ToolDefinition toolDefinition,
+		final Function<JsonNode, Object> function,
+		final boolean destructive,
+		final String owner,
+		final org.metricshub.engine.tool.ToolDefinition declaration
+	) {
 		this.toolDefinition = toolDefinition;
 		this.function = function;
 		this.destructive = destructive;
+		this.owner = owner;
+		this.declaration = declaration;
 	}
 
 	@Override

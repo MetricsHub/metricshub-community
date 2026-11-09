@@ -38,8 +38,7 @@ import org.springframework.context.ApplicationContext;
 		"spring.ai.mcp.server.keep-alive-interval=200ms",
 		"mcp.sse.enabled=true",
 		"mcp.sse.message-timeout=30s",
-		"mcp.sse.ping-timeout=5s"
-	}
+		"mcp.sse.ping-timeout=5s" }
 )
 class McpTransportsCoexistenceTest {
 

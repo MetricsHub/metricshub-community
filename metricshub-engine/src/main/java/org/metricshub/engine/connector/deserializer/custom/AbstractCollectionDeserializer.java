@@ -60,8 +60,8 @@ public abstract class AbstractCollectionDeserializer<T> extends JsonDeserializer
 			}
 
 			return Optional.ofNullable(parser.getValueAsString())
-				.map(str ->
-					Arrays.stream(str.split(","))
+				.map(
+					str -> Arrays.stream(str.split(","))
 						.map(String::trim) // optional: trim spaces
 						.map(valueExtractor()) // apply the custom extractor
 						.filter(getFilterPredicate())

@@ -502,8 +502,7 @@ class FileSourceProcessorTest {
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-		final Map<String, Long> cursors = telemetryManager
-			.getHostProperties()
+		final Map<String, Long> cursors = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getFileSourceCursors(SOURCE_KEY);
 		assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -584,8 +583,7 @@ class FileSourceProcessorTest {
 		assertNotNull(result1);
 		assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-		final Map<String, Long> cursors = telemetryManager
-			.getHostProperties()
+		final Map<String, Long> cursors = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getFileSourceCursors(SOURCE_KEY);
 		assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -644,8 +642,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFileContent(anyString())).thenReturn(content);
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
@@ -696,8 +693,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFromOffset(eq(resolvedPath), anyLong(), anyInt())).thenReturn(newContent);
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
@@ -711,8 +707,7 @@ class FileSourceProcessorTest {
 			assertNotNull(result1);
 			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-			Map<String, Long> cursors = telemetryManager
-				.getHostProperties()
+			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
 				.getFileSourceCursors(SOURCE_KEY);
 			assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -755,8 +750,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFromOffset(eq(resolvedPath), anyLong(), anyInt())).thenReturn(newContent);
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
@@ -770,8 +764,7 @@ class FileSourceProcessorTest {
 			assertNotNull(result1);
 			assertEquals(expectedMarkedLogCell(resolvedPath, ""), result1.getRawData());
 
-			Map<String, Long> cursors = telemetryManager
-				.getHostProperties()
+			Map<String, Long> cursors = telemetryManager.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
 				.getFileSourceCursors(SOURCE_KEY);
 			assertEquals(initialFileSize, cursors.get(resolvedPath));
@@ -810,8 +803,7 @@ class FileSourceProcessorTest {
 		when(mockFileOps.readFileContent(eq(path2))).thenThrow(new IOException("boom"));
 
 		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
-			mockedFileHelper
-				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
+			mockedFileHelper.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(path1, path2));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
@@ -839,8 +831,8 @@ class FileSourceProcessorTest {
 		when(fileOps.getFileSize(path1)).thenReturn(10L, 10L, 14L);
 		when(fileOps.getFileSize(path2)).thenReturn(10L);
 		when(fileOps.readFromOffset(path1, 10L, 4)).thenReturn("line");
-		final String emptyBlocks =
-			"<<<LOG:file=\"/logs/a.log\">>>\n<<<END_LOG>>>\n\n" + "<<<LOG:file=\"/logs/b.log\">>>\n<<<END_LOG>>>\n\n";
+		final String emptyBlocks = "<<<LOG:file=\"/logs/a.log\">>>\n<<<END_LOG>>>\n\n" +
+			"<<<LOG:file=\"/logs/b.log\">>>\n<<<END_LOG>>>\n\n";
 
 		for (int poll = 0; poll < 2; poll++) {
 			final var rows = processor.processFilesInLogMode(fileOps, paths, cursors, source, HOSTNAME);

@@ -363,10 +363,9 @@ public class FileHelper {
 			literalCount++;
 		}
 
-		final String root =
-			literalCount == 0
-				? fixedRoot
-				: joinPath(fixedRoot, String.join(delimiter, remaining.subList(0, literalCount)), delimiter);
+		final String root = literalCount == 0
+			? fixedRoot
+			: joinPath(fixedRoot, String.join(delimiter, remaining.subList(0, literalCount)), delimiter);
 
 		return new PathPattern(root, List.copyOf(remaining.subList(literalCount, remaining.size())), delimiter);
 	}
@@ -438,8 +437,8 @@ public class FileHelper {
 	 * @throws FileNotFoundException if the file does not exist
 	 * @throws IOException           if an I/O error occurs while reading
 	 */
-	public static String readOffset(final String path, final long offset, final int length)
-		throws FileNotFoundException, IOException {
+	public static String readOffset(final String path, final long offset, final int length) throws FileNotFoundException,
+		IOException {
 		try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
 			// Set the file pointer to the cursor offset position
 			file.seek(offset);
@@ -622,8 +621,7 @@ public class FileHelper {
 
 		// Replace \r\n first (Windows line endings), then handle any remaining \r or \n
 		// Use replace() for literal replacements to avoid regex interpretation of $ in replacement string
-		return value
-			.replace("\r\n", NEW_LINE_ESCAPE_STRING)
+		return value.replace("\r\n", NEW_LINE_ESCAPE_STRING)
 			.replace("\n", NEW_LINE_ESCAPE_STRING)
 			.replace("\r", NEW_LINE_ESCAPE_STRING);
 	}

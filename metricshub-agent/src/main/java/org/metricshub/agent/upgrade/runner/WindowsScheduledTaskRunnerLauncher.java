@@ -142,8 +142,7 @@ public class WindowsScheduledTaskRunnerLauncher implements RunnerLauncher {
 		final Path stagingDirectory,
 		final Path stagedScript
 	) throws IOException {
-		final String powershell =
-			"powershell -NoProfile -ExecutionPolicy Bypass -File \"" +
+		final String powershell = "powershell -NoProfile -ExecutionPolicy Bypass -File \"" +
 			stagedScript.toAbsolutePath() +
 			"\" -Package \"" +
 			stagedPackage.toAbsolutePath() +

@@ -66,8 +66,8 @@ public class EmulationOsCommandService extends OsCommandService {
 		final boolean isExecuteLocally,
 		final boolean isLocalhost,
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles
-	)
-		throws IOException, ClientException, InterruptedException, java.util.concurrent.TimeoutException, NoCredentialProvidedException, ControlledSshException {
+	) throws IOException, ClientException, InterruptedException, java.util.concurrent.TimeoutException,
+		NoCredentialProvidedException, ControlledSshException {
 		if (commandLine == null || telemetryManager == null) {
 			throw new IllegalArgumentException("commandLine and telemetryManager cannot be null.");
 		}

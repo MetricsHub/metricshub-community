@@ -79,14 +79,11 @@ class WinRmRequestExecutorTest {
 	 * An executor whose client factory hands out mocks, recording them in the given list.
 	 */
 	private static WinRmRequestExecutor newPoolingExecutor(final List<WinRMClient> created, final Duration idleTimeout) {
-		return new WinRmRequestExecutor(
-			(hostname, configuration) -> {
-				final WinRMClient client = mock(WinRMClient.class);
-				created.add(client);
-				return client;
-			},
-			idleTimeout
-		);
+		return new WinRmRequestExecutor((hostname, configuration) -> {
+			final WinRMClient client = mock(WinRMClient.class);
+			created.add(client);
+			return client;
+		}, idleTimeout);
 	}
 
 	private static WinRmConfiguration configuration(final String password) {
@@ -103,8 +100,10 @@ class WinRmRequestExecutorTest {
 		assertSame(first, executor.withClient("host", configuration("pass"), client -> client));
 
 		// A concurrent request (here, nested) gets its own client
-		final WinRMClient concurrent = executor.withClient("host", configuration("pass"), outer ->
-			executor.withClient("host", configuration("pass"), inner -> inner)
+		final WinRMClient concurrent = executor.withClient(
+			"host",
+			configuration("pass"),
+			outer -> executor.withClient("host", configuration("pass"), inner -> inner)
 		);
 		assertNotSame(first, concurrent);
 
@@ -139,11 +138,9 @@ class WinRmRequestExecutorTest {
 		final List<WinRMClient> created = new ArrayList<>();
 		final WinRmRequestExecutor executor = newPoolingExecutor(created, Duration.ofHours(1));
 
-		assertThrows(IllegalStateException.class, () ->
-			executor.withClient("host", configuration("pass"), client -> {
-				throw new IllegalStateException("timed out");
-			})
-		);
+		assertThrows(IllegalStateException.class, () -> executor.withClient("host", configuration("pass"), client -> {
+			throw new IllegalStateException("timed out");
+		}));
 
 		final WinRMClient failed = created.get(0);
 		verify(failed).close();

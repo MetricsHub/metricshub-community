@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
@@ -28,6 +29,7 @@ import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -51,6 +53,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = Extract.class, name = "extract"),
 		@JsonSubTypes.Type(value = ExtractPropertyFromWbemPath.class, name = "extractPropertyFromWbemPath"),
 		@JsonSubTypes.Type(value = Head.class, name = "head"),
+		@JsonSubTypes.Type(value = InsertColumn.class, name = "insertColumn"),
 		@JsonSubTypes.Type(value = Json2Csv.class, name = "json2Csv"),
 		@JsonSubTypes.Type(value = KeepColumns.class, name = "keepColumns"),
 		@JsonSubTypes.Type(value = KeepOnlyMatchingLines.class, name = "keepOnlyMatchingLines"),
@@ -63,9 +66,10 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = Subtract.class, name = "subtract"),
 		@JsonSubTypes.Type(value = Substring.class, name = "substring"),
 		@JsonSubTypes.Type(value = Tail.class, name = "tail"),
+		@JsonSubTypes.Type(value = ToTable.class, name = "toTable"),
+		@JsonSubTypes.Type(value = ToText.class, name = "toText"),
 		@JsonSubTypes.Type(value = Translate.class, name = "translate"),
-		@JsonSubTypes.Type(value = Xml2Csv.class, name = "xml2Csv")
-	}
+		@JsonSubTypes.Type(value = Xml2Csv.class, name = "xml2Csv") }
 )
 @Data
 @NoArgsConstructor
@@ -78,6 +82,29 @@ public abstract class Compute implements Serializable {
 	 * The type of the compute operation.
 	 */
 	protected String type;
+
+	/**
+	 * The content type this compute consumes. A table for every compute but <code>awk</code>, <code>json2Csv</code>,
+	 * <code>xml2Csv</code> and <code>toTable</code>, which read text. A static property of the class, never a YAML
+	 * field.
+	 *
+	 * @return the input content type
+	 */
+	@JsonIgnore
+	public ContentType getInputContentType() {
+		return ContentType.TABLE;
+	}
+
+	/**
+	 * The content type this compute produces. A table for every compute but <code>awk</code> and
+	 * <code>toText</code>, which write text. A static property of the class, never a YAML field.
+	 *
+	 * @return the output content type
+	 */
+	@JsonIgnore
+	public ContentType getOutputContentType() {
+		return ContentType.TABLE;
+	}
 
 	/**
 	 * Creates a copy of the current compute operation.

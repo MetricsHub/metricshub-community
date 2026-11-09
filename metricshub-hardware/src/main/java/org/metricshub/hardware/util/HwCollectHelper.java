@@ -292,20 +292,14 @@ public class HwCollectHelper {
 	 * @return true if a metric with a given metricNamePrefix is collected, false otherwise.
 	 */
 	public static boolean isMetricCollected(final Monitor monitor, final String metricNamePrefix) {
-		return monitor
-			.getMetrics()
-			.values()
-			.stream()
-			.anyMatch(metric -> {
-				// Extract the metric name prefix
-				final String currentMetricNamePrefix = MetricFactory.extractName(metric.getName());
-				final Map<String, String> metricAttributes = metric.getAttributes();
-				return (
-					metricNamePrefix.equals(currentMetricNamePrefix) &&
-					(!metricAttributes.containsKey("hw.type") || monitor.getType().equals(metricAttributes.get("hw.type"))) &&
-					metric.isUpdated()
-				);
-			});
+		return monitor.getMetrics().values().stream().anyMatch(metric -> {
+			// Extract the metric name prefix
+			final String currentMetricNamePrefix = MetricFactory.extractName(metric.getName());
+			final Map<String, String> metricAttributes = metric.getAttributes();
+			return (metricNamePrefix.equals(currentMetricNamePrefix) &&
+				(!metricAttributes.containsKey("hw.type") || monitor.getType().equals(metricAttributes.get("hw.type"))) &&
+				metric.isUpdated());
+		});
 	}
 
 	/**
@@ -339,8 +333,8 @@ public class HwCollectHelper {
 	) {
 		if (
 			measuredMonitorIds.isEmpty() ||
-			monitor.getAttribute("hw.parent.id") == null ||
-			monitor.getAttribute("hw.parent.type") == null
+				monitor.getAttribute("hw.parent.id") == null ||
+				monitor.getAttribute("hw.parent.type") == null
 		) {
 			return false;
 		}
@@ -365,30 +359,23 @@ public class HwCollectHelper {
 		// Get the metric from the monitor by metric name prefix and attributes
 		// This atomic integer is used to log a warning if multiple metrics are found with the same prefix and attributes
 		final AtomicInteger count = new AtomicInteger(0);
-		return monitor
-			.getMetrics()
-			.values()
-			.stream()
-			.filter(metric -> {
-				// Extract the metric name prefix and check if the metric attributes are contained in the given attributes
-				final boolean result =
-					metric.isUpdated() &&
-					metricNamePrefix.equals(MetricFactory.extractName(metric.getName())) &&
-					containsAllEntries(metric.getAttributes(), metricAttributes);
+		return monitor.getMetrics().values().stream().filter(metric -> {
+			// Extract the metric name prefix and check if the metric attributes are contained in the given attributes
+			final boolean result = metric.isUpdated() &&
+				metricNamePrefix.equals(MetricFactory.extractName(metric.getName())) &&
+				containsAllEntries(metric.getAttributes(), metricAttributes);
 
-				// Log a warning if multiple metrics are found with the same prefix and attributes
-				if (result && count.incrementAndGet() > 1) {
-					log.warn(
-						"Hostname {} - Multiple metrics found for the same prefix {} and attributes: {}",
-						hostname,
-						metricNamePrefix,
-						metricAttributes
-					);
-				}
-				return result;
-			})
-			.map(NumberMetric.class::cast)
-			.findFirst();
+			// Log a warning if multiple metrics are found with the same prefix and attributes
+			if (result && count.incrementAndGet() > 1) {
+				log.warn(
+					"Hostname {} - Multiple metrics found for the same prefix {} and attributes: {}",
+					hostname,
+					metricNamePrefix,
+					metricAttributes
+				);
+			}
+			return result;
+		}).map(NumberMetric.class::cast).findFirst();
 	}
 
 	/**
@@ -403,8 +390,7 @@ public class HwCollectHelper {
 	 */
 	public static boolean containsAllEntries(Map<String, String> firstMap, Map<String, String> secondMap) {
 		// Checks if the second map entries are all contained within the first map
-		return secondMap
-			.entrySet()
+		return secondMap.entrySet()
 			.stream()
 			.allMatch(entry -> firstMap.containsKey(entry.getKey()) && firstMap.get(entry.getKey()).equals(entry.getValue()));
 	}

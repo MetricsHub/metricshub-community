@@ -109,10 +109,7 @@ public record ExtensionDescriptor(String id, File jarFile, List<String> requires
 		if (value == null || value.isBlank()) {
 			return List.of();
 		}
-		return java.util.Arrays.stream(value.split(","))
-			.map(String::trim)
-			.filter(token -> !token.isEmpty())
-			.toList();
+		return java.util.Arrays.stream(value.split(",")).map(String::trim).filter(token -> !token.isEmpty()).toList();
 	}
 
 	/**

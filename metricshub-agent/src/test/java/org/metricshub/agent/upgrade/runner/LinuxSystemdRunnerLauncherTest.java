@@ -50,16 +50,10 @@ class LinuxSystemdRunnerLauncherTest {
 		final Path pkg = Files.writeString(staging.resolve("metricshub.deb"), "pkg");
 		final AtomicReference<List<String>> captured = new AtomicReference<>();
 
-		final LinuxSystemdRunnerLauncher launcher = new LinuxSystemdRunnerLauncher(
-			() -> shippedDir,
-			command -> {
-				captured.set(command);
-				return 0;
-			},
-			"metricshub-community-service.service",
-			() -> true,
-			() -> true
-		);
+		final LinuxSystemdRunnerLauncher launcher = new LinuxSystemdRunnerLauncher(() -> shippedDir, command -> {
+			captured.set(command);
+			return 0;
+		}, "metricshub-community-service.service", () -> true, () -> true);
 
 		launcher.launch(transaction("deb"), pkg, staging);
 
@@ -95,8 +89,9 @@ class LinuxSystemdRunnerLauncherTest {
 			() -> true
 		);
 
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			launcher.launch(transaction("deb"), tempDir.resolve("p.deb"), tempDir)
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> launcher.launch(transaction("deb"), tempDir.resolve("p.deb"), tempDir)
 		);
 		assertTrue(failure.getMessage().contains("systemd"));
 	}
@@ -112,8 +107,9 @@ class LinuxSystemdRunnerLauncherTest {
 			() -> false
 		);
 
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			launcher.launch(transaction("deb"), tempDir.resolve("p.deb"), tempDir)
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> launcher.launch(transaction("deb"), tempDir.resolve("p.deb"), tempDir)
 		);
 		assertTrue(failure.getMessage().contains("root"));
 	}
@@ -146,16 +142,10 @@ class LinuxSystemdRunnerLauncherTest {
 		final Path shippedDir = shippedScriptDir();
 		final Path staging = Files.createDirectories(tempDir.resolve("staging-ent"));
 		final AtomicReference<List<String>> captured = new AtomicReference<>();
-		final LinuxSystemdRunnerLauncher launcher = new LinuxSystemdRunnerLauncher(
-			() -> shippedDir,
-			command -> {
-				captured.set(command);
-				return 0;
-			},
-			"metricshub-enterprise-service.service",
-			() -> true,
-			() -> true
-		);
+		final LinuxSystemdRunnerLauncher launcher = new LinuxSystemdRunnerLauncher(() -> shippedDir, command -> {
+			captured.set(command);
+			return 0;
+		}, "metricshub-enterprise-service.service", () -> true, () -> true);
 
 		launcher.launch(transaction("rpm"), staging.resolve("p.rpm"), staging);
 
@@ -173,8 +163,9 @@ class LinuxSystemdRunnerLauncherTest {
 			() -> true
 		);
 
-		assertThrows(UpgradeException.class, () ->
-			launcher.buildCommand(transaction("msi"), tempDir.resolve("p.msi"), tempDir, tempDir.resolve("r.sh"))
+		assertThrows(
+			UpgradeException.class,
+			() -> launcher.buildCommand(transaction("msi"), tempDir.resolve("p.msi"), tempDir, tempDir.resolve("r.sh"))
 		);
 	}
 

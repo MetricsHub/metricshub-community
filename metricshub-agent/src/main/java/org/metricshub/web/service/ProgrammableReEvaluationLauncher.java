@@ -210,8 +210,7 @@ public class ProgrammableReEvaluationLauncher implements StartupHook {
 
 		final String reEvaluationId = currentContext.getConfigDirectory().resolve(fileName).toAbsolutePath().toString();
 
-		final IConfigurationProvider provider = currentContext
-			.getExtensionManager()
+		final IConfigurationProvider provider = currentContext.getExtensionManager()
 			.getConfigurationProviderExtensions()
 			.stream()
 			.filter(candidate -> candidate.getFileExtensions().stream().anyMatch(fileName.toLowerCase(Locale.ROOT)::endsWith))

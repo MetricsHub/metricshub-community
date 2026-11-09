@@ -152,36 +152,30 @@ public class PingCli implements IQuery, Callable<Integer> {
 		// Gets the output writer from the command line spec.
 		printWriter = spec.commandLine().getOut();
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
-					configurationNode.set("timeout", new TextNode(timeout));
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
+				configurationNode.set("timeout", new TextNode(timeout));
 
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(
-						PROTOCOL_IDENTIFIER,
-						configurationNode,
-						null
-					);
-					configuration.setHostname(hostname);
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, configurationNode, null);
+				configuration.setHostname(hostname);
 
-					configuration.validateConfiguration(hostname);
+				configuration.validateConfiguration(hostname);
 
-					// display the request
-					displayQuery();
-					// Execute ICMP Ping query and calculate response time
-					final long startTime = System.currentTimeMillis();
-					final String result = extension.executeQuery(configuration, getQuery());
-					final long responseTime = (System.currentTimeMillis() - startTime);
-					// display the returned result
-					displayResult(result, responseTime);
-				} catch (Exception e) {
-					displayResult(Boolean.toString(false), null);
-				}
-			});
+				// display the request
+				displayQuery();
+				// Execute ICMP Ping query and calculate response time
+				final long startTime = System.currentTimeMillis();
+				final String result = extension.executeQuery(configuration, getQuery());
+				final long responseTime = (System.currentTimeMillis() - startTime);
+				// display the returned result
+				displayResult(result, responseTime);
+			} catch (Exception e) {
+				displayResult(Boolean.toString(false), null);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

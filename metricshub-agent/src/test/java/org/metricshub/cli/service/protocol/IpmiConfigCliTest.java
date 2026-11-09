@@ -32,8 +32,7 @@ class IpmiConfigCliTest {
 				.withProtocolExtensions(List.of(new IpmiExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			// Create an IpmiTestConfiguration and call method toProtocol

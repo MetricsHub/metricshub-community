@@ -21,8 +21,7 @@ public class Constants {
 	public static final String NETWORK_ENERGY_METRIC = "hw.energy{hw.type=\"network\"}";
 	public static final String NETWORK_LINK_STATUS_METRIC = "hw.network.up";
 	public static final String NETWORK_LINK_SPEED_ATTRIBUTE = "hw.network.bandwidth.limit";
-	public static final String NETWORK_TRANSMITTED_BANDWIDTH_UTILIZATION_METRIC =
-		"hw.network.bandwidth.utilization{direction=\"transmit\"}";
+	public static final String NETWORK_TRANSMITTED_BANDWIDTH_UTILIZATION_METRIC = "hw.network.bandwidth.utilization{direction=\"transmit\"}";
 
 	public static final String LOCALHOST = "localhost";
 	public static final String HW_HOST_AVERAGE_CPU_TEMPERATURE = "__hw.host.average_cpu_temperature";
@@ -49,7 +48,6 @@ public class Constants {
 	public static final String CPU_ENERGY_METRIC = "hw.energy{hw.type=\"cpu\"}";
 
 	public static final String HW_CONNECTOR = "hw_connector";
-	public static final String DISK_CONTROLLER_PRESENT_METRIC =
-		"hw.status{hw.type=\"disk_controller\", state=\"present\"}";
+	public static final String DISK_CONTROLLER_PRESENT_METRIC = "hw.status{hw.type=\"disk_controller\", state=\"present\"}";
 	public static final String ENCLOSURE_PRESENT_METRIC = "hw.status{hw.type=\"enclosure\", state=\"present\"}";
 }

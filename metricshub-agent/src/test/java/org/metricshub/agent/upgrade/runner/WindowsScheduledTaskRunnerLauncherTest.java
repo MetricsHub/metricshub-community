@@ -148,8 +148,9 @@ class WindowsScheduledTaskRunnerLauncherTest {
 			"MetricsHub"
 		);
 
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			launcher.launch(transaction(), tempDir.resolve("p.msi"), tempDir)
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> launcher.launch(transaction(), tempDir.resolve("p.msi"), tempDir)
 		);
 		assertTrue(failure.getMessage().contains("create"));
 	}
@@ -168,8 +169,9 @@ class WindowsScheduledTaskRunnerLauncherTest {
 			"MetricsHub"
 		);
 
-		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
-			launcher.launch(transaction(), tempDir.resolve("p.msi"), tempDir)
+		final UpgradeException failure = assertThrows(
+			UpgradeException.class,
+			() -> launcher.launch(transaction(), tempDir.resolve("p.msi"), tempDir)
 		);
 		assertTrue(failure.getMessage().contains("start"));
 	}

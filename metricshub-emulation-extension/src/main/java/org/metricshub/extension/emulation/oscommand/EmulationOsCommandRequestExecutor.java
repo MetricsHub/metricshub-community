@@ -71,12 +71,7 @@ public class EmulationOsCommandRequestExecutor {
 			emulationInputDirectory,
 			OsCommandEmulationImage.class,
 			commandLine,
-			new AbstractEmulationExecutor.ReplayOperations<
-				OsCommandEmulationImage,
-				OsCommandEmulationEntry,
-				String,
-				String
-			>() {
+			new AbstractEmulationExecutor.ReplayOperations<OsCommandEmulationImage, OsCommandEmulationEntry, String, String>() {
 				@Override
 				public String protocolName() {
 					return "OS command";
@@ -137,8 +132,7 @@ public class EmulationOsCommandRequestExecutor {
 		if (entries == null || entries.isEmpty()) {
 			return List.of();
 		}
-		return entries
-			.stream()
+		return entries.stream()
 			.filter(entry -> entry != null && commandLine.equals(entry.getCommand()))
 			.collect(Collectors.toCollection(ArrayList::new));
 	}

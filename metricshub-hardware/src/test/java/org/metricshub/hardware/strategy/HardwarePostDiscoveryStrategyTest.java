@@ -381,13 +381,11 @@ class HardwarePostDiscoveryStrategyTest {
 		final Map<String, String> sourceTables = new HashMap<>(
 			Map.of(enclosureSource, "enclosure-1", temperatureSource, "temperature-1")
 		);
-		doAnswer(invocation ->
-			SourceTable.builder()
+		doAnswer(
+			invocation -> SourceTable.builder()
 				.table(SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtension)
-			.processSource(any(Source.class), anyString(), any(TelemetryManager.class));
+		).when(protocolExtension).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		new DiscoveryStrategy(telemetryManager, firstDiscoveryTime, clientsExecutor, extensionManager).run();
 

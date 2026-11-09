@@ -40,6 +40,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.ToolAccess;
+import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.ProductToolCallback;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -101,29 +102,94 @@ class TunnelServiceTest {
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
 		when(provider.getToolCallbacks()).thenReturn(callbacks);
 
-		service = new TunnelService(
-			agentContextHolder,
-			provider,
-			(settings, listener) -> {
-				if (failClientCreation) {
-					throw new IllegalStateException("cannot connect");
-				}
-				capturedSettings.add(settings);
-				capturedListeners.add(listener);
-				final TunnelClient client = mock(TunnelClient.class);
-				when(client.isConnected()).thenReturn(true);
-				// A frame that fits, which is the ordinary case; the test about one that does not
-				// says so for itself
-				when(client.send(any())).thenReturn(true);
-				createdClients.add(client);
-				return client;
-			},
-			() -> UID
-		);
+		service = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			if (failClientCreation) {
+				throw new IllegalStateException("cannot connect");
+			}
+			capturedSettings.add(settings);
+			capturedListeners.add(listener);
+			final TunnelClient client = mock(TunnelClient.class);
+			when(client.isConnected()).thenReturn(true);
+			// A frame that fits, which is the ordinary case; the test about one that does not
+			// says so for itself
+			when(client.send(any())).thenReturn(true);
+			createdClients.add(client);
+			return client;
+		}, () -> UID);
 	}
 
 	private void configure(final TunnelConfig tunnel) {
 		agentConfig = AgentConfig.builder().central(CentralConfig.builder().enabled(true).tunnel(tunnel).build()).build();
+	}
+
+	@Test
+	void aReloadThatDeclaresAHostToolOtherwiseReconnects() {
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		final String[] description = { "Reads the SEL." };
+		final ToolCallback listHosts = callback("ListHosts");
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenAnswer(
+			invocation -> new ToolCallback[] {
+				listHosts,
+				new DynamicToolCallback(
+					org.springframework.ai.tool.definition.ToolDefinition.builder()
+						.name("ipmi_sel")
+						.description(description[0])
+						.inputSchema("{\"type\":\"object\"}")
+						.build(),
+					arguments -> "",
+					false,
+					"ipmi",
+					null
+				) }
+		);
+		final List<TunnelClient> clients = new ArrayList<>();
+		final TunnelService reconnecting = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			final TunnelClient client = mock(TunnelClient.class);
+			when(client.isConnected()).thenReturn(true);
+			clients.add(client);
+			return client;
+		}, () -> UID);
+		try {
+			reconnecting.supervise();
+
+			// The same declarations rebuilt by a reload: the bridge takes the new callbacks, the session stays
+			generation = 2;
+			reconnecting.supervise();
+			assertEquals(1, clients.size());
+
+			// Another declaration: what Central was told about the host is stale, so the session goes
+			description[0] = "Reads the System Event Log.";
+			generation = 3;
+			reconnecting.supervise();
+			assertEquals(2, clients.size());
+		} finally {
+			reconnecting.shutdown();
+		}
+	}
+
+	@Test
+	void aSnapshotIsRebuiltWhenAReloadLandsWhileItIsBuilt() {
+		// The first build sees a reload published mid-way: its callbacks and the context its host lookup answers
+		// from could be two configurations', so it is built again from one
+		final ToolCallback[] callbacks = { callback("ListHosts") };
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenAnswer(invocation -> {
+			if (generation == 1) {
+				generation = 2;
+			}
+			return callbacks;
+		});
+		final TunnelService rebuilding = new TunnelService(
+			agentContextHolder,
+			provider,
+			(settings, listener) -> null,
+			() -> UID
+		);
+
+		rebuilding.snapshotOf(Set.of());
+
+		verify(provider, times(2)).getToolCallbacks();
 	}
 
 	@Test
@@ -205,7 +271,8 @@ class TunnelServiceTest {
 		assertEquals(1, register.protocolVersion());
 		assertEquals("MetricsHub Agent", register.agent().name());
 		assertEquals("Community", register.agent().edition());
-		assertEquals(List.of("ListHosts"), register.tools().stream().map(ToolDescriptor::name).toList());
+		// The agent's own tools, and the lookup Central asks a host's tools with
+		assertEquals(List.of("ListHostTools", "ListHosts"), register.tools().stream().map(ToolDescriptor::name).toList());
 		assertTrue(register.toolRegistryRevision().startsWith("sha256:"));
 		assertEquals(1, register.hosts().size());
 		assertEquals("server-01", register.hosts().get(0).resourceKey());
@@ -257,20 +324,15 @@ class TunnelServiceTest {
 		final boolean[] fail = { true };
 		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
 		when(provider.getToolCallbacks()).thenReturn(new ToolCallback[0]);
-		service = new TunnelService(
-			agentContextHolder,
-			provider,
-			(settings, listener) -> {
-				capturedSettings.add(settings);
-				return mock(TunnelClient.class);
-			},
-			() -> {
-				if (fail[0]) {
-					throw new IOException("security directory is read-only");
-				}
-				return UID;
+		service = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			capturedSettings.add(settings);
+			return mock(TunnelClient.class);
+		}, () -> {
+			if (fail[0]) {
+				throw new IOException("security directory is read-only");
 			}
-		);
+			return UID;
+		});
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 
 		service.supervise();

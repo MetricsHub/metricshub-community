@@ -124,8 +124,7 @@ class SecurityConfigTest {
 
 	@Test
 	void testSecuredPathsShouldFollowRelocatedMcpEndpoints() {
-		final var environment = new MockEnvironment()
-			.withProperty("spring.ai.mcp.server.sse-endpoint", "/events")
+		final var environment = new MockEnvironment().withProperty("spring.ai.mcp.server.sse-endpoint", "/events")
 			.withProperty("spring.ai.mcp.server.sse-message-endpoint", "/messages")
 			.withProperty("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp-v2");
 

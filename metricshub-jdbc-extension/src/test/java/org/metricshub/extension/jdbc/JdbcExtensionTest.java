@@ -118,8 +118,7 @@ class JdbcExtensionTest {
 	@Test
 	void testCheckSqlDownHealthNullUrl() throws Exception {
 		initSql("jdbc:h2:invalidUrl");
-		final JdbcConfiguration configuration = (JdbcConfiguration) telemetryManager
-			.getHostConfiguration()
+		final JdbcConfiguration configuration = (JdbcConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(JdbcConfiguration.class);
 		configuration.setUrl(null);
@@ -131,40 +130,36 @@ class JdbcExtensionTest {
 	void testIsValidConfiguration() {
 		assertTrue(jdbcExtension.isValidConfiguration(JdbcConfiguration.builder().build()));
 
-		assertFalse(
-			jdbcExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(jdbcExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -182,8 +177,7 @@ class JdbcExtensionTest {
 		initSql(JDBC_URL);
 		final SqlCriterion sqlCriterion = SqlCriterion.builder().query(SQL_QUERY).build();
 
-		doReturn(List.of(List.of("1")))
-			.when(sqlRequestExecutorMock)
+		doReturn(List.of(List.of("1"))).when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
@@ -201,8 +195,7 @@ class JdbcExtensionTest {
 		initSql(JDBC_URL);
 		final SqlCriterion sqlCriterion = SqlCriterion.builder().query(SQL_QUERY).build();
 
-		doReturn(List.of())
-			.when(sqlRequestExecutorMock)
+		doReturn(List.of()).when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
@@ -221,8 +214,7 @@ class JdbcExtensionTest {
 		initSql(JDBC_URL);
 		final SqlCriterion sqlCriterion = SqlCriterion.builder().query(SQL_QUERY).build();
 
-		doThrow(new ClientException("SQL query failed"))
-			.when(sqlRequestExecutorMock)
+		doThrow(new ClientException("SQL query failed")).when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
@@ -253,8 +245,7 @@ class JdbcExtensionTest {
 		initSql(JDBC_URL);
 		final SqlCriterion sqlCriterion = SqlCriterion.builder().query(SQL_QUERY).build();
 
-		doReturn(List.of(List.of("value1", "value2")))
-			.when(sqlRequestExecutorMock)
+		doReturn(List.of(List.of("value1", "value2"))).when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
@@ -267,8 +258,9 @@ class JdbcExtensionTest {
 	void testProcessSourceThrowsIllegalArgumentException() {
 		initSql(JDBC_URL);
 		final WbemSource wbemSource = WbemSource.builder().query("SELECT Name FROM testDb").build();
-		assertThrows(IllegalArgumentException.class, () ->
-			jdbcExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jdbcExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
 		);
 	}
 
@@ -333,8 +325,9 @@ class JdbcExtensionTest {
 	void testProcessSourceWithNullSource() {
 		initSql(JDBC_URL);
 
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			jdbcExtension.processSource(null, CONNECTOR_ID, telemetryManager)
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> jdbcExtension.processSource(null, CONNECTOR_ID, telemetryManager)
 		);
 
 		assertEquals("Hostname test-host - Cannot process source <null>.", exception.getMessage());
@@ -359,8 +352,7 @@ class JdbcExtensionTest {
 
 	@Test
 	void tesExecuteQuery() throws Exception {
-		doReturn(SQL_RESULT)
-			.when(sqlRequestExecutorMock)
+		doReturn(SQL_RESULT).when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
@@ -378,8 +370,7 @@ class JdbcExtensionTest {
 
 	@Test
 	void tesExecuteQueryThrow() throws Exception {
-		doThrow(ClientException.class)
-			.when(sqlRequestExecutorMock)
+		doThrow(ClientException.class).when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();

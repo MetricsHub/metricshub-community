@@ -250,8 +250,9 @@ class ProtocolHealthCheckServiceTest {
 		try (
 			MockedConstruction<OsCommandService> construction = mockConstruction(
 				OsCommandService.class,
-				(commandService, context) ->
-					when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn("test")
+				(commandService, context) -> when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn(
+					"test"
+				)
 			)
 		) {
 			final OsCommandExtension extension = configureLocalCommandChecks(
@@ -265,9 +266,8 @@ class ProtocolHealthCheckServiceTest {
 
 			assertTrue(service.checkFromAgentContext("localhost", protocol, 5L, extension).isReachable());
 			verify(extension).checkProtocol(
-				argThat(telemetryManager ->
-					telemetryManager
-						.getHostConfiguration()
+				argThat(
+					telemetryManager -> telemetryManager.getHostConfiguration()
 						.getConfigurations()
 						.values()
 						.stream()
@@ -288,8 +288,9 @@ class ProtocolHealthCheckServiceTest {
 		try (
 			MockedConstruction<OsCommandService> construction = mockConstruction(
 				OsCommandService.class,
-				(commandService, context) ->
-					when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn("test")
+				(commandService, context) -> when(commandService.runLocalCommand(anyString(), anyLong(), any())).thenReturn(
+					"test"
+				)
 			)
 		) {
 			final Monitor monitor = Monitor.builder().type("host").isEndpoint(true).build();

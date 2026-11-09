@@ -84,8 +84,9 @@ class SnmpExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			snmpExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode().put("oid", "1"))
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> snmpExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode().put("oid", "1"))
 		);
 	}
 }

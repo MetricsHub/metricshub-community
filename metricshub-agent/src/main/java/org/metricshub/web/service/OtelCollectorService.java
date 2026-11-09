@@ -144,18 +144,15 @@ public class OtelCollectorService {
 		final String prefix = logId + "-";
 
 		try (Stream<Path> stream = Files.list(outputDir)) {
-			final Path latestLog = stream
-				.filter(Files::isRegularFile)
+			final Path latestLog = stream.filter(Files::isRegularFile)
 				.filter(p -> p.getFileName().toString().startsWith(prefix) && p.getFileName().toString().endsWith(".log"))
-				.max(
-					Comparator.comparingLong(p -> {
-						try {
-							return Files.getLastModifiedTime(p).toMillis();
-						} catch (IOException e) {
-							return 0L;
-						}
-					})
-				)
+				.max(Comparator.comparingLong(p -> {
+					try {
+						return Files.getLastModifiedTime(p).toMillis();
+					} catch (IOException e) {
+						return 0L;
+					}
+				}))
 				.orElse(null);
 
 			if (latestLog == null) {

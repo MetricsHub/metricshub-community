@@ -147,27 +147,24 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		beforeAllStrategy.run();
 
 		// Sort the connector monitor jobs according to the priority map
-		final Map<String, MonitorJob> connectorMonitorJobs = currentConnector
-			.getMonitors()
+		final Map<String, MonitorJob> connectorMonitorJobs = currentConnector.getMonitors()
 			.entrySet()
 			.stream()
 			.sorted(
-				Comparator.comparing(entry ->
-					MONITOR_JOBS_PRIORITY.containsKey(entry.getKey())
+				Comparator.comparing(
+					entry -> MONITOR_JOBS_PRIORITY.containsKey(entry.getKey())
 						? MONITOR_JOBS_PRIORITY.get(entry.getKey())
 						: MONITOR_JOBS_PRIORITY.get(OTHER_MONITOR_JOB_TYPES)
 				)
 			)
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
-		final Map<String, MonitorJob> sequentialMonitorJobs = connectorMonitorJobs
-			.entrySet()
+		final Map<String, MonitorJob> sequentialMonitorJobs = connectorMonitorJobs.entrySet()
 			.stream()
 			.filter(entry -> MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
-		final Map<String, MonitorJob> otherMonitorJobs = connectorMonitorJobs
-			.entrySet()
+		final Map<String, MonitorJob> otherMonitorJobs = connectorMonitorJobs.entrySet()
 			.stream()
 			.filter(entry -> !MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
@@ -321,8 +318,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
 
-		final Set<String> unansweredSourceKeys = telemetryManager
-			.getHostProperties()
+		final Set<String> unansweredSourceKeys = telemetryManager.getHostProperties()
 			.getConnectorNamespace(currentConnector.getCompiledFilename())
 			.getUnansweredSourceKeys();
 		return sourcesAnswered && mapped && !hasUnreliableSource(currentConnector, monitorTask, unansweredSourceKeys);
@@ -410,21 +406,15 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 */
 	private static Map<String, Source> getSourcesByKey(final Connector connector) {
 		final Map<String, Source> sourcesByKey = new HashMap<>();
-		final Stream<Map<String, Source>> jobSources = connector
-			.getMonitors()
-			.values()
-			.stream()
-			.flatMap(job -> {
-				if (job instanceof SimpleMonitorJob simpleMonitorJob) {
-					return Stream.<AbstractMonitorTask>of(simpleMonitorJob.getSimple());
-				}
-				if (job instanceof StandardMonitorJob standardMonitorJob) {
-					return Stream.<AbstractMonitorTask>of(standardMonitorJob.getDiscovery(), standardMonitorJob.getCollect());
-				}
-				return Stream.<AbstractMonitorTask>empty();
-			})
-			.filter(Objects::nonNull)
-			.map(AbstractMonitorTask::getSources);
+		final Stream<Map<String, Source>> jobSources = connector.getMonitors().values().stream().flatMap(job -> {
+			if (job instanceof SimpleMonitorJob simpleMonitorJob) {
+				return Stream.<AbstractMonitorTask>of(simpleMonitorJob.getSimple());
+			}
+			if (job instanceof StandardMonitorJob standardMonitorJob) {
+				return Stream.<AbstractMonitorTask>of(standardMonitorJob.getDiscovery(), standardMonitorJob.getCollect());
+			}
+			return Stream.<AbstractMonitorTask>empty();
+		}).filter(Objects::nonNull).map(AbstractMonitorTask::getSources);
 		Stream.concat(Stream.of(connector.getBeforeAll(), connector.getAfterAll()), jobSources)
 			.filter(Objects::nonNull)
 			.flatMap(sources -> sources.values().stream())
@@ -533,8 +523,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				.build();
 
 			// Use the mapping processor to extract attributes and resource
-			final Map<String, String> noContextAttributeInterpretedValues =
-				mappingProcessor.interpretNonContextMappingAttributes();
+			final Map<String, String> noContextAttributeInterpretedValues = mappingProcessor
+				.interpretNonContextMappingAttributes();
 
 			// Initialize a monitor factory with the previously created attributes and resources
 
@@ -636,8 +626,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		}
 
 		//Retrieve connector Monitor instances from TelemetryManager
-		final Map<String, Monitor> connectorMonitors = telemetryManager
-			.getMonitors()
+		final Map<String, Monitor> connectorMonitors = telemetryManager.getMonitors()
 			.get(KnownMonitorType.CONNECTOR.getKey());
 
 		// Check whether the resulting map is null or empty
@@ -656,14 +645,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		);
 
 		// Get only connectors that define monitors
-		final List<Connector> connectorsWithMonitorJobs = detectedConnectors
-			.stream()
+		final List<Connector> connectorsWithMonitorJobs = detectedConnectors.stream()
 			.filter(connector -> !connector.getMonitors().isEmpty())
 			.collect(Collectors.toList()); //NOSONAR
 
 		// Sort connectors by monitor job type: first put hosts then enclosures. If two connectors have the same type of monitor job, sort them by name
-		final List<Connector> sortedConnectors = connectorsWithMonitorJobs
-			.stream()
+		final List<Connector> sortedConnectors = connectorsWithMonitorJobs.stream()
 			.sorted(new ConnectorMonitorTypeComparator())
 			.collect(Collectors.toList()); //NOSONAR
 
@@ -712,8 +699,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		if (!telemetryManager.getHostProperties().getConnectorNamespace(connectorId).isStatusOk()) {
 			return;
 		}
-		trustedTypes
-			.stream()
+		trustedTypes.stream()
 			.filter(type -> !KnownMonitorType.CONNECTOR.getKey().equals(type))
 			// Missing devices are kept and reported by HardwarePostDiscoveryStrategy (present = 0)
 			.filter(type -> !StrategyHelper.isMissingDeviceDetectionCandidate(connector, type))

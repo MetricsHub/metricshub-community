@@ -59,8 +59,7 @@ class ExtensionProtocolsDeserializerTest {
 			protocolsNode.set("ping", JsonNodeFactory.instance.nullNode());
 			doReturn(protocolsNode).when(yamlParserMock).readValueAsTree();
 
-			doReturn(extensionManager)
-				.when(deserializeContext)
+			doReturn(extensionManager).when(deserializeContext)
 				.findInjectableValue(ExtensionManager.class.getName(), null, null, null, null);
 			Map<String, IConfiguration> protocols = deserializer.deserialize(yamlParserMock, deserializeContext);
 			assertEquals(PingConfiguration.builder().build(), protocols.get("ping"));
@@ -78,8 +77,7 @@ class ExtensionProtocolsDeserializerTest {
 			protocolsNode.set("ping", pingNode);
 			doReturn(protocolsNode).when(yamlParserMock).readValueAsTree();
 
-			doReturn(extensionManager)
-				.when(deserializeContext)
+			doReturn(extensionManager).when(deserializeContext)
 				.findInjectableValue(ExtensionManager.class.getName(), null, null, null, null);
 			final Map<String, IConfiguration> protocols = deserializer.deserialize(yamlParserMock, deserializeContext);
 			assertEquals(PingConfiguration.builder().timeout(10L).build(), protocols.get("ping"));

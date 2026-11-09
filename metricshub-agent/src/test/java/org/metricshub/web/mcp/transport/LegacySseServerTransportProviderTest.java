@@ -43,14 +43,12 @@ class LegacySseServerTransportProviderTest {
 	private static final String MESSAGE_ENDPOINT = "/mcp/message";
 	private static final Pattern SESSION_ID_PATTERN = Pattern.compile("sessionId=([\\w-]+)");
 
-	private static final String INITIALIZE =
-		"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\"," +
+	private static final String INITIALIZE = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\"," +
 		"\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}";
 	private static final String INITIALIZED = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}";
 	private static final String TOOLS_LIST = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}";
 	private static final String PING = "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"ping\"}";
-	private static final String CANCELLED_NOTIFICATION =
-		"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":1}}";
+	private static final String CANCELLED_NOTIFICATION = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":1}}";
 	private static final String PING_RESPONSE = "{\"jsonrpc\":\"2.0\",\"id\":42,\"result\":{}}";
 
 	private LegacySseServerTransportProvider provider;
@@ -188,8 +186,7 @@ class LegacySseServerTransportProviderTest {
 		// The SDK session answers initialize with a JSON-RPC error over SSE and completes normally
 		session.onHandle = () -> {
 			session.onHandle = null;
-			session.transport
-				.get()
+			session.transport.get()
 				.sendMessage(
 					new JSONRPCResponse(
 						McpSchema.JSONRPC_VERSION,
@@ -360,8 +357,7 @@ class LegacySseServerTransportProviderTest {
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
-			session.transport
-				.get()
+			session.transport.get()
 				.sendMessage(
 					new JSONRPCResponse(
 						McpSchema.JSONRPC_VERSION,
@@ -401,8 +397,7 @@ class LegacySseServerTransportProviderTest {
 		// A second initialize is rejected by the SDK with a JSON-RPC error and must not disturb the valid session
 		session.onHandle = () -> {
 			session.onHandle = null;
-			session.transport
-				.get()
+			session.transport.get()
 				.sendMessage(
 					new JSONRPCResponse(
 						McpSchema.JSONRPC_VERSION,
@@ -459,8 +454,7 @@ class LegacySseServerTransportProviderTest {
 		final String sessionId = openSse(mockMvc).sessionId();
 
 		final long start = System.nanoTime();
-		final MvcResult result = postMessage(mockMvc, sessionId, INITIALIZE)
-			.andExpect(status().isGatewayTimeout())
+		final MvcResult result = postMessage(mockMvc, sessionId, INITIALIZE).andExpect(status().isGatewayTimeout())
 			.andReturn();
 		final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
@@ -566,9 +560,7 @@ class LegacySseServerTransportProviderTest {
 
 		provider.runMaintenance();
 
-		await()
-			.atMost(Duration.ofSeconds(5))
-			.until(() -> provider.activeSessionCount() == 0);
+		await().atMost(Duration.ofSeconds(5)).until(() -> provider.activeSessionCount() == 0);
 		assertStreamCompleted(sse);
 	}
 
@@ -596,8 +588,7 @@ class LegacySseServerTransportProviderTest {
 		final MockMvc mockMvc = setUp(session, LegacySseServerTransportProvider.builder());
 
 		postMessage(mockMvc, "does-not-exist", INITIALIZE).andExpect(status().isNotFound());
-		mockMvc
-			.perform(post(MESSAGE_ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(INITIALIZE))
+		mockMvc.perform(post(MESSAGE_ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(INITIALIZE))
 			.andExpect(status().isBadRequest());
 	}
 
@@ -692,14 +683,15 @@ class LegacySseServerTransportProviderTest {
 			final Runnable hook = onHandle;
 			if (hook != null && message instanceof JSONRPCRequest) {
 				hook.run();
-			} else if (
-				answerInitialize &&
-				message instanceof JSONRPCRequest request &&
-				McpSchema.METHOD_INITIALIZE.equals(request.method())
-			) {
-				// The SDK session answers the initialize over the SSE stream before its Mono completes
-				sendResponse(request.id(), null);
-			}
+			} else
+				if (
+					answerInitialize &&
+						message instanceof JSONRPCRequest request &&
+						McpSchema.METHOD_INITIALIZE.equals(request.method())
+				) {
+					// The SDK session answers the initialize over the SSE stream before its Mono completes
+					sendResponse(request.id(), null);
+				}
 			return handleResult;
 		}
 
@@ -710,8 +702,7 @@ class LegacySseServerTransportProviderTest {
 		 * @param error the error to answer with, or {@code null} for a success response
 		 */
 		void sendResponse(final Object id, final JSONRPCResponse.JSONRPCError error) {
-			transport
-				.get()
+			transport.get()
 				.sendMessage(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, id, error == null ? Map.of() : null, error))
 				.block();
 		}

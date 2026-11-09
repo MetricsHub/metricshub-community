@@ -189,8 +189,7 @@ public class OsCommandService {
 				"/bin/zsh",
 				"/usr/bin/zsh",
 				"/bin/ksh",
-				"/usr/bin/ksh"
-			};
+				"/usr/bin/ksh" };
 
 			// Find the first common shell that exists
 			for (String s : commonShells) {
@@ -244,28 +243,24 @@ public class OsCommandService {
 	) throws ClientException, InterruptedException, ControlledSshException {
 		isTrue(timeout > 0, NEGATIVE_TIMEOUT);
 		try {
-			return runControlledSshCommand(
-				() -> {
-					try {
-						return OsCommandRequestExecutor.runRemoteSshCommand(
-							hostname,
-							sshConfiguration.getUsername(),
-							sshConfiguration.getPassword(),
-							sshConfiguration.getPrivateKey() == null ? null : new File(sshConfiguration.getPrivateKey()),
-							command,
-							timeout,
-							sshConfiguration.getPort(),
-							localFiles,
-							noPasswordCommand,
-							hostType
-						);
-					} catch (ClientException e) {
-						throw new ClientRuntimeException(e);
-					}
-				},
-				hostname,
-				DEFAULT_LOCK_TIMEOUT
-			);
+			return runControlledSshCommand(() -> {
+				try {
+					return OsCommandRequestExecutor.runRemoteSshCommand(
+						hostname,
+						sshConfiguration.getUsername(),
+						sshConfiguration.getPassword(),
+						sshConfiguration.getPrivateKey() == null ? null : new File(sshConfiguration.getPrivateKey()),
+						command,
+						timeout,
+						sshConfiguration.getPort(),
+						localFiles,
+						noPasswordCommand,
+						hostType
+					);
+				} catch (ClientException e) {
+					throw new ClientRuntimeException(e);
+				}
+			}, hostname, DEFAULT_LOCK_TIMEOUT);
 		} catch (final ClientRuntimeException e) {
 			throw (ClientException) e.getCause();
 		}
@@ -282,8 +277,8 @@ public class OsCommandService {
 	 * @throws InterruptedException    When the thread is interrupted during execution.
 	 * @throws ControlledSshException   When there's an issue with controlled SSH execution.
 	 */
-	<T> T runControlledSshCommand(Supplier<T> executable, String hostname, int timeout)
-		throws InterruptedException, ControlledSshException {
+	<T> T runControlledSshCommand(Supplier<T> executable, String hostname, int timeout) throws InterruptedException,
+		ControlledSshException {
 		final Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
 
 		boolean acquired = false;
@@ -411,10 +406,9 @@ public class OsCommandService {
 		final boolean isExecuteLocally,
 		final boolean isLocalhost,
 		@NonNull final Map<Integer, EmbeddedFile> connectorEmbeddedFiles
-	)
-		throws IOException, ClientException, InterruptedException, TimeoutException, NoCredentialProvidedException, ControlledSshException {
-		final IConfiguration sshConfiguration = telemetryManager
-			.getHostConfiguration()
+	) throws IOException, ClientException, InterruptedException, TimeoutException, NoCredentialProvidedException,
+		ControlledSshException {
+		final IConfiguration sshConfiguration = telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(SshConfiguration.class);
 
@@ -434,10 +428,10 @@ public class OsCommandService {
 
 		// A command run over SSH takes the sudo settings of ssh when they enable sudo, otherwise those of osCommand,
 		// which used to apply to every command
-		final OsCommandConfiguration sudoConfiguration =
-			!isLocalhost && !isExecuteLocally && sshConfiguration instanceof SshConfiguration ssh && ssh.isUseSudo()
-				? ssh
-				: osCommandConfiguration;
+		final OsCommandConfiguration sudoConfiguration = !isLocalhost &&
+			!isExecuteLocally &&
+			sshConfiguration instanceof SshConfiguration ssh &&
+			ssh.isUseSudo() ? ssh : osCommandConfiguration;
 
 		SudoInformation sudoInformation = null;
 		if (sudoConfiguration != null) {
@@ -449,10 +443,9 @@ public class OsCommandService {
 		}
 
 		// Embedded files are written with the line endings of the system that executes them
-		final boolean isWindows =
-			isLocalhost || isExecuteLocally
-				? LocalOsHandler.isWindows()
-				: DeviceKind.WINDOWS.equals(telemetryManager.getHostConfiguration().getHostType());
+		final boolean isWindows = isLocalhost || isExecuteLocally
+			? LocalOsHandler.isWindows()
+			: DeviceKind.WINDOWS.equals(telemetryManager.getHostConfiguration().getHostType());
 
 		final Map<String, File> embeddedTempFiles = createOsCommandEmbeddedFiles(
 			commandLine,
@@ -485,29 +478,25 @@ public class OsCommandService {
 		final String updatedSudoCommand = replaceSudo(updatedCommand, sudoInformation);
 		final String updatedSudoCommandNoPassword = replaceSudo(updatedCommandNoPassword, sudoInformation);
 
-		final String command = embeddedTempFiles
-			.entrySet()
+		final String command = embeddedTempFiles.entrySet()
 			.stream()
 			.reduce(
 				updatedSudoCommand,
-				(s, entry) ->
-					s.replaceAll(
-						protectCaseInsensitiveRegex(entry.getKey()),
-						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
-					),
+				(s, entry) -> s.replaceAll(
+					protectCaseInsensitiveRegex(entry.getKey()),
+					Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
+				),
 				(_, _) -> null
 			);
 
-		final String commandNoPassword = embeddedTempFiles
-			.entrySet()
+		final String commandNoPassword = embeddedTempFiles.entrySet()
 			.stream()
 			.reduce(
 				updatedSudoCommandNoPassword,
-				(s, entry) ->
-					s.replaceAll(
-						protectCaseInsensitiveRegex(entry.getKey()),
-						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
-					),
+				(s, entry) -> s.replaceAll(
+					protectCaseInsensitiveRegex(entry.getKey()),
+					Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
+				),
 				(_, _) -> null
 			);
 

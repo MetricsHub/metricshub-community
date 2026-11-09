@@ -42,9 +42,10 @@ public class WbemSourceProcessor {
 	private String connectorId;
 	private Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider;
 
-	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER =
-		telemetryManager ->
-			(WbemConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(WbemConfiguration.class);
+	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER = telemetryManager -> (WbemConfiguration) telemetryManager
+		.getHostConfiguration()
+		.getConfigurations()
+		.get(WbemConfiguration.class);
 
 	/**
 	 * Creates a new {@link WbemSourceProcessor} with the given executor and connector ID,
@@ -104,10 +105,9 @@ public class WbemSourceProcessor {
 		final WbemConfiguration wbemConfiguration = wbemConfigurationProvider.apply(telemetryManager);
 
 		// Retrieve the hostname from the WbemConfiguration, otherwise from the telemetryManager
-		final String hostname =
-			wbemConfiguration != null && wbemConfiguration.getHostname() != null
-				? wbemConfiguration.getHostname()
-				: telemetryManager.getHostname();
+		final String hostname = wbemConfiguration != null && wbemConfiguration.getHostname() != null
+			? wbemConfiguration.getHostname()
+			: telemetryManager.getHostname();
 
 		if (wbemSource == null) {
 			log.error("Hostname {} - Malformed WBEM Source {}. Returning an empty table.", hostname, wbemSource);

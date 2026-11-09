@@ -79,10 +79,9 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
 
-		final String emulationInputDirectory =
-			emulationConfiguration != null && emulationConfiguration.getJdbc() != null
-				? emulationConfiguration.getJdbc().getDirectory()
-				: null;
+		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getJdbc() != null
+			? emulationConfiguration.getJdbc().getDirectory()
+			: null;
 
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - JDBC emulation input directory is not configured.", hostname);
@@ -94,12 +93,7 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 			emulationInputDirectory,
 			JdbcEmulationImage.class,
 			new SqlContext(sqlQuery),
-			new AbstractEmulationExecutor.ReplayOperations<
-				JdbcEmulationImage,
-				JdbcEmulationEntry,
-				SqlContext,
-				List<List<String>>
-			>() {
+			new AbstractEmulationExecutor.ReplayOperations<JdbcEmulationImage, JdbcEmulationEntry, SqlContext, List<List<String>>>() {
 				@Override
 				public String protocolName() {
 					return "JDBC";
@@ -158,8 +152,7 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 			return List.of();
 		}
 
-		return entries
-			.stream()
+		return entries.stream()
 			.filter(entry -> entry != null && sqlQuery.equals(entry.getQuery()))
 			.collect(Collectors.toCollection(ArrayList::new));
 	}

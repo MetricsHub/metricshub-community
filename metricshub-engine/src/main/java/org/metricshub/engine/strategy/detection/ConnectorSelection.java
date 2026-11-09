@@ -122,10 +122,7 @@ public class ConnectorSelection extends AbstractConnectorProcessor {
 		}
 
 		return runAllConnectorsDetectionCriteria(
-			connectorStore
-				.values()
-				.stream()
-				.filter(connector -> isConnectorContainedInSet(connector, connectorIds)),
+			connectorStore.values().stream().filter(connector -> isConnectorContainedInSet(connector, connectorIds)),
 			hostConfiguration
 		).collect(Collectors.toList()); //NOSONAR
 	}

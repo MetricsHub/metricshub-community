@@ -87,12 +87,7 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 			emulationInputDirectory,
 			WmiEmulationImage.class,
 			new WmiContext(query, namespace),
-			new AbstractEmulationExecutor.ReplayOperations<
-				WmiEmulationImage,
-				WmiEmulationEntry,
-				WmiContext,
-				List<List<String>>
-			>() {
+			new AbstractEmulationExecutor.ReplayOperations<WmiEmulationImage, WmiEmulationEntry, WmiContext, List<List<String>>>() {
 				@Override
 				public String protocolName() {
 					return "WMI";
@@ -171,17 +166,14 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 			return List.of();
 		}
 
-		return entries
-			.stream()
-			.filter(entry -> {
-				if (entry == null || entry.getRequest() == null) {
-					return false;
-				}
+		return entries.stream().filter(entry -> {
+			if (entry == null || entry.getRequest() == null) {
+				return false;
+			}
 
-				final String requestWql = entry.getRequest().getWql();
-				final String requestNamespace = entry.getRequest().getNamespace();
-				return query.equals(requestWql) && namespace.equals(requestNamespace);
-			})
-			.collect(Collectors.toCollection(ArrayList::new));
+			final String requestWql = entry.getRequest().getWql();
+			final String requestNamespace = entry.getRequest().getNamespace();
+			return query.equals(requestWql) && namespace.equals(requestNamespace);
+		}).collect(Collectors.toCollection(ArrayList::new));
 	}
 }

@@ -66,6 +66,7 @@ Three properties drive the whole design:
 | Server set the `ReportFullState` flag | Immediately, with the full state |
 | Terminal package status reached (`Installed` / `InstallFailed`) | Immediately, via `OpampClient.pollNow()` |
 | Transport failure or HTTP != 200 | Exponential backoff with jitter, capped at 10 min, floored by `Retry-After` |
+| HTTP 401, the first in a row | The client's `onUnauthorized` hook runs (the owner of the credential drops it), then the next attempt waits exactly `Retry-After`, or not at all without one, and the backoff does not grow. A second 401 in a row follows the backoff above |
 | Server answered `ServerErrorResponse(Unavailable)` | Same backoff, floored by `RetryInfo.retry_after_nanoseconds` |
 | Server answered `ServerErrorResponse(BadRequest / Unknown)` | Normal interval — the message is *not* retried |
 
@@ -273,9 +274,9 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | Method / content type | `POST`, `Content-Type: application/x-protobuf` |
 | Client | JDK `HttpClient` ([`OpampHttpTransport`](metricshub-opamp-client/src/main/java/org/metricshub/opamp/client/http/OpampHttpTransport.java)) |
 | Success | HTTP 200 only; anything else is a transport failure |
-| `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor |
+| `Retry-After` | Parsed (delta-seconds or HTTP-date) and used as a backoff floor; after a first 401, as the exact delay ([§1.2](#12-poll-cadence)) |
 | TLS | System trust store, or a PEM pinned via `central.certificateFile` |
-| Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore |
+| Auth | Arbitrary configured headers (typically `Authorization`), values decryptable from the MetricsHub keystore; or, through `OpampClientSettings.headersSupplier`, headers computed for each POST (a credential renewed while the client runs) |
 
 ### 3.4 Not implemented
 
@@ -605,7 +606,7 @@ Concurrency contracts:
 
 | File | Location | Written by | Purpose |
 |---|---|---|---|
-| `opamp-instance-uid` | Security directory, next to the MetricsHub keystore | `InstanceUidStore` | Stable `instance_uid` across restarts **and upgrades**. Canonical UUID string, atomic write |
+| `metricshub-agent-uid` | Security directory, next to the MetricsHub keystore | `InstanceUidStore` | Stable `instance_uid` across restarts **and upgrades**. Canonical UUID string, atomic write |
 | `upgrade-transaction.json` | Staging directory | `UpgradeTransactionStore` | The crash-safe journal: id, from/to version, URL, hashes, deployment kind, state, `installStartedAt`, `installTimeoutSeconds` |
 | `upgrade-transaction.json.<suffix>` | Staging directory | `UpgradeTransactionStore.archive()` | Archived finished transactions (and `.corrupt` for unparseable ones) |
 | `installed-package.json` | Staging directory | `UpgradeTransactionStore` | `{version, packageHash}` of the last OpAMP-installed package — the source of `agent_has_hash` |
@@ -802,7 +803,8 @@ flowchart TB
 | `agent.tunnel.TunnelService` | Supervisor outside the restartable `AgentContext`: 30 s tick, rebuilds the client when `central:` changes, retries a failed start on the next tick, pushes `hosts.updated` after a reload that changed the hosts |
 | `agent.tunnel.client.TunnelClient` | The WebSocket: handshake headers, registration, heartbeat and idle detection, reconnection with `RetrySchedule`, connection generations |
 | `agent.tunnel.client.TunnelSettings` | Resolved connection settings; refuses `ws://` outside loopback unless `central.insecure` is set |
-| `agent.tunnel.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`, `access`) and their callbacks, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON |
+| `agent.tunnel.ToolRegistrySnapshot` | The advertised tools (`name`, `description`, `inputSchema`, `access`): the agent's own and `ListHostTools`; and the callbacks of every tool Central may invoke, the protocol-extension and connector ones included, from the runtime `ToolCallbackProvider`, minus `excludedTools`; `sha256:` revision over the canonical JSON of the advertised tools |
+| `agent.tunnel.HostToolsLookup` | `ListHostTools`: the protocol-extension and connector tools of one host, those of the protocols configured on it and of the connectors detected on it, each with its `access` |
 | `agent.tunnel.HostInventory` | Hosts with an active `TelemetryManager`, identified by (resource group, resource key) |
 | `agent.tunnel.AgentDescriptorMapper` | Reuses `OpAmpAgentDescriptionMapper.resolveAttributes`, adds the edition |
 | `agent.tunnel.ToolBridge` | Executes `tool.invoke`: exact-name lookup, in-flight cap, deadline, payload cap; exactly one answer per request |
@@ -868,13 +870,13 @@ central:
 | `headers` | `{}` | Merged over `central.headers` key by key. Same rule: only when the deployment splits the channels |
 | `certificateFile` | `central.certificateFile` | Same rule |
 | `heartbeatInterval` | `30s` | Until the server imposes its own in `agent.registered`; values below 1 s fall back to the default |
-| `excludedTools` | `[]` | Never advertised, hence never invokable |
+| `excludedTools` | `[]` | Never advertised nor listed for a host, hence never invokable |
 
 The payload cap and the concurrency cap are **not** configurable on the agent: the server sets them in `agent.registered`. The invocation timeout is not configurable either, but it does not come from the registration — every `tool.invoke` carries its own `timeoutMs`, and the agent falls back to five minutes if a request omits it.
 
 ### 13.5 On-disk state
 
-None of its own. The uid comes from `security/opamp-instance-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
+None of its own. The uid comes from `security/metricshub-agent-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
 
 One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `central:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
 
@@ -883,8 +885,8 @@ One exception, deliberate: an OpAMP server may reassign an agent's identity with
 | Decision | Rationale |
 |---|---|
 | Outbound only, `wss://` required outside a loopback **literal** | Credentials travel in the handshake headers, so cleartext is granted to `localhost`, `127.0.0.0/8` and `::1` as written — never to a name that merely resolves to one. The resolution that would matter is the one the HTTP client does when it connects, and a record can change between the two. `central.insecure` lifts the rule for every host, and a tunnel configured in cleartext that way logs a warning |
-| Only advertised tools are invokable; `excludedTools` removes a tool from the advertisement itself | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
-| The local flag `metricshub.mcp.tool.destructive.enabled` gates only the agent's own MCP server and chat: every tool, the destructive ones included, is advertised to Central with its access class (`write` for a destructive one), and Central decides itself (enabled in the UI, authorized user, manual approval) before invoking one | A remotely invoked tool never has more rights than a locally invoked one |
+| Only the advertised tools and the protocol-extension and connector tools are invokable; `excludedTools` removes a tool from both | The registry is the security boundary; an operator withdraws a capability without touching the fleet |
+| The local flag `metricshub.mcp.tool.destructive.enabled` gates only the agent's own MCP server and chat: every tool, the destructive ones included, is offered to Central with its access class (`write` for a destructive one), and Central decides itself (its tool classes, the user's permissions, an approval for every `write` tool) before invoking one | A remotely invoked tool never has more rights than a locally invoked one |
 | Every outbound frame is bounded, and weighed in bytes | Measured at the socket, so it covers a registration and a `hosts.updated` as well as an answer: a fleet monitoring thousands of hosts can produce either above the cap, and sending it would close the tunnel (`1009`) rather than lose one frame. Above the cap, a result becomes `RESULT_TOO_LARGE`, a failure's detail is truncated rather than the failure going unreported, and anything still too large is dropped with an error in the log — the server's own deadline then ends that one invocation |
 | Only actively monitored hosts are advertised | Central never routes to a resource the agent could not validate |
 | `maxInFlight` bounds concurrent **invocations**; the work inside one is bounded by the tool, but it is cancelled with the invocation | A multi-host tool fans out internally, exactly as it does for the agent's own AI features — the tunnel exposes that concurrency, it does not introduce it. Bound it where it is configured (the tool's own pool size), not at the bridge, which cannot tell one tool's fan-out from another's. The deadline's interruption does reach that fan-out: `MultiHostToolExecutor` waits interruptibly and shuts its per-call pool down, so a timed-out invocation stops its per-host work instead of leaving it to run to completion unattended. Per-host work that ignores its interruption keeps its thread, as ever — and keeps the worker too, until its pool has terminated, so it stays under the same thread ceiling rather than accumulating a pool per cancelled invocation |

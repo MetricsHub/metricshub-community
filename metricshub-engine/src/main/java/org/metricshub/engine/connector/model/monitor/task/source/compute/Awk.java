@@ -38,6 +38,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -84,6 +85,23 @@ public class Awk extends Compute {
 	private Map<String, String> variables = new LinkedHashMap<>();
 
 	/**
+	 * How the script reads the source result: {@link ContentType#TEXT} (the raw text, or the table serialized as
+	 * <code>;</code>-separated lines) or {@link ContentType#TABLE} (each row is a record whose cells are
+	 * <code>$1..$NF</code>, nothing is serialized). Default text.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private ContentType input = ContentType.TEXT;
+
+	/**
+	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
+	 * {@link ContentType#TABLE} (each <code>print</code> is one row, the text of <code>printf</code> is split into rows
+	* on <code>ORS</code> and into cells on <code>OFS</code>).
+	 * Default text.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private ContentType output = ContentType.TEXT;
+
+	/**
 	 * Construct a new instance of Awk.
 	 *
 	 * @param type          The type of the computation task.
@@ -93,6 +111,8 @@ public class Awk extends Compute {
 	 * @param separators    The separators parameter for the AWK task.
 	 * @param selectColumns The selectColumns parameter for the AWK task.
 	 * @param variables     The variables to expose to the AWK script.
+	 * @param input         How the script reads the source result, null for text.
+	 * @param output        What the script produces, null for text.
 	 */
 	@Builder
 	@JsonCreator
@@ -103,7 +123,9 @@ public class Awk extends Compute {
 		@JsonProperty("keep") String keep,
 		@JsonProperty("separators") String separators,
 		@JsonProperty("selectColumns") String selectColumns,
-		@JsonProperty("variables") Map<String, String> variables
+		@JsonProperty("variables") Map<String, String> variables,
+		@JsonProperty("input") ContentType input,
+		@JsonProperty("output") ContentType output
 	) {
 		super(type);
 		this.script = script;
@@ -112,6 +134,18 @@ public class Awk extends Compute {
 		this.separators = separators;
 		this.selectColumns = selectColumns;
 		this.variables = variables == null ? new LinkedHashMap<>() : variables;
+		this.input = input == null ? ContentType.TEXT : input;
+		this.output = output == null ? ContentType.TEXT : output;
+	}
+
+	@Override
+	public ContentType getInputContentType() {
+		return input == null ? ContentType.TEXT : input;
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return output == null ? ContentType.TEXT : output;
 	}
 
 	@Override
@@ -126,6 +160,8 @@ public class Awk extends Compute {
 		addNonNull(stringJoiner, "- separators=", separators);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
+		addNonNull(stringJoiner, "- input=", input == ContentType.TABLE ? input : null);
+		addNonNull(stringJoiner, "- output=", output == ContentType.TABLE ? output : null);
 
 		return stringJoiner.toString();
 	}
@@ -140,6 +176,8 @@ public class Awk extends Compute {
 			.separators(separators)
 			.selectColumns(selectColumns)
 			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
+			.input(input)
+			.output(output)
 			.build();
 	}
 

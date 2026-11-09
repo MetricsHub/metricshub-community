@@ -106,8 +106,7 @@ public class JdbcExtension implements IProtocolExtension {
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		// Retrieve SQL Configuration from the telemetry manager host configuration
-		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) telemetryManager
-			.getHostConfiguration()
+		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(JdbcConfiguration.class);
 
@@ -230,8 +229,7 @@ public class JdbcExtension implements IProtocolExtension {
 		if (telemetryManager == null || telemetryManager.getHostConfiguration() == null) {
 			return null;
 		}
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
-			.getHostConfiguration()
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager.getHostConfiguration()
 			.getConfigurations();
 		if (configurations == null) {
 			return null;
@@ -254,8 +252,7 @@ public class JdbcExtension implements IProtocolExtension {
 		if (telemetryManager.getHostConfiguration() == null) {
 			return null;
 		}
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
-			.getHostConfiguration()
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager.getHostConfiguration()
 			.getConfigurations();
 		if (configurations == null) {
 			return null;
@@ -400,7 +397,7 @@ public class JdbcExtension implements IProtocolExtension {
 	 *
 	 * <p>When {@code selection} is non-null the supplied driver is used. Otherwise the URL prefix is
 	 * matched against the built-in driver inference table; this keeps zero-config liveness checks
-	 * working for built-in drivers (MariaDB, PostgreSQL, MySQL, H2).
+	 * working for built-in drivers (MariaDB, PostgreSQL, MySQL, ClickHouse, H2).
 	 *
 	 * @param jdbcUrl   The JDBC URL of the database
 	 * @param username  The database username

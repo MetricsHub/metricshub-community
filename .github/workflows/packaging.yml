@@ -6,6 +6,7 @@
 # Requirements:
 # - Maven build that upload assets
 # - JDK 25
+# - GitHub-hosted arm64 runners (ubuntu-24.04-arm)
 # - WiX Toolset 3 (3.14) for Windows
 
 name: Package Creation
@@ -24,11 +25,6 @@ on:
         description: "Name of the asset artifact to get for packages"
         required: true
         default: package-artifacts
-      platforms:
-        type: string
-        description: "Docker platforms to build for (e.g., linux/amd64,linux/arm64)"
-        required: false
-        default: 'linux/amd64,linux/arm64'
       deploy:
         type: boolean
         description: "Whether to deploy the Docker image and packages to the repositories"
@@ -56,16 +52,16 @@ on:
     outputs:
       linuxPackage:
         description: "Path to the Linux packages created"
-        value: ${{ jobs.package-linux.outputs.linuxPackage }}
+        value: ${{ jobs.package-linux-merge.outputs.linuxPackage }}
       windowsPackage:
         description: "Path to the Windows packages created"
         value: ${{ jobs.package-windows.outputs.windowsPackage }}
       dockerImageName:
         description: "Name of the Docker image created"
-        value: ${{ jobs.package-linux.outputs.dockerImageName }}
+        value: ${{ jobs.package-linux-merge.outputs.dockerImageName }}
       dockerRegistry:
         description: "Docker registry used"
-        value: ${{ jobs.package-linux.outputs.dockerRegistry }}
+        value: ${{ jobs.package-linux-merge.outputs.dockerRegistry }}
 
 permissions:
   contents: read
@@ -73,14 +69,19 @@ permissions:
 
 jobs:
 
+  # Each architecture builds on its own native runner (no QEMU emulation)
   package-linux:
-    name: Package for Linux and Docker
-    runs-on: ubuntu-latest
+    name: Package for Linux and Docker (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+        - arch: amd64
+          runner: ubuntu-latest
+        - arch: arm64
+          runner: ubuntu-24.04-arm
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v7
-
     - name: Download Assets
       uses: actions/download-artifact@v8
       with:
@@ -102,12 +103,6 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    -
-      # Add support for more platforms with QEMU (optional)
-      # https://github.com/docker/setup-qemu-action
-      name: Set up QEMU
-      uses: docker/setup-qemu-action@v4
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
 
@@ -117,28 +112,26 @@ jobs:
         repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
         projectVersion=$(echo '${{ inputs.version }}' | tr '[:upper:]' '[:lower:]')
         currentBranch=$(echo '${{ github.ref_name }}-${{ github.run_number }}' | tr '[:upper:]' '[:lower:]' | tr -c 'a-zA-Z0-9._-' '-' | sed 's/-*$//')
-        dockerVersion=${projectVersion}-${currentBranch}
-        echo "repository=${repository}" >> $GITHUB_OUTPUT
-        echo "branchName=${currentBranch}" >> $GITHUB_OUTPUT
-        echo "dockerVersion=${dockerVersion}" >> $GITHUB_OUTPUT
+        arch=${{ matrix.arch }}
 
-        # Packaging in Docker Image Name
-        buildImage=ghcr.io/${repository}:packages-${currentBranch}
+        # Packaging in Docker Image Name (one per architecture)
+        buildImage=ghcr.io/${repository}:packages-${currentBranch}-${arch}
         echo "buildImage=${buildImage}" >> $GITHUB_OUTPUT
 
-        # MetricsHub Docker Image Name
+        # MetricsHub Docker Image Name (multi-architecture manifest created by package-linux-merge)
         if [ "${{ inputs.deployDockerHub }}" = "true" ] ; then
           imageName=metricshub/metricshub-community:${projectVersion}
         else
           imageName=ghcr.io/${repository}:${currentBranch}
         fi
         echo "imageName=${imageName}" >> $GITHUB_OUTPUT
+        echo "imageRepository=${imageName%:*}" >> $GITHUB_OUTPUT
 
-        # Extract build image names from Dockerfile
+        # Extract build image names from Dockerfile (one per architecture)
         debianBaseImage=$(grep 'ARG DEBIAN_JPACKAGE_IMAGE=' packaging-assets/Dockerfile.build | cut -d'=' -f2)
-        debianBaseImage=$( echo ${debianBaseImage} | sed "s|metricshub/metricshub-community|$repository|" )
+        debianBaseImage=$( echo ${debianBaseImage} | sed "s|metricshub/metricshub-community|$repository|" )-${arch}
         rhelBaseImage=$(grep 'ARG RHEL_JPACKAGE_IMAGE=' packaging-assets/Dockerfile.build | cut -d'=' -f2)
-        rhelBaseImage=$( echo ${rhelBaseImage} | sed "s|metricshub/metricshub-community|$repository|" )
+        rhelBaseImage=$( echo ${rhelBaseImage} | sed "s|metricshub/metricshub-community|$repository|" )-${arch}
         echo "debianBaseImage=${debianBaseImage}" >> $GITHUB_OUTPUT
         echo "rhelBaseImage=${rhelBaseImage}" >> $GITHUB_OUTPUT
 
@@ -152,26 +145,26 @@ jobs:
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.debian
-        platforms: ${{ inputs.platforms }}
+        platforms: linux/${{ matrix.arch }}
         push: true
         tags: ${{ steps.version.outputs.debianBaseImage }}
         # Cache scope enables to share cache between branches
-        cache-from: type=gha,scope=debian-packaging
-        cache-to: type=gha,mode=max,scope=debian-packaging
+        cache-from: type=gha,scope=debian-packaging-${{ matrix.arch }}
+        cache-to: type=gha,mode=max,scope=debian-packaging-${{ matrix.arch }}
       env:
         SOURCE_DATE_EPOCH: 0
-  
+
     - name: Prepare RHEL Packaging with Docker
       uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.rhel
-        platforms: ${{ inputs.platforms }}
+        platforms: linux/${{ matrix.arch }}
         push: true
         tags: ${{ steps.version.outputs.rhelBaseImage }}
         # Cache scope enables to share cache between branches
-        cache-from: type=gha,scope=rhel-packaging
-        cache-to: type=gha,mode=max,scope=rhel-packaging
+        cache-from: type=gha,scope=rhel-packaging-${{ matrix.arch }}
+        cache-to: type=gha,mode=max,scope=rhel-packaging-${{ matrix.arch }}
       env:
         SOURCE_DATE_EPOCH: 0
 
@@ -180,7 +173,7 @@ jobs:
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.build
-        platforms: ${{ inputs.platforms }}
+        platforms: linux/${{ matrix.arch }}
         push: true
         build-args: |
           DEBIAN_JPACKAGE_IMAGE=${{ steps.version.outputs.debianBaseImage }}
@@ -190,24 +183,13 @@ jobs:
       env:
         SOURCE_DATE_EPOCH: 0
 
-    - name: Extract ARM64 Packages from Docker Image
+    - name: Extract Packages from Docker Image
       run: |
-        containerId=$(docker create --platform linux/arm64 ${{ steps.version.outputs.buildImage }})
+        containerId=$(docker create --platform linux/${{ matrix.arch }} ${{ steps.version.outputs.buildImage }})
         mkdir -p packages
         docker cp ${containerId}:/tmp/packages/. ./packages/
         docker rm ${containerId}
         ls -l packages
-      if: contains(inputs.platforms, 'linux/arm64')
-
-    # Extract default x86 architecture last, to avoid erase by other archs
-    - name: Extract AMD64 Packages from Docker Image
-      run: |
-        containerId=$(docker create --platform linux/amd64 ${{ steps.version.outputs.buildImage }})
-        mkdir -p packages
-        docker cp ${containerId}:/tmp/packages/. ./packages/
-        docker rm ${containerId}
-        ls -l packages
-      if: contains(inputs.platforms, 'linux/amd64')
 
     - name: Rename Packages to Include "community"
       run: |
@@ -242,7 +224,7 @@ jobs:
       if: ${{ inputs.deploy }}
       run: |
         echo "Uploading RPM package to YUM repository ${REPO_NAME}..."
-        find maven-${{ github.ref_name }} -type f -name '*.rpm' | while read file; do
+        find packages -type f -name '*.rpm' | while read file; do
           echo "---"
           echo "Adding $file to YUM repository..."
           curl -v -X "POST" \
@@ -261,29 +243,93 @@ jobs:
     - name: Upload Linux Packages
       uses: actions/upload-artifact@v7
       with:
-        name: linux-packages
+        name: linux-packages-${{ matrix.arch }}
         path: packages/*
 
+    # Pushed by digest only: package-linux-merge tags the multi-architecture manifest
     - name: Create Docker image
+      id: docker
       uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile
-        platforms: ${{ inputs.platforms }}
-        push: true
+        platforms: linux/${{ matrix.arch }}
         build-args: |
           BUILD_IMAGE=${{ steps.version.outputs.buildImage }}
-        tags: |
-          ${{ steps.version.outputs.imageName }}
+        outputs: type=image,name=${{ steps.version.outputs.imageRepository }},push-by-digest=true,name-canonical=true,push=true
 
-    - name: Clean up cache
+    - name: Export Docker image digest
       run: |
-        rm -rf /tmp/.buildx-cache
+        mkdir -p digests
+        touch "digests/${DIGEST#sha256:}"
+      env:
+        DIGEST: ${{ steps.docker.outputs.digest }}
+
+    - name: Upload Docker image digest
+      uses: actions/upload-artifact@v7
+      with:
+        name: docker-digest-${{ matrix.arch }}
+        path: digests/*
+        retention-days: 1
+
+    outputs:
+      dockerImageName: ${{ steps.version.outputs.imageName }}
+      dockerImageRepository: ${{ steps.version.outputs.imageRepository }}
+
+  package-linux-merge:
+    name: Merge Linux Packages and Docker Image
+    needs: package-linux
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Linux Packages
+      uses: actions/download-artifact@v8
+      with:
+        pattern: linux-packages-*
+        merge-multiple: true
+        path: packages
+
+    - name: Upload Linux Packages
+      uses: actions/upload-artifact@v7
+      with:
+        name: linux-packages
+        path: packages/*
+
+    - name: Download Docker image digests
+      uses: actions/download-artifact@v8
+      with:
+        pattern: docker-digest-*
+        merge-multiple: true
+        path: digests
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to Docker Hub
+      if: ${{ inputs.deployDockerHub }}
+      uses: docker/login-action@v4
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Create multi-architecture Docker image
+      working-directory: digests
+      run: |
+        docker buildx imagetools create -t "${IMAGE_NAME}" $(printf "${IMAGE_REPOSITORY}@sha256:%s " *)
+        docker buildx imagetools inspect "${IMAGE_NAME}"
+      env:
+        IMAGE_NAME: ${{ needs.package-linux.outputs.dockerImageName }}
+        IMAGE_REPOSITORY: ${{ needs.package-linux.outputs.dockerImageRepository }}
 
     outputs:
       linuxPackage: linux-packages
       dockerRegistry: ${{ inputs.dockerRegistry }}
-      dockerImageName: ${{ steps.version.outputs.imageName }}
+      dockerImageName: ${{ needs.package-linux.outputs.dockerImageName }}
 
   package-windows:
     name: Package for Windows

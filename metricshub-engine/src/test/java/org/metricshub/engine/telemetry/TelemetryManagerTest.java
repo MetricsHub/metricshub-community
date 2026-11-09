@@ -110,8 +110,7 @@ class TelemetryManagerTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
@@ -120,9 +119,9 @@ class TelemetryManagerTest {
 			.build();
 
 		// Mock detection criteria result
-		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
-			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
+		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test")).when(
+			protocolExtensionMock
+		).processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
@@ -135,9 +134,7 @@ class TelemetryManagerTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
 		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
@@ -156,9 +153,7 @@ class TelemetryManagerTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
 		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
@@ -173,13 +168,11 @@ class TelemetryManagerTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Call DiscoveryStrategy to discover the monitors
-		assertDoesNotThrow(() ->
-			telemetryManager.run(
+		assertDoesNotThrow(
+			() -> telemetryManager.run(
 				new DiscoveryStrategy(telemetryManager, System.currentTimeMillis(), clientsExecutorMock, extensionManager)
 			)
 		);

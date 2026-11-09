@@ -138,19 +138,16 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 
 		boolean listingCompleted = false;
 		try (Stream<Path> stream = Files.list(configDirectory)) {
-			stream
-				.filter((Path path) -> !Files.isDirectory(path))
-				.filter((Path path) -> {
-					String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-					return getFileExtensions().stream().anyMatch(fileName::endsWith);
-				})
-				.forEach((Path path) -> {
-					seenPaths.add(path.toAbsolutePath());
-					readVmFragment(path).ifPresent((JsonNode jsonNode) -> {
-						configurations.add(jsonNode);
-						log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
-					});
+			stream.filter((Path path) -> !Files.isDirectory(path)).filter((Path path) -> {
+				String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+				return getFileExtensions().stream().anyMatch(fileName::endsWith);
+			}).forEach((Path path) -> {
+				seenPaths.add(path.toAbsolutePath());
+				readVmFragment(path).ifPresent((JsonNode jsonNode) -> {
+					configurations.add(jsonNode);
+					log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
 				});
+			});
 			listingCompleted = true;
 		} catch (IOException | UncheckedIOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
@@ -223,8 +220,8 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	@Override
 	public Collection<ScheduledReEvaluation> getScheduledReEvaluations() {
 		final List<ScheduledReEvaluation> result = new ArrayList<>();
-		loaders.forEach((path, loader) ->
-			loader.getCron().ifPresent(cron -> result.add(new ScheduledReEvaluation(path.toString(), cron)))
+		loaders.forEach(
+			(path, loader) -> loader.getCron().ifPresent(cron -> result.add(new ScheduledReEvaluation(path.toString(), cron)))
 		);
 		return result;
 	}

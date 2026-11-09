@@ -46,29 +46,27 @@ class ContextExecutorStrategyTest implements IStrategy {
 	 */
 	@Test
 	void testContextExecutorWithExpiringStrategyTimeout() {
-		contextExecutor = new ContextExecutor(
-			new IStrategy() {
-				@Override
-				public void run() {
-					while (true) {
-						if (Thread.currentThread().isInterrupted()) {
-							return;
-						}
+		contextExecutor = new ContextExecutor(new IStrategy() {
+			@Override
+			public void run() {
+				while (true) {
+					if (Thread.currentThread().isInterrupted()) {
+						return;
 					}
 				}
-
-				@Override
-				public long getStrategyTimeout() {
-					// One second
-					return 1;
-				}
-
-				@Override
-				public Long getStrategyTime() {
-					return System.currentTimeMillis();
-				}
 			}
-		);
+
+			@Override
+			public long getStrategyTimeout() {
+				// One second
+				return 1;
+			}
+
+			@Override
+			public Long getStrategyTime() {
+				return System.currentTimeMillis();
+			}
+		});
 
 		// The context executor throws the TimeoutException
 		assertThrows(TimeoutException.class, () -> contextExecutor.execute());

@@ -85,8 +85,7 @@ class DellOpenManageIT {
 	 * @param port             the port of the configuration to be updated
 	 */
 	static void updateSnmpPort(TelemetryManager telemetryManager, Integer port) {
-		final SnmpConfiguration snmpConfiguration = (SnmpConfiguration) telemetryManager
-			.getHostConfiguration()
+		final SnmpConfiguration snmpConfiguration = (SnmpConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(SnmpConfiguration.class);
 
@@ -97,8 +96,9 @@ class DellOpenManageIT {
 	void test() throws Exception {
 		long discoveryTime = System.currentTimeMillis();
 		long collectTime = discoveryTime + 60 * 2 * 1000;
-		new SnmpITJob(telemetryManager, DellOpenManageIT::updateSnmpPort)
-			.withServerRecordData("snmp/DellOpenManageIT/input/input.snmp")
+		new SnmpITJob(telemetryManager, DellOpenManageIT::updateSnmpPort).withServerRecordData(
+			"snmp/DellOpenManageIT/input/input.snmp"
+		)
 			.executeStrategies(
 				new DetectionStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
 				new DiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),

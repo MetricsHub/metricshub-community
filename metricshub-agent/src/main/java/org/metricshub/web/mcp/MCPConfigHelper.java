@@ -83,8 +83,7 @@ public class MCPConfigHelper {
 		// Retrieve all telemetry managers grouped by agent from the context
 		final Map<String, Map<String, TelemetryManager>> telemetryManagersByAgent = agentContext.getTelemetryManagers();
 
-		return telemetryManagersByAgent
-			.values()
+		return telemetryManagersByAgent.values()
 			.stream()
 			// Flatten inner maps of TelemetryManagers into a single stream
 			.flatMap((Map<String, TelemetryManager> innerMap) -> innerMap.values().stream())
@@ -142,8 +141,7 @@ public class MCPConfigHelper {
 		final String hostname,
 		final AgentContext agentContext
 	) {
-		return agentContext
-			.getTelemetryManagers()
+		return agentContext.getTelemetryManagers()
 			.values()
 			.stream()
 			.flatMap((Map<String, TelemetryManager> innerMap) -> innerMap.values().stream())
@@ -218,8 +216,7 @@ public class MCPConfigHelper {
 	public static <T> MultiHostToolResponse<T> flattenHostsResult(
 		final MultiHostToolResponse<List<T>> hostsExecutionResults
 	) {
-		List<HostToolResponse<T>> flatHosts = hostsExecutionResults
-			.getHosts()
+		List<HostToolResponse<T>> flatHosts = hostsExecutionResults.getHosts()
 			.stream()
 			.filter(Objects::nonNull)
 			.flatMap(response -> {

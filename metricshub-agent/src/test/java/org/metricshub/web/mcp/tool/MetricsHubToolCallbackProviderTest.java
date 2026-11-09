@@ -22,10 +22,7 @@ class MetricsHubToolCallbackProviderTest {
 	}
 
 	private static List<String> names(final ToolCallback[] callbacks) {
-		return List.of(callbacks)
-			.stream()
-			.map(callback -> callback.getToolDefinition().name())
-			.toList();
+		return List.of(callbacks).stream().map(callback -> callback.getToolDefinition().name()).toList();
 	}
 
 	@Test
@@ -69,12 +66,9 @@ class MetricsHubToolCallbackProviderTest {
 		final MetricsHubToolCallbackProvider provider = new MetricsHubToolCallbackProvider(
 			new ToolCallback[] { callback("ListHosts") },
 			holder,
-			List.of(
-				ignored -> {
-					throw new IllegalStateException("broken connector");
-				},
-				ignored -> List.of(callback("Windows_listProcesses"))
-			)
+			List.of(ignored -> {
+				throw new IllegalStateException("broken connector");
+			}, ignored -> List.of(callback("Windows_listProcesses")))
 		);
 
 		assertEquals(List.of("ListHosts", "Windows_listProcesses"), names(provider.getToolCallbacks()));

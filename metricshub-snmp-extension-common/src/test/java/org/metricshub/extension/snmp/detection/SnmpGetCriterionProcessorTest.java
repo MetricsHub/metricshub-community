@@ -65,9 +65,8 @@ public class SnmpGetCriterionProcessorTest {
 		String expectedResult = "TestValue";
 		String expectedHostname = "hostname";
 
-		when(
-			snmpRequestExecutor.executeSNMPGet(expectedOid, snmpConfiguration, expectedHostname, false, "hostname")
-		).thenReturn(expectedResult);
+		when(snmpRequestExecutor.executeSNMPGet(expectedOid, snmpConfiguration, expectedHostname, false, "hostname"))
+			.thenReturn(expectedResult);
 
 		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder()
 			.oid(expectedOid)

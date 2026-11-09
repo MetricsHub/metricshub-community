@@ -160,18 +160,14 @@ public class TelemetryManager {
 
 		final List<String> monitorTypes = new ArrayList<>(monitors.keySet());
 
-		monitorTypes
-			.stream()
-			.sorted()
-			.filter(monitorType -> {
-				final Map<String, Monitor> monitorsMap = monitors.get(monitorType);
-				return monitorsMap != null && monitorsMap.values() != null;
-			})
-			.forEach(monitorType -> {
-				final List<Monitor> monitorList = new ArrayList<>(monitors.get(monitorType).values());
-				Collections.sort(monitorList, Comparator.comparing(Monitor::getId));
-				monitorsVo.addAll(monitorList);
-			});
+		monitorTypes.stream().sorted().filter(monitorType -> {
+			final Map<String, Monitor> monitorsMap = monitors.get(monitorType);
+			return monitorsMap != null && monitorsMap.values() != null;
+		}).forEach(monitorType -> {
+			final List<Monitor> monitorList = new ArrayList<>(monitors.get(monitorType).values());
+			Collections.sort(monitorList, Comparator.comparing(Monitor::getId));
+			monitorsVo.addAll(monitorList);
+		});
 		return monitorsVo;
 	}
 
@@ -242,8 +238,7 @@ public class TelemetryManager {
 		@NonNull final String connectorId,
 		final long discoveryTime
 	) {
-		final Predicate<Monitor> stale = monitor ->
-			!monitor.isEndpoint() &&
+		final Predicate<Monitor> stale = monitor -> !monitor.isEndpoint() &&
 			connectorId.equals(monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID)) &&
 			monitor.getDiscoveryTime() != null &&
 			monitor.getDiscoveryTime() < discoveryTime;
@@ -301,8 +296,7 @@ public class TelemetryManager {
 		if (hwParentType != null && hwParentId != null) {
 			Optional<Map<String, Monitor>> sameTypeMonitors = Optional.ofNullable(findMonitorsByType(hwParentType));
 			if (sameTypeMonitors.isPresent()) {
-				final Optional<Monitor> parentMonitor = sameTypeMonitors
-					.get()
+				final Optional<Monitor> parentMonitor = sameTypeMonitors.get()
 					.entrySet()
 					.stream()
 					.filter(entry -> hwParentId.equals(entry.getValue().getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_ID)))
@@ -323,8 +317,7 @@ public class TelemetryManager {
 	 * @return {@link Monitor}
 	 */
 	public Monitor findMonitorById(final String monitorId) {
-		return getMonitors()
-			.values()
+		return getMonitors().values()
 			.stream()
 			.map(monitorsMap -> monitorsMap.get(monitorId))
 			.filter(Objects::nonNull)
@@ -360,8 +353,7 @@ public class TelemetryManager {
 	 * @return the first non-null hostname from the provided configurations, or the telemetry manager's hostname if none are found.
 	 */
 	public String getHostname(List<Class<? extends IConfiguration>> configurations) {
-		return configurations
-			.stream()
+		return configurations.stream()
 			.map(config -> hostConfiguration.getConfigurations().get(config)) // Get the configuration from the user's configuration map
 			.filter(Objects::nonNull) // Filter out null configurations
 			.map(IConfiguration::getHostname) // Map to hostname

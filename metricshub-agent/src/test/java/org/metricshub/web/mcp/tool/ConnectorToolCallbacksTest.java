@@ -61,8 +61,11 @@ class ConnectorToolCallbacksTest {
 		// The flag applies where the tools are exposed, not where they are built: Central gets them all
 		final List<ToolCallback> callbacks = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext());
 
-		assertEquals(List.of("TestConnectorWithTool_listThings", "TestConnectorWithTool_reboot"), names(callbacks));
-		assertTrue(((DynamicToolCallback) callbacks.get(1)).isDestructive());
+		assertEquals(
+			List.of("TestConnectorWithTool_listThings", "TestConnectorWithTool_readNotes", "TestConnectorWithTool_reboot"),
+			names(callbacks)
+		);
+		assertTrue(((DynamicToolCallback) callbacks.get(2)).isDestructive());
 	}
 
 	@Test
@@ -80,6 +83,23 @@ class ConnectorToolCallbacksTest {
 
 		// The collected telemetry manager was left alone
 		assertEquals(0, telemetryManager.getMonitors().size());
+	}
+
+	/**
+	 * A tool without columns whose result source ends in text returns that text as it is: no table, no split on ";".
+	 */
+	@Test
+	void testTextToolReturnsItsText() throws Exception {
+		final ToolCallback callback = ConnectorToolCallbacks.from(agentContextHolder.getAgentContext()).get(1);
+		final JsonNode response = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"]}"))
+			.get("hosts")
+			.get(0)
+			.get("response");
+		// The text as the source holds it: one line per printed line, the ";" inside a line kept (no split into cells)
+		final String text = response.get("text").asText();
+		assertTrue(text.startsWith("first note"), text);
+		assertTrue(text.contains("second, then a semicolon; here"), text);
+		assertTrue(response.get("rows") == null, response.toString());
 	}
 
 	@Test
@@ -101,8 +121,10 @@ class ConnectorToolCallbacksTest {
 			List.of(
 				"myThing_showThing",
 				"myThing_listThings",
+				"myThing_readNotes",
 				"myThing_reboot",
 				"TestConnectorWithTool_listThings",
+				"TestConnectorWithTool_readNotes",
 				"TestConnectorWithTool_reboot",
 				"TestTemplateWithTool_showThing"
 			),
@@ -117,7 +139,7 @@ class ConnectorToolCallbacksTest {
 		);
 
 		// The template itself, with its default variables
-		final JsonNode defaultResult = MAPPER.readTree(callbacks.get(5).call("{\"hostname\":[\"host-01\"]}"));
+		final JsonNode defaultResult = MAPPER.readTree(callbacks.get(7).call("{\"hostname\":[\"host-01\"]}"));
 		assertEquals(
 			List.of(List.of("alpha")),
 			MAPPER.convertValue(response(defaultResult, HOSTNAME).get("rows"), List.class)
@@ -194,10 +216,7 @@ class ConnectorToolCallbacksTest {
 	}
 
 	private static List<String> names(final List<ToolCallback> callbacks) {
-		return callbacks
-			.stream()
-			.map(callback -> callback.getToolDefinition().name())
-			.toList();
+		return callbacks.stream().map(callback -> callback.getToolDefinition().name()).toList();
 	}
 
 	private static JsonNode response(final JsonNode result, final String hostname) {

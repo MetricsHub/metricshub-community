@@ -35,6 +35,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
@@ -154,6 +155,11 @@ public class HttpSource extends Source {
 		header = updater.apply(header);
 		body = updater.apply(body);
 		authenticationToken = updater.apply(authenticationToken);
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return ContentType.TEXT;
 	}
 
 	@Override

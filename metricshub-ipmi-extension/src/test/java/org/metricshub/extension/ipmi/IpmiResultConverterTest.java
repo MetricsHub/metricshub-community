@@ -49,8 +49,7 @@ public class IpmiResultConverterTest {
 		0x6F,
 		0x01,
 		(byte) 0xFF,
-		(byte) 0xFF
-	};
+		(byte) 0xFF };
 
 	/**
 	 * SEL record 6: an OEM timestamped record (C0h) of manufacturer 000157h with 6 bytes of data
@@ -71,8 +70,7 @@ public class IpmiResultConverterTest {
 		(byte) 0xCC,
 		(byte) 0xDD,
 		(byte) 0xEE,
-		(byte) 0xFF
-	};
+		(byte) 0xFF };
 
 	/**
 	 * @param id the record ID
@@ -631,8 +629,7 @@ public class IpmiResultConverterTest {
 		0,
 		-63,
 		0,
-		26
-	};
+		26 };
 
 	public static final byte[] FRONT_PANEL_FULL_RECORD = {
 		1,
@@ -694,8 +691,7 @@ public class IpmiResultConverterTest {
 		84,
 		101,
 		109,
-		112
-	};
+		112 };
 
 	@Test
 	void testConvertResultListOfFruListOfSensor() {
@@ -704,8 +700,7 @@ public class IpmiResultConverterTest {
 		List<Fru> frus = buildSystemBoardFrus();
 
 		String result = IpmiResultConverter.convertResult(null, frus, sensors);
-		String expected =
-			"FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
+		String expected = "FRU;IBM;System x3650 M2;KD9098C - 794722G\n" +
 			"System Board;1;System Board 1;IBM;System x3650 M2;KD9098C - 794722G;Base board=Device Present|Video USB=Connected;;;;\n" +
 			"Battery;1;Battery 1;;;;Battery 1=Transition to OK;;;;\n" +
 			"Front Panel Board;1;Front Panel Board 1;;;;Front Panel=Device Present;;;;\n" +

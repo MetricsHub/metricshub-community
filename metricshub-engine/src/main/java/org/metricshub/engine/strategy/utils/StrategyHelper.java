@@ -62,14 +62,12 @@ public class StrategyHelper {
 		// Build a set of connector identifiers and retrieve the corresponding connectors from the connector store
 
 		// Retrieve the connector identifiers
-		final Set<String> connectorIds = connectorMonitors
-			.stream()
+		final Set<String> connectorIds = connectorMonitors.stream()
 			.map(monitor -> monitor.getAttributes().get(MONITOR_ATTRIBUTE_ID))
 			.collect(Collectors.toSet());
 
 		// Keep only connectors that match the connector identifiers
-		return connectorStore
-			.getStore()
+		return connectorStore.getStore()
 			.entrySet()
 			.stream()
 			.filter(entry -> connectorIds.contains(entry.getKey()))

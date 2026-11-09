@@ -69,8 +69,7 @@ public class MetricsHubAgentServer {
 
 			// Build the Spring application context, registering the caller-provided holder as
 			// a singleton bean so all @Autowired services share it and see reloads immediately.
-			context = new SpringApplicationBuilder()
-				.sources(MetricsHubAgentServer.class)
+			context = new SpringApplicationBuilder().sources(MetricsHubAgentServer.class)
 				.initializers((ConfigurableApplicationContext applicationContext) -> {
 					final var beanFactory = applicationContext.getBeanFactory();
 					beanFactory.registerSingleton("agentContextHolder", agentContextHolder);
@@ -139,8 +138,7 @@ public class MetricsHubAgentServer {
 
 		// Only add the default filter argument if it is not already present,
 		// to avoid duplicate or conflicting command-line options.
-		final boolean hasSwaggerFilterArg = arguments
-			.stream()
+		final boolean hasSwaggerFilterArg = arguments.stream()
 			.anyMatch(arg -> arg != null && arg.startsWith(swaggerFilterPrefix));
 
 		if (!hasSwaggerFilterArg) {

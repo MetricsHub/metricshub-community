@@ -173,8 +173,7 @@ public class TelemetryResultTruncator {
 		}
 
 		// 7. Build summary string and return TruncationResult
-		final List<MonitorEntry> truncatedEntries = entries
-			.stream()
+		final List<MonitorEntry> truncatedEntries = entries.stream()
 			.filter(e -> e.currentCount < e.originalCount)
 			.map(TruncationEntry::toMonitorEntry)
 			.toList();
@@ -226,8 +225,7 @@ public class TelemetryResultTruncator {
 	) {
 		for (final HostToolResponse<TelemetryResult> host : workingCopy.getHosts()) {
 			if (hostname.equals(host.getHostname())) {
-				host
-					.getResponse()
+				host.getResponse()
 					.getTelemetry()
 					.getMonitors()
 					.computeIfPresent(monitorType, (_, items) -> truncateTypeList(items, maxMonitors));
@@ -313,8 +311,7 @@ public class TelemetryResultTruncator {
 				sb.append("\n  - ").append(entry.getKey()).append(": ");
 				sb.append(entry.getValue()).append(" monitor(s)");
 
-				final Optional<MonitorEntry> truncated = truncatedEntries
-					.stream()
+				final Optional<MonitorEntry> truncated = truncatedEntries.stream()
 					.filter(te -> te.hostname().equals(hostStats.hostname()) && te.monitorType().equals(entry.getKey()))
 					.findFirst();
 				if (truncated.isPresent()) {

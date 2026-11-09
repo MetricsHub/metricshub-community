@@ -66,17 +66,13 @@ class ConfigurationFilesServiceValidateTest {
 		assertFalse(validation.isValid(), "Validation should fail for invalid numeric value");
 		assertEquals("test.yaml", validation.getFileName());
 		assertTrue(
-			validation
-				.getErrors()
+			validation.getErrors()
 				.stream()
 				.anyMatch(error -> error.getMessage() != null && error.getMessage().contains("Weird string value for type")),
 			"Tracking handler should record the weird string value"
 		);
 		assertTrue(
-			validation
-				.getErrors()
-				.stream()
-				.allMatch(error -> error.getLine() != null && error.getLine() >= 1),
+			validation.getErrors().stream().allMatch(error -> error.getLine() != null && error.getLine() >= 1),
 			"All errors should provide a line number"
 		);
 	}
@@ -96,10 +92,7 @@ class ConfigurationFilesServiceValidateTest {
 		assertFalse(validation.isValid(), "Validation should fail for malformed YAML");
 		assertEquals("broken.yaml", validation.getFileName());
 		assertTrue(
-			validation
-				.getErrors()
-				.stream()
-				.anyMatch(error -> error.getMessage() != null && !error.getMessage().isBlank()),
+			validation.getErrors().stream().anyMatch(error -> error.getMessage() != null && !error.getMessage().isBlank()),
 			"JsonProcessingException should enrich the failure with at least one message"
 		);
 	}
@@ -118,8 +111,7 @@ class ConfigurationFilesServiceValidateTest {
 		assertFalse(validation.isValid(), "Validation should fail when a runtime exception is raised");
 		assertEquals("boom.yaml", validation.getFileName());
 		assertTrue(
-			validation
-				.getErrors()
+			validation.getErrors()
 				.stream()
 				.anyMatch(error -> error.getMessage() != null && error.getMessage().contains("boom")),
 			"Failure should contain the propagated exception message"

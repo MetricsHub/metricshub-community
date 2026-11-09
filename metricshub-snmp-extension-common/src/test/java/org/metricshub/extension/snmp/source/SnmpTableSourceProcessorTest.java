@@ -85,8 +85,7 @@ public class SnmpTableSourceProcessorTest {
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
 
-		doThrow(new InterruptedException("Test exception"))
-			.when(snmpRequestExecutor)
+		doThrow(new InterruptedException("Test exception")).when(snmpRequestExecutor)
 			.executeSNMPTable(
 				"test_oid",
 				new String[] { "column1", "column2" },

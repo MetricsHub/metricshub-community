@@ -1,6 +1,7 @@
 package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.constants.Constants.AUTOMATIC;
 import static org.metricshub.engine.constants.Constants.ECS1_01;
@@ -37,6 +38,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.SqlColumn;
 import org.metricshub.engine.connector.model.common.SqlTable;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
@@ -181,8 +183,7 @@ class SourceProcessorTest {
 
 		final WmiSource wmiSource = WmiSource.builder().query(WBEM_QUERY).namespace(AUTOMATIC).build();
 
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(wmiSource), anyString(), any(TelemetryManager.class));
 
 		final SourceTable actual = sourceProcessor.process(wmiSource);
@@ -229,8 +230,7 @@ class SourceProcessorTest {
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
 		final SourceTable expected = SourceTable.builder().table(Arrays.asList(Arrays.asList(ECS1_01))).build();
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpGetSource), anyString(), any(TelemetryManager.class));
 
 		final SourceTable actual = sourceProcessor.process(snmpGetSource);
@@ -283,8 +283,7 @@ class SourceProcessorTest {
 			.table(EXPECTED_SNMP_TABLE_DATA)
 			.headers(SNMP_SELECTED_COLUMNS_LIST)
 			.build();
-		doReturn(expected)
-			.when(protocolExtensionMock)
+		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
 		final SourceTable actual = sourceProcessor.process(snmpTableSource);
 		assertEquals(expected, actual);
@@ -354,8 +353,7 @@ class SourceProcessorTest {
 			Arrays.asList(UPPERCASE_V1, UPPERCASE_V2, UPPERCASE_V3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
 			Arrays.asList(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1)
 		);
-		doReturn(clientReturn)
-			.when(clientsExecutorMock)
+		doReturn(clientReturn).when(clientsExecutorMock)
 			.executeTableJoin(
 				tabl1.getTable(),
 				tabl2.getTable(),
@@ -389,8 +387,7 @@ class SourceProcessorTest {
 			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)
 		);
 		expectedResult = SourceTable.builder().table(expectedJoin).build();
-		doReturn(expectedJoin)
-			.when(clientsExecutorMock)
+		doReturn(expectedJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
@@ -405,6 +402,20 @@ class SourceProcessorTest {
 		assertEquals(expectedResult.getHeaders(), sourceProcessor.process(tableJoinExample).getHeaders());
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 
+		// list form of the default right line: the exact cells, not split on ';'
+		final List<List<String>> listJoin = List.of(List.of("joined"));
+		doReturn(listJoin).when(clientsExecutorMock)
+			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, List.of("", "a;b", ""), false, true);
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB2_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(List.of("", "a;b", ""))
+			.build();
+		assertEquals(listJoin, sourceProcessor.process(tableJoinExample).getTable());
+
 		// no matches
 		SourceTable tabl3 = SourceTable.builder()
 			.table(
@@ -417,8 +428,7 @@ class SourceProcessorTest {
 		mapSources.put(TAB3_REF, tabl3);
 		expectedJoin = Arrays.asList(Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C));
 		expectedResult = SourceTable.builder().table(expectedJoin).build();
-		doReturn(expectedJoin)
-			.when(clientsExecutorMock)
+		doReturn(expectedJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl3.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
@@ -559,6 +569,42 @@ class SourceProcessorTest {
 		assertEquals(LOWERCASE_A1 + "\n" + TAB1_REF, sourceProcessor.process(tableUnionExample).getRawData());
 	}
 
+	/**
+	 * The text of a union of text sources, which the awk scripts parsing glued command outputs read: the members'
+	 * texts joined with a line feed, a member without text skipped, every pair of line feeds collapsed once (three in
+	 * a row give two), and an empty first member leaving a leading line feed. Stage 4 of #1508 keeps this text.
+	 */
+	@Test
+	void testProcessTableUnionSourceText() {
+		final String empty = "${source::monitors.cpu.discovery.sources.empty}";
+		final String lines = "${source::monitors.cpu.discovery.sources.lines}";
+		final String tableOnly = "${source::monitors.cpu.discovery.sources.tableOnly}";
+		final String last = "${source::monitors.cpu.discovery.sources.last}";
+		final Map<String, SourceTable> mapSources = new HashMap<>();
+		mapSources.put(empty, SourceTable.builder().rawData("").build());
+		mapSources.put(lines, SourceTable.builder().rawData("x\n\n\ny\n").build());
+		mapSources.put(tableOnly, SourceTable.ofTable(List.of(List.of("t"))));
+		mapSources.put(last, SourceTable.builder().rawData("z").build());
+
+		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
+		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(ECS1_01).hostId(ECS1_01).build())
+			.hostProperties(HostProperties.builder().connectorNamespaces(connectorNamespaces).build())
+			.build();
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutorMock)
+			.connectorId(MY_CONNECTOR_1_NAME)
+			.build();
+
+		final SourceTable result = sourceProcessor.process(
+			TableUnionSource.builder().tables(Arrays.asList(empty, lines, tableOnly, last)).build()
+		);
+		assertEquals("\nx\n\ny\nz", result.getRawData());
+		assertEquals(List.of(List.of("t")), result.getTable());
+	}
+
 	@Test
 	void testProcessCopySource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
@@ -577,8 +623,11 @@ class SourceProcessorTest {
 		);
 
 		SourceTable table = SourceTable.builder().table(expectedTable).rawData("rawData").build();
+		final String emptyTableRef = "${source::monitors.cpu.discovery.sources.emptyTable}";
 
-		ConnectorNamespace namespace = ConnectorNamespace.builder().sourceTables(Map.of(TAB1_REF, table)).build();
+		ConnectorNamespace namespace = ConnectorNamespace.builder()
+			.sourceTables(Map.of(TAB1_REF, table, emptyTableRef, SourceTable.ofTable(new ArrayList<>())))
+			.build();
 		Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, namespace);
 		HostProperties hostProperties = HostProperties.builder().connectorNamespaces(connectorNamespaces).build();
@@ -603,9 +652,17 @@ class SourceProcessorTest {
 
 		copySource = CopySource.builder().from(TAB1_REF).build();
 
-		final List<List<String>> tableResult = sourceProcessor.process(copySource).getTable();
+		final SourceTable copy = sourceProcessor.process(copySource);
+		final List<List<String>> tableResult = copy.getTable();
 
 		assertEquals(expectedTable, tableResult);
+		// No explicit marker on the origin, none on the copy
+		assertNull(copy.getExplicitContentType());
+
+		// An empty table typed by its marker only stays a table once copied
+		final SourceTable emptyCopy = sourceProcessor.process(CopySource.builder().from(emptyTableRef).build());
+		assertEquals(List.of(), emptyCopy.getTable());
+		assertEquals(ContentType.TABLE, emptyCopy.getContentType());
 
 		tableResult.get(0).add(VALUE_VAL3);
 
@@ -650,6 +707,19 @@ class SourceProcessorTest {
 		staticSource = StaticSource.builder().value(VALUE_LIST).build();
 
 		assertEquals(expectedTable, sourceProcessor.process(staticSource).getTable());
+
+		// list form: the single row of exactly these cells, a ';' in a cell included
+		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1, "", "b;1")).build();
+		final SourceTable listResult = sourceProcessor.process(staticSource);
+		assertEquals(List.of(List.of(LOWERCASE_A1, "", "b;1")), listResult.getTable());
+		// The raw text is separator-safe (as toText writes it): a legacy awk reading it sees the three cells
+		assertEquals("a1;;b,1;", listResult.getRawData());
+
+		// A line break a reference resolved into at run time stays in the cell, but never splits the raw text row
+		staticSource = StaticSource.builder().value(List.of("x\r\ny", "z")).build();
+		final SourceTable breakResult = sourceProcessor.process(staticSource);
+		assertEquals(List.of(List.of("x\r\ny", "z")), breakResult.getTable());
+		assertEquals("x y;z;", breakResult.getRawData());
 	}
 
 	@Test
@@ -771,8 +841,7 @@ class SourceProcessorTest {
 			.build();
 
 		doReturn(true).when(sourceComputationExtensionMock).isValidSource(internalDbQuery);
-		doReturn(SourceTable.empty())
-			.when(sourceComputationExtensionMock)
+		doReturn(SourceTable.empty()).when(sourceComputationExtensionMock)
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
 		assertEquals(SourceTable.empty(), sourceProcessor.process(internalDbQuery));
@@ -797,8 +866,7 @@ class SourceProcessorTest {
 		sourceTableExpected.setTable(result);
 
 		doReturn(true).when(sourceComputationExtensionMock).isValidSource(internalDbQuery);
-		doReturn(sourceTableExpected)
-			.when(sourceComputationExtensionMock)
+		doReturn(sourceTableExpected).when(sourceComputationExtensionMock)
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
 		assertEquals(result, sourceProcessor.process(internalDbQuery).getTable());

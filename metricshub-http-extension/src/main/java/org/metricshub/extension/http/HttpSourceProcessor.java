@@ -48,9 +48,10 @@ public class HttpSourceProcessor {
 	 * Default HTTP configuration provider that retrieves the {@link HttpConfiguration}
 	 * from the telemetry manager's configuration map.
 	 */
-	private static final Function<TelemetryManager, HttpConfiguration> DEFAULT_HTTP_CONFIGURATION_PROVIDER =
-		telemetryManager ->
-			(HttpConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(HttpConfiguration.class);
+	private static final Function<TelemetryManager, HttpConfiguration> DEFAULT_HTTP_CONFIGURATION_PROVIDER = telemetryManager -> (HttpConfiguration) telemetryManager
+		.getHostConfiguration()
+		.getConfigurations()
+		.get(HttpConfiguration.class);
 
 	/**
 	 * Creates a new {@link HttpSourceProcessor} with the given executor and the

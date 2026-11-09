@@ -176,8 +176,7 @@ public class ChatController {
 		description = "Handles streaming chat requests via Server-Sent Events with OpenAI integration.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Streaming response started"),
-			@ApiResponse(responseCode = "400", description = "Invalid request")
-		}
+			@ApiResponse(responseCode = "400", description = "Invalid request") }
 	)
 	@PostMapping(
 		value = "/chat/stream",
@@ -335,17 +334,15 @@ public class ChatController {
 			final AtomicReference<Long> inputTokensUsed = new AtomicReference<>();
 
 			try (
-				StreamResponse<ResponseStreamEvent> stream = openAIClient
-					.orElseThrow(() -> new IllegalStateException("OpenAI Client is not configured"))
-					.responses()
-					.createStreaming(currentParams)
+				StreamResponse<ResponseStreamEvent> stream = openAIClient.orElseThrow(
+					() -> new IllegalStateException("OpenAI Client is not configured")
+				).responses().createStreaming(currentParams)
 			) {
 				streamRef.set(stream);
 
-				stream
-					.stream()
-					.forEach((ResponseStreamEvent event) ->
-						handleStreamEvent(
+				stream.stream()
+					.forEach(
+						(ResponseStreamEvent event) -> handleStreamEvent(
 							emitter,
 							terminated,
 							pendingCalls,
@@ -505,9 +502,9 @@ public class ChatController {
 			final JsonNode node = objectMapper.readTree(followUpInput);
 			if (
 				node != null &&
-				node.has("type") &&
-				"tool_output_manifest".equals(node.get("type").asText()) &&
-				node.has("openai_file_id")
+					node.has("type") &&
+					"tool_output_manifest".equals(node.get("type").asText()) &&
+					node.has("openai_file_id")
 			) {
 				return Optional.ofNullable(node.get("openai_file_id").asText());
 			}
@@ -546,67 +543,81 @@ public class ChatController {
 		}
 
 		// Handle ResponseInProgressEvent to store current response ID
-		event
-			.inProgress()
-			.ifPresent((ResponseInProgressEvent inProgress) ->
-				storeResponseId(currentResponseId, () -> inProgress.response().id())
+		event.inProgress()
+			.ifPresent(
+				(ResponseInProgressEvent inProgress) -> storeResponseId(currentResponseId, () -> inProgress.response().id())
 			);
 
 		// Handle ResponseCreatedEvent to store current response ID
-		event
-			.created()
+		event.created()
 			.ifPresent((ResponseCreatedEvent created) -> storeResponseId(currentResponseId, () -> created.response().id()));
 
 		// Handle text delta events
-		event
-			.outputTextDelta()
-			.ifPresent((ResponseTextDeltaEvent deltaEvent) ->
-				sendEventSafely(emitter, terminated, CHUNK_EVENT_CODE, deltaEvent.delta())
+		event.outputTextDelta()
+			.ifPresent(
+				(ResponseTextDeltaEvent deltaEvent) -> sendEventSafely(
+					emitter,
+					terminated,
+					CHUNK_EVENT_CODE,
+					deltaEvent.delta()
+				)
 			);
 
 		// Handle output item added events with function calls
-		event
-			.outputItemAdded()
-			.ifPresent((ResponseOutputItemAddedEvent added) ->
-				handleAddedEventWithFunctionCall(emitter, terminated, pendingCalls, added)
+		event.outputItemAdded()
+			.ifPresent(
+				(ResponseOutputItemAddedEvent added) -> handleAddedEventWithFunctionCall(
+					emitter,
+					terminated,
+					pendingCalls,
+					added
+				)
 			);
 
 		// Handle function call arguments delta events
-		event
-			.functionCallArgumentsDelta()
-			.ifPresent((ResponseFunctionCallArgumentsDeltaEvent deltaEvent) ->
-				appendFunctionArgsDelta(pendingCalls, deltaEvent)
+		event.functionCallArgumentsDelta()
+			.ifPresent(
+				(ResponseFunctionCallArgumentsDeltaEvent deltaEvent) -> appendFunctionArgsDelta(pendingCalls, deltaEvent)
 			);
 
 		// Handle output item done events for function call
-		event
-			.outputItemDone()
-			.ifPresent((ResponseOutputItemDoneEvent doneEvent) ->
-				handleOutputItemDoneForFunctionCall(pendingCalls, toolCalls, doneEvent)
+		event.outputItemDone()
+			.ifPresent(
+				(ResponseOutputItemDoneEvent doneEvent) -> handleOutputItemDoneForFunctionCall(
+					pendingCalls,
+					toolCalls,
+					doneEvent
+				)
 			);
 
 		// Handle reasoning text delta events
-		event
-			.reasoningTextDelta()
-			.ifPresent((ResponseReasoningTextDeltaEvent deltaEvent) ->
-				sendEventSafely(emitter, terminated, REASONING_EVENT_CODE, deltaEvent.delta())
+		event.reasoningTextDelta()
+			.ifPresent(
+				(ResponseReasoningTextDeltaEvent deltaEvent) -> sendEventSafely(
+					emitter,
+					terminated,
+					REASONING_EVENT_CODE,
+					deltaEvent.delta()
+				)
 			);
 
 		// Handle reasoning summary text delta events
-		event
-			.reasoningSummaryTextDelta()
-			.ifPresent((ResponseReasoningSummaryTextDeltaEvent deltaEvent) ->
-				sendEventSafely(emitter, terminated, REASONING_SUMMARY_EVENT_CODE, deltaEvent.delta())
+		event.reasoningSummaryTextDelta()
+			.ifPresent(
+				(ResponseReasoningSummaryTextDeltaEvent deltaEvent) -> sendEventSafely(
+					emitter,
+					terminated,
+					REASONING_SUMMARY_EVENT_CODE,
+					deltaEvent.delta()
+				)
 			);
 
 		// Handle completed event to store completed response ID and capture token usage
-		event
-			.completed()
-			.ifPresent((ResponseCompletedEvent done) -> {
-				storeResponseId(completedResponseId, () -> done.response().id());
-				// Capture input tokens from usage for budget calculation
-				extractInputTokens(done, inputTokensUsed);
-			});
+		event.completed().ifPresent((ResponseCompletedEvent done) -> {
+			storeResponseId(completedResponseId, () -> done.response().id());
+			// Capture input tokens from usage for budget calculation
+			extractInputTokens(done, inputTokensUsed);
+		});
 	}
 
 	/**
@@ -640,15 +651,13 @@ public class ChatController {
 		if (!item.isFunctionCall()) {
 			return;
 		}
-		item
-			.functionCall()
-			.ifPresent((ResponseFunctionToolCall fc) -> {
-				final PendingFunctionCall pending = pendingCalls.computeIfAbsent(
-					doneEvent.outputIndex(),
-					PendingFunctionCall::new
-				);
-				toolCalls.add(new ToolCallData(fc.name(), fc.callId(), pending.getArgsJson()));
-			});
+		item.functionCall().ifPresent((ResponseFunctionToolCall fc) -> {
+			final PendingFunctionCall pending = pendingCalls.computeIfAbsent(
+				doneEvent.outputIndex(),
+				PendingFunctionCall::new
+			);
+			toolCalls.add(new ToolCallData(fc.name(), fc.callId(), pending.getArgsJson()));
+		});
 	}
 
 	/**
@@ -668,12 +677,10 @@ public class ChatController {
 		final ResponseOutputItem item = added.item();
 		final long outputIndex = added.outputIndex();
 		if (item.isFunctionCall()) {
-			item
-				.functionCall()
-				.ifPresent((ResponseFunctionToolCall fc) -> {
-					pendingCalls.computeIfAbsent(outputIndex, PendingFunctionCall::new);
-					sendEventSafely(emitter, terminated, FUNCTION_REQUESTED_EVENT_CODE, "\n\n* `" + fc.name() + "`\n\n");
-				});
+			item.functionCall().ifPresent((ResponseFunctionToolCall fc) -> {
+				pendingCalls.computeIfAbsent(outputIndex, PendingFunctionCall::new);
+				sendEventSafely(emitter, terminated, FUNCTION_REQUESTED_EVENT_CODE, "\n\n* `" + fc.name() + "`\n\n");
+			});
 		}
 	}
 

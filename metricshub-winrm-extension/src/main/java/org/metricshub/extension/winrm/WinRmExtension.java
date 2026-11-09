@@ -123,8 +123,7 @@ public class WinRmExtension implements IProtocolExtension {
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		// Retrieve WinRM Configuration from the telemetry manager host configuration
-		final WinRmConfiguration winRmConfiguration = (WinRmConfiguration) telemetryManager
-			.getHostConfiguration()
+		final WinRmConfiguration winRmConfiguration = (WinRmConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(WinRmConfiguration.class);
 
@@ -176,8 +175,10 @@ public class WinRmExtension implements IProtocolExtension {
 		TelemetryManager telemetryManager,
 		boolean logMode
 	) {
-		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager ->
-			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WinRmConfiguration.class);
+		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager -> (IWinConfiguration) manager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(WinRmConfiguration.class);
 
 		if (criterion instanceof WmiCriterion wmiCriterion) {
 			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode).process(
@@ -209,8 +210,10 @@ public class WinRmExtension implements IProtocolExtension {
 
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
-		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager ->
-			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WinRmConfiguration.class);
+		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager -> (IWinConfiguration) manager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(WinRmConfiguration.class);
 
 		if (source instanceof WmiSource wmiSource) {
 			return new WmiSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId).process(
@@ -333,15 +336,12 @@ public class WinRmExtension implements IProtocolExtension {
 			case "wql", "wmi" -> winRmRequestExecutor.executeWqlQuery(hostname, winRmConfiguration, query, namespace);
 			case "file" -> winRmRequestExecutor.readRemoteFile(hostname, winRmConfiguration, query);
 			case "ls" -> winRmRequestExecutor.listRemoteFiles(hostname, winRmConfiguration, query);
-			case "command", "winremote" -> winRmRequestExecutor.executeWinRemoteCommand(
-				hostname,
-				winRmConfiguration,
-				query,
-				null
-			);
-			default -> throw new IllegalArgumentException(
-				String.format("Query type %s is not supported over WinRM (supported: wql, command, file, ls).", queryType)
-			);
+			case "command", "winremote" ->
+				winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null);
+			default ->
+				throw new IllegalArgumentException(
+					String.format("Query type %s is not supported over WinRM (supported: wql, command, file, ls).", queryType)
+				);
 		};
 	}
 
@@ -361,10 +361,7 @@ public class WinRmExtension implements IProtocolExtension {
 			ToolDefinition.builder(
 				"runCommand",
 				"Runs a Windows command (CMD) on a Windows host through WinRM and returns its output."
-			)
-				.requiredParameter("commandLine", "The command line to run")
-				.destructive()
-				.build(),
+			).requiredParameter("commandLine", "The command line to run").destructive().build(),
 			ToolDefinition.builder("readFile", "Reads a file on a Windows host through WinRM and returns its content.")
 				.requiredParameter("path", "The path of the file, e.g. C:\\Windows\\System32\\drivers\\etc\\hosts")
 				.build(),

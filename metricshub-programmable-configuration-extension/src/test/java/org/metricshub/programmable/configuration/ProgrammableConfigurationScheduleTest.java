@@ -246,8 +246,8 @@ class ProgrammableConfigurationScheduleTest {
 
 		// Captured inside the scope, exactly as the reload does for the restart it may request.
 		final List<Supplier<Collection<JsonNode>>> captured = new ArrayList<>();
-		provider.runReusingCachedFragments(() ->
-			captured.add(provider.captureCachedFragmentsScope(() -> provider.load(tempDir)))
+		provider.runReusingCachedFragments(
+			() -> captured.add(provider.captureCachedFragmentsScope(() -> provider.load(tempDir)))
 		);
 
 		// Run it once the scope is long gone, on a thread that never entered it.

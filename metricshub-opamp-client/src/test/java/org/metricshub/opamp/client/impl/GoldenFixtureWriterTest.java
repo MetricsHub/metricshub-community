@@ -29,13 +29,12 @@ class GoldenFixtureWriterTest {
 		assertTrue(first.hasHealth());
 		assertTrue(first.hasPackageStatuses());
 		assertTrue(
-			first
-				.getAgentDescription()
+			first.getAgentDescription()
 				.getNonIdentifyingAttributesList()
 				.stream()
 				.anyMatch(
-					attribute ->
-						attribute.getKey().equals("installer.type") && attribute.getValue().getStringValue().equals("deb")
+					attribute -> attribute.getKey().equals("installer.type") &&
+						attribute.getValue().getStringValue().equals("deb")
 				),
 			"the description must carry the installer.type selection attribute"
 		);

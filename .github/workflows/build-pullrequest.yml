@@ -37,5 +37,5 @@ jobs:
       jdkVersion: "25"
       assetPackage: ${{ needs.build-community-artifacts.outputs.packageArtifact }}
       version: ${{ needs.build-community-artifacts.outputs.version }}
-      deploy: true
+      deploy: false
     secrets: inherit

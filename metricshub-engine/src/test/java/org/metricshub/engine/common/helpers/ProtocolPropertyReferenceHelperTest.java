@@ -64,9 +64,7 @@ class ProtocolPropertyReferenceHelperTest {
 		assertEquals("ssh-timeout", ProtocolPropertyReferenceHelper.getProtocolProperty("ssh.timeout", telemetryManager));
 	}
 
-	private static final class ProtocolScopedTestConfiguration
-		implements IConfiguration, IProtocolScopedPropertyAccessor
-	{
+	private static final class ProtocolScopedTestConfiguration implements IConfiguration, IProtocolScopedPropertyAccessor {
 
 		@Override
 		public String getHostname() {

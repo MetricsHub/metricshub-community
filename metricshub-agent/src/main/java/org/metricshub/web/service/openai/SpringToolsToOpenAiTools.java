@@ -96,8 +96,7 @@ public final class SpringToolsToOpenAiTools {
 	 * @return the Parameters object
 	 */
 	private static Parameters buildParametersFromSchema(final Map<String, JsonNode> schema) {
-		Map<String, ? extends JsonValue> additionalProperties = schema
-			.entrySet()
+		Map<String, ? extends JsonValue> additionalProperties = schema.entrySet()
 			.stream()
 			.collect(
 				HashMap::new,

@@ -118,8 +118,7 @@ import picocli.CommandLine.Spec;
 			"@|yellow -t|@=@|italic TYPE|@ " +
 			"<@|yellow --http|@|@|yellow --https|@|@|yellow --ipmi|@|@|yellow --jdbc|@|@|yellow " +
 			"--snmp|@=@|italic VERSION|@|@|yellow --ssh|@|@|yellow --wbem|@|@|yellow --wmi|@|@|yellow --winrm|@> " +
-			"[@|yellow -u|@=@|italic USER|@ [@|yellow -p|@=@|italic P4SSW0RD|@]] [OPTIONS]..."
-	}
+			"[@|yellow -u|@=@|italic USER|@ [@|yellow -p|@=@|italic P4SSW0RD|@]] [OPTIONS]..." }
 )
 /**
  * MetricsHub CLI service providing a command-line interface to gather metrics from specified hosts.
@@ -375,8 +374,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 		// Detection
 		if (ConsoleService.hasConsole()) {
-			String protocolDisplay = configurations
-				.values()
+			String protocolDisplay = configurations.values()
 				.stream()
 				.map(proto -> Ansi.ansi().bold().a(proto.toString()).boldOff().toString())
 				.collect(Collectors.joining(", "));
@@ -424,10 +422,9 @@ public class MetricsHubCliService implements Callable<Integer> {
 			printWriter.print("Performing discovery with ");
 			printWriter.print(Ansi.ansi().bold().a(connectorCount).boldOff().toString());
 			printWriter.println(connectorCount > 1 ? " connectors..." : " connector...");
-			connectors
-				.values()
-				.forEach(monitor ->
-					printWriter.println(
+			connectors.values()
+				.forEach(
+					monitor -> printWriter.println(
 						Ansi.ansi().a("- ").fgCyan().a(new PrettyPrinterService().getMonitorDisplayName(monitor)).reset()
 					)
 				);
@@ -458,8 +455,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 		for (int i = 0; i < iterations; i++) {
 			// Collect
 			if (ConsoleService.hasConsole()) {
-				long monitorCount = telemetryManager
-					.getMonitors()
+				long monitorCount = telemetryManager.getMonitors()
 					.values()
 					.stream()
 					.map(Map::values)
@@ -575,29 +571,27 @@ public class MetricsHubCliService implements Callable<Integer> {
 		final Map<String, AdditionalConnector> additionalConnectorsConfiguration = getAdditionalConnectorsConfiguration();
 		final PrintWriter printWriter = spec.commandLine().getErr();
 
-		additionalConnectorsConfiguration
-			.values()
-			.forEach((AdditionalConnector additionalConnector) -> {
-				final String uses = additionalConnector.getUses();
-				if (!rawConnectors.containsKey(uses)) {
-					printWriter.println(
-						Ansi.ansi()
-							.fgRed()
-							.a(
-								String.format(
-									"Error: Connector '%s' specified in --uses does not exist in the connector store.%n" +
-										"You can view the list of available connectors using: metricshub --list%n",
-									uses
-								)
+		additionalConnectorsConfiguration.values().forEach((AdditionalConnector additionalConnector) -> {
+			final String uses = additionalConnector.getUses();
+			if (!rawConnectors.containsKey(uses)) {
+				printWriter.println(
+					Ansi.ansi()
+						.fgRed()
+						.a(
+							String.format(
+								"Error: Connector '%s' specified in --uses does not exist in the connector store.%n" +
+									"You can view the list of available connectors using: metricshub --list%n",
+								uses
 							)
-							.fgBrightBlack()
-							.a("https://metricshub.com/docs/latest/connectors-directory.html")
-							.reset()
-							.toString()
-					);
-					rawConnectors.remove(uses);
-				}
-			});
+						)
+						.fgBrightBlack()
+						.a("https://metricshub.com/docs/latest/connectors-directory.html")
+						.reset()
+						.toString()
+				);
+				rawConnectors.remove(uses);
+			}
+		});
 
 		printWriter.flush();
 		return ConnectorStoreComposer.builder()
@@ -634,22 +628,19 @@ public class MetricsHubCliService implements Callable<Integer> {
 			jdbcConfigCli,
 			jmxConfigCli,
 			emulationConfigCli
-		)
-			.filter(Objects::nonNull)
-			.map(protocolConfig -> {
-				try {
-					final IConfiguration protocol = protocolConfig.toConfiguration(username, password);
-					// If the protocol hostname is not set, use the main hostname.
-					if (!StringHelper.nonNullNonBlank(protocol.getHostname())) {
-						protocol.setHostname(hostname);
-					}
-					protocol.validateConfiguration(hostname);
-					return protocol;
-				} catch (InvalidConfigurationException e) {
-					throw new IllegalStateException("Invalid configuration detected.", e);
+		).filter(Objects::nonNull).map(protocolConfig -> {
+			try {
+				final IConfiguration protocol = protocolConfig.toConfiguration(username, password);
+				// If the protocol hostname is not set, use the main hostname.
+				if (!StringHelper.nonNullNonBlank(protocol.getHostname())) {
+					protocol.setHostname(hostname);
 				}
-			})
-			.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
+				protocol.validateConfiguration(hostname);
+				return protocol;
+			} catch (InvalidConfigurationException e) {
+				throw new IllegalStateException("Invalid configuration detected.", e);
+			}
+		}).collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
 
 		return protocolConfigurations;
 	}
@@ -691,8 +682,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 		}
 
 		if (additionalConnectors != null) {
-			final boolean connectorIdNotFound = additionalConnectors
-				.stream()
+			final boolean connectorIdNotFound = additionalConnectors.stream()
 				.anyMatch(additionalConnector -> additionalConnector.getConnectorId() == null);
 			if (connectorIdNotFound) {
 				throw new ParameterException(
@@ -712,8 +702,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 	 */
 	public Map<String, AdditionalConnector> getAdditionalConnectorsConfiguration() {
 		if (additionalConnectors != null) {
-			return additionalConnectors
-				.stream()
+			return additionalConnectors.stream()
 				.collect(
 					Collectors.toMap(
 						AdditionalConnectorConfigCli::getConnectorId,
@@ -930,8 +919,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 			);
 		}
 
-		connectorStore
-			.getStore()
+		connectorStore.getStore()
 			.entrySet()
 			.stream()
 			.filter(Objects::nonNull)
@@ -941,16 +929,14 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.forEachOrdered(connectorEntry -> {
 				final String connectorName = connectorEntry.getKey();
 				final Connector connector = connectorEntry.getValue();
-				final String osList = connector
-					.getConnectorIdentity()
+				final String osList = connector.getConnectorIdentity()
 					.getDetection()
 					.getAppliesTo()
 					.stream()
 					.map(DeviceKind::getDisplayName)
 					.collect(Collectors.joining(", "));
 
-				final String connectorCategories = connector
-					.getConnectorIdentity()
+				final String connectorCategories = connector.getConnectorIdentity()
 					.getDetection()
 					.getTags()
 					.stream()

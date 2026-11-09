@@ -37,8 +37,9 @@ class JdbcConfigurationTest {
 			.username("")
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -58,8 +59,9 @@ class JdbcConfigurationTest {
 			.timeout(-10L)
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -80,8 +82,9 @@ class JdbcConfigurationTest {
 			.port(-1)
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -118,8 +121,9 @@ class JdbcConfigurationTest {
 			.port(3306)
 			.build();
 
-		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
-			jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
@@ -211,6 +215,31 @@ class JdbcConfigurationTest {
 			.build();
 		String url = String.valueOf(cfg.generateUrl());
 		assertEquals("jdbc:postgresql://localhost:5432/mydb", url);
+	}
+
+	@Test
+	void testGenerateUrlClickHouse() {
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
+			.type("clickhouse")
+			.hostname("localhost")
+			.port(8123)
+			.database("metrics")
+			.build();
+
+		assertEquals("jdbc:clickhouse://localhost:8123/metrics", String.valueOf(jdbcConfiguration.generateUrl()));
+	}
+
+	@Test
+	void testValidateConfigurationAssignsClickHouseDefaults() {
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
+			.username("default")
+			.type("clickhouse")
+			.hostname("localhost")
+			.build();
+
+		assertDoesNotThrow(() -> jdbcConfiguration.validateConfiguration("resourceKey"));
+		assertEquals(8123, jdbcConfiguration.getPort());
+		assertEquals("jdbc:clickhouse://localhost:8123/default", String.valueOf(jdbcConfiguration.getUrl()));
 	}
 
 	@Test

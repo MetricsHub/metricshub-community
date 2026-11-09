@@ -134,29 +134,25 @@ public class WinCommandService {
 		final String updatedSudoCommand = replaceSudo(updatedCommand, null);
 		final String updatedSudoCommandNoPassword = replaceSudo(updatedCommandNoPassword, null);
 
-		final String command = embeddedTempFiles
-			.entrySet()
+		final String command = embeddedTempFiles.entrySet()
 			.stream()
 			.reduce(
 				updatedSudoCommand,
-				(s, entry) ->
-					s.replaceAll(
-						protectCaseInsensitiveRegex(entry.getKey()),
-						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
-					),
+				(s, entry) -> s.replaceAll(
+					protectCaseInsensitiveRegex(entry.getKey()),
+					Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
+				),
 				(_, _) -> null
 			);
 
-		final String commandNoPassword = embeddedTempFiles
-			.entrySet()
+		final String commandNoPassword = embeddedTempFiles.entrySet()
 			.stream()
 			.reduce(
 				updatedSudoCommandNoPassword,
-				(s, entry) ->
-					s.replaceAll(
-						protectCaseInsensitiveRegex(entry.getKey()),
-						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
-					),
+				(s, entry) -> s.replaceAll(
+					protectCaseInsensitiveRegex(entry.getKey()),
+					Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
+				),
 				(_, _) -> null
 			);
 

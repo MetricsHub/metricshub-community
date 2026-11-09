@@ -102,8 +102,7 @@ class HttpExtensionTest {
 		initHttp();
 
 		// Mock HTTP protocol health check response
-		doReturn(null)
-			.when(httpRequestExecutorMock)
+		doReturn(null).when(httpRequestExecutorMock)
 			.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class));
 
 		Optional<Boolean> result = httpExtension.checkProtocol(telemetryManager);
@@ -117,8 +116,7 @@ class HttpExtensionTest {
 		initHttp();
 
 		// Mock HTTP protocol health check response
-		doReturn("success")
-			.when(httpRequestExecutorMock)
+		doReturn("success").when(httpRequestExecutorMock)
 			.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class));
 
 		Optional<Boolean> result = httpExtension.checkProtocol(telemetryManager);
@@ -130,40 +128,36 @@ class HttpExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(httpExtension.isValidConfiguration(HttpConfiguration.builder().build()));
-		assertFalse(
-			httpExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(httpExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -227,8 +221,9 @@ class HttpExtensionTest {
 
 		final HttpCriterion httpCriterion = null;
 
-		assertThrows(IllegalArgumentException.class, () ->
-			httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 
@@ -457,8 +452,7 @@ class HttpExtensionTest {
 	void testProcessHttpSourceOk() {
 		initHttp();
 
-		doReturn(RESULT)
-			.when(httpRequestExecutorMock)
+		doReturn(RESULT).when(httpRequestExecutorMock)
 			.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 		final SourceTable actual = httpExtension.processSource(
 			HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
@@ -474,8 +468,7 @@ class HttpExtensionTest {
 	void testProcessHttpSourceThrowsException() {
 		initHttp();
 
-		doThrow(new RuntimeException("excepton"))
-			.when(httpRequestExecutorMock)
+		doThrow(new RuntimeException("excepton")).when(httpRequestExecutorMock)
 			.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 		final SourceTable actual = httpExtension.processSource(
 			HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
@@ -492,8 +485,7 @@ class HttpExtensionTest {
 		initHttp();
 
 		{
-			doReturn(null)
-				.when(httpRequestExecutorMock)
+			doReturn(null).when(httpRequestExecutorMock)
 				.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 			final SourceTable actual = httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
@@ -506,8 +498,7 @@ class HttpExtensionTest {
 		}
 
 		{
-			doReturn("")
-				.when(httpRequestExecutorMock)
+			doReturn("").when(httpRequestExecutorMock)
 				.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 			final SourceTable actual = httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
@@ -539,8 +530,7 @@ class HttpExtensionTest {
 	@Test
 	void testExecuteQuery() {
 		initHttp();
-		HttpConfiguration httpConfiguration = (HttpConfiguration) telemetryManager
-			.getHostConfiguration()
+		HttpConfiguration httpConfiguration = (HttpConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(HttpConfiguration.class);
 		ObjectNode httpQueryConfiguration = JsonNodeFactory.instance.objectNode();
@@ -561,8 +551,7 @@ class HttpExtensionTest {
 			.build();
 
 		// Mock HTTP Client response
-		doReturn(HTTP_SUCCESSFUL_RESPONSE)
-			.when(httpRequestExecutorMock)
+		doReturn(HTTP_SUCCESSFUL_RESPONSE).when(httpRequestExecutorMock)
 			.executeHttp(eq(httpRequest), anyBoolean(), any(TelemetryManager.class));
 
 		final String result = httpExtension.executeQuery(httpConfiguration, httpQueryConfiguration);

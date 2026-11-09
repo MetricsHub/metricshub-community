@@ -142,15 +142,13 @@ public class DeploymentDetector {
 		if (LocalOsHandler.isWindows()) {
 			// Matches the service of any edition (MetricsHub Community, MetricsHub Enterprise, ...)
 			return probe.succeeds(
-					"reg",
-					"query",
-					WINDOWS_SERVICES_REGISTRY_KEY,
-					"/k",
-					"/f",
-					AgentConstants.PRODUCT_WIN_DIR_NAME + "*"
-				)
-				? DeploymentKind.MSI
-				: DeploymentKind.ARCHIVE;
+				"reg",
+				"query",
+				WINDOWS_SERVICES_REGISTRY_KEY,
+				"/k",
+				"/f",
+				AgentConstants.PRODUCT_WIN_DIR_NAME + "*"
+			) ? DeploymentKind.MSI : DeploymentKind.ARCHIVE;
 		}
 		if (probe.succeeds("dpkg", "-s", LINUX_PACKAGE_NAME)) {
 			return DeploymentKind.DEB;
@@ -179,8 +177,7 @@ public class DeploymentDetector {
 		}
 		final Process process;
 		try {
-			process = new ProcessBuilder(command)
-				.redirectOutput(ProcessBuilder.Redirect.DISCARD)
+			process = new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.DISCARD)
 				.redirectErrorStream(false)
 				.start();
 		} catch (Exception e) {

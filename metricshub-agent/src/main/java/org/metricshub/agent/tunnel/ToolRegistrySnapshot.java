@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
 import org.metricshub.agent.tunnel.protocol.TunnelJson;
 import org.metricshub.web.mcp.ToolAccess.Access;
@@ -39,18 +40,26 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
 
 /**
- * The tools this agent advertises to Central, derived from the runtime Spring AI
- * {@link ToolCallbackProvider}: every {@code IMCPToolService} tool not explicitly excluded.
+ * The tools this agent offers Central, derived from the runtime Spring AI {@link ToolCallbackProvider}.
  * <p>
- * Tools are sorted by name and the revision is a fingerprint of the descriptors, so the same tool set
- * always yields the same revision and the server can skip a registry rewrite on reconnect.
+ * The registration advertises the agent's own tools ({@code IMCPToolService}) and {@link HostToolsLookup#NAME};
+ * the protocol-extension and connector tools are not advertised but answered per host by that lookup, and stay
+ * invokable here. Tools are sorted by name and the revision is a fingerprint of the advertised descriptors, so the
+ * same tool set always yields the same revision and the server can skip a registry rewrite on reconnect.
  * </p>
  *
- * @param tools     advertised tools, sorted by name
- * @param callbacks the callback executing each advertised tool, keyed by tool name
- * @param revision  fingerprint of {@code tools}
+ * @param tools             advertised tools, sorted by name
+ * @param callbacks         the callback executing each tool Central may invoke, the host-scoped ones included, by name
+ * @param revision          fingerprint of {@code tools}
+ * @param hostToolsRevision fingerprint of the host-scoped tools' descriptors: Central keeps what ListHostTools
+ *                          answered for the session, so a change to it needs a new session
  */
-public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolCallback> callbacks, String revision) {
+public record ToolRegistrySnapshot(
+	List<ToolDescriptor> tools,
+	Map<String, ToolCallback> callbacks,
+	String revision,
+	String hostToolsRevision
+) {
 	/**
 	 * Schema advertised for a tool without arguments.
 	 */
@@ -60,24 +69,50 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 	 * Builds the snapshot from the runtime callbacks.
 	 *
 	 * @param provider      the Spring AI tool callbacks
-	 * @param excludedTools names never advertised
+	 * @param excludedTools names never advertised nor invokable
+	 * @param context       the agent context the provider's tools were built from, which the host lookup answers from
 	 * @return the snapshot
 	 */
-	public static ToolRegistrySnapshot from(final ToolCallbackProvider provider, final Collection<String> excludedTools) {
+	public static ToolRegistrySnapshot from(
+		final ToolCallbackProvider provider,
+		final Collection<String> excludedTools,
+		final AgentContext context
+	) {
 		final Map<String, ToolCallback> callbacks = new TreeMap<>();
+		final Map<String, ToolCallback> hostScoped = new TreeMap<>();
 		for (final ToolCallback callback : provider.getToolCallbacks()) {
 			final String name = callback.getToolDefinition().name();
 			// A callback of no known kind has no access class: neither advertised nor invokable
 			if (!excludedTools.contains(name) && accessOf(callback) != null) {
 				callbacks.put(name, callback);
+				if (callback instanceof DynamicToolCallback) {
+					hostScoped.put(name, callback);
+				}
 			}
+		}
+		// Excluded like any other tool, and with it every host-scoped tool: Central learns them only through it, so
+		// none stays invokable by a name it learned before
+		if (excludedTools.contains(HostToolsLookup.NAME)) {
+			hostScoped.keySet().forEach(callbacks::remove);
+			hostScoped.clear();
+		} else {
+			callbacks.put(HostToolsLookup.NAME, HostToolsLookup.callback(hostScoped, context));
 		}
 
 		final List<ToolDescriptor> tools = new ArrayList<>();
-		callbacks.values().forEach(callback -> tools.add(describe(callback, accessOf(callback))));
+		callbacks.values()
+			.stream()
+			.filter(callback -> callback instanceof ProductToolCallback)
+			.forEach(callback -> tools.add(describe(callback)));
 		tools.sort(Comparator.comparing(ToolDescriptor::name));
 
-		return new ToolRegistrySnapshot(List.copyOf(tools), Map.copyOf(callbacks), TunnelJson.fingerprint(tools));
+		final List<ToolDescriptor> hostTools = hostScoped.values().stream().map(ToolRegistrySnapshot::describe).toList();
+		return new ToolRegistrySnapshot(
+			List.copyOf(tools),
+			Map.copyOf(callbacks),
+			TunnelJson.fingerprint(tools),
+			TunnelJson.fingerprint(hostTools)
+		);
 	}
 
 	/**
@@ -85,7 +120,6 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 	 * @return the class its {@code @ToolAccess} declares for the agent's own tool, write for a protocol-extension
 	 *         or connector tool that changes a host and read for any other, or null for a callback of no known kind
 	 */
-	// ponytail: the extension and connector tools ride the registration until Central asks for them per host
 	private static Access accessOf(final ToolCallback callback) {
 		if (callback instanceof final ProductToolCallback product) {
 			return product.access();
@@ -96,18 +130,23 @@ public record ToolRegistrySnapshot(List<ToolDescriptor> tools, Map<String, ToolC
 		return null;
 	}
 
-	private static ToolDescriptor describe(final ToolCallback callback, final Access access) {
+	/**
+	 * @param callback a tool of a known kind
+	 * @return its descriptor, with its access class
+	 */
+	static ToolDescriptor describe(final ToolCallback callback) {
+		final Access access = accessOf(callback);
 		final ToolDefinition definition = callback.getToolDefinition();
-		final String description =
-			definition.description() == null || definition.description().isBlank()
-				? definition.name()
-				: definition.description();
+		final String description = definition.description() == null || definition.description().isBlank()
+			? definition.name()
+			: definition.description();
 		return new ToolDescriptor(definition.name(), description, parseSchema(definition), access.wire());
 	}
 
 	private static JsonNode parseSchema(final ToolDefinition definition) {
-		final String schema =
-			definition.inputSchema() == null || definition.inputSchema().isBlank() ? EMPTY_SCHEMA : definition.inputSchema();
+		final String schema = definition.inputSchema() == null || definition.inputSchema().isBlank()
+			? EMPTY_SCHEMA
+			: definition.inputSchema();
 		try {
 			return TunnelJson.MAPPER.readTree(schema);
 		} catch (JsonProcessingException e) {

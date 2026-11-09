@@ -63,17 +63,21 @@ class AutomaticDetectionTest {
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		// The extension manager is empty because it is not involved in this test
 		final ExtensionManager extensionManager = ExtensionManager.empty();
-		assertThrows(IllegalArgumentException.class, () ->
-			new AutomaticDetection(null, clientsExecutor, emptySet, extensionManager)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AutomaticDetection(null, clientsExecutor, emptySet, extensionManager)
 		);
-		assertThrows(IllegalArgumentException.class, () ->
-			new AutomaticDetection(telemetryManager, null, emptySet, extensionManager)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AutomaticDetection(telemetryManager, null, emptySet, extensionManager)
 		);
-		assertThrows(IllegalArgumentException.class, () ->
-			new AutomaticDetection(telemetryManager, clientsExecutor, null, extensionManager)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AutomaticDetection(telemetryManager, clientsExecutor, null, extensionManager)
 		);
-		assertThrows(IllegalArgumentException.class, () ->
-			new AutomaticDetection(telemetryManager, clientsExecutor, emptySet, null)
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> new AutomaticDetection(telemetryManager, clientsExecutor, emptySet, null)
 		);
 	}
 
@@ -474,12 +478,8 @@ class AutomaticDetectionTest {
 
 			final List<ConnectorTestResult> connectorTestResultList = new ArrayList<>(List.of(lastResortConnectorTestResult));
 
-			new AutomaticDetection(
-				telemetryManager,
-				clientsExecutor,
-				Collections.emptySet(),
-				ExtensionManager.empty()
-			).filterLastResortConnectors(connectorTestResultList, LOCALHOST);
+			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
+				.filterLastResortConnectors(connectorTestResultList, LOCALHOST);
 
 			// The last resort connector should be kept
 			assertEquals(1, connectorTestResultList.size());
@@ -513,12 +513,8 @@ class AutomaticDetectionTest {
 				.build();
 			connectorTestResultList.add(regularConnectorTestResult);
 
-			new AutomaticDetection(
-				telemetryManager,
-				clientsExecutor,
-				Collections.emptySet(),
-				ExtensionManager.empty()
-			).filterLastResortConnectors(connectorTestResultList, LOCALHOST);
+			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
+				.filterLastResortConnectors(connectorTestResultList, LOCALHOST);
 
 			// We should only have the regular connector left
 			assertEquals(1, connectorTestResultList.size());
@@ -576,12 +572,8 @@ class AutomaticDetectionTest {
 				List.of(lastResortConnectorTestResult, regularConnectorTestResult)
 			);
 
-			new AutomaticDetection(
-				telemetryManager,
-				clientsExecutor,
-				Collections.emptySet(),
-				ExtensionManager.empty()
-			).filterLastResortConnectors(connectorTestResultList, LOCALHOST);
+			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
+				.filterLastResortConnectors(connectorTestResultList, LOCALHOST);
 
 			// Our two connectors should still be in the list as the regular connector does
 			// not discover disk controllers
@@ -673,12 +665,8 @@ class AutomaticDetectionTest {
 				List.of(lastResortConnectorTestResult1, lastResortConnectorTestResult2, regularConnectorTestResult)
 			);
 
-			new AutomaticDetection(
-				telemetryManager,
-				clientsExecutor,
-				Collections.emptySet(),
-				ExtensionManager.empty()
-			).filterLastResortConnectors(testedConnectors, LOCALHOST);
+			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
+				.filterLastResortConnectors(testedConnectors, LOCALHOST);
 
 			// The regular connector and the first last resort connector should be in the
 			// list. The second last resort connector should
@@ -778,12 +766,8 @@ class AutomaticDetectionTest {
 				)
 			);
 
-			new AutomaticDetection(
-				telemetryManager,
-				clientsExecutor,
-				Collections.emptySet(),
-				ExtensionManager.empty()
-			).filterLastResortConnectors(testedConnectors, LOCALHOST);
+			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
+				.filterLastResortConnectors(testedConnectors, LOCALHOST);
 
 			// All connectors should be kept
 			assertEquals(3, testedConnectors.size());

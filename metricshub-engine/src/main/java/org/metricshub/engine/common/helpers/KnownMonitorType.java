@@ -137,8 +137,8 @@ public enum KnownMonitorType {
 	 * Monitor types that take part in the hardware missing device detection when produced by a "hardware" connector.
 	 */
 	public static final Set<String> MISSING_DEVICE_DETECTION_TYPES = KEYS.stream()
-		.filter(key ->
-			!Set.of(
+		.filter(
+			key -> !Set.of(
 				HOST.getKey(),
 				CONNECTOR.getKey(),
 				LUN.getKey(),
@@ -159,9 +159,7 @@ public enum KnownMonitorType {
 	 * @return the matching value which is an Optional of {@code KnownMonitorType}.
 	 */
 	public static Optional<KnownMonitorType> fromString(final String monitorType) {
-		return Stream.of(KnownMonitorType.values())
-			.filter(type -> type.key.equalsIgnoreCase(monitorType))
-			.findFirst();
+		return Stream.of(KnownMonitorType.values()).filter(type -> type.key.equalsIgnoreCase(monitorType)).findFirst();
 	}
 
 	/**

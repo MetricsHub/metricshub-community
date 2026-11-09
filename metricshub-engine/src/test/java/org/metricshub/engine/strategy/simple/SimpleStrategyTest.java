@@ -149,8 +149,7 @@ class SimpleStrategyTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		// Mock detection criteria result
@@ -173,9 +172,7 @@ class SimpleStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -230,8 +227,7 @@ class SimpleStrategyTest {
 
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("monitor1")
 				.getMetric(
@@ -240,8 +236,7 @@ class SimpleStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("monitor1")
 				.getMetric(
@@ -250,8 +245,7 @@ class SimpleStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("monitor1")
 				.getMetric(
@@ -332,8 +326,7 @@ class SimpleStrategyTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		// Mock detection criteria result
@@ -356,9 +349,7 @@ class SimpleStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -381,12 +372,10 @@ class SimpleStrategyTest {
 			.build()
 			.run();
 
-		final Monitor enclosure = telemetryManager
-			.getMonitors()
+		final Monitor enclosure = telemetryManager.getMonitors()
 			.get(ENCLOSURE.getKey())
 			.get("TestConnectorWithSimple_enclosure_enclosure-1");
-		final Monitor diskController = telemetryManager
-			.getMonitors()
+		final Monitor diskController = telemetryManager.getMonitors()
 			.get(DISK_CONTROLLER.getKey())
 			.get("TestConnectorWithSimple_disk_controller_1");
 
@@ -404,8 +393,7 @@ class SimpleStrategyTest {
 
 		// Second collect cycle: the enclosure source no longer returns any row
 		final long secondCollectTime = firstCollectTime + 60 * 1000;
-		doReturn(SourceTable.empty())
-			.when(protocolExtensionMock)
+		doReturn(SourceTable.empty()).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		new PrepareCollectStrategy(telemetryManager, secondCollectTime, clientsExecutorMock, extensionManager).run();
@@ -520,9 +508,8 @@ class SimpleStrategyTest {
 			"null_source",
 			"before_all_union"
 		);
-		final Map<String, Monitor> staleMonitors = Stream.concat(trustedTypes.stream(), untrustedTypes.stream()).collect(
-			Collectors.toMap(Function.identity(), type -> addStaleMonitor(telemetryManager, type))
-		);
+		final Map<String, Monitor> staleMonitors = Stream.concat(trustedTypes.stream(), untrustedTypes.stream())
+			.collect(Collectors.toMap(Function.identity(), type -> addStaleMonitor(telemetryManager, type)));
 
 		// Every mapping table has a row, except the one of empty_source
 		Stream.concat(trustedTypes.stream(), untrustedTypes.stream())
@@ -530,8 +517,7 @@ class SimpleStrategyTest {
 			.forEach(type -> sourceTables.put(SOURCE_KEY_FORMAT.formatted(type), "new;1"));
 
 		// A mapping without attributes is deserialized as an empty map: null is the consolidation job case
-		final SimpleMonitorJob noAttributesJob = (SimpleMonitorJob) telemetryManager
-			.getConnectorStore()
+		final SimpleMonitorJob noAttributesJob = (SimpleMonitorJob) telemetryManager.getConnectorStore()
 			.getStore()
 			.get(REMOVAL_CONNECTOR_ID)
 			.getMonitors()
@@ -544,15 +530,13 @@ class SimpleStrategyTest {
 		// null_source's source(2) answered during the previous run: now the extension returns null, which arrives as an
 		// empty table, so the source is retried then given up
 		final String nullSourceKey = "${source::monitors.null_source.simple.sources.source(2)}";
-		telemetryManager
-			.getHostProperties()
+		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
 				nullSourceKey,
 				SourceTable.builder().table(SourceTable.csvToTable("previous;1", MetricsHubConstants.TABLE_SEP)).build()
 			);
-		lenient()
-			.doReturn(null)
+		lenient().doReturn(null)
 			.when(protocolExtensionMock)
 			.processSource(
 				argThat(source -> source != null && nullSourceKey.equals(source.getKey())),
@@ -563,8 +547,7 @@ class SimpleStrategyTest {
 		// The union of beforeAll read by before_all_union: partA has a row, partB answered during the previous run and is now
 		// empty, so it is retried then given up
 		sourceTables.put("${source::beforeAll.partA}", "new;1");
-		telemetryManager
-			.getHostProperties()
+		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
 				"${source::beforeAll.partB}",
@@ -572,8 +555,7 @@ class SimpleStrategyTest {
 			);
 
 		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up
-		telemetryManager
-			.getHostProperties()
+		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
 				"${source::monitors.failed_source.simple.sources.source(2)}",
@@ -588,8 +570,8 @@ class SimpleStrategyTest {
 			// The monitor refreshed by the run is kept
 			assertNotNull(monitors.get("%s_%s_new".formatted(REMOVAL_CONNECTOR_ID, type)), type);
 		});
-		untrustedTypes.forEach(type ->
-			assertSame(
+		untrustedTypes.forEach(
+			type -> assertSame(
 				staleMonitors.get(type),
 				telemetryManager.getMonitors().get(type).get(staleMonitors.get(type).getId()),
 				type
@@ -626,11 +608,10 @@ class SimpleStrategyTest {
 		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder().sequential(true));
 
 		// The source of the process job, run after the enclosure job, interrupts the strategy thread
-		lenient()
-			.doAnswer(invocation -> {
-				Thread.currentThread().interrupt();
-				return SourceTable.empty();
-			})
+		lenient().doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return SourceTable.empty();
+		})
 			.when(protocolExtensionMock)
 			.processSource(
 				argThat(source -> source != null && SOURCE_KEY_FORMAT.formatted(PROCESS).equals(source.getKey())),
@@ -709,23 +690,19 @@ class SimpleStrategyTest {
 
 		// Lenient: the jobs of an interrupted strategy may never call the extension
 		lenient().doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
-		lenient()
-			.doReturn(Set.of(SnmpTableSource.class, EventLogSource.class, FileSource.class))
+		lenient().doReturn(Set.of(SnmpTableSource.class, EventLogSource.class, FileSource.class))
 			.when(protocolExtensionMock)
 			.getSupportedSources();
-		lenient()
-			.doAnswer(invocation ->
-				SourceTable.builder()
-					.table(
-						SourceTable.csvToTable(
-							sourceTables.get(invocation.<Source>getArgument(0).getKey()),
-							MetricsHubConstants.TABLE_SEP
-						)
+		lenient().doAnswer(
+			invocation -> SourceTable.builder()
+				.table(
+					SourceTable.csvToTable(
+						sourceTables.get(invocation.<Source>getArgument(0).getKey()),
+						MetricsHubConstants.TABLE_SEP
 					)
-					.build()
-			)
-			.when(protocolExtensionMock)
-			.processSource(any(Source.class), anyString(), any(TelemetryManager.class));
+				)
+				.build()
+		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		return TelemetryManager.builder()
 			.monitors(
@@ -744,8 +721,7 @@ class SimpleStrategyTest {
 				)
 			)
 			.hostConfiguration(
-				hostConfigurationBuilder
-					.hostId("host-01")
+				hostConfigurationBuilder.hostId("host-01")
 					.hostname("ec-02")
 					.hostType(DeviceKind.LINUX)
 					.configurations(Map.of(TestConfiguration.class, snmpConfig))

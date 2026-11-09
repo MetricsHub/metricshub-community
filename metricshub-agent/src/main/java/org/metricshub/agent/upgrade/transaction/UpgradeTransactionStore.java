@@ -116,10 +116,9 @@ public class UpgradeTransactionStore {
 		if (!Files.isRegularFile(transactionFile)) {
 			return;
 		}
-		final String suffix =
-			transaction != null && transaction.getUpgradeId() != null
-				? transaction.getUpgradeId()
-				: String.valueOf(System.currentTimeMillis());
+		final String suffix = transaction != null && transaction.getUpgradeId() != null
+			? transaction.getUpgradeId()
+			: String.valueOf(System.currentTimeMillis());
 		try {
 			Files.move(
 				transactionFile,

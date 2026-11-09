@@ -52,8 +52,7 @@ class InternalDbQueryDeserializerTest extends DeserializerTest {
 			.build();
 		expected.setKey("${source::beforeAll.testInternalDbQuerySource}");
 
-		final InternalDbQuerySource internalDbQuerySource = (InternalDbQuerySource) connector
-			.getBeforeAll()
+		final InternalDbQuerySource internalDbQuerySource = (InternalDbQuerySource) connector.getBeforeAll()
 			.get("testInternalDbQuerySource");
 
 		assertEquals(expected.toString(), internalDbQuerySource.toString());

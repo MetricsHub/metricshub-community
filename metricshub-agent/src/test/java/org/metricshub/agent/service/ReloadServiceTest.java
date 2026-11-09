@@ -59,11 +59,9 @@ class ReloadServiceTest {
 	}
 
 	private void shutdownAgents(final ReloadService reloadService) throws InterruptedException {
-		final TaskSchedulingService defaultTaskSchedulingService = reloadService
-			.getRunningAgentContext()
+		final TaskSchedulingService defaultTaskSchedulingService = reloadService.getRunningAgentContext()
 			.getTaskSchedulingService();
-		final TaskSchedulingService newTaskSchedulingService = reloadService
-			.getReloadedAgentContext()
+		final TaskSchedulingService newTaskSchedulingService = reloadService.getReloadedAgentContext()
 			.getTaskSchedulingService();
 
 		defaultTaskSchedulingService.getMetricsExporter().shutdown();
@@ -102,15 +100,13 @@ class ReloadServiceTest {
 
 		ReloadService reloadService = createReloadServiceWithConfigs(config, config);
 		assertTrue(
-			reloadService
-				.compareResources(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, config.getResources(), config.getResources())
+			reloadService.compareResources(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, config.getResources(), config.getResources())
 				.isEmpty(),
 			"No resources should be scheduled for update"
 		);
 
 		assertTrue(
-			reloadService
-				.compareResourceGroups(config.getResourceGroups(), config.getResourceGroups())
+			reloadService.compareResourceGroups(config.getResourceGroups(), config.getResourceGroups())
 				.get("paris")
 				.isEmpty(),
 			"No resources should be scheduled for update"
@@ -133,8 +129,7 @@ class ReloadServiceTest {
 
 		final AgentConfig defaultConfig = defaultContext.getAgentConfig();
 		final Map<String, ResourceConfig> defaultTopLevelResources = defaultConfig.getResources();
-		final Map<String, ResourceConfig> defaultParisResources = defaultConfig
-			.getResourceGroups()
+		final Map<String, ResourceConfig> defaultParisResources = defaultConfig.getResourceGroups()
 			.get("paris")
 			.getResources();
 
@@ -198,8 +193,7 @@ class ReloadServiceTest {
 		defaultContext.getTaskSchedulingService().start();
 		final AgentConfig defaultConfig = defaultContext.getAgentConfig();
 		final Map<String, ResourceConfig> defaultTopLevelResources = defaultConfig.getResources();
-		final Map<String, ResourceConfig> defaultParisResources = defaultConfig
-			.getResourceGroups()
+		final Map<String, ResourceConfig> defaultParisResources = defaultConfig.getResourceGroups()
 			.get("paris")
 			.getResources();
 		final Map<String, Map<String, TelemetryManager>> defaultTelemetryManagers = defaultContext
@@ -253,8 +247,8 @@ class ReloadServiceTest {
 	}
 
 	@Test
-	void testCompareResources_updatedResource_shouldRescheduleAndUpdateConfigs()
-		throws IOException, InterruptedException {
+	void testCompareResources_updatedResource_shouldRescheduleAndUpdateConfigs() throws IOException,
+		InterruptedException {
 		TestHelper.configureGlobalLogger();
 
 		// Load default context (with original values for resources)
@@ -262,8 +256,7 @@ class ReloadServiceTest {
 		defaultContext.getTaskSchedulingService().start();
 		final AgentConfig defaultConfig = defaultContext.getAgentConfig();
 		final Map<String, ResourceConfig> defaultTopLevelResources = defaultConfig.getResources();
-		final Map<String, ResourceConfig> defaultParisResources = defaultConfig
-			.getResourceGroups()
+		final Map<String, ResourceConfig> defaultParisResources = defaultConfig.getResourceGroups()
 			.get("paris")
 			.getResources();
 		final Map<String, Map<String, TelemetryManager>> defaultTelemetryManagers = defaultContext
@@ -278,10 +271,9 @@ class ReloadServiceTest {
 		final Map<String, ResourceConfig> newTopLevelResources = newConfig.getResources();
 
 		// Get configuration before update
-		final HttpConfiguration parisServer2HttpConfigBefore = (HttpConfiguration) defaultParisResources
-			.get("paris-server-2")
-			.getProtocols()
-			.get("http");
+		final HttpConfiguration parisServer2HttpConfigBefore = (HttpConfiguration) defaultParisResources.get(
+			"paris-server-2"
+		).getProtocols().get("http");
 
 		assertEquals(
 			"password",
@@ -334,10 +326,9 @@ class ReloadServiceTest {
 		assertEquals(2, defaultParisResources.size());
 		assertTrue(defaultParisResources.containsKey("paris-server-2"));
 
-		final HttpConfiguration parisServer2HttpConfigAfter = (HttpConfiguration) defaultParisResources
-			.get("paris-server-2")
-			.getProtocols()
-			.get("http");
+		final HttpConfiguration parisServer2HttpConfigAfter = (HttpConfiguration) defaultParisResources.get(
+			"paris-server-2"
+		).getProtocols().get("http");
 
 		assertEquals("password-updated", String.valueOf(parisServer2HttpConfigAfter.getPassword()));
 		assertTrue(defaultTelemetryManagers.get("paris").containsKey("paris-server-2"));
@@ -401,8 +392,8 @@ class ReloadServiceTest {
 	}
 
 	@Test
-	void testCompareResourceGroups_existingGroupRemoved_shouldCleanupCorrectly()
-		throws IOException, InterruptedException {
+	void testCompareResourceGroups_existingGroupRemoved_shouldCleanupCorrectly() throws IOException,
+		InterruptedException {
 		TestHelper.configureGlobalLogger();
 
 		// Load full config with group 'paris'
@@ -450,10 +441,9 @@ class ReloadServiceTest {
 			"Group schedule should be removed"
 		);
 
-		parisResources
-			.keySet()
-			.forEach(id ->
-				assertNull(
+		parisResources.keySet()
+			.forEach(
+				id -> assertNull(
 					defaultContext.getTaskSchedulingService().getSchedules().get(getScheduleResourceName("paris", id)),
 					"Schedule for 'paris' resource %s should be removed".formatted(id)
 				)

@@ -142,8 +142,7 @@ class CollectStrategyTest {
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
-		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class))
-			.when(protocolExtensionMock)
+		doReturn(Set.of(SnmpGetNextCriterion.class, SnmpGetCriterion.class)).when(protocolExtensionMock)
 			.getSupportedCriteria();
 
 		collectStrategy = CollectStrategy.builder()
@@ -173,9 +172,7 @@ class CollectStrategyTest {
 			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
-		)
-			.when(protocolExtensionMock)
-			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		).when(protocolExtensionMock).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -222,8 +219,7 @@ class CollectStrategyTest {
 
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -232,8 +228,7 @@ class CollectStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -242,8 +237,7 @@ class CollectStrategyTest {
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(

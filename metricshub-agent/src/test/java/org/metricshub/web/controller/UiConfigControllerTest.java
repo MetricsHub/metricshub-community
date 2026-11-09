@@ -88,8 +88,7 @@ class UiConfigControllerTest {
 	@Test
 	void testGetAgentHostname() throws Exception {
 		when(uiConfigService.getAgentHostname()).thenReturn("ec-win");
-		mockMvc
-			.perform(get("/api/ui-config/agent-hostname"))
+		mockMvc.perform(get("/api/ui-config/agent-hostname"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.hostname").value("ec-win"));
 	}
@@ -106,12 +105,10 @@ class UiConfigControllerTest {
 		final HostUpCheckResponseDto response = HostUpCheckResponseDto.builder().hostUp(1).responseTimeMs(120.0).build();
 		when(uiProtocolCheckService.checkHostUp(any(ProtocolCheckRequestDto.class))).thenReturn(response);
 
-		mockMvc
-			.perform(
-				post("/api/ui-config/protocol-check")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
+		mockMvc.perform(
+			post("/api/ui-config/protocol-check").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.hostUp").value(1))
 			.andExpect(jsonPath("$.responseTimeMs").value(120.0));
@@ -129,8 +126,7 @@ class UiConfigControllerTest {
 			.build();
 		when(uiConfigService.getSnapshot()).thenReturn(snapshot);
 
-		mockMvc
-			.perform(get("/api/ui-config/hosts"))
+		mockMvc.perform(get("/api/ui-config/hosts"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.resourceGroups.GroupA").exists())
@@ -141,8 +137,7 @@ class UiConfigControllerTest {
 	void testGetSnapshotWhenEmptyReturnsEmptyCollections() throws Exception {
 		when(uiConfigService.getSnapshot()).thenReturn(UiConfigSnapshotDto.builder().build());
 
-		mockMvc
-			.perform(get("/api/ui-config/hosts"))
+		mockMvc.perform(get("/api/ui-config/hosts"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.resourceGroups").isEmpty())
 			.andExpect(jsonPath("$.resources").isEmpty());
@@ -176,12 +171,10 @@ class UiConfigControllerTest {
 			.build();
 		when(uiConfigService.createResourceGroup(any(CreateResourceGroupRequestDto.class))).thenReturn(snapshot);
 
-		mockMvc
-			.perform(
-				post("/api/ui-config/resource-groups")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
+		mockMvc.perform(
+			post("/api/ui-config/resource-groups").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+		)
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.resourceGroups.Paris").exists())
@@ -198,13 +191,10 @@ class UiConfigControllerTest {
 		final CreateResourceGroupRequestDto request = new CreateResourceGroupRequestDto();
 		request.setName("NewGroup");
 
-		mockMvc
-			.perform(
-				post("/api/ui-config/resource-groups")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isOk());
+		mockMvc.perform(
+			post("/api/ui-config/resource-groups").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+		).andExpect(status().isOk());
 
 		verify(uiConfigService).createResourceGroup(argThat(r -> "NewGroup".equals(r.getName())));
 	}
@@ -217,13 +207,10 @@ class UiConfigControllerTest {
 		request.setName("Group");
 		request.setMetrics(Map.of("hw.site.pue", 1.5));
 
-		mockMvc
-			.perform(
-				post("/api/ui-config/resource-groups")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isOk());
+		mockMvc.perform(
+			post("/api/ui-config/resource-groups").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+		).andExpect(status().isOk());
 
 		verify(uiConfigService).createResourceGroup(argThat(r -> r.getMetrics() != null && !r.getMetrics().isEmpty()));
 	}
@@ -258,12 +245,10 @@ class UiConfigControllerTest {
 			snapshot
 		);
 
-		mockMvc
-			.perform(
-				put("/api/ui-config/resource-groups/Paris")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
+		mockMvc.perform(
+			put("/api/ui-config/resource-groups/Paris").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+		)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.resourceGroups.Paris.metrics['hw.site.electricity_cost']").value(0.15));
 	}
@@ -276,13 +261,10 @@ class UiConfigControllerTest {
 		request.setName("Renamed");
 		request.setMetrics(Map.of("hw.site.pue", 2.0));
 
-		mockMvc
-			.perform(
-				put("/api/ui-config/resource-groups/Original")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isOk());
+		mockMvc.perform(
+			put("/api/ui-config/resource-groups/Original").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+		).andExpect(status().isOk());
 
 		verify(uiConfigService).updateResourceGroup(
 			eq("Original"),
@@ -298,8 +280,7 @@ class UiConfigControllerTest {
 	void testDeleteResourceGroupReturns200() throws Exception {
 		when(uiConfigService.deleteResourceGroup("OldGroup")).thenReturn(UiConfigSnapshotDto.builder().build());
 
-		mockMvc
-			.perform(delete("/api/ui-config/resource-groups/OldGroup"))
+		mockMvc.perform(delete("/api/ui-config/resource-groups/OldGroup"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 
@@ -328,8 +309,7 @@ class UiConfigControllerTest {
 			)
 		);
 
-		mockMvc
-			.perform(get("/api/ui-config/connectors/catalog"))
+		mockMvc.perform(get("/api/ui-config/connectors/catalog"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].id").value("Linux"))
 			.andExpect(jsonPath("$[0].requiredProtocols[0]").value("ssh"));

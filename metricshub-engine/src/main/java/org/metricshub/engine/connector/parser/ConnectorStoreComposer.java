@@ -134,26 +134,24 @@ public class ConnectorStoreComposer {
 
 		if (rawConnectorStore != null) {
 			// For each Raw Connector, search for variables in the JsonNode or the Embedded Files.
-			rawConnectorStore
-				.getStore()
-				.forEach((connectorId, rawConnector) -> {
-					final IntermediateConnector intermediateConnector = new IntermediateConnector(connectorId, rawConnector);
+			rawConnectorStore.getStore().forEach((connectorId, rawConnector) -> {
+				final IntermediateConnector intermediateConnector = new IntermediateConnector(connectorId, rawConnector);
 
-					// If the connector contains variables, do not parse it in this phase.
-					// This is due to the absence of additional connectors configuration.
-					// If processed, this may cause parsing errors.
-					if (intermediateConnector.hasVariables()) {
-						connectorsWithVariables.add(connectorId);
-					} else {
-						try {
-							// Add all the resulting connectors in the connector store
-							connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
-						} catch (IOException e) {
-							log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
-							log.debug(EXCEPTION_MESSAGE, e);
-						}
+				// If the connector contains variables, do not parse it in this phase.
+				// This is due to the absence of additional connectors configuration.
+				// If processed, this may cause parsing errors.
+				if (intermediateConnector.hasVariables()) {
+					connectorsWithVariables.add(connectorId);
+				} else {
+					try {
+						// Add all the resulting connectors in the connector store
+						connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
+					} catch (IOException e) {
+						log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
+						log.debug(EXCEPTION_MESSAGE, e);
 					}
-				});
+				}
+			});
 
 			connectorStore.setRawConnectorStore(rawConnectorStore);
 			connectorStore.addConnectorsWithVariables(connectorsWithVariables);
@@ -182,8 +180,7 @@ public class ConnectorStoreComposer {
 		// From the Set of connectors with variables that have been found in generateConnectorStore(),
 		// collect all the Raw Connectors with variables.
 		// In this map, either connectors or their embedded files contain variables that need to be replaced.
-		final Map<String, RawConnector> connectorsWithVariables = rawConnectorStore
-			.getStore()
+		final Map<String, RawConnector> connectorsWithVariables = rawConnectorStore.getStore()
 			.entrySet()
 			.stream()
 			.filter(entry -> connectorStore.getConnectorsWithVariables().contains(entry.getKey()))
@@ -191,11 +188,9 @@ public class ConnectorStoreComposer {
 
 		// For each Raw Connector, process variables
 		connectorsWithVariables.forEach((String connectorId, RawConnector rawConnector) ->
-			// Put all the resulting connectors inside the output object.
-			connectorsParsingResult
-				.getCustomConnectorsMap()
-				.putAll((processConnector(new IntermediateConnector(connectorId, rawConnector))))
-		);
+		// Put all the resulting connectors inside the output object.
+		connectorsParsingResult.getCustomConnectorsMap()
+			.putAll((processConnector(new IntermediateConnector(connectorId, rawConnector)))));
 
 		return connectorsParsingResult;
 	}
@@ -289,8 +284,7 @@ public class ConnectorStoreComposer {
 				processedConnectors.add(newIntermediateConnector);
 
 				// Add the connector to the host connectors set.
-				connectorsParsingResult
-					.getResourceConnectors()
+				connectorsParsingResult.getResourceConnectors()
 					.add(additionalConnectorValue.isForce() ? "+" + additionalConnectorId : additionalConnectorId);
 			}
 		}
@@ -316,17 +310,15 @@ public class ConnectorStoreComposer {
 		final Map<String, String> connectorVariablesMap = new HashMap<>();
 
 		// Iterate over the variables and extract description and defaultValue
-		variablesNode
-			.properties()
-			.forEach((Entry<String, JsonNode> entry) -> {
-				final String variableName = entry.getKey();
-				final JsonNode variableValue = entry.getValue();
+		variablesNode.properties().forEach((Entry<String, JsonNode> entry) -> {
+			final String variableName = entry.getKey();
+			final JsonNode variableValue = entry.getValue();
 
-				final JsonNode defaultValue = variableValue.get("defaultValue");
-				if (defaultValue != null && !defaultValue.isNull()) {
-					connectorVariablesMap.put(variableName, variableValue.get("defaultValue").asText());
-				}
-			});
+			final JsonNode defaultValue = variableValue.get("defaultValue");
+			if (defaultValue != null && !defaultValue.isNull()) {
+				connectorVariablesMap.put(variableName, variableValue.get("defaultValue").asText());
+			}
+		});
 
 		return connectorVariablesMap;
 	}
@@ -367,23 +359,21 @@ public class ConnectorStoreComposer {
 		final Map<Integer, EmbeddedFile> processedEmbeddedFiles = new HashMap<>();
 
 		// Iterate on each embedded file of the connector to replace variables
-		intermediateConnector
-			.getEmbeddedFiles()
-			.forEach((Integer embeddedFileId, EmbeddedFile embeddedFile) -> {
-				final String newEmbeddedFileContent = replaceEmbeddedFileVariables(
-					embeddedFile.getContentAsString(),
-					connectorVariables
-				);
+		intermediateConnector.getEmbeddedFiles().forEach((Integer embeddedFileId, EmbeddedFile embeddedFile) -> {
+			final String newEmbeddedFileContent = replaceEmbeddedFileVariables(
+				embeddedFile.getContentAsString(),
+				connectorVariables
+			);
 
-				// Create a copy of the embedded file
-				final EmbeddedFile newEmbeddedFile = embeddedFile.copy();
+			// Create a copy of the embedded file
+			final EmbeddedFile newEmbeddedFile = embeddedFile.copy();
 
-				// As the content is replaced, set the new content.
-				newEmbeddedFile.setContent(newEmbeddedFileContent.getBytes());
+			// As the content is replaced, set the new content.
+			newEmbeddedFile.setContent(newEmbeddedFileContent.getBytes());
 
-				// put the new embedded file in the final
-				processedEmbeddedFiles.put(embeddedFileId, newEmbeddedFile);
-			});
+			// put the new embedded file in the final
+			processedEmbeddedFiles.put(embeddedFileId, newEmbeddedFile);
+		});
 
 		// Replace the intermediate connector embedded files by the processed ones.
 		intermediateConnector.setEmbeddedFiles(processedEmbeddedFiles);
@@ -415,8 +405,7 @@ public class ConnectorStoreComposer {
 		}
 
 		// Filtering all the configurations that are not using this connector.
-		return additionalConnectors
-			.entrySet()
+		return additionalConnectors.entrySet()
 			.stream()
 			.filter(entry -> connectorId.equalsIgnoreCase(entry.getValue().getUses()))
 			.collect(

@@ -173,8 +173,7 @@ public class HostMonitorPowerAndEnergyEstimator {
 		}
 
 		// Browse through all the collected objects and perform the adjustment of estimated powers
-		final Stream<Monitor> monitorStream = telemetryManager
-			.getMonitors()
+		final Stream<Monitor> monitorStream = telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)
@@ -281,8 +280,8 @@ public class HostMonitorPowerAndEnergyEstimator {
 		// (zero estimated power or zero total estimated power)
 		if (
 			estimatedPowerConsumption == null ||
-			estimatedPowerConsumption.equals(0.0) ||
-			totalEstimatedPowerConsumption.equals(0.0)
+				estimatedPowerConsumption.equals(0.0) ||
+				totalEstimatedPowerConsumption.equals(0.0)
 		) {
 			return 0.0;
 		}
@@ -302,8 +301,7 @@ public class HostMonitorPowerAndEnergyEstimator {
 		final String hostname = telemetryManager.getHostname();
 
 		// Getting the sums of the enclosures' power consumption values
-		Double totalPowerConsumption = enclosureMonitors
-			.values()
+		Double totalPowerConsumption = enclosureMonitors.values()
 			.stream()
 			.filter(monitor -> !HwCollectHelper.isMissing(monitor))
 			.filter(monitor -> telemetryManager.isConnectorStatusOk(monitor))
@@ -338,8 +336,7 @@ public class HostMonitorPowerAndEnergyEstimator {
 	 */
 	Double sumPowerConsumptions(final Predicate<Monitor> filter) {
 		// Browse through all the collected objects and perform the sum of parameters using the map-reduce
-		return telemetryManager
-			.getMonitors()
+		return telemetryManager.getMonitors()
 			.values()
 			.stream()
 			.map(Map::values)
@@ -351,8 +348,8 @@ public class HostMonitorPowerAndEnergyEstimator {
 			.filter(monitor -> !KnownMonitorType.VM.getKey().equals(monitor.getType())) // Skip VM monitors as their power is already computed based on the host's power
 			.filter(monitor -> !HwCollectHelper.hasMeasuredParent(monitor, telemetryManager, measuredPowerParentIds)) // Double counting: already included in the parent's measured power
 			.filter(filter)
-			.map(monitor ->
-				CollectHelper.getNumberMetricValue(
+			.map(
+				monitor -> CollectHelper.getNumberMetricValue(
 					monitor,
 					HwCollectHelper.generatePowerMetricNameForMonitorType(monitor.getType()),
 					false

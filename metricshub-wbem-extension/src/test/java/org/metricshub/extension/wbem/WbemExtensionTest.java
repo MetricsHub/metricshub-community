@@ -108,8 +108,7 @@ class WbemExtensionTest {
 			initWbem();
 
 			// Mock a positive WBEM protocol health check response
-			doReturn(EXECUTE_WBEM_RESULT)
-				.when(wbemRequestExecutorSpy)
+			doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 				.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 			// Start the WBEM Health Check strategy
@@ -121,9 +120,9 @@ class WbemExtensionTest {
 		{
 			initWbem();
 
-			doThrow(new RuntimeException(new WBEMException(WBEMException.CIM_ERR_INVALID_NAMESPACE)))
-				.when(wbemRequestExecutorSpy)
-				.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
+			doThrow(new RuntimeException(new WBEMException(WBEMException.CIM_ERR_INVALID_NAMESPACE))).when(
+				wbemRequestExecutorSpy
+			).doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 			doCallRealMethod().when(wbemRequestExecutorSpy).isAcceptableException(any());
 
@@ -139,8 +138,7 @@ class WbemExtensionTest {
 		initWbem();
 
 		// Mock null WBEM protocol health check response
-		doReturn(null)
-			.when(wbemRequestExecutorSpy)
+		doReturn(null).when(wbemRequestExecutorSpy)
 			.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 		// Start the WBEM Health Check strategy
@@ -152,40 +150,36 @@ class WbemExtensionTest {
 	@Test
 	void testIsValidConfiguration() {
 		assertTrue(wbemExtension.isValidConfiguration(WbemConfiguration.builder().build()));
-		assertFalse(
-			wbemExtension.isValidConfiguration(
-				new IConfiguration() {
-					@Override
-					public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
+		assertFalse(wbemExtension.isValidConfiguration(new IConfiguration() {
+			@Override
+			public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {}
 
-					@Override
-					public String getHostname() {
-						return null;
-					}
+			@Override
+			public String getHostname() {
+				return null;
+			}
 
-					@Override
-					public void setHostname(String hostname) {}
+			@Override
+			public void setHostname(String hostname) {}
 
-					@Override
-					public IConfiguration copy() {
-						return null;
-					}
+			@Override
+			public IConfiguration copy() {
+				return null;
+			}
 
-					@Override
-					public void setTimeout(Long timeout) {}
+			@Override
+			public void setTimeout(Long timeout) {}
 
-					@Override
-					public String getProperty(String property) {
-						return null;
-					}
+			@Override
+			public String getProperty(String property) {
+				return null;
+			}
 
-					@Override
-					public boolean isCorrespondingProtocol(String protocol) {
-						return false;
-					}
-				}
-			)
-		);
+			@Override
+			public boolean isCorrespondingProtocol(String protocol) {
+				return false;
+			}
+		}));
 	}
 
 	@Test
@@ -267,8 +261,7 @@ class WbemExtensionTest {
 			.query(WBEM_TEST_QUERY)
 			.build();
 
-		doReturn(null)
-			.when(wbemRequestExecutorSpy)
+		doReturn(null).when(wbemRequestExecutorSpy)
 			.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 		final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
@@ -316,8 +309,7 @@ class WbemExtensionTest {
 			.query(WBEM_TEST_QUERY)
 			.build();
 
-		doReturn(EXECUTE_WBEM_RESULT)
-			.when(wbemRequestExecutorSpy)
+		doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 			.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 		final String message = "WbemCriterion test succeeded:";
@@ -367,8 +359,7 @@ class WbemExtensionTest {
 			.query(WBEM_TEST_QUERY)
 			.build();
 
-		doReturn(EXECUTE_WBEM_RESULT)
-			.when(wbemRequestExecutorSpy)
+		doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 			.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 		final String message = "WbemCriterion test succeeded:";
@@ -419,8 +410,7 @@ class WbemExtensionTest {
 				.build();
 
 			{
-				doReturn(EXECUTE_WBEM_RESULT)
-					.when(wbemRequestExecutorSpy)
+				doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 					.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 				{
@@ -437,8 +427,7 @@ class WbemExtensionTest {
 				}
 
 				{
-					threadHelperMock
-						.when(() -> ThreadHelper.execute(any(), anyLong(), anyString(), anyString()))
+					threadHelperMock.when(() -> ThreadHelper.execute(any(), anyLong(), anyString(), anyString()))
 						.thenReturn("ticket");
 
 					final String message = "WbemCriterion test succeeded:";
@@ -495,13 +484,11 @@ class WbemExtensionTest {
 				.query(WBEM_TEST_QUERY)
 				.build();
 
-			threadHelperMock
-				.when(() -> ThreadHelper.execute(any(), anyLong(), anyString(), anyString()))
+			threadHelperMock.when(() -> ThreadHelper.execute(any(), anyLong(), anyString(), anyString()))
 				.thenReturn("ticket");
 
 			{
-				doReturn(EXECUTE_WBEM_RESULT)
-					.when(wbemRequestExecutorSpy)
+				doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 					.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 				final String message = "WbemCriterion test succeeded:";
@@ -521,8 +508,7 @@ class WbemExtensionTest {
 			{
 				ClientException clientException = new ClientException(new WBEMException("error"));
 
-				doThrow(clientException)
-					.when(wbemRequestExecutorSpy)
+				doThrow(clientException).when(wbemRequestExecutorSpy)
 					.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 				final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
@@ -535,8 +521,7 @@ class WbemExtensionTest {
 				assertNull(criterionTestResult.getResult());
 			}
 
-			{
-			}
+			{}
 		}
 	}
 
@@ -573,8 +558,7 @@ class WbemExtensionTest {
 			.namespace(AUTOMATIC_NAMESPACE)
 			.build();
 
-		doReturn(EXECUTE_WBEM_RESULT)
-			.when(wbemRequestExecutorSpy)
+		doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 			.doWbemQuery(anyString(), any(WbemConfiguration.class), anyString(), anyString());
 
 		final String message = "WbemCriterion test succeeded:";
@@ -595,13 +579,11 @@ class WbemExtensionTest {
 	void testProcessWbemSourceOk() throws ClientException {
 		initWbem();
 
-		final WbemConfiguration configuration = (WbemConfiguration) telemetryManager
-			.getHostConfiguration()
+		final WbemConfiguration configuration = (WbemConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(WbemConfiguration.class);
 
-		doReturn(EXECUTE_WBEM_RESULT)
-			.when(wbemRequestExecutorSpy)
+		doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 			.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager, HOST_NAME);
 		final SourceTable actual = wbemExtension.processSource(
 			WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
@@ -617,13 +599,11 @@ class WbemExtensionTest {
 	void testProcessWbemSourceThrowsException() throws ClientException {
 		initWbem();
 
-		final WbemConfiguration configuration = (WbemConfiguration) telemetryManager
-			.getHostConfiguration()
+		final WbemConfiguration configuration = (WbemConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(WbemConfiguration.class);
 
-		doThrow(new RuntimeException("exception"))
-			.when(wbemRequestExecutorSpy)
+		doThrow(new RuntimeException("exception")).when(wbemRequestExecutorSpy)
 			.executeWbem(
 				anyString(),
 				eq(configuration),
@@ -646,14 +626,12 @@ class WbemExtensionTest {
 	void testProcessWbemSourceEmptyResult() throws ClientException {
 		initWbem();
 
-		final WbemConfiguration configuration = (WbemConfiguration) telemetryManager
-			.getHostConfiguration()
+		final WbemConfiguration configuration = (WbemConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(WbemConfiguration.class);
 
 		{
-			doReturn(null)
-				.when(wbemRequestExecutorSpy)
+			doReturn(null).when(wbemRequestExecutorSpy)
 				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager, HOST_NAME);
 			final SourceTable actual = wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_QUERY).build(),
@@ -666,8 +644,7 @@ class WbemExtensionTest {
 		}
 
 		{
-			doReturn(Collections.emptyList())
-				.when(wbemRequestExecutorSpy)
+			doReturn(Collections.emptyList()).when(wbemRequestExecutorSpy)
 				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager, HOST_NAME);
 			final SourceTable actual = wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_QUERY).build(),
@@ -700,8 +677,7 @@ class WbemExtensionTest {
 	void tesExecuteQuery() throws Exception {
 		initWbem();
 
-		doReturn(EXECUTE_WBEM_RESULT)
-			.when(wbemRequestExecutorSpy)
+		doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 			.executeWbem(
 				anyString(),
 				any(WbemConfiguration.class),
@@ -734,8 +710,7 @@ class WbemExtensionTest {
 	void tesExecuteQueryThrow() throws Exception {
 		initWbem();
 
-		doThrow(ClientException.class)
-			.when(wbemRequestExecutorSpy)
+		doThrow(ClientException.class).when(wbemRequestExecutorSpy)
 			.executeWbem(
 				anyString(),
 				any(WbemConfiguration.class),

@@ -126,8 +126,7 @@ class ReferenceResolverProcessorTest {
 		// Check that the relative source references are correctly replaced under the "enclosure" monitor section
 		assertEquals(
 			"${source::monitors.enclosure.discovery.sources.httpSource(1)}/${source::monitors.enclosure.discovery.sources.httpSource(1)}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -142,8 +141,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::monitors.enclosure.discovery.sources.httpSource(1)}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -154,8 +152,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::monitors.enclosure.discovery.sources.http.source3}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -166,8 +163,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::monitors.enclosure.discovery.sources.http-source4}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -178,8 +174,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::monitors.enclosure.discovery.sources.http_source5}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -190,8 +185,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::monitors.enclosure.discovery.sources.http.source6}/${source::monitors.enclosure.discovery.sources.http-source4}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -202,8 +196,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::beforeAll.systemId}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("discovery")
 				.get("sources")
@@ -215,8 +208,7 @@ class ReferenceResolverProcessorTest {
 
 		assertEquals(
 			"${source::monitors.enclosure.collect.sources.httpSource1}",
-			processedNode
-				.get("monitors")
+			processedNode.get("monitors")
 				.get("enclosure")
 				.get("collect")
 				.get("sources")

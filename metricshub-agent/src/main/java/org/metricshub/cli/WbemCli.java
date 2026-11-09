@@ -279,44 +279,38 @@ public class WbemCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
 
-					configurationNode.set("username", new TextNode(username));
-					if (password != null) {
-						configurationNode.set("password", new TextNode(String.valueOf(password)));
-					}
-
-					configurationNode.set("timeout", new TextNode(timeout));
-					configurationNode.set("namespace", new TextNode(namespace));
-					configurationNode.set("vcenter", new TextNode(vcenter));
-					configurationNode.set("protocol", new TextNode(protocol));
-					configurationNode.set("port", new IntNode(getOrDeducePortNumber()));
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(
-						PROTOCOL_IDENTIFIER,
-						configurationNode,
-						null
-					);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
-					// display the request
-					displayQuery();
-					// Execute the WBEM query
-					final String result = extension.executeQuery(configuration, getQuery());
-					// display the result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute WBEM query.\n", e);
+				configurationNode.set("username", new TextNode(username));
+				if (password != null) {
+					configurationNode.set("password", new TextNode(String.valueOf(password)));
 				}
-			});
+
+				configurationNode.set("timeout", new TextNode(timeout));
+				configurationNode.set("namespace", new TextNode(namespace));
+				configurationNode.set("vcenter", new TextNode(vcenter));
+				configurationNode.set("protocol", new TextNode(protocol));
+				configurationNode.set("port", new IntNode(getOrDeducePortNumber()));
+
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, configurationNode, null);
+				configuration.setHostname(hostname);
+
+				configuration.validateConfiguration(hostname);
+
+				// display the request
+				displayQuery();
+				// Execute the WBEM query
+				final String result = extension.executeQuery(configuration, getQuery());
+				// display the result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute WBEM query.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

@@ -71,21 +71,20 @@ public class FilterResultHelper {
 		// Remove footer : remove number of lines from the end.
 		final int end = removeFooter != null ? lines.size() - removeFooter : lines.size();
 
-		final Pattern excludePattern =
-			excludeRegExp == null || excludeRegExp.isEmpty() ? null : Pattern.compile(PslUtils.psl2JavaRegex(excludeRegExp));
+		final Pattern excludePattern = excludeRegExp == null || excludeRegExp.isEmpty()
+			? null
+			: Pattern.compile(PslUtils.psl2JavaRegex(excludeRegExp));
 
-		final Pattern keepOnlyPattern =
-			keepOnlyRegExp == null || keepOnlyRegExp.isEmpty()
-				? null
-				: Pattern.compile(PslUtils.psl2JavaRegex(keepOnlyRegExp));
+		final Pattern keepOnlyPattern = keepOnlyRegExp == null || keepOnlyRegExp.isEmpty()
+			? null
+			: Pattern.compile(PslUtils.psl2JavaRegex(keepOnlyRegExp));
 
 		// Remove lines containing a given regular expression excludeRegExp
 		// Keep only the lines containing a given regular expression
 		return IntStream.range(begin, end)
 			.mapToObj(lines::get)
 			.filter(
-				line ->
-					(excludePattern == null || !excludePattern.matcher(line).find()) &&
+				line -> (excludePattern == null || !excludePattern.matcher(line).find()) &&
 					(keepOnlyPattern == null || keepOnlyPattern.matcher(line).find())
 			)
 			.collect(Collectors.toList());
@@ -110,22 +109,20 @@ public class FilterResultHelper {
 			return lines;
 		}
 
-		return lines
-			.stream()
-			.map(line -> {
-				// protect the initial string that contains ";" and replace it with "," if this
-				// latest is not in Separators list. Otherwise, just remove the ";"
-				// replace all separators by ";", which is the standard separator used by MS_HW
-				if (!separators.contains(TABLE_SEP) && !separators.contains(COMMA)) {
-					return line.replace(TABLE_SEP, COMMA);
-				}
-				if (!separators.contains(TABLE_SEP)) {
-					return line.replace(TABLE_SEP, EMPTY);
-				}
-				return line;
-			})
-			.map(line ->
-				!separators.contains(TAB) && !separators.contains(WHITE_SPACE)
+		return lines.stream().map(line -> {
+			// protect the initial string that contains ";" and replace it with "," if this
+			// latest is not in Separators list. Otherwise, just remove the ";"
+			// replace all separators by ";", which is the standard separator used by MS_HW
+			if (!separators.contains(TABLE_SEP) && !separators.contains(COMMA)) {
+				return line.replace(TABLE_SEP, COMMA);
+			}
+			if (!separators.contains(TABLE_SEP)) {
+				return line.replace(TABLE_SEP, EMPTY);
+			}
+			return line;
+		})
+			.map(
+				line -> !separators.contains(TAB) && !separators.contains(WHITE_SPACE)
 					? PslUtils.nthArgf(line, selectColumns, separators, TABLE_SEP) // equivalent to ntharg // if separator = tab or simple space, then ignore empty cells
 					: PslUtils.nthArg(line, selectColumns, separators, TABLE_SEP)
 			)

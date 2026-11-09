@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -40,6 +41,7 @@ import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -72,8 +74,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 		@JsonSubTypes.Type(value = SqlSource.class, name = "sql"),
 		@JsonSubTypes.Type(value = JmxSource.class, name = "jmx"),
 		@JsonSubTypes.Type(value = EventLogSource.class, name = "eventLog"),
-		@JsonSubTypes.Type(value = FileSource.class, name = "file")
-	}
+		@JsonSubTypes.Type(value = FileSource.class, name = "file") }
 )
 @Data
 @NoArgsConstructor
@@ -142,6 +143,19 @@ public abstract class Source implements Serializable {
 	}
 
 	/**
+	 * The content type this source produces, before its computes run: text for <code>http</code>, <code>file</code>,
+	 * <code>ipmi</code>, <code>commandLine</code> and the <code>awk</code> source, a table for every other source
+	 * (<code>ipmiRaw</code> included: its result is one row holding the request and the response).
+	 * A static property of the class, never a YAML field.
+	 *
+	 * @return the output content type
+	 */
+	@JsonIgnore
+	public ContentType getOutputContentType() {
+		return ContentType.TABLE;
+	}
+
+	/**
 	 * Creates a copy of the source.
 	 *
 	 * @return A new Source instance that is a copy of the original.
@@ -185,11 +199,9 @@ public abstract class Source implements Serializable {
 	 *         <code>false</code>
 	 */
 	public boolean isExecuteForEachEntryOf() {
-		return (
-			executeForEachEntryOf != null &&
+		return (executeForEachEntryOf != null &&
 			executeForEachEntryOf.getSource() != null &&
-			!executeForEachEntryOf.getSource().isBlank()
-		);
+			!executeForEachEntryOf.getSource().isBlank());
 	}
 
 	/**

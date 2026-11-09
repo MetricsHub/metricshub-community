@@ -136,13 +136,11 @@ public class OtelCollectorConfig {
 			return false;
 		}
 		OtelCollectorConfig other = (OtelCollectorConfig) obj;
-		return (
-			Objects.equals(commandLine, other.commandLine) &&
+		return (Objects.equals(commandLine, other.commandLine) &&
 			disabled == other.disabled &&
 			MapHelper.areEqual(environment, other.environment) &&
 			output == other.output &&
-			Objects.equals(workingDir, other.workingDir)
-		);
+			Objects.equals(workingDir, other.workingDir));
 	}
 
 	@Override

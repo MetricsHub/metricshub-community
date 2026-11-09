@@ -31,15 +31,15 @@ class MetricsHubExtensionForJawkTest {
 		) {
 			// Without parsingMode, the JSON is parsed as a tree
 			assertEquals(CSV, extension.executeJson2csv(args));
-			clientsExecutor.verify(() ->
-				ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), ";", false, "host")
+			clientsExecutor.verify(
+				() -> ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), ";", false, "host")
 			);
 
 			// parsingMode events (case-insensitive) gives the same CSV
 			args.put("parsingMode", "Events");
 			assertEquals(CSV, extension.executeJson2csv(args));
-			clientsExecutor.verify(() ->
-				ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), ";", true, "host")
+			clientsExecutor.verify(
+				() -> ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), ";", true, "host")
 			);
 		}
 	}

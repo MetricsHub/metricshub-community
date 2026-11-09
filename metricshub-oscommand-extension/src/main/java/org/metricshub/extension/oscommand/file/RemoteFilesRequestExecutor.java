@@ -192,15 +192,13 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 			regex.append("(?!\\.)");
 		}
 		// Code points, not chars: a character outside the BMP must be quoted whole
-		segment
-			.codePoints()
-			.forEach(c -> {
-				switch (c) {
-					case '*' -> regex.append(".*");
-					case '?' -> regex.append('.');
-					default -> regex.append(Pattern.quote(Character.toString(c)));
-				}
-			});
+		segment.codePoints().forEach(c -> {
+			switch (c) {
+				case '*' -> regex.append(".*");
+				case '?' -> regex.append('.');
+				default -> regex.append(Pattern.quote(Character.toString(c)));
+			}
+		});
 		return regex.append("\\z").toString();
 	}
 

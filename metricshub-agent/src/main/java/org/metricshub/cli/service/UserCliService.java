@@ -24,9 +24,6 @@ package org.metricshub.cli.service;
 import static org.metricshub.agent.helper.AgentConstants.USER_INFO_SEPARATOR;
 import static org.metricshub.agent.helper.AgentConstants.USER_PREFIX;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
@@ -56,8 +53,9 @@ import picocli.CommandLine.Spec;
 @Command(
 	name = "user",
 	subcommands = {
-		UserCliService.CreateCommand.class, UserCliService.ListCommand.class, UserCliService.DeleteCommand.class
-	},
+		UserCliService.CreateCommand.class,
+		UserCliService.ListCommand.class,
+		UserCliService.DeleteCommand.class },
 	sortOptions = false,
 	usageHelpAutoWidth = true,
 	headerHeading = "%n",
@@ -95,19 +93,6 @@ public class UserCliService {
 	 */
 	private static String userAlias(final String username) {
 		return USER_PREFIX + username;
-	}
-
-	/**
-	 * Store the given KeyStore to the specified file.
-	 *
-	 * @param ks           the KeyStore instance
-	 * @param keyStoreFile the file to store the KeyStore
-	 * @throws Exception if an error occurs during storing
-	 */
-	private static void store(final KeyStore ks, final File keyStoreFile) throws Exception {
-		try (OutputStream fos = new FileOutputStream(keyStoreFile)) {
-			SecurityManager.store(ks, fos);
-		}
 	}
 
 	/**
@@ -179,8 +164,7 @@ public class UserCliService {
 				final var secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
 				final var protectionParam = new KeyStore.PasswordProtection(getKeyStoreChars());
 
-				ks.setEntry(alias, secretKeyEntry, protectionParam);
-				store(ks, keyStoreFile);
+				SecurityManager.updateKeyStore(keyStoreFile, fresh -> fresh.setEntry(alias, secretKeyEntry, protectionParam));
 
 				out.println(
 					Ansi.ansi()
@@ -323,8 +307,7 @@ public class UserCliService {
 					return CommandLine.ExitCode.SOFTWARE;
 				}
 
-				ks.deleteEntry(alias);
-				store(ks, keyStoreFile);
+				SecurityManager.updateKeyStore(keyStoreFile, fresh -> fresh.deleteEntry(alias));
 
 				out.println(Ansi.ansi().a("User '").fgGreen().a(username).reset().a("' has been deleted."));
 				return CommandLine.ExitCode.OK;

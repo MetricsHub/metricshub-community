@@ -291,32 +291,23 @@ public class ToolBridge {
 			running.remove(released);
 		}
 		final long timeoutMs = invoke.timeoutMs() > 0 ? invoke.timeoutMs() : TimeUnit.SECONDS.toMillis(300);
-		final ScheduledFuture<?> scheduled = timer.schedule(
-			() -> {
-				if (
-					answerOnce(
-						answered,
-						generation,
-						new ToolError(invoke.requestId(), ToolErrorCode.TIMEOUT, "Timed out after " + timeoutMs + " ms")
-					)
-				) {
-					log.warn(
-						"Tunnel tool '{}' (request {}) timed out after {} ms.",
-						invoke.tool(),
-						invoke.requestId(),
-						timeoutMs
-					);
-				}
-				// Both of these run whether or not the answer was sent. A session that ended
-				// suppresses the reply, never the deadline: otherwise work outliving its session
-				// would hold its slot through every session that follows, until nothing new could
-				// be invoked at all.
-				execution.cancel(true);
-				release(released);
-			},
-			timeoutMs,
-			TimeUnit.MILLISECONDS
-		);
+		final ScheduledFuture<?> scheduled = timer.schedule(() -> {
+			if (
+				answerOnce(
+					answered,
+					generation,
+					new ToolError(invoke.requestId(), ToolErrorCode.TIMEOUT, "Timed out after " + timeoutMs + " ms")
+				)
+			) {
+				log.warn("Tunnel tool '{}' (request {}) timed out after {} ms.", invoke.tool(), invoke.requestId(), timeoutMs);
+			}
+			// Both of these run whether or not the answer was sent. A session that ended
+			// suppresses the reply, never the deadline: otherwise work outliving its session
+			// would hold its slot through every session that follows, until nothing new could
+			// be invoked at all.
+			execution.cancel(true);
+			release(released);
+		}, timeoutMs, TimeUnit.MILLISECONDS);
 		deadline.set(scheduled);
 		if (answered.get() || released.get()) {
 			// The tool finished, or a lost connection gave up on it, before the handle was stored.
@@ -384,8 +375,9 @@ public class ToolBridge {
 		final AgentRegistered currentLimits,
 		final long startedAt
 	) {
-		final String arguments =
-			invoke.arguments() == null || invoke.arguments().isNull() ? "{}" : invoke.arguments().toString();
+		final String arguments = invoke.arguments() == null || invoke.arguments().isNull()
+			? "{}"
+			: invoke.arguments().toString();
 		final String output;
 		try {
 			output = callback.call(arguments);

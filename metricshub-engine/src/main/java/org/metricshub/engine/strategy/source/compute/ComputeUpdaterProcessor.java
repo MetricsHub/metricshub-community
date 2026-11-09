@@ -41,6 +41,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Exclude
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.InsertColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
@@ -52,6 +53,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Sort;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Tail;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
@@ -211,6 +214,21 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 		processCompute(xml2csv);
 	}
 
+	@Override
+	public void process(final ToTable toTable) {
+		processCompute(toTable);
+	}
+
+	@Override
+	public void process(final ToText toText) {
+		processCompute(toText);
+	}
+
+	@Override
+	public void process(final InsertColumn insertColumn) {
+		processCompute(insertColumn);
+	}
+
 	/**
 	 * Copy the given compute, replace device id when running mono-instance collects, replace
 	 * source reference and finally call the compute visitor
@@ -222,8 +240,8 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 		final Compute copy = origin.copy();
 
 		// Replace resource attributes references
-		copy.update(value ->
-			SourceUpdaterProcessor.replaceResourceAttributeReferences(
+		copy.update(
+			value -> SourceUpdaterProcessor.replaceResourceAttributeReferences(
 				value,
 				telemetryManager.getHostConfiguration().getAttributes()
 			)

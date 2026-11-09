@@ -126,8 +126,8 @@ public class ThreadHelper {
 	 * @throws ExecutionException   if the computation threw an exception
 	 * @throws TimeoutException     if the wait timed out
 	 */
-	public static <T> T execute(final Callable<T> callable, final long timeout)
-		throws InterruptedException, ExecutionException, TimeoutException {
+	public static <T> T execute(final Callable<T> callable, final long timeout) throws InterruptedException,
+		ExecutionException, TimeoutException {
 		return doExecute(callable, timeout, null);
 	}
 

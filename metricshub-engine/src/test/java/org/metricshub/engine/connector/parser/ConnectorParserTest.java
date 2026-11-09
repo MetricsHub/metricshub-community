@@ -304,9 +304,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase1() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/beforeAllSourceDep/useCase1"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase1")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase1Dependency();
 
@@ -315,9 +314,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase2() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/beforeAllSourceDep/useCase2"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase2")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase2Dependency();
 
@@ -326,9 +324,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase3() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/beforeAllSourceDep/useCase3"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase3")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase3Dependency();
 		assertEquals(expected, connector.getBeforeAllSourceDep());
@@ -336,9 +333,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase4() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/beforeAllSourceDep/useCase4"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase4")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = new ArrayList<>();
 		final Set<String> level1 = new HashSet<>();
@@ -357,9 +353,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase1() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/afterAllSourceDep/useCase1"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase1")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase1Dependency();
 
@@ -368,9 +363,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase2() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/afterAllSourceDep/useCase2"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase2")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase2Dependency();
 
@@ -379,9 +373,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase3() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/afterAllSourceDep/useCase3"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase3")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase3Dependency();
 		assertEquals(expected, connector.getAfterAllSourceDep());
@@ -389,9 +382,8 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase4() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/afterAllSourceDep/useCase4"
-		).parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase4")
+			.parse("sourceDep");
 
 		final List<Set<String>> expected = new ArrayList<>();
 		final Set<String> level1 = new HashSet<>();
@@ -734,34 +726,34 @@ class ConnectorParserTest {
 	@Test
 	void withNodeProcessorExtendsAndConstantsProcessorTest() {
 		final AbstractNodeProcessor processor = ConnectorParser.withNodeProcessor(RESOURCES_TEST_FILES_PATH).getProcessor();
-		assertNotNull(processor, () ->
-			"Context: Extends, reference resolver and constants node processors creation. First processor shouldn't be null"
+		assertNotNull(
+			processor,
+			() -> "Context: Extends, reference resolver and constants node processors creation. First processor shouldn't be null"
 		);
 		assertTrue(
 			processor instanceof ExtendsProcessor,
-			() ->
-				"Context: Extends, reference resolver and constants node processors creation. First processor should be: " +
+			() -> "Context: Extends, reference resolver and constants node processors creation. First processor should be: " +
 				ExtendsProcessor.class.getSimpleName()
 		);
 
 		AbstractNodeProcessor next = processor.getNext();
-		assertNotNull(next, () ->
-			"Context: Extends, reference resolver and constants node processors creation. Second processor shouldn't be null"
+		assertNotNull(
+			next,
+			() -> "Context: Extends, reference resolver and constants node processors creation. Second processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ReferenceResolverProcessor,
-			() ->
-				"Context: Extends, reference resolver and constants node processors creation. Second processor should be: " +
+			() -> "Context: Extends, reference resolver and constants node processors creation. Second processor should be: " +
 				ReferenceResolverProcessor.class.getSimpleName()
 		);
 		next = next.next;
-		assertNotNull(next, () ->
-			"Context: Extends, reference resolver and constants node processors creation. Third processor shouldn't be null"
+		assertNotNull(
+			next,
+			() -> "Context: Extends, reference resolver and constants node processors creation. Third processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ConstantsProcessor,
-			() ->
-				"Context: Extends, reference resolver and constants node processors creation. Third processor should be: " +
+			() -> "Context: Extends, reference resolver and constants node processors creation. Third processor should be: " +
 				ConstantsProcessor.class.getSimpleName()
 		);
 	}
@@ -772,45 +764,45 @@ class ConnectorParserTest {
 			RESOURCES_TEST_FILES_PATH,
 			Collections.emptyMap()
 		).getProcessor();
-		assertNotNull(processor, () ->
-			"Context: Extends, configuration variable, reference resolver and constants node processors creation. First processor shouldn't be null"
+		assertNotNull(
+			processor,
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. First processor shouldn't be null"
 		);
 		assertTrue(
 			processor instanceof ExtendsProcessor,
-			() ->
-				"Context: Extends, configuration variable, reference resolver and constants node processors creation. First processor should be: " +
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. First processor should be: " +
 				ExtendsProcessor.class.getSimpleName()
 		);
 
 		AbstractNodeProcessor next = processor.getNext();
-		assertNotNull(next, () ->
-			"Context: Extends, configuration variable, reference resolver and constants node processors creation. Second processor shouldn't be null"
+		assertNotNull(
+			next,
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. Second processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ConnectorVariableProcessor,
-			() ->
-				"Context: Extends, configuration variable, reference resolver and constants node processors creation. Second processor should be: " +
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. Second processor should be: " +
 				ConnectorVariableProcessor.class.getSimpleName()
 		);
 
 		next = next.getNext();
-		assertNotNull(next, () ->
-			"Context: Extends, configuration variable, reference resolver and constants node processors creation. Third processor shouldn't be null"
+		assertNotNull(
+			next,
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. Third processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ReferenceResolverProcessor,
-			() ->
-				"Context: Extends, configuration variable, reference resolver and constants node processors creation. Third processor should be: " +
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. Third processor should be: " +
 				ReferenceResolverProcessor.class.getSimpleName()
 		);
 		next = next.getNext();
-		assertNotNull(next, () ->
-			"Context: Extends, configuration variable, reference resolver and constants node processors creation. Fourth processor shouldn't be null"
+		assertNotNull(
+			next,
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. Fourth processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ConstantsProcessor,
-			() ->
-				"Context: Extends, configuration variable, reference resolver and constants node processors creation. Fourth processor should be: " +
+			() -> "Context: Extends, configuration variable, reference resolver and constants node processors creation. Fourth processor should be: " +
 				ConstantsProcessor.class.getSimpleName()
 		);
 	}

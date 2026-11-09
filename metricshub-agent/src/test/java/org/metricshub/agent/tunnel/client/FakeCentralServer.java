@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLContext;
 import org.java_websocket.WebSocket;
 import org.java_websocket.enums.Opcode;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
@@ -140,14 +141,21 @@ public class FakeCentralServer extends WebSocketServer {
 	/**
 	 * Sends one text message as {@code pieces} non-final fragments, and never finishes it.
 	 *
+	 * <p>Stops sending to a connection once it is closed: the tests ask for more fragments than the
+	 * client accepts, and the client closing the tunnel part way through is the expected outcome.
+	 *
 	 * @param chunk  the text of each fragment
 	 * @param pieces how many to send
 	 */
 	public void sendFragmentsToAll(final String chunk, final int pieces) {
 		connections.forEach(connection -> {
-			for (int piece = 0; piece < pieces; piece++) {
-				// The library manages the CONTINUOUS opcode itself; it only accepts TEXT here.
-				connection.sendFragmentedFrame(Opcode.TEXT, ByteBuffer.wrap(chunk.getBytes(StandardCharsets.UTF_8)), false);
+			try {
+				for (int piece = 0; piece < pieces; piece++) {
+					// The library manages the CONTINUOUS opcode itself; it only accepts TEXT here.
+					connection.sendFragmentedFrame(Opcode.TEXT, ByteBuffer.wrap(chunk.getBytes(StandardCharsets.UTF_8)), false);
+				}
+			} catch (WebsocketNotConnectedException e) {
+				// The client closed the tunnel (an isOpen() check before each send would still race the close)
 			}
 		});
 	}

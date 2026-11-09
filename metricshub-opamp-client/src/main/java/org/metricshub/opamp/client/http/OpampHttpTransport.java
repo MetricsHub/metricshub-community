@@ -71,10 +71,9 @@ public class OpampHttpTransport implements OpampTransport {
 			.timeout(settings.getRequestTimeout())
 			.header("Content-Type", CONTENT_TYPE_PROTOBUF);
 
-		settings.getHeaders().forEach(requestBuilder::header);
+		settings.currentHeaders().forEach(requestBuilder::header);
 
-		final HttpRequest httpRequest = requestBuilder
-			.POST(HttpRequest.BodyPublishers.ofByteArray(agentToServerBytes))
+		final HttpRequest httpRequest = requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(agentToServerBytes))
 			.build();
 
 		final HttpResponse<byte[]> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
@@ -98,7 +97,7 @@ public class OpampHttpTransport implements OpampTransport {
 	 * @param value the raw header value
 	 * @return the corresponding delay, or an empty optional when the value cannot be parsed
 	 */
-	static Optional<Duration> parseRetryAfter(final String value) {
+	public static Optional<Duration> parseRetryAfter(final String value) {
 		final String trimmed = value.trim();
 		try {
 			return Optional.of(Duration.ofSeconds(Long.parseLong(trimmed)));

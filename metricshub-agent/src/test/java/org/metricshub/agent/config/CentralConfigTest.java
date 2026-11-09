@@ -26,16 +26,14 @@ class CentralConfigTest {
 
 	@Test
 	void oneServerShouldBeWrittenOnce() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com:4320
 			  headers:
 			    Authorization: Bearer dev-agent-secret
 			  certificateFile: /opt/metricshub/security/central-ca.pem
-			"""
-		);
+			""");
 
 		// Both channels reach the same server, so both are addressed, credentialed and trusted from
 		// what was written once -- and only the tunnel's scheme differs, because only it is a socket
@@ -49,13 +47,11 @@ class CentralConfigTest {
 
 	@Test
 	void plainHttpShouldGiveAPlainSocket() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: http://127.0.0.1:4320
-			"""
-		);
+			""");
 
 		assertEquals("http://127.0.0.1:4320/v1/opamp", central.opamp().getEndpoint());
 		assertEquals("ws://127.0.0.1:4320/ws/agent", central.tunnel().getEndpoint());
@@ -63,13 +59,11 @@ class CentralConfigTest {
 
 	@Test
 	void aTrailingSlashShouldNotDoubleUp() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com/
-			"""
-		);
+			""");
 
 		assertEquals("https://central.example.com/v1/opamp", central.opamp().getEndpoint());
 		assertEquals("wss://central.example.com/ws/agent", central.tunnel().getEndpoint());
@@ -77,8 +71,7 @@ class CentralConfigTest {
 
 	@Test
 	void aChannelShouldBeAbleToLeaveTheRoof() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
@@ -90,8 +83,7 @@ class CentralConfigTest {
 			    headers:
 			      Authorization: Bearer its-own
 			    certificateFile: /its/own/ca.pem
-			"""
-		);
+			""");
 
 		// The deployment where the two channels do not come out of the same ingress
 		assertEquals("https://central.example.com/v1/opamp", central.opamp().getEndpoint());
@@ -123,8 +115,7 @@ class CentralConfigTest {
 
 	@Test
 	void aChannelShouldBeAbleToTrustNothingOfItsOwn() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
@@ -132,8 +123,7 @@ class CentralConfigTest {
 			  tunnel:
 			    endpoint: wss://tunnel.example.net/ws/agent
 			    certificateFile: ""
-			"""
-		);
+			""");
 
 		// Both transports read a blank certificate file as "use the system trust store", which is
 		// what an overridden endpoint presenting a publicly trusted certificate needs. Read as
@@ -167,8 +157,7 @@ class CentralConfigTest {
 
 	@Test
 	void aPathWrittenWithoutItsSlashShouldStillBeAPath() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
@@ -176,8 +165,7 @@ class CentralConfigTest {
 			    path: fleet/v1/opamp
 			  tunnel:
 			    path: fleet/ws/agent
-			"""
-		);
+			""");
 
 		// Welded on, the path becomes part of the HOST -- a name that resolves to nothing, which
 		// reads like a DNS problem rather than the missing slash it is
@@ -187,8 +175,7 @@ class CentralConfigTest {
 
 	@Test
 	void aChannelShouldOverrideAHeaderItSpellsDifferently() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
@@ -197,8 +184,7 @@ class CentralConfigTest {
 			  tunnel:
 			    headers:
 			      authorization: Bearer its-own
-			"""
-		);
+			""");
 
 		// A header name is case-insensitive, and `HttpRequest.Builder.header` APPENDS: kept apart,
 		// these two would send the credential twice in one request and a server reading one value
@@ -245,8 +231,7 @@ class CentralConfigTest {
 
 	@Test
 	void aPathShouldBeAbleToMoveWithoutTheHost() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
@@ -254,8 +239,7 @@ class CentralConfigTest {
 			    path: /fleet/v1/opamp
 			  tunnel:
 			    path: /fleet/ws/agent
-			"""
-		);
+			""");
 
 		assertEquals("https://central.example.com/fleet/v1/opamp", central.opamp().getEndpoint());
 		assertEquals("wss://central.example.com/fleet/ws/agent", central.tunnel().getEndpoint());
@@ -263,16 +247,14 @@ class CentralConfigTest {
 
 	@Test
 	void nothingShouldRunWithoutTheRoof() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  url: https://central.example.com
 			  opamp:
 			    enabled: true
 			  tunnel:
 			    enabled: true
-			"""
-		);
+			""");
 
 		// A channel cannot let itself in: `central.enabled` is the door, and it is shut by default
 		assertFalse(central.opamp().isEnabled());
@@ -316,8 +298,7 @@ class CentralConfigTest {
 
 	@Test
 	void theResolvedPolicyShouldBeThePolicyWhenTheFlagIsOff() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: https://central.example.com
@@ -332,8 +313,7 @@ class CentralConfigTest {
 			    downloadHeaders:
 			      repo.metricshub.com:
 			        Authorization: Basic abc
-			"""
-		);
+			""");
 
 		// UpgradeManager used to read the configured policy itself. The copy it reads now must be
 		// that policy, field for field -- a copy that dropped one would silently change what an
@@ -349,8 +329,7 @@ class CentralConfigTest {
 
 	@Test
 	void insecureShouldOnlyBeReadFromTheRoof() throws Exception {
-		final CentralConfig central = deserialize(
-			"""
+		final CentralConfig central = deserialize("""
 			central:
 			  enabled: true
 			  url: http://central.lab:4320
@@ -358,8 +337,7 @@ class CentralConfigTest {
 			    insecure: true
 			  upgrade:
 			    insecure: true
-			"""
-		);
+			""");
 
 		// One switch, in one place: written under a channel it is not a second way in
 		assertFalse(central.tunnel().isInsecure());

@@ -65,8 +65,8 @@ class ConnectorToolTest {
 	void testWherePlacedIsLeftToTheReview() {
 		// Escaped or not, in a command, a request or a compute: what the connector does with a value is reviewed
 		assertDoesNotThrow(() -> definition("kill -${param::signal} $(pgrep ${param::service})"));
-		assertDoesNotThrow(() ->
-			tool(HttpSource.builder().body("{\"unit\": \"${esc(json)::param::service}\"}").build()).toDefinition("logs")
+		assertDoesNotThrow(
+			() -> tool(HttpSource.builder().body("{\"unit\": \"${esc(json)::param::service}\"}").build()).toDefinition("logs")
 		);
 		final CommandLineSource source = CommandLineSource.builder().commandLine("tail ${param::path}").build();
 		source.setComputes(List.of(Append.builder().column(1).value(";${attribute::service}").build()));
@@ -76,8 +76,9 @@ class ConnectorToolTest {
 	@Test
 	void testReferencesMustNameDeclaredParameters() {
 		// A misspelled reference would stay in the source as is, a compute's included
-		final IllegalArgumentException undeclared = assertThrows(IllegalArgumentException.class, () ->
-			definition("journalctl -u ${param::servce}")
+		final IllegalArgumentException undeclared = assertThrows(
+			IllegalArgumentException.class,
+			() -> definition("journalctl -u ${param::servce}")
 		);
 		assertTrue(undeclared.getMessage().contains("servce"), undeclared.getMessage());
 		final CommandLineSource source = CommandLineSource.builder().commandLine("ls").build();

@@ -63,20 +63,17 @@ public class FileSourceProcessor {
 	/**
 	 * PowerShell command template for resolving file paths on Windows.
 	 */
-	public static final String RESOLVE_WINDOWS_FILES_COMMAND =
-		"PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object FullName\"";
+	public static final String RESOLVE_WINDOWS_FILES_COMMAND = "PowerShell.exe -ExecutionPolicy Bypass -Command \"Get-Item -Path \\\"%s\\\" -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object FullName\"";
 
 	/**
 	 *
 	 */
-	public static final String READ_CONTENT_FROM_OFFSET_COMMAND =
-		"powershell.exe -ExecutionPolicy Bypass -File \"%s\" -Path \"%s\" -Offset %d -Length %d";
+	public static final String READ_CONTENT_FROM_OFFSET_COMMAND = "powershell.exe -ExecutionPolicy Bypass -File \"%s\" -Path \"%s\" -Offset %d -Length %d";
 
 	/**
 	 *
 	 */
-	public static final String READ_FILE_CONTENT_COMMAND =
-		"powershell.exe -ExecutionPolicy Bypass -File \"%s\" -Path \"%s\"";
+	public static final String READ_FILE_CONTENT_COMMAND = "powershell.exe -ExecutionPolicy Bypass -File \"%s\" -Path \"%s\"";
 
 	/**
 	 *
@@ -157,8 +154,7 @@ public class FileSourceProcessor {
 				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
-				Map<String, Long> sourceCursors = telemetryManager
-					.getHostProperties()
+				Map<String, Long> sourceCursors = telemetryManager.getHostProperties()
 					.getConnectorNamespace(connectorId)
 					.getFileSourceCursors(fileSource.getKey());
 
@@ -357,8 +353,7 @@ public class FileSourceProcessor {
 			return null;
 		}
 
-		return winRequestExecutor
-			.openFileOperations(hostname, winConfiguration)
+		return winRequestExecutor.openFileOperations(hostname, winConfiguration)
 			.orElseGet(() -> createScriptFileOperations(hostname, winConfiguration));
 	}
 
@@ -606,10 +601,9 @@ public class FileSourceProcessor {
 			final long additionalContentSize = fileSize - cursor;
 
 			// Determine the actual size to read, respecting the remaining size limit
-			final long sizeLimit =
-				remainingSize == UNLIMITED_SIZE_PER_POLL
-					? additionalContentSize
-					: Math.min(additionalContentSize, remainingSize);
+			final long sizeLimit = remainingSize == UNLIMITED_SIZE_PER_POLL
+				? additionalContentSize
+				: Math.min(additionalContentSize, remainingSize);
 
 			// Cap read length to int range for readFromOffset; advance cursor by what we actually read
 			final int readLength = sizeLimit > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) sizeLimit;

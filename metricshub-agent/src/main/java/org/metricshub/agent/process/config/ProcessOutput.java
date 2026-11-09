@@ -60,8 +60,7 @@ public class ProcessOutput {
 	 * @return a new {@link ProcessOutput}
 	 */
 	public static ProcessOutput namedConsole(final String label) {
-		return builder()
-			.outputProcessor(ProcessorHelper.namedConsole(String.format("[%s output]", label), false))
+		return builder().outputProcessor(ProcessorHelper.namedConsole(String.format("[%s output]", label), false))
 			.errorProcessor(ProcessorHelper.namedConsole(String.format("[%s error]", label), true))
 			.build();
 	}
@@ -84,8 +83,7 @@ public class ProcessOutput {
 	 * @return a new {@link ProcessOutput}
 	 */
 	public static ProcessOutput log(final Logger logger) {
-		return builder()
-			.outputProcessor(ProcessorHelper.safeLogger(logger, Slf4jLevel.DEBUG))
+		return builder().outputProcessor(ProcessorHelper.safeLogger(logger, Slf4jLevel.DEBUG))
 			.errorProcessor(ProcessorHelper.safeLogger(logger, Slf4jLevel.ERROR))
 			.build();
 	}

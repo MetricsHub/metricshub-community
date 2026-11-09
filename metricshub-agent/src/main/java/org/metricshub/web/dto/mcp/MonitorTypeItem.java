@@ -35,7 +35,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonSubTypes(
 	{
 		@JsonSubTypes.Type(value = MonitorVo.class, name = "monitor"),
-		@JsonSubTypes.Type(value = MonitorTypeSummaryVo.class, name = "summary")
-	}
+		@JsonSubTypes.Type(value = MonitorTypeSummaryVo.class, name = "summary") }
 )
 public interface MonitorTypeItem {}

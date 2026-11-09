@@ -125,8 +125,7 @@ class DetectionStrategyTest {
 		assertEquals(1, telemetryManager.getMonitors().get(KnownMonitorType.CONNECTOR.getKey()).size());
 		assertEquals(
 			"AAC",
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get(KnownMonitorType.CONNECTOR.getKey())
 				.get(monitorId)
 				.getAttributes()
@@ -134,8 +133,7 @@ class DetectionStrategyTest {
 		);
 		assertEquals(
 			AAC_CONNECTOR_NAME,
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get(KnownMonitorType.CONNECTOR.getKey())
 				.get(monitorId)
 				.getAttributes()
@@ -143,8 +141,7 @@ class DetectionStrategyTest {
 		);
 		assertEquals(
 			AAC_CONNECTOR_ID,
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get(KnownMonitorType.CONNECTOR.getKey())
 				.get(monitorId)
 				.getAttributes()
@@ -155,8 +152,7 @@ class DetectionStrategyTest {
 				.sorted()
 				.map(deviceKind -> deviceKind.toString().toLowerCase())
 				.collect(Collectors.joining(",")),
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get(KnownMonitorType.CONNECTOR.getKey())
 				.get(monitorId)
 				.getAttributes()
@@ -164,8 +160,7 @@ class DetectionStrategyTest {
 		);
 
 		// Check monitor metrics
-		StateSetMetric stateSetMetric = telemetryManager
-			.getMonitors()
+		StateSetMetric stateSetMetric = telemetryManager.getMonitors()
 			.get(KnownMonitorType.CONNECTOR.getKey())
 			.get(monitorId)
 			.getMetric(CONNECTOR_STATUS_METRIC_KEY, StateSetMetric.class);
@@ -174,8 +169,7 @@ class DetectionStrategyTest {
 		// Set criterion test result to isSuccess = false, call DetectionStrategy and expect the metric to be set to failed
 		criterionTestResult.setSuccess(false);
 		detectionStrategy.createConnectorMonitors(connectorTestResultList);
-		stateSetMetric = telemetryManager
-			.getMonitors()
+		stateSetMetric = telemetryManager.getMonitors()
 			.get(KnownMonitorType.CONNECTOR.getKey())
 			.get(monitorId)
 			.getMetric(CONNECTOR_STATUS_METRIC_KEY, StateSetMetric.class);
@@ -218,8 +212,7 @@ class DetectionStrategyTest {
 		detectionStrategy.createConnectorMonitor(connectorTestResult);
 
 		// Retrieve the created monitor
-		final Map<String, Monitor> connectorMonitorMap = telemetryManager
-			.getMonitors()
+		final Map<String, Monitor> connectorMonitorMap = telemetryManager.getMonitors()
 			.get(KnownMonitorType.CONNECTOR.getKey());
 		final String compiledFilename = connector.getConnectorIdentity().getCompiledFilename();
 		final Monitor monitor = connectorMonitorMap.get(

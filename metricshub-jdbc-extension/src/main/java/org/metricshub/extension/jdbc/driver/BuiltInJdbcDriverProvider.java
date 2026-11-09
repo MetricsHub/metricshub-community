@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * {@link IJdbcDriverProvider} that advertises the JDBC drivers shaded into
- * {@code metricshub-jdbc-extension}: MariaDB, PostgreSQL, MySQL and H2.
+ * {@code metricshub-jdbc-extension}: MariaDB, PostgreSQL, MySQL, ClickHouse and H2.
  *
  * <p>All descriptors use {@link DriverOrigin#BUILT_IN}, which instructs
  * {@link JdbcDriverRegistry} to load them from the extension's own classloader (no isolated
@@ -56,6 +56,12 @@ public final class BuiltInJdbcDriverProvider implements IJdbcDriverProvider {
 				"MySQL Connector/J",
 				DriverOrigin.BUILT_IN,
 				List.of("com.mysql.")
+			),
+			new JdbcDriverDescriptor(
+				"com.clickhouse.jdbc.ClickHouseDriver",
+				"ClickHouse JDBC Driver",
+				DriverOrigin.BUILT_IN,
+				List.of("com.clickhouse.")
 			),
 			new JdbcDriverDescriptor("org.h2.Driver", "H2 Database Engine", DriverOrigin.BUILT_IN, List.of("org.h2."))
 		);

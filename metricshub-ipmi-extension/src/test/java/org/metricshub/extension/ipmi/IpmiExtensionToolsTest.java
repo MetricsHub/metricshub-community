@@ -100,8 +100,9 @@ class IpmiExtensionToolsTest {
 
 	@Test
 	void testExecuteToolRejectsUnknownTool() {
-		assertThrows(IllegalArgumentException.class, () ->
-			ipmiExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode())
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ipmiExtension.executeTool("nope", configuration(), JsonNodeFactory.instance.objectNode())
 		);
 	}
 }

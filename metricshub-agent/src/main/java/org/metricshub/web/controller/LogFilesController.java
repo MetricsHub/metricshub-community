@@ -92,8 +92,7 @@ public class LogFilesController {
 		description = "Returns the last N bytes of a specific log file.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Log tail retrieved successfully"),
-			@ApiResponse(responseCode = "404", description = "Log file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Log file not found") }
 	)
 	@GetMapping(value = "/{fileName}/tail", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getLogFileTail(
@@ -119,8 +118,7 @@ public class LogFilesController {
 		description = "Downloads a log file as an octet-stream attachment.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "File download started"),
-			@ApiResponse(responseCode = "404", description = "Log file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Log file not found") }
 	)
 	@GetMapping(value = "/{fileName}/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	public ResponseEntity<InputStreamResource> downloadLogFile(
@@ -147,8 +145,7 @@ public class LogFilesController {
 		description = "Deletes a specific log file by name.",
 		responses = {
 			@ApiResponse(responseCode = "204", description = "Log file deleted successfully"),
-			@ApiResponse(responseCode = "404", description = "Log file not found")
-		}
+			@ApiResponse(responseCode = "404", description = "Log file not found") }
 	)
 	@DeleteMapping("/{fileName}")
 	public ResponseEntity<Void> deleteLogFile(

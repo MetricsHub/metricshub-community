@@ -17,20 +17,15 @@ public class Constants {
 	public static final String DETECTION_FOLDER = "src/test/resources/test-files/connector/detection";
 	public static final String MY_CONNECTOR_1_NAME = "myConnector1";
 	public static final String NO_TEST_WILL_BE_PERFORMED_MESSAGE = "Process presence check: No test will be performed.";
-	public static final String NO_TEST_WILL_BE_PERFORMED_UNKNOWN_OS_MESSAGE =
-		"Process presence check: OS unknown, no test will be performed.";
-	public static final String NO_TEST_WILL_BE_PERFORMED_AIX_MESSAGE =
-		"Process presence check: No tests will be performed for OS: aix.";
-	public static final String NO_TEST_WILL_BE_PERFORMED_REMOTELY_MESSAGE =
-		"Process presence check: No test will be performed remotely.";
+	public static final String NO_TEST_WILL_BE_PERFORMED_UNKNOWN_OS_MESSAGE = "Process presence check: OS unknown, no test will be performed.";
+	public static final String NO_TEST_WILL_BE_PERFORMED_AIX_MESSAGE = "Process presence check: No tests will be performed for OS: aix.";
+	public static final String NO_TEST_WILL_BE_PERFORMED_REMOTELY_MESSAGE = "Process presence check: No test will be performed remotely.";
 	public static final String PROCESS_CRITERION_COMMAND_LINE = "MBM[5-9]\\.exe";
 	public static final String WBEM_QUERY = "SELECT ProcessId,Name,ParentProcessId,CommandLine FROM Win32_Process";
 	public static final String WEBM_CRITERION_SUCCESS_EXPECTED_RESULT = "^Some Res[aeiouy]lt";
-	public static final String RUNNING_PROCESS_MATCH_REGEX_MESSAGE =
-		"One or more currently running processes match the following regular expression:\n- " +
+	public static final String RUNNING_PROCESS_MATCH_REGEX_MESSAGE = "One or more currently running processes match the following regular expression:\n- " +
 		"Regexp (should match with the command-line): MBM[5-9]\\.exe";
-	public static final String NO_RUNNING_PROCESS_MATCH_REGEX_MESSAGE =
-		"No currently running processes match the following regular expression:\n" +
+	public static final String NO_RUNNING_PROCESS_MATCH_REGEX_MESSAGE = "No currently running processes match the following regular expression:\n" +
 		"- Regexp (should match with the command-line): MBM[5-9]\\.exe\n" +
 		"- Currently running process list:\n" +
 		"1;ps;root;0;ps -A -o pid,comm,ruser,ppid,args\n" +
@@ -65,11 +60,10 @@ public class Constants {
 	public static final String EXPECTED_VAL_2 = "expectedVal2";
 	public static final String EXPECTED_VAL_1_AND_2 = "expectedVal1\nexpectedVal2";
 	public static final String EXPECTED_VAL_1_AND_2_ARRAY = "[expectedVal1,\nexpectedVal2]";
-	private static final String EXPECTED_FULL_ROW_1 =
-		String.join(TABLE_SEP, VALUE_VAL1, VALUE_VAL2, VALUE_VAL3) + TABLE_SEP;
+	private static final String EXPECTED_FULL_ROW_1 = String.join(TABLE_SEP, VALUE_VAL1, VALUE_VAL2, VALUE_VAL3) +
+		TABLE_SEP;
 	private static final String EXPECTED_FULL_ROW_2 = String.join(TABLE_SEP, VALUE_A1, VALUE_B1, VALUE_C1) + TABLE_SEP;
-	public static final String EXPECTED_RESULT =
-		"[{\n" +
+	public static final String EXPECTED_RESULT = "[{\n" +
 		"\"Entry\":{\n" +
 		"\"Full\":\"" +
 		EXPECTED_FULL_ROW_1 +
@@ -136,8 +130,8 @@ public class Constants {
 	public static final String HOST_CAMEL_CASE = "Host";
 
 	// IPMI message
-	public static final String IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE =
-		"Successfully connected to the IPMI BMC chip with the IPMI-over-LAN " + "interface.";
+	public static final String IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE = "Successfully connected to the IPMI BMC chip with the IPMI-over-LAN " +
+		"interface.";
 
 	// Exception messages
 	public static final String SYSTEM_POWER_UP_MESSAGE = "System power state is up";
@@ -154,8 +148,7 @@ public class Constants {
 	public static final String SNMP_CRITERION_TYPE = "snmpGetNext";
 	public static final String HW_PARENT_TYPE = "hw.parent.type";
 	public static final String DISK_CONTROLLER_AWK_COMMAND = "${awk::sprintf(\"Disk Controller: %s (%s)\", $2, $3)}";
-	public static final String PHYSICAL_DISK_AWK_COMMAND =
-		"${awk::sprintf(\"%s (%s - %s)\", $1, $4, bytes2HumanFormatBase10($6))}";
+	public static final String PHYSICAL_DISK_AWK_COMMAND = "${awk::sprintf(\"%s (%s - %s)\", $1, $4, bytes2HumanFormatBase10($6))}";
 	public static final String SOURCE = "source(1)";
 
 	// OS

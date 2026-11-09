@@ -324,8 +324,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		final List<AuthenticationEnum> authentications = winRmConfiguration.getAuthentications();
 		final Long timeout = winRmConfiguration.getTimeout();
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing WinRM WQL request:\n- hostname: {}\n- username: {}\n- query: {}\n" + // NOSONAR
 					"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- namespace: {}\n",
 				hostname,
@@ -367,8 +367,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 				table.add(values);
 			}
 
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executed WinRM WQL request:\n- hostname: {}\n- username: {}\n- query: {}\n" + // NOSONAR
 						"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- namespace: {}\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
@@ -457,8 +457,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		final List<AuthenticationEnum> authentications = winRmConfiguration.getAuthentications();
 		final Long timeout = winRmConfiguration.getTimeout();
 
-		LoggingHelper.trace(() ->
-			log.trace(
+		LoggingHelper.trace(
+			() -> log.trace(
 				"Executing WinRM remote command:\n- hostname: {}\n- username: {}\n- command: {}\n" + // NOSONAR
 					"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n",
 				hostname,
@@ -493,8 +493,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 
 			final String resultStdout = result.stdout();
 
-			LoggingHelper.trace(() ->
-				log.trace(
+			LoggingHelper.trace(
+				() -> log.trace(
 					"Executed WinRM remote command:\n- hostname: {}\n- username: {}\n- command: {}\n" + // NOSONAR
 						"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- Result:\n{}\n- response-time: {}\n",
 					hostname,

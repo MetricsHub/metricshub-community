@@ -83,7 +83,17 @@ jobs:
       with:
         java-version: ${{ inputs.jdkVersion }}
         distribution: temurin
-        cache: maven
+
+    # Restore the closest Maven repository, even when a pom.xml changed. Only main saves it
+    # (below), so pull requests don't evict main's cache from the 10 GB budget.
+    # ponytail: restored entries keep stale versions; delete the main cache entries if it grows too big
+    - name: Restore Maven repository
+      id: maven-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.m2/repository
+        key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+        restore-keys: maven-${{ runner.os }}-
 
     - name: Set up Maven settings.xml
       uses: s4u/maven-settings-action@v4.1.0
@@ -149,12 +159,33 @@ jobs:
         REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
         REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
 
+    # The compute-chain golden corpus (metricshub-engine, ComputeChainGoldenCorpusTest) verifies the goldens
+    # committed in each connector repository (src/test/goldens/compute-chains) against its connectors, for the
+    # repositories found next to this checkout, and is skipped when none is there. The community repository is
+    # public: check it out, at the revision recorded in metricshub-engine's goldens/compute-chains/revisions.properties
+    # (a revision holding the goldens), so that pull requests and main verify its goldens. The enterprise repository
+    # is private: its goldens stay there and are verified locally only.
+    - name: Checkout the community connectors for the golden corpus
+      shell: bash
+      run: |
+        rev=$(grep '^metricshub-community-connectors=' metricshub-engine/src/test/resources/goldens/compute-chains/revisions.properties | cut -d= -f2 | tr -d '\r')
+        git init -q ../metricshub-community-connectors
+        git -C ../metricshub-community-connectors fetch -q --depth 1 https://github.com/MetricsHub/community-connectors.git "$rev"
+        git -C ../metricshub-community-connectors checkout -q FETCH_HEAD
+
     - name: Build with Maven
       run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml ${{ inputs.mavenPhases }} ${{ inputs.mavenOptions }}
       env:
         LOCAL_REPOSITORY_PATH_INSTALL: ${{ env.additionalInstallPath }}
         REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
         REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
+
+    - name: Save Maven repository
+      if: github.ref == 'refs/heads/main' && steps.maven-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.m2/repository
+        key: ${{ steps.maven-cache.outputs.cache-primary-key }}
 
     - name: Upload Maven Artifacts
       uses: actions/upload-artifact@v7

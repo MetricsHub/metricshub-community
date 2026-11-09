@@ -44,9 +44,10 @@ public class JmxSourceProcessor {
 
 	private final Function<TelemetryManager, JmxConfiguration> jmxConfigurationProvider;
 
-	private static final Function<TelemetryManager, JmxConfiguration> DEFAULT_JMX_CONFIGURATION_PROVIDER =
-		telemetryManager ->
-			(JmxConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(JmxConfiguration.class);
+	private static final Function<TelemetryManager, JmxConfiguration> DEFAULT_JMX_CONFIGURATION_PROVIDER = telemetryManager -> (JmxConfiguration) telemetryManager
+		.getHostConfiguration()
+		.getConfigurations()
+		.get(JmxConfiguration.class);
 
 	/**
 	 * Creates a new {@link JmxSourceProcessor} with the given executor,

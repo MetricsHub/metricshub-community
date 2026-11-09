@@ -123,8 +123,7 @@ public class OtelConfigurationFilesService {
 
 		// Only list top-level YAML files, excluding any subdirectories (e.g., backup)
 		try (Stream<Path> files = Files.list(configurationDirectory)) {
-			return files
-				.filter(Files::isRegularFile)
+			return files.filter(Files::isRegularFile)
 				.filter(OtelConfigurationFilesService::hasAllowedExtension)
 				.map(this::buildConfigurationFile)
 				.filter(Objects::nonNull)
@@ -516,11 +515,7 @@ public class OtelConfigurationFilesService {
 				return "";
 			}
 
-			return errors
-				.stream()
-				.findFirst()
-				.map(DeserializationFailure.Error::getMessage)
-				.orElseGet(() -> "");
+			return errors.stream().findFirst().map(DeserializationFailure.Error::getMessage).orElseGet(() -> "");
 		}
 	}
 
@@ -708,8 +703,7 @@ public class OtelConfigurationFilesService {
 			return List.of();
 		}
 		try (Stream<Path> files = Files.list(backupDir)) {
-			return files
-				.filter(Files::isRegularFile)
+			return files.filter(Files::isRegularFile)
 				.filter(OtelConfigurationFilesService::hasAllowedExtension)
 				.filter(path -> BackupFileNames.isBackupFileName(path.getFileName().toString()))
 				.map(this::buildConfigurationFile)

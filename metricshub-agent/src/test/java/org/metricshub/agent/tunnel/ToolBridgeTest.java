@@ -76,14 +76,10 @@ class ToolBridgeTest {
 		slow = callback("Slow");
 		final ToolCallbackProvider provider = provider(listHosts, slow);
 		workers = ToolBridge.newWorkerPool();
-		bridge = new ToolBridge(
-			ToolRegistrySnapshot.from(provider, Set.of()),
-			(answer, generation) -> {
-				answers.add(answer);
-				answeredGenerations.add(generation);
-			},
-			workers
-		);
+		bridge = new ToolBridge(ToolRegistrySnapshot.from(provider, Set.of(), null), (answer, generation) -> {
+			answers.add(answer);
+			answeredGenerations.add(generation);
+		}, workers);
 	}
 
 	@AfterEach
@@ -214,9 +210,7 @@ class ToolBridgeTest {
 		bridge.invoke(invoke("ListHosts", 600_000), GENERATION);
 
 		assertInstanceOf(ToolResult.class, answer());
-		await()
-			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-			.until(() -> bridge.pendingDeadlines() == 0);
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> bridge.pendingDeadlines() == 0);
 	}
 
 	@Test
@@ -247,7 +241,7 @@ class ToolBridgeTest {
 		when(rebuilt.call(anyString())).thenReturn("\"rebuilt\"");
 		final ToolCallbackProvider provider = provider(rebuilt, slow);
 
-		bridge.update(ToolRegistrySnapshot.from(provider, Set.of()));
+		bridge.update(ToolRegistrySnapshot.from(provider, Set.of(), null));
 		bridge.invoke(invoke("ListHosts", 10_000), GENERATION);
 
 		final ToolResult result = assertInstanceOf(ToolResult.class, answer());
@@ -280,8 +274,7 @@ class ToolBridgeTest {
 		// Central is told the invocation is over, and the slot goes back with the answer even
 		// though the thread running it never will
 		assertEquals(ToolErrorCode.TIMEOUT, assertInstanceOf(ToolError.class, answer()).code());
-		await()
-			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
 			.untilAsserted(() -> assertEquals(0, bridge.inFlight(), "The deadline must release the slot"));
 
 		// And the cap is genuinely free again: the next invocation runs rather than being refused
@@ -309,11 +302,8 @@ class ToolBridgeTest {
 			}
 
 			// Every attempt is answered: the ones that got a thread time out, the rest are refused
-			await()
-				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-				.until(() -> answers.size() >= attempts);
-			final long refused = answers
-				.stream()
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> answers.size() >= attempts);
+			final long refused = answers.stream()
 				.filter(ToolError.class::isInstance)
 				.map(ToolError.class::cast)
 				.filter(error -> error.message().startsWith("No worker available"))
@@ -362,14 +352,11 @@ class ToolBridgeTest {
 		// A five-minute deadline: without the disconnect handling, the slot would be held for all of
 		// it and the NEXT session's first invocation would be refused for work nobody awaits.
 		bridge.invoke(invoke("Slow", 300_000), GENERATION);
-		await()
-			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-			.until(() -> bridge.inFlight() == 1);
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> bridge.inFlight() == 1);
 
 		bridge.cancelGeneration(GENERATION);
 
-		await()
-			.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+		await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
 			.untilAsserted(() -> assertEquals(0, bridge.inFlight(), "The lost connection's slot must come back"));
 		assertEquals(null, answers.poll(200, TimeUnit.MILLISECONDS), "and nothing is answered to a session that is gone");
 
@@ -389,7 +376,7 @@ class ToolBridgeTest {
 		final ToolCallbackProvider provider = provider(listHosts, slow);
 		final ExecutorService single = Executors.newSingleThreadExecutor();
 		final ToolBridge queueing = new ToolBridge(
-			ToolRegistrySnapshot.from(provider, Set.of()),
+			ToolRegistrySnapshot.from(provider, Set.of(), null),
 			(answer, generation) -> answers.add(answer),
 			single
 		);
@@ -407,16 +394,13 @@ class ToolBridgeTest {
 			queueing.invoke(invoke("Slow", 300_000), GENERATION);
 			assertTrue(occupied.await(TIMEOUT_MS, TimeUnit.MILLISECONDS), "The only worker must be busy");
 			queueing.invoke(invoke("ListHosts", 300_000), GENERATION);
-			await()
-				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-				.until(() -> queueing.pendingDeadlines() == 2);
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> queueing.pendingDeadlines() == 2);
 
 			queueing.cancelGeneration(GENERATION);
 
-			await()
-				.atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-				.untilAsserted(() ->
-					assertEquals(
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+				.untilAsserted(
+					() -> assertEquals(
 						0,
 						queueing.pendingDeadlines(),
 						"Work Central discarded must not keep its arguments in the timer queue"

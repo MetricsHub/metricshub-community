@@ -39,8 +39,7 @@ class HttpConfigCliTest {
 				.withProtocolExtensions(List.of(new HttpExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			HttpConfiguration expected = HttpConfiguration.builder()
@@ -101,8 +100,7 @@ class HttpConfigCliTest {
 				.withProtocolExtensions(List.of(new HttpExtension()))
 				.build();
 
-			cliExtensionManagerMock
-				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+			cliExtensionManagerMock.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
 			final HttpConfiguration result = (HttpConfiguration) httpConfigCli.toConfiguration(username, password);

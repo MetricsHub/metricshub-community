@@ -314,20 +314,18 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 		final String protocol = configEntry.getKey();
 
 		// Find an extension to execute the command
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(protocol)
-			.ifPresent(extension -> {
-				try {
-					// display the request
-					displayCommand(protocol);
-					// Execute the Windows remote OS command
-					final String result = extension.executeQuery(configEntry.getValue(), getQuery());
-					// display the returned result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute Windows remote OS command.\n", e);
-				}
-			});
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(protocol).ifPresent(extension -> {
+			try {
+				// display the request
+				displayCommand(protocol);
+				// Execute the Windows remote OS command
+				final String result = extension.executeQuery(configEntry.getValue(), getQuery());
+				// display the returned result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute Windows remote OS command.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

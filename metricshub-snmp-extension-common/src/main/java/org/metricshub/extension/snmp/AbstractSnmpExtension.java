@@ -107,8 +107,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		String result = null;
 
 		// Retrieve SNMP Configuration from the telemetry manager host configuration
-		final ISnmpConfiguration configuration = (ISnmpConfiguration) telemetryManager
-			.getHostConfiguration()
+		final ISnmpConfiguration configuration = (ISnmpConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(configurationClass);
 
@@ -142,8 +141,10 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
-		final Function<TelemetryManager, ISnmpConfiguration> configurationRetriever = manager ->
-			(ISnmpConfiguration) manager.getHostConfiguration().getConfigurations().get(getConfigurationClass());
+		final Function<TelemetryManager, ISnmpConfiguration> configurationRetriever = manager -> (ISnmpConfiguration) manager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(getConfigurationClass());
 
 		if (source instanceof SnmpTableSource snmpTableSource) {
 			return new SnmpTableSourceProcessor(getRequestExecutor(), configurationRetriever).process(
@@ -175,8 +176,10 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		TelemetryManager telemetryManager,
 		boolean logMode
 	) {
-		final Function<TelemetryManager, ISnmpConfiguration> configurationRetriever = manager ->
-			(ISnmpConfiguration) manager.getHostConfiguration().getConfigurations().get(getConfigurationClass());
+		final Function<TelemetryManager, ISnmpConfiguration> configurationRetriever = manager -> (ISnmpConfiguration) manager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(getConfigurationClass());
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
 			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode).process(

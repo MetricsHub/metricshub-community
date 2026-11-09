@@ -116,8 +116,7 @@ public class IntermediateConnector {
 		}
 
 		// Detect if any of the connector's embedded files contain variable patterns
-		return embeddedFiles
-			.values()
+		return embeddedFiles.values()
 			.stream()
 			.anyMatch(embeddedFile -> (embeddedFile.getContentAsString().contains(CONNECTOR_VARIABLE_PATTERN)));
 	}

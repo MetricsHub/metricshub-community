@@ -168,8 +168,9 @@ public class MacrosUpdater {
 		final Map<String, String> macroNameField
 	) {
 		final String replacement = macroNameField.getOrDefault(macroName, EMPTY);
-		final String maybeEscapedReplacement =
-			escapeType != null ? escapeReplacement(replacement, escapeType) : replacement;
+		final String maybeEscapedReplacement = escapeType != null
+			? escapeReplacement(replacement, escapeType)
+			: replacement;
 		return protectAndReplaceMatchedMacro(content, matchedMacro, maybeEscapedReplacement);
 	}
 
@@ -356,8 +357,7 @@ public class MacrosUpdater {
 	 */
 	static String escapeXmlSpecialCharacters(final String value) {
 		// Escape special XML characters
-		return value
-			.replace("&", "&amp;")
+		return value.replace("&", "&amp;")
 			.replace("<", "&lt;")
 			.replace(">", "&gt;")
 			.replace("\"", "&quot;")
@@ -372,8 +372,7 @@ public class MacrosUpdater {
 	 */
 	static String escapeWindowsCmdSpecialCharacters(final String value) {
 		// Escape special CMD characters
-		return value
-			.replace("^", "^^")
+		return value.replace("^", "^^")
 			.replace("&", "^&")
 			.replace("|", "^|")
 			.replace("<", "^<")
@@ -393,8 +392,7 @@ public class MacrosUpdater {
 	 * @return The escaped value
 	 */
 	static String escapePowershellSpecialCharacters(final String value) {
-		return value
-			.replace("'", "''")
+		return value.replace("'", "''")
 			.replace("\u2018", "\u2018\u2018")
 			.replace("\u2019", "\u2019\u2019")
 			.replace("\u201A", "\u201A\u201A")
@@ -420,8 +418,7 @@ public class MacrosUpdater {
 	 * @return a string where special SQL characters have been escaped
 	 */
 	static String escapeSqlSpecialCharacters(final String value) {
-		return value
-			.replace("\\", "\\\\") // First, or it would double the backslashes added below
+		return value.replace("\\", "\\\\") // First, or it would double the backslashes added below
 			.replace("'", "''")
 			.replace("\"", "\\\"") // Only if applicable for the specific SQL dialect
 			.replace("\n", "\\n")

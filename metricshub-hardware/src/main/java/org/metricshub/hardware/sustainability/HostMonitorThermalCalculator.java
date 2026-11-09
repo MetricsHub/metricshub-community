@@ -260,12 +260,10 @@ public class HostMonitorThermalCalculator {
 	 *         <code>false</code>
 	 */
 	static boolean isCpuSensor(final Double warningThreshold, final String... data) {
-		return (
-			warningThreshold != null &&
+		return (warningThreshold != null &&
 			warningThreshold > 10 &&
 			data != null &&
-			ArrayHelper.anyMatchLowerCase(HostMonitorThermalCalculator::matchesCpuSensor, data)
-		);
+			ArrayHelper.anyMatchLowerCase(HostMonitorThermalCalculator::matchesCpuSensor, data));
 	}
 
 	/**

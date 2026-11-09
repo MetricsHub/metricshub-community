@@ -94,11 +94,9 @@ class OpAmpServiceTest {
 	@Test
 	void indeterminateDeploymentDetectionShouldStillReportTheDescription() {
 		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
-		opAmpService.setDeploymentDetector(
-			new DeploymentDetector(command -> {
-				throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
-			})
-		);
+		opAmpService.setDeploymentDetector(new DeploymentDetector(command -> {
+			throw new DeploymentDetector.DetectionIndeterminateException("Simulated probe timeout");
+		}));
 
 		opAmpService.supervise();
 
@@ -149,8 +147,7 @@ class OpAmpServiceTest {
 	}
 
 	private static String attributeValue(final List<KeyValue> attributes, final String key) {
-		return attributes
-			.stream()
+		return attributes.stream()
 			.filter(keyValue -> keyValue.getKey().equals(key))
 			.map(keyValue -> keyValue.getValue().getStringValue())
 			.findFirst()
@@ -297,8 +294,9 @@ class OpAmpServiceTest {
 		final org.metricshub.agent.upgrade.UpgradeManager upgradeManager = mock(
 			org.metricshub.agent.upgrade.UpgradeManager.class
 		);
-		final org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter adapter =
-			new org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter(upgradeManager);
+		final org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter adapter = new org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter(
+			upgradeManager
+		);
 		final org.metricshub.opamp.client.packages.PackageStatusSink clientSink = mock(
 			org.metricshub.opamp.client.packages.PackageStatusSink.class
 		);

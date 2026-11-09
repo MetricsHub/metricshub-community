@@ -242,43 +242,37 @@ public class SshCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager.getExtensionManagerSingleton()
-			.findExtensionByType(PROTOCOL_IDENTIFIER)
-			.ifPresent(extension -> {
-				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
+		CliExtensionManager.getExtensionManagerSingleton().findExtensionByType(PROTOCOL_IDENTIFIER).ifPresent(extension -> {
+			try {
+				// Create and fill in a configuration ObjectNode
+				final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
 
-					configurationNode.set("username", new TextNode(username));
+				configurationNode.set("username", new TextNode(username));
 
-					if (password != null) {
-						configurationNode.set("password", new TextNode(String.valueOf(password)));
-					}
-
-					configurationNode.set("publicKey", new TextNode(publicKeyFilePath));
-					configurationNode.set("timeout", new TextNode(timeout));
-					configurationNode.set("port", new IntNode(getPort()));
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(
-						PROTOCOL_IDENTIFIER,
-						configurationNode,
-						null
-					);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
-					// display the request
-					displayQuery();
-					// Execute the command line query through SSH
-					final String result = extension.executeQuery(configuration, getQuery());
-					// display the returned result
-					displayResult(result);
-				} catch (Exception e) {
-					throw new IllegalStateException("Failed to execute command line through SSH.\n", e);
+				if (password != null) {
+					configurationNode.set("password", new TextNode(String.valueOf(password)));
 				}
-			});
+
+				configurationNode.set("publicKey", new TextNode(publicKeyFilePath));
+				configurationNode.set("timeout", new TextNode(timeout));
+				configurationNode.set("port", new IntNode(getPort()));
+
+				// Build an IConfiguration from the configuration ObjectNode
+				final IConfiguration configuration = extension.buildConfiguration(PROTOCOL_IDENTIFIER, configurationNode, null);
+				configuration.setHostname(hostname);
+
+				configuration.validateConfiguration(hostname);
+
+				// display the request
+				displayQuery();
+				// Execute the command line query through SSH
+				final String result = extension.executeQuery(configuration, getQuery());
+				// display the returned result
+				displayResult(result);
+			} catch (Exception e) {
+				throw new IllegalStateException("Failed to execute command line through SSH.\n", e);
+			}
+		});
 		return CommandLine.ExitCode.OK;
 	}
 

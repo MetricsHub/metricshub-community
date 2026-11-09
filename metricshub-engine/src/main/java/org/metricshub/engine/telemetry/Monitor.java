@@ -193,8 +193,7 @@ public class Monitor {
 	 * @return formatted identifying attributes separated by "_"
 	 */
 	public String formatIdentifyingAttributes() {
-		return identifyingAttributeKeys
-			.stream()
+		return identifyingAttributeKeys.stream()
 			.sorted()
 			.map(key -> Optional.ofNullable(attributes.get(key)).orElse(""))
 			.collect(Collectors.joining("_"));

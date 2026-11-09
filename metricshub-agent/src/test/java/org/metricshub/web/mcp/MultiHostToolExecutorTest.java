@@ -39,8 +39,8 @@ class MultiHostToolExecutorTest {
 
 		final ExecutorService caller = Executors.newSingleThreadExecutor();
 		try {
-			final Future<?> callingTask = caller.submit(() ->
-				MultiHostToolExecutor.executeForHosts(
+			final Future<?> callingTask = caller.submit(
+				() -> MultiHostToolExecutor.executeForHosts(
 					List.of("host1", "host2"),
 					() -> HostToolResponse.<String>builder().build(),
 					hostname -> {
@@ -134,8 +134,9 @@ class MultiHostToolExecutorTest {
 	void shouldStopTheSequentialFanOutWhenTheCallingThreadIsInterrupted() {
 		final List<String> visited = new ArrayList<>();
 		try {
-			assertThrows(CancellationException.class, () ->
-				MultiHostToolExecutor.executeForHosts(
+			assertThrows(
+				CancellationException.class,
+				() -> MultiHostToolExecutor.executeForHosts(
 					List.of("host1", "host2"),
 					() -> HostToolResponse.<String>builder().build(),
 					hostname -> {

@@ -83,8 +83,7 @@ public class PingExtension implements IProtocolExtension {
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		// Retrieve Ping configuration from the telemetry manager
-		final PingConfiguration pingConfiguration = (PingConfiguration) telemetryManager
-			.getHostConfiguration()
+		final PingConfiguration pingConfiguration = (PingConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(PingConfiguration.class);
 

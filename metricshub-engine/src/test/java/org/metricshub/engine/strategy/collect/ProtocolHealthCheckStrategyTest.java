@@ -83,8 +83,7 @@ class ProtocolHealthCheckStrategyTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		final String protocol = "snmp";
@@ -104,14 +103,12 @@ class ProtocolHealthCheckStrategyTest {
 
 		assertEquals(
 			ProtocolHealthCheckStrategy.UP,
-			telemetryManager
-				.getEndpointHostMonitor()
+			telemetryManager.getEndpointHostMonitor()
 				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted(protocol), NumberMetric.class)
 				.getValue()
 		);
 		assertNotNull(
-			telemetryManager
-				.getEndpointHostMonitor()
+			telemetryManager.getEndpointHostMonitor()
 				.getMetric(ProtocolHealthCheckStrategy.RESPONSE_TIME_METRIC_FORMAT.formatted(protocol), NumberMetric.class)
 		);
 		assertEquals(
@@ -127,8 +124,7 @@ class ProtocolHealthCheckStrategyTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		final String protocol = "ssh";
@@ -145,8 +141,7 @@ class ProtocolHealthCheckStrategyTest {
 		assertDoesNotThrow(healthCheckStrategy::run);
 		assertEquals(
 			ProtocolHealthCheckStrategy.DOWN,
-			telemetryManager
-				.getEndpointHostMonitor()
+			telemetryManager.getEndpointHostMonitor()
 				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted(protocol), NumberMetric.class)
 				.getValue()
 		);
@@ -163,11 +158,9 @@ class ProtocolHealthCheckStrategyTest {
 			.withProtocolExtensions(List.of(protocolExtensionMock, additionalProtocolExtensionMock))
 			.build();
 
-		doReturn(true)
-			.when(protocolExtensionMock)
+		doReturn(true).when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
-		doReturn(true)
-			.when(additionalProtocolExtensionMock)
+		doReturn(true).when(additionalProtocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn("snmp").when(protocolExtensionMock).getIdentifier(any(TelemetryManager.class));
@@ -185,15 +178,13 @@ class ProtocolHealthCheckStrategyTest {
 		assertDoesNotThrow(healthCheckStrategy::run);
 		assertEquals(
 			ProtocolHealthCheckStrategy.DOWN,
-			telemetryManager
-				.getEndpointHostMonitor()
+			telemetryManager.getEndpointHostMonitor()
 				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted("snmp"), NumberMetric.class)
 				.getValue()
 		);
 		assertEquals(
 			ProtocolHealthCheckStrategy.UP,
-			telemetryManager
-				.getEndpointHostMonitor()
+			telemetryManager.getEndpointHostMonitor()
 				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted("ssh"), NumberMetric.class)
 				.getValue()
 		);

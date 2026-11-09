@@ -131,8 +131,7 @@ public class WmiCriterionProcessor {
 
 		// If namespace is specified as "Automatic"
 		if (AUTOMATIC_NAMESPACE.equalsIgnoreCase(wmiCriterion.getNamespace())) {
-			final String cachedNamespace = telemetryManager
-				.getHostProperties()
+			final String cachedNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
 				.getAutomaticWmiNamespace();
 
@@ -322,8 +321,7 @@ public class WmiCriterionProcessor {
 		// If that was successful, remember it in HostMonitoring, so we don't perform this
 		// (costly) detection again
 		if (namespaceResult.getResult().isSuccess()) {
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
 				.setAutomaticWmiNamespace(namespaceResult.getNamespace());
 		}
@@ -358,8 +356,7 @@ public class WmiCriterionProcessor {
 		Set<String> possibleWmiNamespaces = new TreeSet<>();
 
 		try {
-			wmiDetectionService
-				.getWinRequestExecutor()
+			wmiDetectionService.getWinRequestExecutor()
 				.executeWmi(hostname, winConfiguration, NAMESPACE_WQL, ROOT_NAMESPACE, recordOutputDirectory)
 				.stream()
 				.filter(row -> !row.isEmpty())
@@ -368,15 +365,13 @@ public class WmiCriterionProcessor {
 				.filter(namespace -> !namespace.isBlank())
 				.filter(namespace -> !namespace.toLowerCase().contains("interop"))
 				.filter(namespace -> !IGNORED_WMI_NAMESPACES.contains(namespace))
-				.filter(namespace ->
-					IGNORED_WMI_NAMESPACES.stream().noneMatch(ignoredNamespace ->
-						(ROOT_SLASH + ignoredNamespace).equalsIgnoreCase(namespace)
-					)
+				.filter(
+					namespace -> IGNORED_WMI_NAMESPACES.stream()
+						.noneMatch(ignoredNamespace -> (ROOT_SLASH + ignoredNamespace).equalsIgnoreCase(namespace))
 				)
-				.filter(namespace ->
-					IGNORED_WMI_NAMESPACES.stream().noneMatch(ignoredNamespace ->
-						("root\\" + ignoredNamespace).equalsIgnoreCase(namespace)
-					)
+				.filter(
+					namespace -> IGNORED_WMI_NAMESPACES.stream()
+						.noneMatch(ignoredNamespace -> ("root\\" + ignoredNamespace).equalsIgnoreCase(namespace))
 				)
 				.map(namespace -> ROOT_SLASH + namespace)
 				.forEach(possibleWmiNamespaces::add);

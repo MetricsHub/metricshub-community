@@ -22,7 +22,6 @@ package org.metricshub.web;
  */
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import org.metricshub.agent.context.AgentContext;
 
 /**
@@ -41,16 +40,19 @@ import org.metricshub.agent.context.AgentContext;
  */
 public class AgentContextHolder {
 
-	private volatile AgentContext agentContext;
+	/**
+	 * A context with the generation it was published as.
+	 *
+	 * @param agentContext the context
+	 * @param generation   its generation: {@code 1} for the bootstrap context, then one more per publication
+	 */
+	private record Published(AgentContext agentContext, long generation) {}
 
 	/**
-	 * Monotonically increasing generation counter, incremented on every
-	 * {@link #setAgentContext(AgentContext)}.
-	 * <p>
-	 * Starts at {@code 1} once the initial context is stored (bootstrap generation).
-	 * </p>
+	 * The context and its generation in one field, so that a reader never pairs a context with another one's
+	 * generation: two fields would let a reader see the new context while the generation still says the old one.
 	 */
-	private final AtomicLong generation = new AtomicLong();
+	private volatile Published published;
 
 	/**
 	 * Create a new holder pre-populated with the given (bootstrap) agent context.
@@ -58,15 +60,14 @@ public class AgentContextHolder {
 	 * @param agentContext the initial {@link AgentContext}; must not be {@code null}
 	 */
 	public AgentContextHolder(final AgentContext agentContext) {
-		this.agentContext = Objects.requireNonNull(agentContext, "agentContext must not be null");
-		this.generation.set(1L);
+		this.published = new Published(Objects.requireNonNull(agentContext, "agentContext must not be null"), 1L);
 	}
 
 	/**
 	 * @return the currently active {@link AgentContext}.
 	 */
 	public AgentContext getAgentContext() {
-		return agentContext;
+		return published.agentContext();
 	}
 
 	/**
@@ -79,9 +80,9 @@ public class AgentContextHolder {
 	 *
 	 * @param agentContext the new {@link AgentContext}; must not be {@code null}
 	 */
-	public void setAgentContext(final AgentContext agentContext) {
-		this.agentContext = Objects.requireNonNull(agentContext, "agentContext must not be null");
-		this.generation.incrementAndGet();
+	public synchronized void setAgentContext(final AgentContext agentContext) {
+		Objects.requireNonNull(agentContext, "agentContext must not be null");
+		this.published = new Published(agentContext, published.generation() + 1);
 	}
 
 	/**
@@ -90,6 +91,6 @@ public class AgentContextHolder {
 	 *         {@link #setAgentContext(AgentContext)} increments this value.
 	 */
 	public long getGeneration() {
-		return generation.get();
+		return published.generation();
 	}
 }

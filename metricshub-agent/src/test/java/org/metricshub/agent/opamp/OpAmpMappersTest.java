@@ -23,8 +23,7 @@ import org.metricshub.web.dto.ApplicationStatus.Status;
 class OpAmpMappersTest {
 
 	private static Optional<String> attributeValue(final java.util.List<KeyValue> attributes, final String key) {
-		return attributes
-			.stream()
+		return attributes.stream()
 			.filter(keyValue -> keyValue.getKey().equals(key))
 			.map(keyValue -> keyValue.getValue().getStringValue())
 			.findFirst();
@@ -180,11 +179,7 @@ class OpAmpMappersTest {
 		assertEquals(Optional.of("rpm"), attributeValue(description.getNonIdentifyingAttributesList(), "installer.type"));
 		assertEquals(
 			1,
-			description
-				.getIdentifyingAttributesList()
-				.stream()
-				.filter(kv -> "host.name".equals(kv.getKey()))
-				.count(),
+			description.getIdentifyingAttributesList().stream().filter(kv -> "host.name".equals(kv.getKey())).count(),
 			"An overridden attribute must be reported once"
 		);
 	}

@@ -55,8 +55,7 @@ import org.springframework.ai.tool.ToolCallback;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConnectorToolCallbacks {
 
-	private static final String OTHER_DECLARATION_ERROR =
-		"Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
+	private static final String OTHER_DECLARATION_ERROR = "Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
 
 	/**
 	 * What a connector tool returns for one host.
@@ -65,6 +64,13 @@ public final class ConnectorToolCallbacks {
 	 * @param rows    the rows of the tool's result source
 	 */
 	public record ToolTable(List<String> columns, List<List<String>> rows) {}
+
+	/**
+	 * What a tool returns when its result is text (a command output): the text as it is, for the LLM to read.
+	 *
+	 * @param text the text of the result source
+	 */
+	public record ToolText(String text) {}
 
 	/**
 	 * @param agentContext the agent context to build the tools from, the one every callback stays on
@@ -84,42 +90,41 @@ public final class ConnectorToolCallbacks {
 		final Map<String, Map<String, ConnectorTool>> tools = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		Stream.concat(
 			Stream.of(connectorStore),
-			agentContext
-				.getTelemetryManagers()
+			agentContext.getTelemetryManagers()
 				.values()
 				.stream()
 				.flatMap(telemetryManagers -> telemetryManagers.values().stream())
 				.map(TelemetryManager::getConnectorStore)
 		)
 			.filter(store -> store != null && store.getStore() != null)
-			.forEach(store ->
-				store
-					.getStore()
-					.forEach((connectorId, connector) ->
-						connector
-							.getTools()
-							.forEach((toolName, tool) ->
-								tools.computeIfAbsent(connectorId, id -> new LinkedHashMap<>()).putIfAbsent(toolName, tool)
+			.forEach(
+				store -> store.getStore()
+					.forEach(
+						(connectorId, connector) -> connector.getTools()
+							.forEach(
+								(toolName, tool) -> tools.computeIfAbsent(connectorId, id -> new LinkedHashMap<>())
+									.putIfAbsent(toolName, tool)
 							)
 					)
 			);
 
-		tools.forEach((connectorId, connectorTools) ->
-			connectorTools.forEach((toolName, tool) -> {
-				// Destructive tools included: the interfaces decide what they expose
-				try {
-					final ToolDefinition definition = tool.toDefinition(toolName);
-					callbacks.add(
-						HostTools.perHost(HostTools.toolName(connectorId, toolName), definition, (hostname, arguments) ->
-							run(agentContext, connectorId, toolName, definition, hostname, arguments)
-						)
-					);
-				} catch (IllegalArgumentException e) {
-					// One bad declaration must not take the connector's other tools down
-					log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
-				}
-			})
-		);
+		tools.forEach((connectorId, connectorTools) -> connectorTools.forEach((toolName, tool) -> {
+			// Destructive tools included: the interfaces decide what they expose
+			try {
+				final ToolDefinition definition = tool.toDefinition(toolName);
+				callbacks.add(
+					HostTools.perHost(
+						connectorId,
+						HostTools.toolName(connectorId, toolName),
+						definition,
+						(hostname, arguments) -> run(agentContext, connectorId, toolName, definition, hostname, arguments)
+					)
+				);
+			} catch (IllegalArgumentException e) {
+				// One bad declaration must not take the connector's other tools down
+				log.warn("Connector {}: tool {} is not exposed: {}", connectorId, toolName, e.getMessage());
+			}
+		}));
 		return callbacks;
 	}
 
@@ -160,8 +165,7 @@ public final class ConnectorToolCallbacks {
 
 		// A host may belong to several resources: the first one whose variables leave the tool as advertised, since
 		// the arguments were completed with its defaults and the assistant chose it for its description
-		final TelemetryManager hostTelemetryManager = telemetryManagers
-			.stream()
+		final TelemetryManager hostTelemetryManager = telemetryManagers.stream()
 			.filter(candidate -> declaresAsAdvertised(candidate, connectorId, toolName, definition))
 			.findFirst()
 			.orElse(null);
@@ -193,7 +197,41 @@ public final class ConnectorToolCallbacks {
 			.build();
 		strategy.run();
 
+		if (tool.isTextResult()) {
+			final String text = strategy.getResult().getRawData();
+			return new ToolText(text == null ? "" : text.replace("\r\n", "\n"));
+		}
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
+	}
+
+	/**
+	 * Whether a host's own declaration of a connector tool, through its connector variables, is the one a callback
+	 * advertises: the only one the callback runs there.
+	 *
+	 * @param telemetryManager the host's telemetry manager
+	 * @param connectorId      the connector identifier in the host's store
+	 * @param toolName         the tool name within the connector
+	 * @param callback         the callback built for the tool
+	 * @return whether the callback runs the tool on that host
+	 */
+	public static boolean runsAsAdvertised(
+		final TelemetryManager telemetryManager,
+		final String connectorId,
+		final String toolName,
+		final ToolCallback callback
+	) {
+		final ConnectorTool tool = toolOf(telemetryManager, connectorId, toolName);
+		if (tool == null) {
+			return false;
+		}
+		try {
+			// The very predicate run() applies: the declarations equal, whatever order the parameters come in
+			return callback instanceof final DynamicToolCallback dynamic &&
+				tool.toDefinition(toolName).equals(dynamic.getDeclaration());
+		} catch (IllegalArgumentException e) {
+			// Variables that make the declaration invalid
+			return false;
+		}
 	}
 
 	private static ConnectorTool toolOf(

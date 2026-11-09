@@ -17,8 +17,8 @@ class WinRmConfigurationTest {
 
 	@Test
 	void testValidateConfiguration() throws InvalidConfigurationException {
-		assertDoesNotThrow(() ->
-			WinRmConfiguration.builder()
+		assertDoesNotThrow(
+			() -> WinRmConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.namespace("namespace")
@@ -27,8 +27,9 @@ class WinRmConfigurationTest {
 				.build()
 				.validateConfiguration("resourceKey")
 		);
-		assertThrows(InvalidConfigurationException.class, () ->
-			WinRmConfiguration.builder()
+		assertThrows(
+			InvalidConfigurationException.class,
+			() -> WinRmConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.timeout(-15L) // Bad timeout
@@ -127,14 +128,15 @@ class WinRmConfigurationTest {
 			.protocol(TransportProtocols.HTTP)
 			.authentications(List.of(AuthenticationEnum.NTLM, AuthenticationEnum.BASIC))
 			.build();
-		final InvalidConfigurationException exception = assertThrows(InvalidConfigurationException.class, () ->
-			overHttp.validateConfiguration("resourceKey")
+		final InvalidConfigurationException exception = assertThrows(
+			InvalidConfigurationException.class,
+			() -> overHttp.validateConfiguration("resourceKey")
 		);
 		assertTrue(exception.getMessage().contains("Basic authentication"));
 
 		// The same list over HTTPS is accepted
-		assertDoesNotThrow(() ->
-			WinRmConfiguration.builder()
+		assertDoesNotThrow(
+			() -> WinRmConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.protocol(TransportProtocols.HTTPS)

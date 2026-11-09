@@ -68,8 +68,7 @@ public class ProtocolPropertyReferenceHelper {
 			return null;
 		}
 
-		return getProtocol(protocol, telemetryManager)
-			.map(configuration -> getProperty(configuration, protocol, property))
+		return getProtocol(protocol, telemetryManager).map(configuration -> getProperty(configuration, protocol, property))
 			.orElse(null);
 	}
 
@@ -95,11 +94,9 @@ public class ProtocolPropertyReferenceHelper {
 	 * @return The right {@link IConfiguration} or null if not possible.
 	 */
 	private static Optional<IConfiguration> getProtocol(final String protocol, final TelemetryManager telemetryManager) {
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
-			.getHostConfiguration()
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager.getHostConfiguration()
 			.getConfigurations();
-		return configurations
-			.values()
+		return configurations.values()
 			.stream()
 			.filter(Objects::nonNull) // Filter out null configurations
 			.filter(config -> config.isCorrespondingProtocol(protocol)) // Filter out wrong protocols

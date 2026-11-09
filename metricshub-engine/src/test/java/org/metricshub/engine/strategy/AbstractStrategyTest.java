@@ -101,8 +101,7 @@ class AbstractStrategyTest {
 		);
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -160,8 +159,7 @@ class AbstractStrategyTest {
 		);
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -219,8 +217,7 @@ class AbstractStrategyTest {
 		);
 		// Check job duration metrics values
 		assertNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric(
@@ -277,8 +274,7 @@ class AbstractStrategyTest {
 		);
 		// Check job duration metrics values
 		assertNotNull(
-			telemetryManager
-				.getMonitors()
+			telemetryManager.getMonitors()
 				.get("host")
 				.get("anyMonitorId")
 				.getMetric("metricshub.job.duration{job.type=\"beforeAll\", connector_id=\"TestConnector\"}")
@@ -337,8 +333,9 @@ class AbstractStrategyTest {
 			.clientsExecutor(new ClientsExecutor())
 			.extensionManager(new ExtensionManager())
 			.build();
-		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-			simpleStrategy.hasExpectedJobTypes(connector, "unknown")
+		final IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> simpleStrategy.hasExpectedJobTypes(connector, "unknown")
 		);
 		assertEquals("Unknown strategy job name: unknown", exception.getMessage());
 	}
@@ -409,8 +406,7 @@ class AbstractStrategyTest {
 		assertTrue(strategy.validateConnectorDetectionCriteria(connector, HOST_NAME, "collect"));
 		assertConnectorStatus(strategy.getTelemetryManager(), STATE_SET_METRIC_OK, true, 0);
 
-		final Monitor validatedConnectorMonitor = strategy
-			.getTelemetryManager()
+		final Monitor validatedConnectorMonitor = strategy.getTelemetryManager()
 			.findMonitorByTypeAndId(
 				KnownMonitorType.CONNECTOR.getKey(),
 				String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), TEST_CONNECTOR_ID)
@@ -457,8 +453,7 @@ class AbstractStrategyTest {
 		assertTrue(strategy.validateConnectorDetectionCriteria(connector, HOST_NAME, "collect"));
 		assertConnectorStatus(strategy.getTelemetryManager(), STATE_SET_METRIC_FAILED, false, 1);
 
-		final Monitor validatedConnectorMonitor = strategy
-			.getTelemetryManager()
+		final Monitor validatedConnectorMonitor = strategy.getTelemetryManager()
 			.findMonitorByTypeAndId(
 				KnownMonitorType.CONNECTOR.getKey(),
 				String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), TEST_CONNECTOR_ID)
@@ -643,8 +638,7 @@ class AbstractStrategyTest {
 			String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), TEST_CONNECTOR_ID)
 		);
 		final StateSetMetric statusMetric = connectorMonitor.getMetric(CONNECTOR_STATUS_METRIC_KEY, StateSetMetric.class);
-		final ConnectorNamespace connectorNamespace = telemetryManager
-			.getHostProperties()
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(TEST_CONNECTOR_ID);
 
 		assertEquals(expectedMetricValue, statusMetric.getValue());

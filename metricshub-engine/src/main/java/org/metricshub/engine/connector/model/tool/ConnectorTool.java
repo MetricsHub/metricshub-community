@@ -23,6 +23,7 @@ package org.metricshub.engine.connector.model.tool;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.LinkedHashMap;
@@ -86,6 +87,15 @@ public class ConnectorTool extends AbstractMonitorTask {
 	private ToolResult result;
 
 	/**
+	 * Whether the tool returns the text of its result source rather than its table: set when the connector is parsed,
+	 * for a tool that declares no columns and whose result source ends in text (a command output, a free-form awk).
+	 * Never set from YAML.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean textResult;
+
+	/**
 	 * Constructs a tool with its sources and description.
 	 *
 	 * @param sources        the sources to run, by name
@@ -133,10 +143,8 @@ public class ConnectorTool extends AbstractMonitorTask {
 			}
 			if (!parameter.required() && parameter.defaultValue() == null) {
 				throw new IllegalArgumentException(
-					"Tool %s references %s, optional without a default: declare a default (even '') or make it required".formatted(
-						name,
-						reference
-					)
+					"Tool %s references %s, optional without a default: declare a default (even '') or make it required"
+						.formatted(name, reference)
 				);
 			}
 			final String escape = matcher.group("esc");

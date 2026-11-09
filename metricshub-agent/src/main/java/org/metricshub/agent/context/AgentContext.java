@@ -255,17 +255,17 @@ public class AgentContext implements AutoCloseable {
 
 			log.info(
 				"""
-				Product information:
-				Name: {}
-				Version: {}
-				Build number: {}
-				Build date: {}
-				Community Connector Library version: {}
-				Java version: {}
-				Java Runtime Environment directory: {}
-				Operating System: {} {}
-				User working directory: {}
-				PID: {}""",
+					Product information:
+					Name: {}
+					Version: {}
+					Build number: {}
+					Build date: {}
+					Community Connector Library version: {}
+					Java version: {}
+					Java Runtime Environment directory: {}
+					Operating System: {} {}
+					User working directory: {}
+					PID: {}""",
 				project.name(),
 				project.version(),
 				applicationProperties.buildNumber(),

@@ -77,9 +77,7 @@ class EmulationHttpRequestExecutorTest {
 	private void writeStandardImage(final Path baseDir) throws IOException {
 		Files.createDirectories(baseDir);
 
-		Files.writeString(
-			baseDir.resolve("image.yaml"),
-			"""
+		Files.writeString(baseDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -115,9 +113,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: delete-response.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		Files.writeString(
 			baseDir.resolve("get-status-response.txt"),
@@ -367,9 +363,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpNullRequestEntrySkipped(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			    response:
@@ -380,9 +374,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: valid-response.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("valid-response.txt"), "valid answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
@@ -396,9 +388,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpMissingResponseFile(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -406,9 +396,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: this-file-does-not-exist.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
 		final HttpRequest request = buildHttpRequest("GET", "/missing-file");
@@ -549,9 +537,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpUrlMatch(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -559,9 +545,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: url-response.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("url-response.txt"), "url answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
@@ -579,9 +563,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpUrlMismatch(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -589,9 +571,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: url-response.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("url-response.txt"), "url answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
@@ -608,9 +588,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpPathOnlyEntryNotMatchedByUrlOnlyRequest(@TempDir Path tempDir) throws IOException {
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -618,9 +596,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: response.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("response.txt"), "answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
@@ -640,9 +616,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpPathAndUrlBothMatch(@TempDir Path tempDir) throws IOException {
 		// A single entry carrying both path and url fields is what the recorder
 		// produces when both are set on the request.
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -651,9 +625,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: combined.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("combined.txt"), "combined answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
@@ -673,9 +645,7 @@ class EmulationHttpRequestExecutorTest {
 	@Test
 	void testExecuteHttpPathAndUrlMismatchWhenOnlyOneMatches(@TempDir Path tempDir) throws IOException {
 		// Entry has both path and url. Request must match BOTH (strict equality).
-		Files.writeString(
-			tempDir.resolve("image.yaml"),
-			"""
+		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
 			      method: GET
@@ -684,9 +654,7 @@ class EmulationHttpRequestExecutorTest {
 			    response:
 			      file: combined.txt
 			      resultContent: body
-			""",
-			StandardCharsets.UTF_8
-		);
+			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("combined.txt"), "combined answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());

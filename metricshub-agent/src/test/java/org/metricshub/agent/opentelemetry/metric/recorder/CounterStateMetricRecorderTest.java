@@ -100,16 +100,14 @@ class CounterStateMetricRecorderTest {
 
 		assertEquals(2, attributesList.size(), "Expected two attributes");
 
-		final KeyValue resourceKeyValue = attributesList
-			.stream()
+		final KeyValue resourceKeyValue = attributesList.stream()
 			.filter(kv -> kv.getKey().equals("resource"))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("resource attribute not found"));
 		assertEquals("resource", resourceKeyValue.getKey(), "Attribute resource should match");
 		assertEquals("resourceValue", resourceKeyValue.getValue().getStringValue(), "Attribute resourceValue should match");
 
-		final KeyValue stateKeyValue = attributesList
-			.stream()
+		final KeyValue stateKeyValue = attributesList.stream()
 			.filter(kv -> kv.getKey().equals("state"))
 			.findFirst()
 			.orElseThrow(() -> new AssertionError("state attribute not found"));

@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -292,8 +294,7 @@ class SourceUpdaterProcessorTest {
 			)
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().build();
-		hostProperties
-			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 			.addSourceTable(
 				ENCLOSURE_COLLECT_SOURCE_1,
 				SourceTable.builder().table(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d"))).build()
@@ -439,8 +440,9 @@ class SourceUpdaterProcessorTest {
 			.source(ENCLOSURE_COLLECT_SOURCE_1)
 			.maxParallel(4)
 			.build();
-		final IllegalStateException thrown = assertThrows(IllegalStateException.class, () ->
-			runForEachEntry(executeForEachEntryOf, false, false, invocation -> {
+		final IllegalStateException thrown = assertThrows(
+			IllegalStateException.class,
+			() -> runForEachEntry(executeForEachEntryOf, false, false, invocation -> {
 				throw new IllegalStateException("boom");
 			})
 		);
@@ -823,8 +825,7 @@ class SourceUpdaterProcessorTest {
 
 		{
 			final String value = String.format("%s value", vendorSource1Ref);
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
@@ -843,8 +844,7 @@ class SourceUpdaterProcessorTest {
 
 		{
 			final String value = String.format("%s %s value", vendorSource1Ref, vendorSource1Ref);
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
@@ -862,8 +862,7 @@ class SourceUpdaterProcessorTest {
 		}
 		{
 			final String value = String.format("%s%s value", vendorSource1Ref, vendorSource1Ref);
-			telemetryManager
-				.getHostProperties()
+			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
 				.addSourceTable(
 					vendorSource1Ref,
@@ -964,5 +963,42 @@ class SourceUpdaterProcessorTest {
 
 		// The original source must not have been mutated: the updater works on a copy
 		assertEquals("${resource.attribute::host.name}", jawkSource.getVariables().get("hostname"));
+	}
+
+	/**
+	 * The input reference of an awk source reading a table is resolved to the table when the script runs: the
+	 * updater must not expand it into the source's text, whatever that text looks like.
+	 */
+	@Test
+	void testProcessJawkSourceTableInputKeepsItsReference() {
+		final String inputRef = "${source::monitors.enclosure.discovery.sources.raw}";
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).build())
+			.hostProperties(HostProperties.builder().build())
+			.build();
+		// A table whose only cell looks like a source reference
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+			.addSourceTable(
+				inputRef,
+				SourceTable.builder().table(List.of(List.of("${source::monitors.enclosure.discovery.sources.other}"))).build()
+			);
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(JawkSource.class));
+		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
+		);
+
+		updater.process(JawkSource.builder().input(inputRef).inputFormat(ContentType.TABLE).script("{ print }").build());
+		updater.process(JawkSource.builder().input(inputRef).script("{ print }").build());
+
+		final ArgumentCaptor<JawkSource> captor = ArgumentCaptor.forClass(JawkSource.class);
+		verify(sourceProcessor, times(2)).process(captor.capture());
+		assertEquals(inputRef, captor.getAllValues().get(0).getInput(), "table input: the reference is kept");
+		// Text input: the reference is expanded into the source's text (the cell, which looks like a reference)
+		assertEquals("${source::monitors.enclosure.discovery.sources.other}", captor.getAllValues().get(1).getInput());
 	}
 }

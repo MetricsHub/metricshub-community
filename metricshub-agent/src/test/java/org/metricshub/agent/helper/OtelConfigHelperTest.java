@@ -27,32 +27,20 @@ class OtelConfigHelperTest {
 	void testGetSecurityFilePath() {
 		// Null certificate file configured, the default is loaded
 		assertTrue(
-			OtelConfigHelper.getSecurityFilePath(
-				TEST_SECURITY_PATH,
-				DEFAULT_OTEL_CRT_FILENAME,
-				null,
-				HTTPS_GRPC_ENDPOINT
-			).isPresent()
+			OtelConfigHelper.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, null, HTTPS_GRPC_ENDPOINT)
+				.isPresent()
 		);
 
 		// Empty certificate file configured, the default is loaded
 		assertTrue(
-			OtelConfigHelper.getSecurityFilePath(
-				TEST_SECURITY_PATH,
-				DEFAULT_OTEL_CRT_FILENAME,
-				"",
-				HTTPS_GRPC_ENDPOINT
-			).isPresent()
+			OtelConfigHelper.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, "", HTTPS_GRPC_ENDPOINT)
+				.isPresent()
 		);
 
 		// Blank certificate file, the default is loaded
 		assertTrue(
-			OtelConfigHelper.getSecurityFilePath(
-				TEST_SECURITY_PATH,
-				DEFAULT_OTEL_CRT_FILENAME,
-				" ",
-				HTTPS_GRPC_ENDPOINT
-			).isPresent()
+			OtelConfigHelper.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, " ", HTTPS_GRPC_ENDPOINT)
+				.isPresent()
 		);
 
 		// Certificate file not found, it cannot be loaded
@@ -68,12 +56,8 @@ class OtelConfigHelperTest {
 
 		// HTTP instead of HTTPS, no certificate to load
 		assertTrue(
-			OtelConfigHelper.getSecurityFilePath(
-				TEST_SECURITY_PATH,
-				DEFAULT_OTEL_CRT_FILENAME,
-				null,
-				HTTP_GRPC_ENDPOINT
-			).isEmpty()
+			OtelConfigHelper.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, null, HTTP_GRPC_ENDPOINT)
+				.isEmpty()
 		);
 
 		// The certificate file is found

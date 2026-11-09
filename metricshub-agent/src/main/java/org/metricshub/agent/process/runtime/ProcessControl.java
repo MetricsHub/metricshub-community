@@ -211,16 +211,13 @@ public class ProcessControl {
 		if (closeable == null) {
 			return;
 		}
-		final Thread closer = new Thread(
-			() -> {
-				try {
-					closeable.close();
-				} catch (IOException e) {
-					log.debug("Failed to close {}: {}", label, e.getMessage());
-				}
-			},
-			"process-close-" + label
-		);
+		final Thread closer = new Thread(() -> {
+			try {
+				closeable.close();
+			} catch (IOException e) {
+				log.debug("Failed to close {}: {}", label, e.getMessage());
+			}
+		}, "process-close-" + label);
 		closer.setDaemon(true);
 		closer.start();
 		try {

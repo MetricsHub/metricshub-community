@@ -51,6 +51,7 @@ public class JdbcConfiguration implements IConfiguration {
 	private static final int DEFAULT_MSSQL_PORT = 1433;
 	private static final int DEFAULT_INFORMIX_PORT = 9088;
 	private static final int DEFAULT_H2_PORT = 9092;
+	private static final int DEFAULT_CLICKHOUSE_PORT = 8123;
 	private static final int INVALID_PORT = -1;
 
 	private String username;
@@ -86,66 +87,41 @@ public class JdbcConfiguration implements IConfiguration {
 
 	@Override
 	public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {
-		StringHelper.validateConfigurationAttribute(
-			username,
-			attr -> attr != null && attr.isBlank(),
-			() ->
-				"""
-				Resource %s - Username value is invalid for JDBC. \
-				This resource will not be monitored. \
-				Please verify the configured username value.\
-				""".formatted(resourceKey)
-		);
+		StringHelper.validateConfigurationAttribute(username, attr -> attr != null && attr.isBlank(), () -> """
+			Resource %s - Username value is invalid for JDBC. \
+			This resource will not be monitored. \
+			Please verify the configured username value.\
+			""".formatted(resourceKey));
 
-		StringHelper.validateConfigurationAttribute(
-			timeout,
-			attr -> attr == null || attr < 0L,
-			() ->
-				"""
-				Resource %s - Timeout value is invalid for JDBC. \
-				Timeout value returned: %s. This resource will not be monitored. \
-				Please verify the configured timeout value.\
-				""".formatted(resourceKey, timeout)
-		);
+		StringHelper.validateConfigurationAttribute(timeout, attr -> attr == null || attr < 0L, () -> """
+			Resource %s - Timeout value is invalid for JDBC. \
+			Timeout value returned: %s. This resource will not be monitored. \
+			Please verify the configured timeout value.\
+			""".formatted(resourceKey, timeout));
 
 		if (url == null || url.length == 0) {
-			StringHelper.validateConfigurationAttribute(
-				type,
-				attr -> attr == null || attr.isBlank(),
-				() ->
-					"""
-					Resource %s - Invalid database type configured for JDBC. \
-					Type value returned: %s. This resource will not be monitored. \
-					Please verify the configured type value.\
-					""".formatted(resourceKey, type)
-			);
+			StringHelper.validateConfigurationAttribute(type, attr -> attr == null || attr.isBlank(), () -> """
+				Resource %s - Invalid database type configured for JDBC. \
+				Type value returned: %s. This resource will not be monitored. \
+				Please verify the configured type value.\
+				""".formatted(resourceKey, type));
 
 			if (port == null) {
 				port = getDefaultPort(type);
 			}
 
-			StringHelper.validateConfigurationAttribute(
-				port,
-				attr -> attr < 1 || attr > 65535,
-				() ->
-					"""
-					Resource %s - Invalid port configured for JDBC. \
-					Port value returned: %s. This resource will not be monitored. \
-					Please verify the configured port value.\
-					""".formatted(resourceKey, port)
-			);
+			StringHelper.validateConfigurationAttribute(port, attr -> attr < 1 || attr > 65535, () -> """
+				Resource %s - Invalid port configured for JDBC. \
+				Port value returned: %s. This resource will not be monitored. \
+				Please verify the configured port value.\
+				""".formatted(resourceKey, port));
 			url = generateUrl();
 		}
 
-		StringHelper.validateConfigurationAttribute(
-			url,
-			attr -> attr.length == 0,
-			() ->
-				"""
-				Resource %s - Invalid url configured for JDBC. This resource will not be monitored. \
-				Please verify the configured url value.\
-				""".formatted(resourceKey)
-		);
+		StringHelper.validateConfigurationAttribute(url, attr -> attr.length == 0, () -> """
+			Resource %s - Invalid url configured for JDBC. This resource will not be monitored. \
+			Please verify the configured url value.\
+			""".formatted(resourceKey));
 	}
 
 	@Override
@@ -177,6 +153,7 @@ public class JdbcConfiguration implements IConfiguration {
 			case "mssql" -> DEFAULT_MSSQL_PORT;
 			case "informix" -> DEFAULT_INFORMIX_PORT;
 			case "h2" -> DEFAULT_H2_PORT;
+			case "clickhouse" -> DEFAULT_CLICKHOUSE_PORT;
 			default -> INVALID_PORT;
 		};
 	}
@@ -189,29 +166,18 @@ public class JdbcConfiguration implements IConfiguration {
 	 */
 	char[] generateUrl() {
 		return switch (type.toLowerCase()) {
-			case "mysql" -> String.format(
-				"jdbc:mysql://%s:%d/%s",
-				hostname,
-				port,
-				database != null ? database : ""
-			).toCharArray();
-			case "mariadb" -> String.format(
-				"jdbc:mariadb://%s:%d/%s",
-				hostname,
-				port,
-				database != null ? database : ""
-			).toCharArray();
-			case "postgresql" -> String.format(
-				"jdbc:postgresql://%s:%d/%s",
-				hostname,
-				port,
-				database != null ? database : "postgres"
-			).toCharArray();
-			case "mssql" -> String.format(
-				"jdbc:sqlserver://%s:%d;decrypt=true;trustServerCertificate=true",
-				hostname,
-				port
-			).toCharArray();
+			case "mysql" ->
+				String.format("jdbc:mysql://%s:%d/%s", hostname, port, database != null ? database : "").toCharArray();
+			case "mariadb" ->
+				String.format("jdbc:mariadb://%s:%d/%s", hostname, port, database != null ? database : "").toCharArray();
+			case "postgresql" ->
+				String.format("jdbc:postgresql://%s:%d/%s", hostname, port, database != null ? database : "postgres")
+					.toCharArray();
+			case "mssql" ->
+				String.format("jdbc:sqlserver://%s:%d;decrypt=true;trustServerCertificate=true", hostname, port).toCharArray();
+			case "clickhouse" ->
+				String.format("jdbc:clickhouse://%s:%d/%s", hostname, port, database != null ? database : "default")
+					.toCharArray();
 			default -> new char[0];
 		};
 	}

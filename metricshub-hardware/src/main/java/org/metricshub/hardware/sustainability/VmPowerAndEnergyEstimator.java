@@ -99,8 +99,9 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 		final Double totalPowerShares = totalPowerSharesByPowerSource.get(powerSourceId);
 
 		// totalPowerShares is never null here because the VM always comes with a powerShare value
-		final double powerShareRatio =
-			totalPowerShares != null && totalPowerShares > 0.0 ? vmPowerShare / totalPowerShares : 0.0;
+		final double powerShareRatio = totalPowerShares != null && totalPowerShares > 0.0
+			? vmPowerShare / totalPowerShares
+			: 0.0;
 
 		// Getting the power source's power consumption value
 		final Monitor powerSourceMonitor = telemetryManager.findMonitorById(powerSourceId);

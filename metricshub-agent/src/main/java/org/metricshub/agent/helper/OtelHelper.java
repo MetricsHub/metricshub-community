@@ -63,14 +63,10 @@ public class OtelHelper {
 		// host.name is managed by the engine based on the resolveHostnameToFqdn flag, so we shouldn't override it here.
 		// host.type is managed by the engine using a set of rules to determine the host.type in OTEL format so we shouldn't override it here.
 		// The other attributes are user-defined so we can override them.
-		userAttributes
-			.entrySet()
-			.stream()
-			.filter(keyValue -> {
-				final String key = keyValue.getKey();
-				return !key.equals("host.name") && !key.equals("host.type");
-			})
-			.forEach(entry -> attributes.put(entry.getKey(), entry.getValue()));
+		userAttributes.entrySet().stream().filter(keyValue -> {
+			final String key = keyValue.getKey();
+			return !key.equals("host.name") && !key.equals("host.type");
+		}).forEach(entry -> attributes.put(entry.getKey(), entry.getValue()));
 
 		return attributes;
 	}
