@@ -71,7 +71,7 @@ public class OpampHttpTransport implements OpampTransport {
 			.timeout(settings.getRequestTimeout())
 			.header("Content-Type", CONTENT_TYPE_PROTOBUF);
 
-		settings.getHeaders().forEach(requestBuilder::header);
+		settings.currentHeaders().forEach(requestBuilder::header);
 
 		final HttpRequest httpRequest = requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(agentToServerBytes))
 			.build();

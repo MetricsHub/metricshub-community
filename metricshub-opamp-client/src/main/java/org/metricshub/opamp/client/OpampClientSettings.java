@@ -25,6 +25,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
@@ -62,6 +63,21 @@ public class OpampClientSettings {
 	 */
 	@Builder.Default
 	Map<String, String> headers = Map.of();
+
+	/**
+	 * Computes the headers of each OpAMP request, when the credential changes while the client runs (a renewed
+	 * token); {@code null} to send {@link #headers}. Evaluated for every POST: an exception it throws is a transport
+	 * failure, retried with the backoff.
+	 */
+	Supplier<Map<String, String>> headersSupplier;
+
+	/**
+	 * Runs when the server answers {@code 401}, so the owner of the credential can drop it (no-op by default). The
+	 * next attempt follows the server's {@code Retry-After} without growing the backoff; a second {@code 401} in a
+	 * row follows the normal backoff.
+	 */
+	@Builder.Default
+	Runnable onUnauthorized = () -> {};
 
 	/**
 	 * Path to a PEM file containing the trusted certificate used to verify the server's TLS
@@ -106,6 +122,8 @@ public class OpampClientSettings {
 	 *
 	 * @param endpoint        the OpAMP server endpoint
 	 * @param headers         the headers sent with every request; {@code null} means none
+	 * @param headersSupplier computes the headers of each request instead, or {@code null}
+	 * @param onUnauthorized  runs when the server answers {@code 401}; {@code null} means nothing
 	 * @param certificateFile the trusted certificate (PEM) path, or {@code null}
 	 * @param pollInterval    the interval between two polls
 	 * @param requestTimeout  the timeout of one HTTP exchange
@@ -116,6 +134,8 @@ public class OpampClientSettings {
 	public OpampClientSettings(
 		@NonNull final URI endpoint,
 		final Map<String, String> headers,
+		final Supplier<Map<String, String>> headersSupplier,
+		final Runnable onUnauthorized,
 		final String certificateFile,
 		final Duration pollInterval,
 		final Duration requestTimeout,
@@ -125,11 +145,21 @@ public class OpampClientSettings {
 	) {
 		this.endpoint = endpoint;
 		this.headers = headers == null ? Map.of() : Map.copyOf(headers);
+		this.headersSupplier = headersSupplier;
+		this.onUnauthorized = onUnauthorized == null ? () -> {} : onUnauthorized;
 		this.certificateFile = certificateFile;
 		this.pollInterval = pollInterval;
 		this.requestTimeout = requestTimeout;
 		this.maxBackoff = maxBackoff;
 		this.instanceUidFile = instanceUidFile;
 		this.reportHealth = reportHealth;
+	}
+
+	/**
+	 * @return the headers of the request about to be sent: the supplier's current value when one is set, the static
+	 *         headers otherwise
+	 */
+	public Map<String, String> currentHeaders() {
+		return headersSupplier == null ? headers : headersSupplier.get();
 	}
 }
