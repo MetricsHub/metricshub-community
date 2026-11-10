@@ -216,6 +216,18 @@ class TunnelServiceTest {
 	}
 
 	@Test
+	void aDisabledChannelShouldStillReconcileTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(false).build());
+
+		service.supervise();
+
+		verify(enrollment).ready(agentContext);
+		assertTrue(createdClients.isEmpty());
+	}
+
+	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.ready(agentContext)).thenReturn(true, false, true);

@@ -280,6 +280,8 @@ public class TunnelService {
 		closeClient("Central tunnel configuration changed");
 		activeConfig = newConfig;
 
+		// Asked first, whatever the channel: it also stops an enrollment a reload no longer configures
+		final boolean enrolled = enrollment.ready(agentContextHolder.getAgentContext());
 		if (newConfig == null || !newConfig.isEnabled()) {
 			log.info("Central tunnel is disabled.");
 			return;
@@ -289,7 +291,7 @@ public class TunnelService {
 			log.warn("Central tunnel is enabled but no endpoint is configured; the tunnel is not started.");
 			return;
 		}
-		if (!enrollment.ready(agentContextHolder.getAgentContext())) {
+		if (!enrolled) {
 			// Retried on the next tick: with central.auth, nothing connects before the agent is enrolled
 			activeConfig = null;
 			log.debug("Central tunnel waits for the enrollment of the agent into MetricsHub Central.");
