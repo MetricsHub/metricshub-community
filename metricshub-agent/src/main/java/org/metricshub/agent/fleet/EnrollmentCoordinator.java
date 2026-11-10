@@ -358,9 +358,15 @@ public class EnrollmentCoordinator {
 		try {
 			token = provider.currentToken();
 		} catch (CentralTokenProvider.InvalidClientException e) {
-			if (provider != currentProvider()) {
-				// The former issuer refused: the new one is asked next
-				throw new IOException("The issuer changed while its token was asked.");
+			// Under the lock ready() replaces the provider with: a refusal of a replaced provider never ends the work
+			// the new one has to do
+			synchronized (this) {
+				if (provider != currentProvider()) {
+					// The former issuer refused: the new one is asked next
+					throw new IOException("The issuer changed while its token was asked.");
+				}
+				// Revoked: there will be no first token, and nothing is retried
+				firstTokenDone = true;
 			}
 			throw e;
 		}
@@ -388,6 +394,13 @@ public class EnrollmentCoordinator {
 				log.warn("Cannot delete the enrollment recovery proof yet: {}. Retried after the next token.", e.getMessage());
 			}
 		}
+	}
+
+	/**
+	 * @return whether the first token came, or a refusal said none ever will (tests)
+	 */
+	boolean isFirstTokenDone() {
+		return firstTokenDone;
 	}
 
 	synchronized CentralTokenProvider currentProvider() {
@@ -647,8 +660,7 @@ public class EnrollmentCoordinator {
 				// The deletion failed: retried with the next token
 				pause("The enrollment recovery proof is not deleted yet", "the KeyStore could not be written", null);
 			} catch (CentralTokenProvider.InvalidClientException e) {
-				// Logged by the provider: the agent is revoked, nothing is retried
-				firstTokenDone = true;
+				// Logged by the provider, recorded by currentToken(): the agent is revoked, nothing is retried
 				return;
 			} catch (IOException e) {
 				// The provider schedules its next attempt itself and names its failures without quoting an answer
