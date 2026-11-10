@@ -3,6 +3,7 @@ package org.metricshub.web.service;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -11,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.opamp.OpAmpService;
 import org.metricshub.agent.upgrade.UpgradeManager;
 import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
@@ -37,6 +40,24 @@ class OpAmpStartupHookTest {
 			capturedHandler.set(packagesHandler);
 			return opAmpService;
 		}, capturedShutdownAction::set);
+	}
+
+	@Test
+	void theEnrollmentAndOpAmpShouldStartEvenWhenTheUpgradeReconciliationFails() {
+		final AgentContext agentContext = mock(AgentContext.class);
+		when(agentContext.getAgentConfig()).thenReturn(AgentConfig.builder().build());
+		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
+		doThrow(new IllegalStateException("reconciliation failed")).when(upgradeManager).reconcileOnStartup();
+		final AtomicReference<AgentContext> started = new AtomicReference<>();
+		final OpAmpStartupHook hook = newHook();
+		hook.setEnrollmentStarter(started::set);
+
+		hook.onStartup();
+
+		assertSame(agentContext, started.get(), "the tunnel waits on it");
+		// Its supervisor reconciles the enrollment on each reload, without package offers
+		verify(opAmpService).start();
+		assertNull(capturedHandler.get());
 	}
 
 	@Test

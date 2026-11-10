@@ -23,6 +23,7 @@ package org.metricshub.agent.opamp;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -33,6 +34,7 @@ import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.fleet.FleetHeaders;
 import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
@@ -76,8 +78,18 @@ public class OpAmpService {
 	 */
 	private DeploymentDetector deploymentDetector = new DeploymentDetector();
 
+	/**
+	 * Says whether the agent may connect to Central. Tests may replace it.
+	 */
+	private EnrollmentCoordinator enrollment = EnrollmentCoordinator.global();
+
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
+	/**
+	 * What of {@code central.auth} the client was started with ({@link EnrollmentCoordinator#authState}): a change
+	 * reconnects through the enrollment.
+	 */
+	private List<String> activeAuth;
 	private Boolean activeUpgradeEnabled;
 
 	/**
@@ -183,8 +195,18 @@ public class OpAmpService {
 
 		final OpAmpConfig config = agentContext.getAgentConfig().getCentral().opamp();
 		final boolean upgradeEnabled = isUpgradeEnabled(agentContext);
-		if (!Objects.equals(config, activeConfig) || !Objects.equals(upgradeEnabled, activeUpgradeEnabled)) {
+		final List<String> auth = EnrollmentCoordinator.authState(
+			agentContext.getAgentConfig().getCentral(),
+			enrollment.isReady()
+		);
+		if (
+			!Objects.equals(config, activeConfig) ||
+				!Objects.equals(upgradeEnabled, activeUpgradeEnabled) ||
+				!Objects.equals(auth, activeAuth)
+		) {
 			reconfigure(agentContext, config, upgradeEnabled);
+			// After it: the reconfiguration may have found the agent enrolled, which drops the key from the state
+			activeAuth = EnrollmentCoordinator.authState(agentContext.getAgentConfig().getCentral(), enrollment.isReady());
 		}
 
 		if (client != null && client.isStarted()) {
@@ -236,6 +258,15 @@ public class OpAmpService {
 	}
 
 	/**
+	 * Replaces the enrollment coordinator (used by tests).
+	 *
+	 * @param enrollment the coordinator to use
+	 */
+	void setEnrollment(final EnrollmentCoordinator enrollment) {
+		this.enrollment = enrollment;
+	}
+
+	/**
 	 * Applies a new {@code central.opamp} configuration: stops the running client and starts a new one
 	 * when the configuration enables OpAMP.
 	 *
@@ -250,6 +281,8 @@ public class OpAmpService {
 		activeConfig = newConfig;
 		activeUpgradeEnabled = upgradeEnabled;
 
+		// Asked first, whatever the channel: it also stops an enrollment a reload no longer configures
+		final boolean enrolled = enrollment.ready(agentContext);
 		if (newConfig == null || !newConfig.isEnabled()) {
 			log.info("OpAMP is disabled.");
 			return;
@@ -257,6 +290,12 @@ public class OpAmpService {
 		final String endpoint = newConfig.getEndpoint();
 		if (endpoint == null || endpoint.isBlank()) {
 			log.warn("OpAMP is enabled but no endpoint is configured; the OpAMP client is not started.");
+			return;
+		}
+		if (!enrolled) {
+			// Retried on the next tick: with central.auth, nothing connects before the agent is enrolled
+			activeConfig = null;
+			log.debug("OpAMP waits for the enrollment of the agent into MetricsHub Central.");
 			return;
 		}
 

@@ -25,6 +25,8 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.opamp.OpAmpService;
 import org.metricshub.agent.process.runtime.ProcessControl;
 import org.metricshub.agent.upgrade.UpgradeManager;
@@ -57,6 +59,7 @@ public class OpAmpStartupHook implements StartupHook {
 	private final Function<AgentContextHolder, UpgradeManager> upgradeManagerFactory;
 	private final BiFunction<AgentContextHolder, OpampPackagesHandler, OpAmpService> opAmpServiceFactory;
 	private final Consumer<Runnable> shutdownHookRegistrar;
+	private Consumer<AgentContext> enrollmentStarter = context -> EnrollmentCoordinator.global().ready(context);
 
 	/**
 	 * Creates the hook with the real collaborators.
@@ -93,15 +96,38 @@ public class OpAmpStartupHook implements StartupHook {
 		this.shutdownHookRegistrar = shutdownHookRegistrar;
 	}
 
+	/**
+	 * Replaces what starts the enrollment (used by tests).
+	 *
+	 * @param enrollmentStarter called with the boot context
+	 */
+	void setEnrollmentStarter(final Consumer<AgentContext> enrollmentStarter) {
+		this.enrollmentStarter = enrollmentStarter;
+	}
+
 	@Override
 	public void onStartup() {
+		// The enrollment first, whatever happens to the upgrade below: no OpAMP client exists yet to write the uid file
+		final AgentContext agentContext = agentContextHolder.getAgentContext();
+		if (agentContext != null && agentContext.getAgentConfig() != null) {
+			enrollmentStarter.accept(agentContext);
+		}
 		// Reconcile a pending upgrade transaction before anything reports to OpAMP, so the
 		// upgrade verdict (SUCCEEDED/FAILED) is part of the first OpAMP status report.
-		final UpgradeManager upgradeManager = upgradeManagerFactory.apply(agentContextHolder);
-		upgradeManager.reconcileOnStartup();
+		UpgradeManager upgradeManager;
+		try {
+			upgradeManager = upgradeManagerFactory.apply(agentContextHolder);
+			upgradeManager.reconcileOnStartup();
+		} catch (RuntimeException e) {
+			// OpAMP starts anyway, without package offers: its supervisor is also the one that reconciles the
+			// enrollment into Central on each reload
+			log.error("The upgrade reconciliation failed: {}. OpAMP starts without package offers.", e.getMessage());
+			log.debug("The upgrade reconciliation failed:", e);
+			upgradeManager = null;
+		}
 
 		// Package offers are accepted only on deployments supporting in-place upgrades (deb/rpm/msi).
-		final OpampPackagesHandler packagesHandler = upgradeManager.isPackageUpgradeSupported()
+		final OpampPackagesHandler packagesHandler = upgradeManager != null && upgradeManager.isPackageUpgradeSupported()
 			? new OpampUpgradeAdapter(upgradeManager)
 			: null;
 

@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.TunnelConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.fleet.FleetHeaders;
 import org.metricshub.agent.tunnel.client.TunnelClient;
 import org.metricshub.agent.tunnel.client.TunnelListener;
@@ -80,6 +81,10 @@ public class TunnelService {
 	private final ToolCallbackProvider toolCallbackProvider;
 	private final BiFunction<TunnelSettings, TunnelListener, TunnelClient> clientFactory;
 	private final UidSupplier uidSupplier;
+	/**
+	 * Says whether the agent may connect to Central. Tests may replace it.
+	 */
+	private EnrollmentCoordinator enrollment = EnrollmentCoordinator.global();
 	private final ExecutorService toolWorkers;
 	private final ScheduledExecutorService supervisor;
 
@@ -91,6 +96,11 @@ public class TunnelService {
 	 */
 	private long snapshotGeneration;
 	private TunnelConfig activeConfig;
+	/**
+	 * What of {@code central.auth} the tunnel was started with ({@link EnrollmentCoordinator#authState}): a change
+	 * reconnects through the enrollment.
+	 */
+	private List<String> activeAuth;
 	// Written by the supervisor and by the tunnel thread building a registration. Volatile rather
 	// than guarded: the tunnel thread must never wait on this service's monitor, which the
 	// supervisor holds while stop() waits for the tunnel thread to run its closing task.
@@ -136,6 +146,15 @@ public class TunnelService {
 	}
 
 	/**
+	 * Replaces the enrollment coordinator (used by tests).
+	 *
+	 * @param enrollment the coordinator to use
+	 */
+	void setEnrollment(final EnrollmentCoordinator enrollment) {
+		this.enrollment = enrollment;
+	}
+
+	/**
 	 * Starts the supervision; the first tick runs immediately.
 	 */
 	public void start() {
@@ -166,8 +185,13 @@ public class TunnelService {
 			return;
 		}
 		final TunnelConfig config = agentContext.getAgentConfig().getCentral().tunnel();
-		if (!Objects.equals(config, activeConfig)) {
-			reconfigure(config);
+		final List<String> auth = EnrollmentCoordinator.authState(
+			agentContext.getAgentConfig().getCentral(),
+			enrollment.isReady()
+		);
+		if (!Objects.equals(config, activeConfig) || !Objects.equals(auth, activeAuth)) {
+			reconfigure(agentContext, config);
+			activeAuth = EnrollmentCoordinator.authState(agentContext.getAgentConfig().getCentral(), enrollment.isReady());
 			return;
 		}
 		if (client != null && agentContextHolder.getGeneration() != snapshotGeneration) {
@@ -184,7 +208,7 @@ public class TunnelService {
 					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
 					current.tools().size()
 				);
-				reconfigure(config);
+				reconfigure(agentContext, config);
 				return;
 			}
 			// Same advertised set, rebuilt callbacks: the ones the bridge holds belong to the replaced
@@ -255,10 +279,20 @@ public class TunnelService {
 		return new ContextSnapshot(context, generation);
 	}
 
-	private void reconfigure(final TunnelConfig newConfig) {
+	/**
+	 * Applies a new {@code central.tunnel} configuration.
+	 *
+	 * @param agentContext the context the configuration was read from: the enrollment gate is asked about the same one
+	 * @param newConfig    the new tunnel configuration
+	 */
+	private void reconfigure(final AgentContext agentContext, final TunnelConfig newConfig) {
 		closeClient("Central tunnel configuration changed");
 		activeConfig = newConfig;
 
+		// Only asked: the OpAMP supervisor starts and stops the enrollment, after it stopped its own client, the one
+		// other writer of the uid file (a new_instance_uid from a server that is not Central)
+		final boolean enrolled = !EnrollmentCoordinator.usesToken(agentContext) ||
+			enrollment.isReadyFor(agentContext.getAgentConfig().getCentral());
 		if (newConfig == null || !newConfig.isEnabled()) {
 			log.info("Central tunnel is disabled.");
 			return;
@@ -266,6 +300,12 @@ public class TunnelService {
 		final String endpoint = newConfig.getEndpoint();
 		if (endpoint == null || endpoint.isBlank()) {
 			log.warn("Central tunnel is enabled but no endpoint is configured; the tunnel is not started.");
+			return;
+		}
+		if (!enrolled) {
+			// Retried on the next tick: with central.auth, nothing connects before the agent is enrolled
+			activeConfig = null;
+			log.debug("Central tunnel waits for the enrollment of the agent into MetricsHub Central.");
 			return;
 		}
 

@@ -18,12 +18,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.fleet.AgentInstanceUid;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientSettings;
@@ -166,6 +168,108 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void anIdentityFoundEnrolledWhenStartingShouldNotReconnectAtTheNextTick() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		// Not ready when the state is computed, found ready while starting (an identity already persisted)
+		when(enrollment.isReady()).thenReturn(false, true);
+		when(enrollment.ready(agentContext)).thenReturn(true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(enabledConfig(ENDPOINT))
+				.auth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").enrollmentKey("used").build())
+				.build()
+		);
+
+		opAmpService.supervise();
+		opAmpService.supervise();
+
+		assertEquals(1, factoryInvocations);
+		verify(client, never()).stop(any());
+	}
+
+	@Test
+	void aNewEnrollmentKeyOnceEnrolledShouldNotReconnect() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true);
+		when(enrollment.isReady()).thenReturn(true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(enabledConfig(ENDPOINT))
+				.auth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").enrollmentKey("first").build())
+				.build()
+		);
+		opAmpService.supervise();
+
+		// The key is consumed: removing or replacing it changes nothing
+		agentConfig.getCentral().getAuth().setEnrollmentKey(null);
+		opAmpService.supervise();
+
+		assertEquals(1, factoryInvocations);
+		verify(client, never()).stop(any());
+	}
+
+	@Test
+	void aNewKeyOrCertificateShouldReachTheEnrollmentWhateverTheChannel() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(OpAmpConfig.builder().build())
+				.auth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").enrollmentKey("refused").build())
+				.build()
+		);
+		opAmpService.supervise();
+
+		// Not enrolled: a new key is reconciled, the channel disabled
+		agentConfig.getCentral().getAuth().setEnrollmentKey("new");
+		opAmpService.supervise();
+		verify(enrollment, times(2)).ready(agentContext);
+
+		// Enrolled: Central's certificate, which the token provider uses whatever the channels override
+		when(enrollment.isReady()).thenReturn(true);
+		opAmpService.supervise();
+		agentConfig.getCentral().setCertificateFile("/tmp/central-ca.pem");
+		opAmpService.supervise();
+		verify(enrollment, times(4)).ready(agentContext);
+	}
+
+	@Test
+	void aDisabledChannelShouldStillReconcileTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(OpAmpConfig.builder().build()).build());
+
+		opAmpService.supervise();
+
+		verify(enrollment).ready(agentContext);
+		assertEquals(0, factoryInvocations);
+	}
+
+	@Test
+	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
+		opAmpService.supervise();
+		assertEquals(1, factoryInvocations);
+
+		// Same channel settings, a new central.auth
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		opAmpService.supervise();
+		verify(client, times(1)).stop(any());
+		assertEquals(1, factoryInvocations, "nothing connects before the enrollment");
+
+		opAmpService.supervise();
+		assertEquals(2, factoryInvocations);
+	}
+
+	@Test
 	void enabledConfigurationShouldStartTheClientOnce() {
 		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
 
@@ -178,6 +282,20 @@ class OpAmpServiceTest {
 		verify(client, times(3)).setAgentDescription(any());
 		verify(client, times(3)).setHealth(any());
 		assertEquals(URI.create(ENDPOINT), capturedSettings.get().getEndpoint());
+	}
+
+	@Test
+	void anAgentNotEnrolledYetShouldNotStartTheClientUntilItIs() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(false, true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
+
+		opAmpService.supervise();
+		assertEquals(0, factoryInvocations);
+
+		opAmpService.supervise();
+		assertEquals(1, factoryInvocations);
 	}
 
 	@Test

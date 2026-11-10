@@ -25,9 +25,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.TunnelConfig;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.tunnel.client.TunnelClient;
@@ -197,6 +199,79 @@ class TunnelServiceTest {
 		service.supervise();
 
 		assertTrue(createdClients.isEmpty());
+	}
+
+	@Test
+	void shouldNotStartBeforeTheAgentIsEnrolled() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReadyFor(any())).thenReturn(false, true);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+
+		service.supervise();
+		assertTrue(createdClients.isEmpty());
+
+		service.supervise();
+		assertEquals(1, createdClients.size());
+	}
+
+	@Test
+	void theGateShouldBeAskedAboutTheContextTheSettingsCameFrom() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		// A reload swaps the context between the settings read and the gate: the newer one has no central.auth
+		final AgentContext reloaded = mock(AgentContext.class);
+		when(reloaded.getAgentConfig()).thenReturn(
+			AgentConfig.builder()
+				.central(
+					CentralConfig.builder()
+						.enabled(true)
+						.tunnel(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build())
+						.build()
+				)
+				.build()
+		);
+		when(agentContextHolder.getAgentContext()).thenReturn(agentContext, reloaded);
+
+		service.supervise();
+
+		assertTrue(createdClients.isEmpty(), "the context the settings came from is not enrolled");
+	}
+
+	@Test
+	void theTunnelShouldNeverStartTheEnrollmentItself() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+
+		service.supervise();
+
+		// The OpAMP supervisor starts it, once its own client, which may write the uid file, is stopped
+		verify(enrollment, never()).ready(any());
+		assertTrue(createdClients.isEmpty());
+	}
+
+	@Test
+	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReadyFor(any())).thenReturn(false, true);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		service.supervise();
+		assertEquals(1, createdClients.size(), "without central.auth, nothing waits");
+
+		// Same channel settings, a new central.auth
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		service.supervise();
+		verify(createdClients.get(0)).stop(anyString());
+		assertEquals(1, createdClients.size(), "nothing connects before the enrollment");
+
+		service.supervise();
+		assertEquals(2, createdClients.size());
 	}
 
 	@Test

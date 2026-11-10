@@ -656,6 +656,23 @@ central:
 | `certificateFile` | system trust store | PEM for the **server**. The one for package repositories is `central.upgrade.trustedCertificateFile`, and they are rarely the same |
 | `insecure` | `false` | Accepts cleartext where the agent otherwise requires TLS: a `ws://` tunnel to **any** host, and package downloads over plain `http://` from **any** host. Off, both accept cleartext for loopback only. On, the tunnel's handshake headers — the credential included — travel unencrypted, and a downloaded package is protected only by the SHA-256 of an offer that may itself have arrived in cleartext ([§10](#10-security-decisions)). For a lab or a first deployment; every cleartext use logs a warning. OpAMP is not gated by it: it accepts `http://` to any host already. Read from this roof only — written under a channel it does nothing |
 | `attributes` | `{}` | Reported as this agent's identity by both channels. Merged **last**, so they override both the pre-built agent attributes and the agent-level `attributes:` — the fleet identity can be tailored without touching the attributes attached to the exported metrics |
+| `auth.issuerUrl` | — | Central's issuer, an origin without a path; `https://`, or `http://` on a loopback address. Required when `auth` is set, else the agent refuses to start ([§9.1.1](#911-centralauth)) |
+| `auth.enrollmentKey` | — | The temporary key of an Install New Agent session, used once at the first start. Never logged ([§9.1.1](#911-centralauth)) |
+
+#### 9.1.1 `central.auth`
+
+```yaml
+central:
+  enabled: true
+  url: https://app.metricshub.com
+  auth:
+    issuerUrl: https://api.metricshub.com
+    enrollmentKey: ${env::METRICSHUB_ENROLLMENT_KEY}
+```
+
+With `auth`, the agent enrolls into Central once, at its first start, in the background (`EnrollmentCoordinator`), before OpAMP or the tunnel connects: it records an attempt id and a recovery proof in the security directory (`AgentCredentialStore`), then calls `POST {issuerUrl}/v1/agents/enroll` with the key. It stores the `agent_uid` it receives in `security/metricshub-agent-uid` and its secret in the keystore, never in `metricshub.yaml`. An answer lost, or a crash between two writes, resumes **the same attempt** (`POST /v1/enrollment-attempts/{id}/recover`), never a second identity. A refused key (`enrollment_not_authorized`, `enrollment_expired`, `enrollment_limit_reached`, `idempotency_conflict`, `attempt_closed`) is logged with what to do, a new Install New Agent command, and the agent waits for a new key; an outage, a `429` or a `5xx` is retried with a backoff, `Retry-After` honoured. OpAMP and the tunnel start only once the agent is enrolled.
+
+Once enrolled, the key is ignored: it may stay in `metricshub.yaml`, which the agent never rewrites. Keep the security directory: without it the agent cannot enroll again with a key already used, and becomes a new agent only with a new command. The agent refuses to start when `auth` has no `issuerUrl`, when a static `Authorization` header is also configured (`central.headers`, `central.opamp.headers` or `central.tunnel.headers`), or when it is not enrolled and has no key. Without `auth`, nothing changes.
 
 ### 9.2 `central.opamp:`
 
