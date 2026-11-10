@@ -170,6 +170,28 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void aNewEnrollmentKeyOnceEnrolledShouldNotReconnect() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(enabledConfig(ENDPOINT))
+				.auth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").enrollmentKey("first").build())
+				.build()
+		);
+		opAmpService.supervise();
+
+		// The key is consumed: removing or replacing it changes nothing
+		agentConfig.getCentral().getAuth().setEnrollmentKey(null);
+		opAmpService.supervise();
+
+		assertEquals(1, factoryInvocations);
+		verify(client, never()).stop(any());
+	}
+
+	@Test
 	void aDisabledChannelShouldStillReconcileTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		opAmpService.setEnrollment(enrollment);

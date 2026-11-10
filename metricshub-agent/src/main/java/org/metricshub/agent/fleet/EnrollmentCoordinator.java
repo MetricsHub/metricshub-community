@@ -123,6 +123,14 @@ public class EnrollmentCoordinator {
 	private record EnrolledAgent(String agentUid, char[] secret) {}
 
 	/**
+	 * Central refused the key or the attempt (logged): nothing is retried until the configuration changes.
+	 */
+	private static final class RefusedException extends IOException {
+
+		private static final long serialVersionUID = 1L;
+	}
+
+	/**
 	 * A failure retried after the backoff, never shorter than {@code floor}. Its message never quotes an answer.
 	 */
 	private static final class RetryableException extends IOException {
@@ -504,6 +512,11 @@ public class EnrollmentCoordinator {
 					}
 					firstToken();
 					return;
+				} catch (RefusedException e) {
+					synchronized (this) {
+						stoppedWith = current;
+					}
+					return;
 				} catch (RetryableException e) {
 					pause("The enrollment into MetricsHub Central did not complete", e.getMessage(), e.floor);
 				} catch (IOException e) {
@@ -641,8 +654,8 @@ public class EnrollmentCoordinator {
 	 * @param attemptId      the attempt id
 	 * @param recoverySecret the recovery proof, ASCII
 	 * @param recover        whether to recover rather than enroll
-	 * @return the identity; {@code null} when an enrollment was refused (logged), or when a recovery found nothing to
-	 *         recover
+	 * @return the identity; {@code null} when a recovery found nothing to recover
+	 * @throws RefusedException     when Central refused the key or the attempt (logged)
 	 * @throws IOException          when the request failed and is retried
 	 * @throws InterruptedException when interrupted
 	 */
@@ -692,14 +705,14 @@ public class EnrollmentCoordinator {
 			log.info("Central has no answer to recover for enrollment attempt {}: enrolling again with it.", attemptId);
 			return null;
 		}
-		if (!recover && (status == 400 || status == 401 || status == 409 || status == 410)) {
+		if (status == 400 || status == 401 || status == 409 || status == 410) {
 			log.error(
 				"Central refused the enrollment of this agent ({} {}): {} No new identity is created.",
 				status,
 				code,
 				explain(code)
 			);
-			return null;
+			throw new RefusedException();
 		}
 		throw new RetryableException("Central answered " + status + " " + code, MAX_BACKOFF);
 	}
