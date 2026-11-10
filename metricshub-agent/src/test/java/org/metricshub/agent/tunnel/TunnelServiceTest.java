@@ -204,7 +204,7 @@ class TunnelServiceTest {
 	@Test
 	void shouldNotStartBeforeTheAgentIsEnrolled() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.isReady()).thenReturn(false, false, true);
+		when(enrollment.isReadyFor(any())).thenReturn(false, true);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
@@ -233,7 +233,7 @@ class TunnelServiceTest {
 	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.isReady()).thenReturn(false, false, false, false, true);
+		when(enrollment.isReadyFor(any())).thenReturn(false, true);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		service.supervise();

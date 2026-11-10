@@ -197,9 +197,6 @@ public class EnrollmentCoordinator {
 	 */
 	public boolean ready(final AgentContext agentContext) {
 		final CentralConfig central = agentContext.getAgentConfig().getCentral();
-		if (ready) {
-			return true;
-		}
 		if (!isConfigured(central)) {
 			// Stops an enrollment that a reload no longer asks for
 			return ready(central, Map.of());
@@ -237,9 +234,6 @@ public class EnrollmentCoordinator {
 			return true;
 		}
 		enrollmentWanted = true;
-		if (ready) {
-			return true;
-		}
 		final CentralAuthConfig auth = central.getAuth();
 		final Settings latest = new Settings(
 			auth.getIssuerUrl(),
@@ -262,6 +256,10 @@ public class EnrollmentCoordinator {
 				settingsChanged = true;
 				backoff.notifyAll();
 			}
+		}
+		if (ready) {
+			// The settings are kept current: a channel opens only for the Central they name (isReadyFor)
+			return true;
 		}
 		if (store == null) {
 			store = storeFactory.get();
@@ -319,6 +317,21 @@ public class EnrollmentCoordinator {
 	 */
 	public boolean isReady() {
 		return ready;
+	}
+
+	/**
+	 * @param central the {@code central} configuration a channel is about to open with
+	 * @return whether the agent is enrolled and the coordinator already runs with that configuration's issuer and
+	 *         certificate: a channel never opens for a Central the coordinator has not reconciled yet
+	 */
+	public boolean isReadyFor(final CentralConfig central) {
+		final Settings current = settings;
+		return (ready &&
+			current != null &&
+			central != null &&
+			central.getAuth() != null &&
+			Objects.equals(current.issuerUrl(), central.getAuth().getIssuerUrl()) &&
+			Objects.equals(current.certificateFile(), central.getCertificateFile()));
 	}
 
 	/**
@@ -426,7 +439,8 @@ public class EnrollmentCoordinator {
 	private boolean refusedAgain(final Settings latest) {
 		return (stoppedWith != null &&
 			Objects.equals(latest.issuerUrl(), stoppedWith.issuerUrl()) &&
-			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()));
+			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()) &&
+			Objects.equals(latest.certificateFile(), stoppedWith.certificateFile()));
 	}
 
 	/**
