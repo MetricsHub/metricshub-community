@@ -198,6 +198,16 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void anErrorOutsideOAuthShouldNeverBeQuoted() throws Exception {
+		script.add(new Answer(400, "{\"error\":\"echoed-" + SECRET + "\"}", null));
+
+		final IOException failure = assertThrows(IOException.class, () -> provider().currentToken());
+
+		assertTrue(failure.getMessage().contains("400 unknown"), failure.getMessage());
+		assertFalse(failure.getMessage().contains(SECRET), failure.getMessage());
+	}
+
+	@Test
 	void anotherIssuerInTheMetadataShouldBeRefused() throws Exception {
 		announcedIssuer = "https://issuer.example.com";
 

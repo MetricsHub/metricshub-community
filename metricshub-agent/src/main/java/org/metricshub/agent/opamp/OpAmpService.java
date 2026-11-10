@@ -22,6 +22,7 @@ package org.metricshub.agent.opamp;
  */
 
 import java.net.URI;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -29,11 +30,13 @@ import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.fleet.AgentCredentialStore;
 import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.fleet.FleetHeaders;
@@ -78,6 +81,13 @@ public class OpAmpService {
 	 * caches its verdict, so the probes run at most once per process. Tests may replace it.
 	 */
 	private DeploymentDetector deploymentDetector = new DeploymentDetector();
+
+	/**
+	 * Whether an enrolled identity is persisted in the security directory. Tests may replace it.
+	 */
+	private BooleanSupplier enrolledIdentity = () -> Files.exists(
+		AgentInstanceUid.file().resolveSibling(AgentCredentialStore.STATE_FILENAME)
+	);
 
 	/**
 	 * Says whether the agent may connect to Central. Tests may replace it.
@@ -268,6 +278,15 @@ public class OpAmpService {
 	}
 
 	/**
+	 * Replaces the check of a persisted enrolled identity (used by tests).
+	 *
+	 * @param enrolledIdentity whether one exists
+	 */
+	void setEnrolledIdentity(final BooleanSupplier enrolledIdentity) {
+		this.enrolledIdentity = enrolledIdentity;
+	}
+
+	/**
 	 * Applies a new {@code central.opamp} configuration: stops the running client and starts a new one
 	 * when the configuration enables OpAMP.
 	 *
@@ -391,7 +410,8 @@ public class OpAmpService {
 			.withHeaders(headers)
 			.withHeadersSupplier(usesToken ? () -> coordinator.headers(headers, generation) : null)
 			.withOnUnauthorized(usesToken ? coordinator::invalidateToken : () -> {})
-			.withAcceptsNewInstanceUid(!usesToken)
+			// Never once an identity was enrolled, even with central.auth removed: the uid is the one its secret belongs to
+			.withAcceptsNewInstanceUid(!usesToken && !enrolledIdentity.getAsBoolean())
 			.withCertificateFile(config.getCertificateFile())
 			.withPollInterval(
 				Duration.ofSeconds(

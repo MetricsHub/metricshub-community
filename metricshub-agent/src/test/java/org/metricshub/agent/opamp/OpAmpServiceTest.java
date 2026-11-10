@@ -436,9 +436,18 @@ class OpAmpServiceTest {
 		verify(enrollment).invalidateToken();
 		assertFalse(settings.isAcceptsNewInstanceUid(), "the uid is the enrolled one");
 
+		opAmpService.setEnrolledIdentity(() -> false);
 		final OpampClientSettings without = opAmpService.buildSettings(config, false);
 		assertEquals(Map.of("X-Site", "a"), without.currentHeaders());
 		assertTrue(without.isAcceptsNewInstanceUid());
+	}
+
+	@Test
+	void anEnrolledIdentityShouldKeepItsUidEvenWithoutCentralAuth() {
+		opAmpService.setEnrolledIdentity(() -> true);
+		final OpAmpConfig config = OpAmpConfig.builder().enabled(true).endpoint(ENDPOINT).build();
+
+		assertFalse(opAmpService.buildSettings(config, false).isAcceptsNewInstanceUid());
 	}
 
 	@Test

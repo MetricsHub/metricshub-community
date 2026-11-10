@@ -38,6 +38,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.tunnel.client.TunnelSettings;
@@ -77,6 +78,16 @@ public class CentralTokenProvider {
 	private static final Duration MAX_BACKOFF = Duration.ofMinutes(5);
 	private static final String METADATA_PATH = "/.well-known/oauth-authorization-server";
 	private static final ObjectMapper JSON = new ObjectMapper();
+	private static final Set<String> OAUTH_ERRORS = Set.of(
+		"invalid_request",
+		"invalid_client",
+		"invalid_grant",
+		"unauthorized_client",
+		"unsupported_grant_type",
+		"invalid_scope",
+		"invalid_target",
+		"temporarily_unavailable"
+	);
 
 	/**
 	 * The agent's credential, as stored at enrollment.
@@ -441,11 +452,18 @@ public class CentralTokenProvider {
 		}
 	}
 
+	/**
+	 * @param body an error answer
+	 * @return its OAuth {@code error} when it is one RFC 6749 or RFC 8693 defines, else {@code "unknown"}: an answer
+	 *         may echo anything, the secret included, and only these are ever logged
+	 */
 	private static String errorCode(final String body) {
 		try {
-			return JSON.readTree(body).path("error").asText(null);
+			final JsonNode answer = JSON.readTree(body);
+			final String error = answer == null ? "" : answer.path("error").asText("");
+			return OAUTH_ERRORS.contains(error) ? error : "unknown";
 		} catch (IOException e) {
-			return null;
+			return "unknown";
 		}
 	}
 
