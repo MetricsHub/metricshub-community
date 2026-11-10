@@ -96,7 +96,8 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * produces, plus a JSON or XML document for the chains starting with <code>json2Csv</code> or <code>xml2Csv</code>.
  * <p>
  * The corpus pins what the engine does today. Stage 1 of the epic must reproduce it byte for byte, stage 2 compares
- * each rewritten chain with its old chain on the same inputs, and stage 4 regenerates it once.
+ * each rewritten chain with its old chain on the same inputs, and stage 4 regenerated it once; it is compared exactly
+ * since.
  * <p>
  * Configuration (system properties, or environment variables for the paths):
  * <ul>
@@ -107,10 +108,8 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * path), the way the enterprise build merges them, so that its connectors resolve the files they extend there (<code>../../semconv/K8s</code>); only its
  * own connectors are checked, reported and given goldens (see {@link #load(Repository)}). A connector file of a
  * repository that does not load is a failure.</li>
- * <li>{@value #UPDATE_PROPERTY}: when <code>true</code>, the goldens are (re)written instead of verified.</li>
- * <li>{@value #COMPARE_PROPERTY}: <code>typed</code> (default during stage 4 of #1508, until the goldens are
- * regenerated) compares what the chain produces for its consumers, see {@link CompareMode#TYPED}; <code>exact</code>
- * compares the whole output.</li>
+ * <li>{@value #UPDATE_PROPERTY}: when <code>true</code>, the goldens are (re)written instead of verified. The
+ * verification is exact: source type, compute list and every output (see {@link #diff(Path, ConnectorGolden)}).</li>
  * <li>{@value #CONNECTORS_PROPERTY}: a comma-separated list of connector ids (case-insensitive) restricting the
  * connectors checked and reported. Default: every connector.</li>
  * </ul>
@@ -127,41 +126,10 @@ public class ComputeChainGoldenCorpus {
 	public static final String ROOTS_PROPERTY = "metricshub.connectors.roots";
 	public static final String ROOTS_ENV = "METRICSHUB_CONNECTORS_ROOTS";
 	public static final String UPDATE_PROPERTY = "metricshub.goldens.update";
-	public static final String COMPARE_PROPERTY = "metricshub.goldens.compare";
 	public static final String CONNECTORS_PROPERTY = "metricshub.goldens.connectors";
 
-	/** Prefix of a difference that is an intended change of the migration: printed, never failing. */
-	public static final String INTENDED_PREFIX = "intended: ";
-
-	/** Suffix of the input names whose differences are intended (a <code>;</code> inside a cell). */
-	public static final String SEPARATOR_IN_CELL_SUFFIX = "SeparatorInCell";
-
-	/**
-	 * How a generated golden is compared with the stored one.
-	 */
-	public enum CompareMode {
-		/** The whole output (table, raw text, error, time-out), the source type and the compute list. */
-		EXACT,
-		/**
-		 * What the chain produces for its consumers, on the side of the generated output's type: the table (trailing
-		 * empty cells stripped from every row on both sides, but a generated row may never be shorter than its stored
-		 * row) when the generated output is a table, the stored raw text when it is a text; error and time-out as they
-		 * are. A changed compute list or source type is not a difference, and some differences are intended ones
-		 * (see {@link ComputeChainGoldenCorpus#isIntendedChange}).
-		 */
-		TYPED;
-
-		/**
-		 * Parses a mode name, case-insensitively.
-		 *
-		 * @param name The name, null or blank for the default (typed, while the goldens stored before stage 4 of #1508
-		 *             still hold both a table and a raw text)
-		 * @return the mode
-		 */
-		public static CompareMode parse(final String name) {
-			return name == null || name.isBlank() ? TYPED : valueOf(name.trim().toUpperCase(Locale.ROOT));
-		}
-	}
+	/** Suffix of the input names holding <code>;</code> inside a cell. */
+	private static final String SEPARATOR_IN_CELL_SUFFIX = "SeparatorInCell";
 
 	/**
 	 * The corpus directory of this module, relative to the module directory: it holds the revision pin only. The
@@ -212,15 +180,6 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * The configured comparison mode.
-	 *
-	 * @return the mode, typed unless {@value #COMPARE_PROPERTY} says otherwise
-	 */
-	public static CompareMode compareMode() {
-		return CompareMode.parse(System.getProperty(COMPARE_PROPERTY));
-	}
-
-	/**
 	 * Whether a connector is selected by {@value #CONNECTORS_PROPERTY}.
 	 *
 	 * @param connectorId The connector identifier
@@ -252,16 +211,6 @@ public class ComputeChainGoldenCorpus {
 			.map(String::trim)
 			.filter(id -> !id.isEmpty() && !known.contains(id))
 			.toList();
-	}
-
-	/**
-	 * Whether a difference line is an intended change (see {@link CompareMode#TYPED}).
-	 *
-	 * @param difference The difference line
-	 * @return <code>true</code> when it carries the {@value #INTENDED_PREFIX} prefix
-	 */
-	public static boolean isIntended(final String difference) {
-		return difference.startsWith(INTENDED_PREFIX);
 	}
 
 	/**
@@ -730,17 +679,11 @@ public class ComputeChainGoldenCorpus {
 	 * @param repository  The repository holding the connector and its golden
 	 * @param store       The store holding the connector
 	 * @param connectorId The identifier of the connector
-	 * @param mode        The comparison mode
-	 * @return the differences, one line each (see {@link #isIntended(String)}), empty when the golden matches or
-	 *         was written
+	 * @return the differences, one line each, empty when the golden matches or was written
 	 * @throws IOException when the golden cannot be read or written
 	 */
-	public static List<String> check(
-		final Repository repository,
-		final ConnectorStore store,
-		final String connectorId,
-		final CompareMode mode
-	) throws IOException {
+	public static List<String> check(final Repository repository, final ConnectorStore store, final String connectorId)
+		throws IOException {
 		final ConnectorGolden golden = generate(store, connectorId);
 		final Path file = repository.getGoldenDirectory().resolve(connectorId + ".json");
 		if (isUpdateMode()) {
@@ -761,11 +704,12 @@ public class ComputeChainGoldenCorpus {
 				connectorId + " has no stored golden " + file + ": generate it with -D" + UPDATE_PROPERTY + "=true"
 			);
 		}
-		return diff(file, golden, mode);
+		return diff(file, golden);
 	}
 
 	/**
-	 * Compares a generated golden with the stored one, exactly.
+	 * Compares a generated golden with the stored one, exactly: the source type, the compute list and every output
+	 * (table or text, error, time-out).
 	 *
 	 * @param file   The stored golden file
 	 * @param golden The generated golden
@@ -773,21 +717,6 @@ public class ComputeChainGoldenCorpus {
 	 * @throws IOException when the stored golden cannot be read
 	 */
 	public static List<String> diff(final Path file, final ConnectorGolden golden) throws IOException {
-		return diff(file, golden, CompareMode.EXACT);
-	}
-
-	/**
-	 * Compares a generated golden with the stored one.
-	 *
-	 * @param file   The stored golden file
-	 * @param golden The generated golden
-	 * @param mode   The comparison mode
-	 * @return the differences, one line each, empty when the goldens are equal; in typed mode the intended ones
-	 *         carry {@value #INTENDED_PREFIX}
-	 * @throws IOException when the stored golden cannot be read
-	 */
-	public static List<String> diff(final Path file, final ConnectorGolden golden, final CompareMode mode)
-		throws IOException {
 		final JsonNode stored = MAPPER.readTree(file.toFile());
 		final JsonNode generated = MAPPER.valueToTree(golden);
 		final List<String> differences = new ArrayList<>();
@@ -805,34 +734,23 @@ public class ComputeChainGoldenCorpus {
 				return;
 			}
 			final JsonNode generatedSource = generatedSources.get(key);
-			if (mode == CompareMode.EXACT) {
-				if (!storedSource.path("source").equals(generatedSource.path("source"))) {
-					differences.add(
-						key + ": source type changed " + storedSource.path("source") + " -> " + generatedSource.path("source")
-					);
-				}
-				if (!storedSource.path("computes").equals(generatedSource.path("computes"))) {
-					differences.add(
-						key + ": compute chain changed " + storedSource.path("computes") + " -> " + generatedSource.path("computes")
-					);
-				}
+			if (!storedSource.path("source").equals(generatedSource.path("source"))) {
+				differences.add(
+					key + ": source type changed " + storedSource.path("source") + " -> " + generatedSource.path("source")
+				);
+			}
+			if (!storedSource.path("computes").equals(generatedSource.path("computes"))) {
+				differences.add(
+					key + ": compute chain changed " + storedSource.path("computes") + " -> " + generatedSource.path("computes")
+				);
 			}
 			final JsonNode storedOutputs = storedSource.path("outputs");
 			final JsonNode generatedOutputs = generatedSource.path("outputs");
 			generatedOutputs.fieldNames().forEachRemaining(input -> {
 				final JsonNode storedOutput = storedOutputs.get(input);
 				final JsonNode generatedOutput = generatedOutputs.get(input);
-				final boolean same = mode == CompareMode.EXACT
-					? generatedOutput.equals(storedOutput)
-					: sameForConsumers(storedOutput, generatedOutput);
-				if (!same) {
-					// Only a content difference is intended, see isIntendedChange: a chain that now throws or hangs, or an
-					// input without a stored output, is a regression like any other
-					final String prefix = mode == CompareMode.TYPED &&
-						storedOutput != null &&
-						sameFlags(storedOutput, generatedOutput) &&
-						isIntendedChange(golden.getSources().get(key).getComputes(), input) ? INTENDED_PREFIX : "";
-					differences.add(prefix + key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
+				if (!generatedOutput.equals(storedOutput)) {
+					differences.add(key + " [" + input + "]: expected " + storedOutput + " but was " + generatedOutput);
 				}
 			});
 			// An input the generator no longer produces leaves a stale output behind: report it too
@@ -843,111 +761,6 @@ public class ComputeChainGoldenCorpus {
 			});
 		});
 		return differences;
-	}
-
-	/**
-	 * Whether a content difference is an intended change of the content-type migration (#1508):
-	 * <ul>
-	 * <li>on an input holding <code>;</code> inside a cell: a {@value #SEPARATOR_IN_CELL_SUFFIX} input (stage 4: no
-	 * serialization round trip splits such a cell any more);</li>
-	 * <li>on a chain parsing a document (<code>json2Csv</code>, <code>xml2Csv</code> first): its own document holds a
-	 * value containing <code>;</code>, which now stays one cell (the following computes may shift columns, so the
-	 * difference cannot be narrowed further); any other input does not parse, and the stored result was what the
-	 * table of a legacy dual input left behind the failed parse, which a single-typed input no longer carries.</li>
-	 * </ul>
-	 * The JSON and XML documents fed to any other chain are compared like every other input.
-	 *
-	 * @param computes The written compute types of the chain
-	 * @param input    The input name
-	 * @return <code>true</code> when the difference is intended
-	 */
-	static boolean isIntendedChange(final List<String> computes, final String input) {
-		if (input.endsWith(SEPARATOR_IN_CELL_SUFFIX)) {
-			return true;
-		}
-		final String first = computes == null || computes.isEmpty() ? "" : computes.get(0).toLowerCase(Locale.ROOT);
-		return first.equals("json2csv") || first.equals("xml2csv");
-	}
-
-	/**
-	 * Whether two outputs failed the same way: same <code>error</code>, same <code>timedOut</code>.
-	 *
-	 * @param stored    The stored output
-	 * @param generated The generated output
-	 * @return <code>true</code> when both flags are equal
-	 */
-	static boolean sameFlags(final JsonNode stored, final JsonNode generated) {
-		return stored.path("error").equals(generated.path("error")) &&
-			stored.path("timedOut").equals(generated.path("timedOut"));
-	}
-
-	/**
-	 * Whether two outputs are the same for the consumers of the chain (see {@link CompareMode#TYPED}): the side of
-	 * the generated output's type. A stored output written before stage 4 of #1508 holds both a table and a raw text
-	 * (<code>rawData</code>, a missing or null one read as an empty text); a stored output written since holds the
-	 * side of its type only (<code>table</code> or <code>text</code>).
-	 *
-	 * @param stored    The stored output, null when the stored golden has none for the input
-	 * @param generated The generated output
-	 * @return <code>true</code> when the consumers see the same result
-	 */
-	static boolean sameForConsumers(final JsonNode stored, final JsonNode generated) {
-		if (stored == null || !sameFlags(stored, generated)) {
-			return false;
-		}
-		if (generated.has("text")) {
-			final JsonNode storedText = stored.has("text") ? stored.get("text") : stored.path("rawData");
-			// A stored table without a raw text was a table: a text now is a type flip
-			if (!storedText.isTextual() && !stored.path("table").isEmpty()) {
-				return false;
-			}
-			return (storedText.isTextual() ? storedText.asText() : "").equals(generated.get("text").asText());
-		}
-		if (generated.has("table")) {
-			return stripTrailingEmptyCells(stored.path("table")).equals(stripTrailingEmptyCells(generated.path("table"))) &&
-				noShorterRow(stored.path("table"), generated.path("table"));
-		}
-		// No payload: a time-out or an error, compared by the flags
-		return true;
-	}
-
-	/**
-	 * Whether no generated row has fewer cells than its stored row. A trailing empty cell may be gained (an explicit
-	 * <code>toTable</code> keeps the one <code>commandLine</code> dropped) but never lost: a consumer indexing it
-	 * (<code>$n</code> of <code>executeForEachEntryOf</code>, a later <code>insertColumn</code>) would break.
-	 *
-	 * @param stored    The stored JSON table
-	 * @param generated The generated JSON table, with as many rows (checked by the caller's comparison)
-	 * @return <code>true</code> when every generated row is at least as long as its stored row
-	 */
-	static boolean noShorterRow(final JsonNode stored, final JsonNode generated) {
-		for (int i = 0; i < stored.size() && i < generated.size(); i++) {
-			if (generated.get(i).size() < stored.get(i).size()) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * The rows of a JSON table, each one without its trailing empty cells (<code>commandLine</code> drops them with
-	 * <code>String.split</code>, <code>toTable</code> keeps them).
-	 *
-	 * @param table The JSON array of rows, or a missing node
-	 * @return the stripped rows
-	 */
-	static List<List<String>> stripTrailingEmptyCells(final JsonNode table) {
-		final List<List<String>> rows = new ArrayList<>();
-		for (final JsonNode row : table) {
-			final List<String> cells = new ArrayList<>();
-			// A null cell stays null: consumers tell it from the "null" text (insertColumn substitutes it as empty)
-			row.forEach(cell -> cells.add(cell.isNull() ? null : cell.asText()));
-			while (!cells.isEmpty() && "".equals(cells.get(cells.size() - 1))) {
-				cells.remove(cells.size() - 1);
-			}
-			rows.add(cells);
-		}
-		return rows;
 	}
 
 	/**
