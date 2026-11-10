@@ -381,7 +381,8 @@ public class EnrollmentCoordinator {
 			);
 		}
 		final String key = auth.getEnrollmentKey();
-		if (key != null && !key.isBlank() && !key.trim().matches("[!-~]+")) {
+		// Only a key the agent may still send: once enrolled, it is ignored, whatever it holds
+		if (identity.status() != Status.READY && key != null && !key.isBlank() && !key.trim().matches("[!-~]+")) {
 			// Never quoted: it is a secret
 			throw new IllegalStateException(
 				"central.auth.enrollmentKey is not a valid key: it may only hold printable characters, without spaces. " +

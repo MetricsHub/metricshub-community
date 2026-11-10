@@ -602,6 +602,13 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void anEnrolledAgentShouldIgnoreItsKeyWhateverItHolds() throws Exception {
+		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+
+		EnrollmentCoordinator.checkConfiguration(central("edited key"), () -> new AgentCredentialStore(directory));
+	}
+
+	@Test
 	void anIssuerPortOutOfRangeShouldRefuseTheStartup() {
 		final CentralConfig central = central(KEY);
 		central.getAuth().setIssuerUrl("https://central.example.com:99999");
