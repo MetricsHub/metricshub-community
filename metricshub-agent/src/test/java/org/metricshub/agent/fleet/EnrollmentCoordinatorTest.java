@@ -506,6 +506,58 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void anEnrollmentNoLongerConfiguredShouldStop() throws Exception {
+		for (int failure = 0; failure < 20; failure++) {
+			script.add(new Answer(503, "{}", null));
+		}
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+
+		// A reload removes central.auth while the enrollment retries
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		coordinator.awaitWorker();
+		final int sent = enrollBodies.size() + recoverRequests.get();
+		Thread.sleep(300);
+
+		assertEquals(sent, enrollBodies.size() + recoverRequests.get(), "nothing is sent any more");
+		assertFalse(coordinator.isReady());
+		assertFalse(Files.exists(store.uidFile()));
+	}
+
+	@Test
+	void anErrorCodeOutsideTheContractShouldNotBeLogged() throws Exception {
+		final StringWriter written = new StringWriter();
+		final WriterAppender appender = WriterAppender.newBuilder()
+			.setName("error-code")
+			.setTarget(written)
+			.setLayout(PatternLayout.newBuilder().withPattern("%m%n").build())
+			.build();
+		appender.start();
+		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
+		final String fleet = EnrollmentCoordinator.class.getPackageName();
+		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
+		logger.addAppender(appender, Level.TRACE, null);
+		context.getConfiguration().addLogger(fleet, logger);
+		context.updateLoggers();
+		try {
+			script.add(new Answer(409, "{\"code\":\"echoed_recoveryproofsecretvalue\"}", null));
+			assertFalse(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+		} finally {
+			context.getConfiguration().removeLogger(fleet);
+			context.updateLoggers();
+			appender.stop();
+		}
+
+		final String logs = written.toString();
+		assertTrue(logs.contains("409 unknown"), logs);
+		assertFalse(logs.contains("recoveryproofsecretvalue"), logs);
+	}
+
+	@Test
 	void aStaticAuthorizationHeaderShouldRefuseTheStartupNamingBoth() {
 		final CentralConfig shared = central(KEY);
 		shared.setHeaders(Map.of("authorization", "Bearer x"));
