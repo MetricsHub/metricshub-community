@@ -241,6 +241,17 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void anUnboundedRetryAfterShouldStillScheduleTheNextAttempt() throws Exception {
+		script.add(new Answer(429, "{}", String.valueOf(Long.MAX_VALUE)));
+		final CentralTokenProvider provider = provider();
+
+		assertThrows(IOException.class, provider::currentToken);
+		assertThrows(IOException.class, provider::currentToken);
+
+		assertEquals(1, tokenRequests.get(), "the delay is honoured, bounded");
+	}
+
+	@Test
 	void aRefusalOfAnOlderTokenShouldKeepTheNewerOne() throws Exception {
 		final CentralTokenProvider provider = provider();
 		final String current = provider.currentToken();

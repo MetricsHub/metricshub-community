@@ -396,9 +396,11 @@ public class TunnelService {
 	 * here also renews it on time, off the tunnel thread.
 	 */
 	private void reconnectWithRenewedToken() {
+		final String token;
 		final String authorization;
 		try {
-			authorization = "Bearer " + enrollment.currentToken();
+			token = enrollment.currentToken();
+			authorization = "Bearer " + token;
 		} catch (IOException e) {
 			log.debug("Central tunnel: no token to check: {}", e.getMessage());
 			return;
@@ -410,7 +412,8 @@ public class TunnelService {
 		if (!authorization.equals(renewedAuthorization)) {
 			// The expiry of the token seen before, the one the tunnel was opened with, on the local clock
 			final Instant previousExpiry = renewedExpiry;
-			renewedExpiry = enrollment.tokenExpiresAt();
+			// The expiry of this very token: another one may have replaced it since it was read
+			renewedExpiry = enrollment.tokenExpiresAt(token);
 			final Instant forced = now.plus(FORCED_RENEWAL);
 			forcedRenewalAt = previousExpiry == null || forced.isBefore(previousExpiry.minus(EXPIRY_MARGIN))
 				? forced

@@ -493,10 +493,11 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * @return when the current token expires, counted on the local clock from its reception, or {@code null}
+	 * @param token a token {@link #currentToken()} returned
+	 * @return when that very token expires, on the local clock, or {@code null} when it is no longer the cached one
 	 */
-	public synchronized Instant tokenExpiresAt() {
-		return tokenProvider == null ? null : tokenProvider.expiresAt();
+	public synchronized Instant tokenExpiresAt(final String token) {
+		return tokenProvider == null ? null : tokenProvider.expiresAt(token);
 	}
 
 	/**

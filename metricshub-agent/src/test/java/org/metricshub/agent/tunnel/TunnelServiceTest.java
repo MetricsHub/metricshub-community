@@ -380,7 +380,8 @@ class TunnelServiceTest {
 		when(enrollment.agentUid()).thenReturn(UID);
 		when(enrollment.currentToken()).thenReturn("expiring", "renewed");
 		// On the local clock: the token the tunnel uses has 30 s left when the renewed one arrives
-		when(enrollment.tokenExpiresAt()).thenReturn(Instant.now().plusSeconds(30), Instant.now().plusSeconds(900));
+		when(enrollment.tokenExpiresAt("expiring")).thenReturn(Instant.now().plusSeconds(30));
+		when(enrollment.tokenExpiresAt("renewed")).thenReturn(Instant.now().plusSeconds(900));
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());

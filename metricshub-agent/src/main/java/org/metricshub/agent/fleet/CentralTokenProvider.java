@@ -76,6 +76,7 @@ public class CentralTokenProvider {
 	private static final Duration MAX_JITTER = Duration.ofSeconds(30);
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 	private static final Duration MAX_BACKOFF = Duration.ofMinutes(5);
+	private static final Duration MAX_RETRY_AFTER = Duration.ofHours(1);
 	private static final String METADATA_PATH = "/.well-known/oauth-authorization-server";
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final Set<String> OAUTH_ERRORS = Set.of(
@@ -233,7 +234,11 @@ public class CentralTokenProvider {
 			// the backoff too, and named by its type only: a parser's message may quote the answer, a token included
 			final boolean classified = e instanceof RetryableException;
 			lastFailure = classified ? e.getMessage() : "an unreadable answer (" + e.getClass().getSimpleName() + ")";
-			final Duration floor = classified ? ((RetryableException) e).floor : null;
+			final Duration retryAfter = classified ? ((RetryableException) e).floor : null;
+			// A server's Retry-After is bounded: any value, however large, must stay an instant the clock can hold
+			final Duration floor = retryAfter == null || retryAfter.compareTo(MAX_RETRY_AFTER) <= 0
+				? retryAfter
+				: MAX_RETRY_AFTER;
 			nextAttemptAt = clock.instant().plus(retrySchedule.nextDelayAfterFailure(floor));
 			// Checked again: the token may have expired while the request was waiting for Central
 			if (token != null && clock.instant().isBefore(expiresAt)) {
@@ -250,11 +255,12 @@ public class CentralTokenProvider {
 	}
 
 	/**
-	 * @return when the cached token expires, counted on the local clock from its reception (never from its
-	 *         {@code exp}: the agent's clock may differ from Central's), or {@code null} without a token
+	 * @param of a token this provider handed out
+	 * @return when it expires, on the local clock, when it is still the cached one, else {@code null}: never the
+	 *         expiry of another token
 	 */
-	public synchronized Instant expiresAt() {
-		return token == null ? null : expiresAt;
+	public synchronized Instant expiresAt(final String of) {
+		return of != null && of.equals(token) ? expiresAt : null;
 	}
 
 	/**
