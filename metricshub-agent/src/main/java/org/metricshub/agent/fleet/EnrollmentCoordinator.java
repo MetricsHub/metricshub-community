@@ -27,6 +27,7 @@ import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_OS_TYPE_
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -67,6 +68,11 @@ import org.metricshub.web.service.ApplicationStatusService;
  * recovery proof, and enrolls again under the same {@code attempt_id} when Central has nothing to recover: never a
  * second identity. A refusal of the key or the attempt stops it until the key changes; a network error, a
  * {@code 429} or a {@code 5xx} is retried with an exponential backoff, {@code Retry-After} honoured.
+ * </p>
+ * <p>
+ * Once enrolled, it owns the process's {@link CentralTokenProvider}: no token is requested before, and the recovery
+ * proof leaves the KeyStore after the first token (retried after the next one when that deletion fails). The
+ * enrollment key is never removed from {@code metricshub.yaml}, which the agent never rewrites.
  * </p>
  * <p>
  * Neither the key, the recovery proof, the client secret nor a request or answer body is ever logged.
@@ -160,6 +166,12 @@ public class EnrollmentCoordinator {
 	/** The last worker stopped by a reload, until it ends (tests wait for it). */
 	private Thread stopping;
 	private Settings stoppedWith;
+	private CentralTokenProvider tokenProvider;
+	private volatile boolean recoveryCleared;
+	/** Whether the worker got the first token, or learnt there will be none (a revoked agent). */
+	private volatile boolean firstTokenDone;
+	/** Runs when the worker has decided to end, before it does (tests). */
+	volatile Runnable beforeWorkerEnds = () -> {};
 
 	/**
 	 * Creates a coordinator (tests).
@@ -224,6 +236,7 @@ public class EnrollmentCoordinator {
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
 		if (!isConfigured(central)) {
 			enrollmentWanted = false;
+			// The enrollment, or the first token after it
 			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
 				worker.interrupt();
@@ -242,6 +255,7 @@ public class EnrollmentCoordinator {
 			Map.copyOf(description)
 		);
 		final Settings previous = settings;
+		// Published before the worker is woken: it reads the new settings when it goes on
 		settings = latest;
 		if (
 			worker != null &&
@@ -251,14 +265,33 @@ public class EnrollmentCoordinator {
 					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()) ||
 					!Objects.equals(previous.certificateFile(), latest.certificateFile()))
 		) {
-			// Wakes the worker from a backoff the former issuer, key or certificate earned: the new ones are used at once
+			// Wakes the worker (enrolling, or waiting for the first token) from a backoff the former issuer, key or
+			// certificate earned: the new ones are used at once
 			synchronized (backoff) {
 				settingsChanged = true;
 				backoff.notifyAll();
 			}
 		}
 		if (ready) {
-			// The settings are kept current: a channel opens only for the Central they name (isReadyFor)
+			if (
+				previous != null &&
+					(!Objects.equals(latest.issuerUrl(), previous.issuerUrl()) ||
+						!Objects.equals(latest.certificateFile(), previous.certificateFile()))
+			) {
+				// A reload moved the issuer or its certificate: the next token comes from there
+				if (tokenProvider != null) {
+					tokenProvider.shutdown();
+				}
+				tokenProvider = null;
+				if (!recoveryCleared) {
+					// The recovery proof goes after the first token of the new issuer
+					firstTokenDone = false;
+				}
+			}
+			if (!firstTokenDone && (worker == null || !worker.isAlive())) {
+				// Stopped by a reload that removed central.auth before the first token: resumed now it is back
+				startWorker();
+			}
 			return true;
 		}
 		if (store == null) {
@@ -272,10 +305,16 @@ public class EnrollmentCoordinator {
 				wipe(identity.recoverySecret());
 				if (identity.status() == Status.READY) {
 					ready = true;
+					// Still started, for the first token: a recovery proof left by a crash goes after it
+					startWorker();
 					return true;
 				}
 			} catch (IOException e) {
 				log.debug("Cannot read the agent identity yet: {}", e.getMessage());
+			}
+			if (refusedAgain(latest)) {
+				// Stopped by a refusal of these very settings: only new ones ask again
+				return false;
 			}
 		} else if (worker.isAlive()) {
 			if (isStoredReady()) {
@@ -292,10 +331,17 @@ public class EnrollmentCoordinator {
 			// the security directory completed the identity meanwhile
 			if (isStoredReady()) {
 				ready = true;
+				// As at a restart: the first token, and the recovery proof after it
+				startWorker();
 				return true;
 			}
 			return false;
 		}
+		startWorker();
+		return false;
+	}
+
+	private void startWorker() {
 		retrySchedule.reset();
 		synchronized (backoff) {
 			// A wake-up meant for a former worker never cuts this one's first backoff
@@ -304,7 +350,109 @@ public class EnrollmentCoordinator {
 		worker = new Thread(this::run, "metricshub-central-enrollment");
 		worker.setDaemon(true);
 		worker.start();
-		return false;
+	}
+
+	/**
+	 * Returns the agent's access token, once the agent is enrolled. The recovery proof of the enrollment is deleted
+	 * after the first token of the process: Central no longer recovers that attempt once the agent authenticated.
+	 *
+	 * @return the access token
+	 * @throws CentralTokenProvider.InvalidClientException when Central refused the agent's credential
+	 * @throws IOException                                 when the agent is not enrolled, or no token is available yet
+	 * @throws InterruptedException                        when interrupted while waiting for Central
+	 */
+	public String currentToken() throws IOException, InterruptedException {
+		final CentralTokenProvider provider = tokenProvider();
+		final String token;
+		try {
+			token = provider.currentToken();
+		} catch (CentralTokenProvider.InvalidClientException e) {
+			// Under the lock ready() replaces the provider with: a refusal of a replaced provider never ends the work
+			// the new one has to do
+			synchronized (this) {
+				if (provider != currentProvider()) {
+					// The former issuer refused: the new one is asked next
+					throw new IOException("The issuer changed while its token was asked.");
+				}
+				// Revoked: there will be no first token, and nothing is retried
+				firstTokenDone = true;
+				// The worker ends on it: a reload that follows starts another one for the next issuer
+				detachWorker();
+			}
+			throw e;
+		}
+		// Under the lock ready() replaces the provider with: the check and the deletion of the recovery proof below are
+		// one step, so a reload never falls between them
+		synchronized (this) {
+			if (provider != currentProvider()) {
+				// Obtained from the former issuer: neither used nor counted as the first token of the new one
+				throw new IOException("The issuer changed while its token was asked.");
+			}
+			clearRecoveryOnce();
+		}
+		return token;
+	}
+
+	/**
+	 * Deletes the recovery proof after the first token; a failure is retried after the next one.
+	 */
+	private void clearRecoveryOnce() {
+		if (!recoveryCleared) {
+			try {
+				store.clearRecovery();
+				recoveryCleared = true;
+			} catch (IOException e) {
+				log.warn("Cannot delete the enrollment recovery proof yet: {}. Retried after the next token.", e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * @return whether the first token came, or a refusal said none ever will (tests)
+	 */
+	boolean isFirstTokenDone() {
+		return firstTokenDone;
+	}
+
+	synchronized CentralTokenProvider currentProvider() {
+		return tokenProvider;
+	}
+
+	/**
+	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
+	 *
+	 * @throws IOException when the agent is not enrolled
+	 */
+	public void invalidateToken() throws IOException {
+		tokenProvider().invalidate();
+	}
+
+	/**
+	 * @return the process's token provider, created the first time the agent is enrolled, and again after a reload
+	 *         changed the issuer or its certificate
+	 * @throws IOException when the agent is not enrolled, or the certificate file cannot be read
+	 */
+	private synchronized CentralTokenProvider tokenProvider() throws IOException {
+		if (!ready || store == null) {
+			throw new IOException("The agent is not enrolled into MetricsHub Central yet.");
+		}
+		if (tokenProvider == null) {
+			// Built from the current settings; ready() drops it when a reload changes them
+			final Settings current = settings;
+			final AgentCredentialStore credentials = store;
+			tokenProvider = new CentralTokenProvider(current.issuerUrl().trim(), () -> {
+				try {
+					final LocalIdentity identity = credentials.read();
+					if (identity.status() != Status.READY) {
+						throw new IOException("The agent identity is not complete.");
+					}
+					return new CentralTokenProvider.Credential(identity.agentUid(), identity.secret());
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			}, current.certificateFile());
+		}
+		return tokenProvider;
 	}
 
 	/**
@@ -496,28 +644,57 @@ public class EnrollmentCoordinator {
 					final String agentUid = enroll(current, httpClient);
 					if (agentUid == null) {
 						if (stopUnlessReplaced(current)) {
+							beforeWorkerEnds.run();
 							return;
 						}
 						continue;
 					}
 					ready = true;
 					log.info("The agent is enrolled into MetricsHub Central as {}.", agentUid);
+					firstToken();
 					return;
 				} catch (RefusedException e) {
 					if (stopUnlessReplaced(current)) {
+						beforeWorkerEnds.run();
 						return;
 					}
 				} catch (RetryableException e) {
-					pause(e.getMessage(), e.floor);
+					pause("The enrollment into MetricsHub Central did not complete", e.getMessage(), e.floor);
 				} catch (IOException e) {
 					// The store's failures and the certificate file's, which quote no answer
-					pause(e.getMessage(), null);
+					pause("The enrollment into MetricsHub Central did not complete", e.getMessage(), null);
 				} catch (RuntimeException e) {
-					pause(e.getClass().getSimpleName(), null);
+					pause("The enrollment into MetricsHub Central did not complete", e.getClass().getSimpleName(), null);
 				}
 			}
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
+		}
+	}
+
+	/**
+	 * Obtains the first token, which deletes the recovery proof, retrying with the token provider's own backoff
+	 * until Central answers or refuses the credential, and until the proof is gone.
+	 */
+	private void firstToken() throws InterruptedException {
+		retrySchedule.reset();
+		while (enrollmentWanted) {
+			try {
+				currentToken();
+				if (recoveryCleared) {
+					firstTokenDone = true;
+					return;
+				}
+				// The deletion failed: retried with the next token
+				pause("The enrollment recovery proof is not deleted yet", "the KeyStore could not be written", null);
+			} catch (CentralTokenProvider.InvalidClientException e) {
+				// Logged by the provider, recorded by currentToken(): the agent is revoked, nothing is retried
+				beforeWorkerEnds.run();
+				return;
+			} catch (IOException e) {
+				// The provider schedules its next attempt itself and names its failures without quoting an answer
+				pause("The agent has no token from MetricsHub Central yet", e.getMessage(), null);
+			}
 		}
 	}
 
@@ -532,6 +709,17 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
+	 * Forgets the calling worker, under the lock its decision to end was taken with: a reload that follows starts a
+	 * new one when its settings need it, instead of counting on a worker that is ending.
+	 */
+	private synchronized void detachWorker() {
+		if (worker == Thread.currentThread()) {
+			stopping = worker;
+			worker = null;
+		}
+	}
+
+	/**
 	 * Stops the worker after a refusal, or a lack of key, that answered the settings still configured. When a reload
 	 * replaced the issuer, the key or the certificate meanwhile, the worker goes on at once with the new ones instead,
 	 * that reload's wake-up used up: it must not cut the backoff the new ones may earn.
@@ -543,6 +731,7 @@ public class EnrollmentCoordinator {
 		synchronized (this) {
 			if (isCurrent(current)) {
 				stoppedWith = current;
+				detachWorker();
 				return true;
 			}
 		}
@@ -554,11 +743,11 @@ public class EnrollmentCoordinator {
 		return false;
 	}
 
-	private void pause(final String failure, final Duration floor) throws InterruptedException {
+	private void pause(final String step, final String failure, final Duration floor) throws InterruptedException {
 		// A server's Retry-After is bounded: any value, however large, must stay a delay the worker can wait
 		final Duration bounded = floor == null || floor.compareTo(MAX_RETRY_AFTER) <= 0 ? floor : MAX_RETRY_AFTER;
 		final Duration delay = retrySchedule.nextDelayAfterFailure(bounded);
-		log.warn("The enrollment into MetricsHub Central did not complete: {}. Next attempt in {}.", failure, delay);
+		log.warn("{}: {}. Next attempt in {}.", step, failure, delay);
 		final long until = System.nanoTime() + delay.toNanos();
 		synchronized (backoff) {
 			long left;

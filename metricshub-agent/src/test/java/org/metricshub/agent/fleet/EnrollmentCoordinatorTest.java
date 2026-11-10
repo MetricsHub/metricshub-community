@@ -1,8 +1,12 @@
 package org.metricshub.agent.fleet;
 
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.InetSocketAddress;
@@ -18,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -104,6 +110,12 @@ class EnrollmentCoordinatorTest {
 	private final List<String> enrollBodies = new CopyOnWriteArrayList<>();
 	private final List<String> enrollAuthorizations = new CopyOnWriteArrayList<>();
 	private final AtomicInteger recoverRequests = new AtomicInteger();
+	private final AtomicInteger tokenRequests = new AtomicInteger();
+	private final AtomicInteger metadataRequests = new AtomicInteger();
+	private volatile boolean tokensUnavailable;
+	private volatile boolean tokensRefused;
+	private volatile CountDownLatch holdTokenAnswer = new CountDownLatch(0);
+	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
 	private volatile CountDownLatch holdRecoverAnswer = new CountDownLatch(0);
@@ -118,6 +130,16 @@ class EnrollmentCoordinatorTest {
 		issuer = "http://127.0.0.1:" + server.getAddress().getPort();
 		server.createContext("/v1/agents/enroll", this::enroll);
 		server.createContext("/v1/enrollment-attempts/", this::recover);
+		server.createContext("/.well-known/oauth-authorization-server", exchange -> {
+			metadataRequests.incrementAndGet();
+			respond(
+				exchange,
+				200,
+				"{\"issuer\":\"" + issuer + "\",\"token_endpoint\":\"" + issuer + "/oauth2/token\"}",
+				null
+			);
+		});
+		server.createContext("/oauth2/token", this::token);
 		server.start();
 	}
 
@@ -204,6 +226,268 @@ class EnrollmentCoordinatorTest {
 			return;
 		}
 		respond(exchange, 200, identity(attempt), null);
+	}
+
+	private void token(final HttpExchange exchange) throws IOException {
+		final int request = tokenRequests.incrementAndGet();
+		try {
+			holdTokenAnswer.await();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		if (tokensUnavailable) {
+			respond(exchange, 503, "{}", null);
+			return;
+		}
+		if (tokensRefused) {
+			respond(exchange, 401, "{\"error\":\"invalid_client\"}", null);
+			return;
+		}
+		final long iat = System.currentTimeMillis() / 1000;
+		final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+		final String jwt = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8)) +
+			"." +
+			encoder.encodeToString(
+				("{\"jti\":\"jti-" + request + "\",\"iat\":" + iat + ",\"exp\":" + (iat + 900) + "}").getBytes(
+					StandardCharsets.UTF_8
+				)
+			) +
+			".c2lnbmF0dXJl" +
+			request;
+		tokensHandedOut.add(jwt);
+		respond(exchange, 200, "{\"access_token\":\"" + jwt + "\",\"token_type\":\"Bearer\",\"expires_in\":900}", null);
+	}
+
+	private byte[] recoveryProofIn(final Path in) throws Exception {
+		return SecurityManager.readSecret(
+			in.resolve(SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME).toFile(),
+			AgentCredentialStore.RECOVERY_ALIAS
+		);
+	}
+
+	@Test
+	void theFirstTokenShouldDeleteTheRecoveryProofAndNeverTouchTheConfiguration() throws Exception {
+		final Path configuration = otherDirectory.resolve("metricshub.yaml");
+		Files.writeString(configuration, "central:\n  auth:\n    enrollmentKey: " + KEY + "\n");
+		final byte[] before = Files.readAllBytes(configuration);
+
+		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+
+		assertEquals(1, tokenRequests.get());
+		assertTrue(recoveryProofIn(directory) == null, "the recovery proof is gone after the first token");
+		assertArrayEquals(before, Files.readAllBytes(configuration));
+		final String yaml = Files.readString(configuration);
+		final Attempt attempt = attempts.values().iterator().next();
+		assertFalse(yaml.contains(attempt.secret()));
+		assertFalse(yaml.contains(attempt.agentUid()));
+	}
+
+	@Test
+	void aReplacedTokenProviderShouldReleaseItsHttpClient() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final CentralTokenProvider former = coordinator.currentProvider();
+
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+
+		await().atMost(10, TimeUnit.SECONDS).until(() -> former.httpClient().isTerminated());
+	}
+
+	@Test
+	void aReloadMovingTheIssuerShouldTakeTheNextTokenFromThere() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		assertEquals(1, metadataRequests.get());
+
+		// Another issuer string (the same stub here)
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		coordinator.invalidateToken();
+		coordinator.currentToken();
+
+		assertEquals(2, metadataRequests.get(), "the token provider was rebuilt for the new issuer");
+	}
+
+	@Test
+	void removingCentralAuthShouldStopAskingForTheFirstToken() throws Exception {
+		tokensUnavailable = true;
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		// A long backoff: the worker waits in it when central.auth goes
+		final EnrollmentCoordinator coordinator = new EnrollmentCoordinator(
+			() -> store,
+			Duration.ofSeconds(20),
+			new Random(0)
+		);
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+
+		final long removedAt = System.nanoTime();
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		coordinator.awaitWorker();
+		assertTrue(
+			Duration.ofNanos(System.nanoTime() - removedAt).toSeconds() < 5,
+			"stopped at once, not after its backoff"
+		);
+		final int asked = tokenRequests.get();
+		Thread.sleep(300);
+
+		assertEquals(asked, tokenRequests.get(), "nothing is asked any more");
+	}
+
+	@Test
+	void aRefusedCredentialShouldEndTheFirstTokenWork() throws Exception {
+		tokensRefused = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+
+		assertTrue(enrollWith(coordinator, central(KEY)));
+
+		assertTrue(coordinator.isFirstTokenDone(), "revoked: no worker is started again for it");
+		assertEquals(1, tokenRequests.get());
+	}
+
+	@Test
+	void anotherIssuerAfterARefusedCredentialShouldGetTheFirstTokenThere() throws Exception {
+		tokensRefused = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		assertTrue(recoveryProofIn(directory) != null, "no token, the proof stays");
+
+		// Another issuer string (the same stub here), which accepts the credential
+		tokensRefused = false;
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertTrue(recoveryProofIn(directory) == null, "the first token of the new issuer came, and the proof went");
+	}
+
+	@Test
+	void anotherIssuerRightAfterARefusedCredentialShouldGetTheFirstTokenThere() throws Exception {
+		tokensRefused = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		final CountDownLatch decided = new CountDownLatch(1);
+		final CountDownLatch reloaded = new CountDownLatch(1);
+		coordinator.beforeWorkerEnds = () -> {
+			decided.countDown();
+			try {
+				reloaded.await();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		};
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		decided.await();
+
+		// Another issuer lands after the worker took the refusal, before it ended
+		coordinator.beforeWorkerEnds = () -> {};
+		tokensRefused = false;
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		reloaded.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(
+			recoveryProofIn(directory) == null,
+			"the new issuer is asked for the first token without another reload"
+		);
+	}
+
+	@Test
+	void aTokenOfTheFormerIssuerShouldNotCountAsTheFirstToken() throws Exception {
+		holdTokenAnswer = new CountDownLatch(1);
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+
+		// The issuer moves while its token is being asked
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		holdTokenAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertEquals(2, metadataRequests.get(), "the new issuer was asked");
+		assertEquals(2, tokenRequests.get());
+		assertTrue(recoveryProofIn(directory) == null);
+	}
+
+	@Test
+	void aFailedDeletionOfTheRecoveryProofShouldBeRetried() throws Exception {
+		final File keyStore = directory.resolve(SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME).toFile();
+		// Once ready (the second state written, after pending), the KeyStore cannot be written: the deletion after the
+		// first token fails
+		final AtomicInteger states = new AtomicInteger();
+		final AgentCredentialStore store = new AgentCredentialStore(directory, written -> {
+			if (written.equals(AgentCredentialStore.STATE_FILENAME) && states.incrementAndGet() == 2) {
+				keyStore.setWritable(false);
+			}
+		});
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(300);
+		keyStore.setWritable(true);
+		coordinator.awaitWorker();
+
+		assertTrue(recoveryProofIn(directory) == null, "deleted once the KeyStore could be written again");
+	}
+
+	@Test
+	void reEnablingCentralAuthShouldResumeTheFirstToken() throws Exception {
+		tokensUnavailable = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		// Back, with Central answering again
+		tokensUnavailable = false;
+		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertTrue(recoveryProofIn(directory) == null, "the first token came, and the recovery proof went");
+	}
+
+	@Test
+	void noTokenShouldBeRequestedBeforeReady() throws Exception {
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+
+		assertFalse(enrollWith(coordinator, central(KEY)));
+
+		assertThrows(IOException.class, coordinator::currentToken);
+		assertEquals(0, metadataRequests.get() + tokenRequests.get(), "nothing reaches the token endpoint");
+	}
+
+	@Test
+	void aCrashBetweenTheTokenAndTheDeletionShouldDeleteAfterTheNextToken() throws Exception {
+		// The process stopped after its first token, before the deletion: ready, with the recovery proof left
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt("a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", randomSecret().getBytes(StandardCharsets.US_ASCII));
+		store.complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
+		final EnrollmentCoordinator restarted = coordinator(store);
+
+		assertTrue(restarted.ready(central(KEY), DESCRIPTION));
+		restarted.awaitWorker();
+
+		assertEquals(1, tokenRequests.get());
+		assertTrue(recoveryProofIn(directory) == null);
+		assertTrue(enrollBodies.isEmpty());
+		assertEquals(0, recoverRequests.get());
 	}
 
 	private void noteRequest() {
@@ -416,6 +700,32 @@ class EnrollmentCoordinatorTest {
 		// A new key resumes the same attempt
 		assertTrue(enrollWith(coordinator, central(OTHER_KEY)));
 		assertEquals(attemptId, JSON.readTree(enrollBodies.get(enrollBodies.size() - 1)).path("attempt_id").asText());
+	}
+
+	@Test
+	void aNewKeyRightAfterTheRefusalDecisionShouldStartANewWorker() throws Exception {
+		script.add(new Answer(401, "{\"code\":\"enrollment_not_authorized\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		final CountDownLatch decided = new CountDownLatch(1);
+		final CountDownLatch reloaded = new CountDownLatch(1);
+		coordinator.beforeWorkerEnds = () -> {
+			decided.countDown();
+			try {
+				reloaded.await();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		};
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		decided.await();
+
+		// The new key lands after the worker decided to stop, before it ended
+		coordinator.beforeWorkerEnds = () -> {};
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		reloaded.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "the new key is tried without another reload");
 	}
 
 	@Test
@@ -654,6 +964,9 @@ class EnrollmentCoordinatorTest {
 		new AgentCredentialStore(directory).complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
 
 		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertEquals(1, tokenRequests.get(), "its first token asked, as at a restart");
 	}
 
 	@Test
@@ -1032,10 +1345,11 @@ class EnrollmentCoordinatorTest {
 			.build();
 		appender.start();
 		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
-		final LoggerConfig logger = context.getConfiguration().getLoggerConfig(EnrollmentCoordinator.class.getName());
-		final Level level = logger.getLevel();
+		// The whole flow at TRACE: the coordinator, the store and the token provider share this package
+		final String fleet = EnrollmentCoordinator.class.getPackageName();
+		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
 		logger.addAppender(appender, Level.TRACE, null);
-		logger.setLevel(Level.TRACE);
+		context.getConfiguration().addLogger(fleet, logger);
 		context.updateLoggers();
 		try {
 			loseNextAnswer.set(true);
@@ -1044,8 +1358,7 @@ class EnrollmentCoordinatorTest {
 			script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 			assertFalse(enrollWith(coordinator(new AgentCredentialStore(otherDirectory)), central(KEY)));
 		} finally {
-			logger.removeAppender("enrollment");
-			logger.setLevel(level);
+			context.getConfiguration().removeLogger(fleet);
 			context.updateLoggers();
 			appender.stop();
 		}
@@ -1059,6 +1372,11 @@ class EnrollmentCoordinatorTest {
 		}
 		for (final String secret : secretsHandedOut) {
 			assertFalse(logs.contains(secret), logs);
+		}
+		assertFalse(tokensHandedOut.isEmpty());
+		for (final String token : tokensHandedOut) {
+			assertFalse(logs.contains(token), logs);
+			assertFalse(logs.contains(token.substring(token.indexOf('.') + 1)), logs);
 		}
 	}
 }
