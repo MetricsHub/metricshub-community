@@ -42,6 +42,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,17 @@ public class EnrollmentCoordinator {
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+	private static final Set<String> ERROR_CODES = Set.of(
+		"invalid_request",
+		"enrollment_not_authorized",
+		"enrollment_expired",
+		"enrollment_limit_reached",
+		"idempotency_conflict",
+		"attempt_closed",
+		"recovery_not_authorized",
+		"too_many_requests",
+		"unavailable"
+	);
 	private static final String NEW_COMMAND = "Generate a new Install New Agent command in MetricsHub Central and set its key in central.auth.enrollmentKey.";
 
 	private static EnrollmentCoordinator global;
@@ -128,6 +140,11 @@ public class EnrollmentCoordinator {
 	private final RetrySchedule retrySchedule;
 
 	private volatile boolean ready;
+	/**
+	 * Whether the configuration still asks for the enrollment: an answer is never stored once a reload removed
+	 * {@code central.auth}.
+	 */
+	private volatile boolean enrollmentWanted;
 	private volatile Settings settings;
 	private Thread worker;
 	private Settings stoppedWith;
@@ -170,8 +187,12 @@ public class EnrollmentCoordinator {
 	 */
 	public boolean ready(final AgentContext agentContext) {
 		final CentralConfig central = agentContext.getAgentConfig().getCentral();
-		if (!isConfigured(central) || ready) {
+		if (ready) {
 			return true;
+		}
+		if (!isConfigured(central)) {
+			// Stops an enrollment that a reload no longer asks for
+			return ready(central, Map.of());
 		}
 		final Map<String, String> attributes = agentContext.getAgentInfo().getAttributes();
 		final Map<String, String> description = new LinkedHashMap<>();
@@ -194,7 +215,16 @@ public class EnrollmentCoordinator {
 	 * @return {@code true} when no enrollment is configured or the agent is enrolled
 	 */
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
-		if (!isConfigured(central) || ready) {
+		if (!isConfigured(central)) {
+			enrollmentWanted = false;
+			if (worker != null && worker.isAlive() && !ready) {
+				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
+				worker.interrupt();
+			}
+			return true;
+		}
+		enrollmentWanted = true;
+		if (ready) {
 			return true;
 		}
 		final CentralAuthConfig auth = central.getAuth();
@@ -519,17 +549,22 @@ public class EnrollmentCoordinator {
 		}
 	}
 
-	private String complete(final Settings current, final EnrolledAgent answer) throws IOException {
+	private String complete(final Settings current, final EnrolledAgent answer) throws IOException, InterruptedException {
 		if (answer == null) {
 			return null;
 		}
-		if (!current.issuerUrl().equals(settings.issuerUrl())) {
-			// The configuration moved to another issuer meanwhile: never keep an identity of the one it left
-			Arrays.fill(answer.secret(), '\0');
-			throw new RetryableException("central.auth.issuerUrl changed during the enrollment", null);
-		}
 		try {
-			store.complete(answer.agentUid(), answer.secret());
+			// Under the lock ready() takes to change the settings, so no reload falls between the check and the write
+			synchronized (this) {
+				if (!enrollmentWanted) {
+					throw new InterruptedException("central.auth is no longer configured");
+				}
+				if (!current.issuerUrl().equals(settings.issuerUrl())) {
+					// The configuration moved to another issuer meanwhile: never keep an identity of the one it left
+					throw new RetryableException("central.auth.issuerUrl changed during the enrollment", null);
+				}
+				store.complete(answer.agentUid(), answer.secret());
+			}
 		} finally {
 			Arrays.fill(answer.secret(), '\0');
 		}
@@ -644,12 +679,17 @@ public class EnrollmentCoordinator {
 		return new EnrolledAgent(agentUid, secret.toCharArray());
 	}
 
+	/**
+	 * @param body an error answer
+	 * @return its {@code code} when it is one of the contract's, else {@code "unknown"}: an answer may echo anything,
+	 *         a secret included, and only these are ever logged
+	 */
 	private static String errorCode(final String body) {
 		try {
-			final String code = JSON.readTree(body).path("code").asText(null);
-			return code == null ? null : clean(code, true, 64, null);
+			final String code = JSON.readTree(body).path("code").asText("");
+			return ERROR_CODES.contains(code) ? code : "unknown";
 		} catch (IOException e) {
-			return null;
+			return "unknown";
 		}
 	}
 
