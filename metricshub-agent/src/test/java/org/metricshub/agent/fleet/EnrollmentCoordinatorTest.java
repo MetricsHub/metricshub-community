@@ -50,6 +50,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -338,6 +339,51 @@ class EnrollmentCoordinatorTest {
 			() -> coordinator.headers(Map.of(), coordinator.tokenGeneration())
 		);
 		assertTrue(refused.getCause().getMessage().contains("not this agent's"));
+	}
+
+	@Test
+	void theUidClaimOfAnotherAgentsTokenShouldNotBeLogged() throws Throwable {
+		tokenAgentUid = "echoed-client-secret";
+		final String logs = logged(() -> {
+			final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+			coordinator.ready(central(KEY), DESCRIPTION);
+			while (!coordinator.isReady()) {
+				Thread.sleep(10);
+			}
+			assertThrows(IOException.class, coordinator::currentToken);
+		});
+
+		assertTrue(logs.contains("issued a token for another agent"), logs);
+		assertFalse(logs.contains("echoed-client-secret"), logs);
+	}
+
+	/**
+	 * @param run what to run with the whole fleet package logged at TRACE
+	 * @return what it logged
+	 */
+	private static String logged(final Executable run) throws Throwable {
+		final StringWriter written = new StringWriter();
+		final WriterAppender appender = WriterAppender.newBuilder()
+			.setName("enrollment")
+			.setTarget(written)
+			.setLayout(PatternLayout.newBuilder().withPattern("%m%n").build())
+			.build();
+		appender.start();
+		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
+		// The whole flow at TRACE: the coordinator, the store and the token provider share this package
+		final String fleet = EnrollmentCoordinator.class.getPackageName();
+		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
+		logger.addAppender(appender, Level.TRACE, null);
+		context.getConfiguration().addLogger(fleet, logger);
+		context.updateLoggers();
+		try {
+			run.execute();
+		} finally {
+			context.getConfiguration().removeLogger(fleet);
+			context.updateLoggers();
+			appender.stop();
+		}
+		return written.toString();
 	}
 
 	@Test
@@ -1394,34 +1440,15 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
-	void neitherTheKeyNorTheSecretsShouldBeLogged() throws Exception {
-		final StringWriter written = new StringWriter();
-		final WriterAppender appender = WriterAppender.newBuilder()
-			.setName("enrollment")
-			.setTarget(written)
-			.setLayout(PatternLayout.newBuilder().withPattern("%m%n").build())
-			.build();
-		appender.start();
-		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
-		// The whole flow at TRACE: the coordinator, the store and the token provider share this package
-		final String fleet = EnrollmentCoordinator.class.getPackageName();
-		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
-		logger.addAppender(appender, Level.TRACE, null);
-		context.getConfiguration().addLogger(fleet, logger);
-		context.updateLoggers();
-		try {
+	void neitherTheKeyNorTheSecretsShouldBeLogged() throws Throwable {
+		final String logs = logged(() -> {
 			loseNextAnswer.set(true);
 			script.add(new Answer(503, "{\"code\":\"" + KEY + "\"}", null));
 			assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
 			script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 			assertFalse(enrollWith(coordinator(new AgentCredentialStore(otherDirectory)), central(KEY)));
-		} finally {
-			context.getConfiguration().removeLogger(fleet);
-			context.updateLoggers();
-			appender.stop();
-		}
+		});
 
-		final String logs = written.toString();
 		assertTrue(logs.contains("enrollment_expired"), logs);
 		assertFalse(logs.contains(KEY), logs);
 		assertFalse(logs.contains(KEY.substring(KEY.indexOf('.') + 1)), logs);

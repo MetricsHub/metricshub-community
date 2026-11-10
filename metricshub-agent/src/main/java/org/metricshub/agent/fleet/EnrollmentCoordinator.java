@@ -393,10 +393,11 @@ public class EnrollmentCoordinator {
 		// Defence: Central binds each token to the agent uid; a channel never presents another agent's
 		final String tokenUid = CentralTokenProvider.claims(token).path("agent_uid").asText(null);
 		if (!agentUid.equals(tokenUid)) {
-			provider.invalidate();
+			// This very token: a valid one another channel got meanwhile is kept
+			provider.invalidate(token);
+			// The claim is not quoted: an unverified value, which may echo anything
 			log.error(
-				"MetricsHub Central issued a token for agent {} to agent {}: it is refused and nothing connects with it.",
-				tokenUid,
+				"MetricsHub Central issued a token for another agent to agent {}: it is refused and nothing connects with it.",
 				agentUid
 			);
 			throw new IOException("The token Central issued is not this agent's.");

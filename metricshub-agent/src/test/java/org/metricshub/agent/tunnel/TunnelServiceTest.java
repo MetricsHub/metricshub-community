@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -28,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -391,6 +393,32 @@ class TunnelServiceTest {
 		service.supervise();
 
 		// The token the tunnel uses expires in 30 s: no waiting for a quiet moment
+		verify(createdClients.get(0)).credentialRenewed(eq("Bearer renewed"), isNull());
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void aRenewalShouldNotOutliveTheTokenTheHandshakeUsed() throws Exception {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReady()).thenReturn(true);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn(UID);
+		when(enrollment.headers(any(), anyLong())).thenReturn(Map.of("Authorization", "Bearer opened"));
+		// On the local clock: the token the handshake presented has 30 s left
+		when(enrollment.tokenExpiresAt("opened")).thenReturn(Instant.now().plusSeconds(30));
+		when(enrollment.currentToken()).thenReturn("renewed");
+		when(enrollment.tokenExpiresAt("renewed")).thenReturn(Instant.now().plusSeconds(900));
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+
+		service.supervise();
+		final ArgumentCaptor<Supplier<Map<String, String>>> credential = ArgumentCaptor.forClass(Supplier.class);
+		verify(createdClients.get(0)).useCredential(credential.capture(), any());
+		// The handshake, then a renewal by another channel before the first supervisor pass
+		credential.getValue().get();
+		service.supervise();
+
 		verify(createdClients.get(0)).credentialRenewed(eq("Bearer renewed"), isNull());
 	}
 

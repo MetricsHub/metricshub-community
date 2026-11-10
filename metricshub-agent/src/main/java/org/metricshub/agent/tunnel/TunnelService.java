@@ -103,6 +103,8 @@ public class TunnelService {
 	private String renewedAuthorization;
 	private Instant renewedExpiry;
 	private Instant forcedRenewalAt = Instant.MAX;
+	/** The local expiry of the token the tunnel's last handshake presented. */
+	private volatile Instant connectedExpiry;
 
 	private TunnelClient client;
 	private ToolBridge bridge;
@@ -368,7 +370,13 @@ public class TunnelService {
 			if (usesToken) {
 				final EnrollmentCoordinator coordinator = enrollment;
 				final long generation = coordinator.tokenGeneration();
-				newClient.useCredential(() -> coordinator.headers(headers, generation), coordinator::invalidateToken);
+				connectedExpiry = null;
+				newClient.useCredential(() -> {
+					final Map<String, String> current = coordinator.headers(headers, generation);
+					// The token this handshake presents: its expiry bounds how long a renewal may wait
+					connectedExpiry = coordinator.tokenExpiresAt(current.get("Authorization").substring("Bearer ".length()));
+					return current;
+				}, coordinator::invalidateToken);
 			}
 			owner.set(newClient);
 			bridge = newBridge;
@@ -420,7 +428,9 @@ public class TunnelService {
 				: previousExpiry.minus(EXPIRY_MARGIN);
 			renewedAuthorization = authorization;
 		}
-		final boolean overdue = !now.isBefore(forcedRenewalAt);
+		final Instant connected = connectedExpiry;
+		final boolean overdue = !now.isBefore(forcedRenewalAt) ||
+			(connected != null && !now.isBefore(connected.minus(EXPIRY_MARGIN)));
 		// The client decides on its own thread, where invocations arrive and answers leave
 		client.credentialRenewed(authorization, overdue || bridge == null ? null : bridge::quiescentMark);
 	}
