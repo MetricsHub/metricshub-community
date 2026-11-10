@@ -433,8 +433,22 @@ public class EnrollmentCoordinator {
 	 * nothing before the first token.
 	 */
 	public synchronized void invalidateToken() {
+		invalidateToken(null);
+	}
+
+	/**
+	 * Drops the token Central refused, when it is still the cached one: a session opened with an older token never
+	 * discards a newer one.
+	 *
+	 * @param authorization the {@code Authorization} value Central refused, or {@code null} for the cached token
+	 */
+	public synchronized void invalidateToken(final String authorization) {
 		if (tokenProvider != null) {
-			tokenProvider.invalidate();
+			tokenProvider.invalidate(
+				authorization != null && authorization.startsWith("Bearer ")
+					? authorization.substring("Bearer ".length())
+					: null
+			);
 		}
 	}
 

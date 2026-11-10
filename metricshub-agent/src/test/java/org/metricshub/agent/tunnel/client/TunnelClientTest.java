@@ -255,6 +255,12 @@ class TunnelClientTest {
 
 		final AtomicInteger read = new AtomicInteger();
 		final AtomicInteger invalidated = new AtomicInteger();
+		final List<String> rejected = new CopyOnWriteArrayList<>();
+
+		void invalidate(final String authorization) {
+			invalidated.incrementAndGet();
+			rejected.add(String.valueOf(authorization));
+		}
 
 		Map<String, String> headers() {
 			return Map.of("Authorization", "Bearer token-" + read.incrementAndGet());
@@ -263,7 +269,7 @@ class TunnelClientTest {
 
 	private TunnelClient clientWithTokens(final FakeCentralServer fakeServer, final Tokens tokens) {
 		final TunnelClient tokenClient = new TunnelClient(settings(fakeServer, null), new RecordingListener());
-		tokenClient.useCredential(tokens::headers, tokens.invalidated::incrementAndGet);
+		tokenClient.useCredential(tokens::headers, tokens::invalidate);
 		return tokenClient;
 	}
 
@@ -283,7 +289,7 @@ class TunnelClientTest {
 		assertEquals("Bearer token-2", server.awaitHandshake(TIMEOUT_MS).get("Authorization"));
 		// The backoff's first delay is at least 500 ms
 		assertTrue(Duration.ofNanos(System.nanoTime() - closedAt).toMillis() < 400, "at once, not after the backoff");
-		assertEquals(1, tokens.invalidated.get());
+		assertEquals(List.of("Bearer token-1"), tokens.rejected, "only the token the connection used is dropped");
 	}
 
 	@Test
@@ -364,7 +370,7 @@ class TunnelClientTest {
 			),
 			new RecordingListener()
 		);
-		refused.useCredential(headers, tokens.invalidated::incrementAndGet);
+		refused.useCredential(headers, tokens::invalidate);
 		return refused;
 	}
 

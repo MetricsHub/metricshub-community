@@ -275,6 +275,18 @@ public class CentralTokenProvider {
 	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
 	 */
 	public synchronized void invalidate() {
+		invalidate(null);
+	}
+
+	/**
+	 * Drops the cached token when it is the one Central refused; a newer one, renewed meanwhile, is kept.
+	 *
+	 * @param rejected the token Central refused, or {@code null} for whichever is cached
+	 */
+	public synchronized void invalidate(final String rejected) {
+		if (rejected != null && !rejected.equals(token)) {
+			return;
+		}
 		token = null;
 		// Central refused the token: a new one is asked at once, whatever the backoff of a former renewal said
 		nextAttemptAt = Instant.MIN;

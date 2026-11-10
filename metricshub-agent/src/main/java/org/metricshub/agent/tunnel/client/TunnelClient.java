@@ -40,6 +40,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -173,7 +174,7 @@ public class TunnelClient {
 	 * Central refused. {@code null}: the static headers of the settings, as before.
 	 */
 	private volatile Supplier<Map<String, String>> credentialHeaders;
-	private volatile Runnable invalidateCredential;
+	private volatile Consumer<String> invalidateCredential;
 	/** The {@code Authorization} the current connection was opened with. */
 	private String connectedAuthorization;
 	/**
@@ -378,9 +379,10 @@ public class TunnelClient {
 	 *
 	 * @param headers    the headers of the next connection, the current token included; throws when no token is
 	 *                   available, its cause an {@link CentralTokenProvider.InvalidClientException} when the agent is revoked
-	 * @param invalidate drops the current token, after Central refused it or let it expire
+	 * @param invalidate drops the token Central refused or let expire, given the {@code Authorization} the connection
+	 *                   was opened with, so a newer token renewed meanwhile is kept
 	 */
-	public void useCredential(final Supplier<Map<String, String>> headers, final Runnable invalidate) {
+	public void useCredential(final Supplier<Map<String, String>> headers, final Consumer<String> invalidate) {
 		this.credentialHeaders = headers;
 		this.invalidateCredential = invalidate;
 	}
@@ -440,7 +442,7 @@ public class TunnelClient {
 		if (credentialHeaders == null || stopped || lostGeneration != generation) {
 			return false;
 		}
-		invalidateCredential.run();
+		invalidateCredential.accept(connectedAuthorization);
 		if (credentialRetryUsed) {
 			return false;
 		}

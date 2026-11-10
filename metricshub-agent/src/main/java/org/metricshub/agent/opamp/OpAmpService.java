@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -424,11 +425,17 @@ public class OpAmpService {
 		final Map<String, String> headers = FleetHeaders.decrypt(config.getHeaders(), "OpAMP");
 		final EnrollmentCoordinator coordinator = enrollment;
 		final long generation = coordinator.tokenGeneration();
+		final AtomicReference<String> sent = new AtomicReference<>();
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create(config.getEndpoint().trim()))
 			.withHeaders(headers)
-			.withHeadersSupplier(usesToken ? () -> coordinator.headers(headers, generation) : null)
-			.withOnUnauthorized(usesToken ? coordinator::invalidateToken : () -> {})
+			.withHeadersSupplier(usesToken ? () -> {
+				final Map<String, String> current = coordinator.headers(headers, generation);
+				sent.set(current.get("Authorization"));
+				return current;
+			} : null)
+			// The token of the POST Central refused, never a newer one renewed meanwhile
+			.withOnUnauthorized(usesToken ? () -> coordinator.invalidateToken(sent.get()) : () -> {})
 			// Never once an identity was enrolled, even with central.auth removed: the uid is the one its secret belongs to
 			.withAcceptsNewInstanceUid(!usesToken && !enrolledIdentity.getAsBoolean())
 			.withCertificateFile(config.getCertificateFile())

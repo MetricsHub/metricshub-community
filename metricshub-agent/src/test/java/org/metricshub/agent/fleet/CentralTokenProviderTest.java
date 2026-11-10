@@ -241,6 +241,19 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void aRefusalOfAnOlderTokenShouldKeepTheNewerOne() throws Exception {
+		final CentralTokenProvider provider = provider();
+		final String current = provider.currentToken();
+
+		provider.invalidate("an-older-token");
+
+		assertEquals(current, provider.currentToken());
+		assertEquals(1, tokenRequests.get());
+		provider.invalidate(current);
+		assertNotEquals(current, provider.currentToken());
+	}
+
+	@Test
 	void aRefusedTokenShouldBeReplacedAtOnceWhateverTheRenewalBackoff() throws Exception {
 		final CentralTokenProvider provider = provider();
 		provider.currentToken();

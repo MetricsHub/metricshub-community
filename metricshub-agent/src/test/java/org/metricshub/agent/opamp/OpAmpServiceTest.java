@@ -436,7 +436,8 @@ class OpAmpServiceTest {
 		assertEquals("Bearer two", settings.currentHeaders().get("Authorization"));
 		verify(enrollment, times(2)).headers(Map.of("X-Site", "a"), 7L);
 		settings.getOnUnauthorized().run();
-		verify(enrollment).invalidateToken();
+		// The token of the refused POST, never a newer one
+		verify(enrollment).invalidateToken("Bearer two");
 		assertFalse(settings.isAcceptsNewInstanceUid(), "the uid is the enrolled one");
 
 		opAmpService.setEnrolledIdentity(() -> false);
