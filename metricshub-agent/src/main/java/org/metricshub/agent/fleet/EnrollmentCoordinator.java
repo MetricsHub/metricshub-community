@@ -646,10 +646,10 @@ public class EnrollmentCoordinator {
 				try (HttpClient httpClient = CentralTokenProvider.httpClient(current.certificateFile())) {
 					final String agentUid = enroll(current, httpClient);
 					if (agentUid == null) {
-						synchronized (this) {
-							stoppedWith = current;
+						if (stopUnlessReplaced(current)) {
+							return;
 						}
-						return;
+						continue;
 					}
 					this.agentUid = agentUid;
 					ready = true;
@@ -657,19 +657,8 @@ public class EnrollmentCoordinator {
 					firstToken();
 					return;
 				} catch (RefusedException e) {
-					synchronized (this) {
-						if (
-							Objects.equals(current.issuerUrl(), settings.issuerUrl()) &&
-								Objects.equals(current.enrollmentKey(), settings.enrollmentKey())
-						) {
-							stoppedWith = current;
-							return;
-						}
-					}
-					// Refused for an issuer or a key a reload has replaced meanwhile: the new ones are tried at once
-					synchronized (backoff) {
-						// That reload's wake-up is used up: it must not cut the backoff the new ones may earn
-						settingsChanged = false;
+					if (stopUnlessReplaced(current)) {
+						return;
 					}
 				} catch (RetryableException e) {
 					pause("The enrollment into MetricsHub Central did not complete", e.getMessage(), e.floor);
@@ -709,6 +698,31 @@ public class EnrollmentCoordinator {
 				pause("The agent has no token from MetricsHub Central yet", e.getMessage(), null);
 			}
 		}
+	}
+
+	/**
+	 * Stops the worker after a refusal, or a lack of key, that answered the settings still configured. When a reload
+	 * replaced the issuer, the key or the certificate meanwhile, the worker goes on at once with the new ones instead,
+	 * that reload's wake-up used up: it must not cut the backoff the new ones may earn.
+	 *
+	 * @param current the settings the stopped pass ran with
+	 * @return whether the worker stops
+	 */
+	private boolean stopUnlessReplaced(final Settings current) {
+		synchronized (this) {
+			if (
+				Objects.equals(current.issuerUrl(), settings.issuerUrl()) &&
+					Objects.equals(current.enrollmentKey(), settings.enrollmentKey()) &&
+					Objects.equals(current.certificateFile(), settings.certificateFile())
+			) {
+				stoppedWith = current;
+				return true;
+			}
+		}
+		synchronized (backoff) {
+			settingsChanged = false;
+		}
+		return false;
 	}
 
 	private void pause(final String step, final String failure, final Duration floor) throws InterruptedException {
@@ -885,7 +899,8 @@ public class EnrollmentCoordinator {
 			);
 		}
 		final String code = errorCode(response.body());
-		if (recover && status == 401) {
+		// Only the recovery's own refusal means "nothing to recover"; another 401 (an intermediary) is a refusal
+		if (recover && status == 401 && "recovery_not_authorized".equals(code)) {
 			log.info("Central has no answer to recover for enrollment attempt {}: enrolling again with it.", attemptId);
 			return null;
 		}
