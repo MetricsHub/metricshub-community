@@ -114,11 +114,20 @@ public class OpAmpStartupHook implements StartupHook {
 		}
 		// Reconcile a pending upgrade transaction before anything reports to OpAMP, so the
 		// upgrade verdict (SUCCEEDED/FAILED) is part of the first OpAMP status report.
-		final UpgradeManager upgradeManager = upgradeManagerFactory.apply(agentContextHolder);
-		upgradeManager.reconcileOnStartup();
+		UpgradeManager upgradeManager;
+		try {
+			upgradeManager = upgradeManagerFactory.apply(agentContextHolder);
+			upgradeManager.reconcileOnStartup();
+		} catch (RuntimeException e) {
+			// OpAMP starts anyway, without package offers: its supervisor is also the one that reconciles the
+			// enrollment into Central on each reload
+			log.error("The upgrade reconciliation failed: {}. OpAMP starts without package offers.", e.getMessage());
+			log.debug("The upgrade reconciliation failed:", e);
+			upgradeManager = null;
+		}
 
 		// Package offers are accepted only on deployments supporting in-place upgrades (deb/rpm/msi).
-		final OpampPackagesHandler packagesHandler = upgradeManager.isPackageUpgradeSupported()
+		final OpampPackagesHandler packagesHandler = upgradeManager != null && upgradeManager.isPackageUpgradeSupported()
 			? new OpampUpgradeAdapter(upgradeManager)
 			: null;
 

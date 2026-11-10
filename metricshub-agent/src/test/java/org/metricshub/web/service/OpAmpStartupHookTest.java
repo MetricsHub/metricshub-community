@@ -3,7 +3,6 @@ package org.metricshub.web.service;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -44,7 +43,7 @@ class OpAmpStartupHookTest {
 	}
 
 	@Test
-	void theEnrollmentShouldStartEvenWhenTheUpgradeReconciliationFails() {
+	void theEnrollmentAndOpAmpShouldStartEvenWhenTheUpgradeReconciliationFails() {
 		final AgentContext agentContext = mock(AgentContext.class);
 		when(agentContext.getAgentConfig()).thenReturn(AgentConfig.builder().build());
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
@@ -53,9 +52,12 @@ class OpAmpStartupHookTest {
 		final OpAmpStartupHook hook = newHook();
 		hook.setEnrollmentStarter(started::set);
 
-		assertThrows(IllegalStateException.class, hook::onStartup);
+		hook.onStartup();
 
 		assertSame(agentContext, started.get(), "the tunnel waits on it");
+		// Its supervisor reconciles the enrollment on each reload, without package offers
+		verify(opAmpService).start();
+		assertNull(capturedHandler.get());
 	}
 
 	@Test
