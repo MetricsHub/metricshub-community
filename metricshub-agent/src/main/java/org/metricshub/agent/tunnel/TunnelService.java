@@ -301,8 +301,10 @@ public class TunnelService {
 		closeClient("Central tunnel configuration changed");
 		activeConfig = newConfig;
 
-		// Asked first, whatever the channel: it also stops an enrollment a reload no longer configures
-		final boolean enrolled = enrollment.ready(agentContextHolder.getAgentContext());
+		// Only asked: the OpAMP supervisor starts and stops the enrollment, after it stopped its own client, the one
+		// other writer of the uid file (a new_instance_uid from a server that is not Central)
+		final AgentContext agentContext = agentContextHolder.getAgentContext();
+		final boolean enrolled = !EnrollmentCoordinator.usesToken(agentContext) || enrollment.isReady();
 		if (newConfig == null || !newConfig.isEnabled()) {
 			log.info("Central tunnel is disabled.");
 			return;

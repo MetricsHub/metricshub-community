@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +36,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.Level;
@@ -109,6 +111,7 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger metadataRequests = new AtomicInteger();
 	private volatile String tokenAgentUid;
 	private volatile boolean tokensUnavailable;
+	private volatile boolean tokensRefused;
 	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
@@ -217,6 +220,10 @@ class EnrollmentCoordinatorTest {
 		final String agentUid = tokenAgentUid == null ? clientId : tokenAgentUid;
 		if (tokensUnavailable) {
 			respond(exchange, 503, "{}", null);
+			return;
+		}
+		if (tokensRefused) {
+			respond(exchange, 401, "{\"error\":\"invalid_client\"}", null);
 			return;
 		}
 		final long iat = System.currentTimeMillis() / 1000;
@@ -333,6 +340,23 @@ class EnrollmentCoordinatorTest {
 		Thread.sleep(300);
 
 		assertEquals(asked, tokenRequests.get(), "nothing is asked any more");
+	}
+
+	@Test
+	void anotherIssuerAfterARefusedCredentialShouldGetTheFirstTokenThere() throws Exception {
+		tokensRefused = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		assertNotNull(recoveryProofIn(directory), "no token, the proof stays");
+
+		// Another issuer string (the same stub here), which accepts the credential
+		tokensRefused = false;
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertNull(recoveryProofIn(directory), "the first token of the new issuer came, and the proof went");
 	}
 
 	@Test
@@ -716,6 +740,38 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aNewIssuerShouldNotWaitForTheFormerOnesBackoff() throws Exception {
+		script.add(new Answer(429, "{}", "30"));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(200);
+
+		// Another issuer string (the same stub here) while the worker waits 30 s
+		final long movedAt = System.nanoTime();
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		coordinator.ready(moved, DESCRIPTION);
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertTrue(Duration.ofNanos(System.nanoTime() - movedAt).toSeconds() < 10, "not after the former Retry-After");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "mh_enr_a\nb", "mh_enr_a b", "mh_enr_é" })
+	void anEnrollmentKeyThatCannotBeAHeaderShouldRefuseTheStartup(final String key) {
+		final IllegalStateException refusal = assertThrows(
+			IllegalStateException.class,
+			() -> EnrollmentCoordinator.checkConfiguration(central(key), () -> new AgentCredentialStore(directory))
+		);
+		assertTrue(refusal.getMessage().contains("central.auth.enrollmentKey"), refusal.getMessage());
+		assertFalse(refusal.getMessage().contains(key), "never quoted");
+	}
+
+	@Test
 	void anIssuerPortOutOfRangeShouldRefuseTheStartup() {
 		final CentralConfig central = central(KEY);
 		central.getAuth().setIssuerUrl("https://central.example.com:99999");
@@ -763,6 +819,51 @@ class EnrollmentCoordinatorTest {
 		assertFalse(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
 
 		assertEquals(1, enrollBodies.size(), "never retried with the key");
+	}
+
+	@Test
+	void centralAuthBackWhileTheStoppedWorkerEndsShouldStartANewOne() throws Exception {
+		final CountDownLatch writing = new CountDownLatch(1);
+		final CountDownLatch release = new CountDownLatch(1);
+		final AtomicBoolean first = new AtomicBoolean(true);
+		// The first worker is held in its first write, deaf to its interruption: it is still ending
+		final AgentCredentialStore store = new AgentCredentialStore(directory, written -> {
+			if (first.getAndSet(false)) {
+				writing.countDown();
+				boolean interrupted = false;
+				while (true) {
+					try {
+						release.await();
+						break;
+					} catch (InterruptedException e) {
+						interrupted = true;
+					}
+				}
+				if (interrupted) {
+					Thread.currentThread().interrupt();
+				}
+			}
+		});
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		assertTrue(writing.await(10, TimeUnit.SECONDS));
+
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		// Released later from another thread: reading the store waits for the write it is held in
+		final Thread releaser = new Thread(() -> {
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+			release.countDown();
+		});
+		releaser.start();
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		releaser.join();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "a new worker enrolled");
 	}
 
 	@Test

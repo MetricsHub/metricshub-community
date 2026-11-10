@@ -217,9 +217,11 @@ class TunnelServiceTest {
 	@Test
 	void shouldNotStartBeforeTheAgentIsEnrolled() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.ready(agentContext)).thenReturn(false, true);
+		when(enrollment.isReady()).thenReturn(false, false, true);
+		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
 
 		service.supervise();
 		assertTrue(createdClients.isEmpty());
@@ -229,26 +231,28 @@ class TunnelServiceTest {
 	}
 
 	@Test
-	void aDisabledChannelShouldStillReconcileTheEnrollment() {
+	void theTunnelShouldNeverStartTheEnrollmentItself() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		service.setEnrollment(enrollment);
-		configure(TunnelConfig.builder().enabled(false).build());
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
 
 		service.supervise();
 
-		verify(enrollment).ready(agentContext);
+		// The OpAMP supervisor starts it, once its own client, which may write the uid file, is stopped
+		verify(enrollment, never()).ready(any());
 		assertTrue(createdClients.isEmpty());
 	}
 
 	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
+		when(enrollment.isReady()).thenReturn(false, false, false, true);
 		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		service.supervise();
-		assertEquals(1, createdClients.size());
+		assertEquals(1, createdClients.size(), "without central.auth, nothing waits");
 
 		// Same channel settings, a new central.auth
 		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
@@ -288,7 +292,7 @@ class TunnelServiceTest {
 			throw new AssertionError("an enrolled agent never loads nor generates its uid itself");
 		});
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.ready(agentContext)).thenReturn(true);
+		when(enrollment.isReady()).thenReturn(true);
 		when(enrollment.agentUid()).thenReturn("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91");
 		when(enrollment.currentToken()).thenReturn("one", "two");
 		renewing.setEnrollment(enrollment);
@@ -325,7 +329,7 @@ class TunnelServiceTest {
 			encoder.encodeToString(("{\"exp\":" + exp + "}").getBytes(StandardCharsets.UTF_8)) +
 			".c2ln";
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.ready(agentContext)).thenReturn(true);
+		when(enrollment.isReady()).thenReturn(true);
 		when(enrollment.agentUid()).thenReturn(UID);
 		when(enrollment.currentToken()).thenReturn(expiring, "renewed");
 		service.setEnrollment(enrollment);
