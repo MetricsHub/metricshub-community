@@ -114,7 +114,6 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger metadataRequests = new AtomicInteger();
 	private volatile String tokenAgentUid;
 	private volatile boolean tokensUnavailable;
-	private final List<EnrollmentCoordinator> coordinators = new ArrayList<>();
 	private volatile boolean tokensRefused;
 	private volatile CountDownLatch holdTokenAnswer = new CountDownLatch(0);
 	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
