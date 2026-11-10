@@ -102,6 +102,7 @@ class EnrollmentCoordinatorTest {
 	private final List<EnrollmentCoordinator> coordinators = new ArrayList<>();
 	private final Deque<Answer> recoverScript = new ConcurrentLinkedDeque<>();
 	private final List<String> enrollBodies = new CopyOnWriteArrayList<>();
+	private final List<String> enrollAuthorizations = new CopyOnWriteArrayList<>();
 	private final AtomicInteger recoverRequests = new AtomicInteger();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
@@ -133,6 +134,7 @@ class EnrollmentCoordinatorTest {
 	private void enroll(final HttpExchange exchange) throws IOException {
 		final String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
 		enrollBodies.add(body);
+		enrollAuthorizations.add(String.valueOf(exchange.getRequestHeaders().getFirst("Authorization")));
 		try {
 			holdEnrollAnswer.await();
 		} catch (InterruptedException e) {
@@ -583,6 +585,26 @@ class EnrollmentCoordinatorTest {
 		assertFalse(enrollWith(coordinator(store), central(KEY)));
 
 		assertTrue(enrollBodies.isEmpty(), "an intermediary's 401 is no proof that nothing can be recovered");
+	}
+
+	@Test
+	void aKeyReplacedDuringTheRecoveryShouldNeverBeSent() throws Exception {
+		holdRecoverAnswer = new CountDownLatch(1);
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt("a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", randomSecret().getBytes(StandardCharsets.US_ASCII));
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (recoverRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+
+		// The key is replaced while Central answers there is nothing to recover
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		holdRecoverAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertEquals(List.of("Bearer " + OTHER_KEY), enrollAuthorizations, "the replaced key is never sent");
 	}
 
 	@Test
