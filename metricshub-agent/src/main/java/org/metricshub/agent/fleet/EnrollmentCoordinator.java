@@ -45,6 +45,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -156,8 +157,13 @@ public class EnrollmentCoordinator {
 	 * {@code central.auth}.
 	 */
 	private volatile boolean enrollmentWanted;
+	/** The worker's backoff waits on it; a new issuer or key wakes it up. */
+	private final Object backoff = new Object();
+	private boolean settingsChanged;
 	private volatile Settings settings;
 	private Thread worker;
+	/** The last worker stopped by a reload, until it ends (tests wait for it). */
+	private Thread stopping;
 	private Settings stoppedWith;
 	private CentralTokenProvider tokenProvider;
 	private volatile boolean recoveryCleared;
@@ -231,6 +237,9 @@ public class EnrollmentCoordinator {
 			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
 				worker.interrupt();
+				// Forgotten at once: if central.auth comes back while it is still ending, a new worker starts
+				stopping = worker;
+				worker = null;
 			}
 			return true;
 		}
@@ -242,6 +251,20 @@ public class EnrollmentCoordinator {
 			central.getCertificateFile(),
 			Map.copyOf(description)
 		);
+		final Settings previous = settings;
+		if (
+			worker != null &&
+				worker.isAlive() &&
+				previous != null &&
+				(!Objects.equals(previous.issuerUrl(), latest.issuerUrl()) ||
+					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()))
+		) {
+			// Wakes the worker (enrolling, or waiting for the first token) from a backoff the former issuer or key earned
+			synchronized (backoff) {
+				settingsChanged = true;
+				backoff.notifyAll();
+			}
+		}
 		if (ready) {
 			if (
 				settings != null &&
@@ -250,9 +273,13 @@ public class EnrollmentCoordinator {
 			) {
 				// A reload moved the issuer or its certificate: the next token comes from there
 				tokenProvider = null;
+				if (!recoveryCleared) {
+					// The recovery proof goes after the first token of the new issuer
+					firstTokenDone = false;
+				}
 			}
 			settings = latest;
-			if (!firstTokenDone && !worker.isAlive()) {
+			if (!firstTokenDone && (worker == null || !worker.isAlive())) {
 				// Stopped by a reload that removed central.auth before the first token: resumed now it is back
 				startWorker();
 			}
@@ -358,8 +385,13 @@ public class EnrollmentCoordinator {
 	 */
 	void awaitWorker() throws InterruptedException {
 		final Thread current;
+		final Thread stopped;
 		synchronized (this) {
 			current = worker;
+			stopped = stopping;
+		}
+		if (stopped != null) {
+			stopped.join();
 		}
 		if (current != null) {
 			current.join();
@@ -436,7 +468,15 @@ public class EnrollmentCoordinator {
 					NEW_COMMAND
 			);
 		}
-		if (identity.status() == Status.ABSENT && (auth.getEnrollmentKey() == null || auth.getEnrollmentKey().isBlank())) {
+		final String key = auth.getEnrollmentKey();
+		if (key != null && !key.isBlank() && !key.trim().matches("[!-~]+")) {
+			// Never quoted: it is a secret
+			throw new IllegalStateException(
+				"central.auth.enrollmentKey is not a valid key: it may only hold printable characters, without spaces. " +
+					NEW_COMMAND
+			);
+		}
+		if (identity.status() == Status.ABSENT && (key == null || key.isBlank())) {
 			throw new IllegalStateException(
 				"central.auth.enrollmentKey is required: this agent is not enrolled into Central yet. " + NEW_COMMAND
 			);
@@ -469,6 +509,14 @@ public class EnrollmentCoordinator {
 		return (stoppedWith != null &&
 			Objects.equals(latest.issuerUrl(), stoppedWith.issuerUrl()) &&
 			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()));
+	}
+
+	/**
+	 * @param agentContext the current agent context
+	 * @return whether the channels toward Central authenticate with the enrolled identity's token
+	 */
+	public static boolean usesToken(final AgentContext agentContext) {
+		return isConfigured(agentContext.getAgentConfig().getCentral());
 	}
 
 	private static boolean isConfigured(final CentralConfig central) {
@@ -538,7 +586,18 @@ public class EnrollmentCoordinator {
 	private void pause(final String step, final String failure, final Duration floor) throws InterruptedException {
 		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
 		log.warn("{}: {}. Next attempt in {}.", step, failure, delay);
-		Thread.sleep(delay.toMillis());
+		final long until = System.nanoTime() + delay.toNanos();
+		synchronized (backoff) {
+			long left;
+			while (!settingsChanged && (left = until - System.nanoTime()) > 0) {
+				TimeUnit.NANOSECONDS.timedWait(backoff, left);
+			}
+			if (settingsChanged) {
+				// A new issuer or key owes nothing to the former one's backoff
+				settingsChanged = false;
+				retrySchedule.reset();
+			}
+		}
 	}
 
 	/**
