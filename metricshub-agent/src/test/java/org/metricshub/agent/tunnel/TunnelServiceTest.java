@@ -229,6 +229,31 @@ class TunnelServiceTest {
 	}
 
 	@Test
+	void theGateShouldBeAskedAboutTheContextTheSettingsCameFrom() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		// A reload swaps the context between the settings read and the gate: the newer one has no central.auth
+		final AgentContext reloaded = mock(AgentContext.class);
+		when(reloaded.getAgentConfig()).thenReturn(
+			AgentConfig.builder()
+				.central(
+					CentralConfig.builder()
+						.enabled(true)
+						.tunnel(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build())
+						.build()
+				)
+				.build()
+		);
+		when(agentContextHolder.getAgentContext()).thenReturn(agentContext, reloaded);
+
+		service.supervise();
+
+		assertTrue(createdClients.isEmpty(), "the context the settings came from is not enrolled");
+	}
+
+	@Test
 	void theTunnelShouldNeverStartTheEnrollmentItself() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		service.setEnrollment(enrollment);

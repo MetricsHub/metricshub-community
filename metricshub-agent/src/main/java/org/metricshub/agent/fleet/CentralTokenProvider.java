@@ -310,7 +310,8 @@ public class CentralTokenProvider {
 			return;
 		}
 		final String error = errorCode(response.body());
-		if (status == 401 && "invalid_client".equals(error)) {
+		// RFC 6749 §5.2 answers invalid_client with 401 or 400: terminal either way
+		if ((status == 401 || status == 400) && "invalid_client".equals(error)) {
 			invalidClient = true;
 			log.error(
 				"Central refused the credential of agent {} (invalid_client): the agent was revoked or deleted. " +

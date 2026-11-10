@@ -206,7 +206,7 @@ public class TunnelService {
 			enrollment.isReady()
 		);
 		if (!Objects.equals(config, activeConfig) || !Objects.equals(auth, activeAuth)) {
-			reconfigure(config);
+			reconfigure(agentContext, config);
 			activeAuth = EnrollmentCoordinator.authState(agentContext.getAgentConfig().getCentral(), enrollment.isReady());
 			return;
 		}
@@ -227,7 +227,7 @@ public class TunnelService {
 					"Central tunnel: the tool set changed; restarting the tunnel to advertise {} tool(s).",
 					current.tools().size()
 				);
-				reconfigure(config);
+				reconfigure(agentContext, config);
 				return;
 			}
 			// Same advertised set, rebuilt callbacks: the ones the bridge holds belong to the replaced
@@ -298,13 +298,18 @@ public class TunnelService {
 		return new ContextSnapshot(context, generation);
 	}
 
-	private void reconfigure(final TunnelConfig newConfig) {
+	/**
+	 * Applies a new {@code central.tunnel} configuration.
+	 *
+	 * @param agentContext the context the configuration was read from: the enrollment gate is asked about the same one
+	 * @param newConfig    the new tunnel configuration
+	 */
+	private void reconfigure(final AgentContext agentContext, final TunnelConfig newConfig) {
 		closeClient("Central tunnel configuration changed");
 		activeConfig = newConfig;
 
 		// Only asked: the OpAMP supervisor starts and stops the enrollment, after it stopped its own client, the one
 		// other writer of the uid file (a new_instance_uid from a server that is not Central)
-		final AgentContext agentContext = agentContextHolder.getAgentContext();
 		final boolean enrolled = !EnrollmentCoordinator.usesToken(agentContext) ||
 			enrollment.isReadyFor(agentContext.getAgentConfig().getCentral());
 		if (newConfig == null || !newConfig.isEnabled()) {

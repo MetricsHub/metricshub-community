@@ -258,6 +258,8 @@ public class EnrollmentCoordinator {
 			Map.copyOf(description)
 		);
 		final Settings previous = settings;
+		// Published before the worker is woken: it reads the new settings when it goes on
+		settings = latest;
 		if (
 			worker != null &&
 				worker.isAlive() &&
@@ -275,9 +277,9 @@ public class EnrollmentCoordinator {
 		}
 		if (ready) {
 			if (
-				settings != null &&
-					(!Objects.equals(latest.issuerUrl(), settings.issuerUrl()) ||
-						!Objects.equals(latest.certificateFile(), settings.certificateFile()))
+				previous != null &&
+					(!Objects.equals(latest.issuerUrl(), previous.issuerUrl()) ||
+						!Objects.equals(latest.certificateFile(), previous.certificateFile()))
 			) {
 				// A reload moved the issuer or its certificate: the next token comes from there
 				if (tokenProvider != null) {
@@ -290,14 +292,12 @@ public class EnrollmentCoordinator {
 					firstTokenDone = false;
 				}
 			}
-			settings = latest;
 			if (!firstTokenDone && (worker == null || !worker.isAlive())) {
 				// Stopped by a reload that removed central.auth before the first token: resumed now it is back
 				startWorker();
 			}
 			return true;
 		}
-		settings = latest;
 		if (store == null) {
 			store = storeFactory.get();
 		}
@@ -317,8 +317,22 @@ public class EnrollmentCoordinator {
 			} catch (IOException e) {
 				log.debug("Cannot read the agent identity yet: {}", e.getMessage());
 			}
-		} else if (worker.isAlive() || refusedAgain(latest)) {
-			// Running, or stopped by a refusal that only a new configuration (a new key) can change
+		} else if (worker.isAlive()) {
+			return false;
+		} else if (refusedAgain(latest)) {
+			// Stopped by a refusal that only a new configuration (a new key) can change, unless another process sharing
+			// the security directory completed the identity meanwhile
+			try {
+				final LocalIdentity identity = store.read();
+				wipe(identity.secret());
+				wipe(identity.recoverySecret());
+				if (identity.status() == Status.READY) {
+					ready = true;
+					return true;
+				}
+			} catch (IOException e) {
+				log.debug("Cannot read the agent identity: {}", e.getMessage());
+			}
 			return false;
 		}
 		startWorker();
@@ -357,10 +371,6 @@ public class EnrollmentCoordinator {
 			}
 			throw e;
 		}
-		if (provider != currentProvider()) {
-			// Obtained from the former issuer: neither used nor counted as the first token of the new one
-			throw new IOException("The issuer changed while its token was asked.");
-		}
 		// Defence: Central binds each token to the agent uid; a channel never presents another agent's
 		final String tokenUid = CentralTokenProvider.claims(token).path("agent_uid").asText(null);
 		if (!agentUid.equals(tokenUid)) {
@@ -372,6 +382,22 @@ public class EnrollmentCoordinator {
 			);
 			throw new IOException("The token Central issued is not this agent's.");
 		}
+		// Under the lock ready() replaces the provider with: the check and the deletion of the recovery proof below are
+		// one step, so a reload never falls between them
+		synchronized (this) {
+			if (provider != currentProvider()) {
+				// Obtained from the former issuer: neither used nor counted as the first token of the new one
+				throw new IOException("The issuer changed while its token was asked.");
+			}
+			clearRecoveryOnce();
+		}
+		return token;
+	}
+
+	/**
+	 * Deletes the recovery proof after the first token; a failure is retried after the next one.
+	 */
+	private void clearRecoveryOnce() {
 		if (!recoveryCleared) {
 			try {
 				store.clearRecovery();
@@ -380,7 +406,6 @@ public class EnrollmentCoordinator {
 				log.warn("Cannot delete the enrollment recovery proof yet: {}. Retried after the next token.", e.getMessage());
 			}
 		}
-		return token;
 	}
 
 	synchronized CentralTokenProvider currentProvider() {
@@ -420,8 +445,14 @@ public class EnrollmentCoordinator {
 			throw new UncheckedIOException(new IOException("The issuer changed: the channel is rebuilt for it."));
 		}
 		try {
+			final String token = currentToken();
+			// Checked again once the token is there: a reload may have replaced the provider while it was asked, and a
+			// token of the new issuer never goes to a channel still open toward the former Central
+			if (generation != tokenGeneration) {
+				throw new IOException("The issuer changed: the channel is rebuilt for it.");
+			}
 			final Map<String, String> result = new HashMap<>(headers);
-			result.put("Authorization", "Bearer " + currentToken());
+			result.put("Authorization", "Bearer " + token);
 			return result;
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
@@ -722,6 +753,8 @@ public class EnrollmentCoordinator {
 		synchronized (backoff) {
 			settingsChanged = false;
 		}
+		// The new settings owe nothing to the failures of the former ones
+		retrySchedule.reset();
 		return false;
 	}
 

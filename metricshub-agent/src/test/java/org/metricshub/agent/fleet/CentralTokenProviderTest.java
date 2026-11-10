@@ -198,6 +198,17 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void anInvalidClientAnsweredWith400ShouldBeTerminalToo() throws Exception {
+		script.add(new Answer(400, "{\"error\":\"invalid_client\"}", null));
+		final CentralTokenProvider provider = provider();
+
+		assertThrows(InvalidClientException.class, provider::currentToken);
+		clock.advance(Duration.ofHours(1));
+		assertThrows(InvalidClientException.class, provider::currentToken);
+		assertEquals(1, tokenRequests.get(), "never asked again");
+	}
+
+	@Test
 	void anErrorOutsideOAuthShouldNeverBeQuoted() throws Exception {
 		script.add(new Answer(400, "{\"error\":\"echoed-" + SECRET + "\"}", null));
 
