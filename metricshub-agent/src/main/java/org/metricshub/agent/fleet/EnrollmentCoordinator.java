@@ -223,7 +223,8 @@ public class EnrollmentCoordinator {
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
 		if (!isConfigured(central)) {
 			enrollmentWanted = false;
-			if (worker != null && worker.isAlive() && !ready) {
+			// The enrollment, or the first token after it
+			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
 				worker.interrupt();
 			}
@@ -500,7 +501,7 @@ public class EnrollmentCoordinator {
 	 */
 	private void firstToken() throws InterruptedException {
 		retrySchedule.reset();
-		while (true) {
+		while (enrollmentWanted) {
 			try {
 				currentToken();
 				return;
