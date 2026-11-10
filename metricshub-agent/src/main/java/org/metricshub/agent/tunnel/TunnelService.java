@@ -24,6 +24,7 @@ package org.metricshub.agent.tunnel;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -95,8 +96,12 @@ public class TunnelService {
 	 */
 	static final Duration FORCED_RENEWAL = Duration.ofMinutes(5);
 	private boolean usesToken;
+	/**
+	 * Margin kept before the expiry of the token a connection was opened with, for the reconnection to happen first.
+	 */
+	static final Duration EXPIRY_MARGIN = Duration.ofSeconds(60);
 	private String renewedAuthorization;
-	private long renewedSinceNanos;
+	private Instant forcedRenewalAt = Instant.MAX;
 
 	private TunnelClient client;
 	private ToolBridge bridge;
@@ -374,9 +379,10 @@ public class TunnelService {
 	}
 
 	/**
-	 * Reconnects the tunnel once its token was renewed, at the first tick with no invocation in flight, or after
-	 * {@link #FORCED_RENEWAL} whatever runs, so a steady stream of invocations never postpones it past the old
-	 * token's expiry. Asking for the token here also renews it on time, off the tunnel thread.
+	 * Reconnects the tunnel once its token was renewed, at the first tick with no invocation in flight, or whatever
+	 * runs after {@link #FORCED_RENEWAL}, or {@link #EXPIRY_MARGIN} before the previous token expires when that comes
+	 * first (a renewal delayed by an outage), so invocations never postpone it past that expiry. Asking for the token
+	 * here also renews it on time, off the tunnel thread.
 	 */
 	private void reconnectWithRenewedToken() {
 		final String authorization;
@@ -389,11 +395,18 @@ public class TunnelService {
 			Thread.currentThread().interrupt();
 			return;
 		}
+		final Instant now = Instant.now();
 		if (!authorization.equals(renewedAuthorization)) {
+			final Instant previousExpiry = renewedAuthorization == null
+				? null
+				: EnrollmentCoordinator.expiryOf(renewedAuthorization.substring("Bearer ".length()));
+			final Instant forced = now.plus(FORCED_RENEWAL);
+			forcedRenewalAt = previousExpiry == null || forced.isBefore(previousExpiry.minus(EXPIRY_MARGIN))
+				? forced
+				: previousExpiry.minus(EXPIRY_MARGIN);
 			renewedAuthorization = authorization;
-			renewedSinceNanos = System.nanoTime();
 		}
-		final boolean overdue = System.nanoTime() - renewedSinceNanos >= FORCED_RENEWAL.toNanos();
+		final boolean overdue = !now.isBefore(forcedRenewalAt);
 		// The client decides on its own thread, where invocations arrive and answers leave
 		client.credentialRenewed(authorization, overdue || bridge == null ? null : bridge::quiescentMark);
 	}

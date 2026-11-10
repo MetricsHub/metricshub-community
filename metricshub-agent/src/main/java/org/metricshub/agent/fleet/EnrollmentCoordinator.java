@@ -36,6 +36,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
@@ -351,6 +352,19 @@ public class EnrollmentCoordinator {
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			throw new UncheckedIOException(new InterruptedIOException("Interrupted while waiting for a token."));
+		}
+	}
+
+	/**
+	 * @param token an access token
+	 * @return its {@code exp}, or {@code null} when it has none or is not a JWT
+	 */
+	public static Instant expiryOf(final String token) {
+		try {
+			final long exp = CentralTokenProvider.claims(token).path("exp").asLong(0);
+			return exp > 0 ? Instant.ofEpochSecond(exp) : null;
+		} catch (IOException e) {
+			return null;
 		}
 	}
 

@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -17,8 +18,11 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -310,6 +314,30 @@ class TunnelServiceTest {
 		} finally {
 			renewing.shutdown();
 		}
+	}
+
+	@Test
+	void aRenewalDelayedCloseToTheOldExpiryShouldReconnectWhateverRuns() throws Exception {
+		final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+		final long exp = Instant.now().plusSeconds(30).getEpochSecond();
+		final String expiring = encoder.encodeToString("{}".getBytes(StandardCharsets.UTF_8)) +
+			"." +
+			encoder.encodeToString(("{\"exp\":" + exp + "}").getBytes(StandardCharsets.UTF_8)) +
+			".c2ln";
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn(UID);
+		when(enrollment.currentToken()).thenReturn(expiring, "renewed");
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+
+		service.supervise();
+		service.supervise();
+		service.supervise();
+
+		// The token the tunnel uses expires in 30 s: no waiting for a quiet moment
+		verify(createdClients.get(0)).credentialRenewed(eq("Bearer renewed"), isNull());
 	}
 
 	@Test
