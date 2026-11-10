@@ -280,6 +280,9 @@ public class EnrollmentCoordinator {
 						!Objects.equals(latest.certificateFile(), settings.certificateFile()))
 			) {
 				// A reload moved the issuer or its certificate: the next token comes from there
+				if (tokenProvider != null) {
+					tokenProvider.shutdown();
+				}
 				tokenProvider = null;
 				tokenGeneration++;
 				if (!recoveryCleared) {
@@ -380,7 +383,7 @@ public class EnrollmentCoordinator {
 		return token;
 	}
 
-	private synchronized CentralTokenProvider currentProvider() {
+	synchronized CentralTokenProvider currentProvider() {
 		return tokenProvider;
 	}
 
@@ -506,6 +509,21 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
+	 * @param central the {@code central} configuration a channel is about to open with
+	 * @return whether the agent is enrolled and the coordinator already runs with that configuration's issuer and
+	 *         certificate: a channel never opens for a Central the coordinator has not reconciled yet
+	 */
+	public boolean isReadyFor(final CentralConfig central) {
+		final Settings current = settings;
+		return (ready &&
+			current != null &&
+			central != null &&
+			central.getAuth() != null &&
+			Objects.equals(current.issuerUrl(), central.getAuth().getIssuerUrl()) &&
+			Objects.equals(current.certificateFile(), central.getCertificateFile()));
+	}
+
+	/**
 	 * Refuses a {@code central.auth} the agent cannot run with, naming the key to fix. Called when the agent context
 	 * is built, so a wrong configuration refuses the startup.
 	 *
@@ -610,7 +628,8 @@ public class EnrollmentCoordinator {
 	private boolean refusedAgain(final Settings latest) {
 		return (stoppedWith != null &&
 			Objects.equals(latest.issuerUrl(), stoppedWith.issuerUrl()) &&
-			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()));
+			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()) &&
+			Objects.equals(latest.certificateFile(), stoppedWith.certificateFile()));
 	}
 
 	private static boolean isConfigured(final CentralConfig central) {

@@ -258,6 +258,20 @@ public class CentralTokenProvider {
 	}
 
 	/**
+	 * Releases the HTTP client once the requests in flight end: a provider a reload replaced is never used again.
+	 */
+	public void shutdown() {
+		httpClient.shutdown();
+	}
+
+	/**
+	 * @return the HTTP client (tests)
+	 */
+	HttpClient httpClient() {
+		return httpClient;
+	}
+
+	/**
 	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
 	 */
 	public synchronized void invalidate() {

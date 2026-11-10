@@ -14,12 +14,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.CentralAuthConfig;
@@ -28,6 +30,7 @@ import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
+import org.metricshub.agent.fleet.AgentCredentialStore;
 import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
@@ -440,6 +443,21 @@ class OpAmpServiceTest {
 		final OpampClientSettings without = opAmpService.buildSettings(config, false);
 		assertEquals(Map.of("X-Site", "a"), without.currentHeaders());
 		assertTrue(without.isAcceptsNewInstanceUid());
+	}
+
+	@Test
+	void onlyAReadyIdentityShouldKeepItsUid(@TempDir final Path security) throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(security);
+		assertFalse(OpAmpService.hasReadyIdentity(store), "nothing stored");
+
+		store.beginAttempt(
+			"a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d",
+			"cmVjb3ZlcnlyZWNvdmVyeXJlY292ZXJ5cmVjb3Zlcnk".getBytes()
+		);
+		assertFalse(OpAmpService.hasReadyIdentity(store), "a pending attempt holds no uid yet");
+
+		store.complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", "c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2U".toCharArray());
+		assertTrue(OpAmpService.hasReadyIdentity(store));
 	}
 
 	@Test

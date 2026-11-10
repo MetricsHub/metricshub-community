@@ -215,7 +215,7 @@ class TunnelServiceTest {
 	@Test
 	void shouldNotStartBeforeTheAgentIsEnrolled() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.isReady()).thenReturn(false, false, true);
+		when(enrollment.isReadyFor(any())).thenReturn(false, true);
 		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
@@ -245,7 +245,7 @@ class TunnelServiceTest {
 	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.isReady()).thenReturn(false, false, false, false, true);
+		when(enrollment.isReadyFor(any())).thenReturn(false, true);
 		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
@@ -291,6 +291,7 @@ class TunnelServiceTest {
 		});
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.isReady()).thenReturn(true);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
 		when(enrollment.agentUid()).thenReturn("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91");
 		when(enrollment.currentToken()).thenReturn("one", "two");
 		renewing.setEnrollment(enrollment);
@@ -322,6 +323,7 @@ class TunnelServiceTest {
 	void aRenewalDelayedCloseToTheOldExpiryShouldReconnectWhateverRuns() throws Exception {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.isReady()).thenReturn(true);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
 		when(enrollment.agentUid()).thenReturn(UID);
 		when(enrollment.currentToken()).thenReturn("expiring", "renewed");
 		// On the local clock: the token the tunnel uses has 30 s left when the renewed one arrives

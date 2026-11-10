@@ -21,9 +21,10 @@ package org.metricshub.agent.opamp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -85,9 +86,27 @@ public class OpAmpService {
 	/**
 	 * Whether an enrolled identity is persisted in the security directory. Tests may replace it.
 	 */
-	private BooleanSupplier enrolledIdentity = () -> Files.exists(
-		AgentInstanceUid.file().resolveSibling(AgentCredentialStore.STATE_FILENAME)
-	);
+	private BooleanSupplier enrolledIdentity = () -> hasReadyIdentity(AgentCredentialStore.standard());
+
+	/**
+	 * @param store the credential store
+	 * @return whether it holds a ready identity, the uid of which the secret belongs to (a pending attempt holds no uid
+	 *         yet); when it cannot be read, {@code true}: the uid is never put at risk
+	 */
+	static boolean hasReadyIdentity(final AgentCredentialStore store) {
+		try {
+			final AgentCredentialStore.LocalIdentity identity = store.read();
+			if (identity.secret() != null) {
+				Arrays.fill(identity.secret(), '\0');
+			}
+			if (identity.recoverySecret() != null) {
+				Arrays.fill(identity.recoverySecret(), (byte) 0);
+			}
+			return identity.status() == AgentCredentialStore.Status.READY;
+		} catch (IOException e) {
+			return true;
+		}
+	}
 
 	/**
 	 * Says whether the agent may connect to Central. Tests may replace it.
