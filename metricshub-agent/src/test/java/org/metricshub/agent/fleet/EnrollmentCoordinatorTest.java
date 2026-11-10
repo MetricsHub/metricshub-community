@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -113,6 +114,7 @@ class EnrollmentCoordinatorTest {
 	private volatile boolean tokensUnavailable;
 	private final List<EnrollmentCoordinator> coordinators = new ArrayList<>();
 	private volatile boolean tokensRefused;
+	private volatile CountDownLatch holdTokenAnswer = new CountDownLatch(0);
 	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
@@ -221,6 +223,11 @@ class EnrollmentCoordinatorTest {
 
 	private void token(final HttpExchange exchange) throws IOException {
 		final int request = tokenRequests.incrementAndGet();
+		try {
+			holdTokenAnswer.await();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 		final String basic = exchange.getRequestHeaders().getFirst("Authorization").substring("Basic ".length());
 		final String clientId = new String(Base64.getDecoder().decode(basic), StandardCharsets.UTF_8).split(":")[0];
 		final String agentUid = tokenAgentUid == null ? clientId : tokenAgentUid;
@@ -381,6 +388,50 @@ class EnrollmentCoordinatorTest {
 		coordinator.awaitWorker();
 
 		assertNull(recoveryProofIn(directory), "the first token of the new issuer came, and the proof went");
+	}
+
+	@Test
+	void aTokenOfTheFormerIssuerShouldNotCountAsTheFirstToken() throws Exception {
+		holdTokenAnswer = new CountDownLatch(1);
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+
+		// The issuer moves while its token is being asked
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		holdTokenAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertEquals(2, metadataRequests.get(), "the new issuer was asked");
+		assertEquals(2, tokenRequests.get());
+		assertNull(recoveryProofIn(directory));
+	}
+
+	@Test
+	void aFailedDeletionOfTheRecoveryProofShouldBeRetried() throws Exception {
+		final File keyStore = directory.resolve(SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME).toFile();
+		// Once ready (the second state written, after pending), the KeyStore cannot be written: the deletion after the
+		// first token fails
+		final AtomicInteger states = new AtomicInteger();
+		final AgentCredentialStore store = new AgentCredentialStore(directory, written -> {
+			if (written.equals(AgentCredentialStore.STATE_FILENAME) && states.incrementAndGet() == 2) {
+				keyStore.setWritable(false);
+			}
+		});
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(300);
+		keyStore.setWritable(true);
+		coordinator.awaitWorker();
+
+		assertNull(recoveryProofIn(directory), "deleted once the KeyStore could be written again");
 	}
 
 	@Test
@@ -798,6 +849,57 @@ class EnrollmentCoordinatorTest {
 		);
 		assertTrue(refusal.getMessage().contains("central.auth.enrollmentKey"), refusal.getMessage());
 		assertFalse(refusal.getMessage().contains(key), "never quoted");
+	}
+
+	@Test
+	void aNewCertificateShouldNotWaitForTheFormerBackoff() throws Exception {
+		script.add(new Answer(429, "{}", "30"));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(200);
+
+		final long changedAt = System.nanoTime();
+		final CentralConfig recertified = central(KEY);
+		recertified.setCertificateFile("");
+		coordinator.ready(recertified, DESCRIPTION);
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertTrue(Duration.ofNanos(System.nanoTime() - changedAt).toSeconds() < 10, "not after the former Retry-After");
+	}
+
+	@Test
+	void anUnboundedRetryAfterShouldNotEndTheWorker() throws Exception {
+		script.add(new Answer(503, "{}", String.valueOf(Long.MAX_VALUE)));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+
+		final Thread waiting = new Thread(() -> {
+			try {
+				coordinator.awaitWorker();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		});
+		waiting.start();
+		waiting.join(1_000);
+
+		assertTrue(waiting.isAlive(), "the worker waits, it did not die");
+		coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION);
+		waiting.join();
+	}
+
+	@Test
+	void anEnrolledAgentShouldIgnoreItsKeyWhateverItHolds() throws Exception {
+		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+
+		EnrollmentCoordinator.checkConfiguration(central("edited key"), () -> new AgentCredentialStore(directory));
 	}
 
 	@Test

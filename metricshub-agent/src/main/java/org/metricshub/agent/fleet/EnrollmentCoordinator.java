@@ -85,6 +85,7 @@ import org.metricshub.web.service.ApplicationStatusService;
 public class EnrollmentCoordinator {
 
 	private static final Duration MAX_BACKOFF = Duration.ofMinutes(5);
+	private static final Duration MAX_RETRY_AFTER = Duration.ofHours(1);
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -262,9 +263,11 @@ public class EnrollmentCoordinator {
 				worker.isAlive() &&
 				previous != null &&
 				(!Objects.equals(previous.issuerUrl(), latest.issuerUrl()) ||
-					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()))
+					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()) ||
+					!Objects.equals(previous.certificateFile(), latest.certificateFile()))
 		) {
-			// Wakes the worker (enrolling, or waiting for the first token) from a backoff the former issuer or key earned
+			// Wakes the worker (enrolling, or waiting for the first token) from a backoff the former issuer, key or
+			// certificate earned: the new ones are used at once
 			synchronized (backoff) {
 				settingsChanged = true;
 				backoff.notifyAll();
@@ -337,7 +340,20 @@ public class EnrollmentCoordinator {
 	 */
 	public String currentToken() throws IOException, InterruptedException {
 		final CentralTokenProvider provider = tokenProvider();
-		final String token = provider.currentToken();
+		final String token;
+		try {
+			token = provider.currentToken();
+		} catch (CentralTokenProvider.InvalidClientException e) {
+			if (provider != currentProvider()) {
+				// The former issuer refused: the new one is asked next
+				throw new IOException("The issuer changed while its token was asked.");
+			}
+			throw e;
+		}
+		if (provider != currentProvider()) {
+			// Obtained from the former issuer: neither used nor counted as the first token of the new one
+			throw new IOException("The issuer changed while its token was asked.");
+		}
 		// Defence: Central binds each token to the agent uid; a channel never presents another agent's
 		final String tokenUid = CentralTokenProvider.claims(token).path("agent_uid").asText(null);
 		if (!agentUid.equals(tokenUid)) {
@@ -358,6 +374,10 @@ public class EnrollmentCoordinator {
 			}
 		}
 		return token;
+	}
+
+	private synchronized CentralTokenProvider currentProvider() {
+		return tokenProvider;
 	}
 
 	/**
@@ -545,7 +565,8 @@ public class EnrollmentCoordinator {
 			);
 		}
 		final String key = auth.getEnrollmentKey();
-		if (key != null && !key.isBlank() && !key.trim().matches("[!-~]+")) {
+		// Only a key the agent may still send: once enrolled, it is ignored, whatever it holds
+		if (identity.status() != Status.READY && key != null && !key.isBlank() && !key.trim().matches("[!-~]+")) {
 			// Never quoted: it is a secret
 			throw new IllegalStateException(
 				"central.auth.enrollmentKey is not a valid key: it may only hold printable characters, without spaces. " +
@@ -632,15 +653,19 @@ public class EnrollmentCoordinator {
 
 	/**
 	 * Obtains the first token, which deletes the recovery proof, retrying with the token provider's own backoff
-	 * until Central answers or refuses the credential.
+	 * until Central answers or refuses the credential, and until the proof is gone.
 	 */
 	private void firstToken() throws InterruptedException {
 		retrySchedule.reset();
 		while (enrollmentWanted) {
 			try {
 				currentToken();
-				firstTokenDone = true;
-				return;
+				if (recoveryCleared) {
+					firstTokenDone = true;
+					return;
+				}
+				// The deletion failed: retried with the next token
+				pause("The enrollment recovery proof is not deleted yet", "the KeyStore could not be written", null);
 			} catch (CentralTokenProvider.InvalidClientException e) {
 				// Logged by the provider: the agent is revoked, nothing is retried
 				firstTokenDone = true;
@@ -653,7 +678,9 @@ public class EnrollmentCoordinator {
 	}
 
 	private void pause(final String step, final String failure, final Duration floor) throws InterruptedException {
-		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
+		// A server's Retry-After is bounded: any value, however large, must stay a delay the worker can wait
+		final Duration bounded = floor == null || floor.compareTo(MAX_RETRY_AFTER) <= 0 ? floor : MAX_RETRY_AFTER;
+		final Duration delay = retrySchedule.nextDelayAfterFailure(bounded);
 		log.warn("{}: {}. Next attempt in {}.", step, failure, delay);
 		final long until = System.nanoTime() + delay.toNanos();
 		synchronized (backoff) {

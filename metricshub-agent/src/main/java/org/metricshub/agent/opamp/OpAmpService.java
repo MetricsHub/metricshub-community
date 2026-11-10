@@ -205,8 +205,9 @@ public class OpAmpService {
 				!Objects.equals(upgradeEnabled, activeUpgradeEnabled) ||
 				!Objects.equals(auth, activeAuth)
 		) {
-			activeAuth = auth;
 			reconfigure(agentContext, config, upgradeEnabled);
+			// After it: the reconfiguration may have found the agent enrolled, which drops the key from the state
+			activeAuth = EnrollmentCoordinator.authState(agentContext.getAgentConfig().getCentral(), enrollment.isReady());
 		}
 
 		if (client != null && client.isStarted()) {

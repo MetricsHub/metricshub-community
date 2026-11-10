@@ -206,8 +206,8 @@ public class TunnelService {
 			enrollment.isReady()
 		);
 		if (!Objects.equals(config, activeConfig) || !Objects.equals(auth, activeAuth)) {
-			activeAuth = auth;
 			reconfigure(config);
+			activeAuth = EnrollmentCoordinator.authState(agentContext.getAgentConfig().getCentral(), enrollment.isReady());
 			return;
 		}
 		if (client != null && usesToken) {
