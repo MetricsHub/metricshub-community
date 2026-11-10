@@ -277,8 +277,22 @@ public class EnrollmentCoordinator {
 			} catch (IOException e) {
 				log.debug("Cannot read the agent identity yet: {}", e.getMessage());
 			}
-		} else if (worker.isAlive() || refusedAgain(latest)) {
-			// Running, or stopped by a refusal that only a new configuration (a new key) can change
+		} else if (worker.isAlive()) {
+			return false;
+		} else if (refusedAgain(latest)) {
+			// Stopped by a refusal that only a new configuration (a new key) can change, unless another process sharing
+			// the security directory completed the identity meanwhile
+			try {
+				final LocalIdentity identity = store.read();
+				wipe(identity.secret());
+				wipe(identity.recoverySecret());
+				if (identity.status() == Status.READY) {
+					ready = true;
+					return true;
+				}
+			} catch (IOException e) {
+				log.debug("Cannot read the agent identity: {}", e.getMessage());
+			}
 			return false;
 		}
 		retrySchedule.reset();
@@ -513,6 +527,8 @@ public class EnrollmentCoordinator {
 		synchronized (backoff) {
 			settingsChanged = false;
 		}
+		// The new settings owe nothing to the failures of the former ones
+		retrySchedule.reset();
 		return false;
 	}
 
