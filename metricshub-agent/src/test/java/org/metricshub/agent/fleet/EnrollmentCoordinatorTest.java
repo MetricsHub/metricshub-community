@@ -645,6 +645,15 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aRefusalWithAnEmptyBodyShouldStopToo() throws Exception {
+		script.add(new Answer(401, "", null));
+
+		assertFalse(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+
+		assertEquals(1, enrollBodies.size(), "never retried with the key");
+	}
+
+	@Test
 	void anEnrollmentNoLongerConfiguredShouldStop() throws Exception {
 		for (int failure = 0; failure < 20; failure++) {
 			script.add(new Answer(503, "{}", null));

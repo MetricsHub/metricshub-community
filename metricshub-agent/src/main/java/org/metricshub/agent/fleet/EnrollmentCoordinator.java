@@ -726,6 +726,9 @@ public class EnrollmentCoordinator {
 			// Never its message, which may quote the answer
 			throw new RetryableException("Central answered a body that is not JSON", null);
 		}
+		if (answer == null) {
+			throw new RetryableException("Central answered an empty body", null);
+		}
 		final String agentUid = answer.path("agent_uid").asText("");
 		final String secret = answer.path("client_secret").asText("");
 		if (secret.isEmpty()) {
@@ -748,7 +751,9 @@ public class EnrollmentCoordinator {
 	 */
 	private static String errorCode(final String body) {
 		try {
-			final String code = JSON.readTree(body).path("code").asText("");
+			final JsonNode answer = JSON.readTree(body);
+			// An empty body reads as no node at all
+			final String code = answer == null ? "" : answer.path("code").asText("");
 			return ERROR_CODES.contains(code) ? code : "unknown";
 		} catch (IOException e) {
 			return "unknown";
