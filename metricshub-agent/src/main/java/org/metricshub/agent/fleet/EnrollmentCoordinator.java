@@ -253,6 +253,8 @@ public class EnrollmentCoordinator {
 			Map.copyOf(description)
 		);
 		final Settings previous = settings;
+		// Published before the worker is woken: it reads the new settings when it goes on
+		settings = latest;
 		if (
 			worker != null &&
 				worker.isAlive() &&
@@ -270,9 +272,9 @@ public class EnrollmentCoordinator {
 		}
 		if (ready) {
 			if (
-				settings != null &&
-					(!Objects.equals(latest.issuerUrl(), settings.issuerUrl()) ||
-						!Objects.equals(latest.certificateFile(), settings.certificateFile()))
+				previous != null &&
+					(!Objects.equals(latest.issuerUrl(), previous.issuerUrl()) ||
+						!Objects.equals(latest.certificateFile(), previous.certificateFile()))
 			) {
 				// A reload moved the issuer or its certificate: the next token comes from there
 				if (tokenProvider != null) {
@@ -284,14 +286,12 @@ public class EnrollmentCoordinator {
 					firstTokenDone = false;
 				}
 			}
-			settings = latest;
 			if (!firstTokenDone && (worker == null || !worker.isAlive())) {
 				// Stopped by a reload that removed central.auth before the first token: resumed now it is back
 				startWorker();
 			}
 			return true;
 		}
-		settings = latest;
 		if (store == null) {
 			store = storeFactory.get();
 		}
@@ -364,10 +364,22 @@ public class EnrollmentCoordinator {
 			}
 			throw e;
 		}
-		if (provider != currentProvider()) {
-			// Obtained from the former issuer: neither used nor counted as the first token of the new one
-			throw new IOException("The issuer changed while its token was asked.");
+		// Under the lock ready() replaces the provider with: the check and the deletion of the recovery proof below are
+		// one step, so a reload never falls between them
+		synchronized (this) {
+			if (provider != currentProvider()) {
+				// Obtained from the former issuer: neither used nor counted as the first token of the new one
+				throw new IOException("The issuer changed while its token was asked.");
+			}
+			clearRecoveryOnce();
 		}
+		return token;
+	}
+
+	/**
+	 * Deletes the recovery proof after the first token; a failure is retried after the next one.
+	 */
+	private void clearRecoveryOnce() {
 		if (!recoveryCleared) {
 			try {
 				store.clearRecovery();
@@ -376,7 +388,6 @@ public class EnrollmentCoordinator {
 				log.warn("Cannot delete the enrollment recovery proof yet: {}. Retried after the next token.", e.getMessage());
 			}
 		}
-		return token;
 	}
 
 	synchronized CentralTokenProvider currentProvider() {
