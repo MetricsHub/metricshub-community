@@ -336,6 +336,25 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void reEnablingCentralAuthShouldResumeTheFirstToken() throws Exception {
+		tokensUnavailable = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		// Back, with Central answering again
+		tokensUnavailable = false;
+		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertNull(recoveryProofIn(directory), "the first token came, and the recovery proof went");
+	}
+
+	@Test
 	void noTokenShouldBeRequestedBeforeReady() throws Exception {
 		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
@@ -694,6 +713,47 @@ class EnrollmentCoordinatorTest {
 
 		assertEquals(1, recoverRequests.get());
 		assertTrue(enrollBodies.isEmpty(), "neither retried nor enrolled");
+	}
+
+	@Test
+	void anIssuerPortOutOfRangeShouldRefuseTheStartup() {
+		final CentralConfig central = central(KEY);
+		central.getAuth().setIssuerUrl("https://central.example.com:99999");
+
+		final IllegalStateException refusal = assertThrows(
+			IllegalStateException.class,
+			() -> EnrollmentCoordinator.checkConfiguration(central, () -> new AgentCredentialStore(directory))
+		);
+		assertTrue(refusal.getMessage().contains("central.auth.issuerUrl"), refusal.getMessage());
+	}
+
+	@Test
+	void aRefusedKeyShouldNotBeSentAgainAfterAnUnrelatedReload() throws Exception {
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(enrollWith(coordinator, central(KEY)));
+
+		// Only Central's certificate changed
+		final CentralConfig reloaded = central(KEY);
+		reloaded.setCertificateFile("/tmp/central-ca.pem");
+		assertFalse(coordinator.ready(reloaded, DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertEquals(1, enrollBodies.size(), "the refused key is never sent again");
+	}
+
+	@Test
+	void aMalformedClientSecretShouldNeverBeStored() throws Exception {
+		script.add(
+			new Answer(201, "{\"agent_uid\":\"0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91\",\"client_secret\":12345}", null)
+		);
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+
+		assertTrue(enrollWith(coordinator(store), central(KEY)));
+
+		final LocalIdentity identity = store.read();
+		assertNotEquals("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", identity.agentUid(), "the malformed answer was not kept");
+		assertEquals(attempts.values().iterator().next().secret(), new String(identity.secret()));
 	}
 
 	@Test
