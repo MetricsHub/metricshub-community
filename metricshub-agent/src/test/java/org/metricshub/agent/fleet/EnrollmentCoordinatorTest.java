@@ -1,8 +1,10 @@
 package org.metricshub.agent.fleet;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
@@ -98,6 +101,9 @@ class EnrollmentCoordinatorTest {
 	private final Deque<Answer> script = new ConcurrentLinkedDeque<>();
 	private final List<String> enrollBodies = new CopyOnWriteArrayList<>();
 	private final AtomicInteger recoverRequests = new AtomicInteger();
+	private final AtomicInteger tokenRequests = new AtomicInteger();
+	private final AtomicInteger metadataRequests = new AtomicInteger();
+	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile long retryAfterSentAt;
 	private volatile long firstRequestAfterRetryAfter;
@@ -110,6 +116,16 @@ class EnrollmentCoordinatorTest {
 		issuer = "http://127.0.0.1:" + server.getAddress().getPort();
 		server.createContext("/v1/agents/enroll", this::enroll);
 		server.createContext("/v1/enrollment-attempts/", this::recover);
+		server.createContext("/.well-known/oauth-authorization-server", exchange -> {
+			metadataRequests.incrementAndGet();
+			respond(
+				exchange,
+				200,
+				"{\"issuer\":\"" + issuer + "\",\"token_endpoint\":\"" + issuer + "/oauth2/token\"}",
+				null
+			);
+		});
+		server.createContext("/oauth2/token", this::token);
 		server.start();
 	}
 
@@ -175,6 +191,75 @@ class EnrollmentCoordinatorTest {
 			return;
 		}
 		respond(exchange, 200, identity(attempt), null);
+	}
+
+	private void token(final HttpExchange exchange) throws IOException {
+		final int request = tokenRequests.incrementAndGet();
+		final long iat = System.currentTimeMillis() / 1000;
+		final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+		final String jwt = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8)) +
+			"." +
+			encoder.encodeToString(
+				("{\"jti\":\"jti-" + request + "\",\"iat\":" + iat + ",\"exp\":" + (iat + 900) + "}").getBytes(
+					StandardCharsets.UTF_8
+				)
+			) +
+			".c2lnbmF0dXJl" +
+			request;
+		tokensHandedOut.add(jwt);
+		respond(exchange, 200, "{\"access_token\":\"" + jwt + "\",\"token_type\":\"Bearer\",\"expires_in\":900}", null);
+	}
+
+	private byte[] recoveryProofIn(final Path in) throws Exception {
+		return SecurityManager.readSecret(
+			in.resolve(SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME).toFile(),
+			AgentCredentialStore.RECOVERY_ALIAS
+		);
+	}
+
+	@Test
+	void theFirstTokenShouldDeleteTheRecoveryProofAndNeverTouchTheConfiguration() throws Exception {
+		final Path configuration = otherDirectory.resolve("metricshub.yaml");
+		Files.writeString(configuration, "central:\n  auth:\n    enrollmentKey: " + KEY + "\n");
+		final byte[] before = Files.readAllBytes(configuration);
+
+		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+
+		assertEquals(1, tokenRequests.get());
+		assertNull(recoveryProofIn(directory), "the recovery proof is gone after the first token");
+		assertArrayEquals(before, Files.readAllBytes(configuration));
+		final String yaml = Files.readString(configuration);
+		final Attempt attempt = attempts.values().iterator().next();
+		assertFalse(yaml.contains(attempt.secret()));
+		assertFalse(yaml.contains(attempt.agentUid()));
+	}
+
+	@Test
+	void noTokenShouldBeRequestedBeforeReady() throws Exception {
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+
+		assertFalse(enrollWith(coordinator, central(KEY)));
+
+		assertThrows(IOException.class, coordinator::currentToken);
+		assertEquals(0, metadataRequests.get() + tokenRequests.get(), "nothing reaches the token endpoint");
+	}
+
+	@Test
+	void aCrashBetweenTheTokenAndTheDeletionShouldDeleteAfterTheNextToken() throws Exception {
+		// The process stopped after its first token, before the deletion: ready, with the recovery proof left
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt("a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", randomSecret().getBytes(StandardCharsets.US_ASCII));
+		store.complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
+		final EnrollmentCoordinator restarted = coordinator(store);
+
+		assertTrue(restarted.ready(central(KEY), DESCRIPTION));
+		restarted.awaitWorker();
+
+		assertEquals(1, tokenRequests.get());
+		assertNull(recoveryProofIn(directory));
+		assertTrue(enrollBodies.isEmpty());
+		assertEquals(0, recoverRequests.get());
 	}
 
 	private void noteRequest() {
@@ -474,10 +559,11 @@ class EnrollmentCoordinatorTest {
 			.build();
 		appender.start();
 		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
-		final LoggerConfig logger = context.getConfiguration().getLoggerConfig(EnrollmentCoordinator.class.getName());
-		final Level level = logger.getLevel();
+		// The whole flow at TRACE: the coordinator, the store and the token provider share this package
+		final String fleet = EnrollmentCoordinator.class.getPackageName();
+		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
 		logger.addAppender(appender, Level.TRACE, null);
-		logger.setLevel(Level.TRACE);
+		context.getConfiguration().addLogger(fleet, logger);
 		context.updateLoggers();
 		try {
 			loseNextAnswer.set(true);
@@ -486,8 +572,7 @@ class EnrollmentCoordinatorTest {
 			script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 			assertFalse(enrollWith(coordinator(new AgentCredentialStore(otherDirectory)), central(KEY)));
 		} finally {
-			logger.removeAppender("enrollment");
-			logger.setLevel(level);
+			context.getConfiguration().removeLogger(fleet);
 			context.updateLoggers();
 			appender.stop();
 		}
@@ -501,6 +586,11 @@ class EnrollmentCoordinatorTest {
 		}
 		for (final String secret : secretsHandedOut) {
 			assertFalse(logs.contains(secret), logs);
+		}
+		assertFalse(tokensHandedOut.isEmpty());
+		for (final String token : tokensHandedOut) {
+			assertFalse(logs.contains(token), logs);
+			assertFalse(logs.contains(token.substring(token.indexOf('.') + 1)), logs);
 		}
 	}
 }
