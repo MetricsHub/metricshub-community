@@ -98,6 +98,7 @@ class EnrollmentCoordinatorTest {
 	private String issuer;
 	private final Map<String, Attempt> attempts = new ConcurrentHashMap<>();
 	private final Deque<Answer> script = new ConcurrentLinkedDeque<>();
+	private final Deque<Answer> recoverScript = new ConcurrentLinkedDeque<>();
 	private final List<String> enrollBodies = new CopyOnWriteArrayList<>();
 	private final AtomicInteger recoverRequests = new AtomicInteger();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
@@ -173,6 +174,11 @@ class EnrollmentCoordinatorTest {
 	private void recover(final HttpExchange exchange) throws IOException {
 		noteRequest();
 		recoverRequests.incrementAndGet();
+		final Answer scripted = recoverScript.poll();
+		if (scripted != null) {
+			respond(exchange, scripted.status(), scripted.body(), scripted.retryAfter());
+			return;
+		}
 		final String attemptId = exchange.getRequestURI().getPath().split("/")[3];
 		final Attempt attempt = attempts.get(attemptId);
 		if (
@@ -503,6 +509,19 @@ class EnrollmentCoordinatorTest {
 		central.setHeaders(headers);
 
 		EnrollmentCoordinator.checkConfiguration(central, () -> new AgentCredentialStore(directory));
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "409, attempt_closed", "409, idempotency_conflict", "410, enrollment_expired", "400, invalid_request" })
+	void aRecoveryRefusalShouldStopWithoutRetrying(final int status, final String code) throws Exception {
+		recoverScript.add(new Answer(status, "{\"code\":\"" + code + "\"}", null));
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt("a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", randomSecret().getBytes(StandardCharsets.US_ASCII));
+
+		assertFalse(enrollWith(coordinator(store), central(KEY)));
+
+		assertEquals(1, recoverRequests.get());
+		assertTrue(enrollBodies.isEmpty(), "neither retried nor enrolled");
 	}
 
 	@Test

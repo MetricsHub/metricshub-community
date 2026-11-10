@@ -86,9 +86,10 @@ public class OpAmpService {
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
 	/**
-	 * The {@code central.auth} the client was started with: adding or changing it reconnects through the enrollment.
+	 * The issuer of the {@code central.auth} the client was started with ({@code ""} without one): adding, removing or
+	 * moving it reconnects through the enrollment. The enrollment key is not part of it: ignored once enrolled.
 	 */
-	private CentralAuthConfig activeAuth;
+	private String activeIssuer;
 	private Boolean activeUpgradeEnabled;
 
 	/**
@@ -194,13 +195,13 @@ public class OpAmpService {
 
 		final OpAmpConfig config = agentContext.getAgentConfig().getCentral().opamp();
 		final boolean upgradeEnabled = isUpgradeEnabled(agentContext);
-		final CentralAuthConfig auth = agentContext.getAgentConfig().getCentral().getAuth();
+		final String issuer = issuerOf(agentContext.getAgentConfig().getCentral().getAuth());
 		if (
 			!Objects.equals(config, activeConfig) ||
 				!Objects.equals(upgradeEnabled, activeUpgradeEnabled) ||
-				!Objects.equals(auth, activeAuth)
+				!Objects.equals(issuer, activeIssuer)
 		) {
-			activeAuth = auth;
+			activeIssuer = issuer;
 			reconfigure(agentContext, config, upgradeEnabled);
 		}
 
@@ -416,5 +417,13 @@ public class OpAmpService {
 		public void onConnect() {
 			log.info("Connected to the OpAMP server.");
 		}
+	}
+
+	/**
+	 * @param auth the {@code central.auth} section, or {@code null}
+	 * @return its issuer URL, {@code ""} for a section without one, {@code null} without a section
+	 */
+	private static String issuerOf(final CentralAuthConfig auth) {
+		return auth == null ? null : Objects.requireNonNullElse(auth.getIssuerUrl(), "");
 	}
 }
