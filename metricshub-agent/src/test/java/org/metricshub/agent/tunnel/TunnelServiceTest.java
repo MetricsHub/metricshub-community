@@ -233,7 +233,7 @@ class TunnelServiceTest {
 	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.isReady()).thenReturn(false, false, false, true);
+		when(enrollment.isReady()).thenReturn(false, false, false, false, true);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		service.supervise();
