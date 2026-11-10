@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.TunnelConfig;
@@ -212,6 +213,25 @@ class TunnelServiceTest {
 
 		service.supervise();
 		assertEquals(1, createdClients.size());
+	}
+
+	@Test
+	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		service.supervise();
+		assertEquals(1, createdClients.size());
+
+		// Same channel settings, a new central.auth
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		service.supervise();
+		verify(createdClients.get(0)).stop(anyString());
+		assertEquals(1, createdClients.size(), "nothing connects before the enrollment");
+
+		service.supervise();
+		assertEquals(2, createdClients.size());
 	}
 
 	@Test

@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
@@ -84,6 +85,10 @@ public class OpAmpService {
 
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
+	/**
+	 * The {@code central.auth} the client was started with: adding or changing it reconnects through the enrollment.
+	 */
+	private CentralAuthConfig activeAuth;
 	private Boolean activeUpgradeEnabled;
 
 	/**
@@ -189,7 +194,13 @@ public class OpAmpService {
 
 		final OpAmpConfig config = agentContext.getAgentConfig().getCentral().opamp();
 		final boolean upgradeEnabled = isUpgradeEnabled(agentContext);
-		if (!Objects.equals(config, activeConfig) || !Objects.equals(upgradeEnabled, activeUpgradeEnabled)) {
+		final CentralAuthConfig auth = agentContext.getAgentConfig().getCentral().getAuth();
+		if (
+			!Objects.equals(config, activeConfig) ||
+				!Objects.equals(upgradeEnabled, activeUpgradeEnabled) ||
+				!Objects.equals(auth, activeAuth)
+		) {
+			activeAuth = auth;
 			reconfigure(agentContext, config, upgradeEnabled);
 		}
 
