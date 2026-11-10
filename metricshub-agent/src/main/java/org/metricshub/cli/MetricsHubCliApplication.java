@@ -26,6 +26,7 @@ import org.fusesource.jansi.AnsiConsole;
 import org.metricshub.cli.service.MetricsHubCliService;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
 import org.metricshub.cli.service.PrintParameterExceptionHandlerService;
+import org.metricshub.cli.util.WindowsCommandLine;
 import picocli.CommandLine;
 
 /**
@@ -67,7 +68,7 @@ public class MetricsHubCliApplication {
 		cli.setCaseInsensitiveEnumValuesAllowed(true);
 
 		// Execute the command
-		final int exitCode = cli.execute(args);
+		final int exitCode = cli.execute(WindowsCommandLine.args(args));
 
 		// Cleanup Windows terminal settings
 		AnsiConsole.systemUninstall();

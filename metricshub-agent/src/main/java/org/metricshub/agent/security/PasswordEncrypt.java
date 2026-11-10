@@ -31,6 +31,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.cli.util.WindowsCommandLine;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
@@ -129,9 +130,10 @@ public class PasswordEncrypt {
 	 * The entry-point of MetricsHub-encrypt which is used for encrypting passwords.
 	 * It reads the password from the command line or console input and prints the encrypted password.
 	 *
-	 * @param args Command line arguments
+	 * @param mainArgs Command line arguments
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] mainArgs) {
+		final String[] args = WindowsCommandLine.args(mainArgs);
 		try {
 			char[] password;
 
