@@ -34,6 +34,7 @@ import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.ConfigurationReloadService;
 import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
+import org.metricshub.cli.util.WindowsCommandLine;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.AgentContextReaderTracker;
@@ -72,7 +73,7 @@ public class MetricsHubAgentApplication implements Runnable {
 	 * @param args The command-line arguments passed to the application.
 	 */
 	public static void main(String[] args) {
-		new CommandLine(new MetricsHubAgentApplication()).execute(args);
+		new CommandLine(new MetricsHubAgentApplication()).execute(WindowsCommandLine.args(args));
 	}
 
 	@Override
