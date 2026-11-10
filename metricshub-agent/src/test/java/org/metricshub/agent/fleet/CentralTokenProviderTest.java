@@ -241,6 +241,23 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void aRefusedTokenShouldBeReplacedAtOnceWhateverTheRenewalBackoff() throws Exception {
+		final CentralTokenProvider provider = provider();
+		provider.currentToken();
+		// The renewal fails: the current token is kept, the next attempt put off
+		clock.advance(Duration.ofSeconds(480));
+		script.add(new Answer(503, "{}", "600"));
+		provider.currentToken();
+		assertEquals(2, tokenRequests.get());
+
+		// Central refuses that token (a handshake 401, a 4006 close)
+		provider.invalidate();
+		provider.currentToken();
+
+		assertEquals(3, tokenRequests.get(), "asked at once");
+	}
+
+	@Test
 	void a2MinuteTokenShouldBeRenewedAtHalfItsLifetime() throws Exception {
 		lifetime = 120;
 		final CentralTokenProvider provider = provider();

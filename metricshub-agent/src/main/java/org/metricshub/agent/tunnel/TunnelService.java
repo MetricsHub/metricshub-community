@@ -331,7 +331,8 @@ public class TunnelService {
 		TunnelClient newClient = null;
 		try {
 			snapshot = snapshotOf(newConfig.getExcludedTools());
-			usesToken = EnrollmentCoordinator.usesToken(agentContextHolder.getAgentContext());
+			// The context the settings came from: its authentication and its endpoint go together
+			usesToken = EnrollmentCoordinator.usesToken(agentContext);
 			final Map<String, String> headers = FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel");
 			final TunnelSettings settings = new TunnelSettings(
 				URI.create(endpoint.trim()),

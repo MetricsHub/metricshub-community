@@ -276,6 +276,8 @@ public class CentralTokenProvider {
 	 */
 	public synchronized void invalidate() {
 		token = null;
+		// Central refused the token: a new one is asked at once, whatever the backoff of a former renewal said
+		nextAttemptAt = Instant.MIN;
 	}
 
 	/**

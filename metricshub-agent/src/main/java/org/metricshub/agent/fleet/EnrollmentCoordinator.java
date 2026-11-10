@@ -327,6 +327,7 @@ public class EnrollmentCoordinator {
 				wipe(identity.secret());
 				wipe(identity.recoverySecret());
 				if (identity.status() == Status.READY) {
+					agentUid = identity.agentUid();
 					ready = true;
 					// As at a restart: the first token, and the recovery proof after it
 					startWorker();

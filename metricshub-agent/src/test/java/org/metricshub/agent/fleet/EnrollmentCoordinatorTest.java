@@ -940,6 +940,8 @@ class EnrollmentCoordinatorTest {
 		new AgentCredentialStore(directory).complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
 
 		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		// Known at once: the channels open with it before the worker runs
+		assertEquals("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", coordinator.agentUid());
 		coordinator.awaitWorker();
 
 		assertEquals(1, tokenRequests.get(), "its first token asked, as at a restart");

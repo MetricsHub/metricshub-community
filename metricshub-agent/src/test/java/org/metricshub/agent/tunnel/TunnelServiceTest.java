@@ -254,6 +254,34 @@ class TunnelServiceTest {
 	}
 
 	@Test
+	void theTokenModeShouldComeFromTheContextTheSettingsCameFrom() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn(UID);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		// A reload swaps in a context without central.auth while this pass builds the tunnel of the former one
+		final AgentContext reloaded = mock(AgentContext.class);
+		when(reloaded.getAgentConfig()).thenReturn(
+			AgentConfig.builder()
+				.central(
+					CentralConfig.builder()
+						.enabled(true)
+						.tunnel(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build())
+						.build()
+				)
+				.build()
+		);
+		when(agentContextHolder.getAgentContext()).thenReturn(agentContext, reloaded);
+
+		service.supervise();
+
+		assertEquals(1, createdClients.size());
+		verify(createdClients.get(0)).useCredential(any(), any());
+	}
+
+	@Test
 	void theTunnelShouldNeverStartTheEnrollmentItself() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		service.setEnrollment(enrollment);
