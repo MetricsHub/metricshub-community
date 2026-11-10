@@ -394,6 +394,17 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aRefusedCredentialShouldEndTheFirstTokenWork() throws Exception {
+		tokensRefused = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+
+		assertTrue(enrollWith(coordinator, central(KEY)));
+
+		assertTrue(coordinator.isFirstTokenDone(), "revoked: no worker is started again for it");
+		assertEquals(1, tokenRequests.get());
+	}
+
+	@Test
 	void anotherIssuerAfterARefusedCredentialShouldGetTheFirstTokenThere() throws Exception {
 		tokensRefused = true;
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
