@@ -558,6 +558,33 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aWakeUpMeantForTheFormerWorkerShouldNotCutTheNextOnesBackoff() throws Exception {
+		holdEnrollAnswer = new CountDownLatch(1);
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		script.add(new Answer(429, "{}", "30"));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		// A new key while the refused request is in flight: a wake-up its worker never consumes
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		holdEnrollAnswer.countDown();
+		coordinator.awaitWorker();
+
+		// The new key's worker gets a Retry-After of 30 s
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		while (enrollBodies.size() < 2) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(1_000);
+
+		assertFalse(coordinator.isReady(), "it waits its Retry-After");
+		coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION);
+		coordinator.awaitWorker();
+	}
+
+	@Test
 	void aNewCertificateShouldNotWaitForTheFormerBackoff() throws Exception {
 		script.add(new Answer(429, "{}", "30"));
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
@@ -608,10 +635,11 @@ class EnrollmentCoordinatorTest {
 		EnrollmentCoordinator.checkConfiguration(central("edited key"), () -> new AgentCredentialStore(directory));
 	}
 
-	@Test
-	void anIssuerPortOutOfRangeShouldRefuseTheStartup() {
+	@ParameterizedTest
+	@ValueSource(strings = { "https://central.example.com:99999", "https://central.example.com:0" })
+	void anIssuerPortOutOfRangeShouldRefuseTheStartup(final String issuerUrl) {
 		final CentralConfig central = central(KEY);
-		central.getAuth().setIssuerUrl("https://central.example.com:99999");
+		central.getAuth().setIssuerUrl(issuerUrl);
 
 		final IllegalStateException refusal = assertThrows(
 			IllegalStateException.class,

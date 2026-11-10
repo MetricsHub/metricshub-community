@@ -284,6 +284,10 @@ public class EnrollmentCoordinator {
 			return false;
 		}
 		retrySchedule.reset();
+		synchronized (backoff) {
+			// A wake-up meant for a former worker never cuts this one's first backoff
+			settingsChanged = false;
+		}
 		worker = new Thread(this::run, "metricshub-central-enrollment");
 		worker.setDaemon(true);
 		worker.start();
@@ -350,6 +354,7 @@ public class EnrollmentCoordinator {
 		final String path = issuer.getRawPath();
 		if (
 			issuer.getRawUserInfo() != null ||
+				issuer.getPort() == 0 ||
 				issuer.getPort() > 65535 ||
 				issuer.getRawQuery() != null ||
 				issuer.getRawFragment() != null ||
