@@ -104,6 +104,7 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger recoverRequests = new AtomicInteger();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
+	private volatile CountDownLatch holdRecoverAnswer = new CountDownLatch(0);
 	private volatile long retryAfterSentAt;
 	private volatile long firstRequestAfterRetryAfter;
 	private final List<String> secretsHandedOut = Collections.synchronizedList(new ArrayList<>());
@@ -175,6 +176,11 @@ class EnrollmentCoordinatorTest {
 	private void recover(final HttpExchange exchange) throws IOException {
 		noteRequest();
 		recoverRequests.incrementAndGet();
+		try {
+			holdRecoverAnswer.await();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 		final Answer scripted = recoverScript.poll();
 		if (scripted != null) {
 			respond(exchange, scripted.status(), scripted.body(), scripted.retryAfter());
@@ -555,6 +561,53 @@ class EnrollmentCoordinatorTest {
 		);
 		assertTrue(refusal.getMessage().contains("central.auth.enrollmentKey"), refusal.getMessage());
 		assertFalse(refusal.getMessage().contains(key), "never quoted");
+	}
+
+	@Test
+	void aRecovery401WithoutItsCodeShouldNotSendTheKey() throws Exception {
+		recoverScript.add(new Answer(401, "", null));
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt("a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", randomSecret().getBytes(StandardCharsets.US_ASCII));
+
+		assertFalse(enrollWith(coordinator(store), central(KEY)));
+
+		assertTrue(enrollBodies.isEmpty(), "an intermediary's 401 is no proof that nothing can be recovered");
+	}
+
+	@Test
+	void aKeyAddedDuringTheRecoveryShouldBeUsed() throws Exception {
+		holdRecoverAnswer = new CountDownLatch(1);
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		store.beginAttempt("a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d", randomSecret().getBytes(StandardCharsets.US_ASCII));
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertFalse(coordinator.ready(central(null), DESCRIPTION));
+		while (recoverRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		holdRecoverAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "enrolled with the key added meanwhile");
+	}
+
+	@Test
+	void aRefusalFromBeforeACertificateChangeShouldGoOnWithTheNewOne() throws Exception {
+		holdEnrollAnswer = new CountDownLatch(1);
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		final CentralConfig recertified = central(KEY);
+		recertified.setCertificateFile("");
+		assertFalse(coordinator.ready(recertified, DESCRIPTION));
+		holdEnrollAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
 	}
 
 	@Test
