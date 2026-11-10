@@ -160,6 +160,8 @@ public class EnrollmentCoordinator {
 	/** The last worker stopped by a reload, until it ends (tests wait for it). */
 	private Thread stopping;
 	private Settings stoppedWith;
+	/** Runs when the worker has decided to end, before it does (tests). */
+	volatile Runnable beforeWorkerEnds = () -> {};
 
 	/**
 	 * Creates a coordinator (tests).
@@ -276,6 +278,10 @@ public class EnrollmentCoordinator {
 				}
 			} catch (IOException e) {
 				log.debug("Cannot read the agent identity yet: {}", e.getMessage());
+			}
+			if (refusedAgain(latest)) {
+				// Stopped by a refusal of these very settings: only new ones ask again
+				return false;
 			}
 		} else if (worker.isAlive()) {
 			if (isStoredReady()) {
@@ -496,6 +502,7 @@ public class EnrollmentCoordinator {
 					final String agentUid = enroll(current, httpClient);
 					if (agentUid == null) {
 						if (stopUnlessReplaced(current)) {
+							beforeWorkerEnds.run();
 							return;
 						}
 						continue;
@@ -505,6 +512,7 @@ public class EnrollmentCoordinator {
 					return;
 				} catch (RefusedException e) {
 					if (stopUnlessReplaced(current)) {
+						beforeWorkerEnds.run();
 						return;
 					}
 				} catch (RetryableException e) {
@@ -532,6 +540,17 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
+	 * Forgets the calling worker, under the lock its decision to end was taken with: a reload that follows starts a
+	 * new one when its settings need it, instead of counting on a worker that is ending.
+	 */
+	private synchronized void detachWorker() {
+		if (worker == Thread.currentThread()) {
+			stopping = worker;
+			worker = null;
+		}
+	}
+
+	/**
 	 * Stops the worker after a refusal, or a lack of key, that answered the settings still configured. When a reload
 	 * replaced the issuer, the key or the certificate meanwhile, the worker goes on at once with the new ones instead,
 	 * that reload's wake-up used up: it must not cut the backoff the new ones may earn.
@@ -543,6 +562,7 @@ public class EnrollmentCoordinator {
 		synchronized (this) {
 			if (isCurrent(current)) {
 				stoppedWith = current;
+				detachWorker();
 				return true;
 			}
 		}

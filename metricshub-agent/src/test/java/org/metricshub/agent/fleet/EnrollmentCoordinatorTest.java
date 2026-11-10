@@ -419,6 +419,32 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aNewKeyRightAfterTheRefusalDecisionShouldStartANewWorker() throws Exception {
+		script.add(new Answer(401, "{\"code\":\"enrollment_not_authorized\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		final CountDownLatch decided = new CountDownLatch(1);
+		final CountDownLatch reloaded = new CountDownLatch(1);
+		coordinator.beforeWorkerEnds = () -> {
+			decided.countDown();
+			try {
+				reloaded.await();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		};
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		decided.await();
+
+		// The new key lands after the worker decided to stop, before it ended
+		coordinator.beforeWorkerEnds = () -> {};
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		reloaded.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "the new key is tried without another reload");
+	}
+
+	@Test
 	void anOutageShouldBeRetriedUntilCentralAnswers() throws Exception {
 		script.add(new Answer(503, "{}", null));
 		script.add(new Answer(500, "{}", null));
