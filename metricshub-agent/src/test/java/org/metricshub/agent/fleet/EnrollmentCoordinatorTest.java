@@ -243,6 +243,22 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aReloadMovingTheIssuerShouldTakeTheNextTokenFromThere() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		assertEquals(1, metadataRequests.get());
+
+		// Another issuer string (the same stub here)
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		coordinator.invalidateToken();
+		coordinator.currentToken();
+
+		assertEquals(2, metadataRequests.get(), "the token provider was rebuilt for the new issuer");
+	}
+
+	@Test
 	void noTokenShouldBeRequestedBeforeReady() throws Exception {
 		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));

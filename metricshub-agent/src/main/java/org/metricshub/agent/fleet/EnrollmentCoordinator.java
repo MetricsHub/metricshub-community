@@ -187,9 +187,6 @@ public class EnrollmentCoordinator {
 	 */
 	public boolean ready(final AgentContext agentContext) {
 		final CentralConfig central = agentContext.getAgentConfig().getCentral();
-		if (ready) {
-			return true;
-		}
 		if (!isConfigured(central)) {
 			// Stops an enrollment that a reload no longer asks for
 			return ready(central, Map.of());
@@ -224,9 +221,6 @@ public class EnrollmentCoordinator {
 			return true;
 		}
 		enrollmentWanted = true;
-		if (ready) {
-			return true;
-		}
 		final CentralAuthConfig auth = central.getAuth();
 		final Settings latest = new Settings(
 			auth.getIssuerUrl(),
@@ -234,6 +228,18 @@ public class EnrollmentCoordinator {
 			central.getCertificateFile(),
 			Map.copyOf(description)
 		);
+		if (ready) {
+			if (
+				settings != null &&
+					(!Objects.equals(latest.issuerUrl(), settings.issuerUrl()) ||
+						!Objects.equals(latest.certificateFile(), settings.certificateFile()))
+			) {
+				// A reload moved the issuer or its certificate: the next token comes from there
+				tokenProvider = null;
+			}
+			settings = latest;
+			return true;
+		}
 		settings = latest;
 		if (store == null) {
 			store = storeFactory.get();
@@ -300,7 +306,8 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * @return the process's token provider, created the first time the agent is enrolled
+	 * @return the process's token provider, created the first time the agent is enrolled, and again after a reload
+	 *         changed the issuer or its certificate
 	 * @throws IOException when the agent is not enrolled, or the certificate file cannot be read
 	 */
 	private synchronized CentralTokenProvider tokenProvider() throws IOException {
@@ -308,7 +315,7 @@ public class EnrollmentCoordinator {
 			throw new IOException("The agent is not enrolled into MetricsHub Central yet.");
 		}
 		if (tokenProvider == null) {
-			// ponytail: built from the settings at the first token; a new issuerUrl needs a restart
+			// Built from the current settings; ready() drops it when a reload changes them
 			final Settings current = settings;
 			final AgentCredentialStore credentials = store;
 			tokenProvider = new CentralTokenProvider(current.issuerUrl().trim(), () -> {
