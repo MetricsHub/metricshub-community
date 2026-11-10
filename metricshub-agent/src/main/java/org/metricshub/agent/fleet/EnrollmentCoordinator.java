@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -150,6 +151,9 @@ public class EnrollmentCoordinator {
 	 * {@code central.auth}.
 	 */
 	private volatile boolean enrollmentWanted;
+	/** The worker's backoff waits on it; a new issuer or key wakes it up. */
+	private final Object backoff = new Object();
+	private boolean settingsChanged;
 	private volatile Settings settings;
 	private Thread worker;
 	private Settings stoppedWith;
@@ -237,7 +241,21 @@ public class EnrollmentCoordinator {
 			central.getCertificateFile(),
 			Map.copyOf(description)
 		);
+		final Settings previous = settings;
 		settings = latest;
+		if (
+			worker != null &&
+				worker.isAlive() &&
+				previous != null &&
+				(!Objects.equals(previous.issuerUrl(), latest.issuerUrl()) ||
+					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()))
+		) {
+			// Wakes the worker from a backoff the former issuer or key earned, so the new ones are used at once
+			synchronized (backoff) {
+				settingsChanged = true;
+				backoff.notifyAll();
+			}
+		}
 		if (store == null) {
 			store = storeFactory.get();
 		}
@@ -350,7 +368,15 @@ public class EnrollmentCoordinator {
 					NEW_COMMAND
 			);
 		}
-		if (identity.status() == Status.ABSENT && (auth.getEnrollmentKey() == null || auth.getEnrollmentKey().isBlank())) {
+		final String key = auth.getEnrollmentKey();
+		if (key != null && !key.isBlank() && !key.trim().matches("[!-~]+")) {
+			// Never quoted: it is a secret
+			throw new IllegalStateException(
+				"central.auth.enrollmentKey is not a valid key: it may only hold printable characters, without spaces. " +
+					NEW_COMMAND
+			);
+		}
+		if (identity.status() == Status.ABSENT && (key == null || key.isBlank())) {
 			throw new IllegalStateException(
 				"central.auth.enrollmentKey is required: this agent is not enrolled into Central yet. " + NEW_COMMAND
 			);
@@ -429,7 +455,18 @@ public class EnrollmentCoordinator {
 	private void pause(final String failure, final Duration floor) throws InterruptedException {
 		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
 		log.warn("The enrollment into MetricsHub Central did not complete: {}. Next attempt in {}.", failure, delay);
-		Thread.sleep(delay.toMillis());
+		final long until = System.nanoTime() + delay.toNanos();
+		synchronized (backoff) {
+			long left;
+			while (!settingsChanged && (left = until - System.nanoTime()) > 0) {
+				TimeUnit.NANOSECONDS.timedWait(backoff, left);
+			}
+			if (settingsChanged) {
+				// A new issuer or key owes nothing to the former one's backoff
+				settingsChanged = false;
+				retrySchedule.reset();
+			}
+		}
 	}
 
 	/**

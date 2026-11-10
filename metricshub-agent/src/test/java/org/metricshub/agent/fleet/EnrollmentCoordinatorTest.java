@@ -525,6 +525,38 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aNewIssuerShouldNotWaitForTheFormerOnesBackoff() throws Exception {
+		script.add(new Answer(429, "{}", "30"));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(200);
+
+		// Another issuer string (the same stub here) while the worker waits 30 s
+		final long movedAt = System.nanoTime();
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		coordinator.ready(moved, DESCRIPTION);
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertTrue(Duration.ofNanos(System.nanoTime() - movedAt).toSeconds() < 10, "not after the former Retry-After");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "mh_enr_a\nb", "mh_enr_a b", "mh_enr_é" })
+	void anEnrollmentKeyThatCannotBeAHeaderShouldRefuseTheStartup(final String key) {
+		final IllegalStateException refusal = assertThrows(
+			IllegalStateException.class,
+			() -> EnrollmentCoordinator.checkConfiguration(central(key), () -> new AgentCredentialStore(directory))
+		);
+		assertTrue(refusal.getMessage().contains("central.auth.enrollmentKey"), refusal.getMessage());
+		assertFalse(refusal.getMessage().contains(key), "never quoted");
+	}
+
+	@Test
 	void anIssuerPortOutOfRangeShouldRefuseTheStartup() {
 		final CentralConfig central = central(KEY);
 		central.getAuth().setIssuerUrl("https://central.example.com:99999");
