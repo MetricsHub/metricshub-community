@@ -281,18 +281,25 @@ public class ToolBridge {
 		final Future<?> execution;
 		try {
 			execution = workers.submit(() -> {
-				answering.incrementAndGet();
+				// Raised once the call returned, never while it runs: a call that outlived its deadline was answered
+				// already and must not hold the quiescent mark
+				boolean handingOver = false;
 				try {
 					final TunnelMessage answer;
 					try {
 						answer = execute(invoke, callback, currentLimits, startedAt);
 					} finally {
+						// Before the slot is freed: no moment shows neither a call nor an answer in flight
+						answering.incrementAndGet();
+						handingOver = true;
 						// Free the slot before the answer leaves: the server may invoke again right away
 						release(released);
 					}
 					answerOnce(answered, generation, answer);
 				} finally {
-					answering.decrementAndGet();
+					if (handingOver) {
+						answering.decrementAndGet();
+					}
 				}
 				cancel(deadline.getAndSet(null));
 			});

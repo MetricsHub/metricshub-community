@@ -3,6 +3,7 @@ package org.metricshub.agent.fleet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -293,6 +294,20 @@ class CentralTokenProviderTest {
 		clock.advance(Duration.ofSeconds(1));
 		assertNotEquals(first, provider.currentToken());
 		assertEquals(2, tokenRequests.get());
+	}
+
+	@Test
+	void theReplacedTokenShouldKeepItsOwnExpiry() throws Exception {
+		lifetime = 120;
+		final CentralTokenProvider provider = provider();
+		final String first = provider.currentToken();
+		clock.advance(Duration.ofSeconds(60));
+		final String second = provider.currentToken();
+
+		// A channel that presented the first token just before the renewal still learns when it ends
+		assertEquals(START.plusSeconds(120), provider.expiresAt(first));
+		assertEquals(START.plusSeconds(180), provider.expiresAt(second));
+		assertNull(provider.expiresAt("another-token"));
 	}
 
 	@Test

@@ -291,6 +291,24 @@ class ToolBridgeTest {
 	}
 
 	@Test
+	void anInvocationPastItsDeadlineShouldNotHoldTheQuiescentMark() throws Exception {
+		final CountDownLatch stuck = new CountDownLatch(1);
+		when(slow.call(anyString())).thenAnswer(invocation -> {
+			blockIgnoringInterruption(stuck);
+			return "{}";
+		});
+		try {
+			bridge.invoke(invoke("Slow", 200), GENERATION);
+			assertInstanceOf(ToolError.class, answer(), "the timeout answer");
+
+			// Still running, ignoring its interruption, but answered and its slot freed
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> bridge.quiescentMark() == 1);
+		} finally {
+			stuck.countDown();
+		}
+	}
+
+	@Test
 	void shouldFreeTheSlotOfAnInvocationThatIgnoredItsDeadline() throws Exception {
 		bridge.setLimits(new AgentRegistered(30, 8L * 1024 * 1024, 1));
 		final CountDownLatch stuck = new CountDownLatch(1);

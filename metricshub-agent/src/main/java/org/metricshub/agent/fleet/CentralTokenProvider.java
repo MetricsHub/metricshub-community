@@ -125,6 +125,9 @@ public class CentralTokenProvider {
 	private String token;
 	private Instant renewAt;
 	private Instant expiresAt;
+	/** The token the cached one replaced, and its expiry: a channel that presented it still learns when it ends. */
+	private String previousToken;
+	private Instant previousExpiresAt;
 	private Instant nextAttemptAt = Instant.MIN;
 	private String lastFailure;
 	private boolean invalidClient;
@@ -256,11 +259,21 @@ public class CentralTokenProvider {
 
 	/**
 	 * @param of a token this provider handed out
-	 * @return when it expires, on the local clock, when it is still the cached one, else {@code null}: never the
-	 *         expiry of another token
+	 * @return when it expires, on the local clock, when it is the cached one or the one it replaced, else
+	 *         {@code null}: never the expiry of another token
 	 */
 	public synchronized Instant expiresAt(final String of) {
-		return of != null && of.equals(token) ? expiresAt : null;
+		if (of == null) {
+			return null;
+		}
+		return of.equals(token) ? expiresAt : of.equals(previousToken) ? previousExpiresAt : null;
+	}
+
+	private void keepAsPrevious() {
+		if (token != null) {
+			previousToken = token;
+			previousExpiresAt = expiresAt;
+		}
 	}
 
 	/**
@@ -293,6 +306,7 @@ public class CentralTokenProvider {
 		if (rejected != null && !rejected.equals(token)) {
 			return;
 		}
+		keepAsPrevious();
 		token = null;
 		// Central refused the token: a new one is asked at once, whatever the backoff of a former renewal said
 		nextAttemptAt = Instant.MIN;
@@ -379,6 +393,7 @@ public class CentralTokenProvider {
 		final Instant received = clock.instant();
 		final long renewAfter = Math.max(lifetime / 2, lifetime - margin.toSeconds());
 		final long jitterMs = (long) (random.nextDouble() * Math.min(MAX_JITTER.toMillis(), lifetime * 1000 / 10));
+		keepAsPrevious();
 		token = accessToken;
 		expiresAt = received.plusSeconds(lifetime);
 		renewAt = received.plusSeconds(renewAfter).minusMillis(jitterMs);

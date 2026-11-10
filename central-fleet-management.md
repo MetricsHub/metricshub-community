@@ -246,7 +246,7 @@ Processed by [`HttpPollingOpampClient.processServerToAgent()`](metricshub-opamp-
 | 5 | `packages_available` | ✅ | Dispatched to the registered `OpampPackagesHandler` |
 | 6 | `flags` | ✅ partially | Only `ServerToAgentFlags_ReportFullState` is acted on: full state, re-poll immediately. `ReportAvailableComponents` is ignored |
 | 7 | `capabilities` | ⚠️ forwarded only | The agent does not adapt its behavior to server capabilities |
-| 8 | `agent_identification` | ✅ | `new_instance_uid` adopted in memory **and** persisted. Rejected unless exactly 16 bytes — a malformed UID cannot poison the identity |
+| 8 | `agent_identification` | ✅ | `new_instance_uid` adopted in memory **and** persisted. Rejected unless exactly 16 bytes — a malformed UID cannot poison the identity. With `central.auth`, always refused: the uid is the one Central assigned at enrollment |
 | 9 | `command` | ⚠️ forwarded only | `RESTART` is **not** implemented (`AcceptsRestartCommand` is not advertised) |
 | 10 | `custom_capabilities` | ⚠️ forwarded only | — |
 | 11 | `custom_message` | ⚠️ forwarded only | — |
@@ -894,9 +894,9 @@ The payload cap and the concurrency cap are **not** configurable on the agent: t
 
 ### 13.5 On-disk state
 
-None of its own. The uid comes from `security/metricshub-agent-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports.
+None of its own. Without `central.auth`, the uid comes from `security/metricshub-agent-uid` through `AgentInstanceUid` — the file OpAMP created, or creates it when OpAMP is disabled — so the fleet sees one agent whichever channel reports. With `central.auth`, the uid is the one Central assigned at enrollment, which the tunnel takes from the enrollment coordinator; neither channel loads, creates nor rewrites it.
 
-One exception, deliberate: an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `central:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
+One exception, deliberate, and only without `central.auth` (with it, OpAMP refuses `new_instance_uid`): an OpAMP server may reassign an agent's identity with `AgentIdentification.new_instance_uid`. The OpAMP client adopts it immediately and rewrites the file, but the tunnel reads the uid once, when its client is built, so the two channels report different identities until the `central:` configuration changes or the agent restarts. Reassignment is rare and neither channel loses data — the fleet simply sees two identities for the interval. Rebuilding the tunnel on reassignment is the fix if that ever matters.
 
 ### 13.6 Security decisions
 
