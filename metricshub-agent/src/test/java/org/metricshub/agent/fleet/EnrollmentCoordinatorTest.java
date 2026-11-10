@@ -285,7 +285,7 @@ class EnrollmentCoordinatorTest {
 		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
 
 		assertEquals(1, tokenRequests.get());
-		assertNull(recoveryProofIn(directory), "the recovery proof is gone after the first token");
+		assertTrue(recoveryProofIn(directory) == null, "the recovery proof is gone after the first token");
 		assertArrayEquals(before, Files.readAllBytes(configuration));
 		final String yaml = Files.readString(configuration);
 		final Attempt attempt = attempts.values().iterator().next();
@@ -411,7 +411,7 @@ class EnrollmentCoordinatorTest {
 		tokensRefused = true;
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
 		assertTrue(enrollWith(coordinator, central(KEY)));
-		assertNotNull(recoveryProofIn(directory), "no token, the proof stays");
+		assertTrue(recoveryProofIn(directory) != null, "no token, the proof stays");
 
 		// Another issuer string (the same stub here), which accepts the credential
 		tokensRefused = false;
@@ -420,7 +420,39 @@ class EnrollmentCoordinatorTest {
 		assertTrue(coordinator.ready(moved, DESCRIPTION));
 		coordinator.awaitWorker();
 
-		assertNull(recoveryProofIn(directory), "the first token of the new issuer came, and the proof went");
+		assertTrue(recoveryProofIn(directory) == null, "the first token of the new issuer came, and the proof went");
+	}
+
+	@Test
+	void anotherIssuerRightAfterARefusedCredentialShouldGetTheFirstTokenThere() throws Exception {
+		tokensRefused = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		final CountDownLatch decided = new CountDownLatch(1);
+		final CountDownLatch reloaded = new CountDownLatch(1);
+		coordinator.beforeWorkerEnds = () -> {
+			decided.countDown();
+			try {
+				reloaded.await();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		};
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		decided.await();
+
+		// Another issuer lands after the worker took the refusal, before it ended
+		coordinator.beforeWorkerEnds = () -> {};
+		tokensRefused = false;
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		reloaded.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(
+			recoveryProofIn(directory) == null,
+			"the new issuer is asked for the first token without another reload"
+		);
 	}
 
 	@Test
@@ -441,7 +473,7 @@ class EnrollmentCoordinatorTest {
 
 		assertEquals(2, metadataRequests.get(), "the new issuer was asked");
 		assertEquals(2, tokenRequests.get());
-		assertNull(recoveryProofIn(directory));
+		assertTrue(recoveryProofIn(directory) == null);
 	}
 
 	@Test
@@ -464,7 +496,7 @@ class EnrollmentCoordinatorTest {
 		keyStore.setWritable(true);
 		coordinator.awaitWorker();
 
-		assertNull(recoveryProofIn(directory), "deleted once the KeyStore could be written again");
+		assertTrue(recoveryProofIn(directory) == null, "deleted once the KeyStore could be written again");
 	}
 
 	@Test
@@ -483,7 +515,7 @@ class EnrollmentCoordinatorTest {
 		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
 		coordinator.awaitWorker();
 
-		assertNull(recoveryProofIn(directory), "the first token came, and the recovery proof went");
+		assertTrue(recoveryProofIn(directory) == null, "the first token came, and the recovery proof went");
 	}
 
 	@Test
@@ -509,7 +541,7 @@ class EnrollmentCoordinatorTest {
 		restarted.awaitWorker();
 
 		assertEquals(1, tokenRequests.get());
-		assertNull(recoveryProofIn(directory));
+		assertTrue(recoveryProofIn(directory) == null);
 		assertTrue(enrollBodies.isEmpty());
 		assertEquals(0, recoverRequests.get());
 	}
@@ -724,6 +756,32 @@ class EnrollmentCoordinatorTest {
 		// A new key resumes the same attempt
 		assertTrue(enrollWith(coordinator, central(OTHER_KEY)));
 		assertEquals(attemptId, JSON.readTree(enrollBodies.get(enrollBodies.size() - 1)).path("attempt_id").asText());
+	}
+
+	@Test
+	void aNewKeyRightAfterTheRefusalDecisionShouldStartANewWorker() throws Exception {
+		script.add(new Answer(401, "{\"code\":\"enrollment_not_authorized\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		final CountDownLatch decided = new CountDownLatch(1);
+		final CountDownLatch reloaded = new CountDownLatch(1);
+		coordinator.beforeWorkerEnds = () -> {
+			decided.countDown();
+			try {
+				reloaded.await();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		};
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		decided.await();
+
+		// The new key lands after the worker decided to stop, before it ended
+		coordinator.beforeWorkerEnds = () -> {};
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		reloaded.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "the new key is tried without another reload");
 	}
 
 	@Test
