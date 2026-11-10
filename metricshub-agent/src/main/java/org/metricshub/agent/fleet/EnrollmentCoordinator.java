@@ -321,6 +321,8 @@ public class EnrollmentCoordinator {
 				wipe(identity.recoverySecret());
 				if (identity.status() == Status.READY) {
 					ready = true;
+					// As at a restart: the first token, and the recovery proof after it
+					startWorker();
 					return true;
 				}
 			} catch (IOException e) {
