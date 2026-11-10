@@ -852,7 +852,25 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
-	void aWakeUpMeantForTheFormerWorkerShouldNotCutTheNextOnesBackoff() throws Exception {
+	void aRefusalForAReplacedKeyShouldGoOnWithTheNewOne() throws Exception {
+		holdEnrollAnswer = new CountDownLatch(1);
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+
+		// A new key while the old one's request is in flight, then the old one is refused
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		holdEnrollAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "enrolled with the new key, without another reload");
+	}
+
+	@Test
+	void theNewKeysBackoffShouldNotBeCutByTheWakeUpItAlreadyUsed() throws Exception {
 		holdEnrollAnswer = new CountDownLatch(1);
 		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 		script.add(new Answer(429, "{}", "30"));
@@ -861,21 +879,34 @@ class EnrollmentCoordinatorTest {
 		while (enrollBodies.isEmpty()) {
 			Thread.sleep(10);
 		}
-		// A new key while the refused request is in flight: a wake-up its worker never consumes
 		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
 		holdEnrollAnswer.countDown();
-		coordinator.awaitWorker();
-
-		// The new key's worker gets a Retry-After of 30 s
-		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
 		while (enrollBodies.size() < 2) {
 			Thread.sleep(10);
 		}
 		Thread.sleep(1_000);
 
-		assertFalse(coordinator.isReady(), "it waits its Retry-After");
+		assertFalse(coordinator.isReady(), "the new key waits its Retry-After");
 		coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION);
 		coordinator.awaitWorker();
+	}
+
+	@Test
+	void aResponseFromBeforeACertificateChangeShouldNotBeKept() throws Exception {
+		holdEnrollAnswer = new CountDownLatch(1);
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		final CentralConfig recertified = central(KEY);
+		recertified.setCertificateFile("");
+		assertFalse(coordinator.ready(recertified, DESCRIPTION));
+		holdEnrollAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertEquals(1, recoverRequests.get(), "the identity is asked again with the new certificate");
 	}
 
 	@Test

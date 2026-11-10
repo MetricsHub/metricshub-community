@@ -639,9 +639,19 @@ public class EnrollmentCoordinator {
 					return;
 				} catch (RefusedException e) {
 					synchronized (this) {
-						stoppedWith = current;
+						if (
+							Objects.equals(current.issuerUrl(), settings.issuerUrl()) &&
+								Objects.equals(current.enrollmentKey(), settings.enrollmentKey())
+						) {
+							stoppedWith = current;
+							return;
+						}
 					}
-					return;
+					// Refused for an issuer or a key a reload has replaced meanwhile: the new ones are tried at once
+					synchronized (backoff) {
+						// That reload's wake-up is used up: it must not cut the backoff the new ones may earn
+						settingsChanged = false;
+					}
 				} catch (RetryableException e) {
 					pause("The enrollment into MetricsHub Central did not complete", e.getMessage(), e.floor);
 				} catch (IOException e) {
@@ -778,9 +788,16 @@ public class EnrollmentCoordinator {
 				if (!enrollmentWanted) {
 					throw new InterruptedException("central.auth is no longer configured");
 				}
-				if (!current.issuerUrl().equals(settings.issuerUrl())) {
-					// The configuration moved to another issuer meanwhile: never keep an identity of the one it left
-					throw new RetryableException("central.auth.issuerUrl changed during the enrollment", null);
+				if (
+					!current.issuerUrl().equals(settings.issuerUrl()) ||
+						!Objects.equals(current.certificateFile(), settings.certificateFile())
+				) {
+					// The configuration moved to another issuer, or trusts another certificate, meanwhile: never keep an
+					// identity of the server it left; the same attempt is resumed there
+					throw new RetryableException(
+						"central.auth.issuerUrl or central.certificateFile changed during the enrollment",
+						null
+					);
 				}
 				store.complete(answer.agentUid(), answer.secret());
 				// Published under the same lock: a reload cannot fall between the write and the readiness, and a channel
