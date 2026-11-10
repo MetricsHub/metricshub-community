@@ -657,6 +657,26 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void anIdentityCompletedByAnotherProcessShouldNotWaitForTheBackoff() throws Exception {
+		script.add(new Answer(429, "{}", "30"));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(200);
+
+		// Another agent process sharing the security directory completes the identity while the worker waits 30 s
+		new AgentCredentialStore(directory).complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
+		final long completedAt = System.nanoTime();
+		coordinator.ready(central(KEY), DESCRIPTION);
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertTrue(Duration.ofNanos(System.nanoTime() - completedAt).toSeconds() < 10, "not after the Retry-After");
+	}
+
+	@Test
 	void theNewSettingsShouldNotInheritTheFormerOnesBackoff() throws Exception {
 		script.add(new Answer(503, "{}", null));
 		script.add(new Answer(503, "{}", null));

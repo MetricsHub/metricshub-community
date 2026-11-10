@@ -278,20 +278,21 @@ public class EnrollmentCoordinator {
 				log.debug("Cannot read the agent identity yet: {}", e.getMessage());
 			}
 		} else if (worker.isAlive()) {
+			if (isStoredReady()) {
+				// Another process sharing the security directory completed the identity: the worker's next pass sees it
+				// at once, not after its backoff
+				synchronized (backoff) {
+					settingsChanged = true;
+					backoff.notifyAll();
+				}
+			}
 			return false;
 		} else if (refusedAgain(latest)) {
 			// Stopped by a refusal that only a new configuration (a new key) can change, unless another process sharing
 			// the security directory completed the identity meanwhile
-			try {
-				final LocalIdentity identity = store.read();
-				wipe(identity.secret());
-				wipe(identity.recoverySecret());
-				if (identity.status() == Status.READY) {
-					ready = true;
-					return true;
-				}
-			} catch (IOException e) {
-				log.debug("Cannot read the agent identity: {}", e.getMessage());
+			if (isStoredReady()) {
+				ready = true;
+				return true;
 			}
 			return false;
 		}
@@ -304,6 +305,21 @@ public class EnrollmentCoordinator {
 		worker.setDaemon(true);
 		worker.start();
 		return false;
+	}
+
+	/**
+	 * @return whether the shared store holds a complete identity, which another process may have written
+	 */
+	private boolean isStoredReady() {
+		try {
+			final LocalIdentity identity = store.read();
+			wipe(identity.secret());
+			wipe(identity.recoverySecret());
+			return identity.status() == Status.READY;
+		} catch (IOException e) {
+			log.debug("Cannot read the agent identity: {}", e.getMessage());
+			return false;
+		}
 	}
 
 	/**
