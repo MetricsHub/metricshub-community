@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.TunnelConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
@@ -98,10 +97,10 @@ public class TunnelService {
 	private long snapshotGeneration;
 	private TunnelConfig activeConfig;
 	/**
-	 * The issuer of the {@code central.auth} the tunnel was started with ({@code ""} without one): adding, removing or
-	 * moving it reconnects through the enrollment. The enrollment key is not part of it: ignored once enrolled.
+	 * What of {@code central.auth} the tunnel was started with ({@link EnrollmentCoordinator#authState}): a change
+	 * reconnects through the enrollment.
 	 */
-	private String activeIssuer;
+	private List<String> activeAuth;
 	// Written by the supervisor and by the tunnel thread building a registration. Volatile rather
 	// than guarded: the tunnel thread must never wait on this service's monitor, which the
 	// supervisor holds while stop() waits for the tunnel thread to run its closing task.
@@ -186,9 +185,12 @@ public class TunnelService {
 			return;
 		}
 		final TunnelConfig config = agentContext.getAgentConfig().getCentral().tunnel();
-		final String issuer = issuerOf(agentContext.getAgentConfig().getCentral().getAuth());
-		if (!Objects.equals(config, activeConfig) || !Objects.equals(issuer, activeIssuer)) {
-			activeIssuer = issuer;
+		final List<String> auth = EnrollmentCoordinator.authState(
+			agentContext.getAgentConfig().getCentral(),
+			enrollment.isReady()
+		);
+		if (!Objects.equals(config, activeConfig) || !Objects.equals(auth, activeAuth)) {
+			activeAuth = auth;
 			reconfigure(config);
 			return;
 		}
@@ -455,13 +457,5 @@ public class TunnelService {
 		} while (generation != agentContextHolder.getGeneration());
 		snapshotGeneration = generation;
 		return built;
-	}
-
-	/**
-	 * @param auth the {@code central.auth} section, or {@code null}
-	 * @return its issuer URL, {@code ""} for a section without one, {@code null} without a section
-	 */
-	private static String issuerOf(final CentralAuthConfig auth) {
-		return auth == null ? null : Objects.requireNonNullElse(auth.getIssuerUrl(), "");
 	}
 }
