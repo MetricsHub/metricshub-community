@@ -109,4 +109,20 @@ class IntermediateConnectorTest {
 		intermediateConnector.setEmbeddedFiles(new HashMap<>());
 		assertFalse(intermediateConnector.hasVariables());
 	}
+
+	@Test
+	void testRawConnectorKeepsStringsThatLookLikeNumbers() throws Exception {
+		// Values of enterprise-connectors that used to come back as numbers: EMCDiskArray, BrocadeSwitchWBEM,
+		// HuaweiOceanStorREST and NvidiaDCGMExporter
+		final ObjectNode node = JsonNodeFactory.instance.objectNode()
+			.put("a", "+0")
+			.put("b", "-1_")
+			.put("c", ".0")
+			.put("d", "0.000000001")
+			.put("e", 2);
+
+		final JsonNode read = new IntermediateConnector(CONNECTOR_ID, new RawConnector(node, null)).getConnectorNode();
+
+		assertEquals(node, read);
+	}
 }

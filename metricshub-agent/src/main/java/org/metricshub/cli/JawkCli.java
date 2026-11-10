@@ -25,6 +25,7 @@ import io.jawk.Cli;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import org.metricshub.cli.util.WindowsCommandLine;
 
 /**
  * Command-line interface for executing AWK scripts with validation.
@@ -38,7 +39,7 @@ public class JawkCli {
 	 * @throws Exception if an error occurs during execution.
 	 */
 	public static void main(String[] args) throws Exception {
-		main(args, System.in, System.out, System.err);
+		main(WindowsCommandLine.args(args), System.in, System.out, System.err);
 	}
 
 	/**

@@ -141,11 +141,19 @@ public class JsonHelper {
 
 	/**
 	 * Build a new {@link ObjectMapper} using {@link YAMLFactory}.
+	 * <p>
+	 * A string that reads as a YAML number, such as {@code +0}, {@code 1.0} or {@code .inf}, is written between
+	 * quotes, so that it reads back as the same string.
+	 * </p>
 	 *
 	 * @return new {@link ObjectMapper} instance.
 	 */
 	public static ObjectMapper buildYamlMapper() {
-		return JsonMapper.builder(new YAMLFactory().disable(Feature.SPLIT_LINES).enable(Feature.MINIMIZE_QUOTES))
+		return JsonMapper.builder(
+			new YAMLFactory().disable(Feature.SPLIT_LINES)
+				.enable(Feature.MINIMIZE_QUOTES)
+				.enable(Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
+		)
 			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
