@@ -298,6 +298,25 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void reEnablingCentralAuthShouldResumeTheFirstToken() throws Exception {
+		tokensUnavailable = true;
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		// Back, with Central answering again
+		tokensUnavailable = false;
+		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		coordinator.awaitWorker();
+
+		assertNull(recoveryProofIn(directory), "the first token came, and the recovery proof went");
+	}
+
+	@Test
 	void noTokenShouldBeRequestedBeforeReady() throws Exception {
 		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));

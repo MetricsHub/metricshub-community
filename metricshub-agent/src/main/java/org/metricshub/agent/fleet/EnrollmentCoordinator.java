@@ -161,6 +161,8 @@ public class EnrollmentCoordinator {
 	private Settings stoppedWith;
 	private CentralTokenProvider tokenProvider;
 	private volatile boolean recoveryCleared;
+	/** Whether the worker got the first token, or learnt there will be none (a revoked agent). */
+	private volatile boolean firstTokenDone;
 
 	/**
 	 * Creates a coordinator (tests).
@@ -250,6 +252,10 @@ public class EnrollmentCoordinator {
 				tokenProvider = null;
 			}
 			settings = latest;
+			if (!firstTokenDone && !worker.isAlive()) {
+				// Stopped by a reload that removed central.auth before the first token: resumed now it is back
+				startWorker();
+			}
 			return true;
 		}
 		settings = latest;
@@ -484,10 +490,8 @@ public class EnrollmentCoordinator {
 						}
 						return;
 					}
-					if (!ready) {
-						ready = true;
-						log.info("The agent is enrolled into MetricsHub Central as {}.", agentUid);
-					}
+					ready = true;
+					log.info("The agent is enrolled into MetricsHub Central as {}.", agentUid);
 					firstToken();
 					return;
 				} catch (RefusedException e) {
@@ -518,9 +522,11 @@ public class EnrollmentCoordinator {
 		while (enrollmentWanted) {
 			try {
 				currentToken();
+				firstTokenDone = true;
 				return;
 			} catch (CentralTokenProvider.InvalidClientException e) {
 				// Logged by the provider: the agent is revoked, nothing is retried
+				firstTokenDone = true;
 				return;
 			} catch (IOException e) {
 				// The provider schedules its next attempt itself and names its failures without quoting an answer
