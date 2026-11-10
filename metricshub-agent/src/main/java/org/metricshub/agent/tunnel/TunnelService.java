@@ -394,9 +394,8 @@ public class TunnelService {
 			renewedSinceNanos = System.nanoTime();
 		}
 		final boolean overdue = System.nanoTime() - renewedSinceNanos >= FORCED_RENEWAL.toNanos();
-		if (bridge == null || bridge.inFlight() == 0 || overdue) {
-			client.credentialRenewed(authorization);
-		}
+		// The client decides on its own thread, where invocations arrive and answers leave
+		client.credentialRenewed(authorization, overdue || bridge == null ? null : bridge::quiescentMark);
 	}
 
 	private void closeClient(final String reason) {

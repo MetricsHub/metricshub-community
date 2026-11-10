@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.ObjLongConsumer;
 import lombok.extern.slf4j.Slf4j;
@@ -98,6 +99,10 @@ public class ToolBridge {
 	private final ExecutorService workers;
 	private final ScheduledThreadPoolExecutor timer;
 	private final AtomicInteger inFlight = new AtomicInteger();
+	/** Workers between the end of their call and the hand-over of its answer. */
+	private final AtomicInteger answering = new AtomicInteger();
+	/** Every invocation received, accepted or refused: tells whether one arrived between two looks. */
+	private final AtomicLong received = new AtomicLong();
 	/**
 	 * The executions this bridge started and has not accounted for yet, keyed by the flag that says
 	 * whether their slot has gone back -- the one object both the worker and the deadline hold.
@@ -186,6 +191,18 @@ public class ToolBridge {
 	}
 
 	/**
+	 * Tells whether nothing runs and every answer was handed over, so a reconnection loses nothing. Two equal marks
+	 * taken on the tunnel thread, the second behind the answers handed over before the first, mean no invocation
+	 * arrived or answered in between.
+	 *
+	 * @return the number of invocations received so far when none runs and no answer is being handed over, else
+	 *         {@code -1}
+	 */
+	public long quiescentMark() {
+		return inFlight.get() == 0 && answering.get() == 0 ? received.get() : -1;
+	}
+
+	/**
 	 * @return the number of invocations currently running
 	 */
 	public int inFlight() {
@@ -209,6 +226,7 @@ public class ToolBridge {
 	 *                   that session never issued
 	 */
 	public void invoke(final ToolInvoke invoke, final long generation) {
+		received.incrementAndGet();
 		if (invoke.requestId() == null || invoke.requestId().isBlank()) {
 			// Nothing to correlate an answer with. Reported as a protocol error rather than dropped,
 			// so the server learns its frame was malformed instead of waiting out a deadline.
@@ -263,14 +281,19 @@ public class ToolBridge {
 		final Future<?> execution;
 		try {
 			execution = workers.submit(() -> {
-				final TunnelMessage answer;
+				answering.incrementAndGet();
 				try {
-					answer = execute(invoke, callback, currentLimits, startedAt);
+					final TunnelMessage answer;
+					try {
+						answer = execute(invoke, callback, currentLimits, startedAt);
+					} finally {
+						// Free the slot before the answer leaves: the server may invoke again right away
+						release(released);
+					}
+					answerOnce(answered, generation, answer);
 				} finally {
-					// Free the slot before the answer leaves: the server may invoke again right away
-					release(released);
+					answering.decrementAndGet();
 				}
-				answerOnce(answered, generation, answer);
 				cancel(deadline.getAndSet(null));
 			});
 		} catch (RejectedExecutionException e) {

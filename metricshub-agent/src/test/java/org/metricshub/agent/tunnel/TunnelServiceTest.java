@@ -1,5 +1,6 @@
 package org.metricshub.agent.tunnel;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -7,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -23,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +52,7 @@ import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.ToolAccess;
 import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.ProductToolCallback;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -293,24 +297,16 @@ class TunnelServiceTest {
 			listeners.get(0).onRegistered(new AgentRegistered(30, 1_048_576L, 2));
 			listeners.get(0).onInvoke(new ToolInvoke("req-1", "ListHosts", TunnelJson.MAPPER.createObjectNode(), 60_000), 1);
 
-			// Renewed while an invocation runs: the reconnection waits
+			// Renewed while an invocation runs: the client is told, and the mark says to wait
 			renewing.supervise();
 			renewing.supervise();
-			verify(client, never()).credentialRenewed("Bearer two");
+			final ArgumentCaptor<LongSupplier> mark = ArgumentCaptor.forClass(LongSupplier.class);
+			verify(client).credentialRenewed(eq("Bearer two"), mark.capture());
+			assertEquals(-1, mark.getValue().getAsLong(), "an invocation runs");
 
-			// Then at the first tick with nothing in flight
+			// Then nothing runs: the mark lets the client reconnect
 			release.countDown();
-			boolean renewed = false;
-			for (int tick = 0; tick < 100 && !renewed; tick++) {
-				Thread.sleep(50);
-				renewing.supervise();
-				renewed = mockingDetails(client).getInvocations()
-					.stream()
-					.anyMatch(
-						call -> "credentialRenewed".equals(call.getMethod().getName()) && "Bearer two".equals(call.getArgument(0))
-					);
-			}
-			assertTrue(renewed);
+			await().atMost(5, TimeUnit.SECONDS).until(() -> mark.getValue().getAsLong() >= 0);
 		} finally {
 			renewing.shutdown();
 		}

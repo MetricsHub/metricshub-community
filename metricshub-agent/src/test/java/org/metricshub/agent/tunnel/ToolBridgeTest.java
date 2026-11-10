@@ -112,6 +112,36 @@ class ToolBridgeTest {
 	}
 
 	@Test
+	void theQuiescentMarkShouldWaitUntilTheAnswerIsHandedOver() throws Exception {
+		final CountDownLatch handing = new CountDownLatch(1);
+		final CountDownLatch handed = new CountDownLatch(1);
+		final ToolBridge holding = new ToolBridge(
+			ToolRegistrySnapshot.from(provider(listHosts, slow), Set.of(), null),
+			(answer, generation) -> {
+				handing.countDown();
+				blockIgnoringInterruption(handed);
+				answers.add(answer);
+			},
+			workers
+		);
+		when(listHosts.call(anyString())).thenReturn("{}");
+		try {
+			assertEquals(0, holding.quiescentMark());
+
+			holding.invoke(invoke("ListHosts", 10_000), GENERATION);
+			assertTrue(handing.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+			assertEquals(0, holding.inFlight(), "the slot is free already");
+			assertEquals(-1, holding.quiescentMark(), "but the answer is not handed over yet");
+			handed.countDown();
+			assertNotNull(answers.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> holding.quiescentMark() == 1);
+		} finally {
+			holding.shutdown();
+		}
+	}
+
+	@Test
 	void shouldWrapANonJsonOutputAsText() throws Exception {
 		when(listHosts.call(anyString())).thenReturn("No host configured");
 

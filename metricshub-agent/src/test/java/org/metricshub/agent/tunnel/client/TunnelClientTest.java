@@ -28,6 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import javax.net.ssl.KeyManagerFactory;
@@ -317,10 +318,16 @@ class TunnelClientTest {
 		assertNotNull(server.awaitHandshake(TIMEOUT_MS));
 		assertTrue(server.awaitRegistrationAck(TIMEOUT_MS));
 
-		client.credentialRenewed("Bearer token-1");
+		client.credentialRenewed("Bearer token-1", () -> 0L);
 		assertNull(server.awaitHandshake(1_000), "the connection already uses that token");
 
-		client.credentialRenewed("Bearer token-renewed");
+		// Busy, or busy between the two looks: it waits
+		client.credentialRenewed("Bearer token-renewed", () -> -1L);
+		final AtomicLong received = new AtomicLong();
+		client.credentialRenewed("Bearer token-renewed", received::getAndIncrement);
+		assertNull(server.awaitHandshake(1_000), "an invocation ran or arrived");
+
+		client.credentialRenewed("Bearer token-renewed", () -> 7L);
 		assertEquals("Bearer token-2", server.awaitHandshake(TIMEOUT_MS).get("Authorization"));
 		assertEquals(0, tokens.invalidated.get());
 	}

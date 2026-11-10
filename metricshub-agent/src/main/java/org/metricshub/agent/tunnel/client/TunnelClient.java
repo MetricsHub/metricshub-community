@@ -40,6 +40,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.fleet.CentralTokenProvider;
@@ -385,25 +386,48 @@ public class TunnelClient {
 	}
 
 	/**
-	 * Reconnects with a renewed token, when the current connection was opened with another one. The caller picks
-	 * the moment (no invocation in flight, or the old token about to expire).
+	 * Reconnects with a renewed token, when the current connection was opened with another one, at a moment it loses
+	 * nothing: decided on this thread, which receives every invocation and sends every answer, with two equal marks of
+	 * {@code quiescentMark}, the second queued behind the answers handed over before the first.
 	 *
-	 * @param authorization the {@code Authorization} of the current token
+	 * @param authorization  the {@code Authorization} of the current token
+	 * @param quiescentMark  {@code -1} while invocations run or answers are being handed over, else a number that
+	 *                       changes with each invocation received; {@code null} to reconnect whatever runs (the old
+	 *                       token is about to expire)
 	 */
-	public void credentialRenewed(final String authorization) {
+	public void credentialRenewed(final String authorization, final LongSupplier quiescentMark) {
 		dispatch(() -> {
-			if (
-				!stopped &&
-					webSocket != null &&
-					limits != null &&
-					connectedAuthorization != null &&
-					!connectedAuthorization.equals(authorization)
-			) {
-				log.info("Central tunnel reconnecting. Reason: credential renewed.");
-				dropConnection(generation, WebSocket.NORMAL_CLOSURE, "credential renewed", false);
-				connect(++generation);
+			if (!usesAnotherToken(authorization)) {
+				return;
 			}
+			if (quiescentMark == null) {
+				reconnectWithRenewedToken();
+				return;
+			}
+			final long mark = quiescentMark.getAsLong();
+			if (mark < 0) {
+				return;
+			}
+			dispatch(() -> {
+				if (usesAnotherToken(authorization) && quiescentMark.getAsLong() == mark) {
+					reconnectWithRenewedToken();
+				}
+			});
 		});
+	}
+
+	private boolean usesAnotherToken(final String authorization) {
+		return (!stopped &&
+			webSocket != null &&
+			limits != null &&
+			connectedAuthorization != null &&
+			!connectedAuthorization.equals(authorization));
+	}
+
+	private void reconnectWithRenewedToken() {
+		log.info("Central tunnel reconnecting. Reason: credential renewed.");
+		dropConnection(generation, WebSocket.NORMAL_CLOSURE, "credential renewed", false);
+		connect(++generation);
 	}
 
 	/**
