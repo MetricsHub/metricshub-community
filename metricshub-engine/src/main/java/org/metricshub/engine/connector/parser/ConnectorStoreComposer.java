@@ -48,6 +48,7 @@ import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.identity.ConnectorDefaultVariable;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
+import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 
 /**
  * Responsible for building and enhancing a {@link ConnectorStore} by processing raw connectors
@@ -447,6 +448,9 @@ public class ConnectorStoreComposer {
 
 		// Update the compiled filename
 		connector.getConnectorIdentity().setCompiledFilename(intermediateConnector.getConnectorId());
+
+		// Tell the author what the desugaring did, now that the connector has its identifier
+		ContentTypeDesugaring.logReport(connector, intermediateConnector.getConnectorId());
 
 		return connector;
 	}

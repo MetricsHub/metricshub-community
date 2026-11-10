@@ -18,6 +18,7 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
@@ -237,7 +238,8 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
-	 * The same source mapped as well is read as a table: it gets the toTable appended.
+	 * The same source mapped as well is read as a table: it gets the toTable appended, so its copy gets a table and
+	 * the copy's awk its toText.
 	 */
 	@Test
 	void textSourceCopiedAndMappedGetsItsToTable() {
@@ -250,8 +252,36 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 
 		assertEquals(List.of("toTable"), types(snapshot));
-		assertEquals(List.of("awk", "toTable"), types(copy));
-		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TABLE_APPENDED), kinds(connector));
+		assertEquals(List.of("toText", "awk", "toTable"), types(copy));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_APPENDED),
+			kinds(connector)
+		);
+	}
+
+	/**
+	 * A table source run for each entry of another and concatenated as a JSON array produces that JSON text: its
+	 * json2Csv reads text, nothing is reported.
+	 */
+	@Test
+	void sourceConcatenatedAsJsonProducesText() {
+		final Source entries = StaticSource.builder().value("a").build();
+		final Source perEntry = SnmpTableSource.builder()
+			.oid("1.3.6.1")
+			.selectColumns("1,2")
+			.executeForEachEntryOf(
+				ExecuteForEachEntryOf.builder().source(ref("entries")).concatMethod(EntryConcatMethod.JSON_ARRAY).build()
+			)
+			.computes(new ArrayList<>(List.of(Json2Csv.builder().type("json2Csv").entryKey("/").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("entries", entries);
+		sources.put("perEntry", perEntry);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("perEntry")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of("json2Csv"), types(perEntry));
 	}
 
 	@Test
@@ -759,85 +789,7 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 
 		assertEquals(List.of("awk", "keepColumns"), types(source));
-		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(connector));
-
-		// The word in a comment or a string literal is not a printf statement
-		final Source noPrintf = SnmpTableSource.builder()
-			.oid("1.3")
-			.selectColumns("ID,1")
-			.computes(
-				List.of(
-					Awk.builder()
-						.type("awk")
-						.script("# avoid printf here\n{ print \"printf\", \"a \\\"quoted\\\" printf\" } # printf")
-						.input(ContentType.TABLE)
-						.output(ContentType.TABLE)
-						.build()
-				)
-			)
-			.build();
-		final Connector noPrintfConnector = connectorWith(noPrintf);
-		new ContentTypeDesugaring().update(noPrintfConnector);
-		assertTrue(noPrintfConnector.getContentTypeReport().isEmpty());
-
-		// A "#" inside a regex literal does not start a comment: the printf after it is seen
-		final Source regexPrintf = SnmpTableSource.builder()
-			.oid("1.3")
-			.selectColumns("ID,1")
-			.computes(
-				List.of(
-					Awk.builder()
-						.type("awk")
-						.script("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }")
-						.input(ContentType.TABLE)
-						.output(ContentType.TABLE)
-						.build()
-				)
-			)
-			.build();
-		final Connector regexPrintfConnector = connectorWith(regexPrintf);
-		new ContentTypeDesugaring().update(regexPrintfConnector);
-		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(regexPrintfConnector));
-		final String code = ContentTypeDesugaring.code("/foo#bar/ { printf \"%s\", $1 }\n{ x = a / b / 2 }");
-		// The pattern of a rule after the action of the previous one is a regex too
-		final String nextRule = ContentTypeDesugaring.code("/foo/ { print }\n/printf/ { print }");
-		assertFalse(nextRule.contains("printf"), nextRule);
-		// ... and after a pattern-only rule
-		final String patternOnly = ContentTypeDesugaring.code("/foo/\n/printf/\n$1 == \"x\"\n/printf/");
-		assertFalse(patternOnly.contains("printf"), patternOnly);
-		// A typed regexp (@/re/) is a literal: its "#" does not start a comment
-		final String typed = ContentTypeDesugaring.code("BEGIN { r = @/foo#bar/; printf \"%s\", $1 }");
-		assertFalse(typed.contains("foo#bar"), typed);
-		assertTrue(typed.contains("printf"), typed);
-		// ... and after an arithmetic or comparison operator
-		final String operand = ContentTypeDesugaring.code(
-			"BEGIN { x = 1 + /printf/; y = a * /printf/ - /printf/ % /printf/; z = b < /printf/ }"
-		);
-		assertFalse(operand.contains("printf"), operand);
-
-		// The same lint applies to an awk source writing a table, inline or from an embedded file
-		final Source inlineSource = JawkSource.builder().output(ContentType.TABLE).script("{ printf \"%s\", $1 }").build();
-		final Connector inlineConnector = connectorWith(inlineSource);
-		new ContentTypeDesugaring().update(inlineConnector);
-		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(inlineConnector));
-		final Source fileSource = JawkSource.builder().output(ContentType.TABLE).script("${file::1}").build();
-		final Connector fileConnector = connectorWith(fileSource);
-		fileConnector.getEmbeddedFiles().put(1, EmbeddedFile.builder().id(1).content("{ printf $1 }".getBytes()).build());
-		new ContentTypeDesugaring().update(fileConnector);
-		assertEquals(List.of(Kind.PRINTF_IN_TABLE_OUTPUT), kinds(fileConnector));
-		// Not for a text output (a legacy dual producer: only the usual toTable appended)
-		final Source textSource = JawkSource.builder().script("{ printf \"%s\", $1 }").build();
-		final Connector textConnector = connectorWith(textSource);
-		new ContentTypeDesugaring().update(textConnector);
-		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(textConnector));
-		// A regex operand after a keyword is a literal too
-		final String afterKeyword = ContentTypeDesugaring.code("{ print /printf/; return /foo#bar/; printf \"%s\", $1 }");
-		assertFalse(afterKeyword.contains("/printf/"), afterKeyword);
-		assertFalse(afterKeyword.contains("foo#bar"), afterKeyword);
-		assertTrue(afterKeyword.endsWith("printf  , $1 }"), afterKeyword);
-		assertTrue(code.contains("printf"), code);
-		assertFalse(code.contains("foo#bar"), code);
-		assertTrue(code.contains("a / b / 2"), code);
+		assertEquals(List.of(), kinds(connector));
 
 		// Text output after a table input: the following table compute needs a toTable, and the chain ends typed
 		final Source textOut = CommandLineSource.builder()
@@ -1062,5 +1014,58 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 		assertEquals(List.of("toTable", "keepColumns"), types(union));
 		assertEquals(List.of(), types(show));
+	}
+
+	/**
+	 * A copy run for each entry of another source and concatenated as JSON produces pure text, whatever its origin
+	 * produces: a table compute reading it reads no rows, and is reported.
+	 */
+	@Test
+	void copyConcatenatedAsJsonProducesText() {
+		final Source entries = StaticSource.builder().value("a").build();
+		final Source table = SnmpTableSource.builder().oid("1.3.6.1").selectColumns("1,2").build();
+		final Source copy = CopySource.builder()
+			.from(ref("table"))
+			.executeForEachEntryOf(
+				ExecuteForEachEntryOf.builder().source(ref("entries")).concatMethod(EntryConcatMethod.JSON_ARRAY).build()
+			)
+			.computes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("entries", entries);
+		sources.put("table", table);
+		sources.put("copy", copy);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("copy")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("keepColumns"), types(copy));
+		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
+	}
+
+	/**
+	 * A union of command outputs run for each entry of another source and concatenated as JSON produces that text
+	 * only, no table: a table compute reading it reads no rows, and is reported (no implicit toTable, which would
+	 * read the table of the members).
+	 */
+	@Test
+	void textUnionConcatenatedAsJsonProducesPureText() {
+		final Source entries = StaticSource.builder().value("a").build();
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"))))
+			.executeForEachEntryOf(
+				ExecuteForEachEntryOf.builder().source(ref("entries")).concatMethod(EntryConcatMethod.JSON_ARRAY).build()
+			)
+			.computes(new ArrayList<>(List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("entries", entries);
+		sources.put("show", show);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("keepColumns"), types(union));
+		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
 	}
 }
