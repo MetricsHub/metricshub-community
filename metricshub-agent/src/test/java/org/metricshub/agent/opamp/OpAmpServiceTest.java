@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
@@ -164,6 +165,25 @@ class OpAmpServiceTest {
 		opAmpService.supervise();
 
 		assertEquals(0, factoryInvocations);
+	}
+
+	@Test
+	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
+		opAmpService.supervise();
+		assertEquals(1, factoryInvocations);
+
+		// Same channel settings, a new central.auth
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		opAmpService.supervise();
+		verify(client, times(1)).stop(any());
+		assertEquals(1, factoryInvocations, "nothing connects before the enrollment");
+
+		opAmpService.supervise();
+		assertEquals(2, factoryInvocations);
 	}
 
 	@Test

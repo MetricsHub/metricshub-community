@@ -276,24 +276,42 @@ public class EnrollmentCoordinator {
 				"central.auth.issuerUrl must use https:// (http:// is accepted for a loopback address only)."
 			);
 		}
+		final String path = issuer.getRawPath();
 		if (
-			central.opamp().getHeaders().containsKey("Authorization") ||
-				central.tunnel().getHeaders().containsKey("Authorization")
+			issuer.getRawUserInfo() != null ||
+				issuer.getRawQuery() != null ||
+				issuer.getRawFragment() != null ||
+				(path != null && !path.isEmpty() && !"/".equals(path))
+		) {
+			throw new IllegalStateException(
+				"central.auth.issuerUrl must be an origin, scheme://host[:port], without a path, a query or a fragment."
+			);
+		}
+		if (
+			central.opamp().getHeaders().get("Authorization") != null ||
+				central.tunnel().getHeaders().get("Authorization") != null
 		) {
 			throw new IllegalStateException(
 				"central.auth and a static Authorization header (central.headers, central.opamp.headers or " +
 					"central.tunnel.headers) cannot both be configured: remove the Authorization header."
 			);
 		}
-		if (auth.getEnrollmentKey() == null || auth.getEnrollmentKey().isBlank()) {
-			final LocalIdentity identity = store.get().read();
-			wipe(identity.secret());
-			wipe(identity.recoverySecret());
-			if (identity.status() == Status.ABSENT) {
-				throw new IllegalStateException(
-					"central.auth.enrollmentKey is required: this agent is not enrolled into Central yet. " + NEW_COMMAND
-				);
-			}
+		final LocalIdentity identity = store.get().read();
+		wipe(identity.secret());
+		wipe(identity.recoverySecret());
+		if (identity.status() == Status.INCOMPLETE && identity.attemptId() == null) {
+			throw new IllegalStateException(
+				"The agent identity in " +
+					store.get().uidFile().getParent() +
+					" is incomplete and no enrollment attempt can be resumed: delete the agent identity from that directory, " +
+					"then set a new key in central.auth.enrollmentKey. " +
+					NEW_COMMAND
+			);
+		}
+		if (identity.status() == Status.ABSENT && (auth.getEnrollmentKey() == null || auth.getEnrollmentKey().isBlank())) {
+			throw new IllegalStateException(
+				"central.auth.enrollmentKey is required: this agent is not enrolled into Central yet. " + NEW_COMMAND
+			);
 		}
 	}
 
@@ -370,7 +388,7 @@ public class EnrollmentCoordinator {
 				try {
 					store.beginAttempt(attemptId, recoverySecret);
 					log.info("Enrolling the agent into MetricsHub Central (attempt {}).", attemptId);
-					return complete(post(current, httpClient, attemptId, recoverySecret, false));
+					return complete(current, post(current, httpClient, attemptId, recoverySecret, false));
 				} finally {
 					wipe(recoverySecret);
 				}
@@ -399,16 +417,21 @@ public class EnrollmentCoordinator {
 						// Never committed, or its answer is no longer kept: the same attempt, never a new one
 						answer = post(current, httpClient, identity.attemptId(), proof, false);
 					}
-					return complete(answer);
+					return complete(current, answer);
 				} finally {
 					wipe(proof);
 				}
 		}
 	}
 
-	private String complete(final EnrolledAgent answer) throws IOException {
+	private String complete(final Settings current, final EnrolledAgent answer) throws IOException {
 		if (answer == null) {
 			return null;
+		}
+		if (!current.issuerUrl().equals(settings.issuerUrl())) {
+			// The configuration moved to another issuer meanwhile: never keep an identity of the one it left
+			Arrays.fill(answer.secret(), '\0');
+			throw new RetryableException("central.auth.issuerUrl changed during the enrollment", null);
 		}
 		try {
 			store.complete(answer.agentUid(), answer.secret());

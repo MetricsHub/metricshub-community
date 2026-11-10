@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.TunnelConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
@@ -96,6 +97,10 @@ public class TunnelService {
 	 */
 	private long snapshotGeneration;
 	private TunnelConfig activeConfig;
+	/**
+	 * The {@code central.auth} the tunnel was started with: adding or changing it reconnects through the enrollment.
+	 */
+	private CentralAuthConfig activeAuth;
 	// Written by the supervisor and by the tunnel thread building a registration. Volatile rather
 	// than guarded: the tunnel thread must never wait on this service's monitor, which the
 	// supervisor holds while stop() waits for the tunnel thread to run its closing task.
@@ -180,7 +185,9 @@ public class TunnelService {
 			return;
 		}
 		final TunnelConfig config = agentContext.getAgentConfig().getCentral().tunnel();
-		if (!Objects.equals(config, activeConfig)) {
+		final CentralAuthConfig auth = agentContext.getAgentConfig().getCentral().getAuth();
+		if (!Objects.equals(config, activeConfig) || !Objects.equals(auth, activeAuth)) {
+			activeAuth = auth;
 			reconfigure(config);
 			return;
 		}

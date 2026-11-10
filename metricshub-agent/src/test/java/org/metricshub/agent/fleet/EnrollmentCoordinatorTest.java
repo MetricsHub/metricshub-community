@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -99,6 +101,7 @@ class EnrollmentCoordinatorTest {
 	private final List<String> enrollBodies = new CopyOnWriteArrayList<>();
 	private final AtomicInteger recoverRequests = new AtomicInteger();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
+	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
 	private volatile long retryAfterSentAt;
 	private volatile long firstRequestAfterRetryAfter;
 	private final List<String> secretsHandedOut = Collections.synchronizedList(new ArrayList<>());
@@ -121,6 +124,11 @@ class EnrollmentCoordinatorTest {
 	private void enroll(final HttpExchange exchange) throws IOException {
 		final String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
 		enrollBodies.add(body);
+		try {
+			holdEnrollAnswer.await();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 		noteRequest();
 		final Answer scripted = script.poll();
 		if (scripted != null) {
@@ -430,6 +438,71 @@ class EnrollmentCoordinatorTest {
 			() -> EnrollmentCoordinator.checkConfiguration(central, () -> new AgentCredentialStore(directory))
 		);
 		assertTrue(refusal.getMessage().contains("central.auth.issuerUrl"), refusal.getMessage());
+	}
+
+	@Test
+	void anIssuerChangedDuringTheEnrollmentShouldNotKeepTheFormerIdentity() throws Exception {
+		holdEnrollAnswer = new CountDownLatch(1);
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		// Another issuer string (the same stub here), while the first answer is in flight
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertFalse(coordinator.ready(moved, DESCRIPTION));
+		holdEnrollAnswer.countDown();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertEquals(1, recoverRequests.get(), "the identity is asked again from the issuer now configured");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "/v1", "/?tenant=x", "#x", "?tenant=x" })
+	void anIssuerThatIsNotAnOriginShouldRefuseTheStartup(final String suffix) {
+		final CentralConfig central = central(KEY);
+		central.getAuth().setIssuerUrl(issuer + suffix);
+
+		final IllegalStateException refusal = assertThrows(
+			IllegalStateException.class,
+			() -> EnrollmentCoordinator.checkConfiguration(central, () -> new AgentCredentialStore(directory))
+		);
+		assertTrue(refusal.getMessage().contains("central.auth.issuerUrl"), refusal.getMessage());
+	}
+
+	@Test
+	void anIssuerWithUserInfoShouldRefuseTheStartup() {
+		final CentralConfig central = central(KEY);
+		central.getAuth().setIssuerUrl(issuer.replace("http://", "http://user@"));
+
+		assertThrows(
+			IllegalStateException.class,
+			() -> EnrollmentCoordinator.checkConfiguration(central, () -> new AgentCredentialStore(directory))
+		);
+	}
+
+	@Test
+	void anIncompleteIdentityWithoutAttemptShouldRefuseTheStartup() throws Exception {
+		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
+		Files.delete(new AgentCredentialStore(directory).uidFile());
+
+		final IllegalStateException refusal = assertThrows(
+			IllegalStateException.class,
+			() -> EnrollmentCoordinator.checkConfiguration(central(KEY), () -> new AgentCredentialStore(directory))
+		);
+		assertTrue(refusal.getMessage().contains("incomplete"), refusal.getMessage());
+	}
+
+	@Test
+	void anAuthorizationHeaderWithoutValueShouldNotRefuseTheStartup() throws Exception {
+		final CentralConfig central = central(KEY);
+		final Map<String, String> headers = new HashMap<>();
+		headers.put("Authorization", null);
+		central.setHeaders(headers);
+
+		EnrollmentCoordinator.checkConfiguration(central, () -> new AgentCredentialStore(directory));
 	}
 
 	@Test
