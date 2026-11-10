@@ -45,6 +45,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.CentralConfig;
@@ -77,6 +78,7 @@ public class EnrollmentCoordinator {
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+	private static final Pattern RANDOM_SECRET = Pattern.compile("^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$");
 	private static final Set<String> ERROR_CODES = Set.of(
 		"invalid_request",
 		"enrollment_not_authorized",
@@ -252,7 +254,7 @@ public class EnrollmentCoordinator {
 			} catch (IOException e) {
 				log.debug("Cannot read the agent identity yet: {}", e.getMessage());
 			}
-		} else if (worker.isAlive() || latest.equals(stoppedWith)) {
+		} else if (worker.isAlive() || refusedAgain(latest)) {
 			// Running, or stopped by a refusal that only a new configuration (a new key) can change
 			return false;
 		}
@@ -318,6 +320,7 @@ public class EnrollmentCoordinator {
 		final String path = issuer.getRawPath();
 		if (
 			issuer.getRawUserInfo() != null ||
+				issuer.getPort() > 65535 ||
 				issuer.getRawQuery() != null ||
 				issuer.getRawFragment() != null ||
 				(path != null && !path.isEmpty() && !"/".equals(path))
@@ -369,6 +372,17 @@ public class EnrollmentCoordinator {
 		}
 		final CentralAuthConfig auth = central.getAuth();
 		return Arrays.asList(auth.getIssuerUrl(), central.getCertificateFile(), enrolled ? null : auth.getEnrollmentKey());
+	}
+
+	/**
+	 * @param latest the settings now configured
+	 * @return whether Central refused the enrollment with the same issuer and key: only a new key, or another issuer,
+	 *         asks again
+	 */
+	private boolean refusedAgain(final Settings latest) {
+		return (stoppedWith != null &&
+			Objects.equals(latest.issuerUrl(), stoppedWith.issuerUrl()) &&
+			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()));
 	}
 
 	private static boolean isConfigured(final CentralConfig central) {
@@ -500,6 +514,8 @@ public class EnrollmentCoordinator {
 					throw new RetryableException("central.auth.issuerUrl changed during the enrollment", null);
 				}
 				store.complete(answer.agentUid(), answer.secret());
+				// Published under the same lock: a reload cannot fall between the write and the readiness
+				ready = true;
 			}
 		} finally {
 			Arrays.fill(answer.secret(), '\0');
@@ -604,9 +620,11 @@ public class EnrollmentCoordinator {
 			throw new RetryableException("Central answered an empty body", null);
 		}
 		final String agentUid = answer.path("agent_uid").asText("");
-		final String secret = answer.path("client_secret").asText("");
-		if (secret.isEmpty()) {
-			throw new RetryableException("Central answered no client secret", null);
+		final JsonNode secretNode = answer.path("client_secret");
+		final String secret = secretNode.isTextual() ? secretNode.asText() : "";
+		// The contract's RandomSecret: stored, a malformed one would leave the agent ready with a secret nothing accepts
+		if (!RANDOM_SECRET.matcher(secret).matches()) {
+			throw new RetryableException("Central answered no valid client secret", null);
 		}
 		try {
 			if (!UUID.fromString(agentUid).toString().equals(agentUid)) {
