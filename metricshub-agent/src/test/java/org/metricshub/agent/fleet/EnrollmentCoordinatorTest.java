@@ -105,6 +105,7 @@ class EnrollmentCoordinatorTest {
 	private String issuer;
 	private final Map<String, Attempt> attempts = new ConcurrentHashMap<>();
 	private final Deque<Answer> script = new ConcurrentLinkedDeque<>();
+	private final List<EnrollmentCoordinator> coordinators = new ArrayList<>();
 	private final Deque<Answer> recoverScript = new ConcurrentLinkedDeque<>();
 	private final List<String> enrollBodies = new CopyOnWriteArrayList<>();
 	private final AtomicInteger recoverRequests = new AtomicInteger();
@@ -142,7 +143,12 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@AfterEach
-	void stopServer() {
+	void stopServer() throws InterruptedException {
+		// No worker outlives its test: one still asking would reach the next test's stub
+		for (final EnrollmentCoordinator coordinator : coordinators) {
+			coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION);
+			coordinator.awaitWorker();
+		}
 		server.stop(0);
 	}
 
@@ -478,8 +484,13 @@ class EnrollmentCoordinatorTest {
 			.build();
 	}
 
-	private static EnrollmentCoordinator coordinator(final AgentCredentialStore store) {
-		return new EnrollmentCoordinator(() -> store, Duration.ofMillis(10), new Random(0));
+	private EnrollmentCoordinator tracked(final EnrollmentCoordinator coordinator) {
+		coordinators.add(coordinator);
+		return coordinator;
+	}
+
+	private EnrollmentCoordinator coordinator(final AgentCredentialStore store) {
+		return tracked(new EnrollmentCoordinator(() -> store, Duration.ofMillis(10), new Random(0)));
 	}
 
 	/**
