@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.ConfigurationReloadService;
@@ -89,6 +90,10 @@ public class MetricsHubAgentApplication implements Runnable {
 			// reads (Spring services, DirectoryWatcher, AgentLifecycleService, ...) go through
 			// this holder, never through a closure-captured AgentContext.
 			final var agentContextHolder = new AgentContextHolder(bootAgentContext);
+
+			// With central.auth, enroll into Central in the background before anything connects to it. The OpAMP and
+			// tunnel supervisors also start it, which is how the enterprise agent reaches it
+			EnrollmentCoordinator.global().ready(bootAgentContext);
 
 			// Start OpenTelemetry Collector process on the bootstrap context
 			bootAgentContext.getOtelCollectorProcessService().launch();

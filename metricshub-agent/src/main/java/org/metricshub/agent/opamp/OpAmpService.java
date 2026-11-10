@@ -33,6 +33,7 @@ import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.fleet.FleetHeaders;
 import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
@@ -75,6 +76,11 @@ public class OpAmpService {
 	 * caches its verdict, so the probes run at most once per process. Tests may replace it.
 	 */
 	private DeploymentDetector deploymentDetector = new DeploymentDetector();
+
+	/**
+	 * Says whether the agent may connect to Central. Tests may replace it.
+	 */
+	private EnrollmentCoordinator enrollment = EnrollmentCoordinator.global();
 
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
@@ -236,6 +242,15 @@ public class OpAmpService {
 	}
 
 	/**
+	 * Replaces the enrollment coordinator (used by tests).
+	 *
+	 * @param enrollment the coordinator to use
+	 */
+	void setEnrollment(final EnrollmentCoordinator enrollment) {
+		this.enrollment = enrollment;
+	}
+
+	/**
 	 * Applies a new {@code central.opamp} configuration: stops the running client and starts a new one
 	 * when the configuration enables OpAMP.
 	 *
@@ -257,6 +272,12 @@ public class OpAmpService {
 		final String endpoint = newConfig.getEndpoint();
 		if (endpoint == null || endpoint.isBlank()) {
 			log.warn("OpAMP is enabled but no endpoint is configured; the OpAMP client is not started.");
+			return;
+		}
+		if (!enrollment.ready(agentContext)) {
+			// Retried on the next tick: with central.auth, nothing connects before the agent is enrolled
+			activeConfig = null;
+			log.debug("OpAMP waits for the enrollment of the agent into MetricsHub Central.");
 			return;
 		}
 

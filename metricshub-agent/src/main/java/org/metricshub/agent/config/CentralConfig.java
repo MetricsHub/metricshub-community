@@ -115,6 +115,13 @@ public class CentralConfig {
 	private Map<String, String> attributes = new HashMap<>();
 
 	/**
+	 * Enrollment into Central's issuer and the agent's tokens; {@code null} when the agent presents static headers
+	 * only, as before.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private CentralAuthConfig auth;
+
+	/**
 	 * The polling channel: status, health and package offers.
 	 */
 	@Default

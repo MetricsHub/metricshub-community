@@ -48,6 +48,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.context.ApplicationProperties.Project;
 import org.metricshub.agent.deserialization.PostConfigDeserializer;
+import org.metricshub.agent.fleet.AgentCredentialStore;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.helper.OtelConfigHelper;
@@ -173,6 +175,9 @@ public class AgentContext implements AutoCloseable {
 
 		// Read the agent configuration file (Default: metricshub.yaml)
 		agentConfig = loadConfiguration(configNode);
+
+		// A central.auth the agent cannot run with refuses the startup, naming the key to fix
+		EnrollmentCoordinator.checkConfiguration(agentConfig.getCentral(), AgentCredentialStore::standard);
 
 		logProductInformation();
 

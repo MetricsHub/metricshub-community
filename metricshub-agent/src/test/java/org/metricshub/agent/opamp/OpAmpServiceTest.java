@@ -24,6 +24,7 @@ import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.fleet.AgentInstanceUid;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientSettings;
@@ -178,6 +179,20 @@ class OpAmpServiceTest {
 		verify(client, times(3)).setAgentDescription(any());
 		verify(client, times(3)).setHealth(any());
 		assertEquals(URI.create(ENDPOINT), capturedSettings.get().getEndpoint());
+	}
+
+	@Test
+	void anAgentNotEnrolledYetShouldNotStartTheClientUntilItIs() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(false, true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(enabledConfig(ENDPOINT)).build());
+
+		opAmpService.supervise();
+		assertEquals(0, factoryInvocations);
+
+		opAmpService.supervise();
+		assertEquals(1, factoryInvocations);
 	}
 
 	@Test

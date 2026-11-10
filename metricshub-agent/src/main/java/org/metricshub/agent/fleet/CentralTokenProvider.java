@@ -375,7 +375,7 @@ public class CentralTokenProvider {
 	 * @param endpoint the token endpoint
 	 * @return whether it is {@code https}, or {@code http} on a loopback literal (the tunnel's rule)
 	 */
-	private static boolean isAcceptable(final URI endpoint) {
+	static boolean isAcceptable(final URI endpoint) {
 		if (endpoint.getHost() == null) {
 			return false;
 		}

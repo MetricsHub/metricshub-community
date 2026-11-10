@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.TunnelConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.fleet.AgentInstanceUid;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.fleet.FleetHeaders;
 import org.metricshub.agent.tunnel.client.TunnelClient;
 import org.metricshub.agent.tunnel.client.TunnelListener;
@@ -80,6 +81,10 @@ public class TunnelService {
 	private final ToolCallbackProvider toolCallbackProvider;
 	private final BiFunction<TunnelSettings, TunnelListener, TunnelClient> clientFactory;
 	private final UidSupplier uidSupplier;
+	/**
+	 * Says whether the agent may connect to Central. Tests may replace it.
+	 */
+	private EnrollmentCoordinator enrollment = EnrollmentCoordinator.global();
 	private final ExecutorService toolWorkers;
 	private final ScheduledExecutorService supervisor;
 
@@ -133,6 +138,15 @@ public class TunnelService {
 		// configuration change would bound nothing: reload often enough with calls stuck and the
 		// agent accumulates a fresh poolful of threads each time.
 		this.toolWorkers = ToolBridge.newWorkerPool();
+	}
+
+	/**
+	 * Replaces the enrollment coordinator (used by tests).
+	 *
+	 * @param enrollment the coordinator to use
+	 */
+	void setEnrollment(final EnrollmentCoordinator enrollment) {
+		this.enrollment = enrollment;
 	}
 
 	/**
@@ -266,6 +280,12 @@ public class TunnelService {
 		final String endpoint = newConfig.getEndpoint();
 		if (endpoint == null || endpoint.isBlank()) {
 			log.warn("Central tunnel is enabled but no endpoint is configured; the tunnel is not started.");
+			return;
+		}
+		if (!enrollment.ready(agentContextHolder.getAgentContext())) {
+			// Retried on the next tick: with central.auth, nothing connects before the agent is enrolled
+			activeConfig = null;
+			log.debug("Central tunnel waits for the enrollment of the agent into MetricsHub Central.");
 			return;
 		}
 

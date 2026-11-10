@@ -28,6 +28,7 @@ import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.TunnelConfig;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.tunnel.client.TunnelClient;
@@ -197,6 +198,20 @@ class TunnelServiceTest {
 		service.supervise();
 
 		assertTrue(createdClients.isEmpty());
+	}
+
+	@Test
+	void shouldNotStartBeforeTheAgentIsEnrolled() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(false, true);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+
+		service.supervise();
+		assertTrue(createdClients.isEmpty());
+
+		service.supervise();
+		assertEquals(1, createdClients.size());
 	}
 
 	@Test
