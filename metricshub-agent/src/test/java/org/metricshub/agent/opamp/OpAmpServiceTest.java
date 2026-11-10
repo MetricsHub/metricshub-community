@@ -168,6 +168,28 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void anIdentityFoundEnrolledWhenStartingShouldNotReconnectAtTheNextTick() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		// Not ready when the state is computed, found ready while starting (an identity already persisted)
+		when(enrollment.isReady()).thenReturn(false, true);
+		when(enrollment.ready(agentContext)).thenReturn(true);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(enabledConfig(ENDPOINT))
+				.auth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").enrollmentKey("used").build())
+				.build()
+		);
+
+		opAmpService.supervise();
+		opAmpService.supervise();
+
+		assertEquals(1, factoryInvocations);
+		verify(client, never()).stop(any());
+	}
+
+	@Test
 	void aNewEnrollmentKeyOnceEnrolledShouldNotReconnect() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.ready(agentContext)).thenReturn(true);

@@ -76,6 +76,7 @@ import org.metricshub.web.service.ApplicationStatusService;
 public class EnrollmentCoordinator {
 
 	private static final Duration MAX_BACKOFF = Duration.ofMinutes(5);
+	private static final Duration MAX_RETRY_AFTER = Duration.ofHours(1);
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -253,9 +254,10 @@ public class EnrollmentCoordinator {
 				worker.isAlive() &&
 				previous != null &&
 				(!Objects.equals(previous.issuerUrl(), latest.issuerUrl()) ||
-					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()))
+					!Objects.equals(previous.enrollmentKey(), latest.enrollmentKey()) ||
+					!Objects.equals(previous.certificateFile(), latest.certificateFile()))
 		) {
-			// Wakes the worker from a backoff the former issuer or key earned, so the new ones are used at once
+			// Wakes the worker from a backoff the former issuer, key or certificate earned: the new ones are used at once
 			synchronized (backoff) {
 				settingsChanged = true;
 				backoff.notifyAll();
@@ -471,7 +473,9 @@ public class EnrollmentCoordinator {
 	}
 
 	private void pause(final String failure, final Duration floor) throws InterruptedException {
-		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
+		// A server's Retry-After is bounded: any value, however large, must stay a delay the worker can wait
+		final Duration bounded = floor == null || floor.compareTo(MAX_RETRY_AFTER) <= 0 ? floor : MAX_RETRY_AFTER;
+		final Duration delay = retrySchedule.nextDelayAfterFailure(bounded);
 		log.warn("The enrollment into MetricsHub Central did not complete: {}. Next attempt in {}.", failure, delay);
 		final long until = System.nanoTime() + delay.toNanos();
 		synchronized (backoff) {

@@ -558,6 +558,50 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aNewCertificateShouldNotWaitForTheFormerBackoff() throws Exception {
+		script.add(new Answer(429, "{}", "30"));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(200);
+
+		final long changedAt = System.nanoTime();
+		final CentralConfig recertified = central(KEY);
+		recertified.setCertificateFile("");
+		coordinator.ready(recertified, DESCRIPTION);
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady());
+		assertTrue(Duration.ofNanos(System.nanoTime() - changedAt).toSeconds() < 10, "not after the former Retry-After");
+	}
+
+	@Test
+	void anUnboundedRetryAfterShouldNotEndTheWorker() throws Exception {
+		script.add(new Answer(503, "{}", String.valueOf(Long.MAX_VALUE)));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		while (enrollBodies.isEmpty()) {
+			Thread.sleep(10);
+		}
+
+		final Thread waiting = new Thread(() -> {
+			try {
+				coordinator.awaitWorker();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		});
+		waiting.start();
+		waiting.join(1_000);
+
+		assertTrue(waiting.isAlive(), "the worker waits, it did not die");
+		coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION);
+		waiting.join();
+	}
+
+	@Test
 	void anIssuerPortOutOfRangeShouldRefuseTheStartup() {
 		final CentralConfig central = central(KEY);
 		central.getAuth().setIssuerUrl("https://central.example.com:99999");
