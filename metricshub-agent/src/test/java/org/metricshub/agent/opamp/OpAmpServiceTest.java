@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -390,10 +392,12 @@ class OpAmpServiceTest {
 	@Test
 	void withCentralAuthEachPostShouldCarryTheCurrentTokenAndA401DropIt() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.headers(Map.of("X-Site", "a"))).thenReturn(
+		when(enrollment.headers(eq(Map.of("X-Site", "a")), anyLong())).thenReturn(
 			Map.of("X-Site", "a", "Authorization", "Bearer one"),
 			Map.of("X-Site", "a", "Authorization", "Bearer two")
 		);
+		// The generation of the token provider when the client is built, then a reload moves the issuer
+		when(enrollment.tokenGeneration()).thenReturn(7L, 8L);
 		opAmpService.setEnrollment(enrollment);
 		final OpAmpConfig config = OpAmpConfig.builder()
 			.enabled(true)
@@ -405,6 +409,7 @@ class OpAmpServiceTest {
 
 		assertEquals("Bearer one", settings.currentHeaders().get("Authorization"));
 		assertEquals("Bearer two", settings.currentHeaders().get("Authorization"));
+		verify(enrollment, times(2)).headers(Map.of("X-Site", "a"), 7L);
 		settings.getOnUnauthorized().run();
 		verify(enrollment).invalidateToken();
 		assertFalse(settings.isAcceptsNewInstanceUid(), "the uid is the enrolled one");

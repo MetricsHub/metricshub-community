@@ -101,6 +101,7 @@ public class TunnelService {
 	 */
 	static final Duration EXPIRY_MARGIN = Duration.ofSeconds(60);
 	private String renewedAuthorization;
+	private Instant renewedExpiry;
 	private Instant forcedRenewalAt = Instant.MAX;
 
 	private TunnelClient client;
@@ -359,7 +360,8 @@ public class TunnelService {
 			newClient = clientFactory.apply(settings, new BridgeListener(newBridge));
 			if (usesToken) {
 				final EnrollmentCoordinator coordinator = enrollment;
-				newClient.useCredential(() -> coordinator.headers(headers), coordinator::invalidateToken);
+				final long generation = coordinator.tokenGeneration();
+				newClient.useCredential(() -> coordinator.headers(headers, generation), coordinator::invalidateToken);
 			}
 			owner.set(newClient);
 			bridge = newBridge;
@@ -399,9 +401,9 @@ public class TunnelService {
 		}
 		final Instant now = Instant.now();
 		if (!authorization.equals(renewedAuthorization)) {
-			final Instant previousExpiry = renewedAuthorization == null
-				? null
-				: EnrollmentCoordinator.expiryOf(renewedAuthorization.substring("Bearer ".length()));
+			// The expiry of the token seen before, the one the tunnel was opened with, on the local clock
+			final Instant previousExpiry = renewedExpiry;
+			renewedExpiry = enrollment.tokenExpiresAt();
 			final Instant forced = now.plus(FORCED_RENEWAL);
 			forcedRenewalAt = previousExpiry == null || forced.isBefore(previousExpiry.minus(EXPIRY_MARGIN))
 				? forced

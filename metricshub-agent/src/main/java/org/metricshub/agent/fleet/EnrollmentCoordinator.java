@@ -171,6 +171,7 @@ public class EnrollmentCoordinator {
 	private CentralTokenProvider tokenProvider;
 	private volatile boolean recoveryCleared;
 	private volatile String agentUid;
+	private volatile long tokenGeneration;
 	/** Whether the worker got the first token, or learnt there will be none (a revoked agent). */
 	private volatile boolean firstTokenDone;
 
@@ -277,6 +278,7 @@ public class EnrollmentCoordinator {
 			) {
 				// A reload moved the issuer or its certificate: the next token comes from there
 				tokenProvider = null;
+				tokenGeneration++;
 				if (!recoveryCleared) {
 					// The recovery proof goes after the first token of the new issuer
 					firstTokenDone = false;
@@ -369,15 +371,27 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
+	 * @return the generation of the token provider, which changes when a reload moves the issuer or its certificate
+	 */
+	public long tokenGeneration() {
+		return tokenGeneration;
+	}
+
+	/**
 	 * The headers of a request to Central: the given ones with {@code Authorization: Bearer <current token>}.
 	 * For the channels' header suppliers, which cannot throw a checked exception.
 	 *
-	 * @param headers the channel's static headers
+	 * @param headers    the channel's static headers
+	 * @param generation the {@link #tokenGeneration()} the channel was built with: once the issuer moved, a channel
+	 *                   still open toward the former Central gets no token of the new one, until it is rebuilt
 	 * @return a new map with the bearer token
 	 * @throws UncheckedIOException when no token is available, its cause a
 	 *                              {@link CentralTokenProvider.InvalidClientException} when the agent is revoked
 	 */
-	public Map<String, String> headers(final Map<String, String> headers) {
+	public Map<String, String> headers(final Map<String, String> headers, final long generation) {
+		if (generation != tokenGeneration) {
+			throw new UncheckedIOException(new IOException("The issuer changed: the channel is rebuilt for it."));
+		}
 		try {
 			final Map<String, String> result = new HashMap<>(headers);
 			result.put("Authorization", "Bearer " + currentToken());
@@ -391,16 +405,10 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * @param token an access token
-	 * @return its {@code exp}, or {@code null} when it has none or is not a JWT
+	 * @return when the current token expires, counted on the local clock from its reception, or {@code null}
 	 */
-	public static Instant expiryOf(final String token) {
-		try {
-			final long exp = CentralTokenProvider.claims(token).path("exp").asLong(0);
-			return exp > 0 ? Instant.ofEpochSecond(exp) : null;
-		} catch (IOException e) {
-			return null;
-		}
+	public synchronized Instant tokenExpiresAt() {
+		return tokenProvider == null ? null : tokenProvider.expiresAt();
 	}
 
 	/**

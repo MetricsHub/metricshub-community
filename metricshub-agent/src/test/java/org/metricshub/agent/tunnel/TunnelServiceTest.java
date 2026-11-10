@@ -18,11 +18,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -322,16 +320,12 @@ class TunnelServiceTest {
 
 	@Test
 	void aRenewalDelayedCloseToTheOldExpiryShouldReconnectWhateverRuns() throws Exception {
-		final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-		final long exp = Instant.now().plusSeconds(30).getEpochSecond();
-		final String expiring = encoder.encodeToString("{}".getBytes(StandardCharsets.UTF_8)) +
-			"." +
-			encoder.encodeToString(("{\"exp\":" + exp + "}").getBytes(StandardCharsets.UTF_8)) +
-			".c2ln";
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.isReady()).thenReturn(true);
 		when(enrollment.agentUid()).thenReturn(UID);
-		when(enrollment.currentToken()).thenReturn(expiring, "renewed");
+		when(enrollment.currentToken()).thenReturn("expiring", "renewed");
+		// On the local clock: the token the tunnel uses has 30 s left when the renewed one arrives
+		when(enrollment.tokenExpiresAt()).thenReturn(Instant.now().plusSeconds(30), Instant.now().plusSeconds(900));
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());

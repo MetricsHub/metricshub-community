@@ -384,10 +384,11 @@ public class OpAmpService {
 	OpampClientSettings buildSettings(final OpAmpConfig config, final boolean usesToken) {
 		final Map<String, String> headers = FleetHeaders.decrypt(config.getHeaders(), "OpAMP");
 		final EnrollmentCoordinator coordinator = enrollment;
+		final long generation = coordinator.tokenGeneration();
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create(config.getEndpoint().trim()))
 			.withHeaders(headers)
-			.withHeadersSupplier(usesToken ? () -> coordinator.headers(headers) : null)
+			.withHeadersSupplier(usesToken ? () -> coordinator.headers(headers, generation) : null)
 			.withOnUnauthorized(usesToken ? coordinator::invalidateToken : () -> {})
 			.withAcceptsNewInstanceUid(!usesToken)
 			.withCertificateFile(config.getCertificateFile())

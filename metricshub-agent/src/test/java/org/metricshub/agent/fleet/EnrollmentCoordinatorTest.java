@@ -111,6 +111,7 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger metadataRequests = new AtomicInteger();
 	private volatile String tokenAgentUid;
 	private volatile boolean tokensUnavailable;
+	private final List<EnrollmentCoordinator> coordinators = new ArrayList<>();
 	private volatile boolean tokensRefused;
 	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
@@ -140,7 +141,12 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@AfterEach
-	void stopServer() {
+	void stopServer() throws InterruptedException {
+		// No worker outlives its test: one still asking would reach the next test's stub
+		for (final EnrollmentCoordinator coordinator : coordinators) {
+			coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION);
+			coordinator.awaitWorker();
+		}
 		server.stop(0);
 	}
 
@@ -276,11 +282,28 @@ class EnrollmentCoordinatorTest {
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
 		assertTrue(enrollWith(coordinator, central(KEY)));
 
-		final Map<String, String> headers = coordinator.headers(Map.of("X-Site", "a"));
+		final Map<String, String> headers = coordinator.headers(Map.of("X-Site", "a"), coordinator.tokenGeneration());
 
 		assertEquals("a", headers.get("X-Site"));
 		assertEquals("Bearer " + tokensHandedOut.get(tokensHandedOut.size() - 1), headers.get("Authorization"));
 		assertEquals(storedUid(directory), coordinator.agentUid());
+	}
+
+	@Test
+	void aChannelOfTheFormerIssuerShouldGetNoTokenOfTheNewOne() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final long former = coordinator.tokenGeneration();
+
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		coordinator.awaitWorker();
+		final int tokens = tokenRequests.get();
+
+		assertThrows(UncheckedIOException.class, () -> coordinator.headers(Map.of(), former));
+		assertEquals(tokens, tokenRequests.get(), "not even asked");
+		assertTrue(coordinator.headers(Map.of(), coordinator.tokenGeneration()).get("Authorization").startsWith("Bearer "));
 	}
 
 	@Test
@@ -294,7 +317,10 @@ class EnrollmentCoordinatorTest {
 		}
 
 		assertThrows(IOException.class, coordinator::currentToken);
-		final UncheckedIOException refused = assertThrows(UncheckedIOException.class, () -> coordinator.headers(Map.of()));
+		final UncheckedIOException refused = assertThrows(
+			UncheckedIOException.class,
+			() -> coordinator.headers(Map.of(), coordinator.tokenGeneration())
+		);
 		assertTrue(refused.getCause().getMessage().contains("not this agent's"));
 	}
 
@@ -319,10 +345,8 @@ class EnrollmentCoordinatorTest {
 		tokensUnavailable = true;
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		// A long backoff: the worker waits in it when central.auth goes
-		final EnrollmentCoordinator coordinator = new EnrollmentCoordinator(
-			() -> store,
-			Duration.ofSeconds(20),
-			new Random(0)
+		final EnrollmentCoordinator coordinator = tracked(
+			new EnrollmentCoordinator(() -> store, Duration.ofSeconds(20), new Random(0))
 		);
 		coordinator.ready(central(KEY), DESCRIPTION);
 		while (tokenRequests.get() == 0) {
@@ -445,8 +469,13 @@ class EnrollmentCoordinatorTest {
 			.build();
 	}
 
-	private static EnrollmentCoordinator coordinator(final AgentCredentialStore store) {
-		return new EnrollmentCoordinator(() -> store, Duration.ofMillis(10), new Random(0));
+	private EnrollmentCoordinator tracked(final EnrollmentCoordinator coordinator) {
+		coordinators.add(coordinator);
+		return coordinator;
+	}
+
+	private EnrollmentCoordinator coordinator(final AgentCredentialStore store) {
+		return tracked(new EnrollmentCoordinator(() -> store, Duration.ofMillis(10), new Random(0)));
 	}
 
 	/**

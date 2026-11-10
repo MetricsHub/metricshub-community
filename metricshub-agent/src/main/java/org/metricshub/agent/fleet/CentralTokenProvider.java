@@ -239,6 +239,14 @@ public class CentralTokenProvider {
 	}
 
 	/**
+	 * @return when the cached token expires, counted on the local clock from its reception (never from its
+	 *         {@code exp}: the agent's clock may differ from Central's), or {@code null} without a token
+	 */
+	public synchronized Instant expiresAt() {
+		return token == null ? null : expiresAt;
+	}
+
+	/**
 	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
 	 */
 	public synchronized void invalidate() {
