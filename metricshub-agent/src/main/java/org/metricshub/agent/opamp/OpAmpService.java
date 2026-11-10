@@ -276,6 +276,8 @@ public class OpAmpService {
 		activeConfig = newConfig;
 		activeUpgradeEnabled = upgradeEnabled;
 
+		// Asked first, whatever the channel: it also stops an enrollment a reload no longer configures
+		final boolean enrolled = enrollment.ready(agentContext);
 		if (newConfig == null || !newConfig.isEnabled()) {
 			log.info("OpAMP is disabled.");
 			return;
@@ -285,7 +287,7 @@ public class OpAmpService {
 			log.warn("OpAMP is enabled but no endpoint is configured; the OpAMP client is not started.");
 			return;
 		}
-		if (!enrollment.ready(agentContext)) {
+		if (!enrolled) {
 			// Retried on the next tick: with central.auth, nothing connects before the agent is enrolled
 			activeConfig = null;
 			log.debug("OpAMP waits for the enrollment of the agent into MetricsHub Central.");

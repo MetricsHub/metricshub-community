@@ -168,6 +168,18 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void aDisabledChannelShouldStillReconcileTheEnrollment() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(CentralConfig.builder().enabled(true).opamp(OpAmpConfig.builder().build()).build());
+
+		opAmpService.supervise();
+
+		verify(enrollment).ready(agentContext);
+		assertEquals(0, factoryInvocations);
+	}
+
+	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
