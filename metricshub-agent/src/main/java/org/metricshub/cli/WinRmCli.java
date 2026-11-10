@@ -21,6 +21,8 @@ package org.metricshub.cli;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import org.metricshub.cli.util.WindowsCommandLine;
+
 /**
  * Command-line interface for WinRM, backed directly by the winrm-java library's own CLI
  * ({@link org.metricshub.winrm.cli.WinRmCli}): WQL queries, remote command execution and an
@@ -36,6 +38,6 @@ public class WinRmCli {
 	 * @param args The command line arguments passed to the application.
 	 */
 	public static void main(final String[] args) {
-		org.metricshub.winrm.cli.WinRmCli.main(args);
+		org.metricshub.winrm.cli.WinRmCli.main(WindowsCommandLine.args(args));
 	}
 }

@@ -25,6 +25,7 @@ import java.util.Locale;
 import org.fusesource.jansi.AnsiConsole;
 import org.metricshub.cli.service.ApiKeyCliService;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
+import org.metricshub.cli.util.WindowsCommandLine;
 import picocli.CommandLine;
 
 /**
@@ -56,7 +57,7 @@ public class ApiKeyCli {
 		cli.setCaseInsensitiveEnumValuesAllowed(true);
 
 		// Execute the command
-		final int exitCode = cli.execute(args);
+		final int exitCode = cli.execute(WindowsCommandLine.args(args));
 
 		// Cleanup Windows terminal settings
 		AnsiConsole.systemUninstall();

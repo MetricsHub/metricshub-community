@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.Map;
 import java.util.TreeSet;
 import org.metricshub.engine.connector.model.ConnectorStore;
-import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.CompareMode;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.LoadedRepository;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Repository;
 
@@ -19,8 +18,8 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * Maven, so that several agents rewriting connectors can check them concurrently without sharing a
  * <code>target</code> directory. It runs the same code as {@link ComputeChainGoldenCorpusTest}.
  * <p>
- * Usage: <code>GoldenCheck --root &lt;repository&gt; [--root ...] [--connectors A,B] [--compare typed|exact]
- * [--update] [--report] [--pin]</code>
+ * Usage: <code>GoldenCheck --root &lt;repository&gt; [--root ...] [--connectors A,B] [--update] [--report]
+ * [--pin]</code>
  * <ul>
  * <li><code>--root</code>: a connector repository root (repeatable, community first): each repository is loaded merged
  * with the connector directories of the roots before it (theirs win on a shared path), as the enterprise build
@@ -29,14 +28,14 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * A connector file that does not load is a failing difference, golden or not;</li>
  * <li><code>--connectors</code>: the connector ids to check, case-insensitive (default: every connector); an id no
  * connector carries is a failing difference;</li>
- * <li><code>--compare</code>: the comparison mode, see {@link CompareMode} (default: exact);</li>
  * <li><code>--update</code>: rewrite the goldens of the selected connectors (the revision pin is left alone: the
  * rewritten goldens are not committed yet);</li>
  * <li><code>--report</code>: print the content-type desugaring report of the selected connectors;</li>
  * <li><code>--pin</code>: once the regenerated goldens are committed, record the current commit of each root in the
  * revision pin ({@link ComputeChainGoldenCorpus#REVISIONS_FILE}) and check nothing.</li>
  * </ul>
- * One line is printed per difference; the exit code is 1 when any failing difference exists, 0 otherwise.
+ * The goldens are compared exactly (see {@link ComputeChainGoldenCorpus#diff}). One line is printed per difference;
+ * the exit code is 1 when any difference exists, 0 otherwise.
  * <p>
  * Build the classpath once, from the repository root:
  *
@@ -50,7 +49,7 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * <pre>
  * java -cp "target/classes:target/test-classes:$(cat target/cp.txt)" \
  *   org.metricshub.engine.strategy.source.compute.golden.GoldenCheck \
- *   --root ../../metricshub-community-connectors --connectors LinuxService --compare typed --report
+ *   --root ../../metricshub-community-connectors --connectors LinuxService --report
  * </pre>
  *
  * On Windows, from Git Bash (<code>cp.txt</code> is written with <code>;</code>):
@@ -58,7 +57,7 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * <pre>
  * java -cp "target/classes;target/test-classes;$(cat target/cp.txt)" \
  *   org.metricshub.engine.strategy.source.compute.golden.GoldenCheck \
- *   --root ../../metricshub-community-connectors --connectors LinuxService --compare typed --report
+ *   --root ../../metricshub-community-connectors --connectors LinuxService --report
  * </pre>
  */
 public final class GoldenCheck {
@@ -79,7 +78,6 @@ public final class GoldenCheck {
 			switch (args[i]) {
 				case "--root" -> roots.add(Path.of(args[++i]));
 				case "--connectors" -> System.setProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY, args[++i]);
-				case "--compare" -> System.setProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY, args[++i]);
 				case "--update" -> System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
 				case "--report" -> report = true;
 				case "--pin" -> pin = true;
@@ -90,9 +88,7 @@ public final class GoldenCheck {
 			}
 		}
 		if (roots.isEmpty()) {
-			System.err.println(
-				"Usage: GoldenCheck --root <repository> [--connectors A,B] [--compare typed|exact] [--update] [--report] [--pin]"
-			);
+			System.err.println("Usage: GoldenCheck --root <repository> [--connectors A,B] [--update] [--report] [--pin]");
 			System.exit(2);
 		}
 		if (pin) {
@@ -133,7 +129,6 @@ public final class GoldenCheck {
 	 * @throws IOException when a golden cannot be read or written
 	 */
 	static int run(final List<Path> roots, final boolean report) throws IOException {
-		final CompareMode mode = ComputeChainGoldenCorpus.compareMode();
 		final Map<Repository, ConnectorStore> stores = new LinkedHashMap<>();
 		final List<String> allConnectorIds = new ArrayList<>();
 		int failing = 0;
@@ -166,14 +161,9 @@ public final class GoldenCheck {
 				if (!ComputeChainGoldenCorpus.isSelected(connectorId)) {
 					continue;
 				}
-				for (final String difference : ComputeChainGoldenCorpus.check(repository, store, connectorId, mode)) {
-					if (ComputeChainGoldenCorpus.isIntended(difference)) {
-						final String prefix = ComputeChainGoldenCorpus.INTENDED_PREFIX;
-						System.out.println(prefix + connectorId + ": " + difference.substring(prefix.length()));
-					} else {
-						System.out.println(connectorId + ": " + difference);
-						failing++;
-					}
+				for (final String difference : ComputeChainGoldenCorpus.check(repository, store, connectorId)) {
+					System.out.println(connectorId + ": " + difference);
+					failing++;
 				}
 			}
 			// A golden of a deleted or renamed connector: removed in update mode, a failure otherwise (as the

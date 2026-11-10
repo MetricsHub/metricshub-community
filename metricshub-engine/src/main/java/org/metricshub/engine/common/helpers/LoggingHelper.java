@@ -117,7 +117,8 @@ public class LoggingHelper {
 			return;
 		}
 
-		log.makeLoggingEventBuilder(loggerLevel).log(() -> sanitizeMessage(message));
+		// The message is an argument, not the pattern: its "{}" (e.g. in a JSON body) are not placeholders
+		log.makeLoggingEventBuilder(loggerLevel).log("{}", sanitizeMessage(message));
 	}
 
 	/**
