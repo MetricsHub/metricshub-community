@@ -21,8 +21,6 @@ package org.metricshub.extension.jdbc;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import java.util.List;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -155,7 +153,7 @@ public class SqlSourceProcessor {
 				driverSelection
 			);
 
-			return SourceTable.builder().table(results).rawData(SourceTable.tableToCsv(results, TABLE_SEP, true)).build();
+			return SourceTable.ofTable(results);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,

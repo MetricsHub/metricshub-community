@@ -156,6 +156,19 @@ public abstract class Source implements Serializable {
 	}
 
 	/**
+	 * The content type of the result of this source, before its computes run: text for a source run for each entry
+	 * of another and concatenated as JSON or custom text, {@link #getOutputContentType()} otherwise.
+	 *
+	 * @return the result content type
+	 */
+	@JsonIgnore
+	public ContentType getResultContentType() {
+		return isExecuteForEachEntryOf() && getEntryConcatMethod() != EntryConcatMethod.LIST
+			? ContentType.TEXT
+			: getOutputContentType();
+	}
+
+	/**
 	 * Creates a copy of the source.
 	 *
 	 * @return A new Source instance that is a copy of the original.

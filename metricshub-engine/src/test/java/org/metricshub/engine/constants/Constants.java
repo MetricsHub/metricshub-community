@@ -90,7 +90,6 @@ public class Constants {
 		Arrays.asList("1", "PowerEdge R630", "FSJR3N2", "34377965102")
 	);
 	public static final String SNMP_SELECTED_COLUMNS = "ID, 9, 11, 49";
-	public static final List<String> SNMP_SELECTED_COLUMNS_LIST = Arrays.asList("ID", "9", "11", "49");
 	public static final String TAB1_REF = "${source::monitors.cpu.discovery.sources.tab1}";
 
 	public static final String MONITOR_ID_ATTRIBUTE_VALUE = "anyMonitorId";

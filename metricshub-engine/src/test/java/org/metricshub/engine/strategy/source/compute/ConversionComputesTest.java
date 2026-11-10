@@ -2,6 +2,7 @@ package org.metricshub.engine.strategy.source.compute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
@@ -47,9 +48,7 @@ class ConversionComputesTest {
 		final SourceTable sourceTable = SourceTable.ofText("a;b;c\nx;;z;\n\n1;2.5;3\n");
 		processor(sourceTable).process(ToTable.builder().build());
 		// Empty cells kept, the cell after a trailing separator and the blank line dropped
-		assertEquals(table("a|b|c", "x||z", "1|2.5|3"), sourceTable.getTable());
-		assertEquals("a;b;c;\nx;;z;\n1;2.5;3;", sourceTable.getRawData());
-		assertEquals(ContentType.TABLE, sourceTable.getContentType());
+		assertEquals(SourceTable.ofTable(table("a|b|c", "x||z", "1|2.5|3")), sourceTable);
 	}
 
 	@Test
@@ -70,29 +69,39 @@ class ConversionComputesTest {
 	void toTableOnEmptyTextGivesEmptyTable() {
 		final SourceTable sourceTable = SourceTable.ofText(EMPTY);
 		processor(sourceTable).process(ToTable.builder().build());
-		assertEquals(List.of(), sourceTable.getTable());
-		assertEquals(EMPTY, sourceTable.getRawData());
+		assertEquals(SourceTable.empty(), sourceTable);
 
 		final SourceTable noText = SourceTable.empty();
 		processor(noText).process(ToTable.builder().build());
-		assertEquals(List.of(), noText.getTable());
+		assertEquals(SourceTable.empty(), noText);
 	}
 
 	/**
-	 * The implicit <code>toTable</code> follows a legacy producer that built its table already: it must not touch
-	 * the source table, not even when the table is empty and the raw text is stale.
+	 * The <code>toTable</code> the content-type desugaring inserts after a legacy text producer
+	 * (<code>commandLine</code>, the <code>awk</code> source and compute) converts like a written one: the canonical
+	 * conversion, {@link SourceTable#asTable()}. A table is left as it is.
 	 */
 	@Test
-	void implicitToTableIsANoOp() {
-		final SourceTable sourceTable = SourceTable.builder().rawData("stale;text").table(table("built")).build();
-		processor(sourceTable).process(ToTable.implicit());
-		assertEquals(table("built"), sourceTable.getTable());
-		assertEquals("stale;text", sourceTable.getRawData());
+	void generatedToTableConverts() {
+		final SourceTable sourceTable = SourceTable.ofText("a;b;;\r\n\r\n;\nc");
+		processor(sourceTable).process(ToTable.generated());
+		// One trailing empty cell dropped, the blank line dropped, ";" a row of one empty cell, CRLF stripped
+		assertEquals(SourceTable.ofTable(table("a|b|", "", "c")), sourceTable);
 
-		final SourceTable emptyTable = SourceTable.builder().rawData("stale;text").build();
-		processor(emptyTable).process(ToTable.implicit());
-		assertEquals(List.of(), emptyTable.getTable());
-		assertEquals("stale;text", emptyTable.getRawData());
+		final SourceTable alreadyATable = SourceTable.ofTable(table("built"));
+		processor(alreadyATable).process(ToTable.generated());
+		assertEquals(SourceTable.ofTable(table("built")), alreadyATable);
+	}
+
+	/**
+	 * A <code>toTable</code> with line filters or a column selection on a table applies them to its text, as the
+	 * legacy toTable did with the raw text of a table (an <code>sql</code> result, a table after a table compute).
+	 */
+	@Test
+	void toTableWithOptionsOnATableReadsItsText() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("MSHW|a;x|b", "other|c|d", "MSHW|e|f"));
+		processor(sourceTable).process(ToTable.builder().keep("^MSHW;").selectColumns("2,3").build());
+		assertEquals(SourceTable.ofTable(table("a,x|b", "e|f")), sourceTable);
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------
@@ -103,39 +112,41 @@ class ConversionComputesTest {
 	void toTextSerializesWithTrailingSeparatorAndCommaForSeparatorInCells() {
 		final SourceTable sourceTable = SourceTable.ofTable(table("a;b|c", "|d"));
 		processor(sourceTable).process(ToText.builder().build());
-		assertEquals("a,b;c;\n;d;", sourceTable.getRawData());
-		assertEquals(List.of(), sourceTable.getTable());
-		assertEquals(ContentType.TEXT, sourceTable.getContentType());
+		assertEquals(SourceTable.ofText("a,b;c;\n;d;"), sourceTable);
 	}
 
 	/**
-	 * The implicit <code>toText</code> precedes an <code>awk</code> compute that serializes the table itself: it
-	 * must not touch the source table (an empty awk result leaves the raw text as it was, null included).
+	 * The <code>toText</code> the content-type desugaring inserts before an <code>awk</code> compute fed a table
+	 * converts like a written one: the canonical conversion, {@link SourceTable#asText()}. A text is left as it is.
 	 */
 	@Test
-	void implicitToTextIsANoOp() {
-		final SourceTable tableOnly = SourceTable.ofTable(table("a;b|c"));
-		processor(tableOnly).process(ToText.implicit());
-		assertNull(tableOnly.getRawData());
-		assertEquals(table("a;b|c"), tableOnly.getTable());
+	void generatedToTextConverts() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("a;b|c"));
+		processor(sourceTable).process(ToText.generated());
+		assertEquals(SourceTable.ofText("a,b;c;"), sourceTable);
 
-		final SourceTable dual = SourceTable.builder().rawData("raw;text").table(table("a;b|c")).build();
-		processor(dual).process(ToText.implicit());
-		assertEquals("raw;text", dual.getRawData());
+		final SourceTable alreadyAText = SourceTable.ofText("raw;text");
+		processor(alreadyAText).process(ToText.generated());
+		assertEquals(SourceTable.ofText("raw;text"), alreadyAText);
 	}
 
 	@Test
-	void implicitToTextThenAwkMatchesAwkOnTheTable() {
+	void generatedToTextThenAwkMatchesExplicitToTextThenAwk() {
 		for (final String script : List.of("{ print }", "BEGIN { }")) {
-			final SourceTable viaToText = SourceTable.ofTable(table("a;b|c", "|d"));
-			processor(viaToText).process(ToText.implicit());
-			processor(viaToText).process(Awk.builder().script(script).build());
+			final SourceTable viaGenerated = SourceTable.ofTable(table("a;b|c", "|d"));
+			processor(viaGenerated).process(ToText.generated());
+			processor(viaGenerated).process(Awk.builder().script(script).build());
 
-			final SourceTable direct = SourceTable.ofTable(table("a;b|c", "|d"));
-			processor(direct).process(Awk.builder().script(script).build());
+			final SourceTable viaExplicit = SourceTable.ofTable(table("a;b|c", "|d"));
+			processor(viaExplicit).process(ToText.builder().type("toText").build());
+			processor(viaExplicit).process(Awk.builder().script(script).build());
 
-			assertEquals(direct, viaToText, script);
+			assertEquals(viaExplicit, viaGenerated, script);
 		}
+		final SourceTable echoed = SourceTable.ofTable(table("a;b|c", "|d"));
+		processor(echoed).process(ToText.generated());
+		processor(echoed).process(Awk.builder().script("{ print }").build());
+		assertEquals(SourceTable.ofText("a,b;c;\n;d;"), echoed);
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------
@@ -146,8 +157,7 @@ class ConversionComputesTest {
 	void insertColumnInsertsLiteralOrReferencedValue() {
 		final SourceTable sourceTable = SourceTable.ofTable(table("a|b", "c|d"));
 		processor(sourceTable).process(InsertColumn.builder().column(2).value("MSHW").build());
-		assertEquals(table("a|MSHW|b", "c|MSHW|d"), sourceTable.getTable());
-		assertEquals("a;MSHW;b;\nc;MSHW;d;", sourceTable.getRawData());
+		assertEquals(SourceTable.ofTable(table("a|MSHW|b", "c|MSHW|d")), sourceTable);
 
 		processor(sourceTable).process(InsertColumn.builder().column(1).value("$3-$1").build());
 		assertEquals(table("b-a|a|MSHW|b", "d-c|c|MSHW|d"), sourceTable.getTable());
@@ -155,8 +165,6 @@ class ConversionComputesTest {
 		// Past the last column, and a reference to an absent column
 		processor(sourceTable).process(InsertColumn.builder().column(5).value("$9;x").build());
 		assertEquals(table("b-a|a|MSHW|b|;x", "d-c|c|MSHW|d|;x"), sourceTable.getTable());
-		// The value is one cell whatever it holds: no round trip, and the raw text shows "," for the ";" inside it
-		assertEquals("b-a;a;MSHW;b;,x;\nd-c;c;MSHW;d;,x;", sourceTable.getRawData());
 
 		// A reference too large for an int is an absent column
 		processor(sourceTable).process(InsertColumn.builder().column(1).value("$9999999999").build());
@@ -221,10 +229,9 @@ class ConversionComputesTest {
 
 		final SourceTable fromEmptyTable = SourceTable.ofTable(new ArrayList<>());
 		processor(fromEmptyTable).process(ToText.builder().build());
-		assertEquals(ContentType.TEXT, fromEmptyTable.getContentType());
-		assertEquals("", fromEmptyTable.getRawData());
+		assertEquals(SourceTable.ofText(""), fromEmptyTable);
 
-		// A legacy compute types its result by its content again
+		// The awk compute writes text
 		processor(fromEmptyText).process(Awk.builder().script("{ print }").build());
 		assertEquals(ContentType.TEXT, fromEmptyText.getContentType());
 	}
@@ -233,7 +240,7 @@ class ConversionComputesTest {
 	void toTextNormalizesCrlfInsideCells() {
 		final SourceTable sourceTable = SourceTable.ofTable(table("a\r\nb|c"));
 		processor(sourceTable).process(ToText.builder().build());
-		assertEquals("a\nb;c;", sourceTable.getRawData());
+		assertEquals("a\nb;c;", sourceTable.getText());
 	}
 
 	@Test
@@ -248,7 +255,6 @@ class ConversionComputesTest {
 		final SourceTable sourceTable = SourceTable.ofText("a;b\r\nc;d\r\n");
 		processor(sourceTable).process(ToTable.builder().build());
 		assertEquals(table("a|b", "c|d"), sourceTable.getTable());
-		assertEquals("a;b;\nc;d;", sourceTable.getRawData());
 	}
 
 	/**
@@ -262,7 +268,6 @@ class ConversionComputesTest {
 		);
 		processor(sourceTable).process(InsertColumn.builder().column(3).value("[$2]").build());
 		assertEquals(List.of(Arrays.asList("a", null, "[]"), List.of("c", "d", "[d]")), sourceTable.getTable());
-		assertEquals("a;;[];\nc;d;[d];", sourceTable.getRawData());
 	}
 
 	@Test
@@ -334,11 +339,42 @@ class ConversionComputesTest {
 	void sourceTableFactoriesAndContentType() {
 		assertEquals(ContentType.TEXT, SourceTable.ofText("x").getContentType());
 		assertEquals(ContentType.TEXT, SourceTable.ofText(null).getContentType());
-		assertEquals(EMPTY, SourceTable.ofText(null).getRawData());
+		assertEquals(EMPTY, SourceTable.ofText(null).getText());
 		assertEquals(ContentType.TABLE, SourceTable.ofTable(table("a")).getContentType());
 		assertEquals(ContentType.TABLE, SourceTable.ofTable(null).getContentType());
+		assertEquals(List.of(), SourceTable.ofTable(null).getTable());
 		assertEquals(ContentType.TABLE, SourceTable.empty().getContentType());
-		// Dual: the table wins
-		assertEquals(ContentType.TABLE, SourceTable.builder().rawData("x").table(table("a")).build().getContentType());
+		// A new instance each time: the strategies compare the retry sentinel by identity
+		assertNotSame(SourceTable.empty(), SourceTable.empty());
+
+		// A reader of the other type sees an empty value
+		assertEquals(List.of(), SourceTable.ofText("a;b").getTable());
+		assertEquals(EMPTY, SourceTable.ofTable(table("a|b")).getText());
+
+		// The setters switch the type and drop the other side
+		final SourceTable sourceTable = SourceTable.ofText("a;b");
+		sourceTable.setTable(table("c"));
+		assertEquals(SourceTable.ofTable(table("c")), sourceTable);
+		sourceTable.setText("d");
+		assertEquals(SourceTable.ofText("d"), sourceTable);
+		assertEquals(List.of(), sourceTable.getTable());
+	}
+
+	/**
+	 * The conversions return new values and never change the source table: a stored source is read in place.
+	 */
+	@Test
+	void conversionsReturnNewValues() {
+		final SourceTable text = SourceTable.ofText("a;b\r\nc;");
+		assertEquals(table("a|b", "c"), text.asTable());
+		assertEquals("a;b\r\nc;", text.asText());
+		assertEquals(SourceTable.ofText("a;b\r\nc;"), text);
+
+		final SourceTable tableSource = SourceTable.ofTable(table("a;x|b"));
+		assertEquals("a,x;b;", tableSource.asText());
+		final List<List<String>> copy = tableSource.asTable();
+		assertEquals(table("a;x|b"), copy);
+		copy.get(0).set(0, "changed");
+		assertEquals(SourceTable.ofTable(table("a;x|b")), tableSource);
 	}
 }

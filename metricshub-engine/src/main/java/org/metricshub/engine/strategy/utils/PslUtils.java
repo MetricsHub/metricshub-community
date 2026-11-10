@@ -184,8 +184,8 @@ public class PslUtils {
 
 		final String rowCsv = SourceTable.lineToCsvSafe(row, TABLE_SEP, true);
 
-		String rawData = tableResult.getRawData();
-		if (rawData == null || rawData.isEmpty()) {
+		final String text = tableResult.asText();
+		if (text.isEmpty()) {
 			log.error("formatExtendedJSON received Empty SourceTable data {}. Returning empty string.", tableResult);
 			return EMPTY;
 		}
@@ -201,7 +201,7 @@ public class PslUtils {
 			i++;
 		}
 
-		jsonContent.append("\"Value\":").append(rawData).append("\n}\n}");
+		jsonContent.append("\"Value\":").append(text).append("\n}\n}");
 
 		return jsonContent.toString();
 	}

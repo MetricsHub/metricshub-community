@@ -405,9 +405,8 @@ class WmiExtensionTest {
 			doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
 				.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
 
-			final List<List<String>> expected = List.of(List.of("16384 MB"), List.of("8192 MB"));
 			assertEquals(
-				SourceTable.builder().table(expected).rawData("16384 MB\n8192 MB").build(),
+				SourceTable.ofText("16384 MB\n8192 MB"),
 				wmiExtension.processSource(commandLineSource, CONNECTOR_ID, telemetryManager)
 			);
 		}
@@ -421,7 +420,7 @@ class WmiExtensionTest {
 				.executeWmi(HOST_NAME, wmiConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
 			final WmiSource wmiSource = WmiSource.builder().query(WQL).build();
 			assertEquals(
-				SourceTable.builder().table(expected).build(),
+				SourceTable.ofTable(expected),
 				wmiExtension.processSource(wmiSource, CONNECTOR_ID, telemetryManager)
 			);
 		}

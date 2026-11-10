@@ -289,9 +289,7 @@ class EmulationExtensionTest {
 		final CommandLineSource source = CommandLineSource.builder().commandLine("echo test").build();
 		final SourceTable result = emulationExtension.processSource(source, "connector", tm);
 
-		assertNotNull(result);
-		assertFalse(result.getTable().isEmpty());
-		assertEquals("ok", result.getTable().get(0).get(0));
+		assertEquals(SourceTable.ofText("ok"), result);
 	}
 
 	@Test
@@ -361,7 +359,7 @@ class EmulationExtensionTest {
 		final SourceTable result = emulationExtension.processSource(ipmiSource, "connector", tm);
 
 		assertNotNull(result);
-		assertEquals("FRU data here", result.getRawData());
+		assertEquals(SourceTable.ofText("FRU data here"), result);
 	}
 
 	@Test

@@ -1,0 +1,15 @@
+# A stale local copy of the base repository's header (no displayName): not a connector, not a load failure, and the
+# base repository's copy wins over it, as in the enterprise build
+monitors:
+  thing:
+    simple:
+      sources:
+        stale:
+          type: commandLine
+          commandLine: echo
+          computes:
+          - type: toTable
+      mapping:
+        source: ${source::stale}
+        attributes:
+          id: $1

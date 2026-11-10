@@ -3,7 +3,6 @@ package org.metricshub.extension.jawk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -12,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,10 +71,7 @@ class JawkSourceExtensionTest {
 		final List<String> line2 = Arrays.asList("BAR", "10", "20", "30");
 		final List<String> line3 = Arrays.asList("BAZ", "100", "200", "300");
 		final List<List<String>> tableOne = Arrays.asList(line1, line2, line3);
-		final SourceTable sourceTableOne = SourceTable.builder()
-			.table(tableOne)
-			.rawData(SourceTable.tableToCsv(tableOne, ";", false))
-			.build();
+		final SourceTable sourceTableOne = SourceTable.ofTable(tableOne);
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
@@ -111,9 +106,9 @@ class JawkSourceExtensionTest {
 				""")
 			.build();
 
-		final SourceTable sourceTableResult1 = SourceTable.builder().rawData(RAW_DATA_RESULT_1).build();
-		final SourceTable sourceTableResult2 = SourceTable.builder().rawData(RAW_DATA_RESULT_2).build();
-		final SourceTable sourceTableResult3 = SourceTable.builder().rawData(RAW_DATA_RESULT_3).build();
+		final SourceTable sourceTableResult1 = SourceTable.ofText(RAW_DATA_RESULT_1);
+		final SourceTable sourceTableResult2 = SourceTable.ofText(RAW_DATA_RESULT_2);
+		final SourceTable sourceTableResult3 = SourceTable.ofText(RAW_DATA_RESULT_3);
 
 		final HttpSource httpSourceFoo = HttpSource.builder()
 			.type("http")
@@ -149,12 +144,8 @@ class JawkSourceExtensionTest {
 		final ArgumentCaptor<HttpSource> httpCaptor = ArgumentCaptor.forClass(HttpSource.class);
 
 		assertEquals(
-			Arrays.asList(
-				Arrays.asList("/", DATA_RESULT_1),
-				Arrays.asList("/", DATA_RESULT_2),
-				Arrays.asList("/", DATA_RESULT_3)
-			),
-			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+			SourceTable.ofText("/;" + DATA_RESULT_1 + ";\n/;" + DATA_RESULT_2 + ";\n/;" + DATA_RESULT_3 + ";\n"),
+			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
 		// Verify and capture the arguments
@@ -195,16 +186,15 @@ class JawkSourceExtensionTest {
 				}
 			""");
 		((JawkSource) source).setInput("input test");
-		doReturn(
-			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		).when(sourceProcessorMock).process(any(WbemSource.class));
+		doReturn(SourceTable.ofTable(List.of(List.of("result1", "result2")))).when(sourceProcessorMock)
+			.process(any(WbemSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<WbemSource> wbemCaptor = ArgumentCaptor.forClass(WbemSource.class);
 
 		assertEquals(
-			Collections.singletonList(Arrays.asList("result1", "result2")),
-			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+			SourceTable.ofText("result1;result2;\n"),
+			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
 		// Verify and capture the arguments
@@ -232,16 +222,15 @@ class JawkSourceExtensionTest {
 				    print executeWmiRequest(requestArguments)
 				}
 			""");
-		doReturn(
-			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		).when(sourceProcessorMock).process(any(WmiSource.class));
+		doReturn(SourceTable.ofTable(List.of(List.of("result1", "result2")))).when(sourceProcessorMock)
+			.process(any(WmiSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<WmiSource> wmiCaptor = ArgumentCaptor.forClass(WmiSource.class);
 
 		assertEquals(
-			Collections.singletonList(Arrays.asList("result1", "result2")),
-			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+			SourceTable.ofText("result1;result2;\n"),
+			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
 		// Verify and capture the arguments
@@ -269,16 +258,15 @@ class JawkSourceExtensionTest {
 				}
 			""");
 
-		doReturn(
-			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		).when(sourceProcessorMock).process(any(SnmpGetSource.class));
+		doReturn(SourceTable.ofTable(List.of(List.of("result1", "result2")))).when(sourceProcessorMock)
+			.process(any(SnmpGetSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<SnmpGetSource> snmpGetCaptor = ArgumentCaptor.forClass(SnmpGetSource.class);
 
 		assertEquals(
-			Collections.singletonList(Arrays.asList("result1", "result2")),
-			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+			SourceTable.ofText("result1;result2;\n"),
+			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
 		// Verify and capture the arguments
@@ -305,16 +293,15 @@ class JawkSourceExtensionTest {
 				    print executeSnmpTable(requestArguments)
 				}
 			""");
-		doReturn(
-			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
-		).when(sourceProcessorMock).process(any(SnmpTableSource.class));
+		doReturn(SourceTable.ofTable(List.of(List.of("result1", "result2")))).when(sourceProcessorMock)
+			.process(any(SnmpTableSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<SnmpTableSource> snmpTableCaptor = ArgumentCaptor.forClass(SnmpTableSource.class);
 
 		assertEquals(
-			Collections.singletonList(Arrays.asList("result1", "result2")),
-			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+			SourceTable.ofText("result1;result2;\n"),
+			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
 		// Verify and capture the arguments
@@ -345,7 +332,7 @@ class JawkSourceExtensionTest {
 			.getConnectorNamespace(CONNECTOR_ID)
 			.addSourceTable(
 				inputRef,
-				SourceTable.builder().table(List.of(List.of("fan1", "x;y", "3000"), List.of("fan2", "z", "0"))).build()
+				SourceTable.ofTable(List.of(List.of("fan1", "x;y", "3000"), List.of("fan2", "z", "0")))
 			);
 
 		final JawkSource source = JawkSource.builder()
@@ -370,19 +357,17 @@ class JawkSourceExtensionTest {
 			telemetryManager,
 			sourceProcessorMock
 		);
-		assertEquals(List.of(List.of("fan1", "x;y", "50", "3")), result.getTable());
-		assertEquals("fan1;x,y;50;3;", result.getRawData());
+		assertEquals(SourceTable.ofTable(List.of(List.of("fan1", "x;y", "50", "3"))), result);
 
-		// Text output of a table input: the printed lines are re-parsed on ";"
+		// Text output of a table input: the printed lines
 		final JawkSource textOutput = JawkSource.builder()
 			.input(inputRef)
 			.inputFormat(ContentType.TABLE)
 			.script("{ print $1 \";\" NF }")
 			.build();
 		assertEquals(
-			List.of(List.of("fan1", "3"), List.of("fan2", "3")),
+			SourceTable.ofText("fan1;3\nfan2;3\n"),
 			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
-				.getTable()
 		);
 
 		// The text written from a table input never holds CRLF
@@ -397,8 +382,7 @@ class JawkSourceExtensionTest {
 			telemetryManager,
 			sourceProcessorMock
 		);
-		assertEquals("a\nb\n", crlfResult.getRawData());
-		assertEquals(List.of(List.of("a"), List.of("b")), crlfResult.getTable());
+		assertEquals(SourceTable.ofText("a\nb\n"), crlfResult);
 
 		// An unknown input source gives no record
 		final JawkSource unknown = JawkSource.builder()
@@ -408,11 +392,11 @@ class JawkSourceExtensionTest {
 			.script("{ print $1 } END { print \"end\" }")
 			.build();
 		assertEquals(
-			List.of(List.of("end")),
-			new JawkSourceExtension().processSource(unknown, CONNECTOR_ID, telemetryManager, sourceProcessorMock).getTable()
+			SourceTable.ofTable(List.of(List.of("end"))),
+			new JawkSourceExtension().processSource(unknown, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
-		// An empty table output stays a table: no raw text
+		// An empty table output stays a table
 		final JawkSource empty = JawkSource.builder()
 			.input(inputRef)
 			.inputFormat(ContentType.TABLE)
@@ -425,9 +409,7 @@ class JawkSourceExtensionTest {
 			telemetryManager,
 			sourceProcessorMock
 		);
-		assertEquals(List.of(), emptyResult.getTable());
-		assertNull(emptyResult.getRawData());
-		assertEquals(ContentType.TABLE, emptyResult.getContentType());
+		assertEquals(SourceTable.ofTable(List.of()), emptyResult);
 	}
 
 	@Test
@@ -444,7 +426,7 @@ class JawkSourceExtensionTest {
 	@Test
 	void testProcessSourceWithSourceTableVariable() {
 		final List<List<String>> table = Arrays.asList(Arrays.asList("FOO", "1", "2"), Arrays.asList("BAR", "10", "20"));
-		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().table(table).build());
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofTable(table));
 
 		final Source source = JawkSource.builder()
 			.type("awk")
@@ -466,7 +448,7 @@ class JawkSourceExtensionTest {
 			sourceProcessorMock
 		);
 
-		assertEquals(Arrays.asList(Arrays.asList("FOO", "2"), Arrays.asList("BAR", "20")), result.getTable());
+		assertEquals(SourceTable.ofText("FOO;2;\nBAR;20;\n"), result);
 	}
 
 	/**
@@ -475,7 +457,7 @@ class JawkSourceExtensionTest {
 	 */
 	@Test
 	void testProcessSourceWithScalarVariables() {
-		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().rawData("unused").build());
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("unused"));
 
 		final Source source = JawkSource.builder()
 			.type("awk")
@@ -491,7 +473,7 @@ class JawkSourceExtensionTest {
 			sourceProcessorMock
 		);
 
-		assertEquals(Collections.singletonList(Arrays.asList("b", "730.5")), result.getTable());
+		assertEquals(SourceTable.ofText("b;730.5;\n"), result);
 	}
 
 	/**
@@ -500,7 +482,7 @@ class JawkSourceExtensionTest {
 	 */
 	@Test
 	void testProcessSourceWithUnknownSourceVariable() {
-		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.builder().rawData("unused").build());
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("unused"));
 
 		final Source source = JawkSource.builder()
 			.type("awk")
@@ -515,17 +497,15 @@ class JawkSourceExtensionTest {
 			sourceProcessorMock
 		);
 
-		assertEquals(Collections.singletonList(Collections.singletonList("rows=0")), result.getTable());
+		assertEquals(SourceTable.ofText("rows=0;\n"), result);
 	}
 
 	/**
-	 * A source holding only raw data is parsed as a semicolon-separated table before being exposed.
+	 * A text source is exposed as its table: the text split on semicolons (asTable).
 	 */
 	@Test
-	void testProcessSourceWithRawDataVariable() {
-		final TelemetryManager telemetryManager = buildTelemetryManager(
-			SourceTable.builder().rawData("alpha;beta;gamma").build()
-		);
+	void testProcessSourceWithTextVariable() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("alpha;beta;gamma"));
 
 		final Source source = JawkSource.builder()
 			.type("awk")
@@ -540,7 +520,7 @@ class JawkSourceExtensionTest {
 			sourceProcessorMock
 		);
 
-		assertEquals(Collections.singletonList(Arrays.asList("1", "beta")), result.getTable());
+		assertEquals(SourceTable.ofText("1;beta;\n"), result);
 	}
 
 	/**
@@ -563,10 +543,7 @@ class JawkSourceExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 		hostProperties.getConnectorNamespace(CONNECTOR_ID)
-			.addSourceTable(
-				"${source::monitors.system.discovery.sources.source_one}",
-				SourceTable.builder().table(table).build()
-			);
+			.addSourceTable("${source::monitors.system.discovery.sources.source_one}", SourceTable.ofTable(table));
 		telemetryManager.setHostProperties(hostProperties);
 
 		// The mono-instance attributes travel on the SourceProcessor
@@ -591,8 +568,8 @@ class JawkSourceExtensionTest {
 		);
 
 		assertEquals(
-			Collections.singletonList(Arrays.asList("my-host", "monitor-42", "BAR")),
-			result.getTable(),
+			SourceTable.ofText("my-host;monitor-42;BAR;\n"),
+			result,
 			"The resource attribute, the mono-instance attribute and the source table must all resolve"
 		);
 	}

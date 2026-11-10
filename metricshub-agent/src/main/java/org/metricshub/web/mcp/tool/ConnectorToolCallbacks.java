@@ -198,8 +198,7 @@ public final class ConnectorToolCallbacks {
 		strategy.run();
 
 		if (tool.isTextResult()) {
-			final String text = strategy.getResult().getRawData();
-			return new ToolText(text == null ? "" : text.replace("\r\n", "\n"));
+			return new ToolText(strategy.getResult().asText().replace("\r\n", "\n"));
 		}
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
 	}

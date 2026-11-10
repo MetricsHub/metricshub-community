@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
@@ -128,9 +127,8 @@ class WinCommandLineSourceProcessorTest {
 		doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
 			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
 
-		final List<List<String>> expected = List.of(List.of("16384 MB"), List.of("8192 MB"));
 		assertEquals(
-			SourceTable.builder().table(expected).rawData("16384 MB\n8192 MB").build(),
+			SourceTable.ofText("16384 MB\n8192 MB"),
 			winCommandLineSourceProcessor.process(commandLineSource, telemetryManager)
 		);
 	}

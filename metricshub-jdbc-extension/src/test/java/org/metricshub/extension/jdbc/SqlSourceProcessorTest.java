@@ -2,9 +2,7 @@ package org.metricshub.extension.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -17,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -53,9 +52,8 @@ class SqlSourceProcessorTest {
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 
 		assertNotNull(result);
+		assertEquals(ContentType.TABLE, result.getContentType());
 		assertTrue(result.getTable().isEmpty());
-		assertTrue(result.getHeaders().isEmpty());
-		assertNull(result.getRawData());
 	}
 
 	@Test
@@ -78,9 +76,8 @@ class SqlSourceProcessorTest {
 
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 		assertNotNull(result);
+		assertEquals(ContentType.TABLE, result.getContentType());
 		assertTrue(result.getTable().isEmpty());
-		assertTrue(result.getHeaders().isEmpty());
-		assertNull(result.getRawData());
 	}
 
 	@Test
@@ -106,11 +103,8 @@ class SqlSourceProcessorTest {
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 
 		assertNotNull(result);
-		assertNotNull(result.getRawData());
-		assertEquals(SourceTable.tableToCsv(expectedResults, TABLE_SEP, true), result.getRawData());
-		assertEquals(1, result.getTable().size());
-		assertEquals("row1_col1", result.getTable().get(0).get(0));
-		assertEquals("row1_col2", result.getTable().get(0).get(1));
+		assertEquals(ContentType.TABLE, result.getContentType());
+		assertEquals(expectedResults, result.getTable());
 	}
 
 	/**
@@ -127,11 +121,10 @@ class SqlSourceProcessorTest {
 	}
 
 	/**
-	 * Legacy shape pinned for #1509: the raw text is serialized with <code>replaceSeparator=true</code>, so a
-	 * <code>;</code> inside a cell shows as <code>,</code> in the raw text while the table keeps it.
+	 * A <code>;</code> inside a cell is just a character of the cell: the result is a table, never serialized.
 	 */
 	@Test
-	void testRawTextReplacesSeparatorInsideCellsWhileTableKeepsIt() throws Exception {
+	void testTableKeepsSeparatorInsideCells() throws Exception {
 		when(jdbcConfiguration.copy()).thenReturn(JdbcConfiguration.builder().hostname("hostname").build());
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
 		when(sqlRequestExecutor.executeSql(eq("hostname"), any(JdbcConfiguration.class), any(), eq(false), any(), any()))
@@ -142,7 +135,6 @@ class SqlSourceProcessorTest {
 			createTelemetryManagerWithHostConfiguration()
 		);
 
-		assertEquals(List.of(List.of("a;b", "c"), List.of("", "d")), result.getTable());
-		assertEquals("a,b;c;\n;d;", result.getRawData());
+		assertEquals(SourceTable.ofTable(List.of(List.of("a;b", "c"), List.of("", "d"))), result);
 	}
 }

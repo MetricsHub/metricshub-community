@@ -21,11 +21,13 @@ package org.metricshub.engine.strategy.source.compute;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.ArrayList;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Add;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.And;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
@@ -252,6 +254,17 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 
 		// Replace source reference
 		copy.update(value -> replaceSourceReference(value, copy));
+
+		// A table compute on a text reads no rows and gives an empty table, whatever it changes in place
+		if (
+			computeProcessor instanceof ComputeProcessor processor &&
+				processor.getSourceTable() != null &&
+				processor.getSourceTable().getContentType() == ContentType.TEXT &&
+				copy.getInputContentType() == ContentType.TABLE &&
+				copy.getOutputContentType() == ContentType.TABLE
+		) {
+			processor.getSourceTable().setTable(new ArrayList<>());
+		}
 
 		// Call the next compute visitor
 		copy.accept(computeProcessor);

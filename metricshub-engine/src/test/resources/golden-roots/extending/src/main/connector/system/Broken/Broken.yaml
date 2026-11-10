@@ -1,0 +1,10 @@
+# Extends a file no repository holds: never loads
+extends:
+- ../../semconv/Missing
+connector:
+  displayName: Broken
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: deviceType
+      keep: [ linux ]

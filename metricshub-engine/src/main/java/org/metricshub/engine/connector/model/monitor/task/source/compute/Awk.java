@@ -85,8 +85,8 @@ public class Awk extends Compute {
 	private Map<String, String> variables = new LinkedHashMap<>();
 
 	/**
-	 * How the script reads the source result: {@link ContentType#TEXT} (the raw text, or the table serialized as
-	 * <code>;</code>-separated lines) or {@link ContentType#TABLE} (each row is a record whose cells are
+	 * How the script reads the source result: {@link ContentType#TEXT} (the text; a table is converted first by
+	 * the <code>toText</code> the content-type desugaring inserts) or {@link ContentType#TABLE} (each row is a record whose cells are
 	 * <code>$1..$NF</code>, nothing is serialized). Default text.
 	 */
 	@JsonSetter(nulls = SKIP)

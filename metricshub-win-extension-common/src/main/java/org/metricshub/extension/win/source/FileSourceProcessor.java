@@ -151,7 +151,7 @@ public class FileSourceProcessor {
 			if (mode.equals(FileSourceProcessingMode.FLAT)) {
 				final List<List<String>> results = processFilesInFlatMode(ops, sourceResolvedPaths, hostname);
 
-				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
+				return SourceTable.ofText(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths));
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
 				Map<String, Long> sourceCursors = telemetryManager.getHostProperties()
@@ -166,7 +166,7 @@ public class FileSourceProcessor {
 					hostname
 				);
 
-				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
+				return SourceTable.ofText(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths));
 			} else {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
 			}

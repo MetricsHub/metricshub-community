@@ -37,34 +37,24 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 	 * The kinds of findings.
 	 */
 	public enum Kind {
-		/** An implicit <code>toText</code> was inserted before an <code>awk</code> compute fed by a table. */
+		/** A <code>toText</code> was inserted before an <code>awk</code> compute fed by a table. */
 		TO_TEXT_INSERTED,
-		/** An implicit <code>toTable</code> was inserted before a table compute fed by a legacy text producer. */
+		/** A <code>toTable</code> was inserted before a table compute fed by text. */
 		TO_TABLE_INSERTED,
-		/** An implicit <code>toTable</code> was appended to a chain ending in text from a legacy dual producer. */
+		/** A <code>toTable</code> was appended to a chain ending in text from a legacy text producer. */
 		TO_TABLE_APPENDED,
 		/**
 		 * A table compute follows a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>):
-		 * it finds an empty table today. No conversion is inserted, so that it stays that way.
+		 * it reads no rows and gives an empty table. No conversion is inserted, so that it stays that way.
 		 */
 		TABLE_COMPUTE_ON_TEXT_SOURCE,
 		/**
-		 * A text compute that reads the raw text only (<code>json2Csv</code>, <code>xml2Csv</code>) follows a
-		 * table producer: it finds the raw text the producer left, if any. No conversion is inserted.
+		 * A text compute that parses a text (<code>json2Csv</code>, <code>xml2Csv</code>) follows a table producer:
+		 * it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
 		 */
 		TEXT_COMPUTE_ON_TABLE_SOURCE,
 		/** An <code>awk</code> compute is fed a table (through the inserted <code>toText</code>). */
 		AWK_ON_TABLE,
-		/**
-		 * An <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>translate</code> value
-		 * contains <code>;</code>: it adds columns through the serialization round trip.
-		 */
-		SEPARATOR_IN_VALUE,
-		/**
-		 * An <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>translate</code> value
-		 * contains a line feed: it adds rows through the serialization round trip.
-		 */
-		LINE_FEED_IN_VALUE,
 		/** A <code>tableJoin</code> declares a <code>defaultRightLine</code> as a <code>;</code> string. */
 		DEFAULT_RIGHT_LINE,
 		/** A <code>static</code> source declares its table as a <code>;</code> string. */

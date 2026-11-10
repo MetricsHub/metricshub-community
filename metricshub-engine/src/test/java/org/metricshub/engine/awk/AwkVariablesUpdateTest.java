@@ -93,8 +93,7 @@ class AwkVariablesUpdateTest {
 
 		final List<List<String>> table = List.of(List.of("FOO", "1"), List.of("BAR", "2"));
 		final HostProperties hostProperties = HostProperties.builder().build();
-		hostProperties.getConnectorNamespace(CONNECTOR_ID)
-			.addSourceTable(SOURCE_REF, SourceTable.builder().table(table).build());
+		hostProperties.getConnectorNamespace(CONNECTOR_ID).addSourceTable(SOURCE_REF, SourceTable.ofTable(table));
 		telemetryManager.setHostProperties(hostProperties);
 
 		final Map<String, Object> resolved = AwkVariableHelper.resolveVariables(

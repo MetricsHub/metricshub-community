@@ -30,6 +30,7 @@ import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
@@ -38,12 +39,17 @@ import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriter
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
+import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.detection.ConnectorSelection;
 import org.metricshub.engine.strategy.detection.ConnectorTestResult;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
@@ -625,6 +631,29 @@ class AbstractStrategyTest {
 			)
 			.connectorStore(connectorStore)
 			.build();
+	}
+
+	@Test
+	void testEmptyResultTypedBySource() {
+		final CopySource copy = CopySource.builder().from("${source::a}").build();
+		final TableUnionSource union = TableUnionSource.builder().tables(List.of("${source::a}")).build();
+		final HttpSource http = HttpSource.builder().url("/x").build();
+		final SnmpTableSource snmp = SnmpTableSource.builder().oid("1.3").selectColumns("1").build();
+
+		// A copy or a union of texts answers an empty text: it stays a text, as the desugaring types it
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(copy, SourceTable.ofText("")).getContentType());
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(union, SourceTable.ofText("")).getContentType());
+		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(copy, SourceTable.empty()).getContentType());
+		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(union, null).getContentType());
+
+		// Any other source is typed by its declaration, whatever it answered
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http, SourceTable.empty()).getContentType());
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http, null).getContentType());
+		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(snmp, SourceTable.ofText("")).getContentType());
+
+		// A fresh result every time
+		final SourceTable answered = SourceTable.ofText("");
+		assertFalse(answered == AbstractStrategy.emptyResult(copy, answered));
 	}
 
 	private void assertConnectorStatus(

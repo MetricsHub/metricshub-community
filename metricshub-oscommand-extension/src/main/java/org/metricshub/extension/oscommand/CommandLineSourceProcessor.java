@@ -22,11 +22,8 @@ package org.metricshub.extension.oscommand;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,8 +35,8 @@ import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Processes command-line data sources to extract and transform the output into structured {@link SourceTable} format.
- * This class handles the execution of operating system commands provided through {@link CommandLineSource}, applies line and column filtering, and builds a structured table from the results.
+ * Processes command-line data sources to extract and transform the output into a text {@link SourceTable}.
+ * This class handles the execution of operating system commands provided through {@link CommandLineSource}, applies line and column filtering, and returns the selected lines as a text.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -49,7 +46,7 @@ public class CommandLineSourceProcessor {
 	private final OsCommandService osCommandService;
 
 	/**
-	 * Processes an OS command defined in a {@link CommandLineSource}, executes it, and converts the output into a structured {@link SourceTable}.
+	 * Processes an OS command defined in a {@link CommandLineSource}, executes it, and returns the selected lines as a text {@link SourceTable}.
 	 *
 	 * @param commandLineSource The command line source configuration containing the command, filtering, and selection settings.
 	 * @param connectorId       Identifier for the connector instance processing this source.
@@ -99,14 +96,7 @@ public class CommandLineSourceProcessor {
 				commandLineSource.getSelectColumns()
 			);
 
-			return SourceTable.builder()
-				.rawData(selectedColumnsLines.stream().collect(Collectors.joining(NEW_LINE)))
-				.table(
-					selectedColumnsLines.stream()
-						.map(line -> Stream.of(line.split(TABLE_SEP)).collect(Collectors.toList()))
-						.collect(Collectors.toList())
-				)
-				.build();
+			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,

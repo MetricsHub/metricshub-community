@@ -441,7 +441,7 @@ public class EmulationExtension implements IProtocolExtension {
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiCfg, emulCfg, rawSource);
 			if (result != null) {
-				return SourceTable.builder().table(List.of(IpmiResultConverter.rawRow(result))).build();
+				return SourceTable.ofTable(List.of(IpmiResultConverter.rawRow(result)));
 			}
 			return SourceTable.empty();
 		} else if (source instanceof IpmiSelSource) {
@@ -450,7 +450,7 @@ public class EmulationExtension implements IProtocolExtension {
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiCfg, emulCfg);
 			if (result != null) {
-				return SourceTable.builder().table(SourceTable.csvToTable(result, ";")).build();
+				return SourceTable.ofTable(SourceTable.csvToTable(result, ";"));
 			}
 			return SourceTable.empty();
 		} else if (source instanceof IpmiSource) {
@@ -459,7 +459,7 @@ public class EmulationExtension implements IProtocolExtension {
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiCfg, emulCfg);
 			if (result != null) {
-				return SourceTable.builder().rawData(result).build();
+				return SourceTable.ofText(result);
 			}
 			return SourceTable.empty();
 		}

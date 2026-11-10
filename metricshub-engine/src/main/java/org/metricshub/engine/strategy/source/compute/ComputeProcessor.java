@@ -45,7 +45,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -263,7 +262,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		sourceTable.setTable(resultTable);
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -318,7 +316,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			}
 		}
 
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -359,8 +356,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Compute Operation (Awk) is null, the table remains unchanged.", hostname);
 			return;
 		}
-		// The result of the script is typed by its content, not by what an explicit conversion marked before
-		sourceTable.setContentType(null);
 		final String script = awk.getScript();
 
 		// An Awk Script is supposed to be only the reference to the EmbeddedFile, so the map contains only one item which is our EmbeddedFile
@@ -396,13 +391,9 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		// Table input: the rows are the records, nothing is serialized. Text input (the default, what every script
-		// written so far expects): the raw text, else the table serialized with "," for ";" inside cells
+		// written so far expects): the text, which the content-type desugaring converted from a table if needed
 		final boolean tableInput = awk.getInputContentType() == ContentType.TABLE;
-		final String input = tableInput
-			? null
-			: (sourceTable.getRawData() == null || sourceTable.getRawData().isEmpty())
-				? SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true)
-				: sourceTable.getRawData();
+		final String input = tableInput ? null : sourceTable.getText();
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
 
@@ -433,12 +424,6 @@ public class ComputeProcessor implements IComputeProcessor {
 					)
 					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 				sourceTable.setTable(rows);
-				// Serialized as toText does, so that a later text consumer cannot split a cell holding the separator,
-				// and never with CRLF; no raw text at all for an empty table, which stays a table
-				sourceTable.setRawData(
-					rows.isEmpty() ? null : SourceTable.tableToCsv(rows, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
-				);
-				sourceTable.setContentType(ContentType.TABLE);
 				return;
 			}
 
@@ -459,11 +444,7 @@ public class ComputeProcessor implements IComputeProcessor {
 					computeKey,
 					(awkResult == null ? "null" : "empty")
 				);
-				sourceTable.setTable(Collections.emptyList());
-				// The script's output is empty text: the input of the script is not its result, so no stale raw text
-				// is left for a later consumer (an explicit toTable would turn the input back into rows)
-				sourceTable.setRawData(EMPTY);
-				sourceTable.setContentType(ContentType.TEXT);
+				sourceTable.setText(EMPTY);
 				return;
 			}
 
@@ -491,8 +472,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				.map(line -> line.endsWith(TABLE_SEP) ? line : line + TABLE_SEP)
 				.collect(Collectors.joining(NEW_LINE));
 
-			sourceTable.setRawData(awkResult);
-			sourceTable.setTable(SourceTable.csvToTable(awkResult, TABLE_SEP));
+			sourceTable.setText(awkResult);
 		} catch (Exception e) {
 			logComputeError(connectorId, computeKey, "AWK: " + embeddedFile.description(), e, hostname);
 		}
@@ -557,7 +537,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				columnIndex
 			);
 		});
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -579,7 +558,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				columnIndex
 			);
 		});
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -651,7 +629,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			}
 		}
 
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -713,7 +690,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				elementList.add(columnIndex, elementList.get(columnIndex));
 			}
 		}
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -763,7 +739,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			}
 		}
 
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -812,7 +787,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				.collect(Collectors.toList());
 
 			sourceTable.setTable(filteredTable);
-			sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 		}
 	}
 
@@ -960,7 +934,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		sourceTable.setTable(resultTable);
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -1014,7 +987,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				}
 			}
 		}
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -1052,7 +1024,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		sourceTable.setTable(
 			new ArrayList<>(last ? table.subList(table.size() - kept, table.size()) : table.subList(0, kept))
 		);
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -1084,12 +1055,19 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
+		if (sourceTable.getContentType() == ContentType.TABLE) {
+			log.warn("Hostname {} - Json2CSV compute on a table: nothing to parse, the table remains unchanged.", hostname);
+			return;
+		}
+
+		// An unconfigured parse gives no rows, like a failed one: the result is a table all the same
 		final String properties = json2csv.getProperties();
 		if (properties == null) {
 			log.warn(
-				"Hostname {} - Json2CSV processor encountered null properties. As a result, the table remains unchanged.",
+				"Hostname {} - Json2CSV processor encountered null properties. As a result, the table is empty.",
 				hostname
 			);
+			sourceTable.setTable(new ArrayList<>());
 			return;
 		}
 
@@ -1097,18 +1075,19 @@ public class ComputeProcessor implements IComputeProcessor {
 			final List<String> jsonToCsvProperties = SourceTable.lineToList(properties, SEMICOLON);
 
 			final String json2csvResult = clientsExecutor.executeJson2Csv(
-				sourceTable.getRawData(),
+				sourceTable.getText(),
 				json2csv.getEntryKey(),
 				jsonToCsvProperties,
 				json2csv.getSeparator(),
 				json2csv.getParsingMode() == Json2Csv.ParsingMode.EVENTS
 			);
 
-			if (json2csvResult != null && !json2csvResult.isEmpty()) {
-				sourceTable.setRawData(json2csvResult);
-				sourceTable.setTable(SourceTable.csvToTable(json2csvResult, json2csv.getSeparator()));
-				sourceTable.setContentType(ContentType.TABLE);
-			}
+			// A document that does not parse gives no rows: the result is a table all the same
+			sourceTable.setTable(
+				json2csvResult == null || json2csvResult.isEmpty()
+					? new ArrayList<>()
+					: SourceTable.csvToTable(json2csvResult, json2csv.getSeparator())
+			);
 		} catch (Exception e) {
 			logComputeError(
 				connectorId,
@@ -1117,6 +1096,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				e,
 				hostname
 			);
+			sourceTable.setTable(new ArrayList<>());
 		}
 	}
 
@@ -1217,7 +1197,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		sourceTable.setTable(resultTable);
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -1348,7 +1327,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				line.set(columnIndex, columnResult);
 			}
 		}
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -1430,11 +1408,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				});
 			}
 		}
-
-		sourceTable.setTable(
-			SourceTable.csvToTable(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false), TABLE_SEP)
-		);
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -1499,7 +1472,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		sorted.addAll(others);
 
 		sourceTable.setTable(sorted);
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	@Override
@@ -1652,7 +1624,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Cannot perform substring on row {} on column index {}", hostname, row, columnIndex);
 		});
 
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -1737,8 +1708,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		boolean needSerialization = false;
-
 		final String defaultTranslation = translations.get(DEFAULT);
 
 		for (List<String> line : sourceTable.getTable()) {
@@ -1748,8 +1717,6 @@ public class ComputeProcessor implements IComputeProcessor {
 
 				if (newValue != null) {
 					line.set(columnIndex, newValue);
-
-					needSerialization = needSerialization || newValue.contains(TABLE_SEP);
 				} else {
 					log.warn(
 						"Hostname {} - The Translation Map {} does not contain the following value {} or default.",
@@ -1760,14 +1727,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				}
 			}
 		}
-
-		if (needSerialization) {
-			sourceTable.setTable(
-				SourceTable.csvToTable(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false), TABLE_SEP)
-			);
-		}
-
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -1775,12 +1734,11 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param xml2csv {@link Xml2Csv} instance
 	 */
 	/**
-	 * Converts the raw text into a table: one row per line, split on the separator, after the line filters and the
-	 * column selection of the compute (the <code>commandLine</code> semantics).
-	 * <p>
-	 * An implicit <code>toTable</code> (inserted by the content-type desugaring after <code>commandLine</code>, the
-	 * <code>awk</code> source or the <code>awk</code> compute) leaves the source table unchanged: those producers
-	 * build their table themselves.
+	 * Converts the text into a table: one row per line, split on the separator by
+	 * {@link SourceTable#textToTable(String, String)} (what {@link SourceTable#asTable()} does with <code>;</code>),
+	 * after the line filters and before the column selection of the compute (the <code>commandLine</code> semantics).
+	 * A table is already a table: it remains unchanged, unless the compute filters lines, selects columns or sets a
+	 * separator, which then apply to {@link SourceTable#asText()} as they did to the legacy raw text of a table.
 	 *
 	 * @param toTable The {@link ToTable} compute
 	 */
@@ -1791,21 +1749,19 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Compute Operation (ToTable) is null, the table remains unchanged.", hostname);
 			return;
 		}
-		if (toTable.isImplicit()) {
-			log.debug(
-				"Hostname {} - Implicit toTable: the table is already built, the source table remains unchanged.",
-				hostname
-			);
+		final boolean hasOptions = toTable.getKeep() != null ||
+			toTable.getExclude() != null ||
+			toTable.getSelectColumns() != null ||
+			!TABLE_SEP.equals(toTable.getSeparator());
+		if (sourceTable.getContentType() == ContentType.TABLE && !hasOptions) {
+			log.debug("Hostname {} - Compute Operation (ToTable) on a table: the table remains unchanged.", hostname);
 			return;
 		}
 
-		final String rawData = sourceTable.getRawData();
-		// The text may come with CRLF line endings: the result must not depend on them
-		final List<String> lines = rawData == null
-			? List.of()
-			: SourceTable.lineToList(rawData.replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE);
+		// A table with line filters or a column selection is read as its text, as the legacy toTable read the raw
+		// text of a table. The text may come with CRLF line endings: the result must not depend on them
 		final List<String> filteredLines = FilterResultHelper.filterLines(
-			lines,
+			SourceTable.lineToList(sourceTable.asText().replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE),
 			null,
 			null,
 			toTable.getExclude(),
@@ -1813,25 +1769,17 @@ public class ComputeProcessor implements IComputeProcessor {
 		);
 		final List<int[]> columns = columnRanges(toTable.getSelectColumns());
 
-		final List<List<String>> table = new ArrayList<>();
-		for (final String line : filteredLines) {
-			// A blank line gives no row; a line whose selected columns are all absent gives empty cells
-			if (line.isEmpty()) {
-				continue;
-			}
-			final List<String> cells = splitLine(line, toTable.getSeparator());
-			// A line of blank separators only gives no cell: no row either
-			if (cells.isEmpty()) {
-				continue;
-			}
-			table.add(columns == null ? cells : selectCells(cells, columns));
-		}
-
-		sourceTable.setTable(table);
-		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never
-		// with CRLF
-		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE));
-		sourceTable.setContentType(ContentType.TABLE);
+		// A blank line, or a line of blank separators only, gives no row; a line whose selected columns are all
+		// absent gives empty cells
+		final List<List<String>> table = SourceTable.textToTable(
+			String.join(NEW_LINE, filteredLines),
+			toTable.getSeparator()
+		);
+		sourceTable.setTable(
+			columns == null
+				? table
+				: table.stream().map(cells -> selectCells(cells, columns)).collect(Collectors.toCollection(ArrayList::new))
+		);
 	}
 
 	/**
@@ -1898,34 +1846,9 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
-	 * Splits a line into cells on a literal separator, keeping the empty cells but the one after a trailing
-	 * separator, as {@link SourceTable#lineToList(String, String)} does. A blank separator (a space, a tab) splits on
-	 * runs of it and keeps no empty cell, as the <code>commandLine</code> selection does. An empty line gives no cell.
-	 *
-	 * @param line      The line
-	 * @param separator The literal separator
-	 * @return the cells, mutable
-	 */
-	private static List<String> splitLine(final String line, final String separator) {
-		if (line == null || line.isEmpty()) {
-			return new ArrayList<>();
-		}
-		final String[] cells = line.split(Pattern.quote(separator), -1);
-		if (separator.isBlank()) {
-			return Stream.of(cells).filter(cell -> !cell.isEmpty()).collect(Collectors.toCollection(ArrayList::new));
-		}
-		final int count = line.endsWith(separator) ? cells.length - 1 : cells.length;
-		return Stream.of(cells).limit(count).collect(Collectors.toCollection(ArrayList::new));
-	}
-
-	/**
-	 * Converts the table into text: one line per row, cells joined with <code>;</code> and a trailing
-	 * <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code> (what the <code>awk</code> compute
-	 * read from a table so far).
-	 * <p>
-	 * An implicit <code>toText</code> (inserted by the content-type desugaring before an <code>awk</code> compute
-	 * fed by a table producer) leaves the source table unchanged: the <code>awk</code> compute serializes the table
-	 * itself when it finds no raw text, and an empty <code>awk</code> result must keep leaving the raw text as it was.
+	 * Converts the table into text with {@link SourceTable#asText()}: one line per row, cells joined with
+	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code> (what
+	 * the <code>awk</code> compute read from a table so far), never a CRLF. A text remains unchanged.
 	 *
 	 * @param toText The {@link ToText} compute
 	 */
@@ -1936,19 +1859,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Compute Operation (ToText) is null, the table remains unchanged.", hostname);
 			return;
 		}
-		if (toText.isImplicit()) {
-			log.debug(
-				"Hostname {} - Implicit toText: the awk compute serializes the table itself, the source table remains unchanged.",
-				hostname
-			);
-			return;
-		}
-		// A text result never carries CRLF, whatever the cells hold
-		sourceTable.setRawData(
-			SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE)
-		);
-		sourceTable.setTable(new ArrayList<>());
-		sourceTable.setContentType(ContentType.TEXT);
+		sourceTable.setText(sourceTable.asText());
 	}
 
 	/**
@@ -2020,10 +1931,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			);
 		}
 		sourceTable.setTable(table);
-		// Serialized as toText does, so that an awk compute reading the raw text sees one field per cell, and never
-		// with CRLF
-		sourceTable.setRawData(SourceTable.tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE));
-		sourceTable.setContentType(ContentType.TABLE);
 	}
 
 	@Override
@@ -2034,18 +1941,20 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
+		if (sourceTable.getContentType() == ContentType.TABLE) {
+			log.warn("Hostname {} - Xml2Csv compute on a table: nothing to parse, the table remains unchanged.", hostname);
+			return;
+		}
+
 		try {
 			final List<List<String>> xmlResult = clientsExecutor.executeXmlParsing(
-				sourceTable.getRawData(),
+				sourceTable.getText(),
 				xml2csv.getProperties(),
 				xml2csv.getRecordTag()
 			);
 
-			if (xmlResult != null && !xmlResult.isEmpty()) {
-				sourceTable.setTable(xmlResult);
-				sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
-				sourceTable.setContentType(ContentType.TABLE);
-			}
+			// A document that does not parse gives no rows: the result is a table all the same
+			sourceTable.setTable(xmlResult == null ? new ArrayList<>() : xmlResult);
 		} catch (Exception e) {
 			logComputeError(
 				connectorId,
@@ -2054,6 +1963,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				e,
 				hostname
 			);
+			sourceTable.setTable(new ArrayList<>());
 		}
 	}
 
@@ -2125,7 +2035,6 @@ public class ComputeProcessor implements IComputeProcessor {
 			performMathComputeOnLine(computeOperation, columnIndex, operand2, operand2Index, line);
 		}
 
-		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 
 	/**
@@ -2233,15 +2142,6 @@ public class ComputeProcessor implements IComputeProcessor {
 					sourceTable.getTable().forEach(line -> concatColumns(line, columnIndex, concatColumnIndex, abstractConcat));
 				} else {
 					sourceTable.getTable().forEach(line -> concatString(line, columnIndex, abstractConcat));
-
-					// Serialize and deserialize
-					// in case the String to concat contains a ';'
-					// so that a new column is created.
-					if (concatString.contains(TABLE_SEP)) {
-						sourceTable.setTable(
-							SourceTable.csvToTable(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false), TABLE_SEP)
-						);
-					}
 				}
 			} else if (abstractConcat.getColumn() == sourceTable.getTable().get(0).size() + 1) {
 				// Case 2 : concatenation with non existing column
@@ -2249,7 +2149,6 @@ public class ComputeProcessor implements IComputeProcessor {
 				// add at the end of the list (or at the beginning if the list is empty)
 				sourceTable.getTable().forEach(line -> line.add(abstractConcat.getValue()));
 			}
-			sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 		}
 	}
 

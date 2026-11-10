@@ -40,7 +40,7 @@ class FileSourceTableLoggingProxyTest {
 	@Test
 	void formatForLogWhenDetailDisabledReturnsHeaderOnly() {
 		FileSourceTableLoggingProxy proxy = new FileSourceTableLoggingProxy(delegate, false);
-		SourceTable sourceTable = SourceTable.builder().rawData("any content").table(List.of(List.of("cell"))).build();
+		SourceTable sourceTable = SourceTable.ofText("any content");
 
 		String result = proxy.formatForLog(OPERATION_TAG, "FileSource", "key1", CONNECTOR_ID, sourceTable, HOSTNAME);
 
@@ -57,13 +57,26 @@ class FileSourceTableLoggingProxyTest {
 	@Test
 	void formatForLogWhenDetailEnabledDelegatesFullMessage() {
 		FileSourceTableLoggingProxy proxy = new FileSourceTableLoggingProxy(delegate, true);
-		SourceTable sourceTable = SourceTable.builder().rawData("any content").table(List.of(List.of("cell"))).build();
+		SourceTable sourceTable = SourceTable.ofText("any content");
 
 		String result = proxy.formatForLog(OPERATION_TAG, "FileSource", "key1", CONNECTOR_ID, sourceTable, HOSTNAME);
 
 		assertNotNull(result);
 		assertTrue(result.contains("any content"));
 		assertTrue(result.contains("Raw result:"));
+		assertFalse(result.contains("Table result:"));
+
+		// A table after the computes of the source
+		result = proxy.formatForLog(
+			OPERATION_TAG,
+			"FileSource",
+			"key1",
+			CONNECTOR_ID,
+			SourceTable.ofTable(List.of(List.of("cell"))),
+			HOSTNAME
+		);
+		assertTrue(result.contains("Table result:"));
 		assertTrue(result.contains("cell"));
+		assertFalse(result.contains("Raw result:"));
 	}
 }

@@ -1,11 +1,12 @@
 package org.metricshub.engine.strategy.source.compute.golden;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -36,6 +38,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.CompareMode;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.ConnectorGolden;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Inputs;
+import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.LoadedRepository;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Output;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Repository;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.SourceGolden;
@@ -83,10 +86,17 @@ class ComputeChainGoldenCorpusTest {
 	private final Set<String> loadedConnectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
 	private Stream<DynamicTest> goldens(final Repository repository) {
-		final ConnectorStore store = ComputeChainGoldenCorpus.loadConnectors(repository.getConnectorDirectory());
+		final LoadedRepository loaded;
+		try {
+			loaded = ComputeChainGoldenCorpus.load(repository);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		final ConnectorStore store = loaded.store();
 		final Set<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		connectorIds.addAll(store.getStore().keySet());
 		loadedConnectorIds.addAll(connectorIds);
+		loadedConnectorIds.addAll(loaded.unloaded().keySet());
 		final Stream<DynamicTest> connectors = connectorIds.stream()
 			.filter(ComputeChainGoldenCorpus::isSelected)
 			.map(
@@ -99,7 +109,18 @@ class ComputeChainGoldenCorpusTest {
 			repository.getRoot().getFileName() + " / stored goldens match the connectors",
 			() -> checkInventory(repository, connectorIds)
 		);
-		return Stream.concat(connectors, Stream.of(inventory));
+		// A connector file that did not load has no golden, no check and no report: a failure, golden or not
+		final Stream<DynamicTest> unloaded = loaded.unloaded()
+			.entrySet()
+			.stream()
+			.filter(entry -> ComputeChainGoldenCorpus.isSelected(entry.getKey()))
+			.map(
+				entry -> DynamicTest.dynamicTest(
+					repository.getRoot().getFileName() + " / " + entry.getKey(),
+					() -> fail(entry.getKey() + ": connector file did not load " + entry.getValue())
+				)
+			);
+		return Stream.of(connectors, unloaded, Stream.of(inventory)).flatMap(stream -> stream);
 	}
 
 	private void checkConnector(final Repository repository, final ConnectorStore store, final String connectorId)
@@ -122,9 +143,7 @@ class ComputeChainGoldenCorpusTest {
 	 * Every stored golden must belong to a connector that still exists (a deleted connector leaves no golden behind).
 	 */
 	private void checkInventory(final Repository repository, final Set<String> connectorIds) throws IOException {
-		// A connector whose file exists but did not load keeps its golden, in both modes, and fails the test
-		final List<String> unloaded = ComputeChainGoldenCorpus.unloadedGoldens(repository, connectorIds);
-		assertTrue(unloaded.isEmpty(), "Connectors that failed to load (goldens kept): " + unloaded);
+		// A connector whose file exists but did not load keeps its golden, in both modes (its own test fails)
 		final List<String> orphans = ComputeChainGoldenCorpus.orphanGoldens(repository, connectorIds);
 		if (ComputeChainGoldenCorpus.isUpdateMode()) {
 			for (final String connectorId : orphans) {
@@ -237,15 +256,20 @@ class ComputeChainGoldenCorpusTest {
 		assertTrue(separatorInCell.get(1).get(0).contains(";"), "separator inside a cell");
 
 		// commandLine: no trailing separator in the raw text, split(";") in the table
-		final SourceTable commandLine = Inputs.commandLine(Inputs.TEXT);
-		assertEquals("a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly", commandLine.getRawData());
-		assertEquals(List.of("x", "", "z"), commandLine.getTable().get(1));
-		assertEquals(List.of(""), commandLine.getTable().get(2));
+		final Inputs.Shape commandLine = Inputs.commandLine(Inputs.TEXT);
+		assertEquals("a;b;c\nx;;z;\n\n1;2.5;3\nval;with,comma\nonly", commandLine.text());
+		assertEquals(List.of("x", "", "z"), commandLine.table().get(1));
+		assertEquals(List.of(""), commandLine.table().get(2));
 
 		// awk source: csvToTable keeps the trailing empty cell and drops the blank line
-		final SourceTable awkSource = Inputs.awkSource(Inputs.TEXT);
-		assertEquals(List.of("x", "", "z"), awkSource.getTable().get(1));
-		assertEquals(List.of("1", "2.5", "3"), awkSource.getTable().get(2));
+		final Inputs.Shape awkSource = Inputs.awkSource(Inputs.TEXT);
+		assertEquals(List.of("x", "", "z"), awkSource.table().get(1));
+		assertEquals(List.of("1", "2.5", "3"), awkSource.table().get(2));
+
+		// A shape is read on the side of the type: the raw text, else the table serialized; or the table
+		assertEquals(SourceTable.ofText(commandLine.text()), commandLine.as(ContentType.TEXT));
+		assertEquals(SourceTable.ofTable(commandLine.table()), commandLine.as(ContentType.TABLE));
+		assertEquals(SourceTable.ofText("a,b;c;"), Inputs.tableOnly(Inputs.rows("a;b|c")).as(ContentType.TEXT));
 
 		// Each shape is a fresh mutable table
 		final Map<String, ?> shapes = Inputs.inputsFor(
@@ -284,6 +308,29 @@ class ComputeChainGoldenCorpusTest {
 	 * and the text shapes keep their trailing-newline convention.
 	 */
 	@Test
+	void copyWithShortReferenceIsTypedByItsOrigin() {
+		final HttpSource http = HttpSource.builder().url("/x").build();
+		http.setKey("${source::monitors.m.discovery.sources.raw}");
+		final CopySource copy = CopySource.builder()
+			.from("${source::raw}")
+			.computes(List.of(Append.builder().column(1).value("v").build()))
+			.build();
+		copy.setKey("${source::monitors.m.discovery.sources.copy}");
+		final Map<String, org.metricshub.engine.connector.model.monitor.task.source.Source> sources = Map.of(
+			http.getKey(),
+			http,
+			copy.getKey(),
+			copy
+		);
+
+		// The short sibling reference resolves to the http origin: the copy is fed texts, as at run time
+		assertEquals(ContentType.TEXT, Inputs.resultType(copy, sources, 0));
+		final Map<String, Supplier<SourceTable>> inputs = Inputs.inputsFor(copy, sources);
+		assertTrue(inputs.containsKey("text"), inputs.keySet().toString());
+		assertEquals(SourceTable.ofText(""), inputs.get("empty").get());
+	}
+
+	@Test
 	void wideAndSeparatorInCellTwins() {
 		final List<List<String>> wide = Inputs.wideTable();
 		assertEquals(3, wide.size());
@@ -303,22 +350,22 @@ class ComputeChainGoldenCorpusTest {
 			List.of("text", "textWide", "textNoTrailingNewline", "textNoTrailingNewlineWide", "empty"),
 			new ArrayList<>(http.keySet())
 		);
-		assertEquals(Inputs.WIDE_TEXT, http.get("textWide").get().getRawData());
+		assertEquals(SourceTable.ofText(Inputs.WIDE_TEXT), http.get("textWide").get());
 		assertEquals(
 			Inputs.WIDE_TEXT.substring(0, Inputs.WIDE_TEXT.length() - 1),
-			http.get("textNoTrailingNewlineWide").get().getRawData()
+			http.get("textNoTrailingNewlineWide").get().getText()
 		);
+		assertEquals(SourceTable.ofText(""), http.get("empty").get());
 
 		final Map<String, Supplier<SourceTable>> commandLine = Inputs.inputsFor(
 			CommandLineSource.builder().commandLine("x").computes(append).build(),
 			Map.of()
 		);
 		assertEquals(List.of("commandLine", "commandLineWide", "empty"), new ArrayList<>(commandLine.keySet()));
-		assertEquals(wide, commandLine.get("commandLineWide").get().getTable());
-		assertTrue(
-			!commandLine.get("commandLineWide").get().getRawData().endsWith("\n"),
-			"commandLine: no trailing newline"
-		);
+		// commandLine produces text
+		assertEquals(ContentType.TEXT, commandLine.get("commandLineWide").get().getContentType());
+		assertEquals(wide, commandLine.get("commandLineWide").get().asTable());
+		assertTrue(!commandLine.get("commandLineWide").get().getText().endsWith("\n"), "commandLine: no trailing newline");
 
 		final Map<String, Supplier<SourceTable>> sql = Inputs.inputsFor(
 			SqlSource.builder().query("q").computes(append).build(),
@@ -328,8 +375,11 @@ class ComputeChainGoldenCorpusTest {
 			List.of("csvReplaceSeparator", "csvReplaceSeparatorSeparatorInCell", "csvReplaceSeparatorWide", "empty"),
 			new ArrayList<>(sql.keySet())
 		);
-		assertEquals(Inputs.separatorInCellTable(), sql.get("csvReplaceSeparatorSeparatorInCell").get().getTable());
-		assertTrue(sql.get("csvReplaceSeparatorSeparatorInCell").get().getRawData().contains("cell,with,sep"));
+		// sql produces a table: the cell keeps its ";"
+		assertEquals(
+			SourceTable.ofTable(Inputs.separatorInCellTable()),
+			sql.get("csvReplaceSeparatorSeparatorInCell").get()
+		);
 
 		final Map<String, Supplier<SourceTable>> staticSource = Inputs.inputsFor(
 			StaticSource.builder().value("a;b").computes(append).build(),
@@ -340,8 +390,7 @@ class ComputeChainGoldenCorpusTest {
 			new ArrayList<>(staticSource.keySet())
 		);
 		assertEquals(List.of(List.of("a", "b")), staticSource.get("static").get().getTable());
-		assertEquals(wide, staticSource.get("staticWide").get().getTable());
-		assertTrue(staticSource.get("staticWide").get().getRawData().startsWith("r1c1;r1c2;"));
+		assertEquals(SourceTable.ofTable(wide), staticSource.get("staticWide").get());
 		// The list form is the single row of exactly these cells, a ';' in a cell included
 		final Map<String, Supplier<SourceTable>> staticCells = Inputs.inputsFor(
 			StaticSource.builder().value(List.of("a", "b;c")).computes(append).build(),
@@ -354,8 +403,8 @@ class ComputeChainGoldenCorpusTest {
 			Map.of()
 		);
 		assertEquals(List.of("table", "tableSeparatorInCell", "tableWide", "empty"), new ArrayList<>(snmp.keySet()));
-		assertEquals(wide, snmp.get("tableWide").get().getTable());
-		assertNull(snmp.get("tableWide").get().getRawData());
+		assertEquals(SourceTable.ofTable(wide), snmp.get("tableWide").get());
+		assertEquals(SourceTable.empty(), snmp.get("empty").get());
 	}
 
 	/**
@@ -374,57 +423,66 @@ class ComputeChainGoldenCorpusTest {
 		assertTrue(!withNull.equals(withText));
 	}
 
+	@Test
+	void intendedChanges() {
+		// A separator-in-cell input, whatever the chain
+		assertTrue(ComputeChainGoldenCorpus.isIntendedChange(List.of("awk"), "tableSeparatorInCell"));
+		// A document chain, whatever the input
+		assertTrue(ComputeChainGoldenCorpus.isIntendedChange(List.of("Json2Csv", "awk"), "json"));
+		assertTrue(ComputeChainGoldenCorpus.isIntendedChange(List.of("xml2Csv"), "table"));
+		// The documents fed to any other chain, and any other input, are compared
+		assertTrue(!ComputeChainGoldenCorpus.isIntendedChange(List.of("awk"), "json"));
+		assertTrue(!ComputeChainGoldenCorpus.isIntendedChange(List.of("replace", "json2Csv"), "xml"));
+		assertTrue(!ComputeChainGoldenCorpus.isIntendedChange(List.of(), "table"));
+		assertTrue(!ComputeChainGoldenCorpus.isIntendedChange(null, "text"));
+	}
+
 	/**
-	 * The typed comparison checks what the consumers of the chain see: the stripped table when the generated chain
-	 * ends in a table, the raw text when it ends in text; the chain itself is not compared, and a difference on a
-	 * separator-in-cell input is intended.
+	 * The typed comparison checks what the consumers of the chain see, on the side of the generated output's type:
+	 * the stripped table for a table, the text for a text, compared with the stored goldens written before stage 4
+	 * of #1508 (a table and a raw text) as with those written since (one side); the chain itself is not compared, and
+	 * a difference on a separator-in-cell input is intended.
 	 */
 	@Test
 	void typedComparison(@TempDir final Path directory) throws IOException {
 		final Path file = directory.resolve("X.json");
-		ComputeChainGoldenCorpus.write(
-			file,
-			golden(
-				"snmpTable",
-				List.of("append"),
-				Map.of(
-					"table",
-					new Output(List.of(List.of("a", "b", ""), List.of("")), "a;b;\n;\n", null, null),
-					"tableSeparatorInCell",
-					new Output(List.of(List.of("cell", "with", "sep")), null, null, null),
-					"text",
-					new Output(List.of(List.of("a")), "a\n", null, null)
-				)
-			)
-		);
-		// Same for the consumers of a table: trailing empty cells gained, raw text, source type and chain all differ
+		// Stored before stage 4: both sides, a null raw text included; "textNew" stored since: one side
+		Files.writeString(file, """
+			{"connector":"X","sources":{"s":{"source":"snmpTable","computes":["append"],"outputs":{
+			"table":{"table":[["a","b",""],[""]],"rawData":"a;b;\\n;\\n"},
+			"tableSeparatorInCell":{"table":[["cell","with","sep"]],"rawData":null},
+			"text":{"table":[["a"]],"rawData":"a\\n"},
+			"textNew":{"text":"a\\n"}}}}}
+			""");
+		// Same for the consumers: trailing empty cells gained, the other side dropped, source type and chain differ
 		final ConnectorGolden generated = golden(
 			"commandLine",
 			List.of("toTable", "insertColumn"),
 			Map.of(
 				"table",
-				new Output(List.of(List.of("a", "b", "", ""), List.of("", "")), "a;b;", null, null),
+				new Output(List.of(List.of("a", "b", "", ""), List.of("", "")), null, null, null),
 				"tableSeparatorInCell",
 				new Output(List.of(List.of("cell;with;sep")), null, null, null),
 				"text",
-				new Output(List.of(List.of("a")), "a\n", null, null)
+				new Output(null, "a\n", null, null),
+				"textNew",
+				new Output(null, "a\n", null, null)
 			)
 		);
-		generated.getSources().get("s").setEnding(ContentType.TABLE);
 		final List<String> typed = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
 		assertEquals(1, typed.size(), typed.toString());
 		assertTrue(ComputeChainGoldenCorpus.isIntended(typed.get(0)), typed.get(0));
 		assertTrue(typed.get(0).contains("s [tableSeparatorInCell]"), typed.get(0));
-		// The exact mode sees every one of them: source type, chain, table, tableSeparatorInCell
-		assertEquals(4, ComputeChainGoldenCorpus.diff(file, generated, CompareMode.EXACT).size());
-		assertEquals(4, ComputeChainGoldenCorpus.diff(file, generated).size());
+		// The exact mode sees every one of them: source type, chain, table, tableSeparatorInCell, text
+		assertEquals(5, ComputeChainGoldenCorpus.diff(file, generated, CompareMode.EXACT).size());
+		assertEquals(5, ComputeChainGoldenCorpus.diff(file, generated).size());
 
 		// A trailing empty cell lost is a difference: a consumer indexing it would break
 		final Output gained = generated.getSources().get("s").getOutputs().get("table");
 		generated.getSources()
 			.get("s")
 			.getOutputs()
-			.put("table", new Output(List.of(List.of("a", "b"), List.of("")), "a;b;", null, null));
+			.put("table", new Output(List.of(List.of("a", "b"), List.of("")), null, null, null));
 		assertTrue(
 			ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED)
 				.stream()
@@ -432,28 +490,39 @@ class ComputeChainGoldenCorpusTest {
 		);
 		generated.getSources().get("s").getOutputs().put("table", gained);
 
-		// A chain ending in text: the raw text only
-		generated.getSources().get("s").setEnding(ContentType.TEXT);
-		final List<String> text = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
+		// A text: the stored raw text only, whatever the stored table; a null raw text is an empty text
+		generated.getSources().get("s").getOutputs().put("text", new Output(null, "b\n", null, null));
+		final List<String> text = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED)
+			.stream()
+			.filter(d -> !ComputeChainGoldenCorpus.isIntended(d))
+			.toList();
 		assertEquals(1, text.size(), text.toString());
-		assertTrue(!ComputeChainGoldenCorpus.isIntended(text.get(0)) && text.get(0).startsWith("s [table]"), text.get(0));
-
-		// Same text, different table: a text ending ignores the table, unless an implicit toTable follows it (the
-		// mapping then reads that table too)
-		generated.getSources().get("s").getOutputs().put("text", new Output(List.of(List.of("b")), "a\n", null, null));
+		assertTrue(!ComputeChainGoldenCorpus.isIntended(text.get(0)) && text.get(0).startsWith("s [text]"), text.get(0));
+		generated.getSources().get("s").getOutputs().put("text", new Output(null, "a\n", null, null));
+		// A stored table without a raw text that now gives a text is a type flip, never the same
+		generated.getSources().get("s").getOutputs().put("tableSeparatorInCell", new Output(null, "", null, null));
+		final List<String> flip = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
+		assertEquals(1, flip.size(), flip.toString());
+		assertTrue(flip.get(0).contains("s [tableSeparatorInCell]"), flip.get(0));
+		final com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 		assertTrue(
-			ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED)
-				.stream()
-				.noneMatch(d -> d.startsWith("s [text]"))
+			!ComputeChainGoldenCorpus.sameForConsumers(
+				mapper.readTree("{\"table\":[[\"x\"]],\"rawData\":null}"),
+				mapper.readTree("{\"text\":\"\"}")
+			)
 		);
-		generated.getSources().get("s").setReadAsBoth(true);
-		final List<String> both = ComputeChainGoldenCorpus.diff(file, generated, CompareMode.TYPED);
-		assertTrue(both.stream().anyMatch(d -> d.startsWith("s [text]")), both.toString());
-		generated.getSources().get("s").setReadAsBoth(false);
-		generated.getSources().get("s").getOutputs().put("text", new Output(List.of(List.of("a")), "a\n", null, null));
+		assertTrue(
+			ComputeChainGoldenCorpus.sameForConsumers(
+				mapper.readTree("{\"table\":[],\"rawData\":null}"),
+				mapper.readTree("{\"text\":\"\"}")
+			)
+		);
+		generated.getSources()
+			.get("s")
+			.getOutputs()
+			.put("tableSeparatorInCell", new Output(List.of(List.of("cell;with;sep")), null, null, null));
 
 		// An error, a time-out and a missing stored output are differences
-		generated.getSources().get("s").setEnding(ContentType.TABLE);
 		generated.getSources().get("s").getOutputs().put("text", new Output(null, null, null, "Boom: x"));
 		generated.getSources().get("s").getOutputs().put("table", new Output(null, null, true, null));
 		generated.getSources().get("s").getOutputs().put("tableWide", new Output(List.of(), null, null, null));
@@ -512,7 +581,7 @@ class ComputeChainGoldenCorpusTest {
 		try {
 			// Start from check mode, exact comparison, whatever the Maven command line set
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
-			System.clearProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY);
+			System.setProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY, "exact");
 			System.setProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY, "goldena, Other");
 			assertTrue(ComputeChainGoldenCorpus.isSelected("GoldenA"));
 			assertTrue(ComputeChainGoldenCorpus.isSelected("OTHER"));
@@ -535,11 +604,13 @@ class ComputeChainGoldenCorpusTest {
 			assertTrue(written.contains("\"commandLineWide\""), written);
 			assertTrue(written.contains("\"r1c16\""), written);
 			assertTrue(!written.contains("ending"), "the ending content type is not stored");
+			// One side per output: commandLine produces a text, the generated toTable makes it a table
+			assertTrue(!written.contains("rawData"), written);
 
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
 			System.setProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY, "typed");
 			assertEquals(0, GoldenCheck.run(List.of(root), true), "the stored golden matches in typed mode");
-			System.clearProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY);
+			System.setProperty(ComputeChainGoldenCorpus.COMPARE_PROPERTY, "exact");
 			assertEquals(0, GoldenCheck.run(List.of(root), false), "and in exact mode");
 
 			System.clearProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY);
@@ -577,6 +648,81 @@ class ComputeChainGoldenCorpusTest {
 					System.setProperty(property, value);
 				}
 			});
+		}
+	}
+
+	/**
+	 * A repository is loaded merged with the connector directories of the roots before it (theirs win on a shared
+	 * path): its connectors resolve the files they extend there, only its own connectors are kept, and a connector
+	 * file of it that does not load, or shares its id with a dependency's connector, is reported (a header file is not
+	 * a connector file, and a golden of one is an orphan).
+	 */
+	@Test
+	void dependencyRootsAndUnloadedConnectors() throws IOException {
+		final Path base = Path.of("src", "test", "resources", "golden-roots", "base");
+		final Path extending = Path.of("src", "test", "resources", "golden-roots", "extending");
+
+		// Alone, the extending repository uses its stale copy of the base header; Broken fails, the header does not
+		final LoadedRepository alone = ComputeChainGoldenCorpus.load(Repository.of(extending));
+		assertEquals(List.of("BaseConnector", "Child"), List.copyOf(alone.store().getStore().keySet()));
+		assertEquals(List.of("Broken"), List.copyOf(alone.unloaded().keySet()));
+		assertEquals(
+			Set.of("${source::monitors.thing.simple.sources.stale}"),
+			ComputeChainGoldenCorpus.generate(alone.store(), "Child").getSources().keySet()
+		);
+
+		final List<Repository> repositories = Repository.of(List.of(base, extending));
+		assertEquals(List.of(), repositories.get(0).getDependencyDirectories());
+		assertEquals(
+			List.of(ComputeChainGoldenCorpus.connectorDirectory(base)),
+			repositories.get(1).getDependencyDirectories()
+		);
+		final LoadedRepository baseLoaded = ComputeChainGoldenCorpus.load(repositories.get(0));
+		assertEquals(List.of("BaseConnector"), List.copyOf(baseLoaded.store().getStore().keySet()));
+		assertEquals(Map.of(), baseLoaded.unloaded());
+
+		// With the base repository: Child loads with the chain of the base header (not the stale copy), and the
+		// extending BaseConnector does not load, since the merged tree holds two connectors with that id
+		final LoadedRepository loaded = ComputeChainGoldenCorpus.load(repositories.get(1));
+		assertEquals(List.of("Child"), List.copyOf(loaded.store().getStore().keySet()));
+		assertEquals(
+			Set.of("${source::monitors.thing.simple.sources.s}"),
+			ComputeChainGoldenCorpus.generate(loaded.store(), "Child").getSources().keySet()
+		);
+		assertEquals(List.of("BaseConnector", "Broken"), List.copyOf(loaded.unloaded().keySet()));
+		assertTrue(loaded.unloaded().get("BaseConnector").contains("BaseConnector.yaml"), loaded.unloaded().toString());
+		assertTrue(loaded.unloaded().get("Broken").contains("../../semconv/Missing"), loaded.unloaded().toString());
+
+		// A golden of a header is an orphan; the golden of a connector file that did not load is kept
+		assertEquals(List.of("Thing"), ComputeChainGoldenCorpus.orphanGoldens(repositories.get(0), List.of()));
+		assertEquals(List.of(), ComputeChainGoldenCorpus.orphanGoldens(repositories.get(1), List.of()));
+
+		// The runner, base: BaseConnector has no stored golden, Thing.json is an orphan. Extending: Child has no stored
+		// golden, BaseConnector and Broken did not load (Broken.json kept). Nothing is written or deleted
+		final Map<String, String> previous = new HashMap<>();
+		for (final String property : List.of(
+			ComputeChainGoldenCorpus.CONNECTORS_PROPERTY,
+			ComputeChainGoldenCorpus.UPDATE_PROPERTY
+		)) {
+			previous.put(property, System.getProperty(property));
+			System.clearProperty(property);
+		}
+		try {
+			assertEquals(5, GoldenCheck.run(List.of(base, extending), false));
+			assertEquals(List.of("Thing.json"), fileNames(ComputeChainGoldenCorpus.goldenDirectory(base)));
+			assertEquals(List.of("Broken.json"), fileNames(ComputeChainGoldenCorpus.goldenDirectory(extending)));
+		} finally {
+			previous.forEach((property, value) -> {
+				if (value != null) {
+					System.setProperty(property, value);
+				}
+			});
+		}
+	}
+
+	private static List<String> fileNames(final Path directory) throws IOException {
+		try (Stream<Path> files = Files.list(directory)) {
+			return files.map(file -> file.getFileName().toString()).sorted().toList();
 		}
 	}
 

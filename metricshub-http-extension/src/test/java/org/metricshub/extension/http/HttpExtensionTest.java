@@ -460,7 +460,7 @@ class HttpExtensionTest {
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.builder().rawData(RESULT).build();
+		final SourceTable expected = SourceTable.ofText(RESULT);
 		assertEquals(expected, actual);
 	}
 

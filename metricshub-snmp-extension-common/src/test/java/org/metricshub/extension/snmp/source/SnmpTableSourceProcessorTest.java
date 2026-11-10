@@ -127,7 +127,7 @@ public class SnmpTableSourceProcessorTest {
 
 		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
-		assertEquals(expectedResult, result.getTable());
+		assertEquals(SourceTable.ofTable(expectedResult), result);
 	}
 
 	/**

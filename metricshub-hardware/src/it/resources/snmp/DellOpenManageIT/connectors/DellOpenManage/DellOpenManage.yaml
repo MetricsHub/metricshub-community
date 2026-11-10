@@ -707,9 +707,12 @@ monitors:
           computes:
             # Add "ESM" and "EventLog" as �nd and 3rd columns
             # DeviceID;DeviceType;AdditionalLabel
-          - type: append
-            column: 1
-            value: ;ESM;EventLog
+          - type: insertColumn
+            column: 2
+            value: ESM
+          - type: insertColumn
+            column: 3
+            value: EventLog
         source(2):
           # Source(2) = remoteAccessTable SNMP table
           # DeviceID;DeviceTypeCode;AdditionalLabel
@@ -736,9 +739,9 @@ monitors:
             value: SDCardUnit-
             # Add a BlankColumn
             # DeviceID;DeviceType;AdditionalLabel;
-          - type: append
-            column: 2
-            value: ;
+          - type: insertColumn
+            column: 3
+            value: ""
         source(4):
           # Source(4) = sdCardDevice SNMP table
           # DeviceID;DeviceType;Size;
@@ -760,7 +763,10 @@ monitors:
             # DeviceID;DeviceType;Size;AdditionalLabel;
           - type: append
             column: 3
-            value: ' MB ;'
+            value: ' MB '
+          - type: insertColumn
+            column: 4
+            value: ""
         source(5):
           # Source(3) = Union of Source(1) and Source(2)
           # DeviceID;DeviceType;AdditionalLabel

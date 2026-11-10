@@ -1,0 +1,17 @@
+# A header of the base repository (no displayName): only extended, never a connector itself
+monitors:
+  thing:
+    simple:
+      sources:
+        s:
+          type: commandLine
+          commandLine: echo
+          computes:
+          - type: toTable
+          - type: append
+            column: 1
+            value: v
+      mapping:
+        source: ${source::s}
+        attributes:
+          id: $1

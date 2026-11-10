@@ -63,26 +63,22 @@ class InternalDbExtensionTest {
 			.build();
 
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		final SourceTable tabl1 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
-					Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
-					Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE),
-					Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
-				)
+		final SourceTable tabl1 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
+				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
+				Arrays.asList(LOWERCASE_C, LOWERCASE_V3, FALSE, THREE),
+				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
 			)
-			.build();
-		final SourceTable tabl2 = SourceTable.builder()
-			.table(
-				Arrays.asList(
-					Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
-					Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
-					Arrays.asList(ONE, LOWERCASE_C, UPPERCASE_V3, TRUE),
-					Arrays.asList(TWO, LOWERCASE_D, UPPERCASE_V4, FALSE)
-				)
+		);
+		final SourceTable tabl2 = SourceTable.ofTable(
+			Arrays.asList(
+				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
+				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
+				Arrays.asList(ONE, LOWERCASE_C, UPPERCASE_V3, TRUE),
+				Arrays.asList(TWO, LOWERCASE_D, UPPERCASE_V4, FALSE)
 			)
-			.build();
+		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
@@ -102,15 +98,15 @@ class InternalDbExtensionTest {
 
 		// Source null
 		SourceTable sourceTableResult = internalDbExtension.processSource(null, connectorId, telemetryManager);
-		assertEquals(new ArrayList<>(), sourceTableResult.getTable());
+		assertEquals(SourceTable.empty(), sourceTableResult);
 
 		// Source is not a SQL Source
 		sourceTableResult = internalDbExtension.processSource(new HttpSource(), connectorId, telemetryManager);
-		assertEquals(new ArrayList<>(), sourceTableResult.getTable());
+		assertEquals(SourceTable.empty(), sourceTableResult);
 
 		// Empty SQL Source
 		sourceTableResult = internalDbExtension.processSource(new InternalDbQuerySource(), connectorId, telemetryManager);
-		assertEquals(new ArrayList<>(), sourceTableResult.getTable());
+		assertEquals(SourceTable.empty(), sourceTableResult);
 
 		final List<SqlColumn> columnsTable1 = new ArrayList<>();
 		final List<SqlColumn> columnsTable2 = new ArrayList<>();
@@ -139,6 +135,6 @@ class InternalDbExtensionTest {
 		);
 
 		sourceTableResult = internalDbExtension.processSource(internalDbQuery, connectorId, telemetryManager);
-		assertEquals(expectedResult, sourceTableResult.getTable());
+		assertEquals(SourceTable.ofTable(expectedResult), sourceTableResult);
 	}
 }

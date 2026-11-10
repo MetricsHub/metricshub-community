@@ -143,9 +143,9 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for disk controller
 		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
-				.build()
+			SourceTable.ofTable(
+				SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP)
+			)
 		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
 		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
@@ -162,9 +162,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for physical_disk
 		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
-				.build()
+			SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
@@ -176,11 +174,9 @@ class DiscoveryStrategyTest {
 			.computes(List.of(Multiply.builder().column(3).value("1048576").type("multiply").build()))
 			.build();
 		// Mock source table information for logical_disk
-		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
-				.build()
-		).when(protocolExtensionMock).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP)))
+			.when(protocolExtensionMock)
+			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
 		// Check discovered monitors
@@ -362,9 +358,9 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for disk controller
 		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
-				.build()
+			SourceTable.ofTable(
+				SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP)
+			)
 		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// Call DiscoveryStrategy to discover the monitors
@@ -451,9 +447,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for physical_disk
 		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
-				.build()
+			SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
@@ -465,11 +459,9 @@ class DiscoveryStrategyTest {
 			.computes(List.of(Multiply.builder().column(3).value("1048576").type("multiply").build()))
 			.build();
 		// Mock source table information for logical_disk
-		doReturn(
-			SourceTable.builder()
-				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
-				.build()
-		).when(protocolExtensionMock).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP)))
+			.when(protocolExtensionMock)
+			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
 		// Check discovered monitors
@@ -546,14 +538,12 @@ class DiscoveryStrategyTest {
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 		doAnswer(
-			invocation -> SourceTable.builder()
-				.table(
-					SourceTable.csvToTable(
-						sourceTables.get(invocation.<Source>getArgument(0).getKey()),
-						MetricsHubConstants.TABLE_SEP
-					)
+			invocation -> SourceTable.ofTable(
+				SourceTable.csvToTable(
+					sourceTables.get(invocation.<Source>getArgument(0).getKey()),
+					MetricsHubConstants.TABLE_SEP
 				)
-				.build()
+			)
 		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		new DiscoveryStrategy(telemetryManager, strategyTime, clientsExecutorMock, extensionManager).run();

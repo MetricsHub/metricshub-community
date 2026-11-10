@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -146,11 +145,7 @@ class JmxExtensionTest {
 
 		final var result = jmxExtension.processSource(jmxSource, "connId", telemetryManager);
 
-		assertEquals(
-			SourceTable.builder().table(table).rawData(SourceTable.tableToCsv(table, TABLE_SEP, true)).build(),
-			result,
-			"Expected SourceTable with fetched data should match"
-		);
+		assertEquals(SourceTable.ofTable(table), result, "Expected SourceTable with fetched data should match");
 	}
 
 	@Test
