@@ -863,6 +863,48 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void anIdentityCompletedByAnotherProcessShouldBeSeenAfterARefusal() throws Exception {
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertFalse(enrollWith(coordinator, central(KEY)));
+
+		// Another agent process sharing the security directory completes the same attempt
+		new AgentCredentialStore(directory).complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
+
+		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+	}
+
+	@Test
+	void theNewSettingsShouldNotInheritTheFormerOnesBackoff() throws Exception {
+		script.add(new Answer(503, "{}", null));
+		script.add(new Answer(503, "{}", null));
+		script.add(new Answer(503, "{}", null));
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		script.add(new Answer(503, "{}", null));
+		final EnrollmentCoordinator coordinator = tracked(
+			new EnrollmentCoordinator(() -> new AgentCredentialStore(directory), Duration.ofMillis(200), new Random(0))
+		);
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		// The fourth request, answered 410 for the former key once the new one is configured
+		while (enrollBodies.size() < 3) {
+			Thread.sleep(5);
+		}
+		holdEnrollAnswer = new CountDownLatch(1);
+		while (enrollBodies.size() < 4) {
+			Thread.sleep(5);
+		}
+		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
+		final long releasedAt = System.nanoTime();
+		holdEnrollAnswer.countDown();
+		coordinator.awaitWorker();
+
+		// After the 503 of the new key: the first backoff (at most 200 ms), not the fourth (at least 800 ms)
+		assertTrue(coordinator.isReady());
+		assertTrue(Duration.ofNanos(System.nanoTime() - releasedAt).toMillis() < 700, "the backoff started over");
+	}
+
+	@Test
 	void aRefusalForAReplacedKeyShouldGoOnWithTheNewOne() throws Exception {
 		holdEnrollAnswer = new CountDownLatch(1);
 		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
