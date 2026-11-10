@@ -762,6 +762,16 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
+	 * @param current settings a pass ran with
+	 * @return whether the issuer, the key and the certificate are still the configured ones
+	 */
+	private synchronized boolean isCurrent(final Settings current) {
+		return (Objects.equals(current.issuerUrl(), settings.issuerUrl()) &&
+			Objects.equals(current.enrollmentKey(), settings.enrollmentKey()) &&
+			Objects.equals(current.certificateFile(), settings.certificateFile()));
+	}
+
+	/**
 	 * Stops the worker after a refusal, or a lack of key, that answered the settings still configured. When a reload
 	 * replaced the issuer, the key or the certificate meanwhile, the worker goes on at once with the new ones instead,
 	 * that reload's wake-up used up: it must not cut the backoff the new ones may earn.
@@ -771,11 +781,7 @@ public class EnrollmentCoordinator {
 	 */
 	private boolean stopUnlessReplaced(final Settings current) {
 		synchronized (this) {
-			if (
-				Objects.equals(current.issuerUrl(), settings.issuerUrl()) &&
-					Objects.equals(current.enrollmentKey(), settings.enrollmentKey()) &&
-					Objects.equals(current.certificateFile(), settings.certificateFile())
-			) {
+			if (isCurrent(current)) {
 				stoppedWith = current;
 				return true;
 			}
@@ -863,6 +869,11 @@ public class EnrollmentCoordinator {
 								NEW_COMMAND
 							);
 							return null;
+						}
+						if (!isCurrent(current)) {
+							// A reload replaced the issuer, key or certificate during the recovery: neither the key nor the proof
+							// goes to the configuration the operator left; the attempt is resumed with the new one
+							throw new RetryableException("central.auth changed during the recovery", null);
 						}
 						// Never committed, or its answer is no longer kept: the same attempt, never a new one
 						answer = post(current, httpClient, identity.attemptId(), proof, false);
