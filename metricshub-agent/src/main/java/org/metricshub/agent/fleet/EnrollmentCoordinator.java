@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -225,7 +226,8 @@ public class EnrollmentCoordinator {
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
 		if (!isConfigured(central)) {
 			enrollmentWanted = false;
-			if (worker != null && worker.isAlive() && !ready) {
+			// The enrollment, or the first token after it
+			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
 				worker.interrupt();
 			}
@@ -486,6 +488,23 @@ public class EnrollmentCoordinator {
 		}
 	}
 
+	/**
+	 * What of {@code central.auth} a channel reconnects for: the issuer and Central's certificate, and, until the agent
+	 * is enrolled, the enrollment key too, so a new key reaches the enrollment whatever the channels. Once enrolled,
+	 * the key is ignored: replacing or removing it reconnects nothing.
+	 *
+	 * @param central  the {@code central} configuration
+	 * @param enrolled whether the agent is enrolled
+	 * @return the values to compare, {@code null} without {@code central.auth}
+	 */
+	public static List<String> authState(final CentralConfig central, final boolean enrolled) {
+		if (central == null || central.getAuth() == null) {
+			return null;
+		}
+		final CentralAuthConfig auth = central.getAuth();
+		return Arrays.asList(auth.getIssuerUrl(), central.getCertificateFile(), enrolled ? null : auth.getEnrollmentKey());
+	}
+
 	private static boolean isConfigured(final CentralConfig central) {
 		return central != null && central.isEnabled() && central.getAuth() != null;
 	}
@@ -537,7 +556,7 @@ public class EnrollmentCoordinator {
 	 */
 	private void firstToken() throws InterruptedException {
 		retrySchedule.reset();
-		while (true) {
+		while (enrollmentWanted) {
 			try {
 				currentToken();
 				return;

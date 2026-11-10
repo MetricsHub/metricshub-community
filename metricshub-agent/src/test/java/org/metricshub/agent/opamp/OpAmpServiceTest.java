@@ -173,6 +173,7 @@ class OpAmpServiceTest {
 	void aNewEnrollmentKeyOnceEnrolledShouldNotReconnect() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.ready(agentContext)).thenReturn(true);
+		when(enrollment.isReady()).thenReturn(true);
 		opAmpService.setEnrollment(enrollment);
 		agentConfig.setCentral(
 			CentralConfig.builder()
@@ -189,6 +190,32 @@ class OpAmpServiceTest {
 
 		assertEquals(1, factoryInvocations);
 		verify(client, never()).stop(any());
+	}
+
+	@Test
+	void aNewKeyOrCertificateShouldReachTheEnrollmentWhateverTheChannel() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		opAmpService.setEnrollment(enrollment);
+		agentConfig.setCentral(
+			CentralConfig.builder()
+				.enabled(true)
+				.opamp(OpAmpConfig.builder().build())
+				.auth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").enrollmentKey("refused").build())
+				.build()
+		);
+		opAmpService.supervise();
+
+		// Not enrolled: a new key is reconciled, the channel disabled
+		agentConfig.getCentral().getAuth().setEnrollmentKey("new");
+		opAmpService.supervise();
+		verify(enrollment, times(2)).ready(agentContext);
+
+		// Enrolled: Central's certificate, which the token provider uses whatever the channels override
+		when(enrollment.isReady()).thenReturn(true);
+		opAmpService.supervise();
+		agentConfig.getCentral().setCertificateFile("/tmp/central-ca.pem");
+		opAmpService.supervise();
+		verify(enrollment, times(4)).ready(agentContext);
 	}
 
 	@Test

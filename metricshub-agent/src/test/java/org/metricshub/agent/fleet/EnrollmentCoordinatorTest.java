@@ -108,6 +108,7 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger tokenRequests = new AtomicInteger();
 	private final AtomicInteger metadataRequests = new AtomicInteger();
 	private volatile String tokenAgentUid;
+	private volatile boolean tokensUnavailable;
 	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
@@ -214,6 +215,10 @@ class EnrollmentCoordinatorTest {
 		final String basic = exchange.getRequestHeaders().getFirst("Authorization").substring("Basic ".length());
 		final String clientId = new String(Base64.getDecoder().decode(basic), StandardCharsets.UTF_8).split(":")[0];
 		final String agentUid = tokenAgentUid == null ? clientId : tokenAgentUid;
+		if (tokensUnavailable) {
+			respond(exchange, 503, "{}", null);
+			return;
+		}
 		final long iat = System.currentTimeMillis() / 1000;
 		final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 		final String jwt = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8)) +
@@ -300,6 +305,34 @@ class EnrollmentCoordinatorTest {
 		coordinator.currentToken();
 
 		assertEquals(2, metadataRequests.get(), "the token provider was rebuilt for the new issuer");
+	}
+
+	@Test
+	void removingCentralAuthShouldStopAskingForTheFirstToken() throws Exception {
+		tokensUnavailable = true;
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		// A long backoff: the worker waits in it when central.auth goes
+		final EnrollmentCoordinator coordinator = new EnrollmentCoordinator(
+			() -> store,
+			Duration.ofSeconds(20),
+			new Random(0)
+		);
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (tokenRequests.get() == 0) {
+			Thread.sleep(10);
+		}
+
+		final long removedAt = System.nanoTime();
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		coordinator.awaitWorker();
+		assertTrue(
+			Duration.ofNanos(System.nanoTime() - removedAt).toSeconds() < 5,
+			"stopped at once, not after its backoff"
+		);
+		final int asked = tokenRequests.get();
+		Thread.sleep(300);
+
+		assertEquals(asked, tokenRequests.get(), "nothing is asked any more");
 	}
 
 	@Test

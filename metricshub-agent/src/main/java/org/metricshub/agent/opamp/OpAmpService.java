@@ -23,6 +23,7 @@ package org.metricshub.agent.opamp;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -30,7 +31,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.agent.config.CentralAuthConfig;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
@@ -87,10 +87,10 @@ public class OpAmpService {
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
 	/**
-	 * The issuer of the {@code central.auth} the client was started with ({@code ""} without one): adding, removing or
-	 * moving it reconnects through the enrollment. The enrollment key is not part of it: ignored once enrolled.
+	 * What of {@code central.auth} the client was started with ({@link EnrollmentCoordinator#authState}): a change
+	 * reconnects through the enrollment.
 	 */
-	private String activeIssuer;
+	private List<String> activeAuth;
 	private Boolean activeUpgradeEnabled;
 
 	/**
@@ -196,13 +196,16 @@ public class OpAmpService {
 
 		final OpAmpConfig config = agentContext.getAgentConfig().getCentral().opamp();
 		final boolean upgradeEnabled = isUpgradeEnabled(agentContext);
-		final String issuer = issuerOf(agentContext.getAgentConfig().getCentral().getAuth());
+		final List<String> auth = EnrollmentCoordinator.authState(
+			agentContext.getAgentConfig().getCentral(),
+			enrollment.isReady()
+		);
 		if (
 			!Objects.equals(config, activeConfig) ||
 				!Objects.equals(upgradeEnabled, activeUpgradeEnabled) ||
-				!Objects.equals(issuer, activeIssuer)
+				!Objects.equals(auth, activeAuth)
 		) {
-			activeIssuer = issuer;
+			activeAuth = auth;
 			reconfigure(agentContext, config, upgradeEnabled);
 		}
 
@@ -436,13 +439,5 @@ public class OpAmpService {
 		public void onConnect() {
 			log.info("Connected to the OpAMP server.");
 		}
-	}
-
-	/**
-	 * @param auth the {@code central.auth} section, or {@code null}
-	 * @return its issuer URL, {@code ""} for a section without one, {@code null} without a section
-	 */
-	private static String issuerOf(final CentralAuthConfig auth) {
-		return auth == null ? null : Objects.requireNonNullElse(auth.getIssuerUrl(), "");
 	}
 }
