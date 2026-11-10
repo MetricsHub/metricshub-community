@@ -156,6 +156,8 @@ public class EnrollmentCoordinator {
 	private boolean settingsChanged;
 	private volatile Settings settings;
 	private Thread worker;
+	/** The last worker stopped by a reload, until it ends (tests wait for it). */
+	private Thread stopping;
 	private Settings stoppedWith;
 
 	/**
@@ -224,9 +226,12 @@ public class EnrollmentCoordinator {
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
 		if (!isConfigured(central)) {
 			enrollmentWanted = false;
-			if (worker != null && worker.isAlive() && !ready) {
+			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
 				worker.interrupt();
+				// Forgotten at once: if central.auth comes back while it is still ending, a new worker starts
+				stopping = worker;
+				worker = null;
 			}
 			return true;
 		}
@@ -290,8 +295,13 @@ public class EnrollmentCoordinator {
 	 */
 	void awaitWorker() throws InterruptedException {
 		final Thread current;
+		final Thread stopped;
 		synchronized (this) {
 			current = worker;
+			stopped = stopping;
+		}
+		if (stopped != null) {
+			stopped.join();
 		}
 		if (current != null) {
 			current.join();
@@ -409,6 +419,14 @@ public class EnrollmentCoordinator {
 		return (stoppedWith != null &&
 			Objects.equals(latest.issuerUrl(), stoppedWith.issuerUrl()) &&
 			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()));
+	}
+
+	/**
+	 * @param agentContext the current agent context
+	 * @return whether the channels toward Central authenticate with the enrolled identity's token
+	 */
+	public static boolean usesToken(final AgentContext agentContext) {
+		return isConfigured(agentContext.getAgentConfig().getCentral());
 	}
 
 	private static boolean isConfigured(final CentralConfig central) {

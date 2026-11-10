@@ -204,9 +204,10 @@ class TunnelServiceTest {
 	@Test
 	void shouldNotStartBeforeTheAgentIsEnrolled() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.ready(agentContext)).thenReturn(false, true);
+		when(enrollment.isReady()).thenReturn(false, false, true);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
 
 		service.supervise();
 		assertTrue(createdClients.isEmpty());
@@ -216,25 +217,27 @@ class TunnelServiceTest {
 	}
 
 	@Test
-	void aDisabledChannelShouldStillReconcileTheEnrollment() {
+	void theTunnelShouldNeverStartTheEnrollmentItself() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		service.setEnrollment(enrollment);
-		configure(TunnelConfig.builder().enabled(false).build());
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
 
 		service.supervise();
 
-		verify(enrollment).ready(agentContext);
+		// The OpAMP supervisor starts it, once its own client, which may write the uid file, is stopped
+		verify(enrollment, never()).ready(any());
 		assertTrue(createdClients.isEmpty());
 	}
 
 	@Test
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
-		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
+		when(enrollment.isReady()).thenReturn(false, false, false, true);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		service.supervise();
-		assertEquals(1, createdClients.size());
+		assertEquals(1, createdClients.size(), "without central.auth, nothing waits");
 
 		// Same channel settings, a new central.auth
 		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());

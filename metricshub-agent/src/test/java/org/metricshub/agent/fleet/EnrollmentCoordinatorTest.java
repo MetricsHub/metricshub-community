@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.Level;
@@ -604,6 +605,51 @@ class EnrollmentCoordinatorTest {
 		assertFalse(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
 
 		assertEquals(1, enrollBodies.size(), "never retried with the key");
+	}
+
+	@Test
+	void centralAuthBackWhileTheStoppedWorkerEndsShouldStartANewOne() throws Exception {
+		final CountDownLatch writing = new CountDownLatch(1);
+		final CountDownLatch release = new CountDownLatch(1);
+		final AtomicBoolean first = new AtomicBoolean(true);
+		// The first worker is held in its first write, deaf to its interruption: it is still ending
+		final AgentCredentialStore store = new AgentCredentialStore(directory, written -> {
+			if (first.getAndSet(false)) {
+				writing.countDown();
+				boolean interrupted = false;
+				while (true) {
+					try {
+						release.await();
+						break;
+					} catch (InterruptedException e) {
+						interrupted = true;
+					}
+				}
+				if (interrupted) {
+					Thread.currentThread().interrupt();
+				}
+			}
+		});
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		assertTrue(writing.await(10, TimeUnit.SECONDS));
+
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		// Released later from another thread: reading the store waits for the write it is held in
+		final Thread releaser = new Thread(() -> {
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+			release.countDown();
+		});
+		releaser.start();
+		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
+		releaser.join();
+		coordinator.awaitWorker();
+
+		assertTrue(coordinator.isReady(), "a new worker enrolled");
 	}
 
 	@Test
