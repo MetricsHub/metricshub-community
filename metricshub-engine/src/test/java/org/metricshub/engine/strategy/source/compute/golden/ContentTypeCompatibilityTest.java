@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
-import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.CompareMode;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.ConnectorGolden;
 
 /**
@@ -48,6 +47,6 @@ class ContentTypeCompatibilityTest {
 
 		assertTrue(Files.exists(GOLDEN), "Missing " + GOLDEN + ": run with -Dmetricshub.goldens.update=true");
 		assertEquals(Files.readString(REPORT, StandardCharsets.UTF_8).replace("\r\n", "\n"), report);
-		assertEquals(List.of(), ComputeChainGoldenCorpus.diff(GOLDEN, golden, CompareMode.EXACT));
+		assertEquals(List.of(), ComputeChainGoldenCorpus.diff(GOLDEN, golden));
 	}
 }
