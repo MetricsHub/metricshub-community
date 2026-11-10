@@ -21,18 +21,24 @@ package org.metricshub.agent.opamp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.fleet.AgentCredentialStore;
 import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.fleet.FleetHeaders;
@@ -77,6 +83,31 @@ public class OpAmpService {
 	 * caches its verdict, so the probes run at most once per process. Tests may replace it.
 	 */
 	private DeploymentDetector deploymentDetector = new DeploymentDetector();
+
+	/**
+	 * Whether an enrolled identity is persisted in the security directory. Tests may replace it.
+	 */
+	private BooleanSupplier enrolledIdentity = () -> hasReadyIdentity(AgentCredentialStore.standard());
+
+	/**
+	 * @param store the credential store
+	 * @return whether it holds a ready identity, the uid of which the secret belongs to (a pending attempt holds no uid
+	 *         yet); when it cannot be read, {@code true}: the uid is never put at risk
+	 */
+	static boolean hasReadyIdentity(final AgentCredentialStore store) {
+		try {
+			final AgentCredentialStore.LocalIdentity identity = store.read();
+			if (identity.secret() != null) {
+				Arrays.fill(identity.secret(), '\0');
+			}
+			if (identity.recoverySecret() != null) {
+				Arrays.fill(identity.recoverySecret(), (byte) 0);
+			}
+			return identity.status() == AgentCredentialStore.Status.READY;
+		} catch (IOException e) {
+			return true;
+		}
+	}
 
 	/**
 	 * Says whether the agent may connect to Central. Tests may replace it.
@@ -267,6 +298,15 @@ public class OpAmpService {
 	}
 
 	/**
+	 * Replaces the check of a persisted enrolled identity (used by tests).
+	 *
+	 * @param enrolledIdentity whether one exists
+	 */
+	void setEnrolledIdentity(final BooleanSupplier enrolledIdentity) {
+		this.enrolledIdentity = enrolledIdentity;
+	}
+
+	/**
 	 * Applies a new {@code central.opamp} configuration: stops the running client and starts a new one
 	 * when the configuration enables OpAMP.
 	 *
@@ -301,7 +341,7 @@ public class OpAmpService {
 
 		OpampClient newClient = null;
 		try {
-			newClient = clientFactory.apply(buildSettings(newConfig));
+			newClient = clientFactory.apply(buildSettings(newConfig, EnrollmentCoordinator.usesToken(agentContext)));
 			if (packagesHandler != null && upgradeEnabled) {
 				// Advertises the AcceptsPackages/ReportsPackageStatuses capabilities
 				newClient.setPackagesHandler(packagesHandler);
@@ -369,9 +409,35 @@ public class OpAmpService {
 	 * @return the client settings
 	 */
 	OpampClientSettings buildSettings(final OpAmpConfig config) {
+		return buildSettings(config, false);
+	}
+
+	/**
+	 * Builds the OpAMP client settings. With {@code central.auth}, every POST carries the current token, a
+	 * {@code 401} drops it so the next POST carries a new one, and the uid is the enrolled one: a
+	 * {@code new_instance_uid} from the server is refused.
+	 *
+	 * @param config    the OpAMP configuration
+	 * @param usesToken whether the agent authenticates with its enrolled identity's token
+	 * @return the client settings
+	 */
+	OpampClientSettings buildSettings(final OpAmpConfig config, final boolean usesToken) {
+		final Map<String, String> headers = FleetHeaders.decrypt(config.getHeaders(), "OpAMP");
+		final EnrollmentCoordinator coordinator = enrollment;
+		final long generation = coordinator.tokenGeneration();
+		final AtomicReference<String> sent = new AtomicReference<>();
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create(config.getEndpoint().trim()))
-			.withHeaders(FleetHeaders.decrypt(config.getHeaders(), "OpAMP"))
+			.withHeaders(headers)
+			.withHeadersSupplier(usesToken ? () -> {
+				final Map<String, String> current = coordinator.headers(headers, generation);
+				sent.set(current.get("Authorization"));
+				return current;
+			} : null)
+			// The token of the POST Central refused, never a newer one renewed meanwhile
+			.withOnUnauthorized(usesToken ? () -> coordinator.invalidateToken(sent.get()) : () -> {})
+			// Never once an identity was enrolled, even with central.auth removed: the uid is the one its secret belongs to
+			.withAcceptsNewInstanceUid(!usesToken && !enrolledIdentity.getAsBoolean())
 			.withCertificateFile(config.getCertificateFile())
 			.withPollInterval(
 				Duration.ofSeconds(

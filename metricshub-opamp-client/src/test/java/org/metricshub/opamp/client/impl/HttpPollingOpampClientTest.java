@@ -325,6 +325,33 @@ class HttpPollingOpampClientTest {
 	}
 
 	@Test
+	void aNewInstanceUidShouldBeRefusedWhenTheUidIsAssignedElsewhere() throws Exception {
+		final byte[] ownUid = UuidV7.generate();
+		Files.writeString(tempDir.resolve("instance-uid"), UuidV7.toCanonicalString(ownUid));
+		transport = new RecordingTransport();
+		client = HttpPollingOpampClient.builder()
+			.withSettings(settingsBuilder().withAcceptsNewInstanceUid(false).build())
+			.withTransport(transport)
+			.build();
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setAgentIdentification(
+						AgentIdentification.newBuilder().setNewInstanceUid(ByteString.copyFrom(UuidV7.generate())).build()
+					)
+					.build()
+			)
+		);
+		client.start();
+
+		transport.awaitRequest(AWAIT);
+		final AgentToServer second = transport.awaitRequest(AWAIT);
+
+		assertEquals(ByteString.copyFrom(ownUid), second.getInstanceUid());
+		assertEquals(UuidV7.toCanonicalString(ownUid), Files.readString(tempDir.resolve("instance-uid")).trim());
+	}
+
+	@Test
 	void malformedNewInstanceUidShouldBeIgnored() throws Exception {
 		newClient(null, null);
 		transport.enqueue(

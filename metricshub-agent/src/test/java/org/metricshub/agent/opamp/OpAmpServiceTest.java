@@ -1,7 +1,11 @@
 package org.metricshub.agent.opamp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -10,12 +14,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.CentralAuthConfig;
@@ -24,6 +30,7 @@ import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.config.UpgradeConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
+import org.metricshub.agent.fleet.AgentCredentialStore;
 import org.metricshub.agent.fleet.AgentInstanceUid;
 import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.upgrade.runner.DeploymentDetector;
@@ -405,6 +412,61 @@ class OpAmpServiceTest {
 
 		assertEquals(Duration.ofSeconds(OpAmpConfig.DEFAULT_POLL_INTERVAL), settings.getPollInterval());
 		assertEquals(Duration.ofSeconds(OpAmpConfig.DEFAULT_REQUEST_TIMEOUT), settings.getRequestTimeout());
+	}
+
+	@Test
+	void withCentralAuthEachPostShouldCarryTheCurrentTokenAndA401DropIt() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.headers(eq(Map.of("X-Site", "a")), anyLong())).thenReturn(
+			Map.of("X-Site", "a", "Authorization", "Bearer one"),
+			Map.of("X-Site", "a", "Authorization", "Bearer two")
+		);
+		// The generation of the token provider when the client is built, then a reload moves the issuer
+		when(enrollment.tokenGeneration()).thenReturn(7L, 8L);
+		opAmpService.setEnrollment(enrollment);
+		final OpAmpConfig config = OpAmpConfig.builder()
+			.enabled(true)
+			.endpoint(ENDPOINT)
+			.headers(Map.of("X-Site", "a"))
+			.build();
+
+		final OpampClientSettings settings = opAmpService.buildSettings(config, true);
+
+		assertEquals("Bearer one", settings.currentHeaders().get("Authorization"));
+		assertEquals("Bearer two", settings.currentHeaders().get("Authorization"));
+		verify(enrollment, times(2)).headers(Map.of("X-Site", "a"), 7L);
+		settings.getOnUnauthorized().run();
+		// The token of the refused POST, never a newer one
+		verify(enrollment).invalidateToken("Bearer two");
+		assertFalse(settings.isAcceptsNewInstanceUid(), "the uid is the enrolled one");
+
+		opAmpService.setEnrolledIdentity(() -> false);
+		final OpampClientSettings without = opAmpService.buildSettings(config, false);
+		assertEquals(Map.of("X-Site", "a"), without.currentHeaders());
+		assertTrue(without.isAcceptsNewInstanceUid());
+	}
+
+	@Test
+	void onlyAReadyIdentityShouldKeepItsUid(@TempDir final Path security) throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(security);
+		assertFalse(OpAmpService.hasReadyIdentity(store), "nothing stored");
+
+		store.beginAttempt(
+			"a5ccfb10-f1fa-4ae9-803d-32bd1b74b49d",
+			"cmVjb3ZlcnlyZWNvdmVyeXJlY292ZXJ5cmVjb3Zlcnk".getBytes()
+		);
+		assertFalse(OpAmpService.hasReadyIdentity(store), "a pending attempt holds no uid yet");
+
+		store.complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", "c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2U".toCharArray());
+		assertTrue(OpAmpService.hasReadyIdentity(store));
+	}
+
+	@Test
+	void anEnrolledIdentityShouldKeepItsUidEvenWithoutCentralAuth() {
+		opAmpService.setEnrolledIdentity(() -> true);
+		final OpAmpConfig config = OpAmpConfig.builder().enabled(true).endpoint(ENDPOINT).build();
+
+		assertFalse(opAmpService.buildSettings(config, false).isAcceptsNewInstanceUid());
 	}
 
 	@Test

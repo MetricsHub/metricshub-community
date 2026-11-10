@@ -1,12 +1,16 @@
 package org.metricshub.agent.tunnel;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -16,11 +20,16 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,14 +45,18 @@ import org.metricshub.agent.tunnel.client.TunnelClient;
 import org.metricshub.agent.tunnel.client.TunnelListener;
 import org.metricshub.agent.tunnel.client.TunnelSettings;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
+import org.metricshub.agent.tunnel.protocol.TunnelJson;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegister;
+import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegistered;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.HostsUpdated;
+import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolInvoke;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.mcp.ToolAccess;
 import org.metricshub.web.mcp.tool.DynamicToolCallback;
 import org.metricshub.web.mcp.tool.ProductToolCallback;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -205,6 +218,7 @@ class TunnelServiceTest {
 	void shouldNotStartBeforeTheAgentIsEnrolled() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.isReadyFor(any())).thenReturn(false, true);
+		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
@@ -242,6 +256,34 @@ class TunnelServiceTest {
 	}
 
 	@Test
+	void theTokenModeShouldComeFromTheContextTheSettingsCameFrom() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn(UID);
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		// A reload swaps in a context without central.auth while this pass builds the tunnel of the former one
+		final AgentContext reloaded = mock(AgentContext.class);
+		when(reloaded.getAgentConfig()).thenReturn(
+			AgentConfig.builder()
+				.central(
+					CentralConfig.builder()
+						.enabled(true)
+						.tunnel(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build())
+						.build()
+				)
+				.build()
+		);
+		when(agentContextHolder.getAgentContext()).thenReturn(agentContext, reloaded);
+
+		service.supervise();
+
+		assertEquals(1, createdClients.size());
+		verify(createdClients.get(0)).useCredential(any(), any());
+	}
+
+	@Test
 	void theTunnelShouldNeverStartTheEnrollmentItself() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		service.setEnrollment(enrollment);
@@ -259,6 +301,7 @@ class TunnelServiceTest {
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.isReadyFor(any())).thenReturn(false, true);
+		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		service.supervise();
@@ -272,6 +315,111 @@ class TunnelServiceTest {
 
 		service.supervise();
 		assertEquals(2, createdClients.size());
+	}
+
+	@Test
+	void aRenewedTokenShouldReconnectAtTheFirstMomentNoInvocationRuns() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		final ToolDefinition definition = mock(ToolDefinition.class);
+		when(definition.name()).thenReturn("ListHosts");
+		when(definition.description()).thenReturn("ListHosts");
+		when(definition.inputSchema()).thenReturn("");
+		final ToolCallback blocking = mock(ToolCallback.class);
+		when(blocking.getToolDefinition()).thenReturn(definition);
+		when(blocking.call(anyString())).thenAnswer(invocation -> {
+			release.await();
+			return "{}";
+		});
+		final ToolCallback[] callbacks = { new ProductToolCallback(blocking, ToolAccess.Access.READ) };
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenReturn(callbacks);
+		final TunnelClient client = mock(TunnelClient.class);
+		when(client.isConnected()).thenReturn(true);
+		when(client.send(any())).thenReturn(true);
+		final List<TunnelListener> listeners = new ArrayList<>();
+		final TunnelService renewing = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			capturedSettings.add(settings);
+			listeners.add(listener);
+			return client;
+		}, () -> {
+			throw new AssertionError("an enrolled agent never loads nor generates its uid itself");
+		});
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReady()).thenReturn(true);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91");
+		when(enrollment.currentToken()).thenReturn("one", "two");
+		renewing.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		try {
+			renewing.supervise();
+			assertEquals("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", capturedSettings.get(0).agentUid());
+			verify(client).useCredential(any(), any());
+			listeners.get(0).onRegistered(new AgentRegistered(30, 1_048_576L, 2));
+			listeners.get(0).onInvoke(new ToolInvoke("req-1", "ListHosts", TunnelJson.MAPPER.createObjectNode(), 60_000), 1);
+
+			// Renewed while an invocation runs: the client is told, and the mark says to wait
+			renewing.supervise();
+			renewing.supervise();
+			final ArgumentCaptor<LongSupplier> mark = ArgumentCaptor.forClass(LongSupplier.class);
+			verify(client).credentialRenewed(eq("Bearer two"), mark.capture());
+			assertEquals(-1, mark.getValue().getAsLong(), "an invocation runs");
+
+			// Then nothing runs: the mark lets the client reconnect
+			release.countDown();
+			await().atMost(5, TimeUnit.SECONDS).until(() -> mark.getValue().getAsLong() >= 0);
+		} finally {
+			renewing.shutdown();
+		}
+	}
+
+	@Test
+	void aRenewalDelayedCloseToTheOldExpiryShouldReconnectWhateverRuns() throws Exception {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReady()).thenReturn(true);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn(UID);
+		when(enrollment.currentToken()).thenReturn("expiring", "renewed");
+		// On the local clock: the token the tunnel uses has 30 s left when the renewed one arrives
+		when(enrollment.tokenExpiresAt("expiring")).thenReturn(Instant.now().plusSeconds(30));
+		when(enrollment.tokenExpiresAt("renewed")).thenReturn(Instant.now().plusSeconds(900));
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+
+		service.supervise();
+		service.supervise();
+		service.supervise();
+
+		// The token the tunnel uses expires in 30 s: no waiting for a quiet moment
+		verify(createdClients.get(0)).credentialRenewed(eq("Bearer renewed"), isNull());
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void aRenewalShouldNotOutliveTheTokenTheHandshakeUsed() throws Exception {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.isReady()).thenReturn(true);
+		when(enrollment.isReadyFor(any())).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn(UID);
+		when(enrollment.headers(any(), anyLong())).thenReturn(Map.of("Authorization", "Bearer opened"));
+		// On the local clock: the token the handshake presented has 30 s left
+		when(enrollment.tokenExpiresAt("opened")).thenReturn(Instant.now().plusSeconds(30));
+		when(enrollment.currentToken()).thenReturn("renewed");
+		when(enrollment.tokenExpiresAt("renewed")).thenReturn(Instant.now().plusSeconds(900));
+		service.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+
+		service.supervise();
+		final ArgumentCaptor<Supplier<Map<String, String>>> credential = ArgumentCaptor.forClass(Supplier.class);
+		verify(createdClients.get(0)).useCredential(credential.capture(), any());
+		// The handshake, then a renewal by another channel before the first supervisor pass
+		credential.getValue().get();
+		service.supervise();
+
+		verify(createdClients.get(0)).credentialRenewed(eq("Bearer renewed"), isNull());
 	}
 
 	@Test

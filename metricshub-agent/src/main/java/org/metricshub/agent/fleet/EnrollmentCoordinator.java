@@ -27,6 +27,7 @@ import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_OS_TYPE_
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -35,8 +36,10 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -168,6 +171,8 @@ public class EnrollmentCoordinator {
 	private Settings stoppedWith;
 	private CentralTokenProvider tokenProvider;
 	private volatile boolean recoveryCleared;
+	private volatile String agentUid;
+	private volatile long tokenGeneration;
 	/** Whether the worker got the first token, or learnt there will be none (a revoked agent). */
 	private volatile boolean firstTokenDone;
 	/** Runs when the worker has decided to end, before it does (tests). */
@@ -283,6 +288,7 @@ public class EnrollmentCoordinator {
 					tokenProvider.shutdown();
 				}
 				tokenProvider = null;
+				tokenGeneration++;
 				if (!recoveryCleared) {
 					// The recovery proof goes after the first token of the new issuer
 					firstTokenDone = false;
@@ -304,6 +310,7 @@ public class EnrollmentCoordinator {
 				wipe(identity.secret());
 				wipe(identity.recoverySecret());
 				if (identity.status() == Status.READY) {
+					agentUid = identity.agentUid();
 					ready = true;
 					// Still started, for the first token: a recovery proof left by a crash goes after it
 					startWorker();
@@ -317,7 +324,7 @@ public class EnrollmentCoordinator {
 				return false;
 			}
 		} else if (worker.isAlive()) {
-			if (isStoredReady()) {
+			if (readyAgentUid() != null) {
 				// Another process sharing the security directory completed the identity: the worker's next pass sees it
 				// at once, not after its backoff
 				synchronized (backoff) {
@@ -329,7 +336,9 @@ public class EnrollmentCoordinator {
 		} else if (refusedAgain(latest)) {
 			// Stopped by a refusal that only a new configuration (a new key) can change, unless another process sharing
 			// the security directory completed the identity meanwhile
-			if (isStoredReady()) {
+			final String storedUid = readyAgentUid();
+			if (storedUid != null) {
+				agentUid = storedUid;
 				ready = true;
 				// As at a restart: the first token, and the recovery proof after it
 				startWorker();
@@ -381,6 +390,18 @@ public class EnrollmentCoordinator {
 			}
 			throw e;
 		}
+		// Defence: Central binds each token to the agent uid; a channel never presents another agent's
+		final String tokenUid = CentralTokenProvider.claims(token).path("agent_uid").asText(null);
+		if (!agentUid.equals(tokenUid)) {
+			// This very token: a valid one another channel got meanwhile is kept
+			provider.invalidate(token);
+			// The claim is not quoted: an unverified value, which may echo anything
+			log.error(
+				"MetricsHub Central issued a token for another agent to agent {}: it is refused and nothing connects with it.",
+				agentUid
+			);
+			throw new IOException("The token Central issued is not this agent's.");
+		}
 		// Under the lock ready() replaces the provider with: the check and the deletion of the recovery proof below are
 		// one step, so a reload never falls between them
 		synchronized (this) {
@@ -419,12 +440,90 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
-	 *
-	 * @throws IOException when the agent is not enrolled
+	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}). Does
+	 * nothing before the first token.
 	 */
-	public void invalidateToken() throws IOException {
-		tokenProvider().invalidate();
+	public synchronized void invalidateToken() {
+		invalidateToken(null);
+	}
+
+	/**
+	 * Drops the token Central refused, when it is still the cached one: a session opened with an older token never
+	 * discards a newer one.
+	 *
+	 * @param authorization the {@code Authorization} value Central refused, or {@code null} for the cached token
+	 */
+	public synchronized void invalidateToken(final String authorization) {
+		if (tokenProvider != null) {
+			tokenProvider.invalidate(
+				authorization != null && authorization.startsWith("Bearer ")
+					? authorization.substring("Bearer ".length())
+					: null
+			);
+		}
+	}
+
+	/**
+	 * @return the generation of the token provider, which changes when a reload moves the issuer or its certificate
+	 */
+	public long tokenGeneration() {
+		return tokenGeneration;
+	}
+
+	/**
+	 * The headers of a request to Central: the given ones with {@code Authorization: Bearer <current token>}.
+	 * For the channels' header suppliers, which cannot throw a checked exception.
+	 *
+	 * @param headers    the channel's static headers
+	 * @param generation the {@link #tokenGeneration()} the channel was built with: once the issuer moved, a channel
+	 *                   still open toward the former Central gets no token of the new one, until it is rebuilt
+	 * @return a new map with the bearer token
+	 * @throws UncheckedIOException when no token is available, its cause a
+	 *                              {@link CentralTokenProvider.InvalidClientException} when the agent is revoked
+	 */
+	public Map<String, String> headers(final Map<String, String> headers, final long generation) {
+		if (generation != tokenGeneration) {
+			throw new UncheckedIOException(new IOException("The issuer changed: the channel is rebuilt for it."));
+		}
+		try {
+			final String token = currentToken();
+			// Checked again once the token is there: a reload may have replaced the provider while it was asked, and a
+			// token of the new issuer never goes to a channel still open toward the former Central
+			if (generation != tokenGeneration) {
+				throw new IOException("The issuer changed: the channel is rebuilt for it.");
+			}
+			final Map<String, String> result = new HashMap<>(headers);
+			result.put("Authorization", "Bearer " + token);
+			return result;
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new UncheckedIOException(new InterruptedIOException("Interrupted while waiting for a token."));
+		}
+	}
+
+	/**
+	 * @param token a token {@link #currentToken()} returned
+	 * @return when that very token expires, on the local clock, or {@code null} when it is no longer the cached one
+	 */
+	public synchronized Instant tokenExpiresAt(final String token) {
+		return tokenProvider == null ? null : tokenProvider.expiresAt(token);
+	}
+
+	/**
+	 * @return the uid the agent was enrolled with, or {@code null} before {@link #isReady()}
+	 */
+	public String agentUid() {
+		return agentUid;
+	}
+
+	/**
+	 * @param agentContext the current agent context
+	 * @return whether the channels toward Central authenticate with the enrolled identity's token
+	 */
+	public static boolean usesToken(final AgentContext agentContext) {
+		return isConfigured(agentContext.getAgentConfig().getCentral());
 	}
 
 	/**
@@ -456,17 +555,18 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * @return whether the shared store holds a complete identity, which another process may have written
+	 * @return the agent uid of the complete identity the shared store holds, which another process may have written, or
+	 *         {@code null}
 	 */
-	private boolean isStoredReady() {
+	private String readyAgentUid() {
 		try {
 			final LocalIdentity identity = store.read();
 			wipe(identity.secret());
 			wipe(identity.recoverySecret());
-			return identity.status() == Status.READY;
+			return identity.status() == Status.READY ? identity.agentUid() : null;
 		} catch (IOException e) {
 			log.debug("Cannot read the agent identity: {}", e.getMessage());
-			return false;
+			return null;
 		}
 	}
 
@@ -621,14 +721,6 @@ public class EnrollmentCoordinator {
 			Objects.equals(latest.certificateFile(), stoppedWith.certificateFile()));
 	}
 
-	/**
-	 * @param agentContext the current agent context
-	 * @return whether the channels toward Central authenticate with the enrolled identity's token
-	 */
-	public static boolean usesToken(final AgentContext agentContext) {
-		return isConfigured(agentContext.getAgentConfig().getCentral());
-	}
-
 	private static boolean isConfigured(final CentralConfig central) {
 		return central != null && central.isEnabled() && central.getAuth() != null;
 	}
@@ -649,6 +741,7 @@ public class EnrollmentCoordinator {
 						}
 						continue;
 					}
+					this.agentUid = agentUid;
 					ready = true;
 					log.info("The agent is enrolled into MetricsHub Central as {}.", agentUid);
 					firstToken();
@@ -856,7 +949,9 @@ public class EnrollmentCoordinator {
 					);
 				}
 				store.complete(answer.agentUid(), answer.secret());
-				// Published under the same lock: a reload cannot fall between the write and the readiness
+				// Published under the same lock: a reload cannot fall between the write and the readiness, and a channel
+				// never sees the readiness without the uid
+				agentUid = answer.agentUid();
 				ready = true;
 			}
 		} finally {

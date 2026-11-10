@@ -17,6 +17,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -49,6 +50,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -112,6 +114,7 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger recoverRequests = new AtomicInteger();
 	private final AtomicInteger tokenRequests = new AtomicInteger();
 	private final AtomicInteger metadataRequests = new AtomicInteger();
+	private volatile String tokenAgentUid;
 	private volatile boolean tokensUnavailable;
 	private volatile boolean tokensRefused;
 	private volatile CountDownLatch holdTokenAnswer = new CountDownLatch(0);
@@ -235,6 +238,9 @@ class EnrollmentCoordinatorTest {
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
+		final String basic = exchange.getRequestHeaders().getFirst("Authorization").substring("Basic ".length());
+		final String clientId = new String(Base64.getDecoder().decode(basic), StandardCharsets.UTF_8).split(":")[0];
+		final String agentUid = tokenAgentUid == null ? clientId : tokenAgentUid;
 		if (tokensUnavailable) {
 			respond(exchange, 503, "{}", null);
 			return;
@@ -248,9 +254,15 @@ class EnrollmentCoordinatorTest {
 		final String jwt = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8)) +
 			"." +
 			encoder.encodeToString(
-				("{\"jti\":\"jti-" + request + "\",\"iat\":" + iat + ",\"exp\":" + (iat + 900) + "}").getBytes(
-					StandardCharsets.UTF_8
-				)
+				("{\"agent_uid\":\"" +
+					agentUid +
+					"\",\"jti\":\"jti-" +
+					request +
+					"\",\"iat\":" +
+					iat +
+					",\"exp\":" +
+					(iat + 900) +
+					"}").getBytes(StandardCharsets.UTF_8)
 			) +
 			".c2lnbmF0dXJl" +
 			request;
@@ -280,6 +292,98 @@ class EnrollmentCoordinatorTest {
 		final Attempt attempt = attempts.values().iterator().next();
 		assertFalse(yaml.contains(attempt.secret()));
 		assertFalse(yaml.contains(attempt.agentUid()));
+	}
+
+	@Test
+	void theChannelsShouldPresentTheEnrolledAgentsToken() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+
+		final Map<String, String> headers = coordinator.headers(Map.of("X-Site", "a"), coordinator.tokenGeneration());
+
+		assertEquals("a", headers.get("X-Site"));
+		assertEquals("Bearer " + tokensHandedOut.get(tokensHandedOut.size() - 1), headers.get("Authorization"));
+		assertEquals(storedUid(directory), coordinator.agentUid());
+	}
+
+	@Test
+	void aChannelOfTheFormerIssuerShouldGetNoTokenOfTheNewOne() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final long former = coordinator.tokenGeneration();
+
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		coordinator.awaitWorker();
+		final int tokens = tokenRequests.get();
+
+		assertThrows(UncheckedIOException.class, () -> coordinator.headers(Map.of(), former));
+		assertEquals(tokens, tokenRequests.get(), "not even asked");
+		assertTrue(coordinator.headers(Map.of(), coordinator.tokenGeneration()).get("Authorization").startsWith("Bearer "));
+	}
+
+	@Test
+	void aTokenForAnotherAgentShouldBeRefused() throws Exception {
+		tokenAgentUid = "0192a6f4-7c1e-7b3a-9f20-000000000000";
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		// Not awaited: the worker keeps asking for a token that is this agent's
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (!coordinator.isReady()) {
+			Thread.sleep(10);
+		}
+
+		assertThrows(IOException.class, coordinator::currentToken);
+		final UncheckedIOException refused = assertThrows(
+			UncheckedIOException.class,
+			() -> coordinator.headers(Map.of(), coordinator.tokenGeneration())
+		);
+		assertTrue(refused.getCause().getMessage().contains("not this agent's"));
+	}
+
+	@Test
+	void theUidClaimOfAnotherAgentsTokenShouldNotBeLogged() throws Throwable {
+		tokenAgentUid = "echoed-client-secret";
+		final String logs = logged(() -> {
+			final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+			coordinator.ready(central(KEY), DESCRIPTION);
+			while (!coordinator.isReady()) {
+				Thread.sleep(10);
+			}
+			assertThrows(IOException.class, coordinator::currentToken);
+		});
+
+		assertTrue(logs.contains("issued a token for another agent"), logs);
+		assertFalse(logs.contains("echoed-client-secret"), logs);
+	}
+
+	/**
+	 * @param run what to run with the whole fleet package logged at TRACE
+	 * @return what it logged
+	 */
+	private static String logged(final Executable run) throws Throwable {
+		final StringWriter written = new StringWriter();
+		final WriterAppender appender = WriterAppender.newBuilder()
+			.setName("enrollment")
+			.setTarget(written)
+			.setLayout(PatternLayout.newBuilder().withPattern("%m%n").build())
+			.build();
+		appender.start();
+		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
+		// The whole flow at TRACE: the coordinator, the store and the token provider share this package
+		final String fleet = EnrollmentCoordinator.class.getPackageName();
+		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
+		logger.addAppender(appender, Level.TRACE, null);
+		context.getConfiguration().addLogger(fleet, logger);
+		context.updateLoggers();
+		try {
+			run.execute();
+		} finally {
+			context.getConfiguration().removeLogger(fleet);
+			context.updateLoggers();
+			appender.stop();
+		}
+		return written.toString();
 	}
 
 	@Test
@@ -316,10 +420,8 @@ class EnrollmentCoordinatorTest {
 		tokensUnavailable = true;
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		// A long backoff: the worker waits in it when central.auth goes
-		final EnrollmentCoordinator coordinator = new EnrollmentCoordinator(
-			() -> store,
-			Duration.ofSeconds(20),
-			new Random(0)
+		final EnrollmentCoordinator coordinator = tracked(
+			new EnrollmentCoordinator(() -> store, Duration.ofSeconds(20), new Random(0))
 		);
 		coordinator.ready(central(KEY), DESCRIPTION);
 		while (tokenRequests.get() == 0) {
@@ -964,6 +1066,8 @@ class EnrollmentCoordinatorTest {
 		new AgentCredentialStore(directory).complete("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", randomSecret().toCharArray());
 
 		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		// Known at once: the channels open with it before the worker runs
+		assertEquals("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", coordinator.agentUid());
 		coordinator.awaitWorker();
 
 		assertEquals(1, tokenRequests.get(), "its first token asked, as at a restart");
@@ -1336,34 +1440,15 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
-	void neitherTheKeyNorTheSecretsShouldBeLogged() throws Exception {
-		final StringWriter written = new StringWriter();
-		final WriterAppender appender = WriterAppender.newBuilder()
-			.setName("enrollment")
-			.setTarget(written)
-			.setLayout(PatternLayout.newBuilder().withPattern("%m%n").build())
-			.build();
-		appender.start();
-		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
-		// The whole flow at TRACE: the coordinator, the store and the token provider share this package
-		final String fleet = EnrollmentCoordinator.class.getPackageName();
-		final LoggerConfig logger = new LoggerConfig(fleet, Level.TRACE, false);
-		logger.addAppender(appender, Level.TRACE, null);
-		context.getConfiguration().addLogger(fleet, logger);
-		context.updateLoggers();
-		try {
+	void neitherTheKeyNorTheSecretsShouldBeLogged() throws Throwable {
+		final String logs = logged(() -> {
 			loseNextAnswer.set(true);
 			script.add(new Answer(503, "{\"code\":\"" + KEY + "\"}", null));
 			assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
 			script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
 			assertFalse(enrollWith(coordinator(new AgentCredentialStore(otherDirectory)), central(KEY)));
-		} finally {
-			context.getConfiguration().removeLogger(fleet);
-			context.updateLoggers();
-			appender.stop();
-		}
+		});
 
-		final String logs = written.toString();
 		assertTrue(logs.contains("enrollment_expired"), logs);
 		assertFalse(logs.contains(KEY), logs);
 		assertFalse(logs.contains(KEY.substring(KEY.indexOf('.') + 1)), logs);

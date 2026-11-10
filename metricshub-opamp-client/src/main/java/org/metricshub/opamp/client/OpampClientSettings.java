@@ -116,9 +116,57 @@ public class OpampClientSettings {
 	boolean reportHealth = true;
 
 	/**
+	 * Whether a {@code new_instance_uid} sent by the server is adopted. Off when the uid is assigned elsewhere (an
+	 * agent enrolled into Central): the server's one is then refused and logged.
+	 */
+	@Builder.Default
+	boolean acceptsNewInstanceUid = true;
+
+	/**
 	 * Creates the settings, storing an immutable copy of the headers so a caller-supplied mutable
 	 * map can neither be mutated after construction (silently dropping authentication from later
 	 * requests) nor be mutated concurrently while a request iterates it.
+	 *
+	 * @param endpoint        the OpAMP server endpoint
+	 * @param headers         the headers sent with every request; {@code null} means none
+	 * @param headersSupplier computes the headers of each request instead, or {@code null}
+	 * @param onUnauthorized  runs when the server answers {@code 401}; {@code null} means nothing
+	 * @param certificateFile the trusted certificate (PEM) path, or {@code null}
+	 * @param pollInterval    the interval between two polls
+	 * @param requestTimeout  the timeout of one HTTP exchange
+	 * @param maxBackoff      the maximum backoff delay
+	 * @param instanceUidFile the file persisting the agent instance UID
+	 * @param reportHealth    whether the agent health is reported
+	 * @param acceptsNewInstanceUid whether a {@code new_instance_uid} sent by the server is adopted
+	 */
+	public OpampClientSettings(
+		@NonNull final URI endpoint,
+		final Map<String, String> headers,
+		final Supplier<Map<String, String>> headersSupplier,
+		final Runnable onUnauthorized,
+		final String certificateFile,
+		final Duration pollInterval,
+		final Duration requestTimeout,
+		final Duration maxBackoff,
+		@NonNull final Path instanceUidFile,
+		final boolean reportHealth,
+		final boolean acceptsNewInstanceUid
+	) {
+		this.endpoint = endpoint;
+		this.headers = headers == null ? Map.of() : Map.copyOf(headers);
+		this.headersSupplier = headersSupplier;
+		this.onUnauthorized = onUnauthorized == null ? () -> {} : onUnauthorized;
+		this.certificateFile = certificateFile;
+		this.pollInterval = pollInterval;
+		this.requestTimeout = requestTimeout;
+		this.maxBackoff = maxBackoff;
+		this.instanceUidFile = instanceUidFile;
+		this.reportHealth = reportHealth;
+		this.acceptsNewInstanceUid = acceptsNewInstanceUid;
+	}
+
+	/**
+	 * Creates the settings adopting a {@code new_instance_uid} sent by the server, as before that choice existed.
 	 *
 	 * @param endpoint        the OpAMP server endpoint
 	 * @param headers         the headers sent with every request; {@code null} means none
@@ -143,16 +191,19 @@ public class OpampClientSettings {
 		@NonNull final Path instanceUidFile,
 		final boolean reportHealth
 	) {
-		this.endpoint = endpoint;
-		this.headers = headers == null ? Map.of() : Map.copyOf(headers);
-		this.headersSupplier = headersSupplier;
-		this.onUnauthorized = onUnauthorized == null ? () -> {} : onUnauthorized;
-		this.certificateFile = certificateFile;
-		this.pollInterval = pollInterval;
-		this.requestTimeout = requestTimeout;
-		this.maxBackoff = maxBackoff;
-		this.instanceUidFile = instanceUidFile;
-		this.reportHealth = reportHealth;
+		this(
+			endpoint,
+			headers,
+			headersSupplier,
+			onUnauthorized,
+			certificateFile,
+			pollInterval,
+			requestTimeout,
+			maxBackoff,
+			instanceUidFile,
+			reportHealth,
+			true
+		);
 	}
 
 	/**

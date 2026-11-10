@@ -24,8 +24,10 @@ package org.metricshub.agent.tunnel;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -87,6 +89,22 @@ public class TunnelService {
 	private EnrollmentCoordinator enrollment = EnrollmentCoordinator.global();
 	private final ExecutorService toolWorkers;
 	private final ScheduledExecutorService supervisor;
+
+	/**
+	 * How long a renewed token may wait for a moment with no invocation in flight before the tunnel reconnects
+	 * anyway: below the renewal margin (7 minutes before {@code exp}), so the old token never expires first.
+	 */
+	static final Duration FORCED_RENEWAL = Duration.ofMinutes(5);
+	private boolean usesToken;
+	/**
+	 * Margin kept before the expiry of the token a connection was opened with, for the reconnection to happen first.
+	 */
+	static final Duration EXPIRY_MARGIN = Duration.ofSeconds(60);
+	private String renewedAuthorization;
+	private Instant renewedExpiry;
+	private Instant forcedRenewalAt = Instant.MAX;
+	/** The local expiry of the token the tunnel's last handshake presented. */
+	private volatile Instant connectedExpiry;
 
 	private TunnelClient client;
 	private ToolBridge bridge;
@@ -193,6 +211,9 @@ public class TunnelService {
 			reconfigure(agentContext, config);
 			activeAuth = EnrollmentCoordinator.authState(agentContext.getAgentConfig().getCentral(), enrollment.isReady());
 			return;
+		}
+		if (client != null && usesToken) {
+			reconnectWithRenewedToken();
 		}
 		if (client != null && agentContextHolder.getGeneration() != snapshotGeneration) {
 			// A configuration reload may have changed the connector and protocol tools. They are not advertised
@@ -312,11 +333,15 @@ public class TunnelService {
 		TunnelClient newClient = null;
 		try {
 			snapshot = snapshotOf(newConfig.getExcludedTools());
+			// The context the settings came from: its authentication and its endpoint go together
+			usesToken = EnrollmentCoordinator.usesToken(agentContext);
+			final Map<String, String> headers = FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel");
 			final TunnelSettings settings = new TunnelSettings(
 				URI.create(endpoint.trim()),
-				FleetHeaders.decrypt(newConfig.getHeaders(), "tunnel"),
+				headers,
 				newConfig.getCertificateFile(),
-				uidSupplier.load(),
+				// Enrolled, the uid is the one Central assigned; the agent never generates one
+				usesToken ? enrollment.agentUid() : uidSupplier.load(),
 				Duration.ofSeconds(atLeastOneSecond(newConfig.getHeartbeatInterval())),
 				TunnelSettings.DEFAULT_CONNECT_TIMEOUT,
 				TunnelSettings.DEFAULT_MAX_BACKOFF,
@@ -342,6 +367,17 @@ public class TunnelService {
 				}
 			}, toolWorkers);
 			newClient = clientFactory.apply(settings, new BridgeListener(newBridge));
+			if (usesToken) {
+				final EnrollmentCoordinator coordinator = enrollment;
+				final long generation = coordinator.tokenGeneration();
+				connectedExpiry = null;
+				newClient.useCredential(() -> {
+					final Map<String, String> current = coordinator.headers(headers, generation);
+					// The token this handshake presents: its expiry bounds how long a renewal may wait
+					connectedExpiry = coordinator.tokenExpiresAt(current.get("Authorization").substring("Bearer ".length()));
+					return current;
+				}, coordinator::invalidateToken);
+			}
 			owner.set(newClient);
 			bridge = newBridge;
 			client = newClient;
@@ -359,6 +395,44 @@ public class TunnelService {
 			log.error("Failed to start the central tunnel toward {}: {}", endpoint, e.getMessage());
 			log.debug("Failed to start the central tunnel:", e);
 		}
+	}
+
+	/**
+	 * Reconnects the tunnel once its token was renewed, at the first tick with no invocation in flight, or whatever
+	 * runs after {@link #FORCED_RENEWAL}, or {@link #EXPIRY_MARGIN} before the previous token expires when that comes
+	 * first (a renewal delayed by an outage), so invocations never postpone it past that expiry. Asking for the token
+	 * here also renews it on time, off the tunnel thread.
+	 */
+	private void reconnectWithRenewedToken() {
+		final String token;
+		final String authorization;
+		try {
+			token = enrollment.currentToken();
+			authorization = "Bearer " + token;
+		} catch (IOException e) {
+			log.debug("Central tunnel: no token to check: {}", e.getMessage());
+			return;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return;
+		}
+		final Instant now = Instant.now();
+		if (!authorization.equals(renewedAuthorization)) {
+			// The expiry of the token seen before, the one the tunnel was opened with, on the local clock
+			final Instant previousExpiry = renewedExpiry;
+			// The expiry of this very token: another one may have replaced it since it was read
+			renewedExpiry = enrollment.tokenExpiresAt(token);
+			final Instant forced = now.plus(FORCED_RENEWAL);
+			forcedRenewalAt = previousExpiry == null || forced.isBefore(previousExpiry.minus(EXPIRY_MARGIN))
+				? forced
+				: previousExpiry.minus(EXPIRY_MARGIN);
+			renewedAuthorization = authorization;
+		}
+		final Instant connected = connectedExpiry;
+		final boolean overdue = !now.isBefore(forcedRenewalAt) ||
+			(connected != null && !now.isBefore(connected.minus(EXPIRY_MARGIN)));
+		// The client decides on its own thread, where invocations arrive and answers leave
+		client.credentialRenewed(authorization, overdue || bridge == null ? null : bridge::quiescentMark);
 	}
 
 	private void closeClient(final String reason) {

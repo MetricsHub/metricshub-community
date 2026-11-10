@@ -23,10 +23,12 @@ package org.metricshub.agent.tunnel.client;
 
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.net.http.WebSocketHandshakeException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -38,7 +40,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.fleet.CentralTokenProvider;
 import org.metricshub.agent.tunnel.protocol.TunnelJson;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegistered;
@@ -74,6 +80,10 @@ public class TunnelClient {
 	public static final int CLOSE_HEARTBEAT_TIMEOUT = 4003;
 	/** Standard close code for a frame type the protocol does not use (binary). */
 	public static final int CLOSE_UNSUPPORTED_DATA = 1003;
+	/** Close code sent by the server when the agent's credential was revoked. */
+	public static final int CLOSE_CREDENTIAL_REVOKED = 4004;
+	/** Close code sent by the server when the agent's token expired. */
+	public static final int CLOSE_CREDENTIAL_EXPIRED = 4006;
 
 	static final Duration BASE_BACKOFF = Duration.ofSeconds(1);
 	static final Duration STOP_TIMEOUT = Duration.ofSeconds(5);
@@ -158,6 +168,20 @@ public class TunnelClient {
 	private ScheduledFuture<?> heartbeat;
 	private ScheduledFuture<?> reconnect;
 	private ScheduledFuture<?> stability;
+
+	/**
+	 * With {@code central.auth}: the headers of each connection, the current token included, and how to drop a token
+	 * Central refused. {@code null}: the static headers of the settings, as before.
+	 */
+	private volatile Supplier<Map<String, String>> credentialHeaders;
+	private volatile Consumer<String> invalidateCredential;
+	/** The {@code Authorization} the current connection was opened with. */
+	private String connectedAuthorization;
+	/**
+	 * Whether the one immediate reconnection after a refused or expired token was used; reset once a connection
+	 * proved durable, so a server refusing every token meets the backoff instead of a loop.
+	 */
+	private boolean credentialRetryUsed;
 
 	/**
 	 * @param settings connection settings
@@ -350,6 +374,84 @@ public class TunnelClient {
 	}
 
 	/**
+	 * Authenticates each connection with the agent's token instead of the static headers. Called before
+	 * {@link #start()}.
+	 *
+	 * @param headers    the headers of the next connection, the current token included; throws when no token is
+	 *                   available, its cause an {@link CentralTokenProvider.InvalidClientException} when the agent is revoked
+	 * @param invalidate drops the token Central refused or let expire, given the {@code Authorization} the connection
+	 *                   was opened with, so a newer token renewed meanwhile is kept
+	 */
+	public void useCredential(final Supplier<Map<String, String>> headers, final Consumer<String> invalidate) {
+		this.credentialHeaders = headers;
+		this.invalidateCredential = invalidate;
+	}
+
+	/**
+	 * Reconnects with a renewed token, when the current connection was opened with another one, at a moment it loses
+	 * nothing: decided on this thread, which receives every invocation and sends every answer, with two equal marks of
+	 * {@code quiescentMark}, the second queued behind the answers handed over before the first.
+	 *
+	 * @param authorization  the {@code Authorization} of the current token
+	 * @param quiescentMark  {@code -1} while invocations run or answers are being handed over, else a number that
+	 *                       changes with each invocation received; {@code null} to reconnect whatever runs (the old
+	 *                       token is about to expire)
+	 */
+	public void credentialRenewed(final String authorization, final LongSupplier quiescentMark) {
+		dispatch(() -> {
+			if (!usesAnotherToken(authorization)) {
+				return;
+			}
+			if (quiescentMark == null) {
+				reconnectWithRenewedToken();
+				return;
+			}
+			final long mark = quiescentMark.getAsLong();
+			if (mark < 0) {
+				return;
+			}
+			dispatch(() -> {
+				if (usesAnotherToken(authorization) && quiescentMark.getAsLong() == mark) {
+					reconnectWithRenewedToken();
+				}
+			});
+		});
+	}
+
+	private boolean usesAnotherToken(final String authorization) {
+		return (!stopped &&
+			webSocket != null &&
+			limits != null &&
+			connectedAuthorization != null &&
+			!connectedAuthorization.equals(authorization));
+	}
+
+	private void reconnectWithRenewedToken() {
+		log.info("Central tunnel reconnecting. Reason: credential renewed.");
+		dropConnection(generation, WebSocket.NORMAL_CLOSURE, "credential renewed", false);
+		connect(++generation);
+	}
+
+	/**
+	 * Drops the token Central refused or let expire, then reconnects at once the first time, with the backoff after.
+	 *
+	 * @param lostGeneration the connection that ended
+	 * @return whether the immediate reconnection was started
+	 */
+	private boolean renewAndReconnect(final long lostGeneration) {
+		if (credentialHeaders == null || stopped || lostGeneration != generation) {
+			return false;
+		}
+		invalidateCredential.accept(connectedAuthorization);
+		if (credentialRetryUsed) {
+			return false;
+		}
+		credentialRetryUsed = true;
+		connect(++generation);
+		return true;
+	}
+
+	/**
 	 * Drops the current connection so the next one re-registers.
 	 *
 	 * <p>The only way to publish a changed identity: {@code agent.register} is the one frame that
@@ -397,10 +499,28 @@ public class TunnelClient {
 			return;
 		}
 		log.debug("Central tunnel connecting (generation {}).", connectGeneration);
+		Map<String, String> headers = settings.headers();
+		final Supplier<Map<String, String>> credential = credentialHeaders;
+		if (credential != null) {
+			try {
+				// Read at each connection: a renewed token is used by the next one
+				headers = credential.get();
+			} catch (RuntimeException e) {
+				if (e.getCause() instanceof CentralTokenProvider.InvalidClientException) {
+					// Logged by the token provider; no automatic enrollment ever follows
+					log.error("Central tunnel stops connecting: Central refused the agent's credential (invalid_client).");
+					return;
+				}
+				log.warn("Central tunnel: no token to connect with: {}", e.getMessage());
+				scheduleReconnect(connectGeneration);
+				return;
+			}
+			connectedAuthorization = headers.get("Authorization");
+		}
 		final WebSocket.Builder builder = httpClient.newWebSocketBuilder()
 			.connectTimeout(settings.connectTimeout())
 			.header(TunnelSettings.AGENT_UID_HEADER, settings.agentUid());
-		settings.headers().forEach(builder::header);
+		headers.forEach(builder::header);
 		builder.buildAsync(settings.endpoint(), new FrameListener(connectGeneration)).whenComplete((socket, error) -> {
 			if (!dispatch(() -> onConnected(connectGeneration, socket, error)) && socket != null) {
 				// stop() ran while the handshake was in flight: the tunnel thread is gone and
@@ -425,6 +545,21 @@ public class TunnelClient {
 				: error;
 			log.warn("Central tunnel connection to {} failed: {}", settings.endpoint(), Failures.describe(cause));
 			log.debug("Central tunnel connection failed:", cause);
+			final int status = cause instanceof WebSocketHandshakeException handshake
+				? handshake.getResponse().statusCode()
+				: 0;
+			if (status == 401 && renewAndReconnect(connectGeneration)) {
+				return;
+			}
+			if (status == 403 && credentialHeaders != null) {
+				log.error(
+					"Central tunnel: Central refused the agent's token (403): wrong agent uid, permission or principal type. " +
+						"Retrying in {}.",
+					settings.maxBackoff()
+				);
+				scheduleReconnect(connectGeneration, settings.maxBackoff());
+				return;
+			}
 			scheduleReconnect(connectGeneration);
 			return;
 		}
@@ -632,6 +767,7 @@ public class TunnelClient {
 		stability = executor.schedule(() -> {
 			if (registeredGeneration == generation && !stopped) {
 				retrySchedule.reset();
+				credentialRetryUsed = false;
 			}
 		}, STABLE_CONNECTION.toMillis(), TimeUnit.MILLISECONDS);
 		final Duration interval = heartbeatIntervalOf(registered);
@@ -671,6 +807,14 @@ public class TunnelClient {
 			return;
 		}
 		log.info("Central tunnel closed by the server (code {}): {}", code, reason);
+		if ((code == CLOSE_CREDENTIAL_EXPIRED || code == CLOSE_CREDENTIAL_REVOKED) && credentialHeaders != null) {
+			// A new token at once, once; the backoff after, unchanged by an expiry Central announced
+			disconnected(closedGeneration, code, reason, false);
+			if (!renewAndReconnect(closedGeneration)) {
+				scheduleReconnect(closedGeneration);
+			}
+			return;
+		}
 		disconnected(closedGeneration, code, reason);
 	}
 
@@ -737,10 +881,14 @@ public class TunnelClient {
 	}
 
 	private void scheduleReconnect(final long fromGeneration) {
+		scheduleReconnect(fromGeneration, null);
+	}
+
+	private void scheduleReconnect(final long fromGeneration, final Duration floor) {
 		if (stopped || fromGeneration != generation) {
 			return;
 		}
-		final Duration delay = retrySchedule.nextDelayAfterFailure(null);
+		final Duration delay = retrySchedule.nextDelayAfterFailure(floor);
 		final long nextGeneration = ++generation;
 		log.info("Central tunnel: next connection attempt in {}.", delay);
 		reconnect = executor.schedule(() -> connect(nextGeneration), delay.toMillis(), TimeUnit.MILLISECONDS);

@@ -22,10 +22,10 @@ The tunnel is a persistent **outbound** WebSocket opened by every MetricsHub Age
 ```
 Agent                                              Central
   │  GET /ws/agent  (Upgrade: websocket)                 │
-  │  Authorization: Bearer <agent secret>                │
+  │  Authorization: Bearer <agent secret | access token> │
   │  X-MetricsHub-Agent-Uid: <uuid>                      │
   │ ────────────────────────────────────────────────────► │
-  │  101 Switching Protocols  |  401  |  400  |  503     │
+  │  101 Switching Protocols | 401 | 403 | 400 | 503     │
   │ ◄──────────────────────────────────────────────────── │
   │  {"type":"agent.register", ...}                      │
   │ ────────────────────────────────────────────────────► │
@@ -34,8 +34,10 @@ Agent                                              Central
 ```
 
 * **Transport:** WebSocket over TLS (`wss://`). Plain `ws://` is tolerated for loopback development only; an agent configured with `central.insecure` uses it toward any host.
-* **Authentication:** `Authorization: Bearer <secret>`; the secret is one of Central's configured agent secrets (`central.headers` on the agent side). A bad or missing secret is refused at the handshake with `401`.
-* **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`metricshub-agent-uid`) — so Central sees one agent whichever channel reports. A value that is not a canonical UUID is refused with `400`.
+* **Authentication:** `Authorization: Bearer <credential>`, one of two kinds:
+  * with `central.auth` on the agent side, the agent's **access token**, a short-lived JWT Central's issuer signs for the enrolled agent (`client_credentials`, `client_id` = `agent_uid`), read anew at each connection. Its `agent_uid` equals `X-MetricsHub-Agent-Uid`. A missing, expired or invalid token is refused at the handshake with `401`: the agent renews it and connects once at once, then follows the backoff; a valid token for another uid, a missing permission or the wrong principal type is refused with `403`, which the agent waits out with its longest backoff. An open tunnel whose token expires is closed `4006`; a revoked credential is closed `4004`;
+  * without it, a static secret, one of Central's configured agent secrets (`central.headers`), refused with `401` when bad or missing.
+* **Identity:** `X-MetricsHub-Agent-Uid` carries the agent's persistent instance uid — the same UUIDv7 persisted for OpAMP in the MetricsHub `security` directory (`metricshub-agent-uid`) — so Central sees one agent whichever channel reports. With `central.auth` it is the uid Central assigned at enrollment, never one the agent generates. A value that is not a canonical UUID is refused with `400`.
 * **First message:** the agent must send `agent.register` within 10 s of the upgrade; otherwise the server closes with code `4002`. A message of any other type before then is answered with `error` `REGISTRATION_REQUIRED` and closed `1002`: nothing may drive a session that has not said who it is.
 * **Capacity:** a server already holding its maximum number of tunnels refuses the handshake with `503`; the agent retries with backoff.
 
@@ -228,7 +230,8 @@ Informational; never closes the connection by itself.
 | `4001` | server | Superseded by a newer session for the same uid |
 | `4002` | server | No `agent.register` within 10 s |
 | `4003` | either | Heartbeat timeout |
-| `4004` | server | The agent secret this tunnel presented is no longer configured |
+| `4004` | server | The agent secret this tunnel presented is no longer configured, or its credential was revoked |
+| `4006` | server | The agent's token expired; the agent renews it and reconnects at once |
 | `4005` | server | The agent was deleted in Central; reconnecting registers it as new |
 
 ## 5. Tool invocation

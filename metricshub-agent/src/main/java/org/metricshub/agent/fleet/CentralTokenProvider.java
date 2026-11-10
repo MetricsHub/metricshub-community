@@ -38,6 +38,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.tunnel.client.TunnelSettings;
@@ -75,8 +76,19 @@ public class CentralTokenProvider {
 	private static final Duration MAX_JITTER = Duration.ofSeconds(30);
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 	private static final Duration MAX_BACKOFF = Duration.ofMinutes(5);
+	private static final Duration MAX_RETRY_AFTER = Duration.ofHours(1);
 	private static final String METADATA_PATH = "/.well-known/oauth-authorization-server";
 	private static final ObjectMapper JSON = new ObjectMapper();
+	private static final Set<String> OAUTH_ERRORS = Set.of(
+		"invalid_request",
+		"invalid_client",
+		"invalid_grant",
+		"unauthorized_client",
+		"unsupported_grant_type",
+		"invalid_scope",
+		"invalid_target",
+		"temporarily_unavailable"
+	);
 
 	/**
 	 * The agent's credential, as stored at enrollment.
@@ -93,7 +105,10 @@ public class CentralTokenProvider {
 
 		private static final long serialVersionUID = 1L;
 
-		InvalidClientException(final String message) {
+		/**
+		 * @param message the message, which never quotes an answer
+		 */
+		public InvalidClientException(final String message) {
 			super(message);
 		}
 	}
@@ -110,6 +125,9 @@ public class CentralTokenProvider {
 	private String token;
 	private Instant renewAt;
 	private Instant expiresAt;
+	/** The token the cached one replaced, and its expiry: a channel that presented it still learns when it ends. */
+	private String previousToken;
+	private Instant previousExpiresAt;
 	private Instant nextAttemptAt = Instant.MIN;
 	private String lastFailure;
 	private boolean invalidClient;
@@ -219,7 +237,11 @@ public class CentralTokenProvider {
 			// the backoff too, and named by its type only: a parser's message may quote the answer, a token included
 			final boolean classified = e instanceof RetryableException;
 			lastFailure = classified ? e.getMessage() : "an unreadable answer (" + e.getClass().getSimpleName() + ")";
-			final Duration floor = classified ? ((RetryableException) e).floor : null;
+			final Duration retryAfter = classified ? ((RetryableException) e).floor : null;
+			// A server's Retry-After is bounded: any value, however large, must stay an instant the clock can hold
+			final Duration floor = retryAfter == null || retryAfter.compareTo(MAX_RETRY_AFTER) <= 0
+				? retryAfter
+				: MAX_RETRY_AFTER;
 			nextAttemptAt = clock.instant().plus(retrySchedule.nextDelayAfterFailure(floor));
 			// Checked again: the token may have expired while the request was waiting for Central
 			if (token != null && clock.instant().isBefore(expiresAt)) {
@@ -232,6 +254,25 @@ public class CentralTokenProvider {
 			}
 			// Without the cause, which may quote the answer
 			throw new IOException("No token from Central: " + lastFailure + "; next attempt at " + nextAttemptAt + ".");
+		}
+	}
+
+	/**
+	 * @param of a token this provider handed out
+	 * @return when it expires, on the local clock, when it is the cached one or the one it replaced, else
+	 *         {@code null}: never the expiry of another token
+	 */
+	public synchronized Instant expiresAt(final String of) {
+		if (of == null) {
+			return null;
+		}
+		return of.equals(token) ? expiresAt : of.equals(previousToken) ? previousExpiresAt : null;
+	}
+
+	private void keepAsPrevious() {
+		if (token != null) {
+			previousToken = token;
+			previousExpiresAt = expiresAt;
 		}
 	}
 
@@ -253,7 +294,22 @@ public class CentralTokenProvider {
 	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
 	 */
 	public synchronized void invalidate() {
+		invalidate(null);
+	}
+
+	/**
+	 * Drops the cached token when it is the one Central refused; a newer one, renewed meanwhile, is kept.
+	 *
+	 * @param rejected the token Central refused, or {@code null} for whichever is cached
+	 */
+	public synchronized void invalidate(final String rejected) {
+		if (rejected != null && !rejected.equals(token)) {
+			return;
+		}
+		keepAsPrevious();
 		token = null;
+		// Central refused the token: a new one is asked at once, whatever the backoff of a former renewal said
+		nextAttemptAt = Instant.MIN;
 	}
 
 	/**
@@ -288,7 +344,8 @@ public class CentralTokenProvider {
 			return;
 		}
 		final String error = errorCode(response.body());
-		if (status == 401 && "invalid_client".equals(error)) {
+		// RFC 6749 §5.2 answers invalid_client with 401 or 400: terminal either way
+		if ((status == 401 || status == 400) && "invalid_client".equals(error)) {
 			invalidClient = true;
 			log.error(
 				"Central refused the credential of agent {} (invalid_client): the agent was revoked or deleted. " +
@@ -336,6 +393,7 @@ public class CentralTokenProvider {
 		final Instant received = clock.instant();
 		final long renewAfter = Math.max(lifetime / 2, lifetime - margin.toSeconds());
 		final long jitterMs = (long) (random.nextDouble() * Math.min(MAX_JITTER.toMillis(), lifetime * 1000 / 10));
+		keepAsPrevious();
 		token = accessToken;
 		expiresAt = received.plusSeconds(lifetime);
 		renewAt = received.plusSeconds(renewAfter).minusMillis(jitterMs);
@@ -444,11 +502,18 @@ public class CentralTokenProvider {
 		}
 	}
 
+	/**
+	 * @param body an error answer
+	 * @return its OAuth {@code error} when it is one RFC 6749 or RFC 8693 defines, else {@code "unknown"}: an answer
+	 *         may echo anything, the secret included, and only these are ever logged
+	 */
 	private static String errorCode(final String body) {
 		try {
-			return JSON.readTree(body).path("error").asText(null);
+			final JsonNode answer = JSON.readTree(body);
+			final String error = answer == null ? "" : answer.path("error").asText("");
+			return OAUTH_ERRORS.contains(error) ? error : "unknown";
 		} catch (IOException e) {
-			return null;
+			return "unknown";
 		}
 	}
 

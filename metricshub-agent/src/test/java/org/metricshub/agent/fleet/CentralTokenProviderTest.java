@@ -3,6 +3,7 @@ package org.metricshub.agent.fleet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -198,6 +199,27 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void anInvalidClientAnsweredWith400ShouldBeTerminalToo() throws Exception {
+		script.add(new Answer(400, "{\"error\":\"invalid_client\"}", null));
+		final CentralTokenProvider provider = provider();
+
+		assertThrows(InvalidClientException.class, provider::currentToken);
+		clock.advance(Duration.ofHours(1));
+		assertThrows(InvalidClientException.class, provider::currentToken);
+		assertEquals(1, tokenRequests.get(), "never asked again");
+	}
+
+	@Test
+	void anErrorOutsideOAuthShouldNeverBeQuoted() throws Exception {
+		script.add(new Answer(400, "{\"error\":\"echoed-" + SECRET + "\"}", null));
+
+		final IOException failure = assertThrows(IOException.class, () -> provider().currentToken());
+
+		assertTrue(failure.getMessage().contains("400 unknown"), failure.getMessage());
+		assertFalse(failure.getMessage().contains(SECRET), failure.getMessage());
+	}
+
+	@Test
 	void anotherIssuerInTheMetadataShouldBeRefused() throws Exception {
 		announcedIssuer = "https://issuer.example.com";
 
@@ -220,6 +242,47 @@ class CentralTokenProviderTest {
 	}
 
 	@Test
+	void anUnboundedRetryAfterShouldStillScheduleTheNextAttempt() throws Exception {
+		script.add(new Answer(429, "{}", String.valueOf(Long.MAX_VALUE)));
+		final CentralTokenProvider provider = provider();
+
+		assertThrows(IOException.class, provider::currentToken);
+		assertThrows(IOException.class, provider::currentToken);
+
+		assertEquals(1, tokenRequests.get(), "the delay is honoured, bounded");
+	}
+
+	@Test
+	void aRefusalOfAnOlderTokenShouldKeepTheNewerOne() throws Exception {
+		final CentralTokenProvider provider = provider();
+		final String current = provider.currentToken();
+
+		provider.invalidate("an-older-token");
+
+		assertEquals(current, provider.currentToken());
+		assertEquals(1, tokenRequests.get());
+		provider.invalidate(current);
+		assertNotEquals(current, provider.currentToken());
+	}
+
+	@Test
+	void aRefusedTokenShouldBeReplacedAtOnceWhateverTheRenewalBackoff() throws Exception {
+		final CentralTokenProvider provider = provider();
+		provider.currentToken();
+		// The renewal fails: the current token is kept, the next attempt put off
+		clock.advance(Duration.ofSeconds(480));
+		script.add(new Answer(503, "{}", "600"));
+		provider.currentToken();
+		assertEquals(2, tokenRequests.get());
+
+		// Central refuses that token (a handshake 401, a 4006 close)
+		provider.invalidate();
+		provider.currentToken();
+
+		assertEquals(3, tokenRequests.get(), "asked at once");
+	}
+
+	@Test
 	void a2MinuteTokenShouldBeRenewedAtHalfItsLifetime() throws Exception {
 		lifetime = 120;
 		final CentralTokenProvider provider = provider();
@@ -231,6 +294,20 @@ class CentralTokenProviderTest {
 		clock.advance(Duration.ofSeconds(1));
 		assertNotEquals(first, provider.currentToken());
 		assertEquals(2, tokenRequests.get());
+	}
+
+	@Test
+	void theReplacedTokenShouldKeepItsOwnExpiry() throws Exception {
+		lifetime = 120;
+		final CentralTokenProvider provider = provider();
+		final String first = provider.currentToken();
+		clock.advance(Duration.ofSeconds(60));
+		final String second = provider.currentToken();
+
+		// A channel that presented the first token just before the renewal still learns when it ends
+		assertEquals(START.plusSeconds(120), provider.expiresAt(first));
+		assertEquals(START.plusSeconds(180), provider.expiresAt(second));
+		assertNull(provider.expiresAt("another-token"));
 	}
 
 	@Test
