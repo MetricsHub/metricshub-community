@@ -23,6 +23,7 @@ package org.metricshub.agent.opamp;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -294,7 +295,7 @@ public class OpAmpService {
 
 		OpampClient newClient = null;
 		try {
-			newClient = clientFactory.apply(buildSettings(newConfig));
+			newClient = clientFactory.apply(buildSettings(newConfig, EnrollmentCoordinator.usesToken(agentContext)));
 			if (packagesHandler != null && upgradeEnabled) {
 				// Advertises the AcceptsPackages/ReportsPackageStatuses capabilities
 				newClient.setPackagesHandler(packagesHandler);
@@ -362,9 +363,27 @@ public class OpAmpService {
 	 * @return the client settings
 	 */
 	OpampClientSettings buildSettings(final OpAmpConfig config) {
+		return buildSettings(config, false);
+	}
+
+	/**
+	 * Builds the OpAMP client settings. With {@code central.auth}, every POST carries the current token, a
+	 * {@code 401} drops it so the next POST carries a new one, and the uid is the enrolled one: a
+	 * {@code new_instance_uid} from the server is refused.
+	 *
+	 * @param config    the OpAMP configuration
+	 * @param usesToken whether the agent authenticates with its enrolled identity's token
+	 * @return the client settings
+	 */
+	OpampClientSettings buildSettings(final OpAmpConfig config, final boolean usesToken) {
+		final Map<String, String> headers = FleetHeaders.decrypt(config.getHeaders(), "OpAMP");
+		final EnrollmentCoordinator coordinator = enrollment;
 		return OpampClientSettings.builder()
 			.withEndpoint(URI.create(config.getEndpoint().trim()))
-			.withHeaders(FleetHeaders.decrypt(config.getHeaders(), "OpAMP"))
+			.withHeaders(headers)
+			.withHeadersSupplier(usesToken ? () -> coordinator.headers(headers) : null)
+			.withOnUnauthorized(usesToken ? coordinator::invalidateToken : () -> {})
+			.withAcceptsNewInstanceUid(!usesToken)
 			.withCertificateFile(config.getCertificateFile())
 			.withPollInterval(
 				Duration.ofSeconds(

@@ -14,6 +14,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -105,6 +106,7 @@ class EnrollmentCoordinatorTest {
 	private final AtomicInteger recoverRequests = new AtomicInteger();
 	private final AtomicInteger tokenRequests = new AtomicInteger();
 	private final AtomicInteger metadataRequests = new AtomicInteger();
+	private volatile String tokenAgentUid;
 	private final List<String> tokensHandedOut = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean loseNextAnswer = new AtomicBoolean();
 	private volatile CountDownLatch holdEnrollAnswer = new CountDownLatch(0);
@@ -203,14 +205,23 @@ class EnrollmentCoordinatorTest {
 
 	private void token(final HttpExchange exchange) throws IOException {
 		final int request = tokenRequests.incrementAndGet();
+		final String basic = exchange.getRequestHeaders().getFirst("Authorization").substring("Basic ".length());
+		final String clientId = new String(Base64.getDecoder().decode(basic), StandardCharsets.UTF_8).split(":")[0];
+		final String agentUid = tokenAgentUid == null ? clientId : tokenAgentUid;
 		final long iat = System.currentTimeMillis() / 1000;
 		final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 		final String jwt = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8)) +
 			"." +
 			encoder.encodeToString(
-				("{\"jti\":\"jti-" + request + "\",\"iat\":" + iat + ",\"exp\":" + (iat + 900) + "}").getBytes(
-					StandardCharsets.UTF_8
-				)
+				("{\"agent_uid\":\"" +
+					agentUid +
+					"\",\"jti\":\"jti-" +
+					request +
+					"\",\"iat\":" +
+					iat +
+					",\"exp\":" +
+					(iat + 900) +
+					"}").getBytes(StandardCharsets.UTF_8)
 			) +
 			".c2lnbmF0dXJl" +
 			request;
@@ -240,6 +251,33 @@ class EnrollmentCoordinatorTest {
 		final Attempt attempt = attempts.values().iterator().next();
 		assertFalse(yaml.contains(attempt.secret()));
 		assertFalse(yaml.contains(attempt.agentUid()));
+	}
+
+	@Test
+	void theChannelsShouldPresentTheEnrolledAgentsToken() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+
+		final Map<String, String> headers = coordinator.headers(Map.of("X-Site", "a"));
+
+		assertEquals("a", headers.get("X-Site"));
+		assertEquals("Bearer " + tokensHandedOut.get(tokensHandedOut.size() - 1), headers.get("Authorization"));
+		assertEquals(storedUid(directory), coordinator.agentUid());
+	}
+
+	@Test
+	void aTokenForAnotherAgentShouldBeRefused() throws Exception {
+		tokenAgentUid = "0192a6f4-7c1e-7b3a-9f20-000000000000";
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		// Not awaited: the worker keeps asking for a token that is this agent's
+		coordinator.ready(central(KEY), DESCRIPTION);
+		while (!coordinator.isReady()) {
+			Thread.sleep(10);
+		}
+
+		assertThrows(IOException.class, coordinator::currentToken);
+		final UncheckedIOException refused = assertThrows(UncheckedIOException.class, () -> coordinator.headers(Map.of()));
+		assertTrue(refused.getCause().getMessage().contains("not this agent's"));
 	}
 
 	@Test

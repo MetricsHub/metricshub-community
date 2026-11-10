@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,8 +38,11 @@ import org.metricshub.agent.tunnel.client.TunnelClient;
 import org.metricshub.agent.tunnel.client.TunnelListener;
 import org.metricshub.agent.tunnel.client.TunnelSettings;
 import org.metricshub.agent.tunnel.protocol.ToolDescriptor;
+import org.metricshub.agent.tunnel.protocol.TunnelJson;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegister;
+import org.metricshub.agent.tunnel.protocol.TunnelMessage.AgentRegistered;
 import org.metricshub.agent.tunnel.protocol.TunnelMessage.HostsUpdated;
+import org.metricshub.agent.tunnel.protocol.TunnelMessage.ToolInvoke;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.web.AgentContextHolder;
@@ -219,6 +224,7 @@ class TunnelServiceTest {
 	void aReloadAddingCentralAuthShouldWaitForTheEnrollment() {
 		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
 		when(enrollment.ready(agentContext)).thenReturn(true, false, true);
+		when(enrollment.agentUid()).thenReturn(UID);
 		service.setEnrollment(enrollment);
 		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
 		service.supervise();
@@ -232,6 +238,70 @@ class TunnelServiceTest {
 
 		service.supervise();
 		assertEquals(2, createdClients.size());
+	}
+
+	@Test
+	void aRenewedTokenShouldReconnectAtTheFirstMomentNoInvocationRuns() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		final ToolDefinition definition = mock(ToolDefinition.class);
+		when(definition.name()).thenReturn("ListHosts");
+		when(definition.description()).thenReturn("ListHosts");
+		when(definition.inputSchema()).thenReturn("");
+		final ToolCallback blocking = mock(ToolCallback.class);
+		when(blocking.getToolDefinition()).thenReturn(definition);
+		when(blocking.call(anyString())).thenAnswer(invocation -> {
+			release.await();
+			return "{}";
+		});
+		final ToolCallback[] callbacks = { new ProductToolCallback(blocking, ToolAccess.Access.READ) };
+		final ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+		when(provider.getToolCallbacks()).thenReturn(callbacks);
+		final TunnelClient client = mock(TunnelClient.class);
+		when(client.isConnected()).thenReturn(true);
+		when(client.send(any())).thenReturn(true);
+		final List<TunnelListener> listeners = new ArrayList<>();
+		final TunnelService renewing = new TunnelService(agentContextHolder, provider, (settings, listener) -> {
+			capturedSettings.add(settings);
+			listeners.add(listener);
+			return client;
+		}, () -> {
+			throw new AssertionError("an enrolled agent never loads nor generates its uid itself");
+		});
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.ready(agentContext)).thenReturn(true);
+		when(enrollment.agentUid()).thenReturn("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91");
+		when(enrollment.currentToken()).thenReturn("one", "two");
+		renewing.setEnrollment(enrollment);
+		configure(TunnelConfig.builder().enabled(true).endpoint(ENDPOINT).build());
+		agentConfig.getCentral().setAuth(CentralAuthConfig.builder().issuerUrl("https://issuer.example.com").build());
+		try {
+			renewing.supervise();
+			assertEquals("0192a6f4-7c1e-7b3a-9f20-4d5e6a7b8c91", capturedSettings.get(0).agentUid());
+			verify(client).useCredential(any(), any());
+			listeners.get(0).onRegistered(new AgentRegistered(30, 1_048_576L, 2));
+			listeners.get(0).onInvoke(new ToolInvoke("req-1", "ListHosts", TunnelJson.MAPPER.createObjectNode(), 60_000), 1);
+
+			// Renewed while an invocation runs: the reconnection waits
+			renewing.supervise();
+			renewing.supervise();
+			verify(client, never()).credentialRenewed("Bearer two");
+
+			// Then at the first tick with nothing in flight
+			release.countDown();
+			boolean renewed = false;
+			for (int tick = 0; tick < 100 && !renewed; tick++) {
+				Thread.sleep(50);
+				renewing.supervise();
+				renewed = mockingDetails(client).getInvocations()
+					.stream()
+					.anyMatch(
+						call -> "credentialRenewed".equals(call.getMethod().getName()) && "Bearer two".equals(call.getArgument(0))
+					);
+			}
+			assertTrue(renewed);
+		} finally {
+			renewing.shutdown();
+		}
 	}
 
 	@Test

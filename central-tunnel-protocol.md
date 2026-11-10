@@ -228,7 +228,8 @@ Informational; never closes the connection by itself.
 | `4001` | server | Superseded by a newer session for the same uid |
 | `4002` | server | No `agent.register` within 10 s |
 | `4003` | either | Heartbeat timeout |
-| `4004` | server | The agent secret this tunnel presented is no longer configured |
+| `4004` | server | The agent secret this tunnel presented is no longer configured, or its credential was revoked |
+| `4006` | server | The agent's token expired; the agent renews it and reconnects at once |
 | `4005` | server | The agent was deleted in Central; reconnecting registers it as new |
 
 ## 5. Tool invocation

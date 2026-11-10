@@ -402,6 +402,13 @@ public class HttpPollingOpampClient implements OpampClient {
 		if (newInstanceUid.isEmpty()) {
 			return;
 		}
+		if (!settings.isAcceptsNewInstanceUid()) {
+			log.error(
+				"The OpAMP server sent a new agent instance UID, which this agent refuses: its uid is the one it was " +
+					"enrolled with. It keeps its own."
+			);
+			return;
+		}
 		if (newInstanceUid.size() != INSTANCE_UID_LENGTH) {
 			log.warn(
 				"The OpAMP server assigned a malformed instance UID of {} bytes ({} expected); it is ignored.",

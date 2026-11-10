@@ -93,7 +93,10 @@ public class CentralTokenProvider {
 
 		private static final long serialVersionUID = 1L;
 
-		InvalidClientException(final String message) {
+		/**
+		 * @param message the message, which never quotes an answer
+		 */
+		public InvalidClientException(final String message) {
 			super(message);
 		}
 	}

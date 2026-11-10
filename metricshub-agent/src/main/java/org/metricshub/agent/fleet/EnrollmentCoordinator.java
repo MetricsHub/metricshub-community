@@ -27,6 +27,7 @@ import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_OS_TYPE_
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -37,6 +38,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -133,6 +135,7 @@ public class EnrollmentCoordinator {
 	private Settings stoppedWith;
 	private CentralTokenProvider tokenProvider;
 	private volatile boolean recoveryCleared;
+	private volatile String agentUid;
 
 	/**
 	 * Creates a coordinator (tests).
@@ -215,6 +218,7 @@ public class EnrollmentCoordinator {
 				wipe(identity.secret());
 				wipe(identity.recoverySecret());
 				if (identity.status() == Status.READY) {
+					agentUid = identity.agentUid();
 					ready = true;
 					// Still started, for the first token: a recovery proof left by a crash goes after it
 					startWorker();
@@ -248,7 +252,19 @@ public class EnrollmentCoordinator {
 	 * @throws InterruptedException                        when interrupted while waiting for Central
 	 */
 	public String currentToken() throws IOException, InterruptedException {
-		final String token = tokenProvider().currentToken();
+		final CentralTokenProvider provider = tokenProvider();
+		final String token = provider.currentToken();
+		// Defence: Central binds each token to the agent uid; a channel never presents another agent's
+		final String tokenUid = CentralTokenProvider.claims(token).path("agent_uid").asText(null);
+		if (!agentUid.equals(tokenUid)) {
+			provider.invalidate();
+			log.error(
+				"MetricsHub Central issued a token for agent {} to agent {}: it is refused and nothing connects with it.",
+				tokenUid,
+				agentUid
+			);
+			throw new IOException("The token Central issued is not this agent's.");
+		}
 		if (!recoveryCleared) {
 			try {
 				store.clearRecovery();
@@ -261,12 +277,50 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}).
-	 *
-	 * @throws IOException when the agent is not enrolled
+	 * Drops the cached token, so the next {@link #currentToken()} requests a new one (after a {@code 401}). Does
+	 * nothing before the first token.
 	 */
-	public void invalidateToken() throws IOException {
-		tokenProvider().invalidate();
+	public synchronized void invalidateToken() {
+		if (tokenProvider != null) {
+			tokenProvider.invalidate();
+		}
+	}
+
+	/**
+	 * The headers of a request to Central: the given ones with {@code Authorization: Bearer <current token>}.
+	 * For the channels' header suppliers, which cannot throw a checked exception.
+	 *
+	 * @param headers the channel's static headers
+	 * @return a new map with the bearer token
+	 * @throws UncheckedIOException when no token is available, its cause a
+	 *                              {@link CentralTokenProvider.InvalidClientException} when the agent is revoked
+	 */
+	public Map<String, String> headers(final Map<String, String> headers) {
+		try {
+			final Map<String, String> result = new HashMap<>(headers);
+			result.put("Authorization", "Bearer " + currentToken());
+			return result;
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new UncheckedIOException(new InterruptedIOException("Interrupted while waiting for a token."));
+		}
+	}
+
+	/**
+	 * @return the uid the agent was enrolled with, or {@code null} before {@link #isReady()}
+	 */
+	public String agentUid() {
+		return agentUid;
+	}
+
+	/**
+	 * @param agentContext the current agent context
+	 * @return whether the channels toward Central authenticate with the enrolled identity's token
+	 */
+	public static boolean usesToken(final AgentContext agentContext) {
+		return isConfigured(agentContext.getAgentConfig().getCentral());
 	}
 
 	/**
@@ -407,6 +461,7 @@ public class EnrollmentCoordinator {
 						return;
 					}
 					if (!ready) {
+						this.agentUid = agentUid;
 						ready = true;
 						log.info("The agent is enrolled into MetricsHub Central as {}.", agentUid);
 					}

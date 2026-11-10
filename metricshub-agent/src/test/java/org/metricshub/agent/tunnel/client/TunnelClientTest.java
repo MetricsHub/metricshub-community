@@ -9,7 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.InetSocketAddress;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -20,9 +24,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -35,6 +41,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.agent.fleet.CentralTokenProvider;
 import org.metricshub.agent.tunnel.protocol.AgentDescriptor;
 import org.metricshub.agent.tunnel.protocol.HostDescriptor;
 import org.metricshub.agent.tunnel.protocol.TunnelJson;
@@ -238,6 +245,179 @@ class TunnelClientTest {
 		assertEquals("UNKNOWN_MESSAGE_TYPE", error.get("code").asText());
 		assertTrue(client.isConnected());
 		assertTrue(listener.disconnections.isEmpty());
+	}
+
+	/**
+	 * The agent's tokens, numbered in the order the client reads them, and how many it dropped.
+	 */
+	private static final class Tokens {
+
+		final AtomicInteger read = new AtomicInteger();
+		final AtomicInteger invalidated = new AtomicInteger();
+
+		Map<String, String> headers() {
+			return Map.of("Authorization", "Bearer token-" + read.incrementAndGet());
+		}
+	}
+
+	private TunnelClient clientWithTokens(final FakeCentralServer fakeServer, final Tokens tokens) {
+		final TunnelClient tokenClient = new TunnelClient(settings(fakeServer, null), new RecordingListener());
+		tokenClient.useCredential(tokens::headers, tokens.invalidated::incrementAndGet);
+		return tokenClient;
+	}
+
+	@Test
+	void anExpiredTokenShouldBeRenewedAndTheTunnelReconnectAtOnce() throws Exception {
+		server = new FakeCentralServer();
+		server.startAndAwait();
+		final Tokens tokens = new Tokens();
+		client = clientWithTokens(server, tokens);
+		client.start();
+		assertEquals("Bearer token-1", server.awaitHandshake(TIMEOUT_MS).get("Authorization"));
+		assertTrue(server.awaitRegistrationAck(TIMEOUT_MS));
+
+		final long closedAt = System.nanoTime();
+		server.closeAll(TunnelClient.CLOSE_CREDENTIAL_EXPIRED, "Credential expired");
+
+		assertEquals("Bearer token-2", server.awaitHandshake(TIMEOUT_MS).get("Authorization"));
+		// The backoff's first delay is at least 500 ms
+		assertTrue(Duration.ofNanos(System.nanoTime() - closedAt).toMillis() < 400, "at once, not after the backoff");
+		assertEquals(1, tokens.invalidated.get());
+	}
+
+	@Test
+	void aSupersededSessionShouldKeepItsTokenAndTheBackoff() throws Exception {
+		server = new FakeCentralServer();
+		server.startAndAwait();
+		final Tokens tokens = new Tokens();
+		client = clientWithTokens(server, tokens);
+		client.start();
+		assertNotNull(server.awaitHandshake(TIMEOUT_MS));
+		assertTrue(server.awaitRegistrationAck(TIMEOUT_MS));
+
+		final long closedAt = System.nanoTime();
+		server.closeAll(TunnelClient.CLOSE_SUPERSEDED, "Superseded");
+
+		assertEquals(
+			"Bearer token-2",
+			server.awaitHandshake(TIMEOUT_MS).get("Authorization"),
+			"re-read at each connection"
+		);
+		assertTrue(Duration.ofNanos(System.nanoTime() - closedAt).toMillis() >= 450, "after the backoff");
+		assertEquals(0, tokens.invalidated.get());
+	}
+
+	@Test
+	void aRenewedTokenShouldReconnectOnlyWhenTheConnectionUsesAnother() throws Exception {
+		server = new FakeCentralServer();
+		server.startAndAwait();
+		final Tokens tokens = new Tokens();
+		client = clientWithTokens(server, tokens);
+		client.start();
+		assertNotNull(server.awaitHandshake(TIMEOUT_MS));
+		assertTrue(server.awaitRegistrationAck(TIMEOUT_MS));
+
+		client.credentialRenewed("Bearer token-1");
+		assertNull(server.awaitHandshake(1_000), "the connection already uses that token");
+
+		client.credentialRenewed("Bearer token-renewed");
+		assertEquals("Bearer token-2", server.awaitHandshake(TIMEOUT_MS).get("Authorization"));
+		assertEquals(0, tokens.invalidated.get());
+	}
+
+	/**
+	 * A server that refuses every WebSocket handshake with the given HTTP status, recording when.
+	 */
+	private static HttpServer refusingServer(final int status, final List<Long> handshakes) throws IOException {
+		final HttpServer http = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		http.createContext("/ws/agent", exchange -> {
+			handshakes.add(System.nanoTime());
+			exchange.sendResponseHeaders(status, -1);
+			exchange.close();
+		});
+		http.start();
+		return http;
+	}
+
+	private static TunnelClient clientOf(
+		final HttpServer http,
+		final Supplier<Map<String, String>> headers,
+		final Tokens tokens
+	) {
+		final TunnelClient refused = new TunnelClient(
+			new TunnelSettings(
+				URI.create("ws://127.0.0.1:" + http.getAddress().getPort() + "/ws/agent"),
+				Map.of(),
+				null,
+				AGENT_UID,
+				Duration.ofSeconds(1),
+				Duration.ofSeconds(5),
+				Duration.ofSeconds(2),
+				false
+			),
+			new RecordingListener()
+		);
+		refused.useCredential(headers, tokens.invalidated::incrementAndGet);
+		return refused;
+	}
+
+	@Test
+	void aRefusedTokenShouldBeRenewedOnceAtOnceThenFollowTheBackoff() throws Exception {
+		final List<Long> handshakes = new CopyOnWriteArrayList<>();
+		final HttpServer http = refusingServer(401, handshakes);
+		final Tokens tokens = new Tokens();
+		try {
+			client = clientOf(http, tokens::headers, tokens);
+			client.start();
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> handshakes.size() >= 2);
+
+			assertTrue(Duration.ofNanos(handshakes.get(1) - handshakes.get(0)).toMillis() < 400, "the second at once");
+			Thread.sleep(300);
+			assertEquals(2, handshakes.size(), "the third after the backoff");
+			assertEquals(2, tokens.invalidated.get());
+			assertEquals(2, tokens.read.get());
+		} finally {
+			http.stop(0);
+		}
+	}
+
+	@Test
+	void aForbiddenTokenShouldWaitTheLongestBackoff() throws Exception {
+		final List<Long> handshakes = new CopyOnWriteArrayList<>();
+		final HttpServer http = refusingServer(403, handshakes);
+		final Tokens tokens = new Tokens();
+		try {
+			client = clientOf(http, tokens::headers, tokens);
+			client.start();
+			await().atMost(TIMEOUT_MS, TimeUnit.MILLISECONDS).until(() -> !handshakes.isEmpty());
+
+			// The first backoff is at most 1 s; the longest, 2 s here
+			Thread.sleep(1_500);
+			assertEquals(1, handshakes.size());
+			assertEquals(0, tokens.invalidated.get());
+		} finally {
+			http.stop(0);
+		}
+	}
+
+	@Test
+	void aRevokedAgentShouldStopConnecting() throws Exception {
+		final List<Long> handshakes = new CopyOnWriteArrayList<>();
+		final HttpServer http = refusingServer(401, handshakes);
+		final AtomicInteger asked = new AtomicInteger();
+		try {
+			client = clientOf(http, () -> {
+				asked.incrementAndGet();
+				throw new UncheckedIOException(new CentralTokenProvider.InvalidClientException("revoked"));
+			}, new Tokens());
+			client.start();
+
+			Thread.sleep(1_500);
+			assertEquals(1, asked.get(), "never asked again");
+			assertTrue(handshakes.isEmpty(), "nothing reaches Central");
+		} finally {
+			http.stop(0);
+		}
 	}
 
 	@Test

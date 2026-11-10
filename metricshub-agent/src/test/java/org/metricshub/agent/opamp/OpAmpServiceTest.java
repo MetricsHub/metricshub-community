@@ -1,6 +1,8 @@
 package org.metricshub.agent.opamp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -322,6 +324,33 @@ class OpAmpServiceTest {
 
 		assertEquals(Duration.ofSeconds(OpAmpConfig.DEFAULT_POLL_INTERVAL), settings.getPollInterval());
 		assertEquals(Duration.ofSeconds(OpAmpConfig.DEFAULT_REQUEST_TIMEOUT), settings.getRequestTimeout());
+	}
+
+	@Test
+	void withCentralAuthEachPostShouldCarryTheCurrentTokenAndA401DropIt() {
+		final EnrollmentCoordinator enrollment = mock(EnrollmentCoordinator.class);
+		when(enrollment.headers(Map.of("X-Site", "a"))).thenReturn(
+			Map.of("X-Site", "a", "Authorization", "Bearer one"),
+			Map.of("X-Site", "a", "Authorization", "Bearer two")
+		);
+		opAmpService.setEnrollment(enrollment);
+		final OpAmpConfig config = OpAmpConfig.builder()
+			.enabled(true)
+			.endpoint(ENDPOINT)
+			.headers(Map.of("X-Site", "a"))
+			.build();
+
+		final OpampClientSettings settings = opAmpService.buildSettings(config, true);
+
+		assertEquals("Bearer one", settings.currentHeaders().get("Authorization"));
+		assertEquals("Bearer two", settings.currentHeaders().get("Authorization"));
+		settings.getOnUnauthorized().run();
+		verify(enrollment).invalidateToken();
+		assertFalse(settings.isAcceptsNewInstanceUid(), "the uid is the enrolled one");
+
+		final OpampClientSettings without = opAmpService.buildSettings(config, false);
+		assertEquals(Map.of("X-Site", "a"), without.currentHeaders());
+		assertTrue(without.isAcceptsNewInstanceUid());
 	}
 
 	@Test
