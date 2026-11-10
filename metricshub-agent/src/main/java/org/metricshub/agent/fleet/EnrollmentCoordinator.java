@@ -275,6 +275,9 @@ public class EnrollmentCoordinator {
 						!Objects.equals(latest.certificateFile(), settings.certificateFile()))
 			) {
 				// A reload moved the issuer or its certificate: the next token comes from there
+				if (tokenProvider != null) {
+					tokenProvider.shutdown();
+				}
 				tokenProvider = null;
 				if (!recoveryCleared) {
 					// The recovery proof goes after the first token of the new issuer
@@ -362,7 +365,7 @@ public class EnrollmentCoordinator {
 		return token;
 	}
 
-	private synchronized CentralTokenProvider currentProvider() {
+	synchronized CentralTokenProvider currentProvider() {
 		return tokenProvider;
 	}
 
@@ -428,6 +431,21 @@ public class EnrollmentCoordinator {
 	 */
 	public boolean isReady() {
 		return ready;
+	}
+
+	/**
+	 * @param central the {@code central} configuration a channel is about to open with
+	 * @return whether the agent is enrolled and the coordinator already runs with that configuration's issuer and
+	 *         certificate: a channel never opens for a Central the coordinator has not reconciled yet
+	 */
+	public boolean isReadyFor(final CentralConfig central) {
+		final Settings current = settings;
+		return (ready &&
+			current != null &&
+			central != null &&
+			central.getAuth() != null &&
+			Objects.equals(current.issuerUrl(), central.getAuth().getIssuerUrl()) &&
+			Objects.equals(current.certificateFile(), central.getCertificateFile()));
 	}
 
 	/**
@@ -535,7 +553,8 @@ public class EnrollmentCoordinator {
 	private boolean refusedAgain(final Settings latest) {
 		return (stoppedWith != null &&
 			Objects.equals(latest.issuerUrl(), stoppedWith.issuerUrl()) &&
-			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()));
+			Objects.equals(latest.enrollmentKey(), stoppedWith.enrollmentKey()) &&
+			Objects.equals(latest.certificateFile(), stoppedWith.certificateFile()));
 	}
 
 	/**

@@ -1,5 +1,6 @@
 package org.metricshub.agent.fleet;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -265,6 +266,19 @@ class EnrollmentCoordinatorTest {
 		final Attempt attempt = attempts.values().iterator().next();
 		assertFalse(yaml.contains(attempt.secret()));
 		assertFalse(yaml.contains(attempt.agentUid()));
+	}
+
+	@Test
+	void aReplacedTokenProviderShouldReleaseItsHttpClient() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final CentralTokenProvider former = coordinator.currentProvider();
+
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+
+		await().atMost(10, TimeUnit.SECONDS).until(() -> former.httpClient().isTerminated());
 	}
 
 	@Test
@@ -887,6 +901,34 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aChannelShouldOpenOnlyForTheCentralTheCoordinatorRunsWith() throws Exception {
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		final CentralConfig recertified = central(KEY);
+		recertified.setCertificateFile("");
+
+		assertTrue(coordinator.isReadyFor(central(KEY)));
+		assertFalse(coordinator.isReadyFor(moved), "not reconciled with the new issuer yet");
+		assertFalse(coordinator.isReadyFor(recertified), "nor with the new certificate");
+
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		assertTrue(coordinator.isReadyFor(moved));
+	}
+
+	@Test
+	void aRefusalShouldBeRetriedWithAnotherCertificate() throws Exception {
+		script.add(new Answer(410, "{\"code\":\"enrollment_expired\"}", null));
+		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
+		assertFalse(enrollWith(coordinator, central(KEY)));
+
+		final CentralConfig recertified = central(KEY);
+		recertified.setCertificateFile("");
+		assertTrue(enrollWith(coordinator, recertified), "the same key, another trust: asked again");
+	}
+
+	@Test
 	void anEnrolledAgentShouldIgnoreItsKeyWhateverItHolds() throws Exception {
 		assertTrue(enrollWith(coordinator(new AgentCredentialStore(directory)), central(KEY)));
 
@@ -912,10 +954,10 @@ class EnrollmentCoordinatorTest {
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
 		assertFalse(enrollWith(coordinator, central(KEY)));
 
-		// Only Central's certificate changed
-		final CentralConfig reloaded = central(KEY);
-		reloaded.setCertificateFile("/tmp/central-ca.pem");
-		assertFalse(coordinator.ready(reloaded, DESCRIPTION));
+		// Only what the agent declares about its host changed
+		final Map<String, String> renamed = new HashMap<>(DESCRIPTION);
+		renamed.put("hostname", "srv-02");
+		assertFalse(coordinator.ready(central(KEY), renamed));
 		coordinator.awaitWorker();
 
 		assertEquals(1, enrollBodies.size(), "the refused key is never sent again");
