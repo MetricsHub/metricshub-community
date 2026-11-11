@@ -610,6 +610,10 @@ class SourceProcessorTest {
 		// A member starting with a blank line keeps it
 		assertEquals("a\n\nb", textUnion("a\n", "\nb"));
 
+		// An empty member adds nothing, at the end or in the middle (before: "a\n" and "a\n\nb")
+		assertEquals("a", textUnion("a", ""));
+		assertEquals("a\nb", textUnion("a\n", "", "b"));
+
 		// A nested union: the inner union is a text member like any other, its blank lines are kept
 		final String inner = textUnion("a\n\nb\n", "c");
 		assertEquals("a\n\nb\nc", inner);
@@ -618,6 +622,8 @@ class SourceProcessorTest {
 		// CRLF members are left as they are: a member ending with CRLF ends with a line feed, the join adds a LF
 		assertEquals("a\r\n\r\nb\r\nc\r\n", textUnion("a\r\n\r\nb\r\n", "c\r\n"));
 		assertEquals("a\nb\r\n", textUnion("a", "b\r\n"));
+		// An LF blank line next to CRLF text is kept (before: "a\r\nb\nc\r\n")
+		assertEquals("a\r\n\nb\nc\r\n", textUnion("a\r\n\nb", "c\r\n"));
 	}
 
 	/**
