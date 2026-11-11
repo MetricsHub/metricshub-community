@@ -71,6 +71,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -196,6 +197,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	@Override
+	public SourceTable process(final TextUnionSource textUnionSource) {
+		return processSource(textUnionSource.copy());
+	}
+
+	@Override
 	public SourceTable process(final WbemSource wbemSource) {
 		return processSource(wbemSource.copy());
 	}
@@ -256,7 +262,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>.
+	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>:
+	 * the whole first line of a text, without its line ending, or the first cell of a table.
 	 *
 	 * @param originalSourceKey The original source key for debugging purposes.
 	 * @param foreignSourceKey  The foreign source key used to extract the token.
@@ -296,9 +303,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		String value = null;
 		if (sourceTable.getContentType() == ContentType.TEXT) {
-			// A text: up to the first separator
+			// A text: its whole first line, without the line ending
 			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			value = sourceTable.getText().split(";")[0];
+			value = sourceTable.getText().lines().findFirst().orElse(EMPTY);
 		} else if (!sourceTable.getTable().isEmpty()) {
 			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);
@@ -474,6 +481,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		return (source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
+			source instanceof TextUnionSource ||
 			source instanceof TableJoinSource ||
 			// An awk source resolves an input that is a single source reference when the script runs, to the source as it is
 			(source instanceof JawkSource jawk && JawkSource.isSourceReference(jawk.getInput())));

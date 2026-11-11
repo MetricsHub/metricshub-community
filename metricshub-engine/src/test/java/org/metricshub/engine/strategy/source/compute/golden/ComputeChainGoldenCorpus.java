@@ -71,6 +71,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
@@ -867,6 +868,7 @@ public class ComputeChainGoldenCorpus {
 	 * <li><code>static</code>: the table parsed from the declared value and its serialization;</li>
 	 * <li><code>copy</code>: the shapes of the copied source, or the serialized table when that source has computes;</li>
 	 * <li><code>tableUnion</code>: every dual shape;</li>
+	 * <li><code>textUnion</code>: raw text only, with and without a trailing line feed;</li>
 	 * <li>every other source: the table only.</li>
 	 * </ul>
 	 * A source table holds one type since stage 4 of #1508: each shape is read on the side of the type the source
@@ -1064,6 +1066,10 @@ public class ComputeChainGoldenCorpus {
 				}
 			} else if (source instanceof TableUnionSource) {
 				addDualShapes(inputs);
+			} else if (source instanceof TextUnionSource) {
+				// The joined texts of its members
+				textShape(inputs, "text", Inputs::textOnly, true);
+				textShape(inputs, "textNoTrailingNewline", Inputs::textOnly, false);
 			} else {
 				tableShape(inputs, "table", Inputs::tableOnly);
 			}

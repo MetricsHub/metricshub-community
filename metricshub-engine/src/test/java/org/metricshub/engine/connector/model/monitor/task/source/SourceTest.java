@@ -146,6 +146,39 @@ class SourceTest {
 	}
 
 	@Test
+	void testReferencesTableLiterals() throws IOException {
+		// A table literal written as a list of rows sits next to the references, which are found as before
+		final String tableUnionYaml = """
+			type: tableUnion
+			tables:
+			- [ [ a, "b;c" ] ]
+			- ${source::monitors.cpu.discovery.sources.source1}
+			""";
+		assertEquals(Set.of(SOURCE_REF1), MAPPER.readValue(tableUnionYaml, Source.class).getReferences());
+
+		final String tableJoinYaml = """
+			type: tableJoin
+			leftTable: [ [ a, b ], [ c, d ] ]
+			rightTable: ${source::monitors.cpu.discovery.sources.source2}
+			leftKeyColumn: 1
+			rightKeyColumn: 1
+			""";
+		assertEquals(Set.of(SOURCE_REF2), MAPPER.readValue(tableJoinYaml, Source.class).getReferences());
+	}
+
+	@Test
+	void testReferencesTextUnion() throws IOException {
+		// The members of a textUnion are dependencies, as the tables of a tableUnion
+		final String textUnionYaml = """
+			type: textUnion
+			texts:
+			- ${source::monitors.cpu.discovery.sources.source1}
+			- ${source::beforeAll.source1}
+			""";
+		assertEquals(Set.of(SOURCE_REF1, SOURCE_REF0), MAPPER.readValue(textUnionYaml, Source.class).getReferences());
+	}
+
+	@Test
 	void testReferencesWbem() throws IOException {
 		final String wbemYaml = """
 			type: wbem

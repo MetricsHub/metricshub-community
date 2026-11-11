@@ -30,6 +30,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
@@ -402,6 +403,15 @@ class ComputeChainGoldenCorpusTest {
 		assertEquals(List.of("table", "tableSeparatorInCell", "tableWide", "empty"), new ArrayList<>(snmp.keySet()));
 		assertEquals(SourceTable.ofTable(wide), snmp.get("tableWide").get());
 		assertEquals(SourceTable.empty(), snmp.get("empty").get());
+
+		// A textUnion gets the synthetic texts of a text source, read as text
+		final Map<String, Supplier<SourceTable>> textUnion = Inputs.inputsFor(
+			TextUnionSource.builder().texts(List.of("${source::a}")).computes(append).build(),
+			Map.of()
+		);
+		assertEquals(new ArrayList<>(http.keySet()), new ArrayList<>(textUnion.keySet()));
+		assertEquals(SourceTable.ofText(Inputs.TEXT), textUnion.get("text").get());
+		assertEquals(SourceTable.ofText(""), textUnion.get("empty").get());
 	}
 
 	/**

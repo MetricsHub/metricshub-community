@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
 import org.metricshub.engine.connector.model.Connector;
@@ -133,5 +135,59 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
 		);
 		assertTrue(e.getMessage().contains("defaultRightLine"), e.getMessage());
+	}
+
+	@Test
+	void testDeserializeTableJoinLiteralRows() throws IOException {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  join:
+			    type: tableJoin
+			    leftTable: [ [ in, "a;b" ], [ out, "" ] ]
+			    rightTable: ${source::beforeAll.right}
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			""";
+		final TableJoinSource source = (TableJoinSource) deserializer.deserialize(
+			new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml))
+		).getBeforeAll().get("join");
+
+		// The list of rows is exactly these rows and cells; the string form of the left table stays null
+		assertEquals(List.of(List.of("in", "a;b"), List.of("out", "")), source.getLeftTableRows());
+		assertNull(source.getLeftTable());
+		assertEquals("${source::beforeAll.right}", source.getRightTable());
+		assertNull(source.getRightTableRows());
+		assertEquals(source, source.copy());
+
+		// The updates apply to each cell of a copy, never to the original
+		final TableJoinSource copy = source.copy();
+		copy.update(value -> value == null ? null : value + "!");
+		assertEquals(List.of(List.of("in!", "a;b!"), List.of("out!", "!")), copy.getLeftTableRows());
+		assertEquals(List.of(List.of("in", "a;b"), List.of("out", "")), source.getLeftTableRows());
+		assertTrue(copy.toString().contains("- leftTable=[[in!, a;b!], [out!, !]]"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"" })
+	void testDeserializeTableJoinInvalidLeftTable(final String leftTable) {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  join:
+			    type: tableJoin
+			    leftTable: %s
+			    rightTable: testRight
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			""".formatted(leftTable);
+		Assertions.assertThrows(
+			MismatchedInputException.class,
+			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
+		);
 	}
 }

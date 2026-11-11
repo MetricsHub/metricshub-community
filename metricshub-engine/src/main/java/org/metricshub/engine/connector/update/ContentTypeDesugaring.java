@@ -57,6 +57,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
@@ -208,8 +209,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return null;
 		}
 		final List<Source> members = new ArrayList<>();
-		for (final String table : union.getTables()) {
-			final Source member = toolSource(tool, table);
+		for (final Object table : union.getTables()) {
+			final Source member = table instanceof String ref ? toolSource(tool, ref) : null;
 			if (member == null || !endsInTextAsWritten(member, sources)) {
 				return null;
 			}
@@ -295,7 +296,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources,
 		final Set<Source> visited
 	) {
-		return textUnionProducer(union, sources, visited, null) != null;
+		return textUnionProducer(union, union.getTables(), sources, visited, null) != null;
 	}
 
 	/**
@@ -303,26 +304,36 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text members only (command outputs, awk results) gets a generated <code>toTable</code>, as a legacy text
 	 * producer on its own. A pure text member (<code>http</code>, <code>file</code>, <code>ipmi</code>) makes it a pure
 	 * text source, whose table readers are reported; an explicit <code>toText</code> member is reported likewise.
+	 * A <code>textUnion</code> is a text union whatever its members: one that is no text (a table, an unresolved
+	 * reference) is joined as its text at run time and leaves the producer as it is.
 	 *
+	 * @param union   The <code>tableUnion</code> or the <code>textUnion</code>
+	 * @param members Its members: source references, or table literals of a <code>tableUnion</code>
 	 * @return {@link TextProducer#PURE} when a member is pure text, else {@link TextProducer#EXPLICIT} when a member
-	 *         ends in an explicit <code>toText</code>, else {@link TextProducer#LEGACY_DUAL}; null when the union is no
-	 *         text union
+	 *         ends in an explicit <code>toText</code>, else {@link TextProducer#LEGACY_DUAL}; null when the union has
+	 *         no member, is in a cycle, or is a <code>tableUnion</code> that is no text union
 	 */
 	private static TextProducer textUnionProducer(
-		final TableUnionSource union,
+		final Source union,
+		final List<?> members,
 		final Map<String, Source> sources,
 		final Set<Source> visited,
 		final Set<String> textOnly
 	) {
-		if (union.getTables() == null || union.getTables().isEmpty() || !visited.add(union)) {
+		if (members == null || members.isEmpty() || !visited.add(union)) {
 			return null;
 		}
 		try {
 			TextProducer producer = TextProducer.LEGACY_DUAL;
-			for (final String table : union.getTables()) {
-				final Source member = table == null ? null : sources.get(resolveReference(table, union.getKey(), sources));
+			for (final Object table : members) {
+				final Source member = table instanceof String ref
+					? sources.get(resolveReference(ref, union.getKey(), sources))
+					: null;
 				final State end = member == null ? null : chainEnd(member, sources, visited, textOnly);
 				if (end == null || end.type() != ContentType.TEXT) {
+					if (union instanceof TextUnionSource) {
+						continue;
+					}
 					return null;
 				}
 				if (end.producer() == TextProducer.PURE) {
@@ -395,8 +406,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			if (
 				scanned instanceof TableUnionSource union && isTextUnion((TableUnionSource) source, sources, new HashSet<>())
 			) {
-				union.getTables().forEach(table -> copied.add(resolveReference(table, source.getKey(), sources)));
+				// The members of a text union are all source references
+				union.getTables().forEach(table -> copied.add(resolveReference((String) table, source.getKey(), sources)));
 				union.setTables(List.of());
+			}
+			// A textUnion reads its members' texts likewise
+			if (scanned instanceof TextUnionSource textUnion) {
+				textUnion.getTexts().forEach(text -> copied.add(resolveReference(text, source.getKey(), sources)));
+				textUnion.setTexts(List.of());
 			}
 			if (scanned instanceof CopySource copy) {
 				if (copy.getFrom() != null) {
@@ -620,10 +637,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return new State(ContentType.TEXT, TextProducer.PURE);
 		}
 		if (source instanceof TableUnionSource union) {
-			final TextProducer producer = textUnionProducer(union, sources, visited, textOnly);
+			final TextProducer producer = textUnionProducer(union, union.getTables(), sources, visited, textOnly);
 			if (producer != null) {
 				return new State(ContentType.TEXT, producer);
 			}
+		}
+		if (source instanceof TextUnionSource textUnion) {
+			final TextProducer producer = textUnionProducer(textUnion, textUnion.getTexts(), sources, visited, textOnly);
+			return new State(ContentType.TEXT, producer != null ? producer : TextProducer.LEGACY_DUAL);
 		}
 		final ContentType type = source.getOutputContentType();
 		return new State(

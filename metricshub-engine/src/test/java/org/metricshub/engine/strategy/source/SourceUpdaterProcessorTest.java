@@ -61,6 +61,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -630,6 +631,23 @@ class SourceUpdaterProcessorTest {
 				extensionManager
 			).process(TableUnionSource.builder().tables(new ArrayList<>()).build())
 		);
+	}
+
+	@Test
+	void testProcessTextUnionSource() {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).build())
+			.build();
+		final String member = "${source::monitors.cpu.discovery.sources.member}";
+		final TextUnionSource textUnion = TextUnionSource.builder().texts(new ArrayList<>(List.of(member))).build();
+		doReturn(SourceTable.ofText("x")).when(sourceProcessor).process(any(TextUnionSource.class));
+		assertEquals(
+			SourceTable.ofText("x"),
+			new SourceUpdaterProcessor(sourceProcessor, telemetryManager, MY_CONNECTOR_1_NAME, Map.of(), extensionManager)
+				.process(textUnion)
+		);
+		// The source processor runs a copy whose members are still the references
+		verify(sourceProcessor).process(TextUnionSource.builder().texts(List.of(member)).build());
 	}
 
 	@Test
