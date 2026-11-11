@@ -1,19 +1,11 @@
 ${source::monitors.command_table.discovery.sources.lines} [TO_TABLE_INSERTED] before keepColumns #0
 ${source::monitors.command_mapped.discovery.sources.raw} [TO_TABLE_INSERTED] before keepOnlyMatchingLines #0
-${source::monitors.awk_on_table.discovery.sources.rows} [TO_TEXT_INSERTED] before awk #0
-${source::monitors.awk_on_table.discovery.sources.rows} [AWK_ON_TABLE] awk #0 inline script (sets FS to ";")
 ${source::monitors.awk_on_table.discovery.sources.rows} [TO_TABLE_APPENDED] after awk #0
 ${source::monitors.wrong_side.discovery.sources.body} [TABLE_COMPUTE_ON_TEXT_SOURCE] replace #0
 ${source::monitors.wrong_side.discovery.sources.json} [TEXT_COMPUTE_ON_TABLE_SOURCE] json2Csv #0
 ${source::monitors.dual_read.discovery.sources.output} [TO_TABLE_APPENDED] after the source
-${source::monitors.dual_read.discovery.sources.parsed} [TO_TEXT_INSERTED] before awk #0
-${source::monitors.dual_read.discovery.sources.parsed} [AWK_ON_TABLE] awk #0 inline script (sets FS to ";")
 ${source::monitors.dual_read.discovery.sources.parsed} [TO_TABLE_APPENDED] after awk #0
-${source::monitors.literals_and_unions.discovery.sources.literal} [TO_TEXT_INSERTED] before awk #0
-${source::monitors.literals_and_unions.discovery.sources.literal} [AWK_ON_TABLE] awk #0 inline script (sets FS to ";")
 ${source::monitors.literals_and_unions.discovery.sources.literal} [TO_TABLE_APPENDED] after awk #0
 ${source::monitors.literals_and_unions.discovery.sources.union} [TO_TABLE_APPENDED] after awk #0
 ${source::monitors.literals_and_unions.discovery.sources.static} [STATIC_CSV] value=x;y;z
-${source::monitors.literals_and_unions.discovery.sources.static} [TO_TEXT_INSERTED] before awk #0
-${source::monitors.literals_and_unions.discovery.sources.static} [AWK_ON_TABLE] awk #0 inline script
 ${source::monitors.literals_and_unions.discovery.sources.static} [TO_TABLE_APPENDED] after awk #0

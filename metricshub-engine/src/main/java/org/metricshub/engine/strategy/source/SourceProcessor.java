@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy.source;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -239,7 +240,7 @@ public class SourceProcessor implements ISourceProcessor {
 
 		if (staticSource.getCells() != null) {
 			// The list form is the single row of exactly these cells. A line break a reference resolved into at run time
-			// becomes a space, so the row stays one line for a text consumer (an awk reads it through toText)
+			// becomes a space, so the row stays one line for a text consumer (a toText)
 			rows = List.of(
 				staticSource.getCells().stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList()
 			);
@@ -438,19 +439,24 @@ public class SourceProcessor implements ISourceProcessor {
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
-		// A text union when every member that holds something is a text: the texts joined with a line feed, a blank
-		// line collapsed once. Otherwise the rows of the members, copied (a compute on the union must not change them)
+		// A text union when every member that holds something is a text: the non-empty texts, CRLF converted to LF, one
+		// after the other, a line feed added only after a member that does not end with one; the blank lines of the
+		// members are kept. Otherwise the rows of the members, copied (a compute on the union must not change them)
 		final boolean textUnion = sourceTablesToConcat.stream()
 			.anyMatch(member -> member.getContentType() == ContentType.TEXT) &&
 			sourceTablesToConcat.stream().allMatch(member -> member.getContentType() == ContentType.TEXT || member.isEmpty());
 		if (textUnion) {
-			return SourceTable.ofText(
-				sourceTablesToConcat.stream()
-					.filter(member -> member.getContentType() == ContentType.TEXT)
-					.map(SourceTable::getText)
-					.collect(Collectors.joining(NEW_LINE))
-					.replace("\n\n", NEW_LINE)
-			);
+			final StringBuilder text = new StringBuilder();
+			sourceTablesToConcat.stream()
+				.filter(member -> member.getContentType() == ContentType.TEXT && !member.isEmpty())
+				.map(member -> member.getText().replace(WINDOWS_NEW_LINE, NEW_LINE))
+				.forEach(memberText -> {
+					if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
+						text.append(NEW_LINE);
+					}
+					text.append(memberText);
+				});
+			return SourceTable.ofText(text.toString());
 		}
 
 		return SourceTable.ofTable(

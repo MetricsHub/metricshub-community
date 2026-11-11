@@ -551,9 +551,9 @@ class SourceProcessorTest {
 
 	/**
 	 * The text of a union of text sources, which the awk scripts parsing glued command outputs read: the members'
-	 * texts joined with a line feed, an empty table member skipped, every pair of line feeds collapsed once (three in
-	 * a row give two), and an empty first member leaving a leading line feed. Stage 4 of #1508 keeps this text. A
-	 * member holding rows makes the union a table: the rows of the table members.
+	 * texts one after the other, an empty member (text or table) skipped, a line feed added only after a member that
+	 * does not end with one, the blank lines inside a member kept (#1555). A member holding rows makes the union a
+	 * table: the rows of the table members.
 	 */
 	@Test
 	void testProcessTableUnionSourceText() {
@@ -584,12 +584,78 @@ class SourceProcessorTest {
 		final SourceTable result = sourceProcessor.process(
 			TableUnionSource.builder().tables(Arrays.asList(empty, lines, emptyTable, last)).build()
 		);
-		assertEquals(SourceTable.ofText("\nx\n\ny\nz"), result);
+		assertEquals(SourceTable.ofText("x\n\n\ny\nz"), result);
 
 		final SourceTable mixed = sourceProcessor.process(
 			TableUnionSource.builder().tables(Arrays.asList(empty, lines, tableOnly, last)).build()
 		);
 		assertEquals(SourceTable.ofTable(List.of(List.of("t"))), mixed);
+	}
+
+	/**
+	 * The text union adds a line feed only at a join after a member that does not end with one, and never changes
+	 * the inside of a member: its blank lines and its CRLF are kept (#1555).
+	 */
+	@Test
+	void testProcessTableUnionSourceTextJoins() {
+		// A blank line inside a member is kept, two stay two
+		assertEquals("a\n\nb\nc", textUnion("a\n\nb", "c"));
+		assertEquals("a\n\n\nb\nc\n", textUnion("a\n\n\nb\n", "c\n"));
+		assertEquals("a\n\n", textUnion("a\n\n"));
+
+		// The first member ends with a line feed: no blank line at the join; it does not: a line feed is added
+		assertEquals("a\nb", textUnion("a\n", "b"));
+		assertEquals("a\nb", textUnion("a", "b"));
+
+		// A member starting with a blank line keeps it
+		assertEquals("a\n\nb", textUnion("a\n", "\nb"));
+
+		// An empty member adds nothing, at the end or in the middle (before: "a\n" and "a\n\nb")
+		assertEquals("a", textUnion("a", ""));
+		assertEquals("a\nb", textUnion("a\n", "", "b"));
+
+		// A nested union: the inner union is a text member like any other, its blank lines are kept
+		final String inner = textUnion("a\n\nb\n", "c");
+		assertEquals("a\n\nb\nc", inner);
+		assertEquals("a\n\nb\nc\nd\n\ne", textUnion(inner, "d\n\n", "e"));
+
+		// CRLF members are converted to LF, their blank lines kept: the result does not depend on the source platform
+		assertEquals("a\n\nb\nc\n", textUnion("a\r\n\r\nb\r\n", "c\r\n"));
+		assertEquals("a\nb\n", textUnion("a", "b\r\n"));
+		// An LF blank line next to CRLF text is kept (before: "a\r\nb\nc\r\n")
+		assertEquals("a\n\nb\nc\n", textUnion("a\r\n\nb", "c\r\n"));
+		// A lone CR is not a line ending: it stays
+		assertEquals("a\rb\nc", textUnion("a\rb", "c"));
+	}
+
+	/**
+	 * Runs a union of text sources.
+	 *
+	 * @param texts The texts of the members, in order
+	 * @return the text of the union
+	 */
+	private String textUnion(final String... texts) {
+		final Map<String, SourceTable> mapSources = new HashMap<>();
+		final List<String> keys = new ArrayList<>();
+		for (int i = 0; i < texts.length; i++) {
+			final String key = "${source::monitors.cpu.discovery.sources.member" + i + "}";
+			mapSources.put(key, SourceTable.ofText(texts[i]));
+			keys.add(key);
+		}
+		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
+		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(ECS1_01).hostId(ECS1_01).build())
+			.hostProperties(HostProperties.builder().connectorNamespaces(connectorNamespaces).build())
+			.build();
+		final SourceTable union = SourceProcessor.builder()
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutorMock)
+			.connectorId(MY_CONNECTOR_1_NAME)
+			.build()
+			.process(TableUnionSource.builder().tables(keys).build());
+		assertEquals(ContentType.TEXT, union.getContentType());
+		return union.getText();
 	}
 
 	@Test

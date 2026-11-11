@@ -2560,7 +2560,8 @@ class ComputeProcessorTest {
 		computeProcessor.process(awkNull);
 		assertEquals(table, sourceTable.getTable());
 
-		sourceTable.setTable(null);
+		// A text source: the script reads the text (a table would be read structured)
+		sourceTable.setText(EMPTY);
 
 		final String embeddedFileName = "${file::1}";
 
@@ -2589,8 +2590,7 @@ class ComputeProcessorTest {
 			assertEquals(expectedTable, sourceTable.asTable());
 
 			// 2) Return null
-			final List<List<String>> osCommandResultTable = List.of(List.of("OS command result"));
-			sourceTable.setTable(osCommandResultTable);
+			sourceTable.setText("OS command result");
 
 			awkOK = Awk.builder()
 				.script(embeddedFileName)
@@ -2606,7 +2606,7 @@ class ComputeProcessorTest {
 			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
 
 			// 3) Return EMPTY
-			sourceTable.setTable(osCommandResultTable);
+			sourceTable.setText("OS command result");
 
 			awkOK = Awk.builder()
 				.script(embeddedFileName)
@@ -2622,7 +2622,7 @@ class ComputeProcessorTest {
 			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
 
 			// 4) Return CSV matching `table`, then filter/select
-			sourceTable.setTable(table);
+			sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));

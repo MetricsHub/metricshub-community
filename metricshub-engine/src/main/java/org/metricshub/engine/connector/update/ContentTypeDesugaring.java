@@ -21,7 +21,6 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
@@ -44,7 +43,6 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -54,6 +52,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
@@ -71,7 +70,8 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * The chain of a source is walked while tracking the current content type, starting from the type the source
  * produces ({@link Source#getOutputContentType()}):
  * <ul>
- * <li>an <code>awk</code> compute fed a table gets a <code>toText</code> before it;</li>
+ * <li>an <code>awk</code> compute reads whatever it gets, a text or a table: nothing is inserted before it, and
+ * what flows out of it is its output type;</li>
  * <li>a table compute fed text by a legacy text producer (<code>commandLine</code>, the <code>awk</code> source,
  * the <code>awk</code> compute, which built their table as well before the content types) gets a
  * <code>toTable</code> before it;</li>
@@ -99,11 +99,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * class again.
 	 */
 	private static final ObjectMapper MAPPER = JsonHelper.buildObjectMapper();
-
-	/**
-	 * <code>FS = ";"</code> in an AWK script, the sign of a script written for the <code>;</code> serialization.
-	 */
-	private static final Pattern FS_SEMICOLON = Pattern.compile("\\bFS\\s*=\\s*\"\\s*;\\s*\"");
 
 	/**
 	 * A short source reference, <code>${source::name}</code>, with no dot: a source of the same tool or job.
@@ -152,7 +147,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources = new LinkedHashMap<>();
 		forEachSource(connector, source -> sources.put(source.getKey(), source));
 		final Set<String> textOnly = textOnlySources(connector, sources);
-		sources.values().forEach(source -> desugar(connector, source, sources, textOnly, report));
+		sources.values().forEach(source -> desugar(source, sources, textOnly, report));
 		connector.setContentTypeReport(report);
 		// A tool without columns whose result source ends in text returns that text as it is
 		if (connector.getTools() != null) {
@@ -360,11 +355,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources or
-	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text: a <code>toTable</code> then the
-	 * <code>toText</code> generated before an <code>awk</code> would add a trailing <code>;</code> to every line, which
-	 * the <code>awk</code> scripts reading the copies do not expect, and the copies get their own conversion where
-	 * they need one.
+	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources, by
+	 * the <code>input</code> of <code>awk</code> sources (a single reference, which the script reads as it is) or
+	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text,
+	 * which the <code>awk</code> scripts reading it expect, and the copies get their own conversion where they need
+	 * one.
 	 * <p>
 	 * "Nowhere else" is checked on the JSON form of every source (its own key and a copy's <code>from</code> left
 	 * out), computes included, plus the mappings and the tool results: a <code>${source::...}</code> reference in any
@@ -408,6 +403,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 					copied.add(resolveReference(copy.getFrom(), source.getKey(), sources));
 				}
 				copy.setFrom("");
+			}
+			// An awk source reads the source of its input as it is: no table read (#1559)
+			if (scanned instanceof JawkSource jawk && JawkSource.isSourceReference(jawk.getInput())) {
+				copied.add(resolveReference(jawk.getInput(), source.getKey(), sources));
+				jawk.setInput("");
 			}
 			try {
 				final Set<String> references = new HashSet<>();
@@ -503,12 +503,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	/**
 	 * Desugars the compute chain of one source and records the findings.
 	 *
-	 * @param connector The connector, for its translation tables and embedded files
 	 * @param source    The source
 	 * @param report    The report to add the findings to
 	 */
 	void desugar(
-		final Connector connector,
 		final Source source,
 		final Map<String, Source> sources,
 		final Set<String> textOnly,
@@ -539,32 +537,17 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			final Compute compute = computes.get(index);
 			final String where = compute.getType() + " #" + index;
 
+			// An awk reads whatever it gets (no input type): nothing is ever inserted before it (#1559)
 			final ContentType input = compute.getInputContentType();
-			if (input != current) {
+			if (input != null && input != current) {
 				if (input == ContentType.TEXT) {
-					if (compute instanceof Awk awk) {
-						desugared.add(ToText.generated());
-						report.add(new ContentTypeReportEntry(key, Kind.TO_TEXT_INSERTED, "before " + where));
-						report.add(
-							new ContentTypeReportEntry(key, Kind.AWK_ON_TABLE, where + " " + describeScript(connector, awk))
-						);
-					} else {
-						report.add(new ContentTypeReportEntry(key, Kind.TEXT_COMPUTE_ON_TABLE_SOURCE, where));
-					}
-				} else if (producer == TextProducer.PURE && !(compute instanceof Awk)) {
+					report.add(new ContentTypeReportEntry(key, Kind.TEXT_COMPUTE_ON_TABLE_SOURCE, where));
+				} else if (producer == TextProducer.PURE) {
 					report.add(new ContentTypeReportEntry(key, Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, where));
-				} else if (producer == TextProducer.PURE || producer == TextProducer.EXPLICIT) {
-					// Text only (a pure text source before an awk reading a table, an explicit toText): a real
-					// conversion is needed to get a table
+				} else if (producer == TextProducer.EXPLICIT) {
 					desugared.add(ToTable.generated());
 					report.add(
-						new ContentTypeReportEntry(
-							key,
-							Kind.TO_TABLE_INSERTED,
-							"before " +
-								where +
-								(producer == TextProducer.PURE ? " (on a text source)" : " (after an explicit toText)")
-						)
+						new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where + " (after an explicit toText)")
 					);
 				} else {
 					desugared.add(ToTable.generated());
@@ -598,41 +581,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 
 		source.setComputes(desugared);
-	}
-
-	/**
-	 * Describes the script of an <code>awk</code> compute: its reference and whether it sets <code>FS</code> to
-	 * <code>;</code>.
-	 */
-	private static String describeScript(final Connector connector, final Awk awk) {
-		final String script = awk.getScript();
-		if (script == null) {
-			return "script=null";
-		}
-		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, script)).find() ? " (sets FS to \";\")" : "";
-		return (FILE_PATTERN.matcher(script).find() ? "script=" + script : "inline script") + fs;
-	}
-
-	/**
-	 * The text of the script of an <code>awk</code> compute: the embedded file it references, or the script itself.
-	 */
-	private static String scriptContent(final Connector connector, final String script) {
-		if (script == null) {
-			return "";
-		}
-		final Matcher matcher = FILE_PATTERN.matcher(script);
-		if (!matcher.find()) {
-			return script;
-		}
-		if (connector.getEmbeddedFiles() == null) {
-			return "";
-		}
-		try {
-			final EmbeddedFile embeddedFile = connector.getEmbeddedFiles().get(Integer.parseInt(matcher.group(1)));
-			return embeddedFile == null ? "" : embeddedFile.getContentAsString();
-		} catch (NumberFormatException e) {
-			return "";
-		}
 	}
 
 	/**
