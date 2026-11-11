@@ -1381,11 +1381,33 @@ class ComputeProcessorTest {
 		computeProcessor.process(Json2Csv.builder().entryKey("/items").properties("name").build());
 		assertEquals(SourceTable.empty(), sourceTable);
 
-		// The cells are cut on a character the document holds neither raw nor escaped
+		// The cells are cut on a character the document holds neither raw nor escaped (in any case): here U+E003
+		final String privateUse = new String(new char[] { 0xE000, 0xE001, 0xE002 });
 		assertEquals(
-			List.of(List.of("[0]", "\uE000\uE001")),
-			ClientsExecutor.executeJson2Table("[{\"v\":\"\\uE000\uE001\"}]", "/", List.of("v"), false, LOCALHOST)
+			List.of(List.of("[0]", privateUse, "x")),
+			ClientsExecutor.executeJson2Table(
+				"[{\"v\":\"\\ue000\\uE001" + privateUse.charAt(2) + "\",\"w\":\"x\"}]",
+				"/",
+				List.of("v", "w"),
+				false,
+				LOCALHOST
+			)
 		);
+
+		// A ../ property resolves in both parsing modes
+		for (final Json2Csv.ParsingMode parsingMode : Json2Csv.ParsingMode.values()) {
+			sourceTable.setText("{\"members\":[{\"name\":\"m;1\",\"disks\":[{\"id\":\"d1\"},{\"id\":\"d\\n2\"}]}]}");
+			computeProcessor.process(
+				Json2Csv.builder().entryKey("/members/*/disks").properties("id;../name").parsingMode(parsingMode).build()
+			);
+			assertEquals(
+				SourceTable.ofTable(
+					List.of(List.of("/members[0]/disks[0]", "d1", "m;1"), List.of("/members[0]/disks[1]", "d\n2", "m;1"))
+				),
+				sourceTable,
+				parsingMode.name()
+			);
+		}
 	}
 
 	@Test

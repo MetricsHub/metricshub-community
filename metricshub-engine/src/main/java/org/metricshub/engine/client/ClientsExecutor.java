@@ -23,11 +23,11 @@ package org.metricshub.engine.client;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -54,6 +54,9 @@ import org.metricshub.xflat.exceptions.XFlatException;
 public class ClientsExecutor {
 
 	private static final long JSON_2_CSV_TIMEOUT = 60; //seconds
+
+	private static final int PRIVATE_USE_FIRST = 0xE000;
+	private static final int PRIVATE_USE_LAST = 0xF8FF;
 
 	private TelemetryManager telemetryManager;
 
@@ -106,53 +109,6 @@ public class ClientsExecutor {
 		);
 
 		return result;
-	}
-
-	/**
-	 * Execute JSON to CSV operation, the JSON being parsed as a tree.
-	 *
-	 * @param jsonSource    The JSON source string.
-	 * @param jsonEntryKey  The JSON entry key.
-	 * @param propertyList  The list of properties.
-	 * @param separator     The separator for CSV.
-	 * @return The CSV representation of the JSON.
-	 * @throws TimeoutException       If the execution times out.
-	 * @throws ExecutionException     If an execution exception occurs.
-	 * @throws InterruptedException   If the execution is interrupted.
-	 */
-	public String executeJson2Csv(String jsonSource, String jsonEntryKey, List<String> propertyList, String separator)
-		throws InterruptedException, ExecutionException, TimeoutException {
-		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, false);
-	}
-
-	/**
-	 * Execute JSON to CSV operation.
-	 *
-	 * @param jsonSource    The JSON source string.
-	 * @param jsonEntryKey  The JSON entry key.
-	 * @param propertyList  The list of properties.
-	 * @param separator     The separator for CSV.
-	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
-	 * @return The CSV representation of the JSON.
-	 * @throws TimeoutException       If the execution times out.
-	 * @throws ExecutionException     If an execution exception occurs.
-	 * @throws InterruptedException   If the execution is interrupted.
-	 */
-	public String executeJson2Csv(
-		String jsonSource,
-		String jsonEntryKey,
-		List<String> propertyList,
-		String separator,
-		boolean eventParsing
-	) throws InterruptedException, ExecutionException, TimeoutException {
-		return executeJson2Csv(
-			jsonSource,
-			jsonEntryKey,
-			propertyList,
-			separator,
-			eventParsing,
-			telemetryManager.getHostname()
-		);
 	}
 
 	/**
@@ -293,7 +249,9 @@ public class ClientsExecutor {
 		String hostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		// jflat only writes text: it ends each cell with the separator and each row with a line feed. A separator
-		// that no value can hold makes the cells exact. ponytail: a jflat method returning the rows would drop this.
+		// that no value can hold makes the cells exact.
+		// ponytail: private-use separator because jflat can only write text; the ceiling is a document holding all
+		// 6400 private-use characters (rejected). Upgrade: a jflat method emitting the rows, then drop this split.
 		final String separator = cellSeparatorAbsentFrom(jsonSource == null ? "" : jsonSource);
 		final String csv = executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, eventParsing, hostname);
 		final List<List<String>> rows = new ArrayList<>();
@@ -321,15 +279,29 @@ public class ClientsExecutor {
 	 * @return the character, as a string that is also a literal regular expression
 	 */
 	static String cellSeparatorAbsentFrom(final String json) {
-		for (int c = 0xE000; c <= 0xF8FF; c++) {
-			if (
-				json.indexOf(c) < 0 &&
-					!Pattern.compile(String.format("\\\\u%04x", c), Pattern.CASE_INSENSITIVE).matcher(json).find()
-			) {
-				return String.valueOf((char) c);
+		// One pass: mark each private-use character found raw or as a backslash-u escape (hex in any case)
+		final BitSet present = new BitSet();
+		final int length = json.length();
+		for (int i = 0; i < length; i++) {
+			final char c = json.charAt(i);
+			if (c >= PRIVATE_USE_FIRST && c <= PRIVATE_USE_LAST) {
+				present.set(c - PRIVATE_USE_FIRST);
+			} else if (c == '\\' && i + 5 < length && (json.charAt(i + 1) == 'u' || json.charAt(i + 1) == 'U')) {
+				try {
+					final int escaped = Integer.parseInt(json, i + 2, i + 6, 16);
+					if (escaped >= PRIVATE_USE_FIRST && escaped <= PRIVATE_USE_LAST) {
+						present.set(escaped - PRIVATE_USE_FIRST);
+					}
+				} catch (NumberFormatException e) {
+					// Not an escape
+				}
 			}
 		}
-		throw new IllegalArgumentException("The JSON document holds every private-use character");
+		final int free = PRIVATE_USE_FIRST + present.nextClearBit(0);
+		if (free > PRIVATE_USE_LAST) {
+			throw new IllegalArgumentException("The JSON document holds every private-use character");
+		}
+		return String.valueOf((char) free);
 	}
 
 	/**

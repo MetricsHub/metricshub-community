@@ -77,7 +77,7 @@ public class Json2Csv extends Compute {
 	 * @param type        The type of the computation task.
 	 * @param entryKey    The entry key for Json2Csv computation.
 	 * @param properties  The properties for Json2Csv computation.
-	 * @param separator   The separator for Json2Csv computation.
+	 * @param separator   Deprecated, ignored by the compute; still accepted so that the connectors setting it load.
 	 * @param parsingMode How the JSON document is parsed; null defaults to {@link ParsingMode#TREE}.
 	 */
 	@Builder
