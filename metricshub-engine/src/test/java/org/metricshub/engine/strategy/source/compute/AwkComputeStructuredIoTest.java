@@ -1,13 +1,20 @@
 package org.metricshub.engine.strategy.source.compute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.slf4j.simple.SimpleLogger;
+import org.slf4j.spi.LocationAwareLogger;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
@@ -104,6 +111,91 @@ class AwkComputeStructuredIoTest {
 		final SourceTable text = SourceTable.ofText("a;b");
 		processor(text).process(Awk.builder().script("BEGIN { }").build());
 		assertEquals(SourceTable.ofText(""), text);
+	}
+
+	private static final String TEXT_FOR_TABLE_WARNING = "reads a table but received a text";
+
+	/**
+	 * Runs the action with the WARN level of the {@link ComputeProcessor} logger enabled (the tests log nothing).
+	 *
+	 * @param action The action
+	 * @return what the action logged
+	 */
+	private static String warningsOf(final Runnable action) throws Exception {
+		final Field logField = ComputeProcessor.class.getDeclaredField("log");
+		logField.setAccessible(true);
+		final SimpleLogger logger = (SimpleLogger) logField.get(null);
+		final Field levelField = SimpleLogger.class.getDeclaredField("currentLogLevel");
+		levelField.setAccessible(true);
+		final int previousLevel = levelField.getInt(logger);
+		final PrintStream previousErr = System.err;
+		final ByteArrayOutputStream err = new ByteArrayOutputStream();
+		try (PrintStream capture = new PrintStream(err, true, StandardCharsets.UTF_8)) {
+			levelField.setInt(logger, LocationAwareLogger.WARN_INT);
+			System.setErr(capture);
+			action.run();
+		} finally {
+			System.setErr(previousErr);
+			levelField.setInt(logger, previousLevel);
+		}
+		return err.toString(StandardCharsets.UTF_8);
+	}
+
+	private static int count(final String text, final String part) {
+		return text.split(part, -1).length - 1;
+	}
+
+	private static ComputeProcessor processor(final SourceTable sourceTable, final String connectorId) {
+		return ComputeProcessor.builder()
+			.hostname(LOCALHOST)
+			.connectorId(connectorId)
+			.sourceKey("${source::monitors.fan.discovery.sources.source(1)}")
+			.index(0)
+			.sourceTable(sourceTable)
+			.build();
+	}
+
+	/**
+	 * A table input meeting a text at run time: the text is converted into a table, the script gets its rows, and
+	 * the WARN names the connector and the source, never the values.
+	 */
+	@Test
+	void textMeetingTableInputIsConvertedWithAWarning() throws Exception {
+		final SourceTable tableOutput = SourceTable.ofText("fan1;3000;\nfan2;0;\n");
+		final String tableOutputWarnings = warningsOf(
+			() -> processor(tableOutput, "MyConnector").process(
+				Awk.builder().script("{ print $1, NF, $2 }").input(ContentType.TABLE).output(ContentType.TABLE).build()
+			)
+		);
+		assertEquals(SourceTable.ofTable(table("fan1|2|3000", "fan2|2|0")), tableOutput);
+		assertEquals(1, count(tableOutputWarnings, TEXT_FOR_TABLE_WARNING), tableOutputWarnings);
+		assertTrue(tableOutputWarnings.contains("MyConnector"), tableOutputWarnings);
+		assertTrue(
+			tableOutputWarnings.contains("${source::monitors.fan.discovery.sources.source(1)} -> computes[0]"),
+			tableOutputWarnings
+		);
+		assertFalse(tableOutputWarnings.contains("fan1") || tableOutputWarnings.contains("3000"), tableOutputWarnings);
+
+		final SourceTable textOutput = SourceTable.ofText("fan1;3000;\n");
+		final String textOutputWarnings = warningsOf(
+			() -> processor(textOutput, "MyConnector").process(
+				Awk.builder().script("{ print $1 \";\" NF }").input(ContentType.TABLE).build()
+			)
+		);
+		assertEquals(SourceTable.ofText("fan1;2;"), textOutput);
+		assertEquals(1, count(textOutputWarnings, TEXT_FOR_TABLE_WARNING), textOutputWarnings);
+	}
+
+	@Test
+	void tableInputMeetingATableHasNoWarning() throws Exception {
+		final SourceTable sourceTable = SourceTable.ofTable(table("fan1|3000", "fan2|0"));
+		final String warnings = warningsOf(
+			() -> processor(sourceTable, "MyConnector").process(
+				Awk.builder().script("{ print $1, NF, $2 }").input(ContentType.TABLE).output(ContentType.TABLE).build()
+			)
+		);
+		assertEquals(SourceTable.ofTable(table("fan1|2|3000", "fan2|2|0")), sourceTable);
+		assertFalse(warnings.contains(TEXT_FOR_TABLE_WARNING), warnings);
 	}
 
 	@Test

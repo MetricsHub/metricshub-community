@@ -397,6 +397,17 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
 
+		// A table input meeting a text at run time (a wrong static content type, a member of a union that differs):
+		// the script would see no record, so the text is converted the canonical way and the mismatch is reported
+		if (tableInput && sourceTable.getContentType() == ContentType.TEXT) {
+			log.warn(
+				"Hostname {} - Compute Operation [{}] (Awk) reads a table but received a text, converted into a table. Connector [{}].",
+				hostname,
+				computeKey,
+				connectorId
+			);
+		}
+
 		final EmbeddedFile embeddedFile = maybeEmbeddedFile.get();
 		final String awkScript = embeddedFile.getContentAsString();
 
@@ -418,7 +429,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				final List<List<String>> rows = tableInput
 					? AwkExecutor.executeAwkToTable(
 						awkScript,
-						new TableInputSource(sourceTable.getTable()),
+						new TableInputSource(sourceTable.asTable()),
 						AwkExecutor.getUtilityEngine(),
 						variables
 					)
@@ -431,7 +442,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			String awkResult = tableInput
 				? AwkExecutor.executeAwk(
 					awkScript,
-					new TableInputSource(sourceTable.getTable()),
+					new TableInputSource(sourceTable.asTable()),
 					AwkExecutor.getUtilityEngine(),
 					variables
 				).replace(WINDOWS_NEW_LINE, NEW_LINE)
