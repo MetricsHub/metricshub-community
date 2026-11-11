@@ -303,9 +303,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		String value = null;
 		if (sourceTable.getContentType() == ContentType.TEXT) {
-			// A text: its whole first line, without the line ending
+			// A text: its whole first line, without its LF or CR LF ending (a lone CR ends no line)
 			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			value = sourceTable.getText().lines().findFirst().orElse(EMPTY);
+			value = sourceTable.getText().split("\r?\n", 2)[0];
 		} else if (!sourceTable.getTable().isEmpty()) {
 			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);

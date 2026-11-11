@@ -2,6 +2,8 @@ package org.metricshub.engine.connector.update;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -301,13 +303,21 @@ class ContentTypeCheckTest {
 			Set.of(
 				"UNRESOLVED_REFERENCE url" + missing,
 				"UNRESOLVED_REFERENCE computes[1].variables.rows" + missing,
-				"UNRESOLVED_REFERENCE monitors.thing.simple.mapping.source" + missing
+				"UNRESOLVED_REFERENCE monitors.thing.simple.mapping.source" + missing,
+				// A short reference the parser cannot make absolute stays short, and the engine finds no such key
+				"UNRESOLVED_REFERENCE commandLine -> ${source::raw+x}"
 			),
 			lines(findings("""
 				monitors:
 				  thing:
 				    simple:
 				      sources:
+				        raw+x:
+				          type: commandLine
+				          commandLine: echo
+				        other:
+				          type: commandLine
+				          commandLine: "echo ${source::raw+x}"
 				        request:
 				          type: http
 				          method: get
@@ -438,5 +448,13 @@ class ContentTypeCheckTest {
 			    result:
 			      source: ${source::out}
 			"""));
+	}
+
+	@Test
+	void aFailingCheckReportsNothing() {
+		// Report only: a connector the check cannot read still loads
+		final Connector connector = mock(Connector.class);
+		when(connector.getMonitors()).thenThrow(new IllegalStateException());
+		assertEquals(List.of(), ContentTypeCheck.check(connector, "broken"));
 	}
 }

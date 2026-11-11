@@ -366,6 +366,8 @@ class SourceTableReadRulesTest {
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\ndef")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\r\ndef")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\n")));
+		// A lone CR ends no line
+		assertEquals("abc\rdef", extractToken(SourceTable.ofText("abc\rdef\nghi")));
 		assertEquals("a b=c", extractToken(SourceTable.ofText("a b=c")));
 		assertEquals(EMPTY, extractToken(SourceTable.ofText("\nabc")));
 		assertEquals(EMPTY, extractToken(SourceTable.ofText(EMPTY)));

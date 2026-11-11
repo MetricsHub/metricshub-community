@@ -101,6 +101,7 @@ class TableUnionSourceDeserializerTest extends DeserializerTest {
 			"[ [ a, b ], \"${source::beforeAll.x}\" ]", // a row that is no list
 			"[ [ [ a, ~ ] ] ]", // a null cell
 			"[ [ [ a, [ b ] ] ] ]", // a cell that is a list
+			"[ [ [ \"a\\nb\" ] ] ]", // a cell with a line break
 			"[ [ [] ] ]", // a row without cell
 			"[ [] ]", // a table without row
 			"[ \" \" ]", // a blank member
@@ -157,6 +158,22 @@ class TableUnionSourceDeserializerTest extends DeserializerTest {
 			    type: textUnion
 			""";
 		assertThrows(MismatchedInputException.class, () -> deserialize(yaml));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "[ abc ]", "[ \"${source::beforeAll.a}\", \"a;b\" ]", "[ \" \" ]" })
+	void testDeserializeTextUnionMemberThatIsNoReference(final String texts) {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  union:
+			    type: textUnion
+			    texts: %s
+			""".formatted(texts);
+		// Raised as the blank member of a collection deserializer is
+		assertThrows(IllegalArgumentException.class, () -> deserialize(yaml));
 	}
 
 	private Connector deserialize(final String yaml) throws IOException {

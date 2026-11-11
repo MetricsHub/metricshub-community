@@ -21,19 +21,33 @@ package org.metricshub.engine.connector.deserializer.custom;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 /**
- * Deserializes the members of a <code>textUnion</code>: non-blank source references.
+ * Deserializes the members of a <code>textUnion</code>: non-blank source references. A member without a
+ * <code>${source::...}</code> reference is rejected: a <code>textUnion</code> has no literal.
  */
 public class TextsDeserializer extends AbstractNonBlankNonNullInCollectionDeserializer {
 
 	@Override
 	protected String getErrorMessage() {
 		return "The text referenced by 'TextUnionSource' cannot be empty.";
+	}
+
+	@Override
+	protected Function<String, String> valueExtractor() {
+		return super.valueExtractor().andThen(text -> {
+			if (!SOURCE_REF_PATTERN.matcher(text).find()) {
+				throw new IllegalArgumentException("A member of 'TextUnionSource' must be a source reference.");
+			}
+			return text;
+		});
 	}
 
 	@Override

@@ -65,8 +65,10 @@ public class TableJoinSource extends Source {
 
 	/**
 	 * The rows of the left table to join, when it is written as a table literal, a YAML list of rows each a list of
-	 * cells: exactly these rows and cells. Null in the string form.
+	 * cells: exactly these rows and cells. Null in the string form. Set from <code>leftTable</code> only: never read
+	 * from the connector, where it would skip the checks of {@link TableLiteralDeserializer}.
 	 */
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
 	private List<List<String>> leftTableRows;
 
 	/**
@@ -78,8 +80,9 @@ public class TableJoinSource extends Source {
 
 	/**
 	 * The rows of the right table to join, when it is written as a table literal: exactly these rows and cells. Null
-	 * in the string form.
+	 * in the string form. Set from <code>rightTable</code> only.
 	 */
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
 	private List<List<String>> rightTableRows;
 
 	/**

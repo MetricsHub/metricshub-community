@@ -358,8 +358,8 @@ public class SourceProcessor implements ISourceProcessor {
 		final SourceTable rightTable = maybeRightTable.get();
 		logTableJoin(
 			tableJoinSource.getKey(),
-			tableJoinSource.getLeftTable(),
-			tableJoinSource.getRightTable(),
+			tableJoinSource.getLeftTableRows() != null ? "table literal" : tableJoinSource.getLeftTable(),
+			tableJoinSource.getRightTableRows() != null ? "table literal" : tableJoinSource.getRightTable(),
 			leftTable,
 			rightTable,
 			hostname

@@ -170,8 +170,31 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 		assertTrue(copy.toString().contains("- leftTable=[[in!, a;b!], [out!, !]]"));
 	}
 
+	@Test
+	void testDeserializeTableJoinIgnoresWrittenRows() throws IOException {
+		// The rows come from leftTable only: written as such, they would skip the checks of the literal
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  join:
+			    type: tableJoin
+			    leftTable: testLeft
+			    leftTableRows: [ [ a, ~ ] ]
+			    rightTable: testRight
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			""";
+		final TableJoinSource join = (TableJoinSource) deserializer.deserialize(
+			new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml))
+		).getBeforeAll().get("join");
+		assertEquals("testLeft", join.getLeftTable());
+		assertNull(join.getLeftTableRows());
+	}
+
 	@ParameterizedTest
-	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"" })
+	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"", "[ [ \"a\\rb\" ] ]" })
 	void testDeserializeTableJoinInvalidLeftTable(final String leftTable) {
 		final String yaml = """
 			connector:

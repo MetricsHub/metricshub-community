@@ -85,6 +85,10 @@ public class TableLiteralDeserializer extends JsonDeserializer<Object> {
 						parser.currentToken()
 					);
 				}
+				// A line break would split the row once the table is read as text, as in the list form of static.value
+				if (parser.getText().indexOf('\n') >= 0 || parser.getText().indexOf('\r') >= 0) {
+					return context.reportInputMismatch(String.class, "A cell of a table literal cannot hold a line break");
+				}
 				row.add(parser.getText());
 			}
 			if (row.isEmpty()) {

@@ -33,7 +33,6 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -114,11 +113,22 @@ public class ContentTypeCheck {
 	 *
 	 * @param connector   The connector, after the update chain
 	 * @param connectorId The identifier of the connector in the findings
-	 * @return the findings, in source order
+	 * @return the findings, in source order; none when the check itself fails, which never fails the load
 	 */
 	public static List<ContentTypeFinding> check(final Connector connector, final String connectorId) {
 		final ContentTypeCheck check = new ContentTypeCheck(connectorId);
-		check.run(connector);
+		try {
+			check.run(connector);
+		} catch (RuntimeException e) {
+			// Report only: a connector the check cannot read loads as before
+			log.warn(
+				"Connector {} - Content type check failed, no finding reported: {}",
+				connectorId,
+				e.getClass().getName()
+			);
+			log.debug("Connector {} - Content type check failure:", connectorId, e);
+			return new ArrayList<>();
+		}
 		return check.findings;
 	}
 
@@ -172,7 +182,7 @@ public class ContentTypeCheck {
 			tree,
 			"",
 			(field, value) -> references(value).stream()
-				.filter(reference -> resolve(reference, key) == null)
+				.filter(reference -> resolve(reference) == null)
 				.forEach(reference -> add(key, field + " -> " + reference, Rule.UNRESOLVED_REFERENCE, EXISTING_SOURCE, NONE))
 		);
 
@@ -181,7 +191,7 @@ public class ContentTypeCheck {
 		} else if (source instanceof TextUnionSource textUnion && textUnion.getTexts() != null) {
 			for (int index = 0; index < textUnion.getTexts().size(); index++) {
 				for (final String reference : references(textUnion.getTexts().get(index))) {
-					if (typeOf(reference, key) == ContentType.TABLE) {
+					if (typeOf(reference) == ContentType.TABLE) {
 						add(key, "texts[" + index + "] -> " + reference, Rule.TABLE_FEEDS_TEXT, TEXT, TABLE);
 					}
 				}
@@ -264,7 +274,7 @@ public class ContentTypeCheck {
 		for (int index = 0; index < tables.size(); index++) {
 			final Object member = tables.get(index);
 			if (member instanceof String reference && hasReference(reference)) {
-				final ContentType type = typeOf(reference, key);
+				final ContentType type = typeOf(reference);
 				if (type == ContentType.TEXT) {
 					texts.put(index, reference.trim());
 				} else if (type == ContentType.TABLE) {
@@ -320,7 +330,7 @@ public class ContentTypeCheck {
 	 */
 	private void checkTableRead(final String key, final String location, final String value) {
 		for (final String reference : references(value)) {
-			if (typeOf(reference, key) == ContentType.TEXT) {
+			if (typeOf(reference) == ContentType.TEXT) {
 				add(key, location + " -> " + reference, Rule.TEXT_FEEDS_TABLE, TABLE, TEXT);
 			}
 		}
@@ -344,7 +354,7 @@ public class ContentTypeCheck {
 		walk(toTree(holder, "key", "references", "computes"), "", (field, value) -> fields.putIfAbsent(value, field));
 		update.accept(value -> {
 			for (final String reference : references(value)) {
-				if (typeOf(reference, key) == ContentType.TABLE) {
+				if (typeOf(reference) == ContentType.TABLE) {
 					add(key, prefix + fields.getOrDefault(value, "?") + " -> " + reference, Rule.TABLE_INTERPOLATED, TEXT, TABLE);
 				}
 			}
@@ -356,15 +366,11 @@ public class ContentTypeCheck {
 		if (task == null || task.getMapping() == null) {
 			return;
 		}
-		// The references are absolute once parsed; any source of the task gives the context of a short one
-		final String context = task.getSources() == null
-			? null
-			: task.getSources().values().stream().map(Source::getKey).filter(Objects::nonNull).findFirst().orElse(null);
 		final String mappingSource = task.getMapping().getSource() == null ? NONE : task.getMapping().getSource().trim();
 		final String location = job + ".mapping";
 		walk(toTree(task.getMapping()), "", (field, value) -> {
 			for (final String reference : references(value)) {
-				final ContentType type = typeOf(reference, context);
+				final ContentType type = typeOf(reference);
 				if (type == null) {
 					add(
 						mappingSource,
@@ -405,8 +411,8 @@ public class ContentTypeCheck {
 	/**
 	 * The static type of the referenced source, null when the connector has no such source.
 	 */
-	private ContentType typeOf(final String reference, final String context) {
-		final Source source = sources.get(ContentTypeDesugaring.resolveReference(reference, context, sources));
+	private ContentType typeOf(final String reference) {
+		final Source source = resolve(reference);
 		return source == null ? null : typeOf(source);
 	}
 
@@ -414,8 +420,12 @@ public class ContentTypeCheck {
 		return types.computeIfAbsent(source, s -> ContentTypeDesugaring.writtenEndType(s, sources));
 	}
 
-	private Source resolve(final String reference, final String context) {
-		return sources.get(ContentTypeDesugaring.resolveReference(reference, context, sources));
+	/**
+	 * The referenced source, as the engine looks it up: the parser made every reference it could resolve absolute, and
+	 * the engine looks up that exact key, with no fallback on a short reference that stayed short.
+	 */
+	private Source resolve(final String reference) {
+		return sources.get(reference.trim());
 	}
 
 	private void add(
