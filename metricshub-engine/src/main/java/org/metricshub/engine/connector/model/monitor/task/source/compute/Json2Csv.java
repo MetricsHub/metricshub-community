@@ -39,7 +39,9 @@ import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
- * Represents a Json2Csv computation task for monitoring.
+ * The <code>json2Table</code> compute: one row per element of the entry key, one cell per property. The type
+ * <code>json2Csv</code> is a deprecated alias with the same behavior; {@link #getType()} keeps the name written in
+ * the connector, so the goldens and the content-type report of a connector still writing it are unchanged.
  */
 @Data
 @NoArgsConstructor
