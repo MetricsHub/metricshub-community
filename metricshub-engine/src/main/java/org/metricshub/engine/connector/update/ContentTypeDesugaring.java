@@ -161,7 +161,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 				tool.setTextResult(
 					!hasColumns(tool) &&
 						result != null &&
-						(endsInText(result, sources) || textUnionMembers(tool, sources) != null)
+						(endsInText(result, sources, textOnly) ||
+							(textUnionMembers(tool, sources) != null &&
+								textUnionProducer((TableUnionSource) result, sources, new HashSet<>(), textOnly) != null))
 				);
 			});
 		}
@@ -349,13 +351,17 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 
 	/**
 	 * Whether the source, as desugared, ends in text: its last compute writes text, or it has no compute and produces
-	 * text (a copy: what its origin's chain produces).
+	 * text (a copy: what its origin's chain produces; a union: a text union, as desugared).
 	 */
-	private static boolean endsInText(final Source source, final Map<String, Source> sources) {
+	private static boolean endsInText(
+		final Source source,
+		final Map<String, Source> sources,
+		final Set<String> textOnly
+	) {
 		if (source.getComputes() != null && !source.getComputes().isEmpty()) {
 			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
 		}
-		final State state = start(source, sources, new HashSet<>(), null);
+		final State state = start(source, sources, new HashSet<>(), textOnly);
 		return state.type() == ContentType.TEXT;
 	}
 
@@ -370,6 +376,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * out), computes included, plus the mappings and the tool results: a <code>${source::...}</code> reference in any
 	 * field (a variable, <code>executeForEachEntryOf</code>, the tables of a union, an internal database query...)
 	 * counts as a table consumer. When a source cannot be serialized, no source is text only: the legacy behavior.
+	 * <p>
+	 * A text union reads its members as text, unless one of them ends in a table once desugared (read as a table
+	 * elsewhere): the union is then a table union at run time, and it reads all its members as tables, so that none
+	 * of them brings a text without rows.
 	 *
 	 * @param connector The connector
 	 * @param sources   Every source by key
@@ -381,11 +391,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		// A tool without columns returning a union of text sources returns their joined text: the members are read as
 		// text, and the union's references to them are no table read
 		final Set<String> textUnions = new HashSet<>();
+		// Every union that is a text union as written, tools' included
+		final List<TableUnionSource> writtenTextUnions = new ArrayList<>();
 		if (connector.getTools() != null) {
 			connector.getTools().values().forEach(tool -> {
 				final List<Source> members = textUnionMembers(tool, sources);
 				if (members != null) {
 					textUnions.add(toolResultSource(tool).getKey());
+					writtenTextUnions.add((TableUnionSource) toolResultSource(tool));
 					members.forEach(member -> copied.add(member.getKey()));
 				}
 			});
@@ -402,6 +415,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			) {
 				union.getTables().forEach(table -> copied.add(resolveReference(table, source.getKey(), sources)));
 				union.setTables(List.of());
+				writtenTextUnions.add((TableUnionSource) source);
 			}
 			if (scanned instanceof CopySource copy) {
 				if (copy.getFrom() != null) {
@@ -438,6 +452,21 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			});
 		}
 		copied.removeAll(readAsTable);
+		// A text union with a member that now ends in a table (a legacy text producer read as a table elsewhere gets a
+		// toTable, a copy of it or a union of it follows) is a table union at run time, where its other text members
+		// would bring no rows: it reads all its members as tables. Until nothing changes, since a union that becomes a
+		// table union that way ends in a table in turn, as a member of another union (#1544).
+		boolean changed = true;
+		while (changed) {
+			changed = false;
+			for (final TableUnionSource union : writtenTextUnions) {
+				if (textUnionProducer(union, sources, new HashSet<>(), copied) == null) {
+					for (final String table : union.getTables()) {
+						changed |= copied.remove(resolveReference(table, union.getKey(), sources));
+					}
+				}
+			}
+		}
 		return copied;
 	}
 

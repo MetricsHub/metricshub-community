@@ -1061,4 +1061,154 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("keepColumns"), types(union));
 		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
 	}
+
+	/**
+	 * A join reading the given source as a table, with a table on its right.
+	 */
+	private static Source joinOf(final String left) {
+		return TableJoinSource.builder()
+			.leftTable(ref(left))
+			.rightTable(ref("snmp"))
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.build();
+	}
+
+	/**
+	 * A member of a text union also read as a table elsewhere gets its toTable: the union is then a table union at
+	 * run time, so every member gets its toTable (a member left in text would bring no rows), and the awk on the union
+	 * its toText (#1544).
+	 */
+	@Test
+	void textUnionWithAMemberReadAsATableElsewhereReadsAllItsMembersAsTables() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("env"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("union", union);
+		sources.put("snmp", SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build());
+		sources.put("join", joinOf("show"));
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(show));
+		assertEquals(List.of("toTable"), types(env));
+		assertEquals(List.of("toText", "awk", "toTable"), types(union));
+		assertEquals(
+			List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TABLE_APPENDED, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE),
+			kinds(connector)
+		);
+	}
+
+	/**
+	 * Nested unions: a member of the inner union read as a table makes the inner union a table union, which makes the
+	 * outer one a table union in turn; a member of the outer union read as a table makes the outer one a table union,
+	 * and the inner one, still a text union, gets its toTable.
+	 */
+	@Test
+	void nestedTextUnionsWithAMemberReadAsATableElsewhereReadAllTheirMembersAsTables() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source inner = TableUnionSource.builder().tables(new ArrayList<>(List.of(ref("env")))).build();
+		final Source outer = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("inner"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Source join = joinOf("env");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("inner", inner);
+		sources.put("outer", outer);
+		sources.put("snmp", SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build());
+		sources.put("join", join);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("outer")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(show));
+		assertEquals(List.of("toTable"), types(env));
+		assertEquals(List.of(), types(inner));
+		assertEquals(List.of("toText", "awk", "toTable"), types(outer));
+
+		((TableJoinSource) join).setLeftTable(ref("show"));
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(show));
+		assertEquals(List.of(), types(env));
+		assertEquals(List.of("toTable"), types(inner));
+		assertEquals(List.of("toText", "awk", "toTable"), types(outer));
+	}
+
+	/**
+	 * A text union whose members are read as text only elsewhere (here, by a copy) stays a text union: nothing is
+	 * inserted.
+	 */
+	@Test
+	void textUnionWithMembersReadAsTextOnlyElsewhereStaysATextUnion() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("env"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Source copy = CopySource.builder().from(ref("show")).computes(new ArrayList<>(List.of(awk()))).build();
+		final Source rows = CopySource.builder().from(ref("copy")).computes(new ArrayList<>(List.of(toTable()))).build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("union", union);
+		sources.put("copy", copy);
+		sources.put("rows", rows);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of(), types(show));
+		assertEquals(List.of(), types(env));
+		assertEquals(List.of("awk", "toTable"), types(union));
+	}
+
+	/**
+	 * A tool without columns returning a union of command outputs, one of them also joined as a table: the union is a
+	 * table union, both commands get their toTable, and the tool returns no text.
+	 */
+	@Test
+	void toolTextUnionWithAMemberReadAsATableReturnsATable() {
+		final Source link = CommandLineSource.builder().commandLine("ip link").build();
+		link.setKey("${source::tools.details.sources.link}");
+		final Source addr = CommandLineSource.builder().commandLine("ip addr").build();
+		addr.setKey("${source::tools.details.sources.addr}");
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of("${source::link}", "${source::addr}")))
+			.build();
+		union.setKey("${source::tools.details.sources.all}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("link", link);
+		sources.put("addr", addr);
+		sources.put("all", union);
+		final Source join = TableJoinSource.builder()
+			.leftTable("${source::link}")
+			.rightTable("${source::link}")
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.build();
+		join.setKey("${source::tools.details.sources.join}");
+		sources.put("join", join);
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(sources)
+			.result(new ToolResult("${source::all}", null))
+			.build();
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("details", tool);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(link));
+		assertEquals(List.of("toTable"), types(addr));
+		assertFalse(tool.isTextResult());
+	}
 }

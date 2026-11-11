@@ -992,9 +992,19 @@ public class ComputeChainGoldenCorpus {
 					: computes.get(computes.size() - 1).getOutputContentType();
 			}
 			if (source instanceof TableUnionSource union) {
-				return ContentTypeDesugaring.isTextUnion(union, sources, new HashSet<>())
-					? ContentType.TEXT
-					: ContentType.TABLE;
+				// A text union as written is text when its members still end in text once desugared: one read as a
+				// table elsewhere ends them all in a table (#1544)
+				return ContentTypeDesugaring.isTextUnion(union, sources, new HashSet<>()) &&
+					depth <= 5 &&
+					union.getTables()
+						.stream()
+						.map(table -> sources.get(ContentTypeDesugaring.resolveReference(table, union.getKey(), sources)))
+						.allMatch(member -> {
+							final List<Compute> computes = member.getComputes();
+							return (computes == null || computes.isEmpty()
+								? resultType(member, sources, depth + 1)
+								: computes.get(computes.size() - 1).getOutputContentType()) == ContentType.TEXT;
+						}) ? ContentType.TEXT : ContentType.TABLE;
 			}
 			return source.getResultContentType();
 		}
