@@ -381,10 +381,11 @@ class JawkSourceExtensionTest {
 			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
-		// $0 is the row joined with ";", the line a legacy script read: a ";" taken from $0 (a password) is kept
+		// $0 is the line the reference expanded to before #1559, trailing ";" included: a ";" taken from $0 (a
+		// password) is kept, and a script matching the line end sees the same text
 		final JawkSource wholeLine = JawkSource.builder().input(inputRef).script("{ print $0 }").build();
 		assertEquals(
-			SourceTable.ofText("fan1;x;y;3000\nfan2;z;0\n"),
+			SourceTable.ofText("fan1;x;y;3000;\nfan2;z;0;\n"),
 			new JawkSourceExtension().processSource(wholeLine, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
@@ -601,5 +602,18 @@ class JawkSourceExtensionTest {
 		telemetryManager.setHostProperties(hostProperties);
 
 		return telemetryManager;
+	}
+
+	/**
+	 * The $0 of a table row is the line a source reference gives: the trailing ";" kept, unless the row has a single
+	 * cell (whose only ";" is the trailing one).
+	 */
+	@Test
+	void testReferenceRowIsTheLegacyReferenceLine() {
+		assertEquals("a;b;", JawkSourceExtension.referenceRow(List.of("a", "b")));
+		assertEquals("token", JawkSourceExtension.referenceRow(List.of("token")));
+		assertEquals("pa;ss;", JawkSourceExtension.referenceRow(List.of("pa;ss")));
+		assertEquals(";;", JawkSourceExtension.referenceRow(Arrays.asList(null, "")));
+		assertEquals("", JawkSourceExtension.referenceRow(List.of()));
 	}
 }
