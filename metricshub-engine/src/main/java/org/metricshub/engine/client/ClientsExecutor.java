@@ -21,10 +21,13 @@ package org.metricshub.engine.client;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -244,6 +247,89 @@ public class ClientsExecutor {
 		);
 
 		return result;
+	}
+
+	/**
+	 * Execute JSON to table operation: one row per entry, the entry identifier then one cell per property, each
+	 * value kept whole (line feeds and separators included, empty cells kept).
+	 *
+	 * @param jsonSource    The JSON source string.
+	 * @param jsonEntryKey  The JSON entry key.
+	 * @param propertyList  The list of properties.
+	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
+	 * @return The rows, empty when the JSON does not parse.
+	 * @throws TimeoutException       If the execution times out.
+	 * @throws ExecutionException     If an execution exception occurs.
+	 * @throws InterruptedException   If the execution is interrupted.
+	 */
+	public List<List<String>> executeJson2Table(
+		String jsonSource,
+		String jsonEntryKey,
+		List<String> propertyList,
+		boolean eventParsing
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Table(jsonSource, jsonEntryKey, propertyList, eventParsing, telemetryManager.getHostname());
+	}
+
+	/**
+	 * Execute JSON to table operation: one row per entry, the entry identifier then one cell per property, each
+	 * value kept whole (line feeds and separators included, empty cells kept).
+	 *
+	 * @param jsonSource    The JSON source string.
+	 * @param jsonEntryKey  The JSON entry key.
+	 * @param propertyList  The list of properties.
+	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
+	 * @param hostname      The hostname, for logging purpose.
+	 * @return The rows, empty when the JSON does not parse.
+	 * @throws TimeoutException       If the execution times out.
+	 * @throws ExecutionException     If an execution exception occurs.
+	 * @throws InterruptedException   If the execution is interrupted.
+	 */
+	public static List<List<String>> executeJson2Table(
+		String jsonSource,
+		String jsonEntryKey,
+		List<String> propertyList,
+		boolean eventParsing,
+		String hostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		// jflat only writes text: it ends each cell with the separator and each row with a line feed. A separator
+		// that no value can hold makes the cells exact. ponytail: a jflat method returning the rows would drop this.
+		final String separator = cellSeparatorAbsentFrom(jsonSource == null ? "" : jsonSource);
+		final String csv = executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, eventParsing, hostname);
+		final List<List<String>> rows = new ArrayList<>();
+		if (csv == null) {
+			return rows;
+		}
+		final int width = propertyList.size() + 1;
+		final List<String> cells = Arrays.asList(csv.split(separator, -1));
+		for (int start = 0; start + width < cells.size(); start += width) {
+			final List<String> row = new ArrayList<>(cells.subList(start, start + width));
+			if (start > 0) {
+				// The line feed ending the previous row
+				row.set(0, row.get(0).substring(1));
+			}
+			rows.add(row);
+		}
+		return rows;
+	}
+
+	/**
+	 * A private-use character that a JSON document cannot decode to: neither the character nor its unicode escape
+	 * appears in the document.
+	 *
+	 * @param json The JSON document
+	 * @return the character, as a string that is also a literal regular expression
+	 */
+	static String cellSeparatorAbsentFrom(final String json) {
+		for (int c = 0xE000; c <= 0xF8FF; c++) {
+			if (
+				json.indexOf(c) < 0 &&
+					!Pattern.compile(String.format("\\\\u%04x", c), Pattern.CASE_INSENSITIVE).matcher(json).find()
+			) {
+				return String.valueOf((char) c);
+			}
+		}
+		throw new IllegalArgumentException("The JSON document holds every private-use character");
 	}
 
 	/**
