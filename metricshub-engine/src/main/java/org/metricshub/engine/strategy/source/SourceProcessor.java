@@ -438,19 +438,24 @@ public class SourceProcessor implements ISourceProcessor {
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
-		// A text union when every member that holds something is a text: the texts joined with a line feed, a blank
-		// line collapsed once. Otherwise the rows of the members, copied (a compute on the union must not change them)
+		// A text union when every member that holds something is a text: the non-empty texts one after the other, a
+		// line feed added only after a member that does not end with one; the members themselves are left untouched
+		// (blank lines, CRLF). Otherwise the rows of the members, copied (a compute on the union must not change them)
 		final boolean textUnion = sourceTablesToConcat.stream()
 			.anyMatch(member -> member.getContentType() == ContentType.TEXT) &&
 			sourceTablesToConcat.stream().allMatch(member -> member.getContentType() == ContentType.TEXT || member.isEmpty());
 		if (textUnion) {
-			return SourceTable.ofText(
-				sourceTablesToConcat.stream()
-					.filter(member -> member.getContentType() == ContentType.TEXT)
-					.map(SourceTable::getText)
-					.collect(Collectors.joining(NEW_LINE))
-					.replace("\n\n", NEW_LINE)
-			);
+			final StringBuilder text = new StringBuilder();
+			sourceTablesToConcat.stream()
+				.filter(member -> member.getContentType() == ContentType.TEXT && !member.isEmpty())
+				.map(SourceTable::getText)
+				.forEach(memberText -> {
+					if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
+						text.append(NEW_LINE);
+					}
+					text.append(memberText);
+				});
+			return SourceTable.ofText(text.toString());
 		}
 
 		return SourceTable.ofTable(
