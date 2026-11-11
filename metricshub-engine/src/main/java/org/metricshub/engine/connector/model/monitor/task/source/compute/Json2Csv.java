@@ -40,7 +40,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * The <code>json2Table</code> compute: one row per element of the entry key, one cell per property. The type
- * <code>json2Csv</code> is a deprecated alias with the same behavior; {@link #getType()} keeps the name written in
+ * <code>json2Csv</code> is a deprecated alias with the same behavior; <code>getType()</code> keeps the name written in
  * the connector, so the goldens and the content-type report of a connector still writing it are unchanged.
  */
 @Data
