@@ -112,8 +112,9 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		// The input has already been resolved by SourceUpdaterProcessor, like every other source field, unless it is a
 		// single source reference: the script reads that source as it is (#1559), a table structured, a text (or a
-		// source that is not available, logged) as the source updater expands it. A table row also gives $0 as its cells
-		// joined with ";", the line a script written before #1559 read (a password holding a ";" taken from $0 keeps it)
+		// source that is not available, logged) as the source updater expands it. A table row also gives $0 as the line
+		// the reference expanded to before #1559 (cells joined with ";", the trailing ";" kept unless the row has one
+		// cell), so a script reading $0 sees the same text (a password holding a ";" taken from $0 keeps it)
 		final String input = jawkSource.getInput();
 		final boolean reference = JawkSource.isSourceReference(input);
 		final List<List<String>> inputTable = reference
@@ -157,7 +158,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 					tableInput
 						? AwkExecutor.executeAwkToTable(
 							awkScript,
-							TableInputSource.withRecordText(inputTable, TABLE_SEP),
+							TableInputSource.withRecordText(inputTable, JawkSourceExtension::referenceRow),
 							awkEngine,
 							variables
 						)
@@ -169,7 +170,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 				tableInput
 					? AwkExecutor.executeAwk(
 						awkScript,
-						TableInputSource.withRecordText(inputTable, TABLE_SEP),
+						TableInputSource.withRecordText(inputTable, JawkSourceExtension::referenceRow),
 						awkEngine,
 						variables
 					).replace(WINDOWS_NEW_LINE, NEW_LINE)
@@ -179,5 +180,16 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);
 			return SourceTable.empty();
 		}
+	}
+
+	/**
+	 * The text of a table row as a source reference expands it: its cells joined with ";", with the trailing ";"
+	 * unless the row has a single cell.
+	 *
+	 * @param cells The cells of the row
+	 * @return the line
+	 */
+	static String referenceRow(final List<String> cells) {
+		return SourceUpdaterProcessor.referenceLine(SourceTable.lineToCsv(cells, TABLE_SEP, false));
 	}
 }

@@ -577,15 +577,25 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			? sourceTable.getText()
 			: SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, false);
 
-		// Remove last semicolon from the rows containing only one cell.
-		// For instance the last semicolon leads to HTTP Errors when the reference is defined in the Header attribute
-		return Stream.of(sourceReferenceContent.split(NEW_LINE)).map(val -> {
-			final int indexOfSemicolon = val.indexOf(SEMICOLON);
-			if (indexOfSemicolon == val.length() - 1) {
-				return val.replace(SEMICOLON, EMPTY);
-			}
-			return val;
-		}).collect(Collectors.joining(NEW_LINE));
+		return Stream.of(sourceReferenceContent.split(NEW_LINE))
+			.map(SourceUpdaterProcessor::referenceLine)
+			.collect(Collectors.joining(NEW_LINE));
+	}
+
+	/**
+	 * A line of a source reference as the reference gives it: a line whose only semicolon is its last character (a
+	 * row of one cell, serialized with its trailing separator) loses that semicolon, any other line is kept as is.
+	 * For instance, the last semicolon leads to HTTP errors when the reference is in a header.
+	 *
+	 * @param line A line of the serialized source
+	 * @return the line as the reference gives it
+	 */
+	public static String referenceLine(final String line) {
+		final int indexOfSemicolon = line.indexOf(SEMICOLON);
+		if (indexOfSemicolon == line.length() - 1) {
+			return line.replace(SEMICOLON, EMPTY);
+		}
+		return line;
 	}
 
 	/**
