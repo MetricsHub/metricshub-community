@@ -43,6 +43,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ICompositeSourceScriptExtension;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -56,37 +57,6 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	@Override
 	public boolean isValidSource(final Source source) {
 		return source instanceof JawkSource;
-	}
-
-	/**
-	 * The table of the source referenced by <code>input</code> when the script reads a table. A missing reference or
-	 * an unknown source gives an empty table (and a warning).
-	 */
-	private static List<List<String>> lookupInputTable(
-		final JawkSource jawkSource,
-		final String connectorId,
-		final TelemetryManager telemetryManager
-	) {
-		final String input = jawkSource.getInput();
-		if (input == null || input.isBlank()) {
-			log.warn(
-				"Hostname {} - Awk source {} reads its input as a table but declares no input source, the script reads no record.",
-				telemetryManager.getHostname(),
-				jawkSource.getKey()
-			);
-			return List.of();
-		}
-		return SourceTable.lookupSourceTable(input.trim(), connectorId, telemetryManager)
-			.map(SourceTable::getTable)
-			.orElseGet(() -> {
-				log.warn(
-					"Hostname {} - Awk source {} reads the table of {} but that source is not available, the script reads no record.",
-					telemetryManager.getHostname(),
-					jawkSource.getKey(),
-					input
-				);
-				return List.of();
-			});
 	}
 
 	@Override
@@ -139,13 +109,29 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		log.debug("Hostname {} - Awk Operation. Awk Script:\n{}\n", hostname, awkScript);
 
-		// The input has already been resolved by SourceUpdaterProcessor, like every other source field, unless the
-		// script reads it as a table: the reference is then resolved to the table itself
-		final boolean tableInput = jawkSource.getInputFormat() == ContentType.TABLE;
-		final String inputContent = tableInput ? null : jawkSource.getInput();
-		final List<List<String>> inputTable = tableInput
-			? lookupInputTable(jawkSource, connectorId, telemetryManager)
+		// The input has already been resolved by SourceUpdaterProcessor, like every other source field, unless it is a
+		// single source reference: the script reads that source as it is (#1559), a table structured, a text (or a
+		// source that is not available, logged) as the source updater expands it
+		final String input = jawkSource.getInput();
+		final boolean reference = JawkSource.isSourceReference(input);
+		final List<List<String>> inputTable = reference
+			? SourceTable.lookupSourceTable(input.trim(), connectorId, telemetryManager)
+				.filter(table -> table.getContentType() == ContentType.TABLE)
+				.map(SourceTable::getTable)
+				.orElse(null)
 			: null;
+		final boolean tableInput = inputTable != null;
+		final String inputContent = tableInput
+			? null
+			: reference
+				? SourceUpdaterProcessor.replaceSourceReferenceContent(
+					input,
+					telemetryManager,
+					connectorId,
+					"JawkSource",
+					source.getKey()
+				)
+				: input;
 
 		// Resolve the variables declared on the source, in one pass: every textual reference is substituted and a
 		// variable referencing a source is exposed to the script as an array holding that source's table

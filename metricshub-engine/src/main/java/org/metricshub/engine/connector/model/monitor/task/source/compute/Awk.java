@@ -43,6 +43,10 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * Represents an Awk computation task for monitoring.
+ * <p>
+ * The <code>input</code> property, once how the script read the source result, is deprecated and ignored: the
+ * script reads the source result as it is (#1559). A connector declaring it still loads, the property is dropped
+ * like any unknown one.
  */
 @Data
 @NoArgsConstructor
@@ -85,14 +89,6 @@ public class Awk extends Compute {
 	private Map<String, String> variables = new LinkedHashMap<>();
 
 	/**
-	 * How the script reads the source result: {@link ContentType#TEXT} (the text; a table is converted first by
-	 * the <code>toText</code> the content-type desugaring inserts) or {@link ContentType#TABLE} (each row is a record whose cells are
-	 * <code>$1..$NF</code>, nothing is serialized). Default text.
-	 */
-	@JsonSetter(nulls = SKIP)
-	private ContentType input = ContentType.TEXT;
-
-	/**
 	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
 	 * {@link ContentType#TABLE} (each <code>print</code> is one row, the text of <code>printf</code> is split into rows
 	* on <code>ORS</code> and into cells on <code>OFS</code>).
@@ -111,7 +107,6 @@ public class Awk extends Compute {
 	 * @param separators    The separators parameter for the AWK task.
 	 * @param selectColumns The selectColumns parameter for the AWK task.
 	 * @param variables     The variables to expose to the AWK script.
-	 * @param input         How the script reads the source result, null for text.
 	 * @param output        What the script produces, null for text.
 	 */
 	@Builder
@@ -124,7 +119,6 @@ public class Awk extends Compute {
 		@JsonProperty("separators") String separators,
 		@JsonProperty("selectColumns") String selectColumns,
 		@JsonProperty("variables") Map<String, String> variables,
-		@JsonProperty("input") ContentType input,
 		@JsonProperty("output") ContentType output
 	) {
 		super(type);
@@ -134,13 +128,19 @@ public class Awk extends Compute {
 		this.separators = separators;
 		this.selectColumns = selectColumns;
 		this.variables = variables == null ? new LinkedHashMap<>() : variables;
-		this.input = input == null ? ContentType.TEXT : input;
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 
+	/**
+	 * None: the script reads the source result as it is at run time, a text the traditional way (the lines are the
+	 * records, split on <code>FS</code>), a table structured (each row is a record whose cells are
+	 * <code>$1..$NF</code>, nothing is serialized). To read a table as text, write a <code>toText</code> before.
+	 *
+	 * @return null
+	 */
 	@Override
 	public ContentType getInputContentType() {
-		return input == null ? ContentType.TEXT : input;
+		return null;
 	}
 
 	@Override
@@ -160,7 +160,6 @@ public class Awk extends Compute {
 		addNonNull(stringJoiner, "- separators=", separators);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
-		addNonNull(stringJoiner, "- input=", input == ContentType.TABLE ? input : null);
 		addNonNull(stringJoiner, "- output=", output == ContentType.TABLE ? output : null);
 
 		return stringJoiner.toString();
@@ -176,7 +175,6 @@ public class Awk extends Compute {
 			.separators(separators)
 			.selectColumns(selectColumns)
 			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
-			.input(input)
 			.output(output)
 			.build();
 	}

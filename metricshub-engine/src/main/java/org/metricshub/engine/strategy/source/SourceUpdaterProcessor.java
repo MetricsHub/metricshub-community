@@ -475,8 +475,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
 			source instanceof TableJoinSource ||
-			// An awk source reading a table resolves its input reference to the table itself when the script runs
-			(source instanceof JawkSource jawk && jawk.getInputFormat() == ContentType.TABLE));
+			// An awk source resolves an input that is a single source reference when the script runs, to the source as it is
+			(source instanceof JawkSource jawk && JawkSource.isSourceReference(jawk.getInput())));
 	}
 
 	/**

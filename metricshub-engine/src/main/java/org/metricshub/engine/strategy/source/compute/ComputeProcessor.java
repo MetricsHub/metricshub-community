@@ -390,29 +390,12 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		// Table input: the rows are the records, nothing is serialized. Text input (the default, what every script
-		// written so far expects): the text, which the content-type desugaring converted from a table if needed
-		final boolean tableInput = awk.getInputContentType() == ContentType.TABLE;
+		// The input is the source result as it is at run time (#1559): a table is read structured (the rows are the
+		// records, nothing is serialized), a text the traditional way
+		final boolean tableInput = sourceTable.getContentType() == ContentType.TABLE;
 		final String input = tableInput ? null : sourceTable.getText();
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
-
-		// A table input meeting a text at run time (a wrong static content type, a member of a union that differs):
-		// the script would see no record, so the text is converted the canonical way and the mismatch is reported.
-		// An empty text (a source that failed) has no row to lose: no WARN
-		if (
-			tableInput &&
-				sourceTable.getContentType() == ContentType.TEXT &&
-				sourceTable.getText() != null &&
-				!sourceTable.getText().isEmpty()
-		) {
-			log.warn(
-				"Hostname {} - Compute Operation [{}] (Awk) reads a table but received a text, converted into a table. Connector [{}].",
-				hostname,
-				computeKey,
-				connectorId
-			);
-		}
 
 		final EmbeddedFile embeddedFile = maybeEmbeddedFile.get();
 		final String awkScript = embeddedFile.getContentAsString();
@@ -435,7 +418,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				final List<List<String>> rows = tableInput
 					? AwkExecutor.executeAwkToTable(
 						awkScript,
-						new TableInputSource(sourceTable.asTable()),
+						new TableInputSource(sourceTable.getTable()),
 						AwkExecutor.getUtilityEngine(),
 						variables
 					)
@@ -448,7 +431,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			String awkResult = tableInput
 				? AwkExecutor.executeAwk(
 					awkScript,
-					new TableInputSource(sourceTable.asTable()),
+					new TableInputSource(sourceTable.getTable()),
 					AwkExecutor.getUtilityEngine(),
 					variables
 				).replace(WINDOWS_NEW_LINE, NEW_LINE)

@@ -14,7 +14,6 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
@@ -238,8 +237,8 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
-	 * The same source mapped as well is read as a table: it gets the toTable appended, so its copy gets a table and
-	 * the copy's awk its toText.
+	 * The same source mapped as well is read as a table: it gets the toTable appended, so its copy gets a table,
+	 * which the copy's awk reads as it is (#1559).
 	 */
 	@Test
 	void textSourceCopiedAndMappedGetsItsToTable() {
@@ -252,11 +251,25 @@ class ContentTypeDesugaringTest {
 		new ContentTypeDesugaring().update(connector);
 
 		assertEquals(List.of("toTable"), types(snapshot));
-		assertEquals(List.of("toText", "awk", "toTable"), types(copy));
-		assertEquals(
-			List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_APPENDED),
-			kinds(connector)
-		);
+		assertEquals(List.of("awk", "toTable"), types(copy));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
+	/**
+	 * An awk source reads the source its input references as it is: a command read that way only keeps its text,
+	 * while a reference inside a text, expanded into the source's text, still reads it as a table (#1559).
+	 */
+	@Test
+	void awkSourceInputReadsItsSourceAsItIs() {
+		final Source snapshot = CommandLineSource.builder().commandLine("cat snapshot").build();
+		final JawkSource awkSource = JawkSource.builder().input(" " + KEY + " ").script("{ print $1 }").build();
+		final Connector connector = connectorWith(snapshot, awkSource, null);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of(), types(snapshot));
+
+		awkSource.setInput("MODE:FC;" + KEY);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("toTable"), types(snapshot));
 	}
 
 	/**
@@ -297,28 +310,69 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
+	/**
+	 * An awk reads the table it gets as it is: nothing before it, its text output gets the toTable of the table
+	 * compute that follows (#1559).
+	 */
 	@Test
-	void awkAfterTableSourceGetsGeneratedToTextAndIsReported() {
+	void awkAfterTableSourceNeedsNoConversion() {
 		final Source source = SnmpTableSource.builder()
 			.oid("1.3")
 			.selectColumns("ID,1")
 			.computes(
 				List.of(
-					Awk.builder().type("awk").script("${file::1}").build(),
+					Awk.builder().type("awk").script("{ print $1 }").build(),
 					KeepColumns.builder().type("keepColumns").columnNumbers("1").build()
 				)
 			)
 			.build();
 		final Connector connector = connectorWith(source);
-		connector.getEmbeddedFiles()
-			.put(1, EmbeddedFile.builder().id(1).content("BEGIN { FS = \";\" }\n{ print $1 }".getBytes()).build());
 		new ContentTypeDesugaring().update(connector);
 
-		// toText before the awk (fed a table), toTable after it (text into a table compute)
-		assertEquals(List.of("toText", "awk", "toTable", "keepColumns"), types(source));
-		assertTrue(((ToText) source.getComputes().get(0)).isGenerated());
-		assertEquals(List.of(Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED), kinds(connector));
-		assertTrue(connector.getContentTypeReport().get(1).detail().contains("sets FS to \";\""));
+		assertEquals(List.of("awk", "toTable", "keepColumns"), types(source));
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+	}
+
+	/**
+	 * A copy whose origin cannot be resolved (declared a table) and a union mixing a text and a table: an awk reads
+	 * either, nothing before it, and what follows it is typed by its output (#1559).
+	 */
+	@Test
+	void awkOnAnUnknownOrMixedTypeNeedsNoConversion() {
+		final Source copy = CopySource.builder()
+			.from("${source::monitors.other.discovery.sources.missing}")
+			.computes(
+				List.of(
+					Awk.builder().type("awk").script("{ print $1 }").build(),
+					KeepColumns.builder().type("keepColumns").columnNumbers("1").build()
+				)
+			)
+			.build();
+		Connector connector = connectorWith(copy);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("awk", "toTable", "keepColumns"), types(copy));
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), ref("snmp"))))
+			.computes(
+				new ArrayList<>(
+					List.of(
+						Awk.builder().type("awk").script("{ print $1, $2 }").output(ContentType.TABLE).build(),
+						KeepColumns.builder().type("keepColumns").columnNumbers("1").build()
+					)
+				)
+			)
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", CommandLineSource.builder().commandLine("show version").build());
+		sources.put("snmp", SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build());
+		sources.put("union", union);
+		connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("awk", "keepColumns"), types(union));
+		// The command, a member of a table union, gets its toTable
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
 	@Test
@@ -335,13 +389,10 @@ class ContentTypeDesugaringTest {
 		final Connector connector = connectorWith(source);
 		new ContentTypeDesugaring().update(connector);
 
-		// No toTable before keepColumns (it finds an empty table today); toText before the awk fed by its table;
-		// nothing appended: the awk compute ends the chain in text but the list ends with... a legacy dual producer
-		assertEquals(List.of("keepColumns", "toText", "awk", "toTable"), types(source));
-		assertEquals(
-			List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_APPENDED),
-			kinds(connector)
-		);
+		// No toTable before keepColumns (it finds an empty table today); nothing before the awk, which reads the
+		// table it gets; the awk compute ends the chain in text, a legacy dual producer: its toTable is appended
+		assertEquals(List.of("keepColumns", "awk", "toTable"), types(source));
+		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
 	@Test
@@ -414,7 +465,7 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("toTable", "keepColumns"), types(copyOfAwk));
 		assertEquals(
 			// The awk chain is read through its copy only: it keeps its text, no toTable is appended to it
-			List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED),
+			List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TABLE_INSERTED),
 			kinds(connector)
 		);
 	}
@@ -560,10 +611,10 @@ class ContentTypeDesugaringTest {
 		final List<ContentTypeReportEntry> report = List.copyOf(connector.getContentTypeReport());
 		new ContentTypeDesugaring().update(connector);
 		assertEquals(once, types(source));
-		assertEquals(List.of("toText", "awk", "toTable", "keepColumns"), once);
+		assertEquals(List.of("awk", "toTable", "keepColumns"), once);
 		// The report is rebuilt from the chain as written, so a second pass loses no finding
 		assertEquals(report, connector.getContentTypeReport());
-		assertEquals(List.of(Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE, Kind.TO_TABLE_INSERTED), kinds(connector));
+		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 	}
 
 	/**
@@ -737,42 +788,33 @@ class ContentTypeDesugaringTest {
 	}
 
 	/**
-	 * An awk compute declaring <code>input: table</code> reads the table itself: no toText is inserted, and its
-	 * <code>output: table</code> ends the chain in a table, so nothing is appended either. A printf in a script
-	 * producing a table is reported.
-	 */
-	/**
-	 * An awk reading a table after a pure text source gets a real toTable: it opted into a table, which the source
-	 * does not produce.
+	 * An awk after a pure text source reads that text: nothing before it (#1559).
 	 */
 	@Test
-	void awkWithTableInputAfterPureTextSourceGetsARealToTable() {
+	void awkAfterPureTextSourceReadsTheText() {
 		final Source source = HttpSource.builder()
 			.url("/")
-			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").build()))
 			.build();
 		final Connector connector = connectorWith(source);
 		new ContentTypeDesugaring().update(connector);
 
-		// The awk still writes text: the chain ends with the usual generated toTable
-		assertEquals(List.of("toTable", "awk", "toTable"), types(source));
-		assertTrue(((ToTable) source.getComputes().get(0)).isGenerated());
-		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(connector));
+		// The awk writes text: the chain ends with the usual generated toTable
+		assertEquals(List.of("awk", "toTable"), types(source));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
+	/**
+	 * An awk with <code>output: table</code> ends the chain in a table: nothing before it, nothing after it.
+	 */
 	@Test
-	void awkWithTableInputAndOutputNeedsNoConversion() {
+	void awkWithTableOutputNeedsNoConversion() {
 		final Source source = SnmpTableSource.builder()
 			.oid("1.3")
 			.selectColumns("ID,1")
 			.computes(
 				List.of(
-					Awk.builder()
-						.type("awk")
-						.script("{ printf \"%s\", $1 }")
-						.input(ContentType.TABLE)
-						.output(ContentType.TABLE)
-						.build(),
+					Awk.builder().type("awk").script("{ printf \"%s\", $1 }").output(ContentType.TABLE).build(),
 					KeepColumns.builder().type("keepColumns").columnNumbers("1").build()
 				)
 			)
@@ -783,15 +825,14 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("awk", "keepColumns"), types(source));
 		assertEquals(List.of(), kinds(connector));
 
-		// Text output after a table input: the following table compute needs a toTable, and the chain ends typed
-		final Source textOut = CommandLineSource.builder()
+		final Source fromText = CommandLineSource.builder()
 			.commandLine("ls")
-			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
+			.computes(List.of(Awk.builder().type("awk").script("{ print $1 }").output(ContentType.TABLE).build()))
 			.build();
-		final Connector textOutConnector = connectorWith(textOut);
-		new ContentTypeDesugaring().update(textOutConnector);
-		assertEquals(List.of("toTable", "awk", "toTable"), types(textOut));
-		assertEquals(List.of(Kind.TO_TABLE_INSERTED, Kind.TO_TABLE_APPENDED), kinds(textOutConnector));
+		final Connector fromTextConnector = connectorWith(fromText);
+		new ContentTypeDesugaring().update(fromTextConnector);
+		assertEquals(List.of("awk"), types(fromText));
+		assertEquals(List.of(), kinds(fromTextConnector));
 	}
 
 	@Test
@@ -910,7 +951,7 @@ class ContentTypeDesugaringTest {
 
 	/**
 	 * A union mixing a command output and a table stays a table union: the command gets its toTable, the awk on the
-	 * union its toText, as before.
+	 * union reads the table as it is (#1559).
 	 */
 	@Test
 	void mixedUnionStaysATableUnion() {
@@ -927,9 +968,9 @@ class ContentTypeDesugaringTest {
 		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
 		new ContentTypeDesugaring().update(connector);
 
-		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TO_TEXT_INSERTED, Kind.AWK_ON_TABLE), kinds(connector));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 		assertEquals(List.of("toTable"), types(show));
-		assertEquals(List.of("toText", "awk", "toTable"), types(union));
+		assertEquals(List.of("awk", "toTable"), types(union));
 	}
 
 	/**
@@ -958,7 +999,7 @@ class ContentTypeDesugaringTest {
 
 	/**
 	 * A text union with a pure text member has no complete table (the member brings no rows): a table compute on it
-	 * is reported and left alone, as on a pure text source, and an awk reading a table gets a real toTable.
+	 * is reported and left alone, as on a pure text source, and an awk reads the text, nothing before it.
 	 */
 	@Test
 	void textUnionWithAPureTextMemberHasNoTable() {
@@ -978,12 +1019,10 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
 		assertEquals(List.of("keepColumns"), types(union));
 
-		union.setComputes(
-			new ArrayList<>(List.of(Awk.builder().type("awk").script("{ print $1 }").input(ContentType.TABLE).build()))
-		);
+		union.setComputes(new ArrayList<>(List.of(Awk.builder().type("awk").script("{ print $1 }").build())));
 		new ContentTypeDesugaring().update(connector);
-		assertEquals(List.of("toTable", "awk", "toTable"), types(union));
-		assertTrue(((ToTable) union.getComputes().get(0)).isGenerated());
+		assertEquals(List.of("awk", "toTable"), types(union));
+		assertTrue(((ToTable) union.getComputes().get(1)).isGenerated());
 	}
 
 	/**
