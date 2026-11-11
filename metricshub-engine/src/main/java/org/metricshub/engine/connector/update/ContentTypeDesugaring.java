@@ -552,6 +552,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		if (source instanceof StaticSource staticSource && contains(staticSource.getValue(), TABLE_SEP)) {
 			report.add(new ContentTypeReportEntry(key, Kind.STATIC_CSV, "value=" + staticSource.getValue()));
 		}
+		if (source instanceof TableUnionSource union) {
+			reportTextMembersOfTableUnion(union, sources, textOnly, report);
+		}
 
 		if (source.getComputes() == null) {
 			return;
@@ -627,6 +630,35 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		}
 
 		source.setComputes(desugared);
+	}
+
+	/**
+	 * Reports the members of a table union, as desugared, that end in text: at run time the union concatenates the
+	 * rows of its members, and a text brings none. A union with an unresolved member is left alone, since it may be
+	 * a text union at run time.
+	 */
+	private static void reportTextMembersOfTableUnion(
+		final TableUnionSource union,
+		final Map<String, Source> sources,
+		final Set<String> textOnly,
+		final List<ContentTypeReportEntry> report
+	) {
+		if (union.getTables() == null || textUnionProducer(union, sources, new HashSet<>(), textOnly) != null) {
+			return;
+		}
+		final Map<String, State> ends = new LinkedHashMap<>();
+		for (final String table : union.getTables()) {
+			final Source member = table == null ? null : sources.get(resolveReference(table, union.getKey(), sources));
+			if (member == null) {
+				return;
+			}
+			ends.put(table, chainEnd(member, sources, new HashSet<>(), textOnly));
+		}
+		ends.forEach((table, end) -> {
+			if (end.type() == ContentType.TEXT) {
+				report.add(new ContentTypeReportEntry(union.getKey(), Kind.TEXT_MEMBER_OF_TABLE_UNION, "member " + table));
+			}
+		});
 	}
 
 	/**

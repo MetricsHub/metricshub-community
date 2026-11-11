@@ -1211,4 +1211,102 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("toTable"), types(addr));
 		assertFalse(tool.isTextResult());
 	}
+
+	/**
+	 * A member shared by two text unions, read as a table through the first one: it ends in a table, which it is for
+	 * every reader, so the second union is a table union too. Its other member gets its toTable, and its awk, like the
+	 * awk of a copy of the shared member, gets a toText: they read the rows as text.
+	 */
+	@Test
+	void textUnionSharingAMemberWithAUnionThatBecameATableUnionBecomesATableUnion() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source env = CommandLineSource.builder().commandLine("show environment").build();
+		final Source other = CommandLineSource.builder().commandLine("show inventory").build();
+		final Source u1 = TableUnionSource.builder().tables(new ArrayList<>(List.of(ref("show"), ref("env")))).build();
+		final Source u2 = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("env"), ref("other"))))
+			.computes(new ArrayList<>(List.of(awk())))
+			.build();
+		final Source copy = CopySource.builder().from(ref("env")).computes(new ArrayList<>(List.of(awk()))).build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("env", env);
+		sources.put("other", other);
+		sources.put("u1", u1);
+		sources.put("u2", u2);
+		sources.put("copy", copy);
+		sources.put("snmp", SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build());
+		sources.put("join", joinOf("show"));
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("u1")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(show));
+		assertEquals(List.of("toTable"), types(env));
+		assertEquals(List.of("toTable"), types(other));
+		assertEquals(List.of(), types(u1));
+		assertEquals(List.of("toText", "awk", "toTable"), types(u2));
+		assertEquals(List.of("toText", "awk", "toTable"), types(copy));
+	}
+
+	/**
+	 * A tool without columns returning a compute-free copy of a command that the tool also joins as a table: the
+	 * command gets its toTable, so the copy is a table, and the tool returns it as a table, as it returns the command
+	 * itself.
+	 */
+	@Test
+	void toolCopyOfACommandReadAsATableReturnsATable() {
+		final Source link = CommandLineSource.builder().commandLine("ip link").build();
+		link.setKey("${source::tools.details.sources.link}");
+		final Source copy = CopySource.builder().from("${source::link}").build();
+		copy.setKey("${source::tools.details.sources.copy}");
+		final Source join = TableJoinSource.builder()
+			.leftTable("${source::link}")
+			.rightTable("${source::link}")
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.build();
+		join.setKey("${source::tools.details.sources.join}");
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("link", link);
+		sources.put("copy", copy);
+		sources.put("join", join);
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(sources)
+			.result(new ToolResult("${source::copy}", null))
+			.build();
+		final Connector connector = Connector.builder().build();
+		connector.getTools().put("details", tool);
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(link));
+		assertFalse(tool.isTextResult());
+
+		tool.setResult(new ToolResult("${source::link}", null));
+		new ContentTypeDesugaring().update(connector);
+		assertFalse(tool.isTextResult());
+	}
+
+	/**
+	 * A pure text member of a union that became a table union brings no rows: it is reported.
+	 */
+	@Test
+	void pureTextMemberOfATableUnionIsReported() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source http = HttpSource.builder().path("/status").build();
+		final Source union = TableUnionSource.builder().tables(new ArrayList<>(List.of(ref("show"), ref("http")))).build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("http", http);
+		sources.put("union", union);
+		sources.put("snmp", SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build());
+		sources.put("join", joinOf("show"));
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of("toTable"), types(show));
+		assertEquals(List.of(), types(http));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED, Kind.TEXT_MEMBER_OF_TABLE_UNION), kinds(connector));
+		assertEquals(ref("union"), connector.getContentTypeReport().get(1).sourceKey());
+		assertEquals("member " + ref("http"), connector.getContentTypeReport().get(1).detail());
+	}
 }

@@ -49,6 +49,11 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		 */
 		TABLE_COMPUTE_ON_TEXT_SOURCE,
 		/**
+		 * A member of a table union ends in a text that is not converted (a pure text producer, an explicit
+		 * <code>toText</code>): it brings no rows. No conversion is inserted.
+		 */
+		TEXT_MEMBER_OF_TABLE_UNION,
+		/**
 		 * A text compute that parses a text (<code>json2Csv</code>, <code>xml2Csv</code>) follows a table producer:
 		 * it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
 		 */
