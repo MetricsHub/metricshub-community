@@ -472,12 +472,13 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Whether this source must have protected references that shouldn't be replaced by the current updater
+	 * Whether this source must have protected references that shouldn't be replaced by the current updater: its
+	 * source references are read as sources, never interpolated in its fields.
 	 *
 	 * @param source {@link Source} instance
 	 * @return boolean value
 	 */
-	private boolean isSourceWithProtectedReferences(final Source source) {
+	public static boolean isSourceWithProtectedReferences(final Source source) {
 		return (source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||

@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_RE
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.ArrayList;
@@ -52,8 +53,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
  * Represents a source that executes an jawk script to retrieve data.
  * <p>
  * The <code>inputFormat</code> property, once how the script read its input, is deprecated and ignored: an input
- * that is a single source reference is read as that source is (#1559). A connector declaring it still loads, the
- * property is dropped like any unknown one.
+ * that is a single source reference is read as that source is (#1559). A connector declaring it still loads, its
+ * value is dropped and the content-type check reports it (<code>inputFormatDeclared</code>).
  */
 @Data
 @NoArgsConstructor
@@ -99,6 +100,24 @@ public class JawkSource extends Source {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private ContentType output = ContentType.TEXT;
+
+	/**
+	 * Whether the connector writes the deprecated, ignored <code>inputFormat</code> property, which the content-type
+	 * check reports. Never serialized, not part of the equality, not copied.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean inputFormatDeclared;
+
+	/**
+	 * Records that the connector writes the deprecated <code>inputFormat</code> property, whose value is ignored.
+	 *
+	 * @param inputFormat The ignored value
+	 */
+	@JsonSetter("inputFormat")
+	private void declareInputFormat(final Object inputFormat) {
+		inputFormatDeclared = true;
+	}
 
 	/**
 	 * Builder for creating instances of {@code JawkSource}.

@@ -228,6 +228,29 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
+	 * What the source produces before its written computes run, as written: what the source (a copy: its origin's
+	 * chain, a text union: its members' texts) produces.
+	 *
+	 * @param source  The source
+	 * @param sources Every source by key
+	 * @return the content type
+	 */
+	static ContentType writtenStartType(final Source source, final Map<String, Source> sources) {
+		return start(source, sources, new HashSet<>(), null).type();
+	}
+
+	/**
+	 * What the source's chain produces as written, no generated conversion counted.
+	 *
+	 * @param source  The source
+	 * @param sources Every source by key
+	 * @return the content type
+	 */
+	static ContentType writtenEndType(final Source source, final Map<String, Source> sources) {
+		return chainEnd(source, sources, new HashSet<>(), null).type();
+	}
+
+	/**
 	 * What the source's chain produces, as written: what the source (or, for a copy, its origin's chain) produces,
 	 * through the source's written computes. Once the sources read as text only are known, a legacy dual chain that is
 	 * not among them produces a table: {@link #desugar} appends its <code>toTable</code>, so that what reads it (a copy,
@@ -603,7 +626,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	/**
 	 * Whether the compute was inserted by this step. A later pass starts from the chain without them.
 	 */
-	private static boolean isGenerated(final Compute compute) {
+	static boolean isGenerated(final Compute compute) {
 		return (compute instanceof ToTable toTable && toTable.isGenerated()) ||
 			(compute instanceof ToText toText && toText.isGenerated());
 	}

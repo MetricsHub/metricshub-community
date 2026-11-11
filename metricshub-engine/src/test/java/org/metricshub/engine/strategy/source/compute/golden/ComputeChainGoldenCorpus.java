@@ -50,6 +50,8 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.ContentTypeFinding;
+import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.IntermediateConnector;
@@ -798,6 +800,43 @@ public class ComputeChainGoldenCorpus {
 		}
 		report.append("Connectors with findings: ").append(connectorsWithFindings).append('\n');
 		totals.forEach((kind, count) -> report.append("  ").append(kind).append(": ").append(count).append('\n'));
+		return report.toString();
+	}
+
+	/**
+	 * Renders the findings of the load-time content-type check of the selected connectors of each repository: the
+	 * worklist of step 2 of #1560, whose exit criterion is an empty list.
+	 *
+	 * @param stores The connector store of each repository, in order
+	 * @return the report
+	 */
+	public static String contentTypeCheckReport(final Map<Repository, ConnectorStore> stores) {
+		final StringBuilder report = new StringBuilder("== Content type check (#1560)\n");
+		final Map<Rule, Integer> totals = new EnumMap<>(Rule.class);
+		int connectorsWithFindings = 0;
+		for (final Map.Entry<Repository, ConnectorStore> repository : stores.entrySet()) {
+			final Map<Rule, Integer> counts = new EnumMap<>(Rule.class);
+			final Path root = repository.getKey().getRoot();
+			report.append("# ").append(root.toAbsolutePath().normalize()).append('\n');
+			for (final Map.Entry<String, Connector> entry : new TreeMap<>(repository.getValue().getStore()).entrySet()) {
+				final List<ContentTypeFinding> findings = entry.getValue().getContentTypeFindings();
+				if (findings.isEmpty() || !isSelected(entry.getKey())) {
+					continue;
+				}
+				connectorsWithFindings++;
+				report.append('\n').append(entry.getKey()).append(" (").append(findings.size()).append(")\n");
+				for (final ContentTypeFinding finding : findings) {
+					report.append("  ").append(finding).append('\n');
+					counts.merge(finding.rule(), 1, Integer::sum);
+				}
+			}
+			report.append("\nCheck totals for ").append(root.getFileName()).append(":\n");
+			counts.forEach((rule, count) -> report.append("  ").append(rule).append(": ").append(count).append('\n'));
+			counts.forEach((rule, count) -> totals.merge(rule, count, Integer::sum));
+			report.append('\n');
+		}
+		report.append("Connectors with check findings: ").append(connectorsWithFindings).append('\n');
+		totals.forEach((rule, count) -> report.append("  ").append(rule).append(": ").append(count).append('\n'));
 		return report.toString();
 	}
 

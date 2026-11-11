@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.LinkedHashMap;
@@ -45,8 +46,8 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
  * Represents an Awk computation task for monitoring.
  * <p>
  * The <code>input</code> property, once how the script read the source result, is deprecated and ignored: the
- * script reads the source result as it is (#1559). A connector declaring it still loads, the property is dropped
- * like any unknown one.
+ * script reads the source result as it is (#1559). A connector declaring it still loads, its value is dropped and
+ * the content-type check reports it (<code>inputDeclared</code>).
  */
 @Data
 @NoArgsConstructor
@@ -96,6 +97,24 @@ public class Awk extends Compute {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private ContentType output = ContentType.TEXT;
+
+	/**
+	 * Whether the connector writes the deprecated, ignored <code>input</code> property, which the content-type check
+	 * reports. Never serialized, not part of the equality, not copied.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean inputDeclared;
+
+	/**
+	 * Records that the connector writes the deprecated <code>input</code> property, whose value is ignored.
+	 *
+	 * @param input The ignored value
+	 */
+	@JsonSetter("input")
+	private void declareInput(final Object input) {
+		inputDeclared = true;
+	}
 
 	/**
 	 * Construct a new instance of Awk.

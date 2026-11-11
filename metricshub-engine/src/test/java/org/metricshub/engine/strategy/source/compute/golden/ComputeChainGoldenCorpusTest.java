@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -521,7 +524,24 @@ class ComputeChainGoldenCorpusTest {
 			assertTrue(!written.contains("rawData"), written);
 
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
-			assertEquals(0, GoldenCheck.run(List.of(root), true), "the stored golden matches");
+			// The report ends with the content-type check: GoldenA's append reads the text of its commandLine
+			final PrintStream out = System.out;
+			final ByteArrayOutputStream printed = new ByteArrayOutputStream();
+			System.setOut(new PrintStream(printed, true, StandardCharsets.UTF_8));
+			try {
+				assertEquals(0, GoldenCheck.run(List.of(root), true), "the stored golden matches");
+			} finally {
+				System.setOut(out);
+			}
+			final String report = printed.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+			final String check = report.substring(report.indexOf("== Content type check (#1560)\n"));
+			assertTrue(
+				check.contains(
+					"\nGoldenA (1)\n  TEXT_FEEDS_TABLE ${source::monitors.thing.simple.sources.s} at append #0: expected TABLE"
+				),
+				check
+			);
+			assertTrue(check.contains("Connectors with check findings: 1\n  TEXT_FEEDS_TABLE: 1\n"), check);
 
 			System.clearProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY);
 			assertTrue(ComputeChainGoldenCorpus.isSelected("GoldenB"));
