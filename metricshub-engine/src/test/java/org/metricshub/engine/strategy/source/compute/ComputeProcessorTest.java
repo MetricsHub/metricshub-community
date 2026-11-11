@@ -1335,7 +1335,79 @@ class ComputeProcessorTest {
 		computeProcessor.process(jsonToCsv);
 		assertEquals(expectedResult, sourceTable);
 		Mockito.verify(clientsExecutorMock)
-			.executeJson2Csv(rawData, "/monitors", List.of("id", "name", "monitorType", "hostId"), ";", true);
+			.executeJson2Table(rawData, "/monitors", List.of("id", "name", "monitorType", "hostId"), true);
+	}
+
+	/**
+	 * Each property gives one cell, whatever its value holds: a line feed, the separator, nothing at the end.
+	 * Nested and array properties resolve as before.
+	 */
+	@Test
+	void testJson2CsvKeepsEachValueInItsCell() throws Exception {
+		final String json = """
+			{"items":[
+			{"name":"a","text":"line 1\\nline 2","last":""},
+			{"name":"b;c","text":"x|y","last":"","nested":{"id":7},"list":[{"v":"first"}]},
+			{"name":"\\u00e9","text":"\\n","last":"end"}
+			]}""";
+
+		for (final String separator : List.of(";", "|", "\u001F")) {
+			for (final Json2Csv.ParsingMode parsingMode : Json2Csv.ParsingMode.values()) {
+				sourceTable.setText(json);
+				computeProcessor.process(
+					Json2Csv.builder()
+						.entryKey("/items")
+						.properties("name;text;nested/id;list[0]/v;last")
+						.separator(separator)
+						.parsingMode(parsingMode)
+						.build()
+				);
+				assertEquals(
+					SourceTable.ofTable(
+						List.of(
+							List.of("/items[0]", "a", "line 1\nline 2", "", "", ""),
+							List.of("/items[1]", "b;c", "x|y", "7", "first", ""),
+							List.of("/items[2]", "\u00e9", "\n", "", "", "end")
+						)
+					),
+					sourceTable,
+					separator + " " + parsingMode
+				);
+			}
+		}
+
+		// A document that does not parse gives an empty table
+		sourceTable.setText("{not json");
+		computeProcessor.process(Json2Csv.builder().entryKey("/items").properties("name").build());
+		assertEquals(SourceTable.empty(), sourceTable);
+
+		// The cells are cut on a character the document holds neither raw nor escaped (in any case): here U+E003
+		final String privateUse = new String(new char[] { 0xE000, 0xE001, 0xE002 });
+		assertEquals(
+			List.of(List.of("[0]", privateUse, "x")),
+			ClientsExecutor.executeJson2Table(
+				"[{\"v\":\"\\ue000\\uE001" + privateUse.charAt(2) + "\",\"w\":\"x\"}]",
+				"/",
+				List.of("v", "w"),
+				false,
+				LOCALHOST
+			)
+		);
+
+		// A ../ property resolves in both parsing modes
+		for (final Json2Csv.ParsingMode parsingMode : Json2Csv.ParsingMode.values()) {
+			sourceTable.setText("{\"members\":[{\"name\":\"m;1\",\"disks\":[{\"id\":\"d1\"},{\"id\":\"d\\n2\"}]}]}");
+			computeProcessor.process(
+				Json2Csv.builder().entryKey("/members/*/disks").properties("id;../name").parsingMode(parsingMode).build()
+			);
+			assertEquals(
+				SourceTable.ofTable(
+					List.of(List.of("/members[0]/disks[0]", "d1", "m;1"), List.of("/members[0]/disks[1]", "d\n2", "m;1"))
+				),
+				sourceTable,
+				parsingMode.name()
+			);
+		}
 	}
 
 	@Test

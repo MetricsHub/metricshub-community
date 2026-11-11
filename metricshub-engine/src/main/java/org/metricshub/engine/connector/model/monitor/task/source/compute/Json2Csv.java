@@ -39,7 +39,9 @@ import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
- * Represents a Json2Csv computation task for monitoring.
+ * The <code>json2Table</code> compute: one row per element of the entry key, one cell per property. The type
+ * <code>json2Csv</code> is a deprecated alias with the same behavior; <code>getType()</code> keeps the name written in
+ * the connector, so the goldens and the content-type report of a connector still writing it are unchanged.
  */
 @Data
 @NoArgsConstructor
@@ -59,7 +61,9 @@ public class Json2Csv extends Compute {
 	 */
 	private String properties;
 	/**
-	 * The separator for Json2Csv computation.
+	 * Deprecated, ignored: the compute builds its rows from the JSON values, with one cell per property, so no
+	 * separator splits them. Still accepted so that the connectors setting it load. Only the text produced by the
+	 * AWK <code>json2csv()</code> function uses a separator.
 	 */
 	private String separator;
 
@@ -75,7 +79,7 @@ public class Json2Csv extends Compute {
 	 * @param type        The type of the computation task.
 	 * @param entryKey    The entry key for Json2Csv computation.
 	 * @param properties  The properties for Json2Csv computation.
-	 * @param separator   The separator for Json2Csv computation.
+	 * @param separator   Deprecated, ignored by the compute; still accepted so that the connectors setting it load.
 	 * @param parsingMode How the JSON document is parsed; null defaults to {@link ParsingMode#TREE}.
 	 */
 	@Builder

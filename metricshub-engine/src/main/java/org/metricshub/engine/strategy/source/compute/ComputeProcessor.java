@@ -1074,19 +1074,15 @@ public class ComputeProcessor implements IComputeProcessor {
 		try {
 			final List<String> jsonToCsvProperties = SourceTable.lineToList(properties, SEMICOLON);
 
-			final String json2csvResult = clientsExecutor.executeJson2Csv(
-				sourceTable.getText(),
-				json2csv.getEntryKey(),
-				jsonToCsvProperties,
-				json2csv.getSeparator(),
-				json2csv.getParsingMode() == Json2Csv.ParsingMode.EVENTS
-			);
-
+			// The rows come straight from the JSON values: the separator plays no part.
 			// A document that does not parse gives no rows: the result is a table all the same
 			sourceTable.setTable(
-				json2csvResult == null || json2csvResult.isEmpty()
-					? new ArrayList<>()
-					: SourceTable.csvToTable(json2csvResult, json2csv.getSeparator())
+				clientsExecutor.executeJson2Table(
+					sourceTable.getText(),
+					json2csv.getEntryKey(),
+					jsonToCsvProperties,
+					json2csv.getParsingMode() == Json2Csv.ParsingMode.EVENTS
+				)
 			);
 		} catch (Exception e) {
 			logComputeError(
