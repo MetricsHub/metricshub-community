@@ -37,7 +37,9 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -197,10 +199,26 @@ public final class ConnectorToolCallbacks {
 			.build();
 		strategy.run();
 
-		if (tool.isTextResult()) {
-			return new ToolText(strategy.getResult().asText().replace("\r\n", "\n"));
+		return toolResponse(tool, strategy.getResult());
+	}
+
+	/**
+	 * What a tool returns for its result source. A tool without columns returns its text when the desugaring found
+	 * its result ends in text, and also when the result is a non-empty text at run time only: a table union whose
+	 * members converted to tables all came back empty leaves the text of its pure-text member. Any other result is
+	 * returned as rows, a text split as any text read as a table.
+	 *
+	 * @param tool   the tool
+	 * @param result the result source's table
+	 * @return a {@link ToolText} or a {@link ToolTable}
+	 */
+	static Object toolResponse(final ConnectorTool tool, final SourceTable result) {
+		final List<String> columns = tool.getResult().columns();
+		final boolean noColumns = columns == null || columns.isEmpty();
+		if (tool.isTextResult() || (noColumns && result.getContentType() == ContentType.TEXT && !result.isEmpty())) {
+			return new ToolText(result.asText().replace("\r\n", "\n"));
 		}
-		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
+		return new ToolTable(columns, result.asTable());
 	}
 
 	/**

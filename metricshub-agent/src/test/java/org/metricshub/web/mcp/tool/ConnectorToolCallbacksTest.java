@@ -20,7 +20,12 @@ import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.tool.ConnectorTool;
+import org.metricshub.engine.connector.model.tool.ToolResult;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.web.mcp.tool.ConnectorToolCallbacks.ToolTable;
+import org.metricshub.web.mcp.tool.ConnectorToolCallbacks.ToolText;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.ToolCallback;
@@ -100,6 +105,42 @@ class ConnectorToolCallbacksTest {
 		assertTrue(text.startsWith("first note"), text);
 		assertTrue(text.contains("second, then a semicolon; here"), text);
 		assertTrue(response.get("rows") == null, response.toString());
+	}
+
+	/**
+	 * The response follows the result's run-time content: a table union whose members converted to tables all came
+	 * back empty leaves the text of its pure-text member, which a tool without columns returns as text, not as an empty
+	 * table.
+	 */
+	@Test
+	void testToolResponseFollowsTheRunTimeResult() {
+		final ConnectorTool noColumns = new ConnectorTool();
+		// No columns: null, frozen as an empty list
+		noColumns.setResult(new ToolResult("${source::union}", null));
+
+		// A text at run time only: the text, as it is
+		assertEquals(
+			new ToolText("a;b\nc"),
+			ConnectorToolCallbacks.toolResponse(noColumns, SourceTable.ofText("a;b\r\nc"))
+		);
+		// An empty text (members that failed): an empty table, as before
+		assertEquals(
+			new ToolTable(List.of(), List.of()),
+			ConnectorToolCallbacks.toolResponse(noColumns, SourceTable.ofText(""))
+		);
+		// A table: its rows
+		assertEquals(
+			new ToolTable(List.of(), List.of(List.of("x", "y"))),
+			ConnectorToolCallbacks.toolResponse(noColumns, SourceTable.ofTable(List.of(List.of("x", "y"))))
+		);
+
+		// With columns, a text at run time is split into rows instead of being lost
+		final ConnectorTool withColumns = new ConnectorTool();
+		withColumns.setResult(new ToolResult("${source::union}", List.of("name", "value")));
+		assertEquals(
+			new ToolTable(List.of("name", "value"), List.of(List.of("a", "1"), List.of("b", "2"))),
+			ConnectorToolCallbacks.toolResponse(withColumns, SourceTable.ofText("a;1\nb;2"))
+		);
 	}
 
 	@Test
