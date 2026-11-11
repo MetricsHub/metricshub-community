@@ -23,6 +23,7 @@ package org.metricshub.extension.jawk;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.jawk.Awk;
@@ -111,7 +112,8 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		// The input has already been resolved by SourceUpdaterProcessor, like every other source field, unless it is a
 		// single source reference: the script reads that source as it is (#1559), a table structured, a text (or a
-		// source that is not available, logged) as the source updater expands it
+		// source that is not available, logged) as the source updater expands it. A table row also gives $0 as its cells
+		// joined with ";", the line a script written before #1559 read (a password holding a ";" taken from $0 keeps it)
 		final String input = jawkSource.getInput();
 		final boolean reference = JawkSource.isSourceReference(input);
 		final List<List<String>> inputTable = reference
@@ -153,15 +155,24 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 				// Each print is a row
 				return SourceTable.ofTable(
 					tableInput
-						? AwkExecutor.executeAwkToTable(awkScript, new TableInputSource(inputTable), awkEngine, variables)
+						? AwkExecutor.executeAwkToTable(
+							awkScript,
+							TableInputSource.withRecordText(inputTable, TABLE_SEP),
+							awkEngine,
+							variables
+						)
 						: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables)
 				);
 			}
 			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			return SourceTable.ofText(
 				tableInput
-					? AwkExecutor.executeAwk(awkScript, new TableInputSource(inputTable), awkEngine, variables)
-						.replace(WINDOWS_NEW_LINE, NEW_LINE)
+					? AwkExecutor.executeAwk(
+						awkScript,
+						TableInputSource.withRecordText(inputTable, TABLE_SEP),
+						awkEngine,
+						variables
+					).replace(WINDOWS_NEW_LINE, NEW_LINE)
 					: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables)
 			);
 		} catch (Exception e) {

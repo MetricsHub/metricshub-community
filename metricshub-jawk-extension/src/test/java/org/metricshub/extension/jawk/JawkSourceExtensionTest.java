@@ -381,6 +381,13 @@ class JawkSourceExtensionTest {
 			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
+		// $0 is the row joined with ";", the line a legacy script read: a ";" taken from $0 (a password) is kept
+		final JawkSource wholeLine = JawkSource.builder().input(inputRef).script("{ print $0 }").build();
+		assertEquals(
+			SourceTable.ofText("fan1;x;y;3000\nfan2;z;0\n"),
+			new JawkSourceExtension().processSource(wholeLine, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
 		// The text written from a table input never holds CRLF
 		final JawkSource crlf = JawkSource.builder().input(inputRef).script("BEGIN { print \"a\\r\\nb\" }").build();
 		final SourceTable crlfResult = new JawkSourceExtension().processSource(
