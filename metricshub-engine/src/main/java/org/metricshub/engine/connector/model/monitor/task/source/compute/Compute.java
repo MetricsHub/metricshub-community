@@ -54,7 +54,8 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = ExtractPropertyFromWbemPath.class, name = "extractPropertyFromWbemPath"),
 		@JsonSubTypes.Type(value = Head.class, name = "head"),
 		@JsonSubTypes.Type(value = InsertColumn.class, name = "insertColumn"),
-		@JsonSubTypes.Type(value = Json2Csv.class, name = "json2Csv"),
+		// json2Csv: deprecated alias of json2Table, removed by step 3 of #1560
+		@JsonSubTypes.Type(value = Json2Csv.class, name = "json2Table", names = { "json2Csv" }),
 		@JsonSubTypes.Type(value = KeepColumns.class, name = "keepColumns"),
 		@JsonSubTypes.Type(value = KeepOnlyMatchingLines.class, name = "keepOnlyMatchingLines"),
 		@JsonSubTypes.Type(value = Prepend.class, name = "prepend"),
@@ -84,7 +85,7 @@ public abstract class Compute implements Serializable {
 	protected String type;
 
 	/**
-	 * The content type this compute consumes. A table for every compute but <code>json2Csv</code>,
+	 * The content type this compute consumes. A table for every compute but <code>json2Table</code>,
 	 * <code>xml2Csv</code> and <code>toTable</code>, which read text, and <code>awk</code>, which reads either. A
 	 * static property of the class, never a YAML field.
 	 *

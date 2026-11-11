@@ -36,6 +36,10 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 				.parsingMode(Json2Csv.ParsingMode.EVENTS)
 				.build()
 		);
+		// json2Table is the name, json2Csv its deprecated alias: same class, same fields, only the written type differs
+		final Json2Csv json2Table = (Json2Csv) computes.get(1).copy();
+		json2Table.setType("json2Table");
+		computes.add(json2Table);
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
