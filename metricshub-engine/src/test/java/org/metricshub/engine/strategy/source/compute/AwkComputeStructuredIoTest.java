@@ -12,14 +12,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.slf4j.simple.SimpleLogger;
 import org.slf4j.spi.LocationAwareLogger;
 import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * The <code>input</code> and <code>output</code> properties of the <code>awk</code> compute (#1511).
@@ -156,15 +159,36 @@ class AwkComputeStructuredIoTest {
 	}
 
 	/**
+	 * Runs the awk compute the way the strategies do: through the {@link ComputeUpdaterProcessor}.
+	 *
+	 * @param awk         The awk compute
+	 * @param sourceTable The source table it changes
+	 */
+	private static void runThroughUpdater(final Awk awk, final SourceTable sourceTable) {
+		awk.accept(
+			ComputeUpdaterProcessor.builder()
+				.computeProcessor(processor(sourceTable, "MyConnector"))
+				.telemetryManager(
+					TelemetryManager.builder().hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build()).build()
+				)
+				.connectorId("MyConnector")
+				.attributes(Map.of())
+				.build()
+		);
+	}
+
+	/**
 	 * A table input meeting a text at run time: the text is converted into a table, the script gets its rows, and
 	 * the WARN names the connector and the source, never the values.
 	 */
 	@Test
 	void textMeetingTableInputIsConvertedWithAWarning() throws Exception {
-		final SourceTable tableOutput = SourceTable.ofText("fan1;3000;\nfan2;0;\n");
+		// CRLF lines, as a source read on Windows may give
+		final SourceTable tableOutput = SourceTable.ofText("fan1;3000;\r\nfan2;0;\r\n");
 		final String tableOutputWarnings = warningsOf(
-			() -> processor(tableOutput, "MyConnector").process(
-				Awk.builder().script("{ print $1, NF, $2 }").input(ContentType.TABLE).output(ContentType.TABLE).build()
+			() -> runThroughUpdater(
+				Awk.builder().script("{ print $1, NF, $2 }").input(ContentType.TABLE).output(ContentType.TABLE).build(),
+				tableOutput
 			)
 		);
 		assertEquals(SourceTable.ofTable(table("fan1|2|3000", "fan2|2|0")), tableOutput);
@@ -178,8 +202,9 @@ class AwkComputeStructuredIoTest {
 
 		final SourceTable textOutput = SourceTable.ofText("fan1;3000;\n");
 		final String textOutputWarnings = warningsOf(
-			() -> processor(textOutput, "MyConnector").process(
-				Awk.builder().script("{ print $1 \";\" NF }").input(ContentType.TABLE).build()
+			() -> runThroughUpdater(
+				Awk.builder().script("{ print $1 \";\" NF }").input(ContentType.TABLE).build(),
+				textOutput
 			)
 		);
 		assertEquals(SourceTable.ofText("fan1;2;"), textOutput);
@@ -190,11 +215,28 @@ class AwkComputeStructuredIoTest {
 	void tableInputMeetingATableHasNoWarning() throws Exception {
 		final SourceTable sourceTable = SourceTable.ofTable(table("fan1|3000", "fan2|0"));
 		final String warnings = warningsOf(
-			() -> processor(sourceTable, "MyConnector").process(
-				Awk.builder().script("{ print $1, NF, $2 }").input(ContentType.TABLE).output(ContentType.TABLE).build()
+			() -> runThroughUpdater(
+				Awk.builder().script("{ print $1, NF, $2 }").input(ContentType.TABLE).output(ContentType.TABLE).build(),
+				sourceTable
 			)
 		);
 		assertEquals(SourceTable.ofTable(table("fan1|2|3000", "fan2|2|0")), sourceTable);
+		assertFalse(warnings.contains(TEXT_FOR_TABLE_WARNING), warnings);
+	}
+
+	/**
+	 * An empty text (the result of a source that failed) has no row to lose: no WARN.
+	 */
+	@Test
+	void emptyTextMeetingTableInputHasNoWarning() throws Exception {
+		final SourceTable sourceTable = SourceTable.ofText("");
+		final String warnings = warningsOf(
+			() -> runThroughUpdater(
+				Awk.builder().script("{ print $1 }").input(ContentType.TABLE).output(ContentType.TABLE).build(),
+				sourceTable
+			)
+		);
+		assertEquals(SourceTable.empty(), sourceTable);
 		assertFalse(warnings.contains(TEXT_FOR_TABLE_WARNING), warnings);
 	}
 

@@ -398,8 +398,14 @@ public class ComputeProcessor implements IComputeProcessor {
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
 
 		// A table input meeting a text at run time (a wrong static content type, a member of a union that differs):
-		// the script would see no record, so the text is converted the canonical way and the mismatch is reported
-		if (tableInput && sourceTable.getContentType() == ContentType.TEXT) {
+		// the script would see no record, so the text is converted the canonical way and the mismatch is reported.
+		// An empty text (a source that failed) has no row to lose: no WARN
+		if (
+			tableInput &&
+				sourceTable.getContentType() == ContentType.TEXT &&
+				sourceTable.getText() != null &&
+				!sourceTable.getText().isEmpty()
+		) {
 			log.warn(
 				"Hostname {} - Compute Operation [{}] (Awk) reads a table but received a text, converted into a table. Connector [{}].",
 				hostname,

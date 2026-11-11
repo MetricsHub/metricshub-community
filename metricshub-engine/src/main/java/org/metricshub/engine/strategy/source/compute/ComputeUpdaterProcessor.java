@@ -255,9 +255,11 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 		// Replace source reference
 		copy.update(value -> replaceSourceReference(value, copy));
 
-		// A table compute on a text reads no rows and gives an empty table, whatever it changes in place
+		// A table compute on a text reads no rows and gives an empty table, whatever it changes in place.
+		// Not an awk: it converts the text itself and reports the mismatch (#1547)
 		if (
-			computeProcessor instanceof ComputeProcessor processor &&
+			!(copy instanceof Awk) &&
+				computeProcessor instanceof ComputeProcessor processor &&
 				processor.getSourceTable() != null &&
 				processor.getSourceTable().getContentType() == ContentType.TEXT &&
 				copy.getInputContentType() == ContentType.TABLE &&
