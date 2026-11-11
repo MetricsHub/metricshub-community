@@ -55,6 +55,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = Head.class, name = "head"),
 		@JsonSubTypes.Type(value = InsertColumn.class, name = "insertColumn"),
 		@JsonSubTypes.Type(value = Json2Csv.class, name = "json2Csv"),
+		@JsonSubTypes.Type(value = Json2List.class, name = "json2List"),
 		@JsonSubTypes.Type(value = KeepColumns.class, name = "keepColumns"),
 		@JsonSubTypes.Type(value = KeepOnlyMatchingLines.class, name = "keepOnlyMatchingLines"),
 		@JsonSubTypes.Type(value = Prepend.class, name = "prepend"),
@@ -85,7 +86,7 @@ public abstract class Compute implements Serializable {
 
 	/**
 	 * The content type this compute consumes. A table for every compute but <code>awk</code>, <code>json2Csv</code>,
-	 * <code>xml2Csv</code> and <code>toTable</code>, which read text. A static property of the class, never a YAML
+	 * <code>json2List</code>, <code>xml2Csv</code> and <code>toTable</code>, which read text. A static property of the class, never a YAML
 	 * field.
 	 *
 	 * @return the input content type

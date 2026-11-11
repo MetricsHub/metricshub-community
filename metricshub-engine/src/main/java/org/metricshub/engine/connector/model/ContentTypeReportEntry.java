@@ -49,8 +49,8 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		 */
 		TABLE_COMPUTE_ON_TEXT_SOURCE,
 		/**
-		 * A text compute that parses a text (<code>json2Csv</code>, <code>xml2Csv</code>) follows a table producer:
-		 * it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
+		 * A text compute that parses a text (<code>json2Csv</code>, <code>json2List</code>, <code>xml2Csv</code>)
+		 * follows a table producer: it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
 		 */
 		TEXT_COMPUTE_ON_TABLE_SOURCE,
 		/** An <code>awk</code> compute is fed a table (through the inserted <code>toText</code>). */
