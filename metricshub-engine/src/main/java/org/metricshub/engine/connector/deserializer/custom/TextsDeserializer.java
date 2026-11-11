@@ -30,8 +30,9 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 /**
- * Deserializes the members of a <code>textUnion</code>: non-blank source references. A member without a
- * <code>${source::...}</code> reference is rejected: a <code>textUnion</code> has no literal.
+ * Deserializes the members of a <code>textUnion</code>: non-blank source references. A member that is not a single
+ * <code>${source::...}</code> reference (a literal, or a reference with other text around it) is rejected: a
+ * <code>textUnion</code> has no literal.
  */
 public class TextsDeserializer extends AbstractNonBlankNonNullInCollectionDeserializer {
 
@@ -43,7 +44,7 @@ public class TextsDeserializer extends AbstractNonBlankNonNullInCollectionDeseri
 	@Override
 	protected Function<String, String> valueExtractor() {
 		return super.valueExtractor().andThen(text -> {
-			if (!SOURCE_REF_PATTERN.matcher(text).find()) {
+			if (!SOURCE_REF_PATTERN.matcher(text.trim()).matches()) {
 				throw new IllegalArgumentException("A member of 'TextUnionSource' must be a source reference.");
 			}
 			return text;

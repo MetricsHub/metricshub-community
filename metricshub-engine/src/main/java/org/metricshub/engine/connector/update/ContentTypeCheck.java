@@ -27,7 +27,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -349,13 +351,20 @@ public class ContentTypeCheck {
 		final Object holder,
 		final Consumer<UnaryOperator<String>> update
 	) {
-		// The holder's own fields: a source's computes are checked on their own
-		final Map<String, String> fields = new HashMap<>();
-		walk(toTree(holder, "key", "references", "computes"), "", (field, value) -> fields.putIfAbsent(value, field));
+		// The holder's own fields: a source's computes are checked on their own. Fields holding the same value are
+		// named in turn, so that each visit of that value reports a field of its own
+		final Map<String, Deque<String>> fields = new HashMap<>();
+		walk(
+			toTree(holder, "key", "references", "computes"),
+			"",
+			(field, value) -> fields.computeIfAbsent(value, v -> new ArrayDeque<>()).add(field)
+		);
 		update.accept(value -> {
+			final Deque<String> names = fields.get(value);
+			final String field = names == null || names.isEmpty() ? "?" : names.poll();
 			for (final String reference : references(value)) {
 				if (typeOf(reference) == ContentType.TABLE) {
-					add(key, prefix + fields.getOrDefault(value, "?") + " -> " + reference, Rule.TABLE_INTERPOLATED, TEXT, TABLE);
+					add(key, prefix + field + " -> " + reference, Rule.TABLE_INTERPOLATED, TEXT, TABLE);
 				}
 			}
 			return value;

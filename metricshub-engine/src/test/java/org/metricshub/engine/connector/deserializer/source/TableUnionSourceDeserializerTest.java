@@ -161,7 +161,14 @@ class TableUnionSourceDeserializerTest extends DeserializerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "[ abc ]", "[ \"${source::beforeAll.a}\", \"a;b\" ]", "[ \" \" ]" })
+	@ValueSource(
+		strings = {
+			"[ abc ]",
+			"[ \"${source::beforeAll.a}\", \"a;b\" ]",
+			"[ \" \" ]",
+			"[ \"prefix ${source::beforeAll.a}\" ]",
+			"[ \"${source::beforeAll.a};${source::beforeAll.b}\" ]" }
+	)
 	void testDeserializeTextUnionMemberThatIsNoReference(final String texts) {
 		final String yaml = """
 			connector:

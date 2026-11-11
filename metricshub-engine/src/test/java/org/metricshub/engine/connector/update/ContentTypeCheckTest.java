@@ -297,6 +297,27 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
+	void tableInterpolatedInTwoFieldsWithTheSameValue() throws IOException {
+		final String table = " -> " + THING + "table}";
+		assertEquals(List.of("TABLE_INTERPOLATED body" + table, "TABLE_INTERPOLATED header" + table), findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        table:
+			          type: snmpTable
+			          oid: 1.3
+			          selectColumns: "1,2"
+			        request:
+			          type: http
+			          method: post
+			          path: /x
+			          header: ${source::table}
+			          body: ${source::table}
+			""").stream().map(finding -> finding.rule() + " " + finding.location()).sorted().toList());
+	}
+
+	@Test
 	void unresolvedReference() throws IOException {
 		final String missing = " -> " + THING + "missing}";
 		assertEquals(
