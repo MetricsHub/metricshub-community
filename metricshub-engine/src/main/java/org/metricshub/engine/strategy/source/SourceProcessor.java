@@ -59,6 +59,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -295,7 +296,10 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		if (tableJoinSource.getLeftTable() == null) {
+		final Object left = tableJoinSource.getLeftTableRows() != null
+			? tableJoinSource.getLeftTableRows()
+			: tableJoinSource.getLeftTable();
+		if (left == null) {
 			log.debug(
 				"Hostname {} - Left table cannot be null, the Join {} will return an empty result.",
 				hostname,
@@ -304,11 +308,7 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final Optional<SourceTable> maybeLeftTable = SourceTable.lookupSourceTable(
-			tableJoinSource.getLeftTable(),
-			connectorId,
-			telemetryManager
-		);
+		final Optional<SourceTable> maybeLeftTable = SourceTable.lookupTableOrLiteral(left, connectorId, telemetryManager);
 		if (maybeLeftTable.isEmpty()) {
 			log.debug(
 				"Hostname {} - Reference to Left table cannot be found, the Join {} will return an empty result.",
@@ -318,7 +318,10 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		if (tableJoinSource.getRightTable() == null) {
+		final Object right = tableJoinSource.getRightTableRows() != null
+			? tableJoinSource.getRightTableRows()
+			: tableJoinSource.getRightTable();
+		if (right == null) {
 			log.debug(
 				"Hostname {} - Right table cannot be null, the Join {} will return an empty result.",
 				hostname,
@@ -327,8 +330,8 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final Optional<SourceTable> maybeRightTable = SourceTable.lookupSourceTable(
-			tableJoinSource.getRightTable(),
+		final Optional<SourceTable> maybeRightTable = SourceTable.lookupTableOrLiteral(
+			right,
 			connectorId,
 			telemetryManager
 		);
@@ -355,8 +358,8 @@ public class SourceProcessor implements ISourceProcessor {
 		final SourceTable rightTable = maybeRightTable.get();
 		logTableJoin(
 			tableJoinSource.getKey(),
-			tableJoinSource.getLeftTable(),
-			tableJoinSource.getRightTable(),
+			tableJoinSource.getLeftTableRows() != null ? "table literal" : tableJoinSource.getLeftTable(),
+			tableJoinSource.getRightTableRows() != null ? "table literal" : tableJoinSource.getRightTable(),
 			leftTable,
 			rightTable,
 			hostname
@@ -423,7 +426,7 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final List<String> unionTables = tableUnionSource.getTables();
+		final List<Object> unionTables = tableUnionSource.getTables();
 		if (unionTables == null) {
 			log.debug(
 				"Hostname {} - Table list in the Union cannot be null, the Union operation {} will return an empty result.",
@@ -434,29 +437,18 @@ public class SourceProcessor implements ISourceProcessor {
 		}
 
 		final List<SourceTable> sourceTablesToConcat = unionTables.stream()
-			.map(key -> SourceTable.lookupSourceTable(key, connectorId, telemetryManager))
+			.map(table -> SourceTable.lookupTableOrLiteral(table, connectorId, telemetryManager))
 			.filter(Optional::isPresent)
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
-		// A text union when every member that holds something is a text: the non-empty texts, CRLF converted to LF, one
-		// after the other, a line feed added only after a member that does not end with one; the blank lines of the
-		// members are kept. Otherwise the rows of the members, copied (a compute on the union must not change them)
+		// A text union when every member that holds something is a text: joined as a textUnion joins its members.
+		// Otherwise the rows of the members, copied (a compute on the union must not change them)
 		final boolean textUnion = sourceTablesToConcat.stream()
 			.anyMatch(member -> member.getContentType() == ContentType.TEXT) &&
 			sourceTablesToConcat.stream().allMatch(member -> member.getContentType() == ContentType.TEXT || member.isEmpty());
 		if (textUnion) {
-			final StringBuilder text = new StringBuilder();
-			sourceTablesToConcat.stream()
-				.filter(member -> member.getContentType() == ContentType.TEXT && !member.isEmpty())
-				.map(member -> member.getText().replace(WINDOWS_NEW_LINE, NEW_LINE))
-				.forEach(memberText -> {
-					if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
-						text.append(NEW_LINE);
-					}
-					text.append(memberText);
-				});
-			return SourceTable.ofText(text.toString());
+			return SourceTable.ofText(joinTexts(sourceTablesToConcat));
 		}
 
 		return SourceTable.ofTable(
@@ -466,6 +458,50 @@ public class SourceProcessor implements ISourceProcessor {
 				.map(row -> row == null ? null : new ArrayList<>(row))
 				.collect(Collectors.toList()) //NOSONAR
 		);
+	}
+
+	@WithSpan("Source TextUnion Exec")
+	@Override
+	public SourceTable process(@SpanAttribute("source.definition") final TextUnionSource textUnionSource) {
+		if (textUnionSource == null || textUnionSource.getTexts() == null) {
+			log.debug(
+				"Hostname {} - Text Union Source or its texts cannot be null, the Text Union will return an empty text.",
+				telemetryManager.getHostname()
+			);
+			return SourceTable.ofText(null);
+		}
+
+		// A member that is a table is joined as its text: the load-time check reports it
+		return SourceTable.ofText(
+			joinTexts(
+				textUnionSource.getTexts()
+					.stream()
+					.map(text -> SourceTable.lookupSourceTable(text, connectorId, telemetryManager))
+					.flatMap(Optional::stream)
+					.toList()
+			)
+		);
+	}
+
+	/**
+	 * Joins the texts of the members of a union: the non-empty members, CRLF converted to LF, one after the other, a
+	 * line feed added only when the text so far does not end with one; the blank lines of the members are kept.
+	 *
+	 * @param members The members, a table being read as its text ({@link SourceTable#asText()})
+	 * @return the joined text
+	 */
+	static String joinTexts(final List<SourceTable> members) {
+		final StringBuilder text = new StringBuilder();
+		members.stream()
+			.filter(member -> !member.isEmpty())
+			.map(member -> member.asText().replace(WINDOWS_NEW_LINE, NEW_LINE))
+			.forEach(memberText -> {
+				if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
+					text.append(NEW_LINE);
+				}
+				text.append(memberText);
+			});
+		return text.toString();
 	}
 
 	/**

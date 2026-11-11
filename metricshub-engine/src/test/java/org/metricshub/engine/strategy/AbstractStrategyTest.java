@@ -43,6 +43,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
@@ -650,6 +651,11 @@ class AbstractStrategyTest {
 		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http, SourceTable.empty()).getContentType());
 		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http, null).getContentType());
 		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(snmp, SourceTable.ofText("")).getContentType());
+
+		// A textUnion is a text, whatever it answered
+		final TextUnionSource textUnion = TextUnionSource.builder().texts(List.of("${source::a}")).build();
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(textUnion, null).getContentType());
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(textUnion, SourceTable.empty()).getContentType());
 
 		// A fresh result every time
 		final SourceTable answered = SourceTable.ofText("");

@@ -21,28 +21,52 @@ package org.metricshub.engine.connector.deserializer.custom;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
+import java.util.List;
 
 /**
- * Custom deserializer for deserializing a collection of tables.
+ * Deserializes the members of a <code>tableUnion</code>. A list holds non-blank scalars, each returned as a
+ * {@link String} (a source reference, or a legacy table literal written as <code>;</code> CSV text), and table
+ * literals written as lists of rows (see {@link TableLiteralDeserializer}), each returned as a {@link List} of rows. A
+ * scalar is the legacy comma-separated list of strings.
  */
-public class TablesDeserializer extends AbstractNonBlankNonNullInCollectionDeserializer {
+public class TablesDeserializer extends JsonDeserializer<List<Object>> {
+
+	private static final String BLANK_MEMBER = "The table referenced by 'TableUnionSource' cannot be empty.";
 
 	@Override
-	protected String getErrorMessage() {
-		return "The table referenced by 'TableUnionSource' cannot be empty.";
+	public List<Object> deserialize(final JsonParser parser, final DeserializationContext context) throws IOException {
+		final List<Object> tables = new ArrayList<>();
+		if (parser.isExpectedStartArrayToken()) {
+			while (parser.nextToken() != JsonToken.END_ARRAY) {
+				if (parser.isExpectedStartArrayToken()) {
+					tables.add(TableLiteralDeserializer.readRows(parser, context));
+				} else if (parser.currentToken().isScalarValue() && !parser.hasToken(JsonToken.VALUE_NULL)) {
+					tables.add(nonBlank(parser.getText(), context));
+				} else {
+					return context.reportInputMismatch(List.class, BLANK_MEMBER);
+				}
+			}
+			return tables;
+		}
+		if (!parser.currentToken().isScalarValue()) {
+			return context.reportInputMismatch(List.class, "Expected a list of tables, got %s", parser.currentToken());
+		}
+		for (final String table : parser.getText().split(",")) {
+			tables.add(nonBlank(table.trim(), context));
+		}
+		return tables;
 	}
 
-	@Override
-	protected Collection<String> emptyCollection() {
-		return new ArrayList<>();
-	}
-
-	@Override
-	protected Collector<String, ?, Collection<String>> collector() {
-		return Collectors.toCollection(ArrayList::new);
+	private static String nonBlank(final String table, final DeserializationContext context) throws IOException {
+		if (table.isBlank()) {
+			return context.reportInputMismatch(List.class, BLANK_MEMBER);
+		}
+		return table;
 	}
 }

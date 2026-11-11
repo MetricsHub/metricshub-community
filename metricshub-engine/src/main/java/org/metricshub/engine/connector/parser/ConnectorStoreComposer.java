@@ -48,6 +48,7 @@ import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.identity.ConnectorDefaultVariable;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
+import org.metricshub.engine.connector.update.ContentTypeCheck;
 import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 
 /**
@@ -451,6 +452,10 @@ public class ConnectorStoreComposer {
 
 		// Tell the author what the desugaring did, now that the connector has its identifier
 		ContentTypeDesugaring.logReport(connector, intermediateConnector.getConnectorId());
+
+		// Report the strict content-type rules the connector breaks (#1560): only reported, nothing changes
+		connector.setContentTypeFindings(ContentTypeCheck.check(connector, intermediateConnector.getConnectorId()));
+		ContentTypeCheck.log(connector.getContentTypeFindings());
 
 		return connector;
 	}

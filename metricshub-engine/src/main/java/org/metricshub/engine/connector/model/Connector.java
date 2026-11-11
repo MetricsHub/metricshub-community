@@ -182,6 +182,16 @@ public class Connector implements Serializable {
 	private List<ContentTypeReportEntry> contentTypeReport = new ArrayList<>();
 
 	/**
+	 * The findings of the load-time content-type check on this connector: the strict content-type rules (#1560) it
+	 * breaks. Computed when the connector is parsed, never serialized.
+	 */
+	@Default
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private List<ContentTypeFinding> contentTypeFindings = new ArrayList<>();
+
+	/**
 	 * The power measurement state ESTIMATED, MEASURED or CONDITIONAL.
 	 */
 	@JsonIgnore

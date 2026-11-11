@@ -38,6 +38,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 
@@ -133,6 +134,14 @@ public interface ISourceProcessor {
 	 * @return The SourceTable result.
 	 */
 	SourceTable process(TableUnionSource tableUnionSource);
+
+	/**
+	 * Process the TextUnionSource and return a SourceTable.
+	 *
+	 * @param textUnionSource The TextUnionSource to process.
+	 * @return The SourceTable result, a text.
+	 */
+	SourceTable process(TextUnionSource textUnionSource);
 
 	/**
 	 * Process the WbemSource and return a SourceTable.

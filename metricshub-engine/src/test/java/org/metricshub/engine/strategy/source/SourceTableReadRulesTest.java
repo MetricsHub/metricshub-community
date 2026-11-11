@@ -356,14 +356,20 @@ class SourceTableReadRulesTest {
 	}
 
 	/**
-	 * The HTTP authentication token is the first cell of the first row of a table, or a text up to the first
-	 * <code>;</code>, line feeds included.
+	 * The HTTP authentication token is the first cell of the first row of a table, or the whole first line of a text
+	 * without its line ending (#1560): a <code>;</code> in the line is part of the token.
 	 */
 	@Test
-	void httpTokenIsFirstCellOfATableOrTextUpToFirstSeparator() {
+	void httpTokenIsFirstCellOfATableOrFirstLineOfAText() {
 		assertEquals("tok", extractToken(SourceTable.ofTable(table("tok|x"))));
-		assertEquals("tok", extractToken(SourceTable.ofText("tok;en\nline2")));
-		assertEquals("abc\ndef", extractToken(SourceTable.ofText("abc\ndef")));
+		assertEquals("tok;en", extractToken(SourceTable.ofText("tok;en\nline2")));
+		assertEquals("abc", extractToken(SourceTable.ofText("abc\ndef")));
+		assertEquals("abc", extractToken(SourceTable.ofText("abc\r\ndef")));
+		assertEquals("abc", extractToken(SourceTable.ofText("abc\n")));
+		// A lone CR ends no line
+		assertEquals("abc\rdef", extractToken(SourceTable.ofText("abc\rdef\nghi")));
+		assertEquals("a b=c", extractToken(SourceTable.ofText("a b=c")));
+		assertEquals(EMPTY, extractToken(SourceTable.ofText("\nabc")));
 		assertEquals(EMPTY, extractToken(SourceTable.ofText(EMPTY)));
 		assertNull(extractToken(SourceTable.empty()));
 	}

@@ -32,6 +32,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -1046,6 +1047,111 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
 		assertEquals(List.of("toTable", "keepColumns"), types(union));
 		assertEquals(List.of(), types(show));
+	}
+
+	/**
+	 * A textUnion of command outputs is desugared as the text tableUnion of the same members: mapped as it is, it gets
+	 * its toTable appended; read by a table compute, a toTable before it; its members keep their text.
+	 */
+	@Test
+	void textUnionIsDesugaredAsATextTableUnion() {
+		for (final boolean textUnion : List.of(false, true)) {
+			for (final List<Compute> computes : List.<List<Compute>>of(
+				List.of(),
+				List.of(KeepColumns.builder().type("keepColumns").columnNumbers("1").build())
+			)) {
+				final Source show = CommandLineSource.builder().commandLine("show version").build();
+				final Source env = CommandLineSource.builder().commandLine("show environment").build();
+				final Source union = textUnion
+					? TextUnionSource.builder().texts(new ArrayList<>(List.of(ref("show"), ref("env")))).build()
+					: TableUnionSource.builder().tables(new ArrayList<>(List.of(ref("show"), ref("env")))).build();
+				union.setComputes(new ArrayList<>(computes));
+				final Map<String, Source> sources = new LinkedHashMap<>();
+				sources.put("show", show);
+				sources.put("env", env);
+				sources.put("union", union);
+				final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+				new ContentTypeDesugaring().update(connector);
+
+				final String scenario = (textUnion ? "textUnion " : "tableUnion ") + computes;
+				assertEquals(
+					computes.isEmpty() ? List.of(Kind.TO_TABLE_APPENDED) : List.of(Kind.TO_TABLE_INSERTED),
+					kinds(connector),
+					scenario
+				);
+				assertEquals(
+					computes.isEmpty() ? List.of("toTable") : List.of("toTable", "keepColumns"),
+					types(union),
+					scenario
+				);
+				assertEquals(List.of(), types(show), scenario);
+				assertEquals(List.of(), types(env), scenario);
+			}
+		}
+	}
+
+	/**
+	 * A textUnion is a text whatever its members: with a table member, which a tableUnion would make a table union, its
+	 * awk reads the text and nothing is inserted; the command member keeps its text. A tool returning a textUnion
+	 * without columns returns its text.
+	 */
+	@Test
+	void textUnionWithATableMemberStaysText() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source snmp = SnmpTableSource.builder().oid("1.3.6.1").selectColumns("ID,1").build();
+		final Source union = TextUnionSource.builder()
+			.texts(new ArrayList<>(List.of(ref("show"), ref("snmp"), ref("missing"))))
+			.computes(new ArrayList<>(List.of(awk(), toTable())))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("snmp", snmp);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), kinds(connector));
+		assertEquals(List.of(), types(show));
+		assertEquals(List.of("awk", "toTable"), types(union));
+
+		final Source link = CommandLineSource.builder().commandLine("ip link").build();
+		link.setKey("${source::tools.details.sources.link}");
+		final Source all = TextUnionSource.builder().texts(new ArrayList<>(List.of("${source::link}"))).build();
+		all.setKey("${source::tools.details.sources.all}");
+		final Map<String, Source> toolSources = new LinkedHashMap<>();
+		toolSources.put("link", link);
+		toolSources.put("all", all);
+		final ConnectorTool tool = ConnectorTool.builder()
+			.sources(toolSources)
+			.result(new ToolResult("${source::all}", null))
+			.build();
+		final Connector toolConnector = Connector.builder().build();
+		toolConnector.getTools().put("details", tool);
+		new ContentTypeDesugaring().update(toolConnector);
+
+		assertTrue(tool.isTextResult());
+		assertEquals(List.of(), types(link));
+		assertEquals(List.of(), types(all));
+		assertEquals(List.of(), kinds(toolConnector));
+	}
+
+	/**
+	 * A table literal member, written as a list of rows, makes a union a table union, as a legacy string literal does.
+	 */
+	@Test
+	void tableUnionWithALiteralMemberIsATableUnion() {
+		final Source show = CommandLineSource.builder().commandLine("show version").build();
+		final Source union = TableUnionSource.builder()
+			.tables(new ArrayList<>(List.of(ref("show"), List.of(List.of("a", "b")))))
+			.build();
+		final Map<String, Source> sources = new LinkedHashMap<>();
+		sources.put("show", show);
+		sources.put("union", union);
+		final Connector connector = connectorWithSources(sources, Mapping.builder().source(ref("union")).build());
+		new ContentTypeDesugaring().update(connector);
+
+		assertEquals(List.of(), types(union));
+		assertEquals(List.of("toTable"), types(show));
 	}
 
 	/**

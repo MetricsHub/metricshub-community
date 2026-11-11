@@ -50,6 +50,8 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.ContentTypeFinding;
+import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.IntermediateConnector;
@@ -71,6 +73,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
@@ -801,6 +804,43 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
+	 * Renders the findings of the load-time content-type check of the selected connectors of each repository: the
+	 * worklist of step 2 of #1560, whose exit criterion is an empty list.
+	 *
+	 * @param stores The connector store of each repository, in order
+	 * @return the report
+	 */
+	public static String contentTypeCheckReport(final Map<Repository, ConnectorStore> stores) {
+		final StringBuilder report = new StringBuilder("== Content type check (#1560)\n");
+		final Map<Rule, Integer> totals = new EnumMap<>(Rule.class);
+		int connectorsWithFindings = 0;
+		for (final Map.Entry<Repository, ConnectorStore> repository : stores.entrySet()) {
+			final Map<Rule, Integer> counts = new EnumMap<>(Rule.class);
+			final Path root = repository.getKey().getRoot();
+			report.append("# ").append(root.toAbsolutePath().normalize()).append('\n');
+			for (final Map.Entry<String, Connector> entry : new TreeMap<>(repository.getValue().getStore()).entrySet()) {
+				final List<ContentTypeFinding> findings = entry.getValue().getContentTypeFindings();
+				if (findings.isEmpty() || !isSelected(entry.getKey())) {
+					continue;
+				}
+				connectorsWithFindings++;
+				report.append('\n').append(entry.getKey()).append(" (").append(findings.size()).append(")\n");
+				for (final ContentTypeFinding finding : findings) {
+					report.append("  ").append(finding).append('\n');
+					counts.merge(finding.rule(), 1, Integer::sum);
+				}
+			}
+			report.append("\nCheck totals for ").append(root.getFileName()).append(":\n");
+			counts.forEach((rule, count) -> report.append("  ").append(rule).append(": ").append(count).append('\n'));
+			counts.forEach((rule, count) -> totals.merge(rule, count, Integer::sum));
+			report.append('\n');
+		}
+		report.append("Connectors with check findings: ").append(connectorsWithFindings).append('\n');
+		totals.forEach((rule, count) -> report.append("  ").append(rule).append(": ").append(count).append('\n'));
+		return report.toString();
+	}
+
+	/**
 	 * The golden of one connector: one entry per source holding computes.
 	 */
 	@Data
@@ -867,6 +907,7 @@ public class ComputeChainGoldenCorpus {
 	 * <li><code>static</code>: the table parsed from the declared value and its serialization;</li>
 	 * <li><code>copy</code>: the shapes of the copied source, or the serialized table when that source has computes;</li>
 	 * <li><code>tableUnion</code>: every dual shape;</li>
+	 * <li><code>textUnion</code>: raw text only, with and without a trailing line feed;</li>
 	 * <li>every other source: the table only.</li>
 	 * </ul>
 	 * A source table holds one type since stage 4 of #1508: each shape is read on the side of the type the source
@@ -1064,6 +1105,10 @@ public class ComputeChainGoldenCorpus {
 				}
 			} else if (source instanceof TableUnionSource) {
 				addDualShapes(inputs);
+			} else if (source instanceof TextUnionSource) {
+				// The joined texts of its members
+				textShape(inputs, "text", Inputs::textOnly, true);
+				textShape(inputs, "textNoTrailingNewline", Inputs::textOnly, false);
 			} else {
 				tableShape(inputs, "table", Inputs::tableOnly);
 			}
