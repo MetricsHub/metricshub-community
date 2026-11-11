@@ -37,8 +37,6 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 	 * The kinds of findings.
 	 */
 	public enum Kind {
-		/** A <code>toText</code> was inserted before an <code>awk</code> compute fed by a table. */
-		TO_TEXT_INSERTED,
 		/** A <code>toTable</code> was inserted before a table compute fed by text. */
 		TO_TABLE_INSERTED,
 		/** A <code>toTable</code> was appended to a chain ending in text from a legacy text producer. */
@@ -53,8 +51,6 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		 * it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
 		 */
 		TEXT_COMPUTE_ON_TABLE_SOURCE,
-		/** An <code>awk</code> compute is fed a table (through the inserted <code>toText</code>). */
-		AWK_ON_TABLE,
 		/** A <code>tableJoin</code> declares a <code>defaultRightLine</code> as a <code>;</code> string. */
 		DEFAULT_RIGHT_LINE,
 		/** A <code>static</code> source declares its table as a <code>;</code> string. */

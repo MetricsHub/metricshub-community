@@ -327,7 +327,8 @@ class ConversionComputesTest {
 
 	@Test
 	void contentTypesOfTheOtherComputes() {
-		assertEquals(ContentType.TEXT, Awk.builder().script("{}").build().getInputContentType());
+		// An awk reads either (#1559)
+		assertNull(Awk.builder().script("{}").build().getInputContentType());
 		assertEquals(ContentType.TEXT, Awk.builder().script("{}").build().getOutputContentType());
 		assertEquals(ContentType.TEXT, Json2Csv.builder().build().getInputContentType());
 		assertEquals(ContentType.TABLE, Json2Csv.builder().build().getOutputContentType());

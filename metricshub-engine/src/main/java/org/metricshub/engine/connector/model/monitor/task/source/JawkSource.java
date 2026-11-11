@@ -24,6 +24,7 @@ package org.metricshub.engine.connector.model.monitor.task.source;
 import static com.fasterxml.jackson.annotation.Nulls.FAIL;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -49,6 +50,10 @@ import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
  * Represents a source that executes an jawk script to retrieve data.
+ * <p>
+ * The <code>inputFormat</code> property, once how the script read its input, is deprecated and ignored: an input
+ * that is a single source reference is read as that source is (#1559). A connector declaring it still loads, the
+ * property is dropped like any unknown one.
  */
 @Data
 @NoArgsConstructor
@@ -66,7 +71,8 @@ public class JawkSource extends Source {
 	private String script;
 
 	/**
-	 * The input on which to execute the JAWK task.
+	 * The input on which to execute the JAWK task: a text, or a single source reference, which the script reads as
+	 * that source is at run time (a table structured, a text the traditional way).
 	 */
 	@JsonSetter(nulls = SKIP)
 	private String input;
@@ -84,15 +90,6 @@ public class JawkSource extends Source {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private Map<String, String> variables = new LinkedHashMap<>();
-
-	/**
-	 * How the script reads <code>input</code>: {@link ContentType#TEXT} (the referenced source as
-	 * <code>;</code>-separated lines, or the literal text) or {@link ContentType#TABLE} (<code>input</code> must be
-	 * a source reference; each row of that source's table is a record whose cells are <code>$1..$NF</code>).
-	 * Default text.
-	 */
-	@JsonSetter(nulls = SKIP)
-	private ContentType inputFormat = ContentType.TEXT;
 
 	/**
 	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
@@ -115,7 +112,6 @@ public class JawkSource extends Source {
 	 * @param input                 The input on which to execute the JAWK task.
 	 * @param separators            The separators parameter for the JAWK task.
 	 * @param variables             The variables to expose to the JAWK script.
-	 * @param inputFormat           How the script reads the input, null for text.
 	 * @param output                What the script produces, null for text.
 	 */
 	@Builder
@@ -130,7 +126,6 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "input") final String input,
 		@JsonProperty(value = "separators") final String separators,
 		@JsonProperty(value = "variables") final Map<String, String> variables,
-		@JsonProperty(value = "inputFormat") final ContentType inputFormat,
 		@JsonProperty(value = "output") final ContentType output
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
@@ -138,7 +133,6 @@ public class JawkSource extends Source {
 		this.input = input;
 		this.separators = separators;
 		this.variables = variables == null ? new LinkedHashMap<>() : variables;
-		this.inputFormat = inputFormat == null ? ContentType.TEXT : inputFormat;
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 
@@ -154,7 +148,6 @@ public class JawkSource extends Source {
 			.input(input)
 			.separators(separators)
 			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
-			.inputFormat(inputFormat)
 			.output(output)
 			.build();
 	}
@@ -163,8 +156,9 @@ public class JawkSource extends Source {
 	public void update(UnaryOperator<String> updater) {
 		// The script is deliberately left out: it is code, not data. It is normally a ${file::...} reference already
 		// resolved at parse time, and running the reference substitutions over a script body would rewrite AWK syntax.
-		// A table input is a source reference resolved to the table itself when the script runs: the source updater
-		// does not expand it into the source's text (see SourceUpdaterProcessor), the other substitutions apply
+		// An input that is a single source reference is resolved when the script runs, to the source as it is: the
+		// source updater does not expand it into the source's text (see SourceUpdaterProcessor), the other
+		// substitutions apply
 		input = updater.apply(input);
 		separators = updater.apply(separators);
 		// The variables are deliberately not updated here: every reference they hold, source references included,
@@ -174,6 +168,18 @@ public class JawkSource extends Source {
 	@Override
 	public SourceTable accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
+	}
+
+	/**
+	 * Whether the value is a single source reference, such as <code>${source::monitors.disk.discovery.sources.raw}</code>:
+	 * an <code>input</code> the script reads as that source is at run time, a table structured, a text the
+	 * traditional way.
+	 *
+	 * @param value The value, null meaning none
+	 * @return whether the value is a single source reference
+	 */
+	public static boolean isSourceReference(final String value) {
+		return value != null && SOURCE_REF_PATTERN.matcher(value.trim()).matches();
 	}
 
 	@Override
