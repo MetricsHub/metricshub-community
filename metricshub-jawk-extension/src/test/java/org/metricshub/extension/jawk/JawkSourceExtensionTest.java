@@ -17,6 +17,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.ConnectorVariables;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.HttpMethod;
@@ -318,12 +319,14 @@ class JawkSourceExtensionTest {
 	}
 
 	/**
-	 * With <code>inputFormat: table</code> the referenced source's rows are the records (a ";" inside a cell stays
-	 * in its field) and with <code>output: table</code> each print is a row (#1511).
+	 * An input that is a single source reference is read as that source is (#1559): a table structured (a ";"
+	 * inside a cell stays in its field), a text the traditional way; with <code>output: table</code> each print is a
+	 * row (#1511). The deprecated <code>inputFormat</code> is ignored.
 	 */
 	@Test
-	void testProcessSourceWithTableInputAndOutput() {
+	void testProcessSourceWithTableInputAndOutput() throws Exception {
 		final String inputRef = "${source::monitors.enclosure.discovery.sources.raw}";
+		final String textRef = "${source::monitors.enclosure.discovery.sources.text}";
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
 			.hostProperties(HostProperties.builder().build())
@@ -334,18 +337,19 @@ class JawkSourceExtensionTest {
 				inputRef,
 				SourceTable.ofTable(List.of(List.of("fan1", "x;y", "3000"), List.of("fan2", "z", "0")))
 			);
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(CONNECTOR_ID)
+			.addSourceTable(textRef, SourceTable.ofText("fan1 x;y 3000\nfan2 z 0\n"));
 
 		final JawkSource source = JawkSource.builder()
 			.input(inputRef)
-			.inputFormat(ContentType.TABLE)
 			.output(ContentType.TABLE)
 			.script("$3 > 0 { print $1, $2, $3 / 60, NF }")
 			.build();
 		// The substitutions, such as the row of an executeForEachEntryOf, apply to the input reference (the source
-		// updater skips the expansion of the reference into the source's text: the extension resolves it to the table)
+		// updater skips the expansion of the reference into the source's text: the extension resolves it)
 		final JawkSource perEntry = JawkSource.builder()
 			.input("${source::monitors.enclosure.discovery.sources.$1}")
-			.inputFormat(ContentType.TABLE)
 			.script("{ print }")
 			.build();
 		perEntry.update(value -> value == null ? null : value.replace("$1", "raw"));
@@ -359,23 +363,34 @@ class JawkSourceExtensionTest {
 		);
 		assertEquals(SourceTable.ofTable(List.of(List.of("fan1", "x;y", "50", "3"))), result);
 
+		// A text source, read the traditional way, whatever the deprecated inputFormat says
+		final JawkSource fromText = JsonHelper.buildYamlMapper()
+			.readValue(
+				"type: awk\ninputFormat: table\noutput: table\ninput: '" + textRef + "'\nscript: '$3 > 0 { print $1, $2, NF }'",
+				JawkSource.class
+			);
+		assertEquals(
+			SourceTable.ofTable(List.of(List.of("fan1", "x;y", "3"))),
+			new JawkSourceExtension().processSource(fromText, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
 		// Text output of a table input: the printed lines
-		final JawkSource textOutput = JawkSource.builder()
-			.input(inputRef)
-			.inputFormat(ContentType.TABLE)
-			.script("{ print $1 \";\" NF }")
-			.build();
+		final JawkSource textOutput = JawkSource.builder().input(inputRef).script("{ print $1 \";\" NF }").build();
 		assertEquals(
 			SourceTable.ofText("fan1;3\nfan2;3\n"),
 			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
+		// $0 is the line the reference expanded to before #1559, trailing ";" included: a ";" taken from $0 (a
+		// password) is kept, and a script matching the line end sees the same text
+		final JawkSource wholeLine = JawkSource.builder().input(inputRef).script("{ print $0 }").build();
+		assertEquals(
+			SourceTable.ofText("fan1;x;y;3000;\nfan2;z;0;\n"),
+			new JawkSourceExtension().processSource(wholeLine, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
 		// The text written from a table input never holds CRLF
-		final JawkSource crlf = JawkSource.builder()
-			.input(inputRef)
-			.inputFormat(ContentType.TABLE)
-			.script("BEGIN { print \"a\\r\\nb\" }")
-			.build();
+		final JawkSource crlf = JawkSource.builder().input(inputRef).script("BEGIN { print \"a\\r\\nb\" }").build();
 		final SourceTable crlfResult = new JawkSourceExtension().processSource(
 			crlf,
 			CONNECTOR_ID,
@@ -387,7 +402,6 @@ class JawkSourceExtensionTest {
 		// An unknown input source gives no record
 		final JawkSource unknown = JawkSource.builder()
 			.input("${source::monitors.enclosure.discovery.sources.missing}")
-			.inputFormat(ContentType.TABLE)
 			.output(ContentType.TABLE)
 			.script("{ print $1 } END { print \"end\" }")
 			.build();
@@ -397,12 +411,7 @@ class JawkSourceExtensionTest {
 		);
 
 		// An empty table output stays a table
-		final JawkSource empty = JawkSource.builder()
-			.input(inputRef)
-			.inputFormat(ContentType.TABLE)
-			.output(ContentType.TABLE)
-			.script("BEGIN { }")
-			.build();
+		final JawkSource empty = JawkSource.builder().input(inputRef).output(ContentType.TABLE).script("BEGIN { }").build();
 		final SourceTable emptyResult = new JawkSourceExtension().processSource(
 			empty,
 			CONNECTOR_ID,
@@ -593,5 +602,18 @@ class JawkSourceExtensionTest {
 		telemetryManager.setHostProperties(hostProperties);
 
 		return telemetryManager;
+	}
+
+	/**
+	 * The $0 of a table row is the line a source reference gives: the trailing ";" kept, unless the row has a single
+	 * cell (whose only ";" is the trailing one).
+	 */
+	@Test
+	void testReferenceRowIsTheLegacyReferenceLine() {
+		assertEquals("a;b;", JawkSourceExtension.referenceRow(List.of("a", "b")));
+		assertEquals("token", JawkSourceExtension.referenceRow(List.of("token")));
+		assertEquals("pa;ss;", JawkSourceExtension.referenceRow(List.of("pa;ss")));
+		assertEquals(";;", JawkSourceExtension.referenceRow(Arrays.asList(null, "")));
+		assertEquals("", JawkSourceExtension.referenceRow(List.of()));
 	}
 }

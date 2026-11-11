@@ -390,9 +390,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		// Table input: the rows are the records, nothing is serialized. Text input (the default, what every script
-		// written so far expects): the text, which the content-type desugaring converted from a table if needed
-		final boolean tableInput = awk.getInputContentType() == ContentType.TABLE;
+		// The input is the source result as it is at run time (#1559): a table is read structured (the rows are the
+		// records, nothing is serialized), a text the traditional way
+		final boolean tableInput = sourceTable.getContentType() == ContentType.TABLE;
 		final String input = tableInput ? null : sourceTable.getText();
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);

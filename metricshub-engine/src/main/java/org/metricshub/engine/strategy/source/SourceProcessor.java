@@ -240,7 +240,7 @@ public class SourceProcessor implements ISourceProcessor {
 
 		if (staticSource.getCells() != null) {
 			// The list form is the single row of exactly these cells. A line break a reference resolved into at run time
-			// becomes a space, so the row stays one line for a text consumer (an awk reads it through toText)
+			// becomes a space, so the row stays one line for a text consumer (a toText)
 			rows = List.of(
 				staticSource.getCells().stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList()
 			);
