@@ -619,11 +619,13 @@ class SourceProcessorTest {
 		assertEquals("a\n\nb\nc", inner);
 		assertEquals("a\n\nb\nc\nd\n\ne", textUnion(inner, "d\n\n", "e"));
 
-		// CRLF members are left as they are: a member ending with CRLF ends with a line feed, the join adds a LF
-		assertEquals("a\r\n\r\nb\r\nc\r\n", textUnion("a\r\n\r\nb\r\n", "c\r\n"));
-		assertEquals("a\nb\r\n", textUnion("a", "b\r\n"));
+		// CRLF members are converted to LF, their blank lines kept: the result does not depend on the source platform
+		assertEquals("a\n\nb\nc\n", textUnion("a\r\n\r\nb\r\n", "c\r\n"));
+		assertEquals("a\nb\n", textUnion("a", "b\r\n"));
 		// An LF blank line next to CRLF text is kept (before: "a\r\nb\nc\r\n")
-		assertEquals("a\r\n\nb\nc\r\n", textUnion("a\r\n\nb", "c\r\n"));
+		assertEquals("a\n\nb\nc\n", textUnion("a\r\n\nb", "c\r\n"));
+		// A lone CR is not a line ending: it stays
+		assertEquals("a\rb\nc", textUnion("a\rb", "c"));
 	}
 
 	/**

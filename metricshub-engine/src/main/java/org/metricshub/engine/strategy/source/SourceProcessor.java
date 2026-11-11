@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy.source;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -438,9 +439,9 @@ public class SourceProcessor implements ISourceProcessor {
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
-		// A text union when every member that holds something is a text: the non-empty texts one after the other, a
-		// line feed added only after a member that does not end with one; the members themselves are left untouched
-		// (blank lines, CRLF). Otherwise the rows of the members, copied (a compute on the union must not change them)
+		// A text union when every member that holds something is a text: the non-empty texts, CRLF converted to LF, one
+		// after the other, a line feed added only after a member that does not end with one; the blank lines of the
+		// members are kept. Otherwise the rows of the members, copied (a compute on the union must not change them)
 		final boolean textUnion = sourceTablesToConcat.stream()
 			.anyMatch(member -> member.getContentType() == ContentType.TEXT) &&
 			sourceTablesToConcat.stream().allMatch(member -> member.getContentType() == ContentType.TEXT || member.isEmpty());
@@ -448,7 +449,7 @@ public class SourceProcessor implements ISourceProcessor {
 			final StringBuilder text = new StringBuilder();
 			sourceTablesToConcat.stream()
 				.filter(member -> member.getContentType() == ContentType.TEXT && !member.isEmpty())
-				.map(SourceTable::getText)
+				.map(member -> member.getText().replace(WINDOWS_NEW_LINE, NEW_LINE))
 				.forEach(memberText -> {
 					if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
 						text.append(NEW_LINE);
