@@ -144,12 +144,22 @@ class Json2ListTest {
 	}
 
 	/**
-	 * A document that does not parse, a scalar, an empty text: an empty table, as <code>json2Csv</code> gives. What
-	 * follows the root is ignored, as JFlat does.
+	 * A document that does not parse, a scalar, an empty text, a number whose exponent overflows a BigDecimal: an
+	 * empty table, as <code>json2Table</code> gives. What follows the root is ignored, as JFlat does.
 	 */
 	@Test
 	void invalidDocumentGivesEmptyTable() {
-		for (final String json : List.of("not json", "{\"a\":1", "{\"a\":1,}", "\"scalar\"", "42", "", "  \n")) {
+		for (final String json : List.of(
+			"not json",
+			"{\"a\":1",
+			"{\"a\":1,}",
+			"\"scalar\"",
+			"42",
+			"",
+			"  \n",
+			"{\"huge\":1e9999999999}",
+			"{\"tiny\":1.5e-2147483648}"
+		)) {
 			assertEquals(SourceTable.ofTable(new ArrayList<>()), json2List(json), json);
 		}
 		assertEquals(rows("/a", "1"), json2List("{\"a\":1} trailing").getTable());
@@ -189,13 +199,7 @@ class Json2ListTest {
 			.hostname(LOCALHOST)
 			.sourceTable(sourceTable)
 			.build()
-			.process(
-				Awk.builder()
-					.script("$1 == \"/data/token\" { print $2; exit }")
-					.input(ContentType.TABLE)
-					.output(ContentType.TABLE)
-					.build()
-			);
+			.process(Awk.builder().script("$1 == \"/data/token\" { print $2; exit }").output(ContentType.TABLE).build());
 		assertEquals(SourceTable.ofTable(List.of(List.of("ab;c\nd"))), sourceTable);
 	}
 }

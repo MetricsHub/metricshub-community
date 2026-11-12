@@ -1127,11 +1127,14 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		try {
 			sourceTable.setTable(jsonToList(sourceTable.getText() == null ? EMPTY : sourceTable.getText()));
-		} catch (IOException e) {
-			// The location only: the message of the parser quotes the document
+		} catch (IOException | NumberFormatException e) {
+			// The kind and the location only: the message of the parser quotes the document. A number whose exponent
+			// overflows a BigDecimal throws a NumberFormatException
 			log.warn(
-				"Hostname {} - Json2List compute: the document is not a JSON object or array ({}). The table is empty.",
+				"Hostname {} - Json2List compute: the document does not read as a JSON object or array ({} {}). " +
+					"The table is empty.",
 				hostname,
+				e.getClass().getSimpleName(),
 				e instanceof JsonProcessingException jpe && jpe.getLocation() != null
 					? jpe.getLocation().offsetDescription()
 					: "no location"
@@ -1151,8 +1154,9 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @throws IOException when the document does not parse or is not an object or an array
 	 */
 	static List<List<String>> jsonToList(final String json) throws IOException {
-		// ponytail: a second JSON walker beside JFlat, with the whole document and its rows in memory. Read JFlat's
-		// flat map once a JFlat release exposes it (getFlatMap()), mind that it is sorted and case-insensitive.
+		// Not JFlat's getFlatMap() (JFlat 1.3.00): that map is sorted ([10] before [2]) and case-insensitive (keys that
+		// differ only in case collapse). This walk keeps the document order and every value.
+		// ponytail: the whole document and its rows are in memory; stream the rows if documents get huge.
 		final List<List<String>> rows = new ArrayList<>();
 		try (JsonParser parser = JSON_FACTORY.createParser(json)) {
 			final JsonToken first = parser.nextToken();
