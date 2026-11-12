@@ -387,6 +387,57 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void eachNewTokenShouldBeWrittenForTheCollectorWhichWaitsForTheFirst() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		final List<Path> launches = new CopyOnWriteArrayList<>();
+
+		assertTrue(coordinator.whenTokenFileWritten(launches::add), "deferred before the agent is enrolled");
+		assertTrue(enrollWith(coordinator, central(KEY)));
+
+		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
+		assertEquals(store.tokenFile(), launches.get(0));
+		final String first = tokensHandedOut.get(tokensHandedOut.size() - 1);
+		assertEquals(first, Files.readString(store.tokenFile()));
+
+		// A 401, or a 4004 close, drops the token: the one that replaces it is written too
+		coordinator.invalidateToken();
+		final String next = coordinator.currentToken();
+		assertNotEquals(first, next);
+		assertEquals(next, Files.readString(store.tokenFile()));
+		assertEquals(1, launches.size(), "launched once");
+
+		// Written already: a later launch (a restart of the collector) runs at once
+		assertFalse(coordinator.whenTokenFileWritten(launches::add));
+		assertEquals(List.of(store.tokenFile(), store.tokenFile()), launches);
+	}
+
+	@Test
+	void aFailedTokenFileWriteShouldBeRetriedWithoutLoggingTheToken() throws Throwable {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		// A directory in the way: the move over it fails
+		Files.createDirectories(store.tokenFile().resolve("in-the-way"));
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		final List<Path> launches = new CopyOnWriteArrayList<>();
+		coordinator.whenTokenFileWritten(launches::add);
+
+		final String logs = logged(() -> {
+			assertTrue(enrollWith(coordinator, central(KEY)));
+			assertTrue(launches.isEmpty(), "no collector without its token file");
+		});
+
+		assertTrue(logs.contains("Cannot write the agent token file"), logs);
+		for (final String token : tokensHandedOut) {
+			assertFalse(logs.contains(token.substring(token.indexOf('.') + 1)), logs);
+		}
+		Files.delete(store.tokenFile().resolve("in-the-way"));
+		Files.delete(store.tokenFile());
+		final String token = coordinator.currentToken();
+		assertEquals(token, Files.readString(store.tokenFile()));
+		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
+	}
+
+	@Test
 	void aReplacedTokenProviderShouldReleaseItsHttpClient() throws Exception {
 		final EnrollmentCoordinator coordinator = coordinator(new AgentCredentialStore(directory));
 		assertTrue(enrollWith(coordinator, central(KEY)));

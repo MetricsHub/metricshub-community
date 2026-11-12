@@ -99,6 +99,11 @@ public final class AgentCredentialStore {
 	 */
 	public static final String LOCK_FILENAME = "metricshub-agent.lock";
 
+	/**
+	 * Name of the file that holds the agent's current access token, for the embedded OpenTelemetry Collector.
+	 */
+	public static final String TOKEN_FILENAME = "metricshub-agent-token";
+
 	private static final String STATE = "state";
 	private static final String ATTEMPT_ID = "attempt_id";
 	private static final String PENDING = "pending";
@@ -347,6 +352,24 @@ public final class AgentCredentialStore {
 	 */
 	public Path uidFile() {
 		return directory.resolve(AgentInstanceUid.FILENAME);
+	}
+
+	/**
+	 * @return the token file, {@link #TOKEN_FILENAME} in this store's directory
+	 */
+	public Path tokenFile() {
+		return directory.resolve(TOKEN_FILENAME);
+	}
+
+	/**
+	 * Replaces the token file atomically, through a temporary file of this directory restricted to the owner: a
+	 * reader sees the former token or the new one, never a part of it.
+	 *
+	 * @param token the access token
+	 * @throws IOException when the file cannot be written
+	 */
+	public void writeToken(final String token) throws IOException {
+		writeAtomically(tokenFile(), token.getBytes(StandardCharsets.US_ASCII));
 	}
 
 	private Path keyStoreFile() {
