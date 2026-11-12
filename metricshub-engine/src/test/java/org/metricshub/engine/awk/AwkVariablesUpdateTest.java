@@ -213,14 +213,14 @@ class AwkVariablesUpdateTest {
 	}
 
 	/**
-	 * Pins what the documentation says: a top-level scalar compares as a number, a value in a list, a map or a table
-	 * compares as text unless the script adds <code>+ 0</code>. A Jawk that made these values numeric strings would
-	 * change the second, third and fourth results, and the documentation with them.
+	 * Pins what the documentation says: a scalar, at the top level or in a list, a map or a table, compares as a number
+	 * when it looks like one (<code>"10" &gt; 9</code>), and as text otherwise (<code>"10x" &gt; 9</code> compares
+	 * <code>"10x"</code> with <code>"9"</code>).
 	 */
 	@Test
-	void testNestedValuesCompareAsText() throws Exception {
+	void testNestedValuesCompareAsNumbers() throws Exception {
 		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
-			Map.of("scalar", "10", "list", List.of("10"), "map", Map.of("key", "10"), "table", SOURCE_REF),
+			Map.of("scalar", "10", "list", List.of("10", "10x"), "map", Map.of("key", "10"), "table", SOURCE_REF),
 			telemetryManagerWithTable(List.of(List.of("10"))),
 			CONNECTOR_ID,
 			Map.of(),
@@ -228,9 +228,9 @@ class AwkVariablesUpdateTest {
 		);
 
 		assertEquals(
-			"1 0 0 0 1\n",
+			"1 1 1 1 0\n",
 			AwkExecutor.executeAwk(
-				"BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[0] + 0 > 9) }",
+				"BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[1] > 9) }",
 				"",
 				AwkExecutor.getUtilityEngine(),
 				variables

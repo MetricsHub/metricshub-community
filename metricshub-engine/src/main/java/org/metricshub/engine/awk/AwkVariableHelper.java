@@ -59,10 +59,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * <code>for (key in myMap)</code>. Lists and maps nest, and each scalar they hold, at any depth, is resolved as a
  * variable is: its textual references are substituted, and a source reference becomes that source's table.
  * <p>
- * Jawk makes a top-level scalar a numeric string, compared as a number when it looks like one, as an input field is.
- * A value in a list, a map or a table is handed over as a plain {@link String} and compared as text:
- * <code>myList[0] &gt; 9</code> is false for <code>"10"</code>, and a script writes <code>myList[0] + 0</code> to
- * compare it as a number.
+ * Jawk makes every scalar, at any depth of a list, a map or a table, a numeric string: like an input field, it compares
+ * as a number when it looks like one (<code>myList[0] &gt; 9</code> is true for <code>"10"</code>), and as text
+ * otherwise.
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
