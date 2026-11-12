@@ -29,10 +29,12 @@ import java.util.regex.Pattern;
 
 /**
  * Collects the output of an AWK script as a table: each <code>print a, b, c</code> appends the row
- * <code>[a, b, c]</code> without serializing anything. <code>printf</code> writes text, so its output is split the
- * way the script serialized it: <code>ORS</code> ends a row and <code>OFS</code> separates its cells, exactly as the
- * text would be read back. Text written after the last <code>ORS</code> stays pending until the next <code>print</code>
- * or <code>printf</code> completes it; {@link #getRows()} turns whatever is still pending into the last row.
+ * <code>[a, b, c]</code> without serializing anything, and a bare <code>print</code> appends the current record's
+ * fields <code>[$1, ..., $NF]</code>, exactly as <code>print $1, ..., $NF</code> would (<code>print $0</code> still
+ * gives one cell). <code>printf</code> writes text, so its output is split the way the script serialized it:
+ * <code>ORS</code> ends a row and <code>OFS</code> separates its cells, exactly as the text would be read back. Text
+ * written after the last <code>ORS</code> stays pending until the next <code>print</code> or <code>printf</code>
+ * completes it; {@link #getRows()} turns whatever is still pending into the last row.
  * <p>
  * The values are rendered as <code>print</code> renders them: a string as is, an integral number without decimals,
  * any other number through <code>OFMT</code>.
@@ -69,6 +71,22 @@ public class TableSink extends AwkSink {
 			cells.addAll(row.subList(1, row.size()));
 		}
 		rows.add(cells);
+	}
+
+	/**
+	 * A bare <code>print</code>: the current record's fields <code>$1..$NF</code> are the printed values, so each one
+	 * is a cell, rendered and completing a pending <code>printf</code> as {@link #print} does. A record without fields
+	 * (<code>NF == 0</code>) prints <code>$0</code> as before: one empty cell, never a row without cells.
+	 */
+	@Override
+	public void printRecord(
+		final String ofs,
+		final String ors,
+		final String ofmt,
+		final List<Object> fields,
+		final Object record
+	) {
+		print(ofs, ors, ofmt, fields.isEmpty() ? new Object[] { record } : fields.toArray());
 	}
 
 	@Override
