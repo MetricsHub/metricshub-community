@@ -111,8 +111,9 @@ public class OtelCollectorProcessService extends AbstractProcess {
 
 	@Override
 	public synchronized void start() throws IOException {
-		if (stopped) {
-			log.debug("The OpenTelemetry Collector was stopped before its deferred launch: it is not started.");
+		if (stopped || started) {
+			// A deferred launch released after a stop, or after a relaunch that already started the collector
+			log.debug("The OpenTelemetry Collector is stopped or already started: it is not started again.");
 			return;
 		}
 		super.start();

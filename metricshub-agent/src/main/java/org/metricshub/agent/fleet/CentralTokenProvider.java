@@ -298,6 +298,14 @@ public class CentralTokenProvider {
 	}
 
 	/**
+	 * @param of a token this provider handed out
+	 * @return whether it is still the cached one: not refused, nor replaced, since
+	 */
+	public synchronized boolean isCurrent(final String of) {
+		return of != null && of.equals(token);
+	}
+
+	/**
 	 * Drops the cached token when it is the one Central refused; a newer one, renewed meanwhile, is kept.
 	 *
 	 * @param rejected the token Central refused, or {@code null} for whichever is cached

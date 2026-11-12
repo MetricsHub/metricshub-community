@@ -204,6 +204,38 @@ class OtelCollectorProcessServiceTest {
 	}
 
 	@Test
+	void aSecondStartShouldNotStartASecondCollector() throws IOException {
+		final ProcessBuilder pb = Mockito.mock(ProcessBuilder.class);
+		final Process process = Mockito.mock(Process.class);
+
+		try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
+			processControl.when(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(File.class), anyBoolean()))
+				.thenReturn(pb);
+			processControl.when(() -> ProcessControl.start(any(ProcessBuilder.class))).thenCallRealMethod();
+			doReturn(process).when(pb).start();
+			doReturn(new CustomInputStream("")).when(process).getInputStream();
+			doReturn(new CustomInputStream("")).when(process).getErrorStream();
+			final OtelCollectorConfig otelCollectorConfigMock = Mockito.mock(OtelCollectorConfig.class);
+			doReturn(
+				ProcessConfig.builder()
+					.commandLine(List.of("otelcol-contrib", "--config", "/opt/metricshub/otel/otel-config.yaml"))
+					.workingDir(new File("."))
+					.build()
+			).when(otelCollectorConfigMock).toProcessConfig();
+			final OtelCollectorProcessService otelProcess = new OtelCollectorProcessService(
+				AgentConfig.builder().otelCollector(otelCollectorConfigMock).build()
+			);
+
+			// A deferred launch released after a relaunch that already started the collector
+			otelProcess.start();
+			otelProcess.start();
+
+			Mockito.verify(pb, Mockito.times(1)).start();
+			otelProcess.stop();
+		}
+	}
+
+	@Test
 	void testWithoutOutputProcessor() throws IOException {
 		final ProcessBuilder pb = Mockito.mock(ProcessBuilder.class);
 		final Process process = Mockito.mock(Process.class);

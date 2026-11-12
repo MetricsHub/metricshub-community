@@ -428,7 +428,7 @@ public class EnrollmentCoordinator {
 				throw new IOException("The issuer changed while its token was asked.");
 			}
 			clearRecoveryOnce();
-			launch = writeTokenFile(token);
+			launch = writeTokenFile(provider, token);
 		}
 		if (launch != null) {
 			// Never on a channel's thread: the launch waits for the collector to start
@@ -442,11 +442,13 @@ public class EnrollmentCoordinator {
 	/**
 	 * Writes a new token to the token file, for the collector; a failure is retried at the next token request.
 	 *
-	 * @param token the token just handed out
+	 * @param provider the provider that handed it out
+	 * @param token    the token just handed out
 	 * @return the collector launch that waited for the first file, or {@code null}
 	 */
-	private Runnable writeTokenFile(final String token) {
-		if (token.equals(writtenToken) || !enrollmentWanted) {
+	synchronized Runnable writeTokenFile(final CentralTokenProvider provider, final String token) {
+		// A token a 401 or a 4004 invalidated meanwhile, maybe replaced and written already, is never written over it
+		if (token.equals(writtenToken) || !enrollmentWanted || !provider.isCurrent(token)) {
 			// A token request that ends after central.auth was removed writes nothing: a later launch waits for a token
 			// written once it is back
 			return null;

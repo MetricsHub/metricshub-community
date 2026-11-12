@@ -440,6 +440,21 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void anInvalidatedTokenShouldNeverBeWrittenOverItsReplacement() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final String refused = coordinator.currentToken();
+		coordinator.invalidateToken();
+		final String replacement = coordinator.currentToken();
+
+		// A call that obtained the refused token reaches the write after the replacement was written
+		coordinator.writeTokenFile(coordinator.currentProvider(), refused);
+
+		assertEquals(replacement, Files.readString(store.tokenFile()));
+	}
+
+	@Test
 	void aTokenOfTheFormerIssuerShouldNotReleaseALaunchForTheNewOne() throws Exception {
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		final EnrollmentCoordinator coordinator = coordinator(store);
