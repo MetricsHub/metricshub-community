@@ -34,6 +34,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -48,7 +49,10 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -177,6 +181,15 @@ public class EnrollmentCoordinator {
 	private volatile boolean firstTokenDone;
 	/** Runs when the worker has decided to end, before it does (tests). */
 	volatile Runnable beforeWorkerEnds = () -> {};
+	/** The token the token file holds, {@code null} before the first write. */
+	private String writtenToken;
+	/** The collector launch waiting for the token file, and the configuration it was launched with. */
+	private Consumer<Path> pendingLaunch;
+	private CentralConfig pendingCentral;
+	/** Keeps the token file renewed, and a failed write retried, whatever the channels do. */
+	private ScheduledExecutorService tokenFileRefresher;
+	/** How often the refresher asks for the token (tests shorten it). */
+	Duration tokenFileRefresh = Duration.ofSeconds(30);
 
 	/**
 	 * Creates a coordinator (tests).
@@ -241,6 +254,8 @@ public class EnrollmentCoordinator {
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
 		if (!isConfigured(central)) {
 			enrollmentWanted = false;
+			// Not renewed meanwhile: when central.auth comes back, a collector launch waits for a token written then
+			writtenToken = null;
 			// The enrollment, or the first token after it
 			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
@@ -289,6 +304,8 @@ public class EnrollmentCoordinator {
 				}
 				tokenProvider = null;
 				tokenGeneration++;
+				// The file holds the former issuer's token: a collector launched for the new one waits for its first
+				writtenToken = null;
 				if (!recoveryCleared) {
 					// The recovery proof goes after the first token of the new issuer
 					firstTokenDone = false;
@@ -404,14 +421,116 @@ public class EnrollmentCoordinator {
 		}
 		// Under the lock ready() replaces the provider with: the check and the deletion of the recovery proof below are
 		// one step, so a reload never falls between them
+		final Runnable launch;
 		synchronized (this) {
 			if (provider != currentProvider()) {
 				// Obtained from the former issuer: neither used nor counted as the first token of the new one
 				throw new IOException("The issuer changed while its token was asked.");
 			}
 			clearRecoveryOnce();
+			launch = writeTokenFile(provider, token);
+		}
+		if (launch != null) {
+			// Never on a channel's thread: the launch waits for the collector to start
+			final Thread launcher = new Thread(launch, "otelcol-deferred-launch");
+			launcher.setDaemon(true);
+			launcher.start();
 		}
 		return token;
+	}
+
+	/**
+	 * Writes a new token to the token file, for the collector; a failure is retried at the next token request.
+	 *
+	 * @param provider the provider that handed it out
+	 * @param token    the token just handed out
+	 * @return the collector launch that waited for the first file, or {@code null}
+	 */
+	synchronized Runnable writeTokenFile(final CentralTokenProvider provider, final String token) {
+		// A token a 401 or a 4004 invalidated meanwhile, maybe replaced and written already, is never written over it
+		if (token.equals(writtenToken) || !enrollmentWanted || !provider.isCurrent(token)) {
+			// A token request that ends after central.auth was removed writes nothing: a later launch waits for a token
+			// written once it is back
+			return null;
+		}
+		// Started before the first write succeeds: a failed one is retried even when no channel asks for a token
+		if (tokenFileRefresher == null) {
+			tokenFileRefresher = Executors.newSingleThreadScheduledExecutor(runnable -> {
+				final Thread thread = new Thread(runnable, "metricshub-agent-token-file");
+				thread.setDaemon(true);
+				return thread;
+			});
+			tokenFileRefresher.scheduleWithFixedDelay(
+				this::refreshTokenFile,
+				tokenFileRefresh.toMillis(),
+				tokenFileRefresh.toMillis(),
+				TimeUnit.MILLISECONDS
+			);
+		}
+		try {
+			store.writeToken(token);
+		} catch (IOException e) {
+			// The message names the file, never the token
+			log.warn("Cannot write the agent token file yet: {}. Retried at the next token request.", e.getMessage());
+			return null;
+		}
+		writtenToken = token;
+		final Consumer<Path> waiting = pendingLaunch;
+		// A token of the former issuer, renewed before ready() reconciled the one the launch waits for, releases nothing
+		if (waiting == null || !isReadyFor(pendingCentral)) {
+			return null;
+		}
+		pendingLaunch = null;
+		pendingCentral = null;
+		final Path file = store.tokenFile();
+		return () -> waiting.accept(file);
+	}
+
+	/**
+	 * Asks for the current token, which renews it and its file when due: the file stays valid when no channel asks.
+	 */
+	private void refreshTokenFile() {
+		if (!enrollmentWanted || !ready) {
+			return;
+		}
+		synchronized (this) {
+			// Deleted or changed by someone else: the next token request writes it again, the same token included
+			if (writtenToken != null && !store.holdsToken(writtenToken)) {
+				log.debug("The agent token file no longer holds the current token: it is written again.");
+				writtenToken = null;
+			}
+		}
+		try {
+			currentToken();
+		} catch (IOException | RuntimeException e) {
+			log.debug("The agent token file is not renewed: {}", e.getMessage());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	/**
+	 * Runs a collector launch with the token file's path once the file holds a token of the given configuration's
+	 * issuer: at once when it does, else after the next write. A launch still waiting is replaced.
+	 *
+	 * @param central the {@code central} configuration the collector is launched with
+	 * @param launch  the launch, given the token file's path
+	 * @return whether the launch waits for the token file
+	 */
+	public boolean whenTokenFileWritten(final CentralConfig central, final Consumer<Path> launch) {
+		final Path file;
+		synchronized (this) {
+			// Before ready() reconciled a reload, the file may hold the former issuer's token: the reconciliation
+			// drops it, and the first token of the new issuer launches the collector
+			if (writtenToken == null || !isReadyFor(central)) {
+				pendingLaunch = launch;
+				pendingCentral = central;
+				return true;
+			}
+			file = store.tokenFile();
+		}
+		launch.accept(file);
+		return false;
 	}
 
 	/**
@@ -721,7 +840,11 @@ public class EnrollmentCoordinator {
 			Objects.equals(latest.certificateFile(), stoppedWith.certificateFile()));
 	}
 
-	private static boolean isConfigured(final CentralConfig central) {
+	/**
+	 * @param central the {@code central} configuration
+	 * @return whether it asks the agent to authenticate with its enrolled identity ({@code central.auth})
+	 */
+	public static boolean isConfigured(final CentralConfig central) {
 		return central != null && central.isEnabled() && central.getAuth() != null;
 	}
 
