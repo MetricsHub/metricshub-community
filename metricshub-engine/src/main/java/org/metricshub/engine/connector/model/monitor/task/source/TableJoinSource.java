@@ -38,9 +38,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.PositiveIntegerDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
+import org.metricshub.engine.connector.deserializer.custom.TableLiteralDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -57,18 +57,33 @@ public class TableJoinSource extends Source {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The name of the left table to join.
+	 * The left table to join, in its string form: a source reference, or a legacy table literal written as
+	 * <code>;</code> CSV text. Null when the table is written as a list of rows (see {@link #leftTableRows}).
 	 */
 	@JsonSetter(nulls = FAIL)
-	@JsonDeserialize(using = NonBlankDeserializer.class)
 	private String leftTable;
 
 	/**
-	 * The name of the right table to join.
+	 * The rows of the left table to join, when it is written as a table literal, a YAML list of rows each a list of
+	 * cells: exactly these rows and cells. Null in the string form. Set from <code>leftTable</code> only: never read
+	 * from the connector, where it would skip the checks of {@link TableLiteralDeserializer}.
+	 */
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	private List<List<String>> leftTableRows;
+
+	/**
+	 * The right table to join, in its string form: a source reference, or a legacy table literal written as
+	 * <code>;</code> CSV text. Null when the table is written as a list of rows (see {@link #rightTableRows}).
 	 */
 	@JsonSetter(nulls = FAIL)
-	@JsonDeserialize(using = NonBlankDeserializer.class)
 	private String rightTable;
+
+	/**
+	 * The rows of the right table to join, when it is written as a table literal: exactly these rows and cells. Null
+	 * in the string form. Set from <code>rightTable</code> only.
+	 */
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	private List<List<String>> rightTableRows;
 
 	/**
 	 * The column index from the left table to use as the key for the join.
@@ -107,8 +122,9 @@ public class TableJoinSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
-	 * @param leftTable            The name of the left table to join.
-	 * @param rightTable           The name of the right table to join.
+	 * @param leftTable            The left table to join: a {@link String} (source reference or <code>;</code> CSV
+	 *                             literal) or a {@link List} of rows, each a {@link List} of cells.
+	 * @param rightTable           The right table to join, in the same forms as the left table.
 	 * @param leftKeyColumn        The column index from the left table to use as the key for the join.
 	 * @param rightKeyColumn       The column index from the right table to use as the key for the join.
 	 * @param defaultRightLine     The default line for right table entries when there is no match: a {@link String}
@@ -123,8 +139,12 @@ public class TableJoinSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
-		@JsonProperty(value = "leftTable", required = true) String leftTable,
-		@JsonProperty(value = "rightTable", required = true) String rightTable,
+		@JsonProperty(value = "leftTable", required = true) @JsonDeserialize(
+			using = TableLiteralDeserializer.class
+		) Object leftTable,
+		@JsonProperty(value = "rightTable", required = true) @JsonDeserialize(
+			using = TableLiteralDeserializer.class
+		) Object rightTable,
 		@JsonProperty(value = "leftKeyColumn", required = true) Integer leftKeyColumn,
 		@JsonProperty(value = "rightKeyColumn", required = true) Integer rightKeyColumn,
 		@JsonProperty("defaultRightLine") @JsonDeserialize(using = StringOrListDeserializer.class) Object defaultRightLine,
@@ -133,8 +153,16 @@ public class TableJoinSource extends Source {
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
-		this.leftTable = leftTable;
-		this.rightTable = rightTable;
+		if (leftTable instanceof List<?> rows) {
+			this.leftTableRows = copyRows(rows);
+		} else {
+			this.leftTable = (String) leftTable;
+		}
+		if (rightTable instanceof List<?> rows) {
+			this.rightTableRows = copyRows(rows);
+		} else {
+			this.rightTable = (String) rightTable;
+		}
 		this.leftKeyColumn = leftKeyColumn;
 		this.rightKeyColumn = rightKeyColumn;
 		if (defaultRightLine instanceof List<?> cells) {
@@ -155,8 +183,8 @@ public class TableJoinSource extends Source {
 			.forceSerialization(forceSerialization)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.leftTable(leftTable)
-			.rightTable(rightTable)
+			.leftTable(leftTableRows != null ? leftTableRows : leftTable)
+			.rightTable(rightTableRows != null ? rightTableRows : rightTable)
 			.leftKeyColumn(leftKeyColumn)
 			.rightKeyColumn(rightKeyColumn)
 			.defaultRightLine(defaultRightLineCells != null ? defaultRightLineCells : defaultRightLine)
@@ -168,6 +196,12 @@ public class TableJoinSource extends Source {
 	public void update(UnaryOperator<String> updater) {
 		leftTable = updater.apply(leftTable);
 		rightTable = updater.apply(rightTable);
+		if (leftTableRows != null) {
+			leftTableRows.forEach(row -> row.replaceAll(updater));
+		}
+		if (rightTableRows != null) {
+			rightTableRows.forEach(row -> row.replaceAll(updater));
+		}
 		keyType = updater.apply(keyType);
 		defaultRightLine = updater.apply(defaultRightLine);
 		if (defaultRightLineCells != null) {
@@ -182,7 +216,9 @@ public class TableJoinSource extends Source {
 		stringJoiner.add(super.toString());
 
 		addNonNull(stringJoiner, "- leftTable=", leftTable);
+		addNonNull(stringJoiner, "- leftTable=", leftTableRows);
 		addNonNull(stringJoiner, "- rightTable=", rightTable);
+		addNonNull(stringJoiner, "- rightTable=", rightTableRows);
 		addNonNull(stringJoiner, "- leftKeyColumn=", leftKeyColumn);
 		addNonNull(stringJoiner, "- rightKeyColumn=", rightKeyColumn);
 		addNonNull(stringJoiner, "- defaultRightLine=", defaultRightLine);
@@ -190,6 +226,18 @@ public class TableJoinSource extends Source {
 		addNonNull(stringJoiner, "- keyType=", keyType);
 
 		return stringJoiner.toString();
+	}
+
+	/**
+	 * A mutable copy of the rows of a table literal: {@link #update(UnaryOperator)} changes the cells of the copy.
+	 *
+	 * @param rows The rows, each a {@link List} of {@link String} cells
+	 * @return the new rows
+	 */
+	private static List<List<String>> copyRows(final List<?> rows) {
+		return rows.stream()
+			.map(row -> ((List<?>) row).stream().map(String.class::cast).collect(Collectors.toCollection(ArrayList::new)))
+			.collect(Collectors.toCollection(ArrayList::new));
 	}
 
 	@Override

@@ -71,6 +71,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -196,6 +197,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	@Override
+	public SourceTable process(final TextUnionSource textUnionSource) {
+		return processSource(textUnionSource.copy());
+	}
+
+	@Override
 	public SourceTable process(final WbemSource wbemSource) {
 		return processSource(wbemSource.copy());
 	}
@@ -256,7 +262,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>.
+	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>:
+	 * the whole first line of a text, without its line ending, or the first cell of a table.
 	 *
 	 * @param originalSourceKey The original source key for debugging purposes.
 	 * @param foreignSourceKey  The foreign source key used to extract the token.
@@ -296,9 +303,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		String value = null;
 		if (sourceTable.getContentType() == ContentType.TEXT) {
-			// A text: up to the first separator
+			// A text: its whole first line, without its LF or CR LF ending (a lone CR ends no line)
 			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			value = sourceTable.getText().split(";")[0];
+			value = sourceTable.getText().split("\r?\n", 2)[0];
 		} else if (!sourceTable.getTable().isEmpty()) {
 			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);
@@ -465,18 +472,20 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Whether this source must have protected references that shouldn't be replaced by the current updater
+	 * Whether this source must have protected references that shouldn't be replaced by the current updater: its
+	 * source references are read as sources, never interpolated in its fields.
 	 *
 	 * @param source {@link Source} instance
 	 * @return boolean value
 	 */
-	private boolean isSourceWithProtectedReferences(final Source source) {
+	public static boolean isSourceWithProtectedReferences(final Source source) {
 		return (source instanceof CopySource ||
 			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
+			source instanceof TextUnionSource ||
 			source instanceof TableJoinSource ||
-			// An awk source reading a table resolves its input reference to the table itself when the script runs
-			(source instanceof JawkSource jawk && jawk.getInputFormat() == ContentType.TABLE));
+			// An awk source resolves an input that is a single source reference when the script runs, to the source as it is
+			(source instanceof JawkSource jawk && JawkSource.isSourceReference(jawk.getInput())));
 	}
 
 	/**
@@ -568,15 +577,25 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			? sourceTable.getText()
 			: SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, false);
 
-		// Remove last semicolon from the rows containing only one cell.
-		// For instance the last semicolon leads to HTTP Errors when the reference is defined in the Header attribute
-		return Stream.of(sourceReferenceContent.split(NEW_LINE)).map(val -> {
-			final int indexOfSemicolon = val.indexOf(SEMICOLON);
-			if (indexOfSemicolon == val.length() - 1) {
-				return val.replace(SEMICOLON, EMPTY);
-			}
-			return val;
-		}).collect(Collectors.joining(NEW_LINE));
+		return Stream.of(sourceReferenceContent.split(NEW_LINE))
+			.map(SourceUpdaterProcessor::referenceLine)
+			.collect(Collectors.joining(NEW_LINE));
+	}
+
+	/**
+	 * A line of a source reference as the reference gives it: a line whose only semicolon is its last character (a
+	 * row of one cell, serialized with its trailing separator) loses that semicolon, any other line is kept as is.
+	 * For instance, the last semicolon leads to HTTP errors when the reference is in a header.
+	 *
+	 * @param line A line of the serialized source
+	 * @return the line as the reference gives it
+	 */
+	public static String referenceLine(final String line) {
+		final int indexOfSemicolon = line.indexOf(SEMICOLON);
+		if (indexOfSemicolon == line.length() - 1) {
+			return line.replace(SEMICOLON, EMPTY);
+		}
+		return line;
 	}
 
 	/**

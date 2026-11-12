@@ -14,7 +14,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.UncheckedIOException;
 import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryFlag;
 import java.nio.file.attribute.AclEntryPermission;
 import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -176,6 +179,72 @@ class AgentCredentialStoreTest {
 				file
 			);
 		}
+	}
+
+	@Test
+	void aReaderShouldSeeTheFormerOrTheNewTokenNeverAPartOfIt() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final String former = "a".repeat(200_000);
+		final String next = "b".repeat(300_000);
+		store.writeToken(former);
+		final AtomicBoolean writing = new AtomicBoolean(true);
+		final Thread writer = new Thread(() -> {
+			try {
+				for (int i = 0; i < 100; i++) {
+					store.writeToken(i % 2 == 0 ? next : former);
+				}
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			} finally {
+				writing.set(false);
+			}
+		});
+		writer.start();
+		int reads = 0;
+		while (writing.get()) {
+			final String read = Files.readString(store.tokenFile(), StandardCharsets.US_ASCII);
+			assertTrue(read.equals(former) || read.equals(next), "a partial token of " + read.length() + " characters");
+			reads++;
+		}
+		writer.join();
+		assertTrue(reads > 0);
+	}
+
+	@Test
+	void theTokenFileShouldBeTheOwnersOnlyOnPosix() throws Exception {
+		assumeTrue(FileSystems.getDefault().supportedFileAttributeViews().contains("posix"));
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwxr-xr-x"));
+
+		store.writeToken("token");
+
+		assertEquals("rw-------", PosixFilePermissions.toString(Files.getPosixFilePermissions(store.tokenFile())));
+	}
+
+	@Test
+	void theTokenFileShouldKeepNoOtherPrincipalOnWindows() throws Exception {
+		final AclFileAttributeView view = Files.getFileAttributeView(directory, AclFileAttributeView.class);
+		assumeTrue(view != null && Files.getFileAttributeView(directory, PosixFileAttributeView.class) == null);
+		final UserPrincipal users = FileSystems.getDefault()
+			.getUserPrincipalLookupService()
+			.lookupPrincipalByName("BUILTIN\\Users");
+		final List<AclEntry> entries = new ArrayList<>(view.getAcl());
+		entries.add(
+			AclEntry.newBuilder()
+				.setType(AclEntryType.ALLOW)
+				.setPrincipal(users)
+				.setPermissions(EnumSet.of(AclEntryPermission.READ_DATA))
+				.setFlags(EnumSet.of(AclEntryFlag.FILE_INHERIT))
+				.build()
+		);
+		view.setAcl(entries);
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+
+		store.writeToken("token");
+
+		final AclFileAttributeView file = Files.getFileAttributeView(store.tokenFile(), AclFileAttributeView.class);
+		assertTrue(file.getAcl().stream().noneMatch(entry -> entry.principal().equals(users)), file.getAcl().toString());
+		assertEquals("token", Files.readString(store.tokenFile()));
 	}
 
 	@Test

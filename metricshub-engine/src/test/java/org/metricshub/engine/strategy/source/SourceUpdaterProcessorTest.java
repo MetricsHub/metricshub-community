@@ -45,7 +45,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
-import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
@@ -62,6 +61,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -634,6 +634,23 @@ class SourceUpdaterProcessorTest {
 	}
 
 	@Test
+	void testProcessTextUnionSource() {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).build())
+			.build();
+		final String member = "${source::monitors.cpu.discovery.sources.member}";
+		final TextUnionSource textUnion = TextUnionSource.builder().texts(new ArrayList<>(List.of(member))).build();
+		doReturn(SourceTable.ofText("x")).when(sourceProcessor).process(any(TextUnionSource.class));
+		assertEquals(
+			SourceTable.ofText("x"),
+			new SourceUpdaterProcessor(sourceProcessor, telemetryManager, MY_CONNECTOR_1_NAME, Map.of(), extensionManager)
+				.process(textUnion)
+		);
+		// The source processor runs a copy whose members are still the references
+		verify(sourceProcessor).process(TextUnionSource.builder().texts(List.of(member)).build());
+	}
+
+	@Test
 	void testProcessCopySource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
 		final HostConfiguration hostConfiguration = HostConfiguration.builder()
@@ -1027,11 +1044,11 @@ class SourceUpdaterProcessorTest {
 	}
 
 	/**
-	 * The input reference of an awk source reading a table is resolved to the table when the script runs: the
-	 * updater must not expand it into the source's text, whatever that text looks like.
+	 * An awk source input that is a single source reference is resolved to that source when the script runs: the
+	 * updater must not expand it into the source's text. A reference inside a text is expanded (#1559).
 	 */
 	@Test
-	void testProcessJawkSourceTableInputKeepsItsReference() {
+	void testProcessJawkSourceReferenceInputKeepsItsReference() {
 		final String inputRef = "${source::monitors.enclosure.discovery.sources.raw}";
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).build())
@@ -1053,13 +1070,13 @@ class SourceUpdaterProcessorTest {
 			extensionManager
 		);
 
-		updater.process(JawkSource.builder().input(inputRef).inputFormat(ContentType.TABLE).script("{ print }").build());
 		updater.process(JawkSource.builder().input(inputRef).script("{ print }").build());
+		updater.process(JawkSource.builder().input("x " + inputRef).script("{ print }").build());
 
 		final ArgumentCaptor<JawkSource> captor = ArgumentCaptor.forClass(JawkSource.class);
 		verify(sourceProcessor, times(2)).process(captor.capture());
-		assertEquals(inputRef, captor.getAllValues().get(0).getInput(), "table input: the reference is kept");
-		// Text input: the reference is expanded into the source's text (the cell, which looks like a reference)
-		assertEquals("${source::monitors.enclosure.discovery.sources.other}", captor.getAllValues().get(1).getInput());
+		assertEquals(inputRef, captor.getAllValues().get(0).getInput(), "single reference: kept");
+		// Inside a text: the reference is expanded into the source's text (the cell, which looks like a reference)
+		assertEquals("x ${source::monitors.enclosure.discovery.sources.other}", captor.getAllValues().get(1).getInput());
 	}
 }

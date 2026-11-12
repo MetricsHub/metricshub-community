@@ -27,9 +27,12 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
@@ -38,11 +41,16 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.deserializer.custom.AwkVariablesDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * Represents an Awk computation task for monitoring.
+ * <p>
+ * The <code>input</code> property, once how the script read the source result, is deprecated and ignored: the
+ * script reads the source result as it is (#1559). A connector declaring it still loads, its value is dropped and
+ * the content-type check reports it (<code>inputDeclared</code>).
  */
 @Data
 @NoArgsConstructor
@@ -78,19 +86,14 @@ public class Awk extends Compute {
 	/**
 	 * The variables to expose to the AWK script, indexed by variable name.
 	 * <p>
-	 * A value referencing a source, such as <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed to
-	 * the script as an AWK array holding that source's table. Any other value is exposed as a scalar.
+	 * A value is a scalar ({@link String}), a list ({@link List}) or a map ({@link Map}), and lists and maps nest (see
+	 * {@link AwkVariablesDeserializer}). A list is exposed to the script as an AWK array indexed from 0, a map as an AWK
+	 * array indexed by its keys. A scalar referencing a source, such as
+	 * <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed as an AWK array holding that source's
+	 * table, any other scalar as a scalar (see {@link org.metricshub.engine.awk.AwkVariableHelper}).
 	 */
 	@JsonSetter(nulls = SKIP)
-	private Map<String, String> variables = new LinkedHashMap<>();
-
-	/**
-	 * How the script reads the source result: {@link ContentType#TEXT} (the text; a table is converted first by
-	 * the <code>toText</code> the content-type desugaring inserts) or {@link ContentType#TABLE} (each row is a record whose cells are
-	 * <code>$1..$NF</code>, nothing is serialized). Default text.
-	 */
-	@JsonSetter(nulls = SKIP)
-	private ContentType input = ContentType.TEXT;
+	private Map<String, Object> variables = new LinkedHashMap<>();
 
 	/**
 	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
@@ -102,6 +105,24 @@ public class Awk extends Compute {
 	private ContentType output = ContentType.TEXT;
 
 	/**
+	 * Whether the connector writes the deprecated, ignored <code>input</code> property, which the content-type check
+	 * reports. Never serialized, not part of the equality, not copied.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean inputDeclared;
+
+	/**
+	 * Records that the connector writes the deprecated <code>input</code> property, whose value is ignored.
+	 *
+	 * @param input The ignored value
+	 */
+	@JsonSetter("input")
+	private void declareInput(final Object input) {
+		inputDeclared = true;
+	}
+
+	/**
 	 * Construct a new instance of Awk.
 	 *
 	 * @param type          The type of the computation task.
@@ -111,7 +132,6 @@ public class Awk extends Compute {
 	 * @param separators    The separators parameter for the AWK task.
 	 * @param selectColumns The selectColumns parameter for the AWK task.
 	 * @param variables     The variables to expose to the AWK script.
-	 * @param input         How the script reads the source result, null for text.
 	 * @param output        What the script produces, null for text.
 	 */
 	@Builder
@@ -123,8 +143,7 @@ public class Awk extends Compute {
 		@JsonProperty("keep") String keep,
 		@JsonProperty("separators") String separators,
 		@JsonProperty("selectColumns") String selectColumns,
-		@JsonProperty("variables") Map<String, String> variables,
-		@JsonProperty("input") ContentType input,
+		@JsonProperty("variables") @JsonDeserialize(using = AwkVariablesDeserializer.class) Map<String, ?> variables,
 		@JsonProperty("output") ContentType output
 	) {
 		super(type);
@@ -133,14 +152,20 @@ public class Awk extends Compute {
 		this.keep = keep;
 		this.separators = separators;
 		this.selectColumns = selectColumns;
-		this.variables = variables == null ? new LinkedHashMap<>() : variables;
-		this.input = input == null ? ContentType.TEXT : input;
+		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 
+	/**
+	 * None: the script reads the source result as it is at run time, a text the traditional way (the lines are the
+	 * records, split on <code>FS</code>), a table structured (each row is a record whose cells are
+	 * <code>$1..$NF</code>, nothing is serialized). To read a table as text, write a <code>toText</code> before.
+	 *
+	 * @return null
+	 */
 	@Override
 	public ContentType getInputContentType() {
-		return input == null ? ContentType.TEXT : input;
+		return null;
 	}
 
 	@Override
@@ -160,7 +185,6 @@ public class Awk extends Compute {
 		addNonNull(stringJoiner, "- separators=", separators);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
-		addNonNull(stringJoiner, "- input=", input == ContentType.TABLE ? input : null);
 		addNonNull(stringJoiner, "- output=", output == ContentType.TABLE ? output : null);
 
 		return stringJoiner.toString();
@@ -175,8 +199,7 @@ public class Awk extends Compute {
 			.keep(keep)
 			.separators(separators)
 			.selectColumns(selectColumns)
-			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
-			.input(input)
+			.variables(variables)
 			.output(output)
 			.build();
 	}

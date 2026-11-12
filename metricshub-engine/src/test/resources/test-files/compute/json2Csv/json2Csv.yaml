@@ -15,3 +15,7 @@ beforeAll:
         entryKey: /items
         properties: name
         parsingMode: Events
+      - type: json2Table
+        entryKey: /items
+        properties: name
+        parsingMode: Events

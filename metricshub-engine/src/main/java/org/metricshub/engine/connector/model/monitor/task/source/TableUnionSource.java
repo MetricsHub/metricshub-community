@@ -55,12 +55,14 @@ public class TableUnionSource extends Source {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The list of tables to be included in the union operation.
+	 * The list of tables to be included in the union operation, in order: a {@link String} is a source reference or a
+	 * legacy table literal written as <code>;</code> CSV text, a {@link List} is a table literal, a list of rows each a
+	 * {@link List} of cells.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
 	@JsonDeserialize(using = TablesDeserializer.class)
-	private List<String> tables = new ArrayList<>();
+	private List<Object> tables = new ArrayList<>();
 
 	/**
 	 * Builder for creating instances of {@code TableUnionSource}.
@@ -68,7 +70,8 @@ public class TableUnionSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
-	 * @param tables               List of tables to be included in the union operation.
+	 * @param tables               List of tables to be included in the union operation: source references, legacy
+	 *                             <code>;</code> CSV literals or table literals (lists of rows).
 	 * @param key                  The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 */
@@ -78,7 +81,7 @@ public class TableUnionSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
-		@JsonProperty(value = "tables", required = true) @NonNull List<String> tables,
+		@JsonProperty(value = "tables", required = true) @NonNull List<Object> tables,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {

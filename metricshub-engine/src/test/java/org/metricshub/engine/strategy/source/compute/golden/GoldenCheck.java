@@ -30,7 +30,8 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * connector carries is a failing difference;</li>
  * <li><code>--update</code>: rewrite the goldens of the selected connectors (the revision pin is left alone: the
  * rewritten goldens are not committed yet);</li>
- * <li><code>--report</code>: print the content-type desugaring report of the selected connectors;</li>
+ * <li><code>--report</code>: print the content-type desugaring report of the selected connectors, then the findings
+ * of the load-time content-type check (#1560);</li>
  * <li><code>--pin</code>: once the regenerated goldens are committed, record the current commit of each root in the
  * revision pin ({@link ComputeChainGoldenCorpus#REVISIONS_FILE}) and check nothing.</li>
  * </ul>
@@ -185,6 +186,7 @@ public final class GoldenCheck {
 		}
 		if (report) {
 			System.out.println(ComputeChainGoldenCorpus.contentTypeReport(stores));
+			System.out.println(ComputeChainGoldenCorpus.contentTypeCheckReport(stores));
 		}
 		System.out.println(failing + " failing difference(s)");
 		return failing;

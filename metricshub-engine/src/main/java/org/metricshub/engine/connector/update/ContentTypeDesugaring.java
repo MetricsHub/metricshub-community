@@ -21,7 +21,6 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
@@ -44,7 +43,6 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry;
 import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -54,10 +52,12 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
@@ -71,7 +71,8 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * The chain of a source is walked while tracking the current content type, starting from the type the source
  * produces ({@link Source#getOutputContentType()}):
  * <ul>
- * <li>an <code>awk</code> compute fed a table gets a <code>toText</code> before it;</li>
+ * <li>an <code>awk</code> compute reads whatever it gets, a text or a table: nothing is inserted before it, and
+ * what flows out of it is its output type;</li>
  * <li>a table compute fed text by a legacy text producer (<code>commandLine</code>, the <code>awk</code> source,
  * the <code>awk</code> compute, which built their table as well before the content types) gets a
  * <code>toTable</code> before it;</li>
@@ -80,7 +81,7 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * else, see {@link #textOnlySources(Connector, Map)});</li>
  * <li>a table compute fed by a pure text producer (<code>http</code>, <code>file</code>, <code>ipmi</code>)
  * reads no rows and gives an empty table: nothing is inserted, the case is reported;</li>
- * <li>a text compute that parses a text (<code>json2Csv</code>, <code>json2List</code>, <code>xml2Csv</code>) fed
+ * <li>a text compute that parses a text (<code>json2Table</code>, <code>json2List</code>, <code>xml2Csv</code>) fed
  * by a table producer
  * finds nothing to parse and leaves the table unchanged: nothing is inserted, the case is reported;</li>
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
@@ -100,11 +101,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * class again.
 	 */
 	private static final ObjectMapper MAPPER = JsonHelper.buildObjectMapper();
-
-	/**
-	 * <code>FS = ";"</code> in an AWK script, the sign of a script written for the <code>;</code> serialization.
-	 */
-	private static final Pattern FS_SEMICOLON = Pattern.compile("\\bFS\\s*=\\s*\"\\s*;\\s*\"");
 
 	/**
 	 * A short source reference, <code>${source::name}</code>, with no dot: a source of the same tool or job.
@@ -153,7 +149,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources = new LinkedHashMap<>();
 		forEachSource(connector, source -> sources.put(source.getKey(), source));
 		final Set<String> textOnly = textOnlySources(connector, sources);
-		sources.values().forEach(source -> desugar(connector, source, sources, textOnly, report));
+		sources.values().forEach(source -> desugar(source, sources, textOnly, report));
 		connector.setContentTypeReport(report);
 		// A tool without columns whose result source ends in text returns that text as it is
 		if (connector.getTools() != null) {
@@ -214,8 +210,8 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return null;
 		}
 		final List<Source> members = new ArrayList<>();
-		for (final String table : union.getTables()) {
-			final Source member = toolSource(tool, table);
+		for (final Object table : union.getTables()) {
+			final Source member = table instanceof String ref ? toolSource(tool, ref) : null;
 			if (member == null || !endsInTextAsWritten(member, sources)) {
 				return null;
 			}
@@ -230,6 +226,29 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 */
 	private static boolean endsInTextAsWritten(final Source source, final Map<String, Source> sources) {
 		return chainEnd(source, sources, new HashSet<>(), null).type() == ContentType.TEXT;
+	}
+
+	/**
+	 * What the source produces before its written computes run, as written: what the source (a copy: its origin's
+	 * chain, a text union: its members' texts) produces.
+	 *
+	 * @param source  The source
+	 * @param sources Every source by key
+	 * @return the content type
+	 */
+	static ContentType writtenStartType(final Source source, final Map<String, Source> sources) {
+		return start(source, sources, new HashSet<>(), null).type();
+	}
+
+	/**
+	 * What the source's chain produces as written, no generated conversion counted.
+	 *
+	 * @param source  The source
+	 * @param sources Every source by key
+	 * @return the content type
+	 */
+	static ContentType writtenEndType(final Source source, final Map<String, Source> sources) {
+		return chainEnd(source, sources, new HashSet<>(), null).type();
 	}
 
 	/**
@@ -301,7 +320,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 		final Map<String, Source> sources,
 		final Set<Source> visited
 	) {
-		return textUnionProducer(union, sources, visited, null) != null;
+		return textUnionProducer(union, union.getTables(), sources, visited, null) != null;
 	}
 
 	/**
@@ -309,26 +328,36 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text members only (command outputs, awk results) gets a generated <code>toTable</code>, as a legacy text
 	 * producer on its own. A pure text member (<code>http</code>, <code>file</code>, <code>ipmi</code>) makes it a pure
 	 * text source, whose table readers are reported; an explicit <code>toText</code> member is reported likewise.
+	 * A <code>textUnion</code> is a text union whatever its members: one that is no text (a table, an unresolved
+	 * reference) is joined as its text at run time and leaves the producer as it is.
 	 *
+	 * @param union   The <code>tableUnion</code> or the <code>textUnion</code>
+	 * @param members Its members: source references, or table literals of a <code>tableUnion</code>
 	 * @return {@link TextProducer#PURE} when a member is pure text, else {@link TextProducer#EXPLICIT} when a member
-	 *         ends in an explicit <code>toText</code>, else {@link TextProducer#LEGACY_DUAL}; null when the union is no
-	 *         text union
+	 *         ends in an explicit <code>toText</code>, else {@link TextProducer#LEGACY_DUAL}; null when the union has
+	 *         no member, is in a cycle, or is a <code>tableUnion</code> that is no text union
 	 */
 	private static TextProducer textUnionProducer(
-		final TableUnionSource union,
+		final Source union,
+		final List<?> members,
 		final Map<String, Source> sources,
 		final Set<Source> visited,
 		final Set<String> textOnly
 	) {
-		if (union.getTables() == null || union.getTables().isEmpty() || !visited.add(union)) {
+		if (members == null || members.isEmpty() || !visited.add(union)) {
 			return null;
 		}
 		try {
 			TextProducer producer = TextProducer.LEGACY_DUAL;
-			for (final String table : union.getTables()) {
-				final Source member = table == null ? null : sources.get(resolveReference(table, union.getKey(), sources));
+			for (final Object table : members) {
+				final Source member = table instanceof String ref
+					? sources.get(resolveReference(ref, union.getKey(), sources))
+					: null;
 				final State end = member == null ? null : chainEnd(member, sources, visited, textOnly);
 				if (end == null || end.type() != ContentType.TEXT) {
+					if (union instanceof TextUnionSource) {
+						continue;
+					}
 					return null;
 				}
 				if (end.producer() == TextProducer.PURE) {
@@ -361,11 +390,11 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources or
-	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text: a <code>toTable</code> then the
-	 * <code>toText</code> generated before an <code>awk</code> would add a trailing <code>;</code> to every line, which
-	 * the <code>awk</code> scripts reading the copies do not expect, and the copies get their own conversion where
-	 * they need one.
+	 * The sources that are read as text only: referenced by the <code>from</code> of <code>copy</code> sources, by
+	 * the <code>input</code> of <code>awk</code> sources (a single reference, which the script reads as it is) or
+	 * returned by a tool that declares no columns, and nowhere else. A legacy dual producer among them keeps its text,
+	 * which the <code>awk</code> scripts reading it expect, and the copies get their own conversion where they need
+	 * one.
 	 * <p>
 	 * "Nowhere else" is checked on the JSON form of every source (its own key and a copy's <code>from</code> left
 	 * out), computes included, plus the mappings and the tool results: a <code>${source::...}</code> reference in any
@@ -401,14 +430,25 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			if (
 				scanned instanceof TableUnionSource union && isTextUnion((TableUnionSource) source, sources, new HashSet<>())
 			) {
-				union.getTables().forEach(table -> copied.add(resolveReference(table, source.getKey(), sources)));
+				// The members of a text union are all source references
+				union.getTables().forEach(table -> copied.add(resolveReference((String) table, source.getKey(), sources)));
 				union.setTables(List.of());
+			}
+			// A textUnion reads its members' texts likewise
+			if (scanned instanceof TextUnionSource textUnion) {
+				textUnion.getTexts().forEach(text -> copied.add(resolveReference(text, source.getKey(), sources)));
+				textUnion.setTexts(List.of());
 			}
 			if (scanned instanceof CopySource copy) {
 				if (copy.getFrom() != null) {
 					copied.add(resolveReference(copy.getFrom(), source.getKey(), sources));
 				}
 				copy.setFrom("");
+			}
+			// An awk source reads the source of its input as it is: no table read (#1559)
+			if (scanned instanceof JawkSource jawk && JawkSource.isSourceReference(jawk.getInput())) {
+				copied.add(resolveReference(jawk.getInput(), source.getKey(), sources));
+				jawk.setInput("");
 			}
 			try {
 				final Set<String> references = new HashSet<>();
@@ -504,12 +544,10 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	/**
 	 * Desugars the compute chain of one source and records the findings.
 	 *
-	 * @param connector The connector, for its translation tables and embedded files
 	 * @param source    The source
 	 * @param report    The report to add the findings to
 	 */
 	void desugar(
-		final Connector connector,
 		final Source source,
 		final Map<String, Source> sources,
 		final Set<String> textOnly,
@@ -540,32 +578,17 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			final Compute compute = computes.get(index);
 			final String where = compute.getType() + " #" + index;
 
+			// An awk reads whatever it gets (no input type): nothing is ever inserted before it (#1559)
 			final ContentType input = compute.getInputContentType();
-			if (input != current) {
+			if (input != null && input != current) {
 				if (input == ContentType.TEXT) {
-					if (compute instanceof Awk awk) {
-						desugared.add(ToText.generated());
-						report.add(new ContentTypeReportEntry(key, Kind.TO_TEXT_INSERTED, "before " + where));
-						report.add(
-							new ContentTypeReportEntry(key, Kind.AWK_ON_TABLE, where + " " + describeScript(connector, awk))
-						);
-					} else {
-						report.add(new ContentTypeReportEntry(key, Kind.TEXT_COMPUTE_ON_TABLE_SOURCE, where));
-					}
-				} else if (producer == TextProducer.PURE && !(compute instanceof Awk)) {
+					report.add(new ContentTypeReportEntry(key, Kind.TEXT_COMPUTE_ON_TABLE_SOURCE, where));
+				} else if (producer == TextProducer.PURE) {
 					report.add(new ContentTypeReportEntry(key, Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, where));
-				} else if (producer == TextProducer.PURE || producer == TextProducer.EXPLICIT) {
-					// Text only (a pure text source before an awk reading a table, an explicit toText): a real
-					// conversion is needed to get a table
+				} else if (producer == TextProducer.EXPLICIT) {
 					desugared.add(ToTable.generated());
 					report.add(
-						new ContentTypeReportEntry(
-							key,
-							Kind.TO_TABLE_INSERTED,
-							"before " +
-								where +
-								(producer == TextProducer.PURE ? " (on a text source)" : " (after an explicit toText)")
-						)
+						new ContentTypeReportEntry(key, Kind.TO_TABLE_INSERTED, "before " + where + " (after an explicit toText)")
 					);
 				} else {
 					desugared.add(ToTable.generated());
@@ -602,44 +625,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * Describes the script of an <code>awk</code> compute: its reference and whether it sets <code>FS</code> to
-	 * <code>;</code>.
-	 */
-	private static String describeScript(final Connector connector, final Awk awk) {
-		final String script = awk.getScript();
-		if (script == null) {
-			return "script=null";
-		}
-		final String fs = FS_SEMICOLON.matcher(scriptContent(connector, script)).find() ? " (sets FS to \";\")" : "";
-		return (FILE_PATTERN.matcher(script).find() ? "script=" + script : "inline script") + fs;
-	}
-
-	/**
-	 * The text of the script of an <code>awk</code> compute: the embedded file it references, or the script itself.
-	 */
-	private static String scriptContent(final Connector connector, final String script) {
-		if (script == null) {
-			return "";
-		}
-		final Matcher matcher = FILE_PATTERN.matcher(script);
-		if (!matcher.find()) {
-			return script;
-		}
-		if (connector.getEmbeddedFiles() == null) {
-			return "";
-		}
-		try {
-			final EmbeddedFile embeddedFile = connector.getEmbeddedFiles().get(Integer.parseInt(matcher.group(1)));
-			return embeddedFile == null ? "" : embeddedFile.getContentAsString();
-		} catch (NumberFormatException e) {
-			return "";
-		}
-	}
-
-	/**
 	 * Whether the compute was inserted by this step. A later pass starts from the chain without them.
 	 */
-	private static boolean isGenerated(final Compute compute) {
+	static boolean isGenerated(final Compute compute) {
 		return (compute instanceof ToTable toTable && toTable.isGenerated()) ||
 			(compute instanceof ToText toText && toText.isGenerated());
 	}
@@ -673,10 +661,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			return new State(ContentType.TEXT, TextProducer.PURE);
 		}
 		if (source instanceof TableUnionSource union) {
-			final TextProducer producer = textUnionProducer(union, sources, visited, textOnly);
+			final TextProducer producer = textUnionProducer(union, union.getTables(), sources, visited, textOnly);
 			if (producer != null) {
 				return new State(ContentType.TEXT, producer);
 			}
+		}
+		if (source instanceof TextUnionSource textUnion) {
+			final TextProducer producer = textUnionProducer(textUnion, textUnion.getTexts(), sources, visited, textOnly);
+			return new State(ContentType.TEXT, producer != null ? producer : TextProducer.LEGACY_DUAL);
 		}
 		final ContentType type = source.getOutputContentType();
 		return new State(

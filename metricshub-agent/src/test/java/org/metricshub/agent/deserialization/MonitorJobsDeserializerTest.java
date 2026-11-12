@@ -123,5 +123,14 @@ class MonitorJobsDeserializerTest {
 
 		assertEquals(expected, result);
 		assertNotNull(resourceConfig.getConnector());
+		// The content-type check runs on these monitors too: the mapping reads the http text as a table
+		assertEquals(
+			List.of("TEXT_FEEDS_TABLE " + GRAFANA_HEALTH_SOURCE_REF),
+			resourceConfig.getConnector()
+				.getContentTypeFindings()
+				.stream()
+				.map(finding -> finding.rule() + " " + finding.sourceKey())
+				.toList()
+		);
 	}
 }

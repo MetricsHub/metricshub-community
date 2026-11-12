@@ -365,4 +365,30 @@ public class SourceTable {
 		// Hard-coded source
 		return Optional.of(ofTable(csvToTable(sourceKey, TABLE_SEP)));
 	}
+
+	/**
+	 * Find the table of a <code>tableUnion</code> member or of a <code>tableJoin</code> input: a table literal written
+	 * as a list of rows gives a new table of exactly these rows, a string is looked up by
+	 * {@link #lookupSourceTable(String, String, TelemetryManager)}.
+	 *
+	 * @param table            A {@link List} of rows, each a {@link List} of cells, or a {@link String}
+	 * @param connectorId      The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
+	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
+	 * @return {@link Optional} instance of {@link SourceTable}
+	 */
+	@SuppressWarnings("unchecked")
+	public static Optional<SourceTable> lookupTableOrLiteral(
+		final Object table,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		if (table instanceof List<?> rows) {
+			return Optional.of(
+				ofTable(
+					rows.stream().map(row -> (List<String>) new ArrayList<>((List<String>) row)).collect(Collectors.toList()) //NOSONAR
+				)
+			);
+		}
+		return lookupSourceTable((String) table, connectorId, telemetryManager);
+	}
 }

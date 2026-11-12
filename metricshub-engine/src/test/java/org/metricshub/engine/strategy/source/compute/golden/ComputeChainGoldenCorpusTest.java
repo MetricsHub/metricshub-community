@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,6 +33,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
+import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
@@ -174,7 +178,8 @@ class ComputeChainGoldenCorpusTest {
 			";",
 			"host"
 		);
-		// json2Csv does not escape the separator: a value containing ";" shifts the columns (legacy behavior)
+		// This text (the AWK json2csv() function) does not escape the separator: a value containing ";" shifts the
+		// columns once the text is cut on ";". The json2Csv compute keeps each value in its cell (executeJson2Table).
 		// The fourth entry is a JSON number, not a text
 		assertTrue(json.contains("\"Health\":42"), json);
 		assertEquals(
@@ -401,6 +406,15 @@ class ComputeChainGoldenCorpusTest {
 		assertEquals(List.of("table", "tableSeparatorInCell", "tableWide", "empty"), new ArrayList<>(snmp.keySet()));
 		assertEquals(SourceTable.ofTable(wide), snmp.get("tableWide").get());
 		assertEquals(SourceTable.empty(), snmp.get("empty").get());
+
+		// A textUnion gets the synthetic texts of a text source, read as text
+		final Map<String, Supplier<SourceTable>> textUnion = Inputs.inputsFor(
+			TextUnionSource.builder().texts(List.of("${source::a}")).computes(append).build(),
+			Map.of()
+		);
+		assertEquals(new ArrayList<>(http.keySet()), new ArrayList<>(textUnion.keySet()));
+		assertEquals(SourceTable.ofText(Inputs.TEXT), textUnion.get("text").get());
+		assertEquals(SourceTable.ofText(""), textUnion.get("empty").get());
 	}
 
 	/**
@@ -510,7 +524,24 @@ class ComputeChainGoldenCorpusTest {
 			assertTrue(!written.contains("rawData"), written);
 
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
-			assertEquals(0, GoldenCheck.run(List.of(root), true), "the stored golden matches");
+			// The report ends with the content-type check: GoldenA's append reads the text of its commandLine
+			final PrintStream out = System.out;
+			final ByteArrayOutputStream printed = new ByteArrayOutputStream();
+			System.setOut(new PrintStream(printed, true, StandardCharsets.UTF_8));
+			try {
+				assertEquals(0, GoldenCheck.run(List.of(root), true), "the stored golden matches");
+			} finally {
+				System.setOut(out);
+			}
+			final String report = printed.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+			final String check = report.substring(report.indexOf("== Content type check (#1560)\n"));
+			assertTrue(
+				check.contains(
+					"\nGoldenA (1)\n  TEXT_FEEDS_TABLE ${source::monitors.thing.simple.sources.s} at append #0: expected TABLE"
+				),
+				check
+			);
+			assertTrue(check.contains("Connectors with check findings: 1\n  TEXT_FEEDS_TABLE: 1\n"), check);
 
 			System.clearProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY);
 			assertTrue(ComputeChainGoldenCorpus.isSelected("GoldenB"));

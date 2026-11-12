@@ -21,7 +21,9 @@ package org.metricshub.agent.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -33,6 +35,7 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.otel.OtelCollectorConfig;
 import org.metricshub.agent.config.otel.OtelCollectorOutput;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.process.config.ProcessOutput;
 import org.metricshub.agent.process.io.LineReaderProcessor;
 import org.metricshub.agent.process.io.ProcessorHelper;
@@ -44,7 +47,23 @@ import org.metricshub.agent.process.runtime.AbstractProcess;
 @Slf4j
 public class OtelCollectorProcessService extends AbstractProcess {
 
+	/**
+	 * The environment variable that gives the collector the path of the file holding the agent's current token.
+	 */
+	public static final String TOKEN_FILE_VARIABLE = "METRICSHUB_AGENT_TOKEN_FILE";
+
 	private AgentConfig agentConfig;
+
+	private EnrollmentCoordinator enrollment = EnrollmentCoordinator.global();
+
+	/** The token file the collector reads, {@code null} without {@code central.auth}. */
+	private volatile Path tokenFile;
+
+	/**
+	 * Set by {@link #stop()}, cleared by {@link #launch()}: a launch that waited for the token file never starts a
+	 * collector stopped meanwhile. Read and written under this object's lock, as {@code start()} and {@code stop()}.
+	 */
+	private boolean stopped;
 
 	/**
 	 * Creates a new instance of OtelCollectorProcessService.
@@ -63,7 +82,11 @@ public class OtelCollectorProcessService extends AbstractProcess {
 
 	@Override
 	protected void onBeforeProcessStart(ProcessBuilder processBuilder) {
-		// Not implemented
+		final Path file = tokenFile;
+		// Only the path: the token, the agent uid and its secret never reach the collector's environment
+		if (file != null) {
+			processBuilder.environment().put(TOKEN_FILE_VARIABLE, file.toString());
+		}
 	}
 
 	@Override
@@ -87,6 +110,29 @@ public class OtelCollectorProcessService extends AbstractProcess {
 	}
 
 	@Override
+	public synchronized void start() throws IOException {
+		if (stopped || started) {
+			// A deferred launch released after a stop, or after a relaunch that already started the collector
+			log.debug("The OpenTelemetry Collector is stopped or already started: it is not started again.");
+			return;
+		}
+		super.start();
+	}
+
+	@Override
+	public synchronized void stop() {
+		stopped = true;
+		super.stop();
+	}
+
+	/**
+	 * @param enrollment the enrollment coordinator (tests)
+	 */
+	void setEnrollment(final EnrollmentCoordinator enrollment) {
+		this.enrollment = enrollment;
+	}
+
+	@Override
 	protected void stopInternal() {
 		super.stopProcess();
 	}
@@ -98,11 +144,10 @@ public class OtelCollectorProcessService extends AbstractProcess {
 
 	/**
 	 * Launch the OpenTelemetry Collector. If the configuration specifies that the collector must
-	 * be disabled, the collector startup will not be initiated.
+	 * be disabled, the collector startup will not be initiated. With {@code central.auth}, the launch waits until
+	 * the agent is enrolled and its first token is written to the token file the collector authenticates with.
 	 */
 	public void launch() {
-		final OtelCollectorConfig otelCollectorConfig = agentConfig.getOtelCollector();
-
 		if (agentConfig.getOtelCollector().isDisabled()) {
 			log.info("The MetricsHub Agent is configured to not start the OpenTelemetry Collector.");
 			return;
@@ -115,6 +160,33 @@ public class OtelCollectorProcessService extends AbstractProcess {
 			);
 			return;
 		}
+
+		synchronized (this) {
+			stopped = false;
+		}
+
+		if (!EnrollmentCoordinator.isConfigured(agentConfig.getCentral())) {
+			tokenFile = null;
+			launchNow();
+			return;
+		}
+
+		final boolean deferred = enrollment.whenTokenFileWritten(agentConfig.getCentral(), file -> {
+			tokenFile = file;
+			launchNow();
+		});
+		if (deferred) {
+			log.info(
+				"The OpenTelemetry Collector starts once the agent is enrolled into MetricsHub Central and holds its first token."
+			);
+		}
+	}
+
+	/**
+	 * Starts the collector process and waits for it, at most its startup delay.
+	 */
+	private void launchNow() {
+		final OtelCollectorConfig otelCollectorConfig = agentConfig.getOtelCollector();
 
 		// The subprocess must be ran using a separate thread so that it creates a log context for himself only.
 		// The process output will be redirected to a dedicated file, see how log4j2.xml is configured using the
