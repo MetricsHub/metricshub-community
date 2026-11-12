@@ -1,0 +1,99 @@
+package org.metricshub.engine.connector.deserializer.custom;
+
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Engine
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Deserializes the <code>variables</code> of an Awk source or compute: a map of variable name to value, where a value
+ * is a scalar, read as a {@link String} exactly as a <code>Map&lt;String, String&gt;</code> would read it, a YAML list,
+ * read as a {@link List}, or a YAML map, read as a {@link LinkedHashMap} keyed by {@link String}. Lists and maps nest,
+ * and a <code>null</code> value (<code>myVariable:</code>) stays <code>null</code>.
+ */
+public class AwkVariablesDeserializer extends JsonDeserializer<Map<String, Object>> {
+
+	@Override
+	public Map<String, Object> deserialize(final JsonParser parser, final DeserializationContext context)
+		throws IOException {
+		if (!parser.isExpectedStartObjectToken()) {
+			@SuppressWarnings("unchecked")
+			final Map<String, Object> unexpected = (Map<String, Object>) context.handleUnexpectedToken(Map.class, parser);
+			return unexpected;
+		}
+		return readMap(parser, context);
+	}
+
+	/**
+	 * Reads one value, the parser being on its first token.
+	 *
+	 * @param parser  The parser
+	 * @param context The deserialization context
+	 * @return the value: a {@link String}, a {@link List}, a {@link Map}, or <code>null</code>
+	 * @throws IOException when the value cannot be read
+	 */
+	private static Object readValue(final JsonParser parser, final DeserializationContext context) throws IOException {
+		final JsonToken token = parser.currentToken();
+		if (token == JsonToken.START_ARRAY) {
+			final List<Object> list = new ArrayList<>();
+			while (parser.nextToken() != JsonToken.END_ARRAY) {
+				list.add(readValue(parser, context));
+			}
+			return list;
+		}
+		if (token == JsonToken.START_OBJECT) {
+			return readMap(parser, context);
+		}
+		if (token == JsonToken.VALUE_NULL) {
+			return null;
+		}
+		if (token.isScalarValue()) {
+			return parser.getText();
+		}
+		return context.handleUnexpectedToken(Object.class, parser);
+	}
+
+	/**
+	 * Reads a map, the parser being on its start.
+	 *
+	 * @param parser  The parser, on the start of the map
+	 * @param context The deserialization context
+	 * @return the map, in the declared order
+	 * @throws IOException when a value cannot be read
+	 */
+	private static Map<String, Object> readMap(final JsonParser parser, final DeserializationContext context)
+		throws IOException {
+		final Map<String, Object> map = new LinkedHashMap<>();
+		for (String name = parser.nextFieldName(); name != null; name = parser.nextFieldName()) {
+			parser.nextToken();
+			map.put(name, readValue(parser, context));
+		}
+		return map;
+	}
+}

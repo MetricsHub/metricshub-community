@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.deserializer.custom.AwkVariablesDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -86,11 +88,14 @@ public class JawkSource extends Source {
 	/**
 	 * The variables to expose to the JAWK script, indexed by variable name.
 	 * <p>
-	 * A value referencing a source, such as <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed to
-	 * the script as an AWK array holding that source's table. Any other value is exposed as a scalar.
+	 * A value is a scalar ({@link String}), a list ({@link List}) or a map ({@link Map}), and lists and maps nest (see
+	 * {@link AwkVariablesDeserializer}). A list is exposed to the script as an AWK array indexed from 0, a map as an AWK
+	 * array indexed by its keys. A scalar referencing a source, such as
+	 * <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed as an AWK array holding that source's
+	 * table, any other scalar as a scalar (see {@link org.metricshub.engine.awk.AwkVariableHelper}).
 	 */
 	@JsonSetter(nulls = SKIP)
-	private Map<String, String> variables = new LinkedHashMap<>();
+	private Map<String, Object> variables = new LinkedHashMap<>();
 
 	/**
 	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
@@ -144,14 +149,16 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "script") String script,
 		@JsonProperty(value = "input") final String input,
 		@JsonProperty(value = "separators") final String separators,
-		@JsonProperty(value = "variables") final Map<String, String> variables,
+		@JsonProperty(value = "variables") @JsonDeserialize(
+			using = AwkVariablesDeserializer.class
+		) final Map<String, ?> variables,
 		@JsonProperty(value = "output") final ContentType output
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
 		this.script = script;
 		this.input = input;
 		this.separators = separators;
-		this.variables = variables == null ? new LinkedHashMap<>() : variables;
+		this.variables = variables == null ? new LinkedHashMap<>() : new LinkedHashMap<>(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 

@@ -24,6 +24,8 @@ package org.metricshub.engine.awk;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
+import io.jawk.jrt.AssocArray;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,6 +53,16 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * arrays, so the script addresses cells as <code>myVariable[row][column]</code> with zero-based indexes, and
  * <code>length(myVariable)</code> gives the row count. Any other value is exposed as a scalar, which also covers the
  * AWK special variables such as <code>FS</code>.
+ * <p>
+ * A list is exposed as an AWK array indexed from 0, like a table: <code>myList[0]</code>,
+ * <code>length(myList)</code>. A map is exposed as an AWK array indexed by its keys: <code>myMap["key"]</code>,
+ * <code>for (key in myMap)</code>. Lists and maps nest, and each scalar they hold, at any depth, is resolved as a
+ * variable is: its textual references are substituted, and a source reference becomes that source's table.
+ * <p>
+ * Jawk makes a top-level scalar a numeric string, compared as a number when it looks like one, as an input field is.
+ * A value in a list, a map or a table is handed over as a plain {@link String} and compared as text:
+ * <code>myList[0] &gt; 9</code> is false for <code>"10"</code>, and a script writes <code>myList[0] + 0</code> to
+ * compare it as a number.
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -59,8 +71,8 @@ public class AwkVariableHelper {
 	/**
 	 * Resolve the given Awk variables.
 	 *
-	 * @param variables        The variables declared in the connector, indexed by variable name. Can be
-	 *                         <code>null</code> or empty.
+	 * @param variables        The variables declared in the connector, indexed by variable name, each value a scalar,
+	 *                         a {@link List} or a {@link Map}. Can be <code>null</code> or empty.
 	 * @param telemetryManager The current {@link TelemetryManager} instance wrapping the connector namespace where the
 	 *                         source tables are located.
 	 * @param connectorId      The connector's identifier.
@@ -68,7 +80,7 @@ public class AwkVariableHelper {
 	 * @return An unmodifiable map of variable name to value, never <code>null</code>.
 	 */
 	public static Map<String, Object> resolveVariables(
-		final Map<String, String> variables,
+		final Map<String, ?> variables,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
 		final Map<String, String> attributes,
@@ -94,15 +106,17 @@ public class AwkVariableHelper {
 	 * Resolve one variable value.
 	 *
 	 * @param name             The variable name, used for logging.
-	 * @param value            The variable value as declared in the connector.
+	 * @param rawValue         The variable value as declared in the connector: a scalar, a {@link List} or a
+	 *                         {@link Map}.
 	 * @param telemetryManager The current {@link TelemetryManager} instance.
 	 * @param connectorId      The connector's identifier.
 	 * @param operationKey     The unique key of the operation, used for logging.
-	 * @return The table of the referenced source, or the value itself when it is not a source reference.
+	 * @return The table of the referenced source, a {@link List} or an {@link AssocArray} of the resolved values, or the
+	 *         value itself.
 	 */
 	private static Object resolveValue(
 		final String name,
-		final String rawValue,
+		final Object rawValue,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
 		final Map<String, String> attributes,
@@ -113,9 +127,30 @@ public class AwkVariableHelper {
 			return EMPTY;
 		}
 
+		// Jawk turns a List into an AWK array indexed from 0
+		if (rawValue instanceof List<?> list) {
+			final List<Object> resolved = new ArrayList<>(list.size());
+			list.forEach(
+				item -> resolved.add(resolveValue(name, item, telemetryManager, connectorId, attributes, operationKey))
+			);
+			return resolved;
+		}
+
+		// An AssocArray rather than a plain Map, whose keys Jawk would compare as they are: myMap[1] finds the key "1"
+		if (rawValue instanceof Map<?, ?> map) {
+			final AssocArray resolved = AssocArray.createHash();
+			map.forEach(
+				(key, item) -> resolved.put(
+					String.valueOf(key),
+					resolveValue(name, item, telemetryManager, connectorId, attributes, operationKey)
+				)
+			);
+			return resolved;
+		}
+
 		// Every textual reference is replaced first, exactly as it would be in any other field
 		String value = SourceUpdaterProcessor.replaceResourceAttributeReferences(
-			rawValue,
+			rawValue.toString(),
 			telemetryManager.getHostConfiguration().getAttributes()
 		);
 		value = SourceUpdaterProcessor.replaceAttributeReferences(value, attributes);

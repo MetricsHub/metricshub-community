@@ -1,7 +1,10 @@
 package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import io.jawk.jrt.AssocArray;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,6 +129,113 @@ class AwkVariablesUpdateTest {
 		);
 
 		assertEquals(List.of(), resolved.get("missing"), "An unresolvable reference must not fail the whole source");
+	}
+
+	private static TelemetryManager telemetryManagerWithTable(final List<List<String>> table) {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname("test-host")
+					.hostId("test-host")
+					.attributes(Map.of("host.name", "my-host"))
+					.build()
+			)
+			.build();
+		final HostProperties hostProperties = HostProperties.builder().build();
+		hostProperties.getConnectorNamespace(CONNECTOR_ID).addSourceTable(SOURCE_REF, SourceTable.ofTable(table));
+		telemetryManager.setHostProperties(hostProperties);
+		return telemetryManager;
+	}
+
+	/**
+	 * Every scalar of a list or a map, at any depth, is resolved as a variable is.
+	 */
+	@Test
+	void testHelperResolvesListsAndMaps() {
+		final List<List<String>> table = List.of(List.of("FOO", "1"), List.of("BAR", "2"));
+
+		final Map<String, Object> labels = new LinkedHashMap<>();
+		labels.put("host", "${resource.attribute::host.name}");
+		labels.put("rows", SOURCE_REF);
+		labels.put("ids", List.of("${attribute::id}", "plain"));
+
+		final Map<String, Object> resolved = AwkVariableHelper.resolveVariables(
+			Map.of("list", Arrays.asList("${attribute::id}", SOURCE_REF, null), "labels", labels),
+			telemetryManagerWithTable(table),
+			CONNECTOR_ID,
+			Map.of("id", "monitor-42"),
+			"someOperation"
+		);
+
+		assertEquals(List.of("monitor-42", table, ""), resolved.get("list"), "A list stays a list of resolved values");
+
+		final AssocArray array = assertInstanceOf(AssocArray.class, resolved.get("labels"), "A map becomes an AWK array");
+		assertEquals("my-host", array.get("host"));
+		assertEquals(table, array.get("rows"));
+		assertEquals(List.of("monitor-42", "plain"), array.get("ids"));
+	}
+
+	/**
+	 * What a script sees: a list indexed from 0, a map indexed by its keys (a numeric subscript finds the key written
+	 * as a string in YAML), nesting, and a source table inside a list.
+	 */
+	@Test
+	void testScriptReadsListsAndMaps() throws Exception {
+		final List<List<String>> table = List.of(List.of("FOO", "1"), List.of("BAR", "2"));
+
+		final Map<String, Object> labels = new LinkedHashMap<>();
+		labels.put("vendor", "NetApp");
+		labels.put("1", "one");
+		labels.put("nested", List.of("x", Map.of("k", "v")));
+
+		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+			Map.of("properties", List.of("node", "", "model"), "labels", labels, "tables", List.of(SOURCE_REF)),
+			telemetryManagerWithTable(table),
+			CONNECTOR_ID,
+			Map.of(),
+			"someOperation"
+		);
+
+		final String script = """
+			BEGIN {
+				print length(properties), properties[0], "[" properties[1] "]", properties[2], (3 in properties)
+				print length(labels), labels["vendor"], labels[1], labels["nested"][1]["k"]
+				count = 0
+				for (key in labels) count++
+				print count, tables[0][1][0]
+			}
+			""";
+
+		assertEquals(
+			"3 node [] model 0\n3 NetApp one v\n3 BAR\n",
+			AwkExecutor.executeAwk(script, "", AwkExecutor.getUtilityEngine(), variables)
+		);
+	}
+
+	/**
+	 * Pins what the documentation says: a top-level scalar compares as a number, a value in a list, a map or a table
+	 * compares as text unless the script adds <code>+ 0</code>. A Jawk that made these values numeric strings would
+	 * change the second, third and fourth results, and the documentation with them.
+	 */
+	@Test
+	void testNestedValuesCompareAsText() throws Exception {
+		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+			Map.of("scalar", "10", "list", List.of("10"), "map", Map.of("key", "10"), "table", SOURCE_REF),
+			telemetryManagerWithTable(List.of(List.of("10"))),
+			CONNECTOR_ID,
+			Map.of(),
+			"someOperation"
+		);
+
+		assertEquals(
+			"1 0 0 0 1\n",
+			AwkExecutor.executeAwk(
+				"BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[0] + 0 > 9) }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				variables
+			)
+		);
 	}
 
 	@Test
