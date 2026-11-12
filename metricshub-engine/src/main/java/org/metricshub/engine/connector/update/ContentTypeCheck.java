@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -317,13 +318,26 @@ public class ContentTypeCheck {
 	/**
 	 * Awk variables: a source reference is exposed as that source's table.
 	 */
-	private void checkVariables(final String key, final String prefix, final Map<String, String> variables) {
+	private void checkVariables(final String key, final String prefix, final Map<String, ?> variables) {
 		if (variables != null) {
-			variables.forEach(
-				(name, value) -> references(value).forEach(
-					reference -> checkTableRead(key, prefix + "variables." + name, reference)
-				)
-			);
+			variables.forEach((name, value) -> checkVariable(key, prefix + "variables." + name, value));
+		}
+	}
+
+	/**
+	 * Checks the source references of one variable value, and of every value nested in it when it is a list or a map.
+	 *
+	 * @param key   The key of the source
+	 * @param where Where the value is, for the finding
+	 * @param value The value: a scalar, a {@link Collection}, a {@link Map}, or <code>null</code>
+	 */
+	private void checkVariable(final String key, final String where, final Object value) {
+		if (value instanceof Collection<?> list) {
+			list.forEach(item -> checkVariable(key, where, item));
+		} else if (value instanceof Map<?, ?> map) {
+			map.values().forEach(item -> checkVariable(key, where, item));
+		} else if (value != null) {
+			references(value.toString()).forEach(reference -> checkTableRead(key, where, reference));
 		}
 	}
 

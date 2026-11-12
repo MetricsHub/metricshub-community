@@ -318,6 +318,51 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
+	void referencesInAVariableListOrMap() throws IOException {
+		final String missing = " -> " + THING + "missing}";
+		final String text = " -> " + THING + "text}";
+		assertEquals(
+			Set.of(
+				"UNRESOLVED_REFERENCE computes[0].variables.list[1]" + missing,
+				"UNRESOLVED_REFERENCE computes[0].variables.map.nested[0].key" + missing,
+				// A table read of a text, however deep in the variable
+				"TEXT_FEEDS_TABLE awk #0 variables.list" + text,
+				"TEXT_FEEDS_TABLE awk #0 variables.map" + text
+			),
+			lines(findings("""
+				monitors:
+				  thing:
+				    simple:
+				      sources:
+				        text:
+				          type: commandLine
+				          commandLine: echo a
+				        request:
+				          type: http
+				          method: get
+				          url: http://host/
+				          computes:
+				          - type: awk
+				            script: "{ print $1 }"
+				            variables:
+				              list:
+				              - plain
+				              - ${source::missing}
+				              - ${source::text}
+				              map:
+				                nested:
+				                - key: ${source::missing}
+				                - other: ${source::text}
+				            output: table
+				      mapping:
+				        source: ${source::request}
+				        attributes:
+				          id: $1
+				"""))
+		);
+	}
+
+	@Test
 	void unresolvedReference() throws IOException {
 		final String missing = " -> " + THING + "missing}";
 		assertEquals(

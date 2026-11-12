@@ -30,7 +30,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
@@ -39,6 +41,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.deserializer.custom.AwkVariablesDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
@@ -83,11 +86,14 @@ public class Awk extends Compute {
 	/**
 	 * The variables to expose to the AWK script, indexed by variable name.
 	 * <p>
-	 * A value referencing a source, such as <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed to
-	 * the script as an AWK array holding that source's table. Any other value is exposed as a scalar.
+	 * A value is a scalar ({@link String}), a list ({@link List}) or a map ({@link Map}), and lists and maps nest (see
+	 * {@link AwkVariablesDeserializer}). A list is exposed to the script as an AWK array indexed from 0, a map as an AWK
+	 * array indexed by its keys. A scalar referencing a source, such as
+	 * <code>${source::monitors.disk.discovery.sources.raw}</code>, is exposed as an AWK array holding that source's
+	 * table, any other scalar as a scalar (see {@link org.metricshub.engine.awk.AwkVariableHelper}).
 	 */
 	@JsonSetter(nulls = SKIP)
-	private Map<String, String> variables = new LinkedHashMap<>();
+	private Map<String, Object> variables = new LinkedHashMap<>();
 
 	/**
 	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
@@ -137,7 +143,7 @@ public class Awk extends Compute {
 		@JsonProperty("keep") String keep,
 		@JsonProperty("separators") String separators,
 		@JsonProperty("selectColumns") String selectColumns,
-		@JsonProperty("variables") Map<String, String> variables,
+		@JsonProperty("variables") @JsonDeserialize(using = AwkVariablesDeserializer.class) Map<String, ?> variables,
 		@JsonProperty("output") ContentType output
 	) {
 		super(type);
@@ -146,7 +152,7 @@ public class Awk extends Compute {
 		this.keep = keep;
 		this.separators = separators;
 		this.selectColumns = selectColumns;
-		this.variables = variables == null ? new LinkedHashMap<>() : variables;
+		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 
@@ -193,7 +199,7 @@ public class Awk extends Compute {
 			.keep(keep)
 			.separators(separators)
 			.selectColumns(selectColumns)
-			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
+			.variables(variables)
 			.output(output)
 			.build();
 	}
