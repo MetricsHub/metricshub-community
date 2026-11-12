@@ -183,8 +183,9 @@ public class EnrollmentCoordinator {
 	volatile Runnable beforeWorkerEnds = () -> {};
 	/** The token the token file holds, {@code null} before the first write. */
 	private String writtenToken;
-	/** The collector launch waiting for the first token file. */
+	/** The collector launch waiting for the token file, and the configuration it was launched with. */
 	private Consumer<Path> pendingLaunch;
+	private CentralConfig pendingCentral;
 	/** Keeps the token file renewed, and a failed write retried, whatever the channels do. */
 	private ScheduledExecutorService tokenFileRefresher;
 	/** How often the refresher asks for the token (tests shorten it). */
@@ -445,7 +446,9 @@ public class EnrollmentCoordinator {
 	 * @return the collector launch that waited for the first file, or {@code null}
 	 */
 	private Runnable writeTokenFile(final String token) {
-		if (token.equals(writtenToken)) {
+		if (token.equals(writtenToken) || !enrollmentWanted) {
+			// A token request that ends after central.auth was removed writes nothing: a later launch waits for a token
+			// written once it is back
 			return null;
 		}
 		// Started before the first write succeeds: a failed one is retried even when no channel asks for a token
@@ -471,10 +474,12 @@ public class EnrollmentCoordinator {
 		}
 		writtenToken = token;
 		final Consumer<Path> waiting = pendingLaunch;
-		pendingLaunch = null;
-		if (waiting == null) {
+		// A token of the former issuer, renewed before ready() reconciled the one the launch waits for, releases nothing
+		if (waiting == null || !isReadyFor(pendingCentral)) {
 			return null;
 		}
+		pendingLaunch = null;
+		pendingCentral = null;
 		final Path file = store.tokenFile();
 		return () -> waiting.accept(file);
 	}
@@ -510,6 +515,7 @@ public class EnrollmentCoordinator {
 			// drops it, and the first token of the new issuer launches the collector
 			if (writtenToken == null || !isReadyFor(central)) {
 				pendingLaunch = launch;
+				pendingCentral = central;
 				return true;
 			}
 			file = store.tokenFile();

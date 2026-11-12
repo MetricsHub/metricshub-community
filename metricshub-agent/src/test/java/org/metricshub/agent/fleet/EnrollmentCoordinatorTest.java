@@ -440,6 +440,44 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aTokenOfTheFormerIssuerShouldNotReleaseALaunchForTheNewOne() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		final List<Path> launches = new CopyOnWriteArrayList<>();
+		assertTrue(coordinator.whenTokenFileWritten(moved, launches::add));
+
+		// The former issuer renews before ready() reconciles the new one
+		coordinator.invalidateToken();
+		coordinator.currentToken();
+		Thread.sleep(200);
+		assertTrue(launches.isEmpty(), "not launched with the former issuer's token");
+
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		final String token = coordinator.currentToken();
+		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
+		assertEquals(token, Files.readString(store.tokenFile()));
+	}
+
+	@Test
+	void aTokenObtainedAfterCentralAuthWasRemovedShouldNotCountAsWritten() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		coordinator.currentToken();
+
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		// A token request that ends after the removal
+		coordinator.invalidateToken();
+		coordinator.currentToken();
+		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+
+		assertTrue(coordinator.whenTokenFileWritten(central(KEY), path -> {}), "waits for a token written now");
+	}
+
+	@Test
 	void aCollectorLaunchedWhenCentralAuthComesBackShouldWaitForAFreshToken() throws Exception {
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		final EnrollmentCoordinator coordinator = coordinator(store);
