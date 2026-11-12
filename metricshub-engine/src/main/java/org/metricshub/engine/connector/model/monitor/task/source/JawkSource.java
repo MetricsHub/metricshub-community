@@ -158,7 +158,7 @@ public class JawkSource extends Source {
 		this.script = script;
 		this.input = input;
 		this.separators = separators;
-		this.variables = variables == null ? new LinkedHashMap<>() : new LinkedHashMap<>(variables);
+		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 
@@ -173,7 +173,7 @@ public class JawkSource extends Source {
 			.script(script)
 			.input(input)
 			.separators(separators)
-			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
+			.variables(variables)
 			.output(output)
 			.build();
 	}

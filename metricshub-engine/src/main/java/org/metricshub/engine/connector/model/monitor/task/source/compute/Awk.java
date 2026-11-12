@@ -152,7 +152,7 @@ public class Awk extends Compute {
 		this.keep = keep;
 		this.separators = separators;
 		this.selectColumns = selectColumns;
-		this.variables = variables == null ? new LinkedHashMap<>() : new LinkedHashMap<>(variables);
+		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
 
@@ -199,7 +199,7 @@ public class Awk extends Compute {
 			.keep(keep)
 			.separators(separators)
 			.selectColumns(selectColumns)
-			.variables(variables != null ? new LinkedHashMap<>(variables) : null)
+			.variables(variables)
 			.output(output)
 			.build();
 	}

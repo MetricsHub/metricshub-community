@@ -51,6 +51,39 @@ public class AwkVariablesDeserializer extends JsonDeserializer<Map<String, Objec
 	}
 
 	/**
+	 * Copies the variables of an Awk source or compute deeply: every list and map, at any depth, is a new one, so that
+	 * the copy shares no container with the original.
+	 *
+	 * @param variables The variables, each value a scalar, a {@link List} or a {@link Map}
+	 * @return the copy, in the same order
+	 */
+	public static Map<String, Object> copy(final Map<String, ?> variables) {
+		final Map<String, Object> copy = new LinkedHashMap<>();
+		variables.forEach((name, value) -> copy.put(name, copyValue(value)));
+		return copy;
+	}
+
+	/**
+	 * Copies one value deeply.
+	 *
+	 * @param value A scalar, a {@link List}, a {@link Map}, or <code>null</code>
+	 * @return a new list or map, or the scalar itself
+	 */
+	private static Object copyValue(final Object value) {
+		if (value instanceof List<?> list) {
+			final List<Object> copy = new ArrayList<>(list.size());
+			list.forEach(item -> copy.add(copyValue(item)));
+			return copy;
+		}
+		if (value instanceof Map<?, ?> map) {
+			final Map<String, Object> copy = new LinkedHashMap<>();
+			map.forEach((key, item) -> copy.put(String.valueOf(key), copyValue(item)));
+			return copy;
+		}
+		return value;
+	}
+
+	/**
 	 * Reads one value, the parser being on its first token.
 	 *
 	 * @param parser  The parser

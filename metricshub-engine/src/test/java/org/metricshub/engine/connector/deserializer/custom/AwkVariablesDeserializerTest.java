@@ -3,10 +3,10 @@ package org.metricshub.engine.connector.deserializer.custom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -108,5 +108,42 @@ class AwkVariablesDeserializerTest {
 	void testCopyKeepsTheNestedValues() throws IOException {
 		final Awk awk = MAPPER.readValue("type: awk\nscript: x\n" + NESTED, Awk.class);
 		assertEquals(awk.getVariables(), awk.copy().getVariables());
+	}
+
+	/**
+	 * A copy shares no list or map with the original, at any depth.
+	 */
+	@Test
+	@SuppressWarnings("unchecked")
+	void testCopySharesNoContainer() throws IOException {
+		final String yaml = "type: awk\nscript: x\n" + NESTED;
+		final Awk awk = MAPPER.readValue(yaml, Awk.class);
+		final JawkSource source = MAPPER.readValue(yaml, JawkSource.class);
+		final Map<String, Object> expected = MAPPER.readValue(yaml, Awk.class).getVariables();
+
+		for (final Map<String, Object> copy : List.of(
+			awk.copy().getVariables(),
+			((JawkSource) source.copy()).getVariables()
+		)) {
+			((List<Object>) copy.get("properties")).add("added");
+			((List<Object>) ((List<Object>) copy.get("rows")).get(0)).add("added");
+			final Map<String, Object> labels = (Map<String, Object>) copy.get("labels");
+			labels.put("added", "added");
+			((Map<String, Object>) ((List<Object>) labels.get("nested")).get(1)).put("added", "added");
+		}
+
+		assertEquals(expected, awk.getVariables(), "The original compute is untouched");
+		assertEquals(expected, source.getVariables(), "The original source is untouched");
+	}
+
+	/**
+	 * Building a model copies the given variables too: the caller's lists and maps stay the caller's.
+	 */
+	@Test
+	void testBuilderCopiesTheGivenVariables() {
+		final List<Object> list = new ArrayList<>(List.of("a"));
+		final Awk awk = Awk.builder().script("x").variables(Map.of("list", list)).build();
+		list.add("b");
+		assertEquals(List.of("a"), awk.getVariables().get("list"));
 	}
 }
