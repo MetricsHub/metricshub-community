@@ -129,6 +129,26 @@ class AwkStructuredIoTest {
 			)
 		);
 
+		// No fields (NF == 0): one empty cell as before, never a row without cells
+		assertEquals(
+			List.of(List.of(""), List.of(""), List.of(""), List.of("p")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { print } { print } END { NF = 0; print; printf \"p\"; print }",
+				"\n",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+		assertEquals(
+			List.of(List.of("")),
+			AwkExecutor.executeAwkToTable(
+				"{ print }",
+				new TableInputSource(List.of(List.of())),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
 		// Text output is unchanged: a bare print writes $0
 		assertEquals("a;b  c\n", AwkExecutor.executeAwk("{ print }", "a;b  c\n", AwkExecutor.getUtilityEngine(), null));
 	}

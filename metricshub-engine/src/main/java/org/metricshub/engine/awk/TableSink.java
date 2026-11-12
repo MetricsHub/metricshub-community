@@ -75,7 +75,8 @@ public class TableSink extends AwkSink {
 
 	/**
 	 * A bare <code>print</code>: the current record's fields <code>$1..$NF</code> are the printed values, so each one
-	 * is a cell, rendered and completing a pending <code>printf</code> as {@link #print} does.
+	 * is a cell, rendered and completing a pending <code>printf</code> as {@link #print} does. A record without fields
+	 * (<code>NF == 0</code>) prints <code>$0</code> as before: one empty cell, never a row without cells.
 	 */
 	@Override
 	public void printRecord(
@@ -85,7 +86,7 @@ public class TableSink extends AwkSink {
 		final List<Object> fields,
 		final Object record
 	) {
-		print(ofs, ors, ofmt, fields.toArray());
+		print(ofs, ors, ofmt, fields.isEmpty() ? new Object[] { record } : fields.toArray());
 	}
 
 	@Override
