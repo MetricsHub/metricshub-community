@@ -493,6 +493,13 @@ public class EnrollmentCoordinator {
 		if (!enrollmentWanted || !ready) {
 			return;
 		}
+		synchronized (this) {
+			// Deleted or changed by someone else: the next token request writes it again, the same token included
+			if (writtenToken != null && !store.holdsToken(writtenToken)) {
+				log.debug("The agent token file no longer holds the current token: it is written again.");
+				writtenToken = null;
+			}
+		}
 		try {
 			currentToken();
 		} catch (IOException | RuntimeException e) {

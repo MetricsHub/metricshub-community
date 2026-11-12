@@ -440,6 +440,21 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aDeletedTokenFileShouldBeWrittenAgainWithTheSameToken() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		coordinator.tokenFileRefresh = Duration.ofMillis(50);
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final String token = coordinator.currentToken();
+		final int requests = tokenRequests.get();
+
+		Files.delete(store.tokenFile());
+
+		await().atMost(10, TimeUnit.SECONDS).until(() -> store.holdsToken(token));
+		assertEquals(requests, tokenRequests.get(), "the same token, not a new one");
+	}
+
+	@Test
 	void anInvalidatedTokenShouldNeverBeWrittenOverItsReplacement() throws Exception {
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		final EnrollmentCoordinator coordinator = coordinator(store);

@@ -372,6 +372,18 @@ public final class AgentCredentialStore {
 		writeAtomically(tokenFile(), token.getBytes(StandardCharsets.US_ASCII));
 	}
 
+	/**
+	 * @param token a token
+	 * @return whether the token file holds exactly this token; {@code false} when it is missing or unreadable
+	 */
+	public boolean holdsToken(final String token) {
+		try {
+			return token.equals(Files.readString(tokenFile(), StandardCharsets.US_ASCII));
+		} catch (IOException e) {
+			return false;
+		}
+	}
+
 	private Path keyStoreFile() {
 		return directory.resolve(SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME);
 	}
