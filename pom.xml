@@ -325,7 +325,7 @@
 			<dependency>
 				<groupId>io.jawk</groupId>
 				<artifactId>jawk</artifactId>
-				<version>7.1.01</version>
+				<version>7.2.00-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>

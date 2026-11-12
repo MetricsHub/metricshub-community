@@ -55,11 +55,82 @@ class AwkStructuredIoTest {
 		);
 		assertEquals("2:a;b:c\n2::d\n", result);
 
-		// $0 is synthesized from the cells with OFS
+		// $0 is synthesized from the cells with FS, as it is when read, then with OFS once a field is assigned
 		assertEquals(
 			"a;b c\n",
 			AwkExecutor.executeAwk("{ print $0 }", new TableInputSource(table("a;b|c")), AwkExecutor.getUtilityEngine(), null)
 		);
+		assertEquals(
+			"b@c d\nb-x\n",
+			AwkExecutor.executeAwk(
+				"BEGIN { FS = \"@\"; OFS = \"-\" } { print; $2 = \"x\"; print }",
+				new TableInputSource(table("b|c d")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+	}
+
+	@Test
+	void barePrintWritesTheFieldsAsCells() throws Exception {
+		// The cells as read: a ";" stays in its cell, empty cells are kept, print $0 is still one cell
+		assertEquals(
+			List.of(List.of("a;b", "", "c", ""), List.of("a;b  c "), List.of("a;b", "", "c", "")),
+			AwkExecutor.executeAwkToTable(
+				"{ print; print $0; print $1, $2, $3, $4 }",
+				new TableInputSource(table("a;b||c|")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// The fields as the script left them: a field assigned beyond NF (the gap filled with empty cells), a smaller
+		// NF, a number rendered with OFMT
+		assertEquals(
+			List.of(List.of("a", "b", "", "", "x"), List.of("a", "b"), List.of("a", "0.33")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFMT = \"%.2f\" } { $5 = \"x\"; print; NF = 2; print; $2 = 1 / 3; print }",
+				new TableInputSource(table("a|b")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// A filter
+		assertEquals(
+			List.of(List.of("1", "x"), List.of("3", "z")),
+			AwkExecutor.executeAwkToTable(
+				"$2 != \"\" { print }",
+				new TableInputSource(table("1|x", "2|", "3|z")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// Text pending from a printf completes the last cell, the fields follow as cells of their own
+		assertEquals(
+			List.of(List.of("p", "q1", "2")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { OFS = \";\" } { printf \"p;q\"; print }",
+				new TableInputSource(table("1|2")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// A text input: the fields as Jawk split the record with FS
+		assertEquals(
+			List.of(List.of("a", "b c"), List.of("d", "")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { FS = \";\" } { print }",
+				"a;b c\nd;\n",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// Text output is unchanged: a bare print writes $0
+		assertEquals("a;b  c\n", AwkExecutor.executeAwk("{ print }", "a;b  c\n", AwkExecutor.getUtilityEngine(), null));
 	}
 
 	@Test
@@ -70,7 +141,8 @@ class AwkStructuredIoTest {
 			AwkExecutor.getUtilityEngine(),
 			null
 		);
-		assertEquals(List.of(List.of("a", "42", "1.5", "2", "x;y"), List.of("a 21")), rows);
+		// A bare print writes the record's fields (#1566)
+		assertEquals(List.of(List.of("a", "42", "1.5", "2", "x;y"), List.of("a", "21")), rows);
 
 		// Empty output: no row
 		assertEquals(List.of(), AwkExecutor.executeAwkToTable("BEGIN { }", "in", AwkExecutor.getUtilityEngine(), null));

@@ -381,6 +381,31 @@ class JawkSourceExtensionTest {
 			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
+		// With output: table, a bare print writes the cells (#1566), not the reference line $0 is
+		final JawkSource barePrint = JawkSource.builder()
+			.input(inputRef)
+			.output(ContentType.TABLE)
+			.script("{ print; print $0 }")
+			.build();
+		assertEquals(
+			SourceTable.ofTable(
+				List.of(
+					List.of("fan1", "x;y", "3000"),
+					List.of("fan1;x;y;3000;"),
+					List.of("fan2", "z", "0"),
+					List.of("fan2;z;0;")
+				)
+			),
+			new JawkSourceExtension().processSource(barePrint, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
+		// With output: text, a bare print writes $0
+		final JawkSource barePrintText = JawkSource.builder().input(inputRef).script("{ print }").build();
+		assertEquals(
+			SourceTable.ofText("fan1;x;y;3000;\nfan2;z;0;\n"),
+			new JawkSourceExtension().processSource(barePrintText, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
 		// $0 is the line the reference expanded to before #1559, trailing ";" included: a ";" taken from $0 (a
 		// password) is kept, and a script matching the line end sees the same text
 		final JawkSource wholeLine = JawkSource.builder().input(inputRef).script("{ print $0 }").build();

@@ -32,9 +32,11 @@ import java.util.function.Function;
  * <code>$1..$NF</code>. Nothing is serialized, no field separator is involved, so a <code>;</code> inside a cell
  * cannot move a column.
  * <p>
- * <code>$0</code> is not provided: Jawk synthesizes it from the fields (joined with <code>OFS</code>) only when the
- * script reads it. Use {@link #withRecordText(List, String)} to expose a given text as <code>$0</code> as well, for
- * instance to keep the legacy <code>;</code>-joined row of a mapping expression.
+ * <code>$0</code> is not provided: Jawk synthesizes it only when the script reads it, joining the cells with the
+ * <code>FS</code> in force when the record was read, taken literally (with <code>BEGIN { FS = "@" }</code>, the
+ * cells <code>b</code> and <code>c d</code> make <code>b@c d</code>), or with <code>OFS</code> once the script
+ * assigned a field or <code>NF</code>. Use {@link #withRecordText(List, String)} to expose a given text as
+ * <code>$0</code> as well, for instance to keep the legacy <code>;</code>-joined row of a mapping expression.
  */
 public class TableInputSource implements InputSource {
 
