@@ -37,6 +37,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.InsertColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2List;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Multiply;
@@ -56,7 +57,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv
  * Interface for a ComputeProcessor responsible for processing various compute operations on source data.
  * Implementations of this interface should handle specific types of compute operations, such as Add, And,
  * ArrayTranslate, Awk, Convert, Divide, DuplicateColumn, ExcludeMatchingLines, Extract, ExtractPropertyFromWbemPath,
- * Head, Json2Csv, KeepColumns, KeepOnlyMatchingLines, Prepend, Multiply, PerBitTranslation, Replace, Sort, Append,
+ * Head, Json2Csv, Json2List, KeepColumns, KeepOnlyMatchingLines, Prepend, Multiply, PerBitTranslation, Replace, Sort, Append,
  * Substring, Subtract, Tail, Translate, and Xml2Csv.
  */
 public interface IComputeProcessor {
@@ -157,6 +158,13 @@ public interface IComputeProcessor {
 	 * @param json2Csv The Json2Csv compute operation to be processed.
 	 */
 	void process(Json2Csv json2Csv);
+
+	/**
+	 * Processes the Json2List compute operation on the source data.
+	 *
+	 * @param json2List The Json2List compute operation to be processed.
+	 */
+	void process(Json2List json2List);
 
 	/**
 	 * Processes the KeepColumns compute operation on the source data.

@@ -29,6 +29,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2List;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Multiply;
@@ -178,6 +179,14 @@ class ComputeUpdaterProcessorTest {
 		doNothing().when(computeProcessor).process(any(Xml2Csv.class));
 		computeUpdaterProcessor.process(xml2Csv);
 		verify(computeProcessor, times(1)).process(any(Xml2Csv.class));
+	}
+
+	@Test
+	void testProcessJson2List() {
+		final Json2List json2List = Json2List.builder().build();
+		doNothing().when(computeProcessor).process(any(Json2List.class));
+		computeUpdaterProcessor.process(json2List);
+		verify(computeProcessor, times(1)).process(any(Json2List.class));
 	}
 
 	@Test

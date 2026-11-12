@@ -47,8 +47,8 @@ public record ContentTypeReportEntry(String sourceKey, Kind kind, String detail)
 		 */
 		TABLE_COMPUTE_ON_TEXT_SOURCE,
 		/**
-		 * A text compute that parses a text (<code>json2Table</code>, <code>xml2Csv</code>) follows a table producer:
-		 * it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
+		 * A text compute that parses a text (<code>json2Table</code>, <code>json2List</code>, <code>xml2Csv</code>)
+		 * follows a table producer: it finds nothing to parse and leaves the table unchanged. No conversion is inserted.
 		 */
 		TEXT_COMPUTE_ON_TABLE_SOURCE,
 		/** A <code>tableJoin</code> declares a <code>defaultRightLine</code> as a <code>;</code> string. */

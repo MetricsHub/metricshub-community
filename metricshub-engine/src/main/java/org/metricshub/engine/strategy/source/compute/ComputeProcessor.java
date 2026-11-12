@@ -35,8 +35,15 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonStreamContext;
+import com.fasterxml.jackson.core.JsonToken;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URLDecoder;
@@ -99,6 +106,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.InsertColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2List;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Multiply;
@@ -146,6 +154,8 @@ public class ComputeProcessor implements IComputeProcessor {
 	private static final Map<Class<? extends Compute>, BiFunction<String, String, String>> MATH_FUNCTIONS_MAP;
 
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
+
+	private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
 	private static final Function<ComputeValue, String> GET_VALUE_FROM_ROW = computeValue -> {
 		if (computeValue.getColumnIndex() < computeValue.getRow().size()) {
@@ -1094,6 +1104,96 @@ public class ComputeProcessor implements IComputeProcessor {
 			);
 			sourceTable.setTable(new ArrayList<>());
 		}
+	}
+
+	/**
+	 * Turns the JSON document into a table of two columns, the JFlat path of each leaf value and the value, whole. A
+	 * document that does not parse, or that is not an object or an array, gives an empty table.
+	 *
+	 * @param json2List {@link Json2List} instance
+	 */
+	@Override
+	@WithSpan("Compute Json2List Exec")
+	public void process(@SpanAttribute("compute.definition") final Json2List json2List) {
+		if (json2List == null) {
+			log.warn("Hostname {} - Compute Operation (Json2List) is null, the table remains unchanged.", hostname);
+			return;
+		}
+
+		if (sourceTable.getContentType() == ContentType.TABLE) {
+			log.warn("Hostname {} - Json2List compute on a table: nothing to parse, the table remains unchanged.", hostname);
+			return;
+		}
+
+		try {
+			sourceTable.setTable(jsonToList(sourceTable.getText() == null ? EMPTY : sourceTable.getText()));
+		} catch (IOException | NumberFormatException e) {
+			// The kind and the location only: the message of the parser quotes the document. A number whose exponent
+			// overflows a BigDecimal throws a NumberFormatException
+			log.warn(
+				"Hostname {} - Json2List compute: the document does not read as a JSON object or array ({} {}). " +
+					"The table is empty.",
+				hostname,
+				e.getClass().getSimpleName(),
+				e instanceof JsonProcessingException jpe && jpe.getLocation() != null
+					? jpe.getLocation().offsetDescription()
+					: "no location"
+			);
+			sourceTable.setTable(new ArrayList<>());
+		}
+	}
+
+	/**
+	 * The leaf values of a JSON object or array, in document order: one row per value, its path in the JFlat syntax
+	 * (<code>/key</code> for an object member, <code>[i]</code> for an array element) and the value as JFlat writes
+	 * it (a string as is, a number as {@link BigDecimal#toString()}, <code>TRUE</code>, <code>FALSE</code>,
+	 * <code>NULL</code>). An empty object or array has no row.
+	 *
+	 * @param json The JSON document
+	 * @return The rows
+	 * @throws IOException when the document does not parse or is not an object or an array
+	 */
+	static List<List<String>> jsonToList(final String json) throws IOException {
+		// Not JFlat's getFlatMap() (JFlat 1.3.00): that map is sorted ([10] before [2]) and case-insensitive (keys that
+		// differ only in case collapse). This walk keeps the document order and every value.
+		// ponytail: the whole document and its rows are in memory; stream the rows if documents get huge.
+		final List<List<String>> rows = new ArrayList<>();
+		try (JsonParser parser = JSON_FACTORY.createParser(json)) {
+			final JsonToken first = parser.nextToken();
+			if (first != JsonToken.START_OBJECT && first != JsonToken.START_ARRAY) {
+				throw new JsonParseException(parser, "Not a JSON object or array");
+			}
+			// Stop when the root closes: what follows is ignored, as JFlat does. A truncated document throws.
+			while (!parser.getParsingContext().inRoot()) {
+				final String value = switch (parser.nextToken()) {
+					case VALUE_STRING -> parser.getText();
+					case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT -> parser.getDecimalValue().toString();
+					case VALUE_TRUE -> "TRUE";
+					case VALUE_FALSE -> "FALSE";
+					case VALUE_NULL -> "NULL";
+					default -> null;
+				};
+				if (value != null) {
+					rows.add(new ArrayList<>(List.of(jflatPath(parser.getParsingContext()), value)));
+				}
+			}
+		}
+		return rows;
+	}
+
+	/**
+	 * The JFlat path of the current value: <code>/key</code> for each object member, <code>[i]</code> for each array
+	 * element, from the root (<code>/items[0]/name</code>, <code>[1][0]</code> in a root array).
+	 *
+	 * @param context The parsing context of the value
+	 * @return The path
+	 */
+	private static String jflatPath(final JsonStreamContext context) {
+		final StringBuilder path = new StringBuilder();
+		for (JsonStreamContext c = context; !c.inRoot(); c = c.getParent()) {
+			path.insert(0, c.inArray() ? "[" + c.getCurrentIndex() + "]" : "/" + c.getCurrentName());
+		}
+		return path.toString();
 	}
 
 	/**
