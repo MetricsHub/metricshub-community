@@ -84,9 +84,9 @@ class OtelCollectorProcessServiceTest {
 	private static EnrollmentCoordinator pending(final AtomicReference<Consumer<Path>> launch) {
 		final EnrollmentCoordinator enrollment = Mockito.mock(EnrollmentCoordinator.class);
 		doAnswer(invocation -> {
-			launch.set(invocation.getArgument(0));
+			launch.set(invocation.getArgument(1));
 			return true;
-		}).when(enrollment).whenTokenFileWritten(any());
+		}).when(enrollment).whenTokenFileWritten(any(), any());
 		return enrollment;
 	}
 
@@ -119,9 +119,9 @@ class OtelCollectorProcessServiceTest {
 		final Path tokenFile = directory.resolve("metricshub-agent-token");
 		final EnrollmentCoordinator enrollment = Mockito.mock(EnrollmentCoordinator.class);
 		doAnswer(invocation -> {
-			invocation.<Consumer<Path>>getArgument(0).accept(tokenFile);
+			invocation.<Consumer<Path>>getArgument(1).accept(tokenFile);
 			return false;
-		}).when(enrollment).whenTokenFileWritten(any());
+		}).when(enrollment).whenTokenFileWritten(any(), any());
 		final OtelCollectorProcessService service = service(withAuth(), enrollment);
 
 		service.launch();

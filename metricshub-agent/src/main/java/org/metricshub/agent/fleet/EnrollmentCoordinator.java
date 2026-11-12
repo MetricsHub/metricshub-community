@@ -91,7 +91,6 @@ public class EnrollmentCoordinator {
 	private static final Duration MAX_BACKOFF = Duration.ofMinutes(5);
 	private static final Duration MAX_RETRY_AFTER = Duration.ofHours(1);
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
-	private static final Duration TOKEN_FILE_REFRESH = Duration.ofSeconds(30);
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private static final Pattern RANDOM_SECRET = Pattern.compile("^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$");
@@ -186,8 +185,10 @@ public class EnrollmentCoordinator {
 	private String writtenToken;
 	/** The collector launch waiting for the first token file. */
 	private Consumer<Path> pendingLaunch;
-	/** Keeps the token file renewed whatever the channels do, once it is written. */
+	/** Keeps the token file renewed, and a failed write retried, whatever the channels do. */
 	private ScheduledExecutorService tokenFileRefresher;
+	/** How often the refresher asks for the token (tests shorten it). */
+	Duration tokenFileRefresh = Duration.ofSeconds(30);
 
 	/**
 	 * Creates a coordinator (tests).
@@ -300,6 +301,8 @@ public class EnrollmentCoordinator {
 				}
 				tokenProvider = null;
 				tokenGeneration++;
+				// The file holds the former issuer's token: a collector launched for the new one waits for its first
+				writtenToken = null;
 				if (!recoveryCleared) {
 					// The recovery proof goes after the first token of the new issuer
 					firstTokenDone = false;
@@ -443,14 +446,7 @@ public class EnrollmentCoordinator {
 		if (token.equals(writtenToken)) {
 			return null;
 		}
-		try {
-			store.writeToken(token);
-		} catch (IOException e) {
-			// The message names the file, never the token
-			log.warn("Cannot write the agent token file yet: {}. Retried at the next token request.", e.getMessage());
-			return null;
-		}
-		writtenToken = token;
+		// Started before the first write succeeds: a failed one is retried even when no channel asks for a token
 		if (tokenFileRefresher == null) {
 			tokenFileRefresher = Executors.newSingleThreadScheduledExecutor(runnable -> {
 				final Thread thread = new Thread(runnable, "metricshub-agent-token-file");
@@ -459,11 +455,19 @@ public class EnrollmentCoordinator {
 			});
 			tokenFileRefresher.scheduleWithFixedDelay(
 				this::refreshTokenFile,
-				TOKEN_FILE_REFRESH.toSeconds(),
-				TOKEN_FILE_REFRESH.toSeconds(),
-				TimeUnit.SECONDS
+				tokenFileRefresh.toMillis(),
+				tokenFileRefresh.toMillis(),
+				TimeUnit.MILLISECONDS
 			);
 		}
+		try {
+			store.writeToken(token);
+		} catch (IOException e) {
+			// The message names the file, never the token
+			log.warn("Cannot write the agent token file yet: {}. Retried at the next token request.", e.getMessage());
+			return null;
+		}
+		writtenToken = token;
 		final Consumer<Path> waiting = pendingLaunch;
 		pendingLaunch = null;
 		if (waiting == null) {
@@ -490,16 +494,19 @@ public class EnrollmentCoordinator {
 	}
 
 	/**
-	 * Runs a collector launch with the token file's path once the file holds a token: at once when it does, else
-	 * after the first write. A launch still waiting is replaced.
+	 * Runs a collector launch with the token file's path once the file holds a token of the given configuration's
+	 * issuer: at once when it does, else after the next write. A launch still waiting is replaced.
 	 *
-	 * @param launch the launch, given the token file's path
-	 * @return whether the launch waits for the first token file
+	 * @param central the {@code central} configuration the collector is launched with
+	 * @param launch  the launch, given the token file's path
+	 * @return whether the launch waits for the token file
 	 */
-	public boolean whenTokenFileWritten(final Consumer<Path> launch) {
+	public boolean whenTokenFileWritten(final CentralConfig central, final Consumer<Path> launch) {
 		final Path file;
 		synchronized (this) {
-			if (writtenToken == null) {
+			// Before ready() reconciled a reload, the file may hold the former issuer's token: the reconciliation
+			// drops it, and the first token of the new issuer launches the collector
+			if (writtenToken == null || !isReadyFor(central)) {
 				pendingLaunch = launch;
 				return true;
 			}

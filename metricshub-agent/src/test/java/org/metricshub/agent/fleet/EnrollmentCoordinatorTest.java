@@ -392,7 +392,7 @@ class EnrollmentCoordinatorTest {
 		final EnrollmentCoordinator coordinator = coordinator(store);
 		final List<Path> launches = new CopyOnWriteArrayList<>();
 
-		assertTrue(coordinator.whenTokenFileWritten(launches::add), "deferred before the agent is enrolled");
+		assertTrue(coordinator.whenTokenFileWritten(central(KEY), launches::add), "deferred before the agent is enrolled");
 		assertTrue(enrollWith(coordinator, central(KEY)));
 
 		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
@@ -408,7 +408,7 @@ class EnrollmentCoordinatorTest {
 		assertEquals(1, launches.size(), "launched once");
 
 		// Written already: a later launch (a restart of the collector) runs at once
-		assertFalse(coordinator.whenTokenFileWritten(launches::add));
+		assertFalse(coordinator.whenTokenFileWritten(central(KEY), launches::add));
 		assertEquals(List.of(store.tokenFile(), store.tokenFile()), launches);
 	}
 
@@ -418,8 +418,9 @@ class EnrollmentCoordinatorTest {
 		// A directory in the way: the move over it fails
 		Files.createDirectories(store.tokenFile().resolve("in-the-way"));
 		final EnrollmentCoordinator coordinator = coordinator(store);
+		coordinator.tokenFileRefresh = Duration.ofMillis(50);
 		final List<Path> launches = new CopyOnWriteArrayList<>();
-		coordinator.whenTokenFileWritten(launches::add);
+		coordinator.whenTokenFileWritten(central(KEY), launches::add);
 
 		final String logs = logged(() -> {
 			assertTrue(enrollWith(coordinator, central(KEY)));
@@ -432,9 +433,36 @@ class EnrollmentCoordinatorTest {
 		}
 		Files.delete(store.tokenFile().resolve("in-the-way"));
 		Files.delete(store.tokenFile());
-		final String token = coordinator.currentToken();
-		assertEquals(token, Files.readString(store.tokenFile()));
+
+		// No channel asks for a token: the refresher retries the write, which launches the collector
 		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
+		assertEquals(tokensHandedOut.get(tokensHandedOut.size() - 1), Files.readString(store.tokenFile()));
+	}
+
+	@Test
+	void aCollectorLaunchedForAnotherIssuerShouldWaitForItsToken() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		final String former = coordinator.currentToken();
+		final CentralConfig moved = central(KEY);
+		moved.getAuth().setIssuerUrl(issuer + "/");
+		final List<Path> launches = new CopyOnWriteArrayList<>();
+
+		// The reloaded collector is launched before the coordinator reconciled the new issuer
+		assertTrue(coordinator.whenTokenFileWritten(moved, launches::add));
+		assertTrue(coordinator.ready(moved, DESCRIPTION));
+		assertTrue(launches.isEmpty(), "never launched with the former issuer's token");
+		// Reconciled, but the file still holds the former issuer's token: a launch waits too
+		assertTrue(coordinator.whenTokenFileWritten(moved, launches::add));
+		final String next = coordinator.currentToken();
+
+		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
+		assertNotEquals(former, next);
+		assertEquals(next, Files.readString(store.tokenFile()));
+		// The new issuer's token is written: a later launch runs at once
+		assertFalse(coordinator.whenTokenFileWritten(moved, launches::add));
+		assertEquals(2, launches.size());
 	}
 
 	@Test

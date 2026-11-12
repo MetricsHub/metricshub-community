@@ -156,7 +156,7 @@ public class OtelCollectorProcessService extends AbstractProcess {
 		launchWanted = true;
 		// ponytail: a stop racing the deferred launch's check can still start this collector once; a lock across
 		// launchNow() if a reload ever hits it
-		final boolean deferred = enrollment.whenTokenFileWritten(file -> {
+		final boolean deferred = enrollment.whenTokenFileWritten(agentConfig.getCentral(), file -> {
 			if (launchWanted) {
 				tokenFile = file;
 				launchNow();
