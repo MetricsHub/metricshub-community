@@ -21,6 +21,7 @@ package org.metricshub.agent.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -58,8 +59,11 @@ public class OtelCollectorProcessService extends AbstractProcess {
 	/** The token file the collector reads, {@code null} without {@code central.auth}. */
 	private volatile Path tokenFile;
 
-	/** Whether a launch waiting for the first token file still wants the collector: a stop cancels it. */
-	private volatile boolean launchWanted;
+	/**
+	 * Set by {@link #stop()}, cleared by {@link #launch()}: a launch that waited for the token file never starts a
+	 * collector stopped meanwhile. Read and written under this object's lock, as {@code start()} and {@code stop()}.
+	 */
+	private boolean stopped;
 
 	/**
 	 * Creates a new instance of OtelCollectorProcessService.
@@ -106,8 +110,17 @@ public class OtelCollectorProcessService extends AbstractProcess {
 	}
 
 	@Override
-	public void stop() {
-		launchWanted = false;
+	public synchronized void start() throws IOException {
+		if (stopped) {
+			log.debug("The OpenTelemetry Collector was stopped before its deferred launch: it is not started.");
+			return;
+		}
+		super.start();
+	}
+
+	@Override
+	public synchronized void stop() {
+		stopped = true;
 		super.stop();
 	}
 
@@ -147,20 +160,19 @@ public class OtelCollectorProcessService extends AbstractProcess {
 			return;
 		}
 
+		synchronized (this) {
+			stopped = false;
+		}
+
 		if (!EnrollmentCoordinator.isConfigured(agentConfig.getCentral())) {
 			tokenFile = null;
 			launchNow();
 			return;
 		}
 
-		launchWanted = true;
-		// ponytail: a stop racing the deferred launch's check can still start this collector once; a lock across
-		// launchNow() if a reload ever hits it
 		final boolean deferred = enrollment.whenTokenFileWritten(agentConfig.getCentral(), file -> {
-			if (launchWanted) {
-				tokenFile = file;
-				launchNow();
-			}
+			tokenFile = file;
+			launchNow();
 		});
 		if (deferred) {
 			log.info(

@@ -440,6 +440,24 @@ class EnrollmentCoordinatorTest {
 	}
 
 	@Test
+	void aCollectorLaunchedWhenCentralAuthComesBackShouldWaitForAFreshToken() throws Exception {
+		final AgentCredentialStore store = new AgentCredentialStore(directory);
+		final EnrollmentCoordinator coordinator = coordinator(store);
+		assertTrue(enrollWith(coordinator, central(KEY)));
+		coordinator.currentToken();
+		final List<Path> launches = new CopyOnWriteArrayList<>();
+
+		// central.auth removed, then back with the same issuer: the file was not renewed meanwhile
+		assertTrue(coordinator.ready(CentralConfig.builder().enabled(true).build(), DESCRIPTION));
+		assertTrue(coordinator.ready(central(KEY), DESCRIPTION));
+		assertTrue(coordinator.whenTokenFileWritten(central(KEY), launches::add), "waits for a token written now");
+		final String token = coordinator.currentToken();
+
+		await().atMost(10, TimeUnit.SECONDS).until(() -> launches.size() == 1);
+		assertEquals(token, Files.readString(store.tokenFile()));
+	}
+
+	@Test
 	void aCollectorLaunchedForAnotherIssuerShouldWaitForItsToken() throws Exception {
 		final AgentCredentialStore store = new AgentCredentialStore(directory);
 		final EnrollmentCoordinator coordinator = coordinator(store);

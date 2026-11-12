@@ -103,15 +103,28 @@ class OtelCollectorProcessServiceTest {
 	}
 
 	@Test
-	void aStoppedServiceShouldNotBeLaunchedByTheFirstTokenFile() throws Exception {
+	void aStopShouldWinOverADeferredLaunchThatStartsAfterIt() throws Exception {
 		final AtomicReference<Consumer<Path>> launch = new AtomicReference<>();
-		final OtelCollectorProcessService service = service(withAuth(), pending(launch));
+		final OtelCollectorConfig otelCollectorConfigMock = Mockito.mock(OtelCollectorConfig.class);
+		doReturn(
+			ProcessConfig.builder()
+				.commandLine(List.of(Files.createFile(directory.resolve("otelcol-contrib")).toString()))
+				.build()
+		).when(otelCollectorConfigMock).toProcessConfig();
+		final OtelCollectorProcessService service = new OtelCollectorProcessService(
+			AgentConfig.builder().otelCollector(otelCollectorConfigMock).central(withAuth()).build()
+		);
+		service.setEnrollment(pending(launch));
 		service.launch();
 
-		service.stop();
-		launch.get().accept(directory.resolve("metricshub-agent-token"));
+		try (MockedStatic<ProcessControl> processControl = mockStatic(ProcessControl.class)) {
+			// A reload stops the service, then the deferred launch, which passed its checks before, reaches start()
+			service.stop();
+			service.start();
 
-		verify(service, never()).start();
+			processControl.verify(() -> ProcessControl.newProcessBuilder(anyList(), anyMap(), any(), anyBoolean()), never());
+			assertFalse(service.isStarted());
+		}
 	}
 
 	@Test

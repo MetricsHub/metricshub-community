@@ -253,6 +253,8 @@ public class EnrollmentCoordinator {
 	synchronized boolean ready(final CentralConfig central, final Map<String, String> description) {
 		if (!isConfigured(central)) {
 			enrollmentWanted = false;
+			// Not renewed meanwhile: when central.auth comes back, a collector launch waits for a token written then
+			writtenToken = null;
 			// The enrollment, or the first token after it
 			if (worker != null && worker.isAlive()) {
 				log.info("central.auth is no longer configured: the enrollment into MetricsHub Central stops.");
