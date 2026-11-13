@@ -1,6 +1,7 @@
 package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jawk.jrt.AssocArray;
 import io.jawk.util.AwkSettings;
@@ -166,5 +167,25 @@ class UtilityExtensionForJawkTest {
 		assertEquals("4.00 GHz", AwkExecutor.evalAwk("megaHertz2HumanFormat($1)", "4000;x"));
 		assertEquals("a b c", AwkExecutor.evalAwk("join(\" \", $1, $2, $3)", "a;b;c"));
 		assertEquals("aGVsbG8=", AwkExecutor.evalAwk("base64Encode($1)", "hello;x"));
+	}
+
+	/**
+	 * A script pauses with <code>sleep(seconds)</code>, since the sandbox rejects <code>system("sleep 1")</code>.
+	 */
+	@Test
+	void testSleep() throws AwkException {
+		final long start = System.nanoTime();
+		assertEquals("0", AwkExecutor.evalAwk("sleep($1)", "0.2;x"));
+		final long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+		assertTrue(elapsedMs >= 190, "The script paused " + elapsedMs + " ms");
+
+		assertEquals(0, UNDER_TEST.sleep(0));
+		assertEquals(-1, UNDER_TEST.sleep(-1), "A negative duration is refused");
+		assertEquals(0, UNDER_TEST.sleep("abc"), "Text is the number 0, as in AWK");
+
+		// An interrupted thread does not pause, and stays interrupted
+		Thread.currentThread().interrupt();
+		assertEquals(-1, UNDER_TEST.sleep(30));
+		assertTrue(Thread.interrupted());
 	}
 }
