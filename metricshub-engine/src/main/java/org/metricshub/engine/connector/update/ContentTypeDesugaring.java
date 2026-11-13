@@ -85,8 +85,9 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * by a table producer
  * finds nothing to parse and leaves the table unchanged: nothing is inserted, the case is reported;</li>
  * <li>an <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>substring</code> without
- * <code>column</code> is a text compute that writes a text: nothing is inserted before it, and a table fed to it is
- * left unchanged and reported likewise; with a <code>column</code>, it is a table compute like any other;</li>
+ * <code>column</code> works on the content it is fed and leaves its type as it is: nothing is inserted before it.
+ * With a <code>column</code> it is the table compute it always was, and a legacy text is still converted for it. The
+ * content-type check reports a <code>column</code> on a text and a missing <code>column</code> on a table;</li>
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
@@ -282,20 +283,6 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
-	 * Whether the compute does nothing to the content it is fed: a compute that reads a text finds nothing to read in
-	 * a table and leaves it as it is (<code>json2Table</code> after a table, an <code>append</code> without
-	 * <code>column</code> after a table). What follows it still reads a table, whatever the compute would have
-	 * produced.
-	 *
-	 * @param compute The compute
-	 * @param current The type of the content the compute is fed
-	 * @return whether the content keeps its type
-	 */
-	static boolean leavesUnchanged(final Compute compute, final ContentType current) {
-		return compute.getInputContentType() == ContentType.TEXT && current == ContentType.TABLE;
-	}
-
-	/**
 	 * The state after the source's written computes, from the given state.
 	 */
 	private static State throughWrittenComputes(final State start, final Source source) {
@@ -304,10 +291,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			if (isGenerated(compute)) {
 				continue;
 			}
-			if (leavesUnchanged(compute, state.type())) {
-				continue;
-			}
-			final ContentType type = compute.getOutputContentType();
+			final ContentType type = compute.getOutputContentType(state.type());
 			final TextProducer producer;
 			if (type != ContentType.TEXT) {
 				producer = TextProducer.NONE;
@@ -402,11 +386,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text (a copy: what its origin's chain produces).
 	 */
 	private static boolean endsInText(final Source source, final Map<String, Source> sources) {
-		if (source.getComputes() != null && !source.getComputes().isEmpty()) {
-			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
+		// The type flows through the computes: a compute such as an append without column leaves it as it is
+		ContentType type = start(source, sources, new HashSet<>(), null).type();
+		if (source.getComputes() != null) {
+			for (final Compute compute : source.getComputes()) {
+				type = compute.getOutputContentType(type);
+			}
 		}
-		final State state = start(source, sources, new HashSet<>(), null);
-		return state.type() == ContentType.TEXT;
+		return type == ContentType.TEXT;
 	}
 
 	/**
@@ -617,10 +604,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 			desugared.add(compute);
 
-			if (leavesUnchanged(compute, current)) {
-				continue;
-			}
-			current = compute.getOutputContentType();
+			current = compute.getOutputContentType(current);
 			if (current != ContentType.TEXT) {
 				producer = TextProducer.NONE;
 			} else if (compute instanceof Awk) {

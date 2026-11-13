@@ -421,7 +421,7 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("prepend", "append", "replace", "substring", "toTable"), types(command));
 		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 
-		// On a table: reported, nothing inserted
+		// On a table: nothing inserted. The content-type check reports the missing column
 		final Source table = SnmpTableSource.builder()
 			.oid("1.3")
 			.selectColumns("1")
@@ -430,10 +430,9 @@ class ContentTypeDesugaringTest {
 		connector = connectorWith(table);
 		new ContentTypeDesugaring().update(connector);
 		assertEquals(List.of("prepend"), types(table));
-		assertEquals(List.of(Kind.TEXT_COMPUTE_ON_TABLE_SOURCE), kinds(connector));
+		assertEquals(List.of(), kinds(connector));
 
-		// The refused compute leaves the table as it is: the table compute after it still reads a table, so no
-		// toTable is inserted before it and nothing else is reported
+		// The table stays a table through it: the table compute after it gets no toTable
 		final Source tableThenColumn = SnmpTableSource.builder()
 			.oid("1.3")
 			.selectColumns("1")
@@ -447,7 +446,7 @@ class ContentTypeDesugaringTest {
 		connector = connectorWith(tableThenColumn);
 		new ContentTypeDesugaring().update(connector);
 		assertEquals(List.of("prepend", "append"), types(tableThenColumn));
-		assertEquals(List.of(Kind.TEXT_COMPUTE_ON_TABLE_SOURCE), kinds(connector));
+		assertEquals(List.of(), kinds(connector));
 
 		// With a column, a table compute like any other: reported on a pure text, converted on a legacy one
 		final List<Compute> tableCompute = List.of(Prepend.builder().type("prepend").column(1).value("a").build());

@@ -1,6 +1,7 @@
 package org.metricshub.engine.connector.deserializer.compute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,11 +67,16 @@ class AppendComputeDeserializerTest extends DeserializerTest {
 			computes
 		);
 		for (final Compute compute : computes) {
-			assertEquals(ContentType.TEXT, compute.getInputContentType());
-			assertEquals(ContentType.TEXT, compute.getOutputContentType());
+			// Without a column, the compute works on what it is fed and leaves its type as it is
+			assertNull(compute.getInputContentType());
+			assertEquals(ContentType.TEXT, compute.getOutputContentType(ContentType.TEXT));
+			assertEquals(ContentType.TABLE, compute.getOutputContentType(ContentType.TABLE));
 			assertEquals(compute, compute.copy());
 		}
 		assertEquals(ContentType.TABLE, Append.builder().column(1).value("x").build().getInputContentType());
-		assertEquals(ContentType.TABLE, Append.builder().column(1).value("x").build().getOutputContentType());
+		assertEquals(
+			ContentType.TABLE,
+			Append.builder().column(1).value("x").build().getOutputContentType(ContentType.TABLE)
+		);
 	}
 }

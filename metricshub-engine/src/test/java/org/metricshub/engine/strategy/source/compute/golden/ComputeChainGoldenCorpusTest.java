@@ -537,11 +537,11 @@ class ComputeChainGoldenCorpusTest {
 			final String check = report.substring(report.indexOf("== Content type check (#1560)\n"));
 			assertTrue(
 				check.contains(
-					"\nGoldenA (1)\n  TEXT_FEEDS_TABLE ${source::monitors.thing.simple.sources.s} at append #0: expected TABLE"
+					"\nGoldenA (1)\n  COLUMN_ON_TEXT ${source::monitors.thing.simple.sources.s} at append #0: expected no column"
 				),
 				check
 			);
-			assertTrue(check.contains("Connectors with check findings: 1\n  TEXT_FEEDS_TABLE: 1\n"), check);
+			assertTrue(check.contains("Connectors with check findings: 1\n  COLUMN_ON_TEXT: 1\n"), check);
 
 			System.clearProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY);
 			assertTrue(ComputeChainGoldenCorpus.isSelected("GoldenB"));

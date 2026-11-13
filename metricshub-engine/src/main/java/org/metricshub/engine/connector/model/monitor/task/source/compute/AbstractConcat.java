@@ -44,7 +44,7 @@ import org.metricshub.engine.connector.model.common.ContentType;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public abstract class AbstractConcat extends Compute {
+public abstract class AbstractConcat extends Compute implements TextOrColumnCompute {
 
 	private static final long serialVersionUID = 1L;
 
@@ -71,14 +71,25 @@ public abstract class AbstractConcat extends Compute {
 		this.value = value;
 	}
 
+	/**
+	 * None without a <code>column</code>: the compute works on the content it is fed. With a <code>column</code>, it
+	 * needs a table, as it always did: a legacy text is still converted for it (see
+	 * {@link org.metricshub.engine.connector.update.ContentTypeDesugaring}).
+	 *
+	 * @return null, or a table when the compute has a column
+	 */
 	@Override
 	public ContentType getInputContentType() {
-		return column == null ? ContentType.TEXT : ContentType.TABLE;
+		return column == null ? null : ContentType.TABLE;
 	}
 
+	/**
+	 * The compute does not change the type of the content: a text stays a text, a table stays a table. (A compute
+	 * with a <code>column</code> fed a text that is not converted gives an empty table, as it always did.)
+	 */
 	@Override
-	public ContentType getOutputContentType() {
-		return column == null ? ContentType.TEXT : ContentType.TABLE;
+	public ContentType getOutputContentType(final ContentType input) {
+		return column == null ? input : ContentType.TABLE;
 	}
 
 	@Override

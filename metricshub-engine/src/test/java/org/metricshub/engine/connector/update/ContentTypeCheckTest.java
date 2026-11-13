@@ -208,16 +208,16 @@ class ContentTypeCheckTest {
 	}
 
 	/**
-	 * <code>append</code>, <code>prepend</code>, <code>replace</code> and <code>substring</code> read a text without
-	 * <code>column</code>, a table with one (#1577).
+	 * <code>append</code>, <code>prepend</code>, <code>replace</code> and <code>substring</code> work on what they are
+	 * fed: a <code>column</code> on a text and a missing <code>column</code> on a table are reported (#1577).
 	 */
 	@Test
 	void computeWithOrWithoutColumn() throws IOException {
 		assertEquals(
 			// The four computes of "text" give no finding, and leave a text, which the mapping cannot read
 			Set.of(
-				"TABLE_FEEDS_TEXT prepend #0",
-				"TEXT_FEEDS_TABLE append #0",
+				"NO_COLUMN_ON_TABLE prepend #0",
+				"COLUMN_ON_TEXT append #0",
 				"TEXT_FEEDS_TABLE monitors.thing.simple.mapping"
 			),
 			lines(findings("""

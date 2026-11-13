@@ -57,6 +57,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSourc
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 
@@ -240,7 +241,14 @@ public class ContentTypeCheck {
 			final String where = compute.getType() + " #" + index;
 			// An awk reads whatever it gets: no input type
 			final ContentType input = compute.getInputContentType();
-			if (input != null && input != current) {
+			if (compute instanceof TextOrColumnCompute textOrColumn) {
+				// The content decides whether such a compute takes a column: a text has none, a table needs one
+				if (current == ContentType.TEXT && textOrColumn.getColumn() != null) {
+					add(key, where, Rule.COLUMN_ON_TEXT, "no column", "column: " + textOrColumn.getColumn());
+				} else if (current == ContentType.TABLE && textOrColumn.getColumn() == null) {
+					add(key, where, Rule.NO_COLUMN_ON_TABLE, "column", "no column");
+				}
+			} else if (input != null && input != current) {
 				add(
 					key,
 					where,
@@ -260,10 +268,7 @@ public class ContentTypeCheck {
 			}
 			final Compute copy = compute.copy();
 			checkInterpolated(key, where + " ", copy, copy::update);
-			// A text compute fed a table leaves it as it is: what follows still reads a table
-			if (!ContentTypeDesugaring.leavesUnchanged(compute, current)) {
-				current = compute.getOutputContentType();
-			}
+			current = compute.getOutputContentType(current);
 		}
 	}
 
