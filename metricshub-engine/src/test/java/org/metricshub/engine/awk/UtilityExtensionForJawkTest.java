@@ -2,7 +2,6 @@ package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.jawk.jrt.AssocArray;
 import io.jawk.util.AwkSettings;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -137,19 +136,18 @@ class UtilityExtensionForJawkTest {
 		assertEquals("", AwkExecutor.evalAwk("base64Encode(unset)", ""), "Unset input should return empty string");
 	}
 
+	/**
+	 * The engines of AwkExecutor (scripts and expressions) load Jawk's gawk functions next to the MetricsHub ones.
+	 */
 	@Test
-	void testAsorti() {
-		AssocArray src = AssocArray.create(false);
-		src.put("z", 1);
-		src.put("b", 1);
-		src.put("a", 1);
-
-		AssocArray dest = AssocArray.create(false);
-		final int n = UNDER_TEST.asorti(src, dest);
-		assertEquals(3, n, "Should return the number of keys");
-		assertEquals("a", dest.get("1"), "First key should be 'a'");
-		assertEquals("b", dest.get("2"), "Second key should be 'b'");
-		assertEquals("z", dest.get("3"), "Third key should be 'z'");
+	void testGawkFunctionsAreAvailable() throws AwkException {
+		assertEquals(
+			"2 a b\n",
+			AwkExecutor.executeAwk("BEGIN { h[\"b\"]; h[\"a\"]; n = asorti(h); print n, h[1], h[2] }", "")
+		);
+		assertEquals("bxx", AwkExecutor.evalAwk("gensub(/a/, \"x\", \"g\", $1)", "baa;x"));
+		assertEquals("31", AwkExecutor.evalAwk("strtonum($1)", "0x1F;x"));
+		assertEquals("1970-01-01", AwkExecutor.evalAwk("strftime(\"%Y-%m-%d\", 0, 1)", ""));
 	}
 
 	/**

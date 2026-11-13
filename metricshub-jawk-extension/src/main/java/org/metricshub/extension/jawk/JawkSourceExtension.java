@@ -35,7 +35,6 @@ import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.awk.TableInputSource;
-import org.metricshub.engine.awk.UtilityExtensionForJawk;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -151,7 +150,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		// Execute
 		try {
-			Awk awkEngine = new Awk(List.of(extension, UtilityExtensionForJawk.INSTANCE), AwkExecutor.newAwkSettings(null));
+			Awk awkEngine = AwkExecutor.newAwk(null, extension);
 			if (jawkSource.getOutput() == ContentType.TABLE) {
 				// Each print is a row
 				return SourceTable.ofTable(

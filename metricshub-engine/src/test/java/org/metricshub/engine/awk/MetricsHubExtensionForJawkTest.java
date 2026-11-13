@@ -31,18 +31,15 @@ class MetricsHubExtensionForJawkTest {
 	private static final String CSV = "/items[0];a;1;\n/items[1];b;2;";
 
 	/**
-	 * A Jawk engine with the MetricsHub and utility extensions, as a connector script runs them.
+	 * A Jawk engine with the MetricsHub, utility and gawk extensions, as a connector script runs them.
 	 *
 	 * @param sourceProcessor The source processor of the <code>execute*</code> functions
 	 * @return the engine
 	 */
 	private static Awk engine(final SourceProcessor sourceProcessor) {
-		return new Awk(
-			List.of(
-				MetricsHubExtensionForJawk.builder().sourceProcessor(sourceProcessor).hostname("host").build(),
-				UtilityExtensionForJawk.INSTANCE
-			),
-			AwkExecutor.newAwkSettings(null)
+		return AwkExecutor.newAwk(
+			null,
+			MetricsHubExtensionForJawk.builder().sourceProcessor(sourceProcessor).hostname("host").build()
 		);
 	}
 
