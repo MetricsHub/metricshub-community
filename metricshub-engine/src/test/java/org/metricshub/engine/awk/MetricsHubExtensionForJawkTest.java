@@ -130,6 +130,41 @@ class MetricsHubExtensionForJawkTest {
 		);
 	}
 
+	/**
+	 * A number keeps its digits: an unsigned 64-bit counter and a long decimal are not rounded to a double, and they
+	 * still compare and compute as numbers.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestKeepsTheDigitsOfANumber() throws Exception {
+		assertEquals(
+			"18446744073709551615 1234567.123456789 42 1 3\n",
+			run(
+				"""
+					BEGIN {
+						args["path"] = "/api"
+						executeHttpJsonRequest(args, r)
+						print r["counter"], r["decimal"], r["small"], (r["counter"] > 9), r["half"] * 2
+					}
+					""",
+				httpGiving(
+					SourceTable.ofText(
+						"{\"counter\":18446744073709551615,\"decimal\":1234567.123456789,\"small\":42,\"half\":1.5}"
+					)
+				)
+			)
+		);
+	}
+
+	@Test
+	void testJson2ListKeepsTheLastValueOfAPath() throws Exception {
+		assertEquals("1 second\n", run("""
+			BEGIN {
+				n = json2List("{\\"a/b\\":\\"first\\",\\"a\\":{\\"b\\":\\"second\\"}}", list)
+				print n, list["/a/b"]
+			}
+			"""));
+	}
+
 	@Test
 	void testExecuteHttpJsonRequestWithoutJson() throws Exception {
 		final String script = "BEGIN { args[\"path\"] = \"/api\"; response[1] = 1; print executeHttpJsonRequest(args, response), length(response) }";
@@ -137,6 +172,9 @@ class MetricsHubExtensionForJawkTest {
 		// Not JSON, a JSON scalar, an empty result, a failed request: the array is empty
 		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText("<html>"))));
 		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText("42"))));
+		// A document followed by something else is not a JSON document
+		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText("{\"status\":\"ok\"}<html>proxy error</html>"))));
+		assertEquals("1 1\n", run(script, httpGiving(SourceTable.ofText("{\"status\":\"ok\"} \n"))));
 		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText(""))));
 		assertEquals("0 0\n", run(script, httpGiving(SourceTable.empty())));
 	}

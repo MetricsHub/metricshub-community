@@ -24,8 +24,9 @@ package org.metricshub.engine.awk;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import io.jawk.ext.AbstractExtension;
 import io.jawk.ext.JawkExtension;
 import io.jawk.ext.annotations.JawkAssocArray;
@@ -69,7 +70,13 @@ import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 @AllArgsConstructor
 public class MetricsHubExtensionForJawk extends AbstractExtension {
 
-	private static final ObjectMapper MAPPER = JsonHelper.buildObjectMapper();
+	/**
+	 * Reads the JSON result of a HTTP request: a number keeps its digits, and anything after the document is an error
+	 */
+	private static final ObjectReader JSON_READER = JsonHelper.buildObjectMapper()
+		.reader()
+		.with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
+		.with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
 	@EqualsAndHashCode.Exclude
 	private SourceProcessor sourceProcessor;
@@ -174,7 +181,9 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * nested arrays, such as <code>response["data"]["items"][0]["name"]</code>.
 	 * <p>
 	 * A JSON object is an array indexed by its keys, a JSON array an array indexed from 0. A string is a string, a
-	 * number a number, <code>true</code> and <code>false</code> are 1 and 0, <code>null</code> is an empty string.
+	 * number a number (with all its digits, even beyond what a double holds), <code>true</code> and
+	 * <code>false</code> are 1 and 0, <code>null</code> is an empty string. A result followed by anything else than
+	 * white space is not JSON.
 	 * The function fills an array instead of returning one: Jawk cannot assign a returned array to a variable.
 	 *
 	 * @param argMap   The array of arguments to use to create the {@link HttpSource}.
@@ -193,7 +202,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			return 0;
 		}
 		try {
-			final JsonNode document = MAPPER.readTree(result);
+			final JsonNode document = JSON_READER.readTree(result);
 			if (document == null || !document.isContainerNode()) {
 				log.warn("Hostname {} - executeHttpJsonRequest: the result is not a JSON object or array.", hostname);
 				return 0;
@@ -253,7 +262,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 
 	/**
 	 * Extract every leaf value of a JSON document, as the <code>json2List</code> compute does, indexed by its path:
-	 * <code>list["/data/token"]</code>, <code>list["/items[0]/name"]</code>.
+	 * <code>list["/data/token"]</code>, <code>list["/items[0]/name"]</code>. An array holds one value per path: when
+	 * two values of the document have the same path (a key written twice, or the key <code>a/b</code> next to the key
+	 * <code>b</code> of an object <code>a</code>), the last one is kept. The <code>json2List</code> compute gives
+	 * both rows.
 	 *
 	 * @param json The JSON document.
 	 * @param list The array to fill with the values. It is emptied first, and stays empty when the document is not a
@@ -318,9 +330,11 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			return node.booleanValue() ? 1L : 0L;
 		}
 		if (node.isNumber()) {
+			// A number that is not a long keeps its digits, as a numeric string: a double would round an unsigned
+			// 64-bit counter or a long decimal, and print them with OFMT
 			return node.isIntegralNumber() && node.canConvertToLong()
 				? (Object) node.longValue()
-				: (Object) node.doubleValue();
+				: (Object) node.decimalValue().toString();
 		}
 		return node.isNull() ? "" : node.asText();
 	}
