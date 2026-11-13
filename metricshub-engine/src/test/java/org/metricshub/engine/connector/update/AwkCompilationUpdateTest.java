@@ -5,6 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -145,6 +149,38 @@ class AwkCompilationUpdateTest {
 		assertNull(rewritten.getProgram());
 		assertSame(plain.getProgram(), untouched.getProgram());
 		assertNotNull(withReference.getProgram(), "The compute of the connector keeps its program");
+	}
+
+	/**
+	 * A connector is {@link java.io.Serializable}: so are the programs it holds. A program that went through Java
+	 * serialization still runs, with its MetricsHub function.
+	 */
+	@Test
+	void testConnectorWithProgramsIsSerializable() throws Exception {
+		final Awk awk = Awk.builder().type("awk").script("{ print toupper($1) }").build();
+		final JawkSource jawkSource = JawkSource.builder()
+			.type("awk")
+			.script("BEGIN { print 1; if (0) { executeHttpRequest(args) } }")
+			.build();
+		jawkSource.setComputes(new ArrayList<>(List.of(awk)));
+		final Connector connector = connectorWith(jawkSource);
+		new AwkCompilationUpdate().update(connector);
+
+		final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
+			output.writeObject(connector);
+		}
+		final Connector copy;
+		try (ObjectInputStream input = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+			copy = (Connector) input.readObject();
+		}
+
+		final JawkSource sourceCopy = (JawkSource) ((StandardMonitorJob) copy.getMonitors().get("enclosure")).getDiscovery()
+			.getSources()
+			.get("source(1)");
+		assertNotNull(sourceCopy.getProgram());
+		final Awk awkCopy = (Awk) sourceCopy.getComputes().get(0);
+		assertEquals("A\n", AwkExecutor.executeAwk(awkCopy.getProgram(), "a b\n", AwkExecutor.getUtilityEngine(), null));
 	}
 
 	@Test
