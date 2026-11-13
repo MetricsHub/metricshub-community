@@ -321,6 +321,101 @@ public class AwkExecutor {
 	}
 
 	/**
+	 * Compile the given <code>awkScript</code> (or find it compiled already) and execute it on the
+	 * <code>awkInput</code>, see {@link #executeAwk(AwkProgram, String, Awk, Map)}.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param awkInput     The input to modify via the AWK script
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The result of the AWK script
+	 * @throws AwkException if compilation or execution fails
+	 */
+	public static String executeAwk(
+		final String awkScript,
+		final String awkInput,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		return executeAwk(compile(awkScript, awkEngine), awkInput, awkEngine, awkVariables);
+	}
+
+	/**
+	 * Compile the given <code>awkScript</code> (or find it compiled already) and execute it on the
+	 * <code>awkInput</code>, see {@link #executeAwk(AwkProgram, String, Awk, Map)}.
+	 *
+	 * @param awkScript The AWK script to process and interpret
+	 * @param awkInput  The input to modify via the AWK script
+	 * @param awkEngine The Awk engine where the script needs to be executed
+	 * @return The result of the AWK script
+	 * @throws AwkException if compilation or execution fails
+	 */
+	public static String executeAwk(final String awkScript, final String awkInput, final Awk awkEngine)
+		throws AwkException {
+		return executeAwk(compile(awkScript, awkEngine), awkInput, awkEngine, null);
+	}
+
+	/**
+	 * Compile the given <code>awkScript</code> (or find it compiled already) and execute it on structured records,
+	 * see {@link #executeAwk(AwkProgram, InputSource, Awk, Map)}.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The result of the AWK script
+	 * @throws AwkException if compilation or execution fails
+	 */
+	public static String executeAwk(
+		final String awkScript,
+		final InputSource input,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		return executeAwk(compile(awkScript, awkEngine), input, awkEngine, awkVariables);
+	}
+
+	/**
+	 * Compile the given <code>awkScript</code> (or find it compiled already) and collect its output on the
+	 * <code>awkInput</code> text as a table, see {@link #executeAwkToTable(AwkProgram, String, Awk, Map)}.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param awkInput     The input to modify via the AWK script
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The rows printed by the script
+	 * @throws AwkException if compilation or execution fails
+	 */
+	public static List<List<String>> executeAwkToTable(
+		final String awkScript,
+		final String awkInput,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		return executeAwkToTable(compile(awkScript, awkEngine), awkInput, awkEngine, awkVariables);
+	}
+
+	/**
+	 * Compile the given <code>awkScript</code> (or find it compiled already) and collect its output on structured
+	 * records as a table, see {@link #executeAwkToTable(AwkProgram, InputSource, Awk, Map)}.
+	 *
+	 * @param awkScript    The AWK script to process and interpret
+	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
+	 * @param awkEngine    The Awk engine where the script needs to be executed
+	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
+	 * @return The rows printed by the script
+	 * @throws AwkException if compilation or execution fails
+	 */
+	public static List<List<String>> executeAwkToTable(
+		final String awkScript,
+		final InputSource input,
+		final Awk awkEngine,
+		final Map<String, Object> awkVariables
+	) throws AwkException {
+		return executeAwkToTable(compile(awkScript, awkEngine), input, awkEngine, awkVariables);
+	}
+
+	/**
 	 * Evaluate the given <code>awkExpression</code> on one table row: the cells are <code>$1..$NF</code>, whatever
 	 * they contain, and <code>$0</code> is the row joined with the table separator, as it has always been.
 	 *
