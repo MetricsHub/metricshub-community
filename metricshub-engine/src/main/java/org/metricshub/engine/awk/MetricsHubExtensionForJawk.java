@@ -97,7 +97,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeHttpRequest")
 	public String executeHttpRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(Source.fromMap(HttpSource.class, argMap));
+		return executeSource(toSource(HttpSource.class, argMap));
 	}
 
 	/**
@@ -109,7 +109,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	@JawkFunction("executeIpmiRequest")
 	public String executeIpmiRequest(@JawkAssocArray AssocArray... args) {
 		if (args[0] != null) {
-			return executeSource(Source.fromMap(IpmiSource.class, args[0]));
+			return executeSource(toSource(IpmiSource.class, args[0]));
 		}
 		return executeSource(IpmiSource.builder().build());
 	}
@@ -122,7 +122,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeSnmpGet")
 	public String executeSnmpGetRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(Source.fromMap(SnmpGetSource.class, argMap));
+		return executeSource(toSource(SnmpGetSource.class, argMap));
 	}
 
 	/**
@@ -133,7 +133,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeSnmpTable")
 	public String executeSnmpTableRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(Source.fromMap(SnmpTableSource.class, argMap));
+		return executeSource(toSource(SnmpTableSource.class, argMap));
 	}
 
 	/**
@@ -144,7 +144,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeWbemRequest")
 	public String executeWbemRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(Source.fromMap(WbemSource.class, argMap));
+		return executeSource(toSource(WbemSource.class, argMap));
 	}
 
 	/**
@@ -155,7 +155,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeWmiRequest")
 	public String executeWmiRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(Source.fromMap(WmiSource.class, argMap));
+		return executeSource(toSource(WmiSource.class, argMap));
 	}
 
 	/**
@@ -197,7 +197,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		final @JawkAssocArray Map<Object, Object> response
 	) {
 		response.clear();
-		final String result = executeSource(Source.fromMap(HttpSource.class, argMap));
+		final String result = executeSource(toSource(HttpSource.class, argMap));
 		if (result == null || result.isBlank()) {
 			return 0;
 		}
@@ -218,6 +218,46 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			);
 		}
 		return response.size();
+	}
+
+	/**
+	 * Builds the source of an <code>execute*</code> function from the AWK array of its arguments.
+	 *
+	 * @param <T>    The class of the source
+	 * @param clazz  The class of the source
+	 * @param argMap The AWK array of the arguments
+	 * @return the source
+	 */
+	private static <T extends Source> T toSource(final Class<T> clazz, final Map<Object, Object> argMap) {
+		@SuppressWarnings("unchecked")
+		final Map<Object, Object> plain = (Map<Object, Object>) plainValue(argMap);
+		return Source.fromMap(clazz, plain);
+	}
+
+	/**
+	 * An AWK value as plain Java data, which Jackson reads: maps and lists copied with plain values, strings,
+	 * numbers, booleans and <code>null</code> as they are, anything else as its text. Jawk hands over a field or a
+	 * value of an awk variable list, map or table as a numeric string (<code>StrNum</code>), which Jackson would read
+	 * as a bean (<code>{"number": false}</code>) instead of its text.
+	 *
+	 * @param value The AWK value
+	 * @return the plain value
+	 */
+	static Object plainValue(final Object value) {
+		if (value instanceof Map<?, ?> map) {
+			final Map<Object, Object> plain = new LinkedHashMap<>();
+			map.forEach((key, item) -> plain.put(key, plainValue(item)));
+			return plain;
+		}
+		if (value instanceof List<?> list) {
+			final List<Object> plain = new ArrayList<>(list.size());
+			list.forEach(item -> plain.add(plainValue(item)));
+			return plain;
+		}
+		if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) {
+			return value;
+		}
+		return value.toString();
 	}
 
 	/**
