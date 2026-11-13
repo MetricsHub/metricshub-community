@@ -145,21 +145,25 @@ class HttpRequestExecutorTest {
 						.build()
 				)
 				.build();
-			for (final ResultContent resultContent : ResultContent.values()) {
-				final HttpRequest request = HttpRequest.builder()
-					.path("/")
-					.method(method)
-					.body("{}", Map.of(), "connector", hostname)
-					.hostname(hostname)
-					.httpConfiguration(httpConfiguration)
-					.header("Connection: keep-alive", Map.of(), "connector", hostname)
-					.resultContent(resultContent)
-					.build();
-				final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
-				if (resultContent == ResultContent.ALL_WITH_STATUS) {
-					assertEquals("Status: 401\n" + httpResponse.getHeader() + "\n{\"error\":\"bad token\"}", result);
-				} else {
-					assertEquals("", result, resultContent.name());
+			// 401: refused at once. 503: retried, and refused again
+			for (final int status : new int[] { 401, 503 }) {
+				httpResponse.setStatusCode(status);
+				for (final ResultContent resultContent : ResultContent.values()) {
+					final HttpRequest request = HttpRequest.builder()
+						.path("/")
+						.method(method)
+						.body("{}", Map.of(), "connector", hostname)
+						.hostname(hostname)
+						.httpConfiguration(httpConfiguration)
+						.header("Connection: keep-alive", Map.of(), "connector", hostname)
+						.resultContent(resultContent)
+						.build();
+					final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
+					if (resultContent == ResultContent.ALL_WITH_STATUS) {
+						assertEquals("Status: " + status + "\n" + httpResponse.getHeader() + "\n{\"error\":\"bad token\"}", result);
+					} else {
+						assertEquals("", result, status + " " + resultContent.name());
+					}
 				}
 			}
 		}

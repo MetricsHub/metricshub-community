@@ -30,6 +30,7 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.RetryableException;
@@ -165,7 +166,10 @@ public class HttpRequestExecutor {
 			)
 		);
 
-		final String result = RetryOperation.<String>builder()
+		// What the server answered when it asked for a retry, for whoever asked for the status
+		final AtomicReference<String> retriedResponse = new AtomicReference<>();
+
+		final String retried = RetryOperation.<String>builder()
 			.withDescription(String.format("%s %s", method, fullUrl))
 			.withWaitStrategy((int) telemetryManager.getHostConfiguration().getRetryDelay())
 			.withMaxRetries(1)
@@ -188,9 +192,13 @@ public class HttpRequestExecutor {
 					url,
 					path,
 					protocol,
-					fullUrl
+					fullUrl,
+					retriedResponse
 				)
 			);
+
+		// The retries are exhausted and the server still answers with an error: that answer is the result
+		final String result = EMPTY.equals(retried) && retriedResponse.get() != null ? retriedResponse.get() : retried;
 
 		// Record the HTTP exchange if recording is enabled
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
@@ -245,6 +253,8 @@ public class HttpRequestExecutor {
 	 * @param path                    The HTTP URL path
 	 * @param protocol               The protocol: http or https
 	 * @param fullUrl                The full HTTP URL. E.g. <pre>http://www.example.com:1080/api/v1/examples</pre>
+	 * @param retriedResponse        Receives the status and the response of a request that is retried, when the
+	 *                               result content is the response with its status
 	 * @return String value
 	 */
 	private String doHttpRequest(
@@ -262,7 +272,8 @@ public class HttpRequestExecutor {
 		final String url,
 		final String path,
 		final String protocol,
-		final String fullUrl
+		final String fullUrl,
+		final AtomicReference<String> retriedResponse
 	) {
 		try {
 			final long startTime = System.currentTimeMillis();
@@ -292,6 +303,9 @@ public class HttpRequestExecutor {
 				// 504 Gateway Timeout
 				// 507 Insufficient Storage
 				if (statusCode == 500 || statusCode == 503 || statusCode == 504 || statusCode == 507) {
+					if (resultContent == ResultContent.ALL_WITH_STATUS) {
+						retriedResponse.set("Status: %s\n%s".formatted(statusCode, httpResponse.toString())); // NOSONAR
+					}
 					throw new RetryableException();
 				}
 
