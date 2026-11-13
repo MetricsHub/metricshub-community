@@ -448,14 +448,19 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("prepend", "append"), types(tableThenColumn));
 		assertEquals(List.of(), kinds(connector));
 
-		// With a column, a table compute like any other: reported on a pure text, converted on a legacy one
-		final List<Compute> tableCompute = List.of(Prepend.builder().type("prepend").column(1).value("a").build());
-		connector = connectorWith(HttpSource.builder().url("/").computes(tableCompute).build());
+		// With a column on a text: nothing is converted for it, on a pure text or on a legacy one (whose text still
+		// gets its toTable at the end of the chain). The content-type check reports the column
+		final List<Compute> withColumn = List.of(Prepend.builder().type("prepend").column(1).value("a").build());
+		final Source httpWithColumn = HttpSource.builder().url("/").computes(withColumn).build();
+		connector = connectorWith(httpWithColumn);
 		new ContentTypeDesugaring().update(connector);
-		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE), kinds(connector));
-		connector = connectorWith(CommandLineSource.builder().commandLine("ls").computes(tableCompute).build());
+		assertEquals(List.of("prepend"), types(httpWithColumn));
+		assertEquals(List.of(), kinds(connector));
+		final Source commandWithColumn = CommandLineSource.builder().commandLine("ls").computes(withColumn).build();
+		connector = connectorWith(commandWithColumn);
 		new ContentTypeDesugaring().update(connector);
-		assertEquals(List.of(Kind.TO_TABLE_INSERTED), kinds(connector));
+		assertEquals(List.of("prepend", "toTable"), types(commandWithColumn));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
 	@Test

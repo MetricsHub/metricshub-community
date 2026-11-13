@@ -241,9 +241,6 @@ class SourceTableReadRulesTest {
 			KeepColumns.builder().columnNumbers("1").build(),
 			DuplicateColumn.builder().column(1).build(),
 			Head.builder().lines("1").build(),
-			Replace.builder().column(1).existingValue("a").newValue("b").build(),
-			Append.builder().column(1).value("x").build(),
-			Prepend.builder().column(1).value("x").build(),
 			KeepOnlyMatchingLines.builder().column(1).regExp("a").build(),
 			ExcludeMatchingLines.builder().column(1).regExp("a").build()
 		)) {
@@ -363,8 +360,9 @@ class SourceTableReadRulesTest {
 	}
 
 	/**
-	 * Called without the updater, which gives a table compute on a text an empty table (see
-	 * {@link #tableComputeOnTextGivesAnEmptyTable()}), a compute with a column leaves a text unchanged.
+	 * A text has no column: a compute with a column leaves a text unchanged, run as a source runs it or called
+	 * directly. Nothing converts the text for it, unlike the other table computes (see
+	 * {@link #tableComputeOnTextGivesAnEmptyTable()}).
 	 */
 	@Test
 	void computeWithColumnLeavesATextUnchanged() {
@@ -374,6 +372,8 @@ class SourceTableReadRulesTest {
 			Replace.builder().column(1).existingValue("a").newValue("b").build(),
 			Substring.builder().column(1).start("1").length("1").build()
 		)) {
+			assertEquals(SourceTable.ofText("ab"), onText(compute, "ab"), compute.toString());
+
 			final SourceTable sourceTable = SourceTable.ofText("ab");
 			compute.accept(computeProcessor(sourceTable));
 			assertEquals(SourceTable.ofText("ab"), sourceTable, compute.toString());

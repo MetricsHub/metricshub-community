@@ -84,10 +84,10 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * <li>a text compute that parses a text (<code>json2Table</code>, <code>json2List</code>, <code>xml2Csv</code>) fed
  * by a table producer
  * finds nothing to parse and leaves the table unchanged: nothing is inserted, the case is reported;</li>
- * <li>an <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>substring</code> without
- * <code>column</code> works on the content it is fed and leaves its type as it is: nothing is inserted before it.
- * With a <code>column</code> it is the table compute it always was, and a legacy text is still converted for it. The
- * content-type check reports a <code>column</code> on a text and a missing <code>column</code> on a table;</li>
+ * <li>an <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>substring</code> works on the
+ * content it is fed and leaves its type as it is: nothing is ever inserted before it. The content-type check
+ * reports a <code>column</code> on a text and a missing <code>column</code> on a table, and the compute then leaves
+ * the content unchanged;</li>
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>

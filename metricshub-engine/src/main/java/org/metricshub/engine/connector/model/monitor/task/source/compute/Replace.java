@@ -83,24 +83,22 @@ public class Replace extends Compute implements TextOrColumnCompute {
 	}
 
 	/**
-	 * None without a <code>column</code>: the compute works on the content it is fed. With a <code>column</code>, it
-	 * needs a table, as it always did: a legacy text is still converted for it (see
-	 * {@link org.metricshub.engine.connector.update.ContentTypeDesugaring}).
+	 * None: the compute works on the content it is fed, a text as a whole or a column of a table. Nothing is ever
+	 * converted for it.
 	 *
-	 * @return null, or a table when the compute has a column
+	 * @return null
 	 */
 	@Override
 	public ContentType getInputContentType() {
-		return column == null ? null : ContentType.TABLE;
+		return null;
 	}
 
 	/**
-	 * The compute does not change the type of the content: a text stays a text, a table stays a table. (A compute
-	 * with a <code>column</code> fed a text that is not converted gives an empty table, as it always did.)
+	 * The compute does not change the type of the content: a text stays a text, a table stays a table.
 	 */
 	@Override
 	public ContentType getOutputContentType(final ContentType input) {
-		return column == null ? input : ContentType.TABLE;
+		return input;
 	}
 
 	@Override

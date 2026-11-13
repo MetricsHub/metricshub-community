@@ -88,8 +88,8 @@ public abstract class Compute implements Serializable {
 	/**
 	 * The content type this compute consumes. A table for every compute but <code>json2Table</code>,
 	 * <code>json2List</code>, <code>xml2Csv</code> and <code>toTable</code>, which read text, <code>awk</code>,
-	 * <code>append</code>, <code>prepend</code>, <code>replace</code> and <code>substring</code> without a
-	 * <code>column</code>, which read either. Never a YAML field.
+	 * <code>append</code>, <code>prepend</code>, <code>replace</code> and <code>substring</code>, which read either.
+	 * A static property of the class, never a YAML field.
 	 *
 	 * @return the input content type, null when the compute reads either (no conversion is ever needed before it)
 	 */

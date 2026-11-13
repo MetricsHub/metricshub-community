@@ -73,7 +73,12 @@ class AppendComputeDeserializerTest extends DeserializerTest {
 			assertEquals(ContentType.TABLE, compute.getOutputContentType(ContentType.TABLE));
 			assertEquals(compute, compute.copy());
 		}
-		assertEquals(ContentType.TABLE, Append.builder().column(1).value("x").build().getInputContentType());
+		// Nor does a column decide the type: the content does
+		assertNull(Append.builder().column(1).value("x").build().getInputContentType());
+		assertEquals(
+			ContentType.TEXT,
+			Append.builder().column(1).value("x").build().getOutputContentType(ContentType.TEXT)
+		);
 		assertEquals(
 			ContentType.TABLE,
 			Append.builder().column(1).value("x").build().getOutputContentType(ContentType.TABLE)
