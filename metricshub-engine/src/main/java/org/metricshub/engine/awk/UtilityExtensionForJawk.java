@@ -25,12 +25,12 @@ import io.jawk.ext.AbstractExtension;
 import io.jawk.ext.JawkExtension;
 import io.jawk.ext.annotations.JawkAssocArray;
 import io.jawk.ext.annotations.JawkFunction;
-import io.jawk.jrt.AssocArray;
 import io.jawk.jrt.JRT;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -191,7 +191,7 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 	 * @return number of keys sorted (n)
 	 */
 	@JawkFunction("asorti")
-	public int asorti(@JawkAssocArray AssocArray src, @JawkAssocArray AssocArray dest) {
+	public int asorti(@JawkAssocArray Map<Object, Object> src, @JawkAssocArray Map<Object, Object> dest) {
 		if (dest == null || src == null || src.isEmpty()) {
 			if (dest != null) {
 				dest.clear();
@@ -199,14 +199,15 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 			return 0;
 		}
 
-		dest.clear();
-
+		// The keys are read before dest is cleared: asorti(a, a) sorts the array in place
 		final List<String> keys = new ArrayList<>(src.keySet().size());
 		for (Object k : src.keySet()) {
 			if (k != null) {
 				keys.add(k.toString());
 			}
 		}
+
+		dest.clear();
 
 		keys.sort(String::compareTo);
 
