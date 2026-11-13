@@ -282,12 +282,29 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	}
 
 	/**
+	 * Whether the compute does nothing to the content it is fed: a compute that reads a text finds nothing to read in
+	 * a table and leaves it as it is (<code>json2Table</code> after a table, an <code>append</code> without
+	 * <code>column</code> after a table). What follows it still reads a table, whatever the compute would have
+	 * produced.
+	 *
+	 * @param compute The compute
+	 * @param current The type of the content the compute is fed
+	 * @return whether the content keeps its type
+	 */
+	static boolean leavesUnchanged(final Compute compute, final ContentType current) {
+		return compute.getInputContentType() == ContentType.TEXT && current == ContentType.TABLE;
+	}
+
+	/**
 	 * The state after the source's written computes, from the given state.
 	 */
 	private static State throughWrittenComputes(final State start, final Source source) {
 		State state = start;
 		for (final Compute compute : source.getComputes() == null ? List.<Compute>of() : source.getComputes()) {
 			if (isGenerated(compute)) {
+				continue;
+			}
+			if (leavesUnchanged(compute, state.type())) {
 				continue;
 			}
 			final ContentType type = compute.getOutputContentType();
@@ -600,6 +617,9 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 			desugared.add(compute);
 
+			if (leavesUnchanged(compute, current)) {
+				continue;
+			}
 			current = compute.getOutputContentType();
 			if (current != ContentType.TEXT) {
 				producer = TextProducer.NONE;

@@ -260,7 +260,10 @@ public class ContentTypeCheck {
 			}
 			final Compute copy = compute.copy();
 			checkInterpolated(key, where + " ", copy, copy::update);
-			current = compute.getOutputContentType();
+			// A text compute fed a table leaves it as it is: what follows still reads a table
+			if (!ContentTypeDesugaring.leavesUnchanged(compute, current)) {
+				current = compute.getOutputContentType();
+			}
 		}
 	}
 

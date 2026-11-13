@@ -432,6 +432,23 @@ class ContentTypeDesugaringTest {
 		assertEquals(List.of("prepend"), types(table));
 		assertEquals(List.of(Kind.TEXT_COMPUTE_ON_TABLE_SOURCE), kinds(connector));
 
+		// The refused compute leaves the table as it is: the table compute after it still reads a table, so no
+		// toTable is inserted before it and nothing else is reported
+		final Source tableThenColumn = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("1")
+			.computes(
+				List.of(
+					Prepend.builder().type("prepend").value("a").build(),
+					Append.builder().type("append").column(1).value("b").build()
+				)
+			)
+			.build();
+		connector = connectorWith(tableThenColumn);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("prepend", "append"), types(tableThenColumn));
+		assertEquals(List.of(Kind.TEXT_COMPUTE_ON_TABLE_SOURCE), kinds(connector));
+
 		// With a column, a table compute like any other: reported on a pure text, converted on a legacy one
 		final List<Compute> tableCompute = List.of(Prepend.builder().type("prepend").column(1).value("a").build());
 		connector = connectorWith(HttpSource.builder().url("/").computes(tableCompute).build());
