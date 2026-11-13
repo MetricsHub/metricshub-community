@@ -28,9 +28,13 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
 import io.jawk.AwkProgram;
+import io.jawk.ext.GawkExtension;
+import io.jawk.ext.JawkExtension;
 import io.jawk.jrt.InputSource;
 import io.jawk.util.AwkSettings;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,15 +48,15 @@ import lombok.NoArgsConstructor;
 public class AwkExecutor {
 
 	/**
-	 * Standard Jawk instance, with the MetricsHub utility extension
+	 * Standard Jawk instance, with the MetricsHub utility extension and the gawk functions
 	 */
-	private static final Awk AWK_PLUS_UTILITY = new Awk(List.of(UtilityExtensionForJawk.INSTANCE), newAwkSettings(null));
+	private static final Awk AWK_PLUS_UTILITY = newAwk(null);
 
 	/**
 	 * Jawk instance dedicated to expression evaluation, where the record is a table row and the fields are therefore
 	 * separated by the table separator
 	 */
-	private static final Awk AWK_FOR_EVAL = new Awk(List.of(UtilityExtensionForJawk.INSTANCE), newAwkSettings(TABLE_SEP));
+	private static final Awk AWK_FOR_EVAL = newAwk(TABLE_SEP);
 
 	/**
 	 * Map of the scripts that have already been compiled to intermediate code
@@ -63,6 +67,23 @@ public class AwkExecutor {
 	 * Map of the expressions that have already been compiled to intermediate code
 	 */
 	private static final ConcurrentHashMap<String, AwkExpression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
+
+	/**
+	 * Build a Jawk engine with the extensions every MetricsHub script can call: the given ones, the MetricsHub utility
+	 * functions ({@link UtilityExtensionForJawk}) and the gawk functions ({@link GawkExtension}: <code>asort</code>,
+	 * <code>asorti</code>, <code>gensub</code>, <code>strftime</code>, <code>strtonum</code>...). Jawk loads
+	 * {@link GawkExtension} by default only when no extension list is given, so it is listed here.
+	 *
+	 * @param fieldSeparator The field separator (FS) to force, or <code>null</code> to keep the Jawk default
+	 * @param extensions     The extensions of this engine, besides the utility and gawk functions
+	 * @return a new engine
+	 */
+	public static Awk newAwk(final String fieldSeparator, final JawkExtension... extensions) {
+		final List<JawkExtension> all = new ArrayList<>(Arrays.asList(extensions));
+		all.add(UtilityExtensionForJawk.INSTANCE);
+		all.add(new GawkExtension());
+		return new Awk(all, newAwkSettings(fieldSeparator));
+	}
 
 	/**
 	 * Build the {@link AwkSettings} MetricsHub expects from a Jawk engine.
