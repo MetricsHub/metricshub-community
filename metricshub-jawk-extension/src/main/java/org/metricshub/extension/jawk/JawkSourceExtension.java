@@ -21,12 +21,12 @@ package org.metricshub.extension.jawk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.jawk.Awk;
+import io.jawk.AwkProgram;
 import io.jawk.SandboxedAwk;
 import java.util.List;
 import java.util.Map;
@@ -85,20 +85,16 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// An Awk Script is supposed to be only the reference to the EmbeddedFile, so the map contains only one item which is our EmbeddedFile
 		final Optional<EmbeddedFile> maybeEmbeddedFile;
 
-		if (!FILE_PATTERN.matcher(script).find()) {
-			maybeEmbeddedFile = Optional.of(EmbeddedFile.fromString(script));
-		} else {
-			try {
-				maybeEmbeddedFile = EmbeddedFileHelper.findEmbeddedFile(
-					script,
-					telemetryManager.getEmbeddedFiles(connectorId),
-					hostname,
-					connectorId
-				);
-			} catch (Exception exception) {
-				log.warn("Hostname {} - Awk Operation script {} has not been set correctly.", hostname, script);
-				return SourceTable.empty();
-			}
+		try {
+			maybeEmbeddedFile = EmbeddedFileHelper.findScript(
+				script,
+				() -> telemetryManager.getEmbeddedFiles(connectorId),
+				hostname,
+				connectorId
+			);
+		} catch (Exception exception) {
+			log.warn("Hostname {} - Awk Operation script {} has not been set correctly.", hostname, script);
+			return SourceTable.empty();
 		}
 
 		if (maybeEmbeddedFile.isEmpty()) {
@@ -156,29 +152,33 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 				List.of(extension, UtilityExtensionForJawk.INSTANCE),
 				AwkExecutor.newAwkSettings(null)
 			);
+			// The program the connector holds, compiled when it loaded. A source built without a connector has none
+			final AwkProgram program = jawkSource.getProgram() != null
+				? jawkSource.getProgram()
+				: AwkExecutor.compile(awkScript, awkEngine);
 			if (jawkSource.getOutput() == ContentType.TABLE) {
 				// Each print is a row
 				return SourceTable.ofTable(
 					tableInput
 						? AwkExecutor.executeAwkToTable(
-							awkScript,
+							program,
 							TableInputSource.withRecordText(inputTable, JawkSourceExtension::referenceRow),
 							awkEngine,
 							variables
 						)
-						: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables)
+						: AwkExecutor.executeAwkToTable(program, inputContent, awkEngine, variables)
 				);
 			}
 			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			return SourceTable.ofText(
 				tableInput
 					? AwkExecutor.executeAwk(
-						awkScript,
+						program,
 						TableInputSource.withRecordText(inputTable, JawkSourceExtension::referenceRow),
 						awkEngine,
 						variables
 					).replace(WINDOWS_NEW_LINE, NEW_LINE)
-					: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables)
+					: AwkExecutor.executeAwk(program, inputContent, awkEngine, variables)
 			);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);

@@ -3,6 +3,7 @@ package org.metricshub.engine.awk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import io.jawk.AwkProgram;
 import io.jawk.jrt.AssocArray;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -208,7 +209,7 @@ class AwkVariablesUpdateTest {
 
 		assertEquals(
 			"3 node [] model 0\n3 NetApp one v\n3 BAR\n",
-			AwkExecutor.executeAwk(script, "", AwkExecutor.getUtilityEngine(), variables)
+			AwkExecutor.executeAwk(compile(script), "", AwkExecutor.getUtilityEngine(), variables)
 		);
 	}
 
@@ -230,7 +231,7 @@ class AwkVariablesUpdateTest {
 		assertEquals(
 			"1 1 1 1 0\n",
 			AwkExecutor.executeAwk(
-				"BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[1] > 9) }",
+				compile("BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[1] > 9) }"),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				variables
@@ -246,5 +247,12 @@ class AwkVariablesUpdateTest {
 		copy.getVariables().put("fromSource", "MUTATED");
 
 		assertEquals(SOURCE_REF, source.getVariables().get("fromSource"), "Mutating the copy must not affect the original");
+	}
+
+	/**
+	 * Compiles a script for the utility engine.
+	 */
+	private static AwkProgram compile(final String script) throws AwkException {
+		return AwkExecutor.compile(script, AwkExecutor.getUtilityEngine());
 	}
 }

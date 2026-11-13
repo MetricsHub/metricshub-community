@@ -32,6 +32,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.jawk.AwkProgram;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -107,6 +108,16 @@ public class JawkSource extends Source {
 	private ContentType output = ContentType.TEXT;
 
 	/**
+	 * The script compiled when the connector loads (see
+	 * {@link org.metricshub.engine.connector.update.AwkCompilationUpdate}), null when the source was built without a
+	 * connector or when the script does not compile: it is then compiled when it runs. Never read from nor written to
+	 * YAML or JSON, not part of the equality.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private AwkProgram program;
+
+	/**
 	 * Whether the connector writes the deprecated, ignored <code>inputFormat</code> property, which the content-type
 	 * check reports. Never serialized, not part of the equality, not copied.
 	 */
@@ -164,7 +175,7 @@ public class JawkSource extends Source {
 
 	@Override
 	public Source copy() {
-		return JawkSource.builder()
+		final JawkSource copy = JawkSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
@@ -176,6 +187,8 @@ public class JawkSource extends Source {
 			.variables(variables)
 			.output(output)
 			.build();
+		copy.setProgram(program);
+		return copy;
 	}
 
 	@Override

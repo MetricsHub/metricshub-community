@@ -62,6 +62,16 @@ public class AwkExecutor {
 	);
 
 	/**
+	 * Jawk instance that only compiles the scripts of the awk sources: it knows the functions of the MetricsHub
+	 * extension, which has no context here. A source script runs on an engine of its own, built with the extension
+	 * that holds the context of the run (Jawk finds the extension of a compiled function by its class).
+	 */
+	private static final Awk AWK_FOR_SOURCE_COMPILATION = new SandboxedAwk(
+		List.of(MetricsHubExtensionForJawk.builder().build(), UtilityExtensionForJawk.INSTANCE),
+		newAwkSettings(null)
+	);
+
+	/**
 	 * Map of the scripts that have already been compiled to intermediate code
 	 */
 	private static final ConcurrentHashMap<String, AwkProgram> PROGRAM_CACHE = new ConcurrentHashMap<>();
@@ -104,7 +114,7 @@ public class AwkExecutor {
 	 * @return the corresponding AwkProgram
 	 * @throws AwkException when unable to compile the script
 	 */
-	private static AwkProgram getAwkProgram(String awkScript, Awk awkEngine) throws AwkException {
+	public static AwkProgram compile(String awkScript, Awk awkEngine) throws AwkException {
 		// We're using our ConcurrentHashMap to cache the intermediate
 		// code, so we don't "compile" it every time.
 		// This saves a lot of CPU.
@@ -121,6 +131,18 @@ public class AwkExecutor {
 		} catch (Exception e) {
 			throw new AwkException("Failed to compile Awk script:\n" + awkScript, e);
 		}
+	}
+
+	/**
+	 * Compiles the script of an awk source, which may call the functions of the MetricsHub extension
+	 * (<code>executeHttpRequest</code>, ...).
+	 *
+	 * @param awkScript Script to compile
+	 * @return the corresponding AwkProgram
+	 * @throws AwkException when unable to compile the script
+	 */
+	public static AwkProgram compileSourceScript(final String awkScript) throws AwkException {
+		return compile(awkScript, AWK_FOR_SOURCE_COMPILATION);
 	}
 
 	/**
@@ -162,15 +184,14 @@ public class AwkExecutor {
 	 * @throws AwkException if execution fails
 	 */
 	public static String executeAwk(final String awkScript, final String awkInput) throws AwkException {
-		return executeAwk(awkScript, awkInput, AWK_PLUS_UTILITY);
+		return executeAwk(compile(awkScript, AWK_PLUS_UTILITY), awkInput, AWK_PLUS_UTILITY, null);
 	}
 
 	/**
 	 * Return the standard Jawk engine, the one carrying the MetricsHub utility functions.
 	 * <p>
-	 * Use it to reach {@link #executeAwk(String, String, Awk, Map)} without having to build an engine. There is
-	 * deliberately no <code>executeAwk(script, input, variables)</code> overload: it would have the same arity as
-	 * {@link #executeAwk(String, String, Awk)} and make the call site ambiguous.
+	 * Use it to reach {@link #compile(String, Awk)} and {@link #executeAwk(AwkProgram, String, Awk, Map)} without
+	 * having to build an engine.
 	 *
 	 * @return the standard Jawk engine
 	 */
@@ -179,29 +200,12 @@ public class AwkExecutor {
 	}
 
 	/**
-	 * Execute the given <code>awkScript</code> on the <code>awkInput</code>
-	 * on the specified Awk engine.
-	 * <p>
-	 * Use this method when you need to execute Awk scripts with specific extensions.
-	 *
-	 * @param awkScript The AWK script to process and interpret
-	 * @param awkInput The input to modify via the AWK script
-	 * @param awkEngine The Awk engine where the script needs to be executed
-	 * @return The result of the AWK script
-	 * @throws AwkException if execution fails
-	 */
-	public static String executeAwk(final String awkScript, final String awkInput, final Awk awkEngine)
-		throws AwkException {
-		return executeAwk(awkScript, awkInput, awkEngine, null);
-	}
-
-	/**
-	 * Execute the given <code>awkScript</code> on the <code>awkInput</code>
+	 * Execute the given compiled <code>program</code> on the <code>awkInput</code>
 	 * on the specified Awk engine, seeding the given variables.
 	 * <p>
 	 * Use this method when you need to execute Awk scripts with specific extensions or variables.
 	 *
-	 * @param awkScript The AWK script to process and interpret
+	 * @param program The compiled AWK script, see {@link #compile(String, Awk)}
 	 * @param awkInput The input to modify via the AWK script
 	 * @param awkEngine The Awk engine where the script needs to be executed
 	 * @param awkVariables The variables to expose to the script, can be <code>null</code>. A {@link List} or a
@@ -210,16 +214,11 @@ public class AwkExecutor {
 	 * @throws AwkException if execution fails
 	 */
 	public static String executeAwk(
-		final String awkScript,
+		final AwkProgram program,
 		final String awkInput,
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final AwkProgram program = getAwkProgram(awkScript, awkEngine);
-		if (program == null) {
-			throw new AwkException("Failed to compile Awk script:\n" + awkScript);
-		}
-
 		final Awk.AwkRunBuilder runBuilder = awkEngine.script(program).input(awkInput == null ? EMPTY : awkInput);
 
 		if (awkVariables != null && !awkVariables.isEmpty()) {
@@ -235,9 +234,9 @@ public class AwkExecutor {
 	}
 
 	/**
-	 * Execute the given <code>awkScript</code> on structured records (a table) and return the printed text.
+	 * Execute the given compiled <code>program</code> on structured records (a table) and return the printed text.
 	 *
-	 * @param awkScript    The AWK script to process and interpret
+	 * @param program      The compiled AWK script, see {@link #compile(String, Awk)}
 	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
 	 * @param awkEngine    The Awk engine where the script needs to be executed
 	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
@@ -245,12 +244,12 @@ public class AwkExecutor {
 	 * @throws AwkException if execution fails
 	 */
 	public static String executeAwk(
-		final String awkScript,
+		final AwkProgram program,
 		final InputSource input,
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine)).input(input);
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(program).input(input);
 		if (awkVariables != null && !awkVariables.isEmpty()) {
 			runBuilder.variables(awkVariables);
 		}
@@ -262,11 +261,11 @@ public class AwkExecutor {
 	}
 
 	/**
-	 * Execute the given <code>awkScript</code> on the <code>awkInput</code> text and collect its output as a
+	 * Execute the given compiled <code>program</code> on the <code>awkInput</code> text and collect its output as a
 	 * table: each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into
 	* rows on <code>ORS</code> and into cells on <code>OFS</code>.
 	 *
-	 * @param awkScript    The AWK script to process and interpret
+	 * @param program      The compiled AWK script, see {@link #compile(String, Awk)}
 	 * @param awkInput     The input to modify via the AWK script
 	 * @param awkEngine    The Awk engine where the script needs to be executed
 	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
@@ -274,22 +273,21 @@ public class AwkExecutor {
 	 * @throws AwkException if execution fails
 	 */
 	public static List<List<String>> executeAwkToTable(
-		final String awkScript,
+		final AwkProgram program,
 		final String awkInput,
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine))
-			.input(awkInput == null ? EMPTY : awkInput);
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(program).input(awkInput == null ? EMPTY : awkInput);
 		return executeToTable(runBuilder, awkVariables);
 	}
 
 	/**
-	 * Execute the given <code>awkScript</code> on structured records (a table) and collect its output as a table:
-	 * each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into rows on
-	* <code>ORS</code> and into cells on <code>OFS</code>.
+	 * Execute the given compiled <code>program</code> on structured records (a table) and collect its output as a
+	 * table: each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into rows
+	 * on <code>ORS</code> and into cells on <code>OFS</code>.
 	 *
-	 * @param awkScript    The AWK script to process and interpret
+	 * @param program      The compiled AWK script, see {@link #compile(String, Awk)}
 	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
 	 * @param awkEngine    The Awk engine where the script needs to be executed
 	 * @param awkVariables The variables to expose to the script, can be <code>null</code>
@@ -297,12 +295,12 @@ public class AwkExecutor {
 	 * @throws AwkException if execution fails
 	 */
 	public static List<List<String>> executeAwkToTable(
-		final String awkScript,
+		final AwkProgram program,
 		final InputSource input,
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine)).input(input);
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(program).input(input);
 		return executeToTable(runBuilder, awkVariables);
 	}
 

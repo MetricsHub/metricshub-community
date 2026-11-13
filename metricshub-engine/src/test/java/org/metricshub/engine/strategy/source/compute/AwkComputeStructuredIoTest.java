@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
@@ -41,6 +42,21 @@ class AwkComputeStructuredIoTest {
 		processor(sourceTable).process(Awk.builder().script("{ print $1 \";\" NF \";\" $2 }").build());
 		// Text output: the ";" inside the first cell is a field separator for whoever splits the text
 		assertEquals(SourceTable.ofText("a;b;2;c;\n;2;d;"), sourceTable);
+	}
+
+	/**
+	 * The compute runs the program it holds, the one compiled when the connector loaded (#1576): here a program that
+	 * deliberately differs from the script.
+	 */
+	@Test
+	void runsTheProgramTheComputeHolds() throws Exception {
+		final Awk awk = Awk.builder().script("{ print \"from the script\" }").build();
+		awk.setProgram(AwkExecutor.compile("{ print \"from the program\" }", AwkExecutor.getUtilityEngine()));
+		final SourceTable sourceTable = SourceTable.ofText("x\n");
+
+		processor(sourceTable).process(awk);
+
+		assertEquals(SourceTable.ofText("from the program;"), sourceTable);
 	}
 
 	@Test

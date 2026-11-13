@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.jawk.AwkProgram;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -48,7 +49,7 @@ class AwkStructuredIoTest {
 	void scriptReadsTableWithoutSerialization() throws Exception {
 		// A ";" inside a cell stays in its field, and NF is the number of cells
 		final String result = AwkExecutor.executeAwk(
-			"{ print NF \":\" $1 \":\" $2 }",
+			compile("{ print NF \":\" $1 \":\" $2 }"),
 			new TableInputSource(table("a;b|c", "|d")),
 			AwkExecutor.getUtilityEngine(),
 			null
@@ -58,12 +59,17 @@ class AwkStructuredIoTest {
 		// $0 is synthesized from the cells with FS, as it is when read, then with OFS once a field is assigned
 		assertEquals(
 			"a;b c\n",
-			AwkExecutor.executeAwk("{ print $0 }", new TableInputSource(table("a;b|c")), AwkExecutor.getUtilityEngine(), null)
+			AwkExecutor.executeAwk(
+				compile("{ print $0 }"),
+				new TableInputSource(table("a;b|c")),
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
 		);
 		assertEquals(
 			"b@c d\nb-x\n",
 			AwkExecutor.executeAwk(
-				"BEGIN { FS = \"@\"; OFS = \"-\" } { print; $2 = \"x\"; print }",
+				compile("BEGIN { FS = \"@\"; OFS = \"-\" } { print; $2 = \"x\"; print }"),
 				new TableInputSource(table("b|c d")),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -77,7 +83,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("a;b", "", "c", ""), List.of("a;b  c "), List.of("a;b", "", "c", "")),
 			AwkExecutor.executeAwkToTable(
-				"{ print; print $0; print $1, $2, $3, $4 }",
+				compile("{ print; print $0; print $1, $2, $3, $4 }"),
 				new TableInputSource(table("a;b||c|")),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -89,7 +95,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("a", "b", "", "", "x"), List.of("a", "b"), List.of("a", "0.33")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFMT = \"%.2f\" } { $5 = \"x\"; print; NF = 2; print; $2 = 1 / 3; print }",
+				compile("BEGIN { OFMT = \"%.2f\" } { $5 = \"x\"; print; NF = 2; print; $2 = 1 / 3; print }"),
 				new TableInputSource(table("a|b")),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -100,7 +106,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("1", "x"), List.of("3", "z")),
 			AwkExecutor.executeAwkToTable(
-				"$2 != \"\" { print }",
+				compile("$2 != \"\" { print }"),
 				new TableInputSource(table("1|x", "2|", "3|z")),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -111,7 +117,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("p", "q1", "2")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFS = \";\" } { printf \"p;q\"; print }",
+				compile("BEGIN { OFS = \";\" } { printf \"p;q\"; print }"),
 				new TableInputSource(table("1|2")),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -122,7 +128,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("a", "b c"), List.of("d", "")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { FS = \";\" } { print }",
+				compile("BEGIN { FS = \";\" } { print }"),
 				"a;b c\nd;\n",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -133,7 +139,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of(""), List.of(""), List.of(""), List.of("p")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { print } { print } END { NF = 0; print; printf \"p\"; print }",
+				compile("BEGIN { print } { print } END { NF = 0; print; printf \"p\"; print }"),
 				"\n",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -142,7 +148,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("")),
 			AwkExecutor.executeAwkToTable(
-				"{ print }",
+				compile("{ print }"),
 				new TableInputSource(List.of(List.of())),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -150,13 +156,16 @@ class AwkStructuredIoTest {
 		);
 
 		// Text output is unchanged: a bare print writes $0
-		assertEquals("a;b  c\n", AwkExecutor.executeAwk("{ print }", "a;b  c\n", AwkExecutor.getUtilityEngine(), null));
+		assertEquals(
+			"a;b  c\n",
+			AwkExecutor.executeAwk(compile("{ print }"), "a;b  c\n", AwkExecutor.getUtilityEngine(), null)
+		);
 	}
 
 	@Test
 	void tableSinkMakesOneRowPerPrint() throws Exception {
 		final List<List<String>> rows = AwkExecutor.executeAwkToTable(
-			"{ print $1, $2 * 2, 1.5, 2.0, \"x;y\"; print }",
+			compile("{ print $1, $2 * 2, 1.5, 2.0, \"x;y\"; print }"),
 			"a 21\n",
 			AwkExecutor.getUtilityEngine(),
 			null
@@ -165,13 +174,16 @@ class AwkStructuredIoTest {
 		assertEquals(List.of(List.of("a", "42", "1.5", "2", "x;y"), List.of("a", "21")), rows);
 
 		// Empty output: no row
-		assertEquals(List.of(), AwkExecutor.executeAwkToTable("BEGIN { }", "in", AwkExecutor.getUtilityEngine(), null));
+		assertEquals(
+			List.of(),
+			AwkExecutor.executeAwkToTable(compile("BEGIN { }"), "in", AwkExecutor.getUtilityEngine(), null)
+		);
 
 		// Structured input and output together
 		assertEquals(
 			List.of(List.of("a;b", "C")),
 			AwkExecutor.executeAwkToTable(
-				"{ print $1, toupper($2) }",
+				compile("{ print $1, toupper($2) }"),
 				new TableInputSource(table("a;b|c")),
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -185,7 +197,9 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("a", "1", ""), List.of("b", "2"), List.of("c")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFS = \";\" } { printf \"%s;%d;\\n\", $1, 1; printf \"%s%s%d%s%s\", \"b\", OFS, 2, ORS, \"c\" }",
+				compile(
+					"BEGIN { OFS = \";\" } { printf \"%s;%d;\\n\", $1, 1; printf \"%s%s%d%s%s\", \"b\", OFS, 2, ORS, \"c\" }"
+				),
 				"a\n",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -196,7 +210,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("x", "y", "z"), List.of("")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { printf \"x\" OFS; print \"y\", \"z\"; printf \"\\n\" }",
+				compile("BEGIN { printf \"x\" OFS; print \"y\", \"z\"; printf \"\\n\" }"),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -207,7 +221,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("x", "y;z", "1\n2")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFS = \";\"; printf \"x;\"; print \"y;z\", \"1\\n2\" }",
+				compile("BEGIN { OFS = \";\"; printf \"x;\"; print \"y;z\", \"1\\n2\" }"),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -218,7 +232,9 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("a", "b"), List.of("c", "d"), List.of("e", "f")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFS = \",\"; printf \"a,b\"; OFS = \";\"; printf \"\"; printf \"\\nc;d\\ne\"; printf \";f\" }",
+				compile(
+					"BEGIN { OFS = \",\"; printf \"a,b\"; OFS = \";\"; printf \"\"; printf \"\\nc;d\\ne\"; printf \";f\" }"
+				),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -229,7 +245,9 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("1"), List.of("2"), List.of("x".repeat(5000))),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { ORS = \"\\r\\n\"; printf \"1\\r\"; printf \"\\n2\"; printf \"\\r\\n\"; for (i = 0; i < 5000; i++) printf \"x\" }",
+				compile(
+					"BEGIN { ORS = \"\\r\\n\"; printf \"1\\r\"; printf \"\\n2\"; printf \"\\r\\n\"; for (i = 0; i < 5000; i++) printf \"x\" }"
+				),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -240,7 +258,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("a b\nc")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFS = \"\"; ORS = \"\"; printf \"a b\\nc\" }",
+				compile("BEGIN { OFS = \"\"; ORS = \"\"; printf \"a b\\nc\" }"),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -251,7 +269,7 @@ class AwkStructuredIoTest {
 		assertEquals(
 			List.of(List.of("1", "2"), List.of("3")),
 			AwkExecutor.executeAwkToTable(
-				"BEGIN { OFS = \"<>\"; ORS = \"\\r\\n\"; printf \"1<>2\\r\\n3\\r\\n\" }",
+				compile("BEGIN { OFS = \"<>\"; ORS = \"\\r\\n\"; printf \"1<>2\\r\\n3\\r\\n\" }"),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				null
@@ -271,5 +289,12 @@ class AwkStructuredIoTest {
 		assertEquals("a-x;y", AwkExecutor.evalAwk("join(\"-\", $1, $2)", row));
 		assertEquals("6", AwkExecutor.evalAwk("$3 * 2", row));
 		assertEquals("", AwkExecutor.evalAwk("$9", row));
+	}
+
+	/**
+	 * Compiles a script for the utility engine.
+	 */
+	private static AwkProgram compile(final String script) throws AwkException {
+		return AwkExecutor.compile(script, AwkExecutor.getUtilityEngine());
 	}
 }

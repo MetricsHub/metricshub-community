@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
@@ -508,6 +509,25 @@ class JawkSourceExtensionTest {
 		);
 
 		assertEquals(SourceTable.ofText("b;730.5;\n"), result);
+	}
+
+	/**
+	 * The awk source runs the program it holds, the one compiled when the connector loaded (#1576): here a program
+	 * that deliberately differs from the script, and that calls a MetricsHub function.
+	 */
+	@Test
+	void testProcessSourceRunsTheProgramTheSourceHolds() throws Exception {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("unused"));
+
+		final JawkSource source = JawkSource.builder().type("awk").script("BEGIN { print \"from the script\" }").build();
+		source.setProgram(
+			AwkExecutor.compileSourceScript("BEGIN { print \"from the program\"; if (0) { executeHttpRequest(args) } }")
+		);
+
+		assertEquals(
+			SourceTable.ofText("from the program\n"),
+			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
 	}
 
 	/**

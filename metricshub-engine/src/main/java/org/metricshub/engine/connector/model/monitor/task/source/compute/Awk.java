@@ -31,9 +31,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.jawk.AwkProgram;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
@@ -103,6 +105,16 @@ public class Awk extends Compute {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private ContentType output = ContentType.TEXT;
+
+	/**
+	 * The script compiled when the connector loads (see
+	 * {@link org.metricshub.engine.connector.update.AwkCompilationUpdate}), null when the compute was built without a
+	 * connector or when the script does not compile: it is then compiled when it runs. Never read from nor written to
+	 * YAML or JSON, not part of the equality.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private AwkProgram program;
 
 	/**
 	 * Whether the connector writes the deprecated, ignored <code>input</code> property, which the content-type check
@@ -192,7 +204,7 @@ public class Awk extends Compute {
 
 	@Override
 	public Awk copy() {
-		return Awk.builder()
+		final Awk copy = Awk.builder()
 			.type(type)
 			.script(script)
 			.exclude(exclude)
@@ -202,11 +214,19 @@ public class Awk extends Compute {
 			.variables(variables)
 			.output(output)
 			.build();
+		copy.setProgram(program);
+		return copy;
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		script = updater.apply(script);
+		// An inline script that holds a reference is a different script once the reference is replaced: the program
+		// compiled when the connector loaded no longer matches, and the new script is compiled when it runs
+		final String updatedScript = updater.apply(script);
+		if (!Objects.equals(updatedScript, script)) {
+			script = updatedScript;
+			program = null;
+		}
 		exclude = updater.apply(exclude);
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);

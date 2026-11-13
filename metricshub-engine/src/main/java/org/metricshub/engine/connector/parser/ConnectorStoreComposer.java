@@ -442,13 +442,13 @@ public class ConnectorStoreComposer {
 			connector.setEmbeddedFiles(embeddedFiles);
 		}
 
+		// Update the compiled filename, before the update chain: it names the connector in the messages of the chain
+		connector.getConnectorIdentity().setCompiledFilename(intermediateConnector.getConnectorId());
+
 		// Run the update chain
 		if (updateChain != null) {
 			updateChain.update(connector);
 		}
-
-		// Update the compiled filename
-		connector.getConnectorIdentity().setCompiledFilename(intermediateConnector.getConnectorId());
 
 		// Tell the author what the desugaring did, now that the connector has its identifier
 		ContentTypeDesugaring.logReport(connector, intermediateConnector.getConnectorId());

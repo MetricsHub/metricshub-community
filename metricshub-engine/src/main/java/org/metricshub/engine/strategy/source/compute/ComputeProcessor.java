@@ -26,7 +26,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_RE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COMMA;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HEXA_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
@@ -41,6 +40,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonStreamContext;
 import com.fasterxml.jackson.core.JsonToken;
+import io.jawk.AwkProgram;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
@@ -371,24 +371,20 @@ public class ComputeProcessor implements IComputeProcessor {
 		// An Awk Script is supposed to be only the reference to the EmbeddedFile, so the map contains only one item which is our EmbeddedFile
 		final Optional<EmbeddedFile> maybeEmbeddedFile;
 
-		if (!FILE_PATTERN.matcher(script).find()) {
-			maybeEmbeddedFile = Optional.of(EmbeddedFile.fromString(script));
-		} else {
-			try {
-				maybeEmbeddedFile = EmbeddedFileHelper.findEmbeddedFile(
-					awk.getScript(),
-					telemetryManager.getEmbeddedFiles(connectorId),
-					hostname,
-					connectorId
-				);
-			} catch (Exception exception) {
-				log.warn(
-					"Hostname {} - Compute Operation (Awk) script {} has not been set correctly, the table remains unchanged.",
-					hostname,
-					awk
-				);
-				return;
-			}
+		try {
+			maybeEmbeddedFile = EmbeddedFileHelper.findScript(
+				script,
+				() -> telemetryManager.getEmbeddedFiles(connectorId),
+				hostname,
+				connectorId
+			);
+		} catch (Exception exception) {
+			log.warn(
+				"Hostname {} - Compute Operation (Awk) script {} has not been set correctly, the table remains unchanged.",
+				hostname,
+				awk
+			);
+			return;
 		}
 
 		if (maybeEmbeddedFile.isEmpty()) {
@@ -423,16 +419,21 @@ public class ComputeProcessor implements IComputeProcessor {
 		);
 
 		try {
+			// The program the connector holds, compiled when it loaded. A compute built without a connector has none
+			final AwkProgram program = awk.getProgram() != null
+				? awk.getProgram()
+				: AwkExecutor.compile(awkScript, AwkExecutor.getUtilityEngine());
+
 			if (awk.getOutputContentType() == ContentType.TABLE) {
 				// Each print is a row: no re-parsing, the text filters and column selection do not apply
 				final List<List<String>> rows = tableInput
 					? AwkExecutor.executeAwkToTable(
-						awkScript,
+						program,
 						new TableInputSource(sourceTable.getTable()),
 						AwkExecutor.getUtilityEngine(),
 						variables
 					)
-					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
+					: AwkExecutor.executeAwkToTable(program, input, AwkExecutor.getUtilityEngine(), variables);
 				sourceTable.setTable(rows);
 				return;
 			}
@@ -440,12 +441,12 @@ public class ComputeProcessor implements IComputeProcessor {
 			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			String awkResult = tableInput
 				? AwkExecutor.executeAwk(
-					awkScript,
+					program,
 					new TableInputSource(sourceTable.getTable()),
 					AwkExecutor.getUtilityEngine(),
 					variables
 				).replace(WINDOWS_NEW_LINE, NEW_LINE)
-				: AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
+				: AwkExecutor.executeAwk(program, input, AwkExecutor.getUtilityEngine(), variables);
 
 			if (awkResult == null || awkResult.isEmpty()) {
 				log.warn(
