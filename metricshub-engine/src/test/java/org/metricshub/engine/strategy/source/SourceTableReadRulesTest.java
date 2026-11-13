@@ -297,6 +297,11 @@ class SourceTableReadRulesTest {
 			SourceTable.ofText("a\nb-\n"),
 			onText(Replace.builder().existingValue(";").newValue("-\r\n").build(), "a\r\nb;")
 		);
+		// A line ending to replace is found whatever its form in the text and in the compute
+		assertEquals(
+			SourceTable.ofText("a-b-"),
+			onText(Replace.builder().existingValue("\r\n").newValue("-").build(), "a\r\nb\n")
+		);
 		// The positions count the LF text: a, LF, b
 		assertEquals(SourceTable.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\r\nb\r\n"));
 	}

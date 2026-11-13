@@ -1457,7 +1457,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// No column: every occurrence in the whole text, the values taken literally (a text has no column)
 		if (columnToReplace == null) {
-			sourceTable.setText(lfText(lfText(sourceTable.getText()).replace(strToReplace, replacement)));
+			sourceTable.setText(lfText(lfText(sourceTable.getText()).replace(lfText(strToReplace), replacement)));
 			return;
 		}
 
