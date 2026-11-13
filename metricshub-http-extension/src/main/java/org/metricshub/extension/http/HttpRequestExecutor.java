@@ -295,7 +295,10 @@ public class HttpRequestExecutor {
 					throw new RetryableException();
 				}
 
-				return "";
+				// Whoever asked for the status gets it, with what the server answered: a 401 is not a missing answer
+				if (resultContent != ResultContent.ALL_WITH_STATUS) {
+					return "";
+				}
 			}
 
 			// The request has been successful

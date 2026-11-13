@@ -39,6 +39,8 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -48,6 +50,7 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -69,6 +72,13 @@ import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 @EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
 public class MetricsHubExtensionForJawk extends AbstractExtension {
+
+	/**
+	 * The result of a HTTP request asked with its status: "Status: 200", the header lines, an empty line, the body
+	 */
+	private static final Pattern STATUS_AND_BODY = Pattern.compile(
+		"(?s)Status: (\\d+)(?:\\n(?:[^\\n]+\\n)*\\n(.*))?\\n?"
+	);
 
 	/**
 	 * Reads the JSON result of a HTTP request: a number keeps its digits, and anything after the document is an error
@@ -185,11 +195,15 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * <code>false</code> are 1 and 0, <code>null</code> is an empty string. A result followed by anything else than
 	 * white space is not JSON.
 	 * The function fills an array instead of returning one: Jawk cannot assign a returned array to a variable.
+	 * <p>
+	 * It returns the HTTP status code, so that a script tells a refused request (401) from an empty answer (200). The
+	 * body of an error response is parsed too: it often says why.
 	 *
-	 * @param argMap   The array of arguments to use to create the {@link HttpSource}.
-	 * @param response The array to fill with the document. It is emptied first, and stays empty when the result is
+	 * @param argMap   The array of arguments to use to create the {@link HttpSource}. Its <code>resultContent</code>
+	 *                 is ignored: the function reads the status and the body.
+	 * @param response The array to fill with the document. It is emptied first, and stays empty when the body is
 	 *                 not a JSON object or array.
-	 * @return The number of elements of <code>response</code>.
+	 * @return The HTTP status code of the response (200, 401, ...), 0 when the request got no response.
 	 */
 	@JawkFunction("executeHttpJsonRequest")
 	public int executeHttpJsonRequest(
@@ -197,27 +211,36 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		final @JawkAssocArray Map<Object, Object> response
 	) {
 		response.clear();
-		final String result = executeSource(toSource(HttpSource.class, argMap));
-		if (result == null || result.isBlank()) {
+		final HttpSource source = toSource(HttpSource.class, argMap);
+		source.setResultContent(ResultContent.ALL_WITH_STATUS);
+
+		// "Status: 200", the header lines, an empty line, the body
+		final Matcher result = STATUS_AND_BODY.matcher(executeSource(source));
+		if (!result.matches()) {
 			return 0;
 		}
+		final int status = Integer.parseInt(result.group(1));
+		final String body = result.group(2) == null ? "" : result.group(2);
+		if (body.isBlank()) {
+			return status;
+		}
 		try {
-			final JsonNode document = JSON_READER.readTree(result);
+			final JsonNode document = JSON_READER.readTree(body);
 			if (document == null || !document.isContainerNode()) {
-				log.warn("Hostname {} - executeHttpJsonRequest: the result is not a JSON object or array.", hostname);
-				return 0;
+				log.warn("Hostname {} - executeHttpJsonRequest: the body is not a JSON object or array.", hostname);
+				return status;
 			}
 			fill(response, toAwkValue(document));
 		} catch (JsonProcessingException e) {
 			// The kind and the location only: the message of the parser quotes the document
 			log.warn(
-				"Hostname {} - executeHttpJsonRequest: the result does not read as JSON ({} {}).",
+				"Hostname {} - executeHttpJsonRequest: the body does not read as JSON ({} {}).",
 				hostname,
 				e.getClass().getSimpleName(),
 				e.getLocation() != null ? e.getLocation().offsetDescription() : "no location"
 			);
 		}
-		return response.size();
+		return status;
 	}
 
 	/**
@@ -351,6 +374,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	/**
 	 * Convert a JSON value to what an AWK script reads: a {@link Map} for an object, a {@link List} for an array, a
 	 * number for a number, 1 or 0 for a boolean, an empty string for <code>null</code>.
+	 * <p>
+	 * Jackson's own conversion (<code>readValue(json, Object.class)</code>) gives the maps and the lists, but not
+	 * values Jawk can hold: a {@link Boolean} stops the script ("Unknown operand_stack type"), and a
+	 * {@link java.math.BigDecimal} or a {@link java.math.BigInteger} is rounded to a double when it is printed.
 	 *
 	 * @param node The JSON value.
 	 * @return The value for AWK.

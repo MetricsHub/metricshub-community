@@ -14,6 +14,7 @@ import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -44,6 +45,13 @@ class MetricsHubExtensionForJawkTest {
 	/**
 	 * An extension whose HTTP requests give the specified result.
 	 */
+	/**
+	 * The result of a HTTP request asked with its status: the status line, a header, an empty line, the body.
+	 */
+	private static SourceTable answer(final int status, final String body) {
+		return SourceTable.ofText("Status: " + status + "\nContent-Type: application/json\n\n" + body);
+	}
+
 	private static MetricsHubExtensionForJawk httpGiving(final SourceTable result) {
 		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
 		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(result);
@@ -111,7 +119,7 @@ class MetricsHubExtensionForJawkTest {
 	void testExecuteHttpJsonRequest() throws Exception {
 		// An object is an array indexed by its keys, an array is indexed from 0, a number is a number, true and
 		// false are 1 and 0, null is an empty string
-		assertEquals("5\na;b 11 2\n1 0 [] 1\n", run("""
+		assertEquals("200\na;b 11 2\n1 0 [] 1\n", run("""
 			BEGIN {
 				args["method"] = "get"
 				args["path"] = "/api"
@@ -121,16 +129,16 @@ class MetricsHubExtensionForJawkTest {
 				print response["items"][0]["name"], response["items"][1]["value"] + 1, length(response["items"])
 				print response["ok"], response["off"], "[" response["none"] "]", response["ratio"] * 2
 			}
-			""", httpGiving(SourceTable.ofText(JSON))));
+			""", httpGiving(answer(200, JSON))));
 	}
 
 	@Test
 	void testExecuteHttpJsonRequestOnAnArray() throws Exception {
 		assertEquals(
-			"2 x 3\n",
+			"200 x 3\n",
 			run(
 				"BEGIN { args[\"path\"] = \"/api\"; n = executeHttpJsonRequest(args, response); print n, response[0], response[1][\"a\"] }",
-				httpGiving(SourceTable.ofText("[\"x\", {\"a\": 3}]"))
+				httpGiving(answer(200, "[\"x\", {\"a\": 3}]"))
 			)
 		);
 	}
@@ -152,9 +160,7 @@ class MetricsHubExtensionForJawkTest {
 					}
 					""",
 				httpGiving(
-					SourceTable.ofText(
-						"{\"counter\":18446744073709551615,\"decimal\":1234567.123456789,\"small\":42,\"half\":1.5}"
-					)
+					answer(200, "{\"counter\":18446744073709551615,\"decimal\":1234567.123456789,\"small\":42,\"half\":1.5}")
 				)
 			)
 		);
@@ -175,13 +181,33 @@ class MetricsHubExtensionForJawkTest {
 		final String script = "BEGIN { args[\"path\"] = \"/api\"; response[1] = 1; print executeHttpJsonRequest(args, response), length(response) }";
 
 		// Not JSON, a JSON scalar, an empty result, a failed request: the array is empty
-		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText("<html>"))));
-		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText("42"))));
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, "<html>"))));
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, "42"))));
 		// A document followed by something else is not a JSON document
-		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText("{\"status\":\"ok\"}<html>proxy error</html>"))));
-		assertEquals("1 1\n", run(script, httpGiving(SourceTable.ofText("{\"status\":\"ok\"} \n"))));
-		assertEquals("0 0\n", run(script, httpGiving(SourceTable.ofText(""))));
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, "{\"status\":\"ok\"}<html>proxy error</html>"))));
+		assertEquals("200 1\n", run(script, httpGiving(answer(200, "{\"status\":\"ok\"} \n"))));
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, ""))));
 		assertEquals("0 0\n", run(script, httpGiving(SourceTable.empty())));
+	}
+
+	@Test
+	void testExecuteHttpJsonRequestReturnsTheStatus() throws Exception {
+		final String script = "BEGIN { args[\"path\"] = \"/api\"; args[\"resultContent\"] = \"body\"; " +
+			"print executeHttpJsonRequest(args, response), response[\"error\"] }";
+
+		// A refused request is not an empty answer: the status says so, and the body says why
+		assertEquals("401 bad token\n", run(script, httpGiving(answer(401, "{\"error\":\"bad token\"}"))));
+		assertEquals("204 \n", run(script, httpGiving(answer(204, ""))));
+		assertEquals("200 \n", run(script, httpGiving(SourceTable.ofText("Status: 200\n\n{}"))));
+		assertEquals("404 \n", run(script, httpGiving(SourceTable.ofText("Status: 404"))));
+
+		// The request asks for the status and the response, whatever resultContent the script gave
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(answer(200, "{}"));
+		run(script, MetricsHubExtensionForJawk.builder().hostname("host").sourceProcessor(sourceProcessor).build());
+		final ArgumentCaptor<HttpSource> source = ArgumentCaptor.forClass(HttpSource.class);
+		verify(sourceProcessor).process(source.capture());
+		assertEquals(ResultContent.ALL_WITH_STATUS, source.getValue().getResultContent());
 	}
 
 	@Test
