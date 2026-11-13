@@ -178,7 +178,7 @@ class ComputeChainGoldenCorpusTest {
 			";",
 			"host"
 		);
-		// This text (the AWK json2csv() function) does not escape the separator: a value containing ";" shifts the
+		// This text (the separated text jflat writes) does not escape the separator: a value containing ";" shifts the
 		// columns once the text is cut on ";". The json2Csv compute keeps each value in its cell (executeJson2Table).
 		// The fourth entry is a JSON number, not a text
 		assertTrue(json.contains("\"Health\":42"), json);

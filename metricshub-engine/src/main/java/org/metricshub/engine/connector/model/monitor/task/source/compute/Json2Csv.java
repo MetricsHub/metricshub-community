@@ -62,8 +62,7 @@ public class Json2Csv extends Compute {
 	private String properties;
 	/**
 	 * Deprecated, ignored: the compute builds its rows from the JSON values, with one cell per property, so no
-	 * separator splits them. Still accepted so that the connectors setting it load. Only the text produced by the
-	 * AWK <code>json2csv()</code> function uses a separator.
+	 * separator splits them. Still accepted so that the connectors setting it load.
 	 */
 	private String separator;
 
