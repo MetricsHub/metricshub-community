@@ -283,6 +283,24 @@ class SourceTableReadRulesTest {
 		return run(compute, SourceTable.ofText(text));
 	}
 
+	/**
+	 * A text compute writes LF line endings only, whatever the text and the value hold.
+	 */
+	@Test
+	void computeWithoutColumnWritesLfOnly() {
+		assertEquals(
+			SourceTable.ofText("x\ny\na\nb\n"),
+			onText(Prepend.builder().value("x\r\ny\r\n").build(), "a\r\nb\r\n")
+		);
+		assertEquals(SourceTable.ofText("a\nb\nx\n"), onText(Append.builder().value("x\r\n").build(), "a\r\nb\r\n"));
+		assertEquals(
+			SourceTable.ofText("a\nb-\n"),
+			onText(Replace.builder().existingValue(";").newValue("-\r\n").build(), "a\r\nb;")
+		);
+		// The positions count the LF text: a, LF, b
+		assertEquals(SourceTable.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\r\nb\r\n"));
+	}
+
 	@Test
 	void computeWithoutColumnAppliesOnceToTheWholeText() {
 		// The value goes before or after the whole text, after its final line ending, with no column reference

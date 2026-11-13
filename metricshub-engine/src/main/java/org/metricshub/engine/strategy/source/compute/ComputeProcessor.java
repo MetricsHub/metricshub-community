@@ -1457,7 +1457,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// No column: every occurrence in the whole text, the values taken literally (a text has no column)
 		if (columnToReplace == null) {
-			sourceTable.setText(sourceTable.getText().replace(strToReplace, replacement));
+			sourceTable.setText(lfText(lfText(sourceTable.getText()).replace(strToReplace, replacement)));
 			return;
 		}
 
@@ -1638,7 +1638,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		// No column: the substring of the whole text, with the start and the end of a cell (a text has no column to
 		// read them from)
 		if (substring != null && substring.getColumn() == null) {
-			final String text = sourceTable.getText();
+			final String text = lfText(sourceTable.getText());
 			final Integer beginIndex = toSubstringIndex(substring.getStart());
 			final Integer endIndex = toSubstringIndex(substring.getLength());
 			if (checkSubstringArguments(beginIndex, endIndex, text.length())) {
@@ -1670,6 +1670,17 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		performSubstring(substring.getColumn() - 1, start, startColumnIndex, length, lengthColumnIndex);
+	}
+
+	/**
+	 * A text with LF line endings only: what a text compute reads and writes does not depend on the platform that
+	 * produced the text.
+	 *
+	 * @param text The text
+	 * @return the text with each CRLF replaced by LF
+	 */
+	private static String lfText(final String text) {
+		return text.replace(WINDOWS_NEW_LINE, NEW_LINE);
 	}
 
 	/**
@@ -2283,8 +2294,8 @@ public class ComputeProcessor implements IComputeProcessor {
 
 			// No column: the value before or after the whole text, taken literally (a text has no column)
 			if (abstractConcat.getColumn() == null) {
-				final String text = sourceTable.getText();
-				final String value = abstractConcat.getValue();
+				final String text = lfText(sourceTable.getText());
+				final String value = lfText(abstractConcat.getValue());
 				sourceTable.setText(abstractConcat instanceof Prepend ? value.concat(text) : text.concat(value));
 				return;
 			}
