@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
 import io.jawk.AwkProgram;
+import io.jawk.SandboxedAwk;
 import io.jawk.jrt.InputSource;
 import io.jawk.util.AwkSettings;
 import java.io.IOException;
@@ -46,13 +47,19 @@ public class AwkExecutor {
 	/**
 	 * Standard Jawk instance, with the MetricsHub utility extension
 	 */
-	private static final Awk AWK_PLUS_UTILITY = new Awk(List.of(UtilityExtensionForJawk.INSTANCE), newAwkSettings(null));
+	private static final Awk AWK_PLUS_UTILITY = new SandboxedAwk(
+		List.of(UtilityExtensionForJawk.INSTANCE),
+		newAwkSettings(null)
+	);
 
 	/**
 	 * Jawk instance dedicated to expression evaluation, where the record is a table row and the fields are therefore
 	 * separated by the table separator
 	 */
-	private static final Awk AWK_FOR_EVAL = new Awk(List.of(UtilityExtensionForJawk.INSTANCE), newAwkSettings(TABLE_SEP));
+	private static final Awk AWK_FOR_EVAL = new SandboxedAwk(
+		List.of(UtilityExtensionForJawk.INSTANCE),
+		newAwkSettings(TABLE_SEP)
+	);
 
 	/**
 	 * Map of the scripts that have already been compiled to intermediate code

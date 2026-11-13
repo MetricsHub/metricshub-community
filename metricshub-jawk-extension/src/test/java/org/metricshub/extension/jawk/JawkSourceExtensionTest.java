@@ -511,6 +511,24 @@ class JawkSourceExtensionTest {
 	}
 
 	/**
+	 * The awk source runs in the Jawk sandbox: a script that runs a command is rejected and gives an empty result.
+	 */
+	@Test
+	void testProcessSourceInSandbox() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("unused"));
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.script("BEGIN { system(\"echo x\"); print \"done\" }")
+			.build();
+
+		assertEquals(
+			SourceTable.empty(),
+			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+	}
+
+	/**
 	 * A variable referencing a source that was never computed must not fail the whole source: the variable is exposed
 	 * as an empty array.
 	 */
