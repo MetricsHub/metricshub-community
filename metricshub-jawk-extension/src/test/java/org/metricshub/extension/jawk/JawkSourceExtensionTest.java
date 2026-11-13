@@ -529,6 +529,32 @@ class JawkSourceExtensionTest {
 	}
 
 	/**
+	 * An awk source can call the gawk functions (Jawk's GawkExtension) next to the MetricsHub ones.
+	 */
+	@Test
+	void testProcessSourceWithGawkFunctions() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("unused"));
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.input("b a")
+			.script(
+				"{ h[$1]; h[$2]; n = asorti(h, sorted); print n \";\" sorted[1] \";\" gensub(/a/, \"x\", \"g\", $0) \";\" " +
+					"strtonum(\"0x1F\") \";\" join(\"-\", $1, $2) }"
+			)
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(SourceTable.ofText("2;a;b x;31;b-a\n"), result);
+	}
+
+	/**
 	 * A variable referencing a source that was never computed must not fail the whole source: the variable is exposed
 	 * as an empty array.
 	 */
