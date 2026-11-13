@@ -27,6 +27,7 @@ import io.jawk.ext.annotations.JawkFunction;
 import io.jawk.jrt.JRT;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -201,7 +202,7 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 			return -1;
 		}
 		try {
-			Thread.sleep((long) (Math.min(duration, MAX_SLEEP_SECONDS) * 1000));
+			TimeUnit.NANOSECONDS.sleep((long) (Math.min(duration, MAX_SLEEP_SECONDS) * 1_000_000_000L));
 			return 0;
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
