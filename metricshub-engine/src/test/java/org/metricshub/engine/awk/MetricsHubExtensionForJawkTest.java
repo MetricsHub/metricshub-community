@@ -144,26 +144,17 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	/**
-	 * A number keeps its digits: an unsigned 64-bit counter and a long decimal are not rounded to a double, and they
-	 * still compare and compute as numbers.
+	 * A number is an AWK number: a 64-bit integer keeps all its digits, anything else is a double.
 	 */
 	@Test
-	void testExecuteHttpJsonRequestKeepsTheDigitsOfANumber() throws Exception {
-		assertEquals(
-			"18446744073709551615 1234567.123456789 42 1 3\n",
-			run(
-				"""
-					BEGIN {
-						args["path"] = "/api"
-						executeHttpJsonRequest(args, r)
-						print r["counter"], r["decimal"], r["small"], (r["counter"] > 9), r["half"] * 2
-					}
-					""",
-				httpGiving(
-					answer(200, "{\"counter\":18446744073709551615,\"decimal\":1234567.123456789,\"small\":42,\"half\":1.5}")
-				)
-			)
-		);
+	void testExecuteHttpJsonRequestNumbers() throws Exception {
+		assertEquals("9223372036854775807 42 3 1\n", run("""
+			BEGIN {
+				args["path"] = "/api"
+				executeHttpJsonRequest(args, r)
+				print r["long"], r["small"], r["half"] * 2, (r["huge"] > r["long"])
+			}
+			""", httpGiving(answer(200, "{\"long\":9223372036854775807,\"small\":42,\"half\":1.5,\"huge\":1e30}"))));
 	}
 
 	@Test

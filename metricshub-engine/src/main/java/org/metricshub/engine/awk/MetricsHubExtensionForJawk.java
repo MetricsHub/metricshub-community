@@ -81,11 +81,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	);
 
 	/**
-	 * Reads the JSON result of a HTTP request: a number keeps its digits, and anything after the document is an error
+	 * Reads the JSON result of a HTTP request: anything after the document is an error
 	 */
 	private static final ObjectReader JSON_READER = JsonHelper.buildObjectMapper()
 		.reader()
-		.with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
 		.with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
 	@EqualsAndHashCode.Exclude
@@ -191,7 +190,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * nested arrays, such as <code>response["data"]["items"][0]["name"]</code>.
 	 * <p>
 	 * A JSON object is an array indexed by its keys, a JSON array an array indexed from 0. A string is a string, a
-	 * number a number (with all its digits, even beyond what a double holds), <code>true</code> and
+	 * number an AWK number (a 64-bit integer or a double, as everywhere in Jawk), <code>true</code> and
 	 * <code>false</code> are 1 and 0, <code>null</code> is an empty string. A result followed by anything else than
 	 * white space is not JSON.
 	 * The function fills an array instead of returning one: Jawk cannot assign a returned array to a variable.
@@ -375,9 +374,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * Convert a JSON value to what an AWK script reads: a {@link Map} for an object, a {@link List} for an array, a
 	 * number for a number, 1 or 0 for a boolean, an empty string for <code>null</code>.
 	 * <p>
-	 * Jackson's own conversion (<code>readValue(json, Object.class)</code>) gives the maps and the lists, but not
-	 * values Jawk can hold: a {@link Boolean} stops the script ("Unknown operand_stack type"), and a
-	 * {@link java.math.BigDecimal} or a {@link java.math.BigInteger} is rounded to a double when it is printed.
+	 * Jackson's own conversion (<code>readValue(json, Object.class)</code>) gives the maps and the lists, but a
+	 * {@link Boolean} among their values stops a Jawk script ("Unknown operand_stack type", jawkio/jawk#654): this
+	 * method can go once Jawk takes a Boolean. A number is limited to what Jawk computes with, a 64-bit integer or a
+	 * double (jawkio/jawk#456 for more).
 	 *
 	 * @param node The JSON value.
 	 * @return The value for AWK.
@@ -397,11 +397,9 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			return node.booleanValue() ? 1L : 0L;
 		}
 		if (node.isNumber()) {
-			// A number that is not a long keeps its digits, as a numeric string: a double would round an unsigned
-			// 64-bit counter or a long decimal, and print them with OFMT
 			return node.isIntegralNumber() && node.canConvertToLong()
 				? (Object) node.longValue()
-				: (Object) node.decimalValue().toString();
+				: (Object) node.doubleValue();
 		}
 		return node.isNull() ? "" : node.asText();
 	}
