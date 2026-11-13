@@ -27,10 +27,7 @@ import io.jawk.ext.AbstractExtension;
 import io.jawk.ext.JawkExtension;
 import io.jawk.ext.annotations.JawkAssocArray;
 import io.jawk.ext.annotations.JawkFunction;
-import io.jawk.jrt.AssocArray;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -80,8 +77,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link HttpSource}.
 	 */
 	@JawkFunction("executeHttpRequest")
-	public String executeHttpRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(toSource(HttpSource.class, argMap));
+	public String executeHttpRequest(final @JawkAssocArray Map<Object, Object> argMap) {
+		return executeSource(Source.fromMap(HttpSource.class, argMap));
 	}
 
 	/**
@@ -91,9 +88,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link IpmiSource}.
 	 */
 	@JawkFunction("executeIpmiRequest")
-	public String executeIpmiRequest(@JawkAssocArray AssocArray... args) {
-		if (args[0] != null) {
-			return executeSource(toSource(IpmiSource.class, args[0]));
+	@SafeVarargs
+	public final String executeIpmiRequest(@JawkAssocArray Map<Object, Object>... args) {
+		if (args.length > 0 && args[0] != null) {
+			return executeSource(Source.fromMap(IpmiSource.class, args[0]));
 		}
 		return executeSource(IpmiSource.builder().build());
 	}
@@ -105,8 +103,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link SnmpGetSource}.
 	 */
 	@JawkFunction("executeSnmpGet")
-	public String executeSnmpGetRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(toSource(SnmpGetSource.class, argMap));
+	public String executeSnmpGetRequest(final @JawkAssocArray Map<Object, Object> argMap) {
+		return executeSource(Source.fromMap(SnmpGetSource.class, argMap));
 	}
 
 	/**
@@ -116,8 +114,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link SnmpTableSource}.
 	 */
 	@JawkFunction("executeSnmpTable")
-	public String executeSnmpTableRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(toSource(SnmpTableSource.class, argMap));
+	public String executeSnmpTableRequest(final @JawkAssocArray Map<Object, Object> argMap) {
+		return executeSource(Source.fromMap(SnmpTableSource.class, argMap));
 	}
 
 	/**
@@ -127,8 +125,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link WbemSource}.
 	 */
 	@JawkFunction("executeWbemRequest")
-	public String executeWbemRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(toSource(WbemSource.class, argMap));
+	public String executeWbemRequest(final @JawkAssocArray Map<Object, Object> argMap) {
+		return executeSource(Source.fromMap(WbemSource.class, argMap));
 	}
 
 	/**
@@ -138,8 +136,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link WmiSource}.
 	 */
 	@JawkFunction("executeWmiRequest")
-	public String executeWmiRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(toSource(WmiSource.class, argMap));
+	public String executeWmiRequest(final @JawkAssocArray Map<Object, Object> argMap) {
+		return executeSource(Source.fromMap(WmiSource.class, argMap));
 	}
 
 	/**
@@ -169,15 +167,15 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the compute.
 	 */
 	@JawkFunction("json2csv")
-	public String executeJson2csv(final @JawkAssocArray AssocArray argMap) {
+	public String executeJson2csv(final @JawkAssocArray Map<Object, Object> argMap) {
 		try {
 			return ClientsExecutor.executeJson2Csv(
-				String.valueOf(argMap.get("jsonSource")),
-				String.valueOf(argMap.get("entryKey")),
+				awkText(argMap.get("jsonSource")),
+				awkText(argMap.get("entryKey")),
 				toAwkListString(argMap.get("properties")),
-				String.valueOf(argMap.get("separator")),
-				argMap.isIn("parsingMode") &&
-					Json2Csv.ParsingMode.EVENTS.name().equalsIgnoreCase(String.valueOf(argMap.get("parsingMode"))),
+				awkText(argMap.get("separator")),
+				argMap.containsKey("parsingMode") &&
+					Json2Csv.ParsingMode.EVENTS.name().equalsIgnoreCase(awkText(argMap.get("parsingMode"))),
 				hostname
 			).strip();
 		} catch (Exception exception) {
@@ -191,43 +189,14 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	}
 
 	/**
-	 * Builds the source of an <code>execute*</code> function from the AWK array of its arguments.
+	 * The text of an argument read from an AWK array: a missing element (<code>null</code> through the array view)
+	 * is the empty string, as AWK reads it, not the text <code>null</code>.
 	 *
-	 * @param <T>    The class of the source
-	 * @param clazz  The class of the source
-	 * @param argMap The AWK array of the arguments
-	 * @return the source
+	 * @param value The argument
+	 * @return its text
 	 */
-	private static <T extends Source> T toSource(final Class<T> clazz, final Map<Object, Object> argMap) {
-		@SuppressWarnings("unchecked")
-		final Map<Object, Object> plain = (Map<Object, Object>) plainValue(argMap);
-		return Source.fromMap(clazz, plain);
-	}
-
-	/**
-	 * An AWK value as plain Java data, which Jackson reads: maps and lists copied with plain values, strings,
-	 * numbers, booleans and <code>null</code> as they are, anything else as its text. Jawk hands over a field or a
-	 * value of an awk variable list, map or table as a numeric string (<code>StrNum</code>), which Jackson would read
-	 * as a bean (<code>{"number": false}</code>) instead of its text.
-	 *
-	 * @param value The AWK value
-	 * @return the plain value
-	 */
-	static Object plainValue(final Object value) {
-		if (value instanceof Map<?, ?> map) {
-			final Map<Object, Object> plain = new LinkedHashMap<>();
-			map.forEach((key, item) -> plain.put(key, plainValue(item)));
-			return plain;
-		}
-		if (value instanceof List<?> list) {
-			final List<Object> plain = new ArrayList<>(list.size());
-			list.forEach(item -> plain.add(plainValue(item)));
-			return plain;
-		}
-		if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) {
-			return value;
-		}
-		return value.toString();
+	private static String awkText(final Object value) {
+		return value == null ? "" : value.toString();
 	}
 
 	/**
@@ -238,7 +207,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The Jawk variable converted to a {@link List} of {@link String}.
 	 */
 	private List<String> toAwkListString(final Object arg) {
-		final String stringArg = String.valueOf(arg);
+		final String stringArg = awkText(arg);
 		return Arrays.asList(stringArg.split(";"));
 	}
 
