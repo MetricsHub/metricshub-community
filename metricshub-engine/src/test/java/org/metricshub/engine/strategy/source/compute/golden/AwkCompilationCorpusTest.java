@@ -37,12 +37,13 @@ class AwkCompilationCorpusTest {
 						programs.add(jawkSource.getProgram());
 					}
 					if (source.getComputes() != null) {
-						source.getComputes()
-							.stream()
-							.filter(Awk.class::isInstance)
-							// A script that holds a reference is compiled when it runs, once the reference is replaced
-							.filter(compute -> !((Awk) compute).getScript().matches("(?s).*\\$\\{(?!file::)[^{}]*::.*"))
-							.forEach(compute -> programs.add(((Awk) compute).getProgram()));
+						source.getComputes().stream().filter(Awk.class::isInstance).forEach(compute -> {
+							programs.add(((Awk) compute).getProgram());
+							// No reference is replaced in a script: it gets its values through its variables
+							if (((Awk) compute).getScript().matches("(?s).*\\$\\{(?!file::)[^{}]*::.*")) {
+								notCompiled.add(connectorId + " " + source.getKey() + " (a reference in the script)");
+							}
+						});
 					}
 					compiled[0] += programs.size();
 					if (programs.contains(null)) {

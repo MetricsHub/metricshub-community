@@ -52,8 +52,8 @@ public class AwkCompilationUpdate extends AbstractConnectorUpdateChain {
 	private static final String NO_HOST = "n/a";
 
 	/**
-	 * A reference that is replaced when a compute runs, such as <code>${param::days}</code> or
-	 * <code>${attribute::id}</code>. Not <code>${file::script.awk}</code>, which names the script.
+	 * A reference such as <code>${param::days}</code> or <code>${attribute::id}</code>, which belongs in the variables
+	 * of an awk compute, not in its script. Not <code>${file::script.awk}</code>, which names the script.
 	 */
 	private static final Pattern REFERENCE = Pattern.compile("\\$\\{(?!file::)[^{}]*::", Pattern.CASE_INSENSITIVE);
 
@@ -65,9 +65,16 @@ public class AwkCompilationUpdate extends AbstractConnectorUpdateChain {
 			}
 			if (source.getComputes() != null) {
 				for (final Compute compute : source.getComputes()) {
-					// An inline compute script that holds a reference (${param::days}) is not AWK yet: the reference is
-					// replaced when the compute runs, and the resulting script is compiled then
-					if (compute instanceof Awk awk && !REFERENCE.matcher(awk.getScript()).find()) {
+					if (compute instanceof Awk awk) {
+						// No reference is replaced in a script: one that holds a reference would read it as text
+						if (REFERENCE.matcher(awk.getScript()).find()) {
+							log.error(
+								"Connector {} - Source {} - The AWK script holds a reference, which is not replaced in a" +
+									" script: pass the value through the variables of the awk compute.",
+								connectorId(connector),
+								source.getKey()
+							);
+						}
 						awk.setProgram(compile(connector, source, awk.getScript(), false));
 					}
 				}

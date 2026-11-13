@@ -124,31 +124,26 @@ class AwkCompilationUpdateTest {
 	}
 
 	/**
-	 * An inline compute script that holds a reference is another script once the reference is replaced: the program
-	 * compiled at load is dropped. A script without a reference keeps it.
+	 * No reference is replaced in a script: the script and its program are what the connector loaded, whatever the
+	 * run replaces in the other properties. A value reaches the script through the variables.
 	 */
 	@Test
-	void testUpdateDropsTheProgramOfARewrittenScript() {
-		final Awk withReference = Awk.builder().type("awk").script("$1 == \"${attribute::id}\" { print }").build();
-		final Awk plain = Awk.builder().type("awk").script("{ print }").keep("${attribute::id}").build();
-		final Source source = httpWith(withReference);
-		source.getComputes().add(plain);
-		new AwkCompilationUpdate().update(connectorWith(source));
-		// The script with a reference is not AWK yet (${param::days} in an expression is a syntax error): it is not
-		// compiled at load. Should it hold a program all the same, replacing the reference drops it
-		assertNull(withReference.getProgram());
-		assertNotNull(plain.getProgram());
-		withReference.setProgram(plain.getProgram());
+	void testUpdateNeverRewritesTheScript() {
+		final Awk awk = Awk.builder()
+			.type("awk")
+			.script("$1 == id { print \"${attribute::id}\" }")
+			.keep("${attribute::id}")
+			.variables(Map.of("id", "${attribute::id}"))
+			.build();
+		new AwkCompilationUpdate().update(connectorWith(httpWith(awk)));
+		assertNotNull(awk.getProgram());
 
-		final Awk rewritten = withReference.copy();
-		rewritten.update(value -> value == null ? null : value.replace("${attribute::id}", "disk1"));
-		final Awk untouched = plain.copy();
-		untouched.update(value -> value == null ? null : value.replace("${attribute::id}", "disk1"));
+		final Awk copy = awk.copy();
+		copy.update(value -> value == null ? null : value.replace("${attribute::id}", "disk1"));
 
-		assertEquals("$1 == \"disk1\" { print }", rewritten.getScript());
-		assertNull(rewritten.getProgram());
-		assertSame(plain.getProgram(), untouched.getProgram());
-		assertNotNull(withReference.getProgram(), "The compute of the connector keeps its program");
+		assertEquals(awk.getScript(), copy.getScript());
+		assertSame(awk.getProgram(), copy.getProgram());
+		assertEquals("disk1", copy.getKeep());
 	}
 
 	/**

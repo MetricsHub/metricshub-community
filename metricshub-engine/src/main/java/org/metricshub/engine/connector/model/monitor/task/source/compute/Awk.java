@@ -35,7 +35,6 @@ import io.jawk.AwkProgram;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
@@ -220,13 +219,8 @@ public class Awk extends Compute {
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		// An inline script that holds a reference is a different script once the reference is replaced: the program
-		// compiled when the connector loaded no longer matches, and the new script is compiled when it runs
-		final String updatedScript = updater.apply(script);
-		if (!Objects.equals(updatedScript, script)) {
-			script = updatedScript;
-			program = null;
-		}
+		// The script is deliberately left out: it is code, compiled when the connector loads, and no reference is
+		// replaced in it. A script receives a value (${param::days}, ${attribute::id}, a source) through its variables
 		exclude = updater.apply(exclude);
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);
