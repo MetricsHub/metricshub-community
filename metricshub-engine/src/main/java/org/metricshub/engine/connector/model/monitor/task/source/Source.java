@@ -34,6 +34,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -132,7 +133,9 @@ public abstract class Source implements Serializable {
 	}
 
 	/**
-	 * Create a Source of specified type from a Map of key-values
+	 * Create a Source of specified type from a Map of key-values. A value that is not a map, a list, a string, a
+	 * number or a boolean, at any depth, is read as its text: an awk script hands over Jawk numeric strings
+	 * (<code>StrNum</code>), which Jackson would read as beans.
 	 *
 	 * @param <T> Class of the source to create
 	 * @param clazz Class of the source
@@ -140,7 +143,31 @@ public abstract class Source implements Serializable {
 	 * @return a Source instance built from the specified map
 	 */
 	public static <T extends Source> T fromMap(Class<T> clazz, Map<Object, Object> map) {
-		return SMALL_USER_FRIENDLY_MAPPER.convertValue(map, clazz);
+		return SMALL_USER_FRIENDLY_MAPPER.convertValue(plainValue(map), clazz);
+	}
+
+	/**
+	 * The value as Jackson reads it: maps and lists copied with their values made plain, strings, numbers, booleans
+	 * and <code>null</code> as they are, anything else as its text.
+	 *
+	 * @param value The value
+	 * @return the plain value
+	 */
+	private static Object plainValue(final Object value) {
+		if (value instanceof Map<?, ?> map) {
+			final Map<Object, Object> plain = new LinkedHashMap<>();
+			map.forEach((key, item) -> plain.put(key, plainValue(item)));
+			return plain;
+		}
+		if (value instanceof List<?> list) {
+			final List<Object> plain = new ArrayList<>(list.size());
+			list.forEach(item -> plain.add(plainValue(item)));
+			return plain;
+		}
+		if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) {
+			return value;
+		}
+		return value.toString();
 	}
 
 	/**

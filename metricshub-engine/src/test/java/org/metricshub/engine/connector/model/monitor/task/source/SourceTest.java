@@ -3,12 +3,17 @@ package org.metricshub.engine.connector.model.monitor.task.source;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jawk.jrt.AssocArray;
+import io.jawk.jrt.StrNum;
+import java.lang.reflect.Constructor;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 
 class SourceTest {
 
@@ -215,5 +220,55 @@ class SourceTest {
 
 		final Source source = MAPPER.readValue(wmiYaml, Source.class);
 		assertEquals(Set.of(SOURCE_REF1), source.getReferences());
+	}
+
+	/**
+	 * Builds a Jawk numeric string, as Jawk hands over a field or a value of an awk variable list, map or table.
+	 *
+	 * @param value The text
+	 * @return the numeric string
+	 */
+	private static StrNum strNum(final String value) throws ReflectiveOperationException {
+		final Constructor<StrNum> constructor = StrNum.class.getDeclaredConstructor(String.class);
+		constructor.setAccessible(true);
+		return constructor.newInstance(value);
+	}
+
+	/**
+	 * An awk script that copies a cell of a variable table into the arguments of <code>executeHttpRequest</code>
+	 * hands over a Jawk numeric string: the source reads its text, at any depth (#1579).
+	 */
+	@Test
+	void testFromMapReadsNumericStringsAsText() throws ReflectiveOperationException {
+		final AssocArray arguments = AssocArray.createHash();
+		arguments.put("method", "get");
+		arguments.put("path", strNum("/redfish/v1/Systems/1"));
+		arguments.put("authenticationToken", strNum("abc123"));
+		arguments.put("header", strNum("42"));
+		arguments.put("resultContent", "body");
+
+		final HttpSource source = Source.fromMap(HttpSource.class, arguments);
+
+		assertEquals("/redfish/v1/Systems/1", source.getPath());
+		assertEquals("abc123", source.getAuthenticationToken());
+		assertEquals("42", source.getHeader());
+		assertEquals("get", source.getMethod().name().toLowerCase());
+	}
+
+	/**
+	 * Numeric strings nested in a list of maps are read as their text too.
+	 */
+	@Test
+	void testFromMapReadsNestedNumericStringsAsText() throws ReflectiveOperationException {
+		final AssocArray compute = AssocArray.createHash();
+		compute.put("type", "awk");
+		compute.put("script", strNum("{ print $1 }"));
+		final AssocArray arguments = AssocArray.createHash();
+		arguments.put("path", "/api");
+		arguments.put("computes", List.of(compute));
+
+		final HttpSource source = Source.fromMap(HttpSource.class, arguments);
+
+		assertEquals("{ print $1 }", ((Awk) source.getComputes().get(0)).getScript());
 	}
 }
