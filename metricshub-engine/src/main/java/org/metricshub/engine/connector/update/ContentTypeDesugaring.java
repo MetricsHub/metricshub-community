@@ -84,6 +84,9 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * <li>a text compute that parses a text (<code>json2Table</code>, <code>json2List</code>, <code>xml2Csv</code>) fed
  * by a table producer
  * finds nothing to parse and leaves the table unchanged: nothing is inserted, the case is reported;</li>
+ * <li>an <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>substring</code> without
+ * <code>column</code> is a text compute that writes a text: nothing is inserted before it, and a table fed to it is
+ * left unchanged and reported likewise; with a <code>column</code>, it is a table compute like any other;</li>
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>

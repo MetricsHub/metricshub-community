@@ -10,10 +10,14 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 
 class AppendComputeDeserializerTest extends DeserializerTest {
 
@@ -42,5 +46,31 @@ class AppendComputeDeserializerTest extends DeserializerTest {
 		);
 
 		assertEquals(expected, connector.getBeforeAll());
+	}
+
+	/**
+	 * <code>column</code> is optional on <code>prepend</code>, <code>append</code>, <code>replace</code> and
+	 * <code>substring</code>: without it, they read and write a text.
+	 */
+	@Test
+	void testDeserializeComputesWithoutColumn() throws IOException {
+		final List<Compute> computes = getConnector("textComputes").getBeforeAll().get("testCompute").getComputes();
+
+		assertEquals(
+			List.of(
+				Prepend.builder().type("prepend").value("Bearer ").build(),
+				Append.builder().type("append").value("suffix").build(),
+				Replace.builder().type("replace").existingValue("a").newValue("b").build(),
+				Substring.builder().type("substring").start("1").length("10").build()
+			),
+			computes
+		);
+		for (final Compute compute : computes) {
+			assertEquals(ContentType.TEXT, compute.getInputContentType());
+			assertEquals(ContentType.TEXT, compute.getOutputContentType());
+			assertEquals(compute, compute.copy());
+		}
+		assertEquals(ContentType.TABLE, Append.builder().column(1).value("x").build().getInputContentType());
+		assertEquals(ContentType.TABLE, Append.builder().column(1).value("x").build().getOutputContentType());
 	}
 }

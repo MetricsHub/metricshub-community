@@ -33,6 +33,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 
 /**
  * An abstract class representing a computation operation for concatenation. Subclasses should provide specific
@@ -48,10 +49,8 @@ public abstract class AbstractConcat extends Compute {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The column index for concatenation.
+	 * The column index for concatenation, null to work on the whole text of a text result.
 	 */
-	@NonNull
-	@JsonSetter(nulls = FAIL)
 	protected Integer column;
 
 	/**
@@ -70,6 +69,16 @@ public abstract class AbstractConcat extends Compute {
 		super(type);
 		this.column = column;
 		this.value = value;
+	}
+
+	@Override
+	public ContentType getInputContentType() {
+		return column == null ? ContentType.TEXT : ContentType.TABLE;
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return column == null ? ContentType.TEXT : ContentType.TABLE;
 	}
 
 	@Override

@@ -35,6 +35,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -48,10 +49,8 @@ public class Substring extends Compute {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The column index used in the Substring computation.
+	 * The column index used in the Substring computation, null to work on the whole text of a text result.
 	 */
-	@NonNull
-	@JsonSetter(nulls = FAIL)
 	private Integer column;
 
 	/**
@@ -80,7 +79,7 @@ public class Substring extends Compute {
 	@JsonCreator
 	public Substring(
 		@JsonProperty("type") String type,
-		@JsonProperty(value = "column", required = true) @NonNull Integer column,
+		@JsonProperty(value = "column") Integer column,
 		@JsonProperty(value = "start", required = true) @NonNull String start,
 		@JsonProperty(value = "length", required = true) @NonNull String length
 	) {
@@ -97,6 +96,16 @@ public class Substring extends Compute {
 	 */
 	public Substring copy() {
 		return Substring.builder().type(type).column(column).start(start).length(length).build();
+	}
+
+	@Override
+	public ContentType getInputContentType() {
+		return column == null ? ContentType.TEXT : ContentType.TABLE;
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		return column == null ? ContentType.TEXT : ContentType.TABLE;
 	}
 
 	@Override

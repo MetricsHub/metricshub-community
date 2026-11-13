@@ -1442,12 +1442,22 @@ public class ComputeProcessor implements IComputeProcessor {
 		final String strToReplace = replace.getExistingValue();
 		final String replacement = replace.getNewValue();
 
-		if (columnToReplace == null || strToReplace == null || replacement == null) {
+		if (strToReplace == null || replacement == null) {
 			log.warn(
 				"Hostname {} - Arguments in Compute Operation (Replace): {} are wrong, the table remains unchanged.",
 				hostname,
 				replace
 			);
+			return;
+		}
+
+		if (isContentTypeMismatch(columnToReplace, "Replace")) {
+			return;
+		}
+
+		// No column: every occurrence in the whole text, the values taken literally (a text has no column)
+		if (columnToReplace == null) {
+			sourceTable.setText(sourceTable.getText().replace(strToReplace, replacement));
 			return;
 		}
 
@@ -1621,6 +1631,24 @@ public class ComputeProcessor implements IComputeProcessor {
 	@Override
 	@WithSpan("Compute Substring Exec")
 	public void process(@SpanAttribute("compute.definition") final Substring substring) {
+		if (substring != null && isContentTypeMismatch(substring.getColumn(), "Substring")) {
+			return;
+		}
+
+		// No column: the substring of the whole text, with the start and the end of a cell (a text has no column to
+		// read them from)
+		if (substring != null && substring.getColumn() == null) {
+			final String text = sourceTable.getText();
+			final Integer beginIndex = toSubstringIndex(substring.getStart());
+			final Integer endIndex = toSubstringIndex(substring.getLength());
+			if (checkSubstringArguments(beginIndex, endIndex, text.length())) {
+				sourceTable.setText(text.substring(beginIndex - 1, endIndex));
+			} else {
+				log.warn("Hostname {} - The substring {} is not valid, the text remains unchanged.", hostname, substring);
+			}
+			return;
+		}
+
 		if (!checkSubstring(substring)) {
 			log.warn("Hostname {} - The substring {} is not valid, the table remains unchanged.", hostname, substring);
 			return;
@@ -1642,6 +1670,38 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		performSubstring(substring.getColumn() - 1, start, startColumnIndex, length, lengthColumnIndex);
+	}
+
+	/**
+	 * The start or the end of a substring on a text: a number, never a column reference.
+	 *
+	 * @param value The value as written
+	 * @return the index, null when the value is not a number
+	 */
+	private static Integer toSubstringIndex(final String value) {
+		return value != null && NUMBER_PATTERN.matcher(value).matches() ? transformToIntegerValue(value) : null;
+	}
+
+	/**
+	 * Whether the compute and the result disagree: a compute without column needs a text, a compute with a column
+	 * needs a table. A mismatch is logged, and the caller leaves the result unchanged.
+	 *
+	 * @param column  The column of the compute, null when it works on the whole text
+	 * @param compute The name of the compute in the message
+	 * @return whether the compute cannot run on the result
+	 */
+	private boolean isContentTypeMismatch(final Integer column, final String compute) {
+		if ((column == null) == (sourceTable.getContentType() == ContentType.TEXT)) {
+			return false;
+		}
+		log.warn(
+			"Hostname {} - Compute Operation ({}) {} on a {}, the result remains unchanged.",
+			hostname,
+			compute,
+			column == null ? "without column" : "with a column",
+			column == null ? "table" : "text"
+		);
+		return true;
 	}
 
 	/**
@@ -2216,6 +2276,20 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param abstractConcat
 	 */
 	private void processAbstractConcat(final AbstractConcat abstractConcat) {
+		if (abstractConcat != null && abstractConcat.getValue() != null && sourceTable != null) {
+			if (isContentTypeMismatch(abstractConcat.getColumn(), abstractConcat.getClass().getSimpleName())) {
+				return;
+			}
+
+			// No column: the value before or after the whole text, taken literally (a text has no column)
+			if (abstractConcat.getColumn() == null) {
+				final String text = sourceTable.getText();
+				final String value = abstractConcat.getValue();
+				sourceTable.setText(abstractConcat instanceof Prepend ? value.concat(text) : text.concat(value));
+				return;
+			}
+		}
+
 		boolean firstChecks = abstractConcat != null &&
 			abstractConcat.getValue() != null &&
 			abstractConcat.getColumn() != null &&

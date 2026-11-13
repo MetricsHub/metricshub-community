@@ -207,6 +207,60 @@ class ContentTypeCheckTest {
 		);
 	}
 
+	/**
+	 * <code>append</code>, <code>prepend</code>, <code>replace</code> and <code>substring</code> read a text without
+	 * <code>column</code>, a table with one (#1577).
+	 */
+	@Test
+	void computeWithOrWithoutColumn() throws IOException {
+		assertEquals(
+			// The four computes of "text" give no finding, and leave a text, which the mapping cannot read
+			Set.of(
+				"TABLE_FEEDS_TEXT prepend #0",
+				"TEXT_FEEDS_TABLE append #0",
+				"TEXT_FEEDS_TABLE monitors.thing.simple.mapping"
+			),
+			lines(findings("""
+				monitors:
+				  thing:
+				    simple:
+				      sources:
+				        text:
+				          type: http
+				          url: /
+				          computes:
+				          - type: prepend
+				            value: "Bearer "
+				          - type: append
+				            value: x
+				          - type: replace
+				            existingValue: a
+				            newValue: b
+				          - type: substring
+				            start: 1
+				            length: 2
+				        noColumnOnTable:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1"
+				          computes:
+				          - type: prepend
+				            value: x
+				        columnOnText:
+				          type: http
+				          url: /
+				          computes:
+				          - type: append
+				            column: 1
+				            value: x
+				      mapping:
+				        source: ${source::text}
+				        attributes:
+				          id: $1
+				"""))
+		);
+	}
+
 	@Test
 	void stringLiteralRows() throws IOException {
 		assertEquals(Set.of("STRING_LITERAL_ROWS tables[0]", "STRING_LITERAL_ROWS rightTable"), lines(findings("""

@@ -29,6 +29,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Head;
@@ -36,6 +37,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepCol
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnlyMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
@@ -255,6 +257,103 @@ class SourceTableReadRulesTest {
 					.build()
 			);
 			assertEquals(SourceTable.empty(), sourceTable, compute.toString());
+		}
+	}
+
+	// ---------------------------------------------------------------------------------------------------------------
+	// append, prepend, replace and substring without column, on a text (#1577)
+	// ---------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Runs the compute as a source does, through the updater, on the given result.
+	 */
+	private static SourceTable run(final Compute compute, final SourceTable sourceTable) {
+		compute.accept(
+			ComputeUpdaterProcessor.builder()
+				.computeProcessor(computeProcessor(sourceTable))
+				.telemetryManager(telemetryManager())
+				.connectorId(MY_CONNECTOR_1_NAME)
+				.attributes(Map.of())
+				.build()
+		);
+		return sourceTable;
+	}
+
+	private static SourceTable onText(final Compute compute, final String text) {
+		return run(compute, SourceTable.ofText(text));
+	}
+
+	@Test
+	void computeWithoutColumnAppliesOnceToTheWholeText() {
+		// The value goes before or after the whole text, after its final line ending, with no column reference
+		assertEquals(SourceTable.ofText("Bearer abc"), onText(Prepend.builder().value("Bearer ").build(), "abc"));
+		assertEquals(SourceTable.ofText("$1;a;b\nc;d\n"), onText(Prepend.builder().value("$1;").build(), "a;b\nc;d\n"));
+		assertEquals(SourceTable.ofText("a;b\nc;d\n$2"), onText(Append.builder().value("$2").build(), "a;b\nc;d\n"));
+		assertEquals(SourceTable.ofText("x"), onText(Append.builder().value("x").build(), EMPTY));
+
+		// Every occurrence, on every line, literally: no regular expression, no column reference
+		assertEquals(
+			SourceTable.ofText("a-b\nc-d\n"),
+			onText(Replace.builder().existingValue(";").newValue("-").build(), "a;b\nc;d\n")
+		);
+		assertEquals(
+			SourceTable.ofText("a$1b"),
+			onText(Replace.builder().existingValue(".").newValue("$1").build(), "a.b")
+		);
+		assertEquals(
+			SourceTable.ofText("ab"),
+			onText(Replace.builder().existingValue("$1").newValue(EMPTY).build(), "a$1b")
+		);
+		assertEquals(
+			SourceTable.ofText("a\nb"),
+			onText(Replace.builder().existingValue("\r\n").newValue("\n").build(), "a\r\nb")
+		);
+		// A missing value leaves the text unchanged
+		assertEquals(SourceTable.ofText("a"), onText(Replace.builder().existingValue("a").build(), "a"));
+
+		// As on a cell: start is 1-based, length is the 1-based position of the last character kept
+		assertEquals(SourceTable.ofText("bcd"), onText(Substring.builder().start("2").length("4").build(), "abcdef"));
+		assertEquals(SourceTable.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\nb\nc"));
+		assertEquals(SourceTable.ofText(EMPTY), onText(Substring.builder().start("1").length("0").build(), "abc"));
+		// Out of the text, not a number, a column reference: the text is unchanged
+		for (final Substring invalid : List.of(
+			Substring.builder().start("0").length("2").build(),
+			Substring.builder().start("2").length("7").build(),
+			Substring.builder().start("x").length("2").build(),
+			Substring.builder().start("$1").length("2").build(),
+			Substring.builder().start("1").length("$2").build()
+		)) {
+			assertEquals(SourceTable.ofText("abcdef"), onText(invalid, "abcdef"), invalid.toString());
+		}
+	}
+
+	@Test
+	void computeWithoutColumnLeavesATableUnchanged() {
+		for (final Compute compute : List.of(
+			Prepend.builder().value("x").build(),
+			Append.builder().value("x").build(),
+			Replace.builder().existingValue("a").newValue("b").build(),
+			Substring.builder().start("1").length("1").build()
+		)) {
+			assertEquals(SourceTable.ofTable(table("ab|cd")), run(compute, SourceTable.ofTable(table("ab|cd"))));
+		}
+	}
+
+	/**
+	 * Called without the updater, which gives a table compute on a text an empty table (see
+	 * {@link #tableComputeOnTextGivesAnEmptyTable()}), a compute with a column leaves a text unchanged.
+	 */
+	@Test
+	void computeWithColumnLeavesATextUnchanged() {
+		for (final Compute compute : List.of(
+			Prepend.builder().column(1).value("x").build(),
+			Append.builder().column(1).value("x").build(),
+			Replace.builder().column(1).existingValue("a").newValue("b").build(),
+			Substring.builder().column(1).start("1").length("1").build()
+		)) {
+			final SourceTable sourceTable = SourceTable.ofText("ab");
+			compute.accept(computeProcessor(sourceTable));
+			assertEquals(SourceTable.ofText("ab"), sourceTable, compute.toString());
 		}
 	}
 
