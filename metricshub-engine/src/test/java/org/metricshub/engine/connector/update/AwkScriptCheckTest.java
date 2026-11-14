@@ -19,6 +19,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -160,7 +161,26 @@ class AwkScriptCheckTest {
 		assertFalse(AwkScriptCheck.holdsReference("${file::script.awk}"));
 		assertFalse(AwkScriptCheck.holdsReference("BEGIN { args[\"header\"] = \"${file::header.txt}\" }"));
 		assertFalse(AwkScriptCheck.holdsReference("{ print $1 }"));
+		assertFalse(AwkScriptCheck.holdsReference("# Not ${attribute::id}\n  # nor ${param::days}\n{ print $1 }"));
+		assertTrue(AwkScriptCheck.holdsReference("# A comment\n{ print \"${attribute::id}\" }"));
 		assertFalse(AwkScriptCheck.holdsReference(null));
+	}
+
+	/**
+	 * The code that is checked is the one that runs: the embedded file the <code>script</code> property names.
+	 */
+	@Test
+	void testHoldsReferenceInTheEmbeddedFile() {
+		final Connector connector = new Connector();
+		connector.setEmbeddedFiles(
+			Map.of(1, EmbeddedFile.fromString("BEGIN { days = ${param::days} }"), 2, EmbeddedFile.fromString("{ print $1 }"))
+		);
+		assertTrue(AwkScriptCheck.holdsReference("${file::1}", connector));
+		assertFalse(AwkScriptCheck.holdsReference("${file::2}", connector));
+		assertTrue(AwkScriptCheck.holdsReference("{ print \"${attribute::id}\" }", connector));
+		// A file the connector does not have is reported when the script runs
+		assertFalse(AwkScriptCheck.holdsReference("${file::3}", connector));
+		assertFalse(AwkScriptCheck.holdsReference(null, connector));
 	}
 
 	/**

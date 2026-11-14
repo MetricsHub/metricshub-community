@@ -52,7 +52,7 @@ class AwkCompilationCorpusTest {
 							compiled[0]++;
 							compile(connector, awk.getScript(), AwkExecutor.getUtilityEngine(), where, failures);
 							// No reference is replaced in a script: it gets its values through its variables
-							if (AwkScriptCheck.holdsReference(awk.getScript())) {
+							if (AwkScriptCheck.holdsReference(awk.getScript(), connector)) {
 								failures.add(where + " (a reference in the script)");
 							}
 						}

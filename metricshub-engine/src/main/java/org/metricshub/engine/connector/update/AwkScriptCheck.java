@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 
 /**
  * Checks the AWK scripts of the <code>awk</code> computes when the connector loads: a script is code, compiled once
@@ -45,13 +46,40 @@ public class AwkScriptCheck extends AbstractConnectorUpdateChain {
 	private static final Pattern REFERENCE = Pattern.compile("\\$\\{(?!file::)[^{}]*::", Pattern.CASE_INSENSITIVE);
 
 	/**
+	 * A line that is only a comment: a comment may name a reference.
+	 */
+	private static final Pattern COMMENT_LINE = Pattern.compile("(?m)^[ \\t]*#.*$");
+
+	/**
 	 * Whether the script of an <code>awk</code> compute holds a reference, which is not replaced in a script.
 	 *
 	 * @param script The <code>script</code> property
 	 * @return whether it holds a reference
 	 */
 	public static boolean holdsReference(final String script) {
-		return script != null && REFERENCE.matcher(script).find();
+		return script != null && REFERENCE.matcher(COMMENT_LINE.matcher(script).replaceAll("")).find();
+	}
+
+	/**
+	 * Whether the script of an <code>awk</code> compute holds a reference: the code itself, or the code of the
+	 * embedded file the <code>script</code> property names.
+	 *
+	 * @param script    The <code>script</code> property
+	 * @param connector The connector, whose embedded files hold the script when the property names one
+	 * @return whether the code holds a reference
+	 */
+	public static boolean holdsReference(final String script, final Connector connector) {
+		if (script == null) {
+			return false;
+		}
+		try {
+			return EmbeddedFileHelper.findScript(script, connector::getEmbeddedFiles, "n/a", "n/a")
+				.map(file -> holdsReference(file.getContentAsString()))
+				.orElse(false);
+		} catch (RuntimeException e) {
+			// A script that names no known file is reported when it runs
+			return false;
+		}
 	}
 
 	@Override
@@ -61,7 +89,7 @@ public class AwkScriptCheck extends AbstractConnectorUpdateChain {
 				return;
 			}
 			for (final Compute compute : source.getComputes()) {
-				if (compute instanceof Awk awk && holdsReference(awk.getScript())) {
+				if (compute instanceof Awk awk && holdsReference(awk.getScript(), connector)) {
 					log.error(
 						"Connector {} - Source {} - The AWK script holds a reference, which is not replaced in a script:" +
 							" pass the value through the variables of the awk compute.",
