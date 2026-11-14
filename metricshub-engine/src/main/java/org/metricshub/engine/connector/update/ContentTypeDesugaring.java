@@ -84,6 +84,10 @@ import org.metricshub.engine.connector.model.tool.ConnectorTool;
  * <li>a text compute that parses a text (<code>json2Table</code>, <code>json2List</code>, <code>xml2Csv</code>) fed
  * by a table producer
  * finds nothing to parse and leaves the table unchanged: nothing is inserted, the case is reported;</li>
+ * <li>an <code>append</code>, <code>prepend</code>, <code>replace</code> or <code>substring</code> works on the
+ * content it is fed and leaves its type as it is: nothing is ever inserted before it. The content-type check
+ * reports a <code>column</code> on a text and a missing <code>column</code> on a table, and the compute then leaves
+ * the content unchanged;</li>
  * <li>a <code>copy</code> source produces what its origin's chain produces: its type and producer are resolved from
  * the origin (declared as a table when the origin cannot be resolved).</li>
  * </ul>
@@ -287,7 +291,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			if (isGenerated(compute)) {
 				continue;
 			}
-			final ContentType type = compute.getOutputContentType();
+			final ContentType type = compute.getOutputContentType(state.type());
 			final TextProducer producer;
 			if (type != ContentType.TEXT) {
 				producer = TextProducer.NONE;
@@ -382,11 +386,14 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 	 * text (a copy: what its origin's chain produces).
 	 */
 	private static boolean endsInText(final Source source, final Map<String, Source> sources) {
-		if (source.getComputes() != null && !source.getComputes().isEmpty()) {
-			return source.getComputes().get(source.getComputes().size() - 1).getOutputContentType() == ContentType.TEXT;
+		// The type flows through the computes: a compute such as an append without column leaves it as it is
+		ContentType type = start(source, sources, new HashSet<>(), null).type();
+		if (source.getComputes() != null) {
+			for (final Compute compute : source.getComputes()) {
+				type = compute.getOutputContentType(type);
+			}
 		}
-		final State state = start(source, sources, new HashSet<>(), null);
-		return state.type() == ContentType.TEXT;
+		return type == ContentType.TEXT;
 	}
 
 	/**
@@ -597,7 +604,7 @@ public class ContentTypeDesugaring extends AbstractConnectorUpdateChain {
 			}
 			desugared.add(compute);
 
-			current = compute.getOutputContentType();
+			current = compute.getOutputContentType(current);
 			if (current != ContentType.TEXT) {
 				producer = TextProducer.NONE;
 			} else if (compute instanceof Awk) {

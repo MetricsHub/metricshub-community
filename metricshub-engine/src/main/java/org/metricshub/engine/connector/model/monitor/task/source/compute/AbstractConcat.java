@@ -33,6 +33,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 
 /**
  * An abstract class representing a computation operation for concatenation. Subclasses should provide specific
@@ -43,15 +44,13 @@ import lombok.NonNull;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public abstract class AbstractConcat extends Compute {
+public abstract class AbstractConcat extends Compute implements TextOrColumnCompute {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The column index for concatenation.
+	 * The column index for concatenation, null to work on the whole text of a text result.
 	 */
-	@NonNull
-	@JsonSetter(nulls = FAIL)
 	protected Integer column;
 
 	/**
@@ -70,6 +69,25 @@ public abstract class AbstractConcat extends Compute {
 		super(type);
 		this.column = column;
 		this.value = value;
+	}
+
+	/**
+	 * None: the compute works on the content it is fed, a text as a whole or a column of a table. Nothing is ever
+	 * converted for it.
+	 *
+	 * @return null
+	 */
+	@Override
+	public ContentType getInputContentType() {
+		return null;
+	}
+
+	/**
+	 * The compute does not change the type of the content: a text stays a text, a table stays a table.
+	 */
+	@Override
+	public ContentType getOutputContentType(final ContentType input) {
+		return input;
 	}
 
 	@Override
