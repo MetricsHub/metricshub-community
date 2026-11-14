@@ -20,6 +20,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.mockito.ArgumentCaptor;
@@ -51,15 +52,15 @@ class MetricsHubExtensionForJawkTest {
 	 * An extension whose HTTP requests give the specified result.
 	 */
 	/**
-	 * The result of a HTTP request asked with its status: the status line, a header, an empty line, the body.
+	 * The response to a HTTP request: its status, a header, the body.
 	 */
-	private static SourceTable answer(final int status, final String body) {
-		return SourceTable.ofText("Status: " + status + "\nContent-Type: application/json\n\n" + body);
+	private static HttpResult answer(final int status, final String body) {
+		return new HttpResult(status, "Content-Type: application/json\n", body);
 	}
 
-	private static MetricsHubExtensionForJawk httpGiving(final SourceTable result) {
+	private static MetricsHubExtensionForJawk httpGiving(final HttpResult result) {
 		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
-		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(result);
+		when(sourceProcessor.executeHttpRequest(any(HttpSource.class))).thenReturn(result);
 		return MetricsHubExtensionForJawk.builder().hostname("host").sourceProcessor(sourceProcessor).build();
 	}
 
@@ -109,14 +110,18 @@ class MetricsHubExtensionForJawkTest {
 			"""));
 	}
 
+	/**
+	 * A property of the parent of an entry, which the events parser reads too.
+	 */
 	@Test
-	void testJson2TableEventsParsingMode() throws Exception {
-		assertEquals(
-			"2 a;b 10\n",
-			run(
-				"BEGIN { n = json2Table(json, \"/items\", \"name;value\", rows, \"Events\"); print n, rows[0][1], rows[1][2] }"
-			)
-		);
+	void testJson2TableParentProperty() throws Exception {
+		assertEquals("2 g1 x g1 y\n", run("""
+			BEGIN {
+				doc = "{\\"groups\\":[{\\"id\\":\\"g1\\",\\"members\\":[{\\"name\\":\\"x\\"},{\\"name\\":\\"y\\"}]}]}"
+				n = json2Table(doc, "/groups/members", "../id;name", rows)
+				print n, rows[0][1], rows[0][2], rows[1][1], rows[1][2]
+			}
+			"""));
 	}
 
 	@Test
@@ -213,7 +218,7 @@ class MetricsHubExtensionForJawkTest {
 		assertEquals("200 0\n", run(script, httpGiving(answer(200, "{\"status\":\"ok\"}<html>proxy error</html>"))));
 		assertEquals("200 1\n", run(script, httpGiving(answer(200, "{\"status\":\"ok\"} \n"))));
 		assertEquals("200 0\n", run(script, httpGiving(answer(200, ""))));
-		assertEquals("0 0\n", run(script, httpGiving(SourceTable.empty())));
+		assertEquals("0 0\n", run(script, httpGiving(null)));
 	}
 
 	@Test
@@ -224,16 +229,8 @@ class MetricsHubExtensionForJawkTest {
 		// A refused request is not an empty answer: the status says so, and the body says why
 		assertEquals("401 bad token\n", run(script, httpGiving(answer(401, "{\"error\":\"bad token\"}"))));
 		assertEquals("204 \n", run(script, httpGiving(answer(204, ""))));
-		assertEquals("200 \n", run(script, httpGiving(SourceTable.ofText("Status: 200\n\n{}"))));
-		assertEquals("404 \n", run(script, httpGiving(SourceTable.ofText("Status: 404"))));
-
-		// The request asks for the status and the response, whatever resultContent the script gave
-		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
-		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(answer(200, "{}"));
-		run(script, MetricsHubExtensionForJawk.builder().hostname("host").sourceProcessor(sourceProcessor).build());
-		final ArgumentCaptor<HttpSource> source = ArgumentCaptor.forClass(HttpSource.class);
-		verify(sourceProcessor).process(source.capture());
-		assertEquals(ResultContent.ALL_WITH_STATUS, source.getValue().getResultContent());
+		assertEquals("200 \n", run(script, httpGiving(answer(200, "{}"))));
+		assertEquals("404 \n", run(script, httpGiving(answer(404, null))));
 	}
 
 	@Test

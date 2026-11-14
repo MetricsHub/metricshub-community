@@ -63,7 +63,9 @@ import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.extension.ICompositeSourceScriptExtension;
+import org.metricshub.engine.extension.IHttpRequestExtension;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.ISourceComputationExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -137,6 +139,21 @@ public class SourceProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") final HttpSource httpSource) {
 		return processSourceThroughExtension(httpSource);
+	}
+
+	/**
+	 * Executes the HTTP request of a source and gives the response itself, with its status code, where
+	 * {@link #process(HttpSource)} gives the text the source asks for.
+	 *
+	 * @param httpSource The request.
+	 * @return The response, <code>null</code> when the request got none or when no extension executes it.
+	 */
+	public HttpResult executeHttpRequest(final HttpSource httpSource) {
+		return extensionManager.findSourceExtension(httpSource, telemetryManager)
+			.filter(IHttpRequestExtension.class::isInstance)
+			.map(IHttpRequestExtension.class::cast)
+			.map(extension -> extension.executeHttpRequest(httpSource, connectorId, telemetryManager))
+			.orElse(null);
 	}
 
 	/**

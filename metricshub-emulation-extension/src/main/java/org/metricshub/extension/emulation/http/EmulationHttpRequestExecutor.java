@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
@@ -63,10 +64,39 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	private final EmulationRoundRobinManager roundRobinManager;
 	private final EmulationImageCacheManager imageCacheManager;
 
+	/**
+	 * The recorded response to the request, read back from the text it was recorded as: the response with its
+	 * status.
+	 */
+	@Override
+	public HttpResult executeHttpRequest(
+		final HttpRequest httpRequest,
+		final boolean logMode,
+		final TelemetryManager telemetryManager
+	) {
+		return HttpResult.parse(readRecordedResponse(httpRequest, ResultContent.ALL_WITH_STATUS, telemetryManager));
+	}
+
 	@Override
 	public String executeHttp(
 		final HttpRequest httpRequest,
 		final boolean logMode,
+		final TelemetryManager telemetryManager
+	) {
+		return readRecordedResponse(httpRequest, httpRequest.getResultContent(), telemetryManager);
+	}
+
+	/**
+	 * Reads the response recorded for the request and the result content.
+	 *
+	 * @param httpRequest      The request.
+	 * @param resultContent    The result content the response was recorded with.
+	 * @param telemetryManager The telemetry manager, which gives the emulation configuration.
+	 * @return The recorded text, <code>null</code> when there is none.
+	 */
+	private String readRecordedResponse(
+		final HttpRequest httpRequest,
+		final ResultContent resultContent,
 		final TelemetryManager telemetryManager
 	) {
 		final EmulationConfiguration emulationConfiguration = (EmulationConfiguration) telemetryManager
@@ -144,7 +174,6 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 				httpRequest.getHostname()
 			)
 			: Collections.emptyMap();
-		final ResultContent resultContent = httpRequest.getResultContent();
 
 		// Find all matching entries
 		final List<HttpEmulationEntry> matchingEntries = findMatchingEntries(

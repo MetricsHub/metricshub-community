@@ -38,6 +38,7 @@ import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.utils.RetryOperation;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.Body;
@@ -74,6 +75,61 @@ public class HttpRequestExecutor {
 		@SpanAttribute("http.config") @NonNull HttpRequest httpRequest,
 		final boolean logMode,
 		final TelemetryManager telemetryManager
+	) {
+		final ResultContent resultContent = httpRequest.getResultContent();
+		return toText(execute(httpRequest, logMode, telemetryManager, resultContent), resultContent);
+	}
+
+	/**
+	 * Executes the given HTTP request and gives the response itself: its status code, its header and its body,
+	 * whatever the result content of the request.
+	 *
+	 * @param httpRequest      The {@link HttpRequest} values.
+	 * @param logMode          Whether or not logging is enabled.
+	 * @param telemetryManager The telemetry manager providing access to host configuration.
+	 * @return The response, <code>null</code> when the request got none.
+	 */
+	@WithSpan("HTTP")
+	public HttpResult executeHttpRequest(
+		@SpanAttribute("http.config") @NonNull HttpRequest httpRequest,
+		final boolean logMode,
+		final TelemetryManager telemetryManager
+	) {
+		// Recorded whole, with its status
+		return execute(httpRequest, logMode, telemetryManager, ResultContent.ALL_WITH_STATUS);
+	}
+
+	/**
+	 * The text an HTTP request gives: the part of the response its result content names. The response to a refused
+	 * request (400 and above) is an empty text, except for who asks for the status.
+	 *
+	 * @param response      The response, <code>null</code> when the request got none
+	 * @param resultContent Which part of the response to return
+	 * @return The text, <code>null</code> without a response
+	 */
+	static String toText(final HttpResult response, final ResultContent resultContent) {
+		if (response == null) {
+			return null;
+		}
+		return response.statusCode() >= HTTP_BAD_REQUEST && resultContent != ResultContent.ALL_WITH_STATUS
+			? EMPTY
+			: response.toText(resultContent);
+	}
+
+	/**
+	 * Executes the given HTTP request, retries it when the server asks to, and records the exchange.
+	 *
+	 * @param httpRequest      The {@link HttpRequest} values.
+	 * @param logMode          Whether or not logging is enabled.
+	 * @param telemetryManager The telemetry manager providing access to host configuration.
+	 * @param resultContent    The part of the response that is recorded.
+	 * @return The response, <code>null</code> when the request got none.
+	 */
+	private HttpResult execute(
+		final HttpRequest httpRequest,
+		final boolean logMode,
+		final TelemetryManager telemetryManager,
+		final ResultContent resultContent
 	) {
 		final HttpConfiguration httpConfiguration = httpRequest.getHttpConfiguration();
 		notNull(httpConfiguration, PROTOCOL_CANNOT_BE_NULL);
@@ -166,15 +222,14 @@ public class HttpRequestExecutor {
 			)
 		);
 
-		// What the server answered when it asked for a retry, for whoever asked for the status
-		final AtomicReference<String> retriedResponse = new AtomicReference<>();
+		// What the server answered when it asked for a retry
+		final AtomicReference<HttpResult> retriedResponse = new AtomicReference<>();
 
-		final String retried = RetryOperation.<String>builder()
+		final HttpResult retried = RetryOperation.<HttpResult>builder()
 			.withDescription(String.format("%s %s", method, fullUrl))
 			.withWaitStrategy((int) telemetryManager.getHostConfiguration().getRetryDelay())
 			.withMaxRetries(1)
 			.withHostname(hostname)
-			.withDefaultValue(EMPTY)
 			.build()
 			.run(
 				() -> doHttpRequest(
@@ -197,8 +252,9 @@ public class HttpRequestExecutor {
 				)
 			);
 
-		// The retries are exhausted and the server still answers with an error: that answer is the result
-		final String result = EMPTY.equals(retried) && retriedResponse.get() != null ? retriedResponse.get() : retried;
+		// The retries are exhausted and the server still answers with an error: that answer is the response
+		final HttpResult response = retried != null ? retried : retriedResponse.get();
+		final String result = toText(response, resultContent);
 
 		// Record the HTTP exchange if recording is enabled
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
@@ -221,18 +277,10 @@ public class HttpRequestExecutor {
 				: body.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
 
 			HttpRecorder.getInstance(recordOutputDirectory)
-				.record(
-					method,
-					httpRequestPath,
-					httpRequestUrl,
-					recordBody,
-					recordHeaders,
-					httpRequest.getResultContent(),
-					result
-				);
+				.record(method, httpRequestPath, httpRequestUrl, recordBody, recordHeaders, resultContent, result);
 		}
 
-		return result;
+		return response;
 	}
 
 	/**
@@ -253,11 +301,10 @@ public class HttpRequestExecutor {
 	 * @param path                    The HTTP URL path
 	 * @param protocol               The protocol: http or https
 	 * @param fullUrl                The full HTTP URL. E.g. <pre>http://www.example.com:1080/api/v1/examples</pre>
-	 * @param retriedResponse        Receives the status and the response of a request that is retried, when the
-	 *                               result content is the response with its status
-	 * @return String value
+	 * @param retriedResponse        Receives the response of a request that is retried
+	 * @return The response, <code>null</code> when the request got none
 	 */
-	private String doHttpRequest(
+	private HttpResult doHttpRequest(
 		final ResultContent resultContent,
 		final boolean logMode,
 		final HttpConfiguration httpConfiguration,
@@ -273,8 +320,10 @@ public class HttpRequestExecutor {
 		final String path,
 		final String protocol,
 		final String fullUrl,
-		final AtomicReference<String> retriedResponse
+		final AtomicReference<HttpResult> retriedResponse
 	) {
+		// The response of a previous attempt is not the response of this one
+		retriedResponse.set(null);
 		try {
 			final long startTime = System.currentTimeMillis();
 
@@ -292,8 +341,10 @@ public class HttpRequestExecutor {
 			// Compute the response time
 			final long responseTime = System.currentTimeMillis() - startTime;
 
-			// The request returned an error
 			final int statusCode = httpResponse.getStatusCode();
+			final HttpResult result = new HttpResult(statusCode, httpResponse.getHeader(), httpResponse.getBody());
+
+			// The request returned an error
 			if (statusCode >= HTTP_BAD_REQUEST) {
 				log.warn("Hostname {} - Bad response for HTTP request {} {}: {}.", hostname, method, fullUrl, statusCode);
 
@@ -303,38 +354,9 @@ public class HttpRequestExecutor {
 				// 504 Gateway Timeout
 				// 507 Insufficient Storage
 				if (statusCode == 500 || statusCode == 503 || statusCode == 504 || statusCode == 507) {
-					if (resultContent == ResultContent.ALL_WITH_STATUS) {
-						retriedResponse.set("Status: %s\n%s".formatted(statusCode, httpResponse.toString())); // NOSONAR
-					}
+					retriedResponse.set(result);
 					throw new RetryableException();
 				}
-
-				// Whoever asked for the status gets it, with what the server answered: a 401 is not a missing answer
-				if (resultContent != ResultContent.ALL_WITH_STATUS) {
-					return "";
-				}
-			}
-
-			// The request has been successful
-			String result;
-			switch (resultContent) {
-				case BODY:
-					result = httpResponse.getBody();
-					break;
-				case HEADER:
-					result = httpResponse.getHeader();
-					break;
-				case HTTP_STATUS:
-					result = String.valueOf(statusCode);
-					break;
-				case ALL:
-					result = httpResponse.toString();
-					break;
-				case ALL_WITH_STATUS:
-					result = "Status: %s\n%s".formatted(statusCode, httpResponse.toString()); // NOSONAR
-					break;
-				default:
-					throw new IllegalArgumentException("Unsupported ResultContent: " + resultContent);
 			}
 
 			LoggingHelper.logWithHiddenPassword(

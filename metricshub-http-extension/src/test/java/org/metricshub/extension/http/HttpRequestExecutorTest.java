@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.http.HttpClient;
@@ -164,6 +165,12 @@ class HttpRequestExecutorTest {
 					} else {
 						assertEquals("", result, status + " " + resultContent.name());
 					}
+
+					// The response itself has its status, whatever the result content
+					assertEquals(
+						new HttpResult(status, httpResponse.getHeader(), "{\"error\":\"bad token\"}"),
+						new HttpRequestExecutor().executeHttpRequest(request, true, telemetryManager)
+					);
 				}
 			}
 		}

@@ -25,22 +25,17 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import io.jawk.ext.AbstractExtension;
 import io.jawk.ext.JawkExtension;
 import io.jawk.ext.annotations.JawkAssocArray;
 import io.jawk.ext.annotations.JawkFunction;
-import io.jawk.ext.annotations.JawkOptional;
 import io.jawk.jrt.AssocArray;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -50,7 +45,6 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -58,7 +52,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
@@ -74,17 +68,10 @@ import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 public class MetricsHubExtensionForJawk extends AbstractExtension {
 
 	/**
-	 * The result of a HTTP request asked with its status: "Status: 200", the header lines, an empty line, the body
-	 */
-	private static final Pattern STATUS_AND_BODY = Pattern.compile(
-		"(?s)Status: (\\d+)(?:\\n(?:[^\\n]+\\n)*\\n(.*))?\\n?"
-	);
-
-	/**
 	 * Reads the JSON result of a HTTP request: anything after the document is an error
 	 */
 	private static final ObjectReader JSON_READER = JsonHelper.buildObjectMapper()
-		.reader()
+		.readerFor(Object.class)
 		.with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
 	@EqualsAndHashCode.Exclude
@@ -200,7 +187,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * body of an error response is parsed too: it often says why.
 	 *
 	 * @param argMap   The array of arguments to use to create the {@link HttpSource}. Its <code>resultContent</code>
-	 *                 is ignored: the function reads the status and the body.
+	 *                 plays no part: the function reads the status and the body of the response.
 	 * @param response The array to fill with the document. It is emptied first, and stays empty when the body is
 	 *                 not a JSON object or array.
 	 * @return The HTTP status code of the response (200, 401, ...), 0 when the request got no response.
@@ -211,26 +198,22 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		final @JawkAssocArray Map<Object, Object> response
 	) {
 		response.clear();
-		final HttpSource source = Source.fromMap(HttpSource.class, argMap);
-		source.setResultContent(ResultContent.ALL_WITH_STATUS);
-
-		// "Status: 200", the header lines, an empty line, the body
-		final Matcher result = STATUS_AND_BODY.matcher(executeSource(source));
-		if (!result.matches()) {
+		final HttpResult result = sourceProcessor.executeHttpRequest(Source.fromMap(HttpSource.class, argMap));
+		if (result == null) {
 			return 0;
 		}
-		final int status = Integer.parseInt(result.group(1));
-		final String body = result.group(2) == null ? "" : result.group(2);
-		if (body.isBlank()) {
-			return status;
+		final String body = result.body();
+		if (body == null || body.isBlank()) {
+			return result.statusCode();
 		}
 		try {
-			final JsonNode document = JSON_READER.readTree(body);
-			if (document == null || !document.isContainerNode()) {
+			// Jackson gives the maps, the lists and the values that Jawk reads
+			final Object document = JSON_READER.readValue(body);
+			if (document instanceof Map || document instanceof List) {
+				fill(response, document);
+			} else {
 				log.warn("Hostname {} - executeHttpJsonRequest: the body is not a JSON object or array.", hostname);
-				return status;
 			}
-			fill(response, toAwkValue(document));
 		} catch (JsonProcessingException e) {
 			// The kind and the location only: the message of the parser quotes the document
 			log.warn(
@@ -240,7 +223,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 				e.getLocation() != null ? e.getLocation().offsetDescription() : "no location"
 			);
 		}
-		return status;
+		return result.statusCode();
 	}
 
 	/**
@@ -252,7 +235,6 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @param entryKey    The path of the entries, such as <code>/Members</code>.
 	 * @param properties  The properties to extract from each entry, separated by ";".
 	 * @param rows        The array to fill with the rows. It is emptied first.
-	 * @param parsingMode Optional: "tree" (the default) or "events", see {@link Json2Csv.ParsingMode}.
 	 * @return The number of rows.
 	 */
 	@JawkFunction("json2Table")
@@ -260,8 +242,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		final Object json,
 		final Object entryKey,
 		final Object properties,
-		final @JawkAssocArray Map<Object, Object> rows,
-		final @JawkOptional Object parsingMode
+		final @JawkAssocArray Map<Object, Object> rows
 	) {
 		rows.clear();
 		try {
@@ -271,7 +252,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 					toAwkString(json),
 					toAwkString(entryKey),
 					Arrays.asList(toAwkString(properties).split(";")),
-					parsingMode != null && Json2Csv.ParsingMode.EVENTS.name().equalsIgnoreCase(toAwkString(parsingMode)),
+					// Read as a stream of events: the same rows, without the whole document as a tree in memory
+					true,
 					hostname
 				)
 			);
@@ -329,40 +311,6 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 				getJrt()::toInputScalar
 			)
 		);
-	}
-
-	/**
-	 * Convert a JSON value to what an AWK script reads: a {@link Map} for an object, a {@link List} for an array, a
-	 * number for a number, 1 or 0 for a boolean, an empty string for <code>null</code>.
-	 * <p>
-	 * Jackson's own conversion (<code>readValue(json, Object.class)</code>) gives the maps and the lists, but a
-	 * {@link Boolean} among their values stops a Jawk script ("Unknown operand_stack type", jawkio/jawk#654): this
-	 * method can go once Jawk takes a Boolean. A number is limited to what Jawk computes with, a 64-bit integer or a
-	 * double (jawkio/jawk#456 for more).
-	 *
-	 * @param node The JSON value.
-	 * @return The value for AWK.
-	 */
-	private static Object toAwkValue(final JsonNode node) {
-		if (node.isObject()) {
-			final Map<String, Object> map = new LinkedHashMap<>();
-			node.fields().forEachRemaining(field -> map.put(field.getKey(), toAwkValue(field.getValue())));
-			return map;
-		}
-		if (node.isArray()) {
-			final List<Object> list = new ArrayList<>();
-			node.forEach(element -> list.add(toAwkValue(element)));
-			return list;
-		}
-		if (node.isBoolean()) {
-			return node.booleanValue() ? 1L : 0L;
-		}
-		if (node.isNumber()) {
-			return node.isIntegralNumber() && node.canConvertToLong()
-				? (Object) node.longValue()
-				: (Object) node.doubleValue();
-		}
-		return node.isNull() ? "" : node.asText();
 	}
 
 	/**
