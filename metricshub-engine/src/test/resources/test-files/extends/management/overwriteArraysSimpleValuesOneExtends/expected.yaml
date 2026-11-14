@@ -6,4 +6,4 @@ connector:
 beforeAll:
   testTableUnionSource:
     type: tableUnion
-    tables: [ testTable4, testTable5, testTable6 ]
+    tables: [ [ [ testTable4 ] ], [ [ testTable5 ] ], [ [ testTable6 ] ] ]

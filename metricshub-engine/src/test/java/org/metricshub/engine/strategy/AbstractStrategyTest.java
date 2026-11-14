@@ -640,26 +640,20 @@ class AbstractStrategyTest {
 		final TableUnionSource union = TableUnionSource.builder().tables(List.of("${source::a}")).build();
 		final HttpSource http = HttpSource.builder().url("/x").build();
 		final SnmpTableSource snmp = SnmpTableSource.builder().oid("1.3").selectColumns("1").build();
-
-		// A copy or a union of texts answers an empty text: it stays a text, as the desugaring types it
-		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(copy, SourceTable.ofText("")).getContentType());
-		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(union, SourceTable.ofText("")).getContentType());
-		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(copy, SourceTable.empty()).getContentType());
-		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(union, null).getContentType());
-
-		// Any other source is typed by its declaration, whatever it answered
-		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http, SourceTable.empty()).getContentType());
-		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http, null).getContentType());
-		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(snmp, SourceTable.ofText("")).getContentType());
-
-		// A textUnion is a text, whatever it answered
 		final TextUnionSource textUnion = TextUnionSource.builder().texts(List.of("${source::a}")).build();
-		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(textUnion, null).getContentType());
-		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(textUnion, SourceTable.empty()).getContentType());
+
+		// Each source is typed statically: a copy by what it copies, as the load-time check found it
+		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(copy).getContentType());
+		copy.setOutputContentType(ContentType.TEXT);
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(copy).getContentType());
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(copy.copy()).getContentType());
+		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(union).getContentType());
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(http).getContentType());
+		assertEquals(ContentType.TABLE, AbstractStrategy.emptyResult(snmp).getContentType());
+		assertEquals(ContentType.TEXT, AbstractStrategy.emptyResult(textUnion).getContentType());
 
 		// A fresh result every time
-		final SourceTable answered = SourceTable.ofText("");
-		assertFalse(answered == AbstractStrategy.emptyResult(copy, answered));
+		assertFalse(AbstractStrategy.emptyResult(copy) == AbstractStrategy.emptyResult(copy));
 	}
 
 	private void assertConnectorStatus(

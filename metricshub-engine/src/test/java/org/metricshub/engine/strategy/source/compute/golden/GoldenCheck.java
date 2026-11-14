@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -18,8 +17,7 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * Maven, so that several agents rewriting connectors can check them concurrently without sharing a
  * <code>target</code> directory. It runs the same code as {@link ComputeChainGoldenCorpusTest}.
  * <p>
- * Usage: <code>GoldenCheck --root &lt;repository&gt; [--root ...] [--connectors A,B] [--update] [--report]
- * [--pin]</code>
+ * Usage: <code>GoldenCheck --root &lt;repository&gt; [--root ...] [--connectors A,B] [--update] [--pin]</code>
  * <ul>
  * <li><code>--root</code>: a connector repository root (repeatable, community first): each repository is loaded merged
  * with the connector directories of the roots before it (theirs win on a shared path), as the enterprise build
@@ -30,8 +28,6 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * connector carries is a failing difference;</li>
  * <li><code>--update</code>: rewrite the goldens of the selected connectors (the revision pin is left alone: the
  * rewritten goldens are not committed yet);</li>
- * <li><code>--report</code>: print the content-type desugaring report of the selected connectors, then the findings
- * of the load-time content-type check (#1560);</li>
  * <li><code>--pin</code>: once the regenerated goldens are committed, record the current commit of each root in the
  * revision pin ({@link ComputeChainGoldenCorpus#REVISIONS_FILE}) and check nothing.</li>
  * </ul>
@@ -50,7 +46,7 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * <pre>
  * java -cp "target/classes:target/test-classes:$(cat target/cp.txt)" \
  *   org.metricshub.engine.strategy.source.compute.golden.GoldenCheck \
- *   --root ../../metricshub-community-connectors --connectors LinuxService --report
+ *   --root ../../metricshub-community-connectors --connectors LinuxService
  * </pre>
  *
  * On Windows, from Git Bash (<code>cp.txt</code> is written with <code>;</code>):
@@ -58,7 +54,7 @@ import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCo
  * <pre>
  * java -cp "target/classes;target/test-classes;$(cat target/cp.txt)" \
  *   org.metricshub.engine.strategy.source.compute.golden.GoldenCheck \
- *   --root ../../metricshub-community-connectors --connectors LinuxService --report
+ *   --root ../../metricshub-community-connectors --connectors LinuxService
  * </pre>
  */
 public final class GoldenCheck {
@@ -73,14 +69,12 @@ public final class GoldenCheck {
 	 */
 	public static void main(final String[] args) throws IOException {
 		final List<Path> roots = new ArrayList<>();
-		boolean report = false;
 		boolean pin = false;
 		for (int i = 0; i < args.length; i++) {
 			switch (args[i]) {
 				case "--root" -> roots.add(Path.of(args[++i]));
 				case "--connectors" -> System.setProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY, args[++i]);
 				case "--update" -> System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
-				case "--report" -> report = true;
 				case "--pin" -> pin = true;
 				default -> {
 					System.err.println("Unknown argument: " + args[i]);
@@ -89,7 +83,7 @@ public final class GoldenCheck {
 			}
 		}
 		if (roots.isEmpty()) {
-			System.err.println("Usage: GoldenCheck --root <repository> [--connectors A,B] [--update] [--report] [--pin]");
+			System.err.println("Usage: GoldenCheck --root <repository> [--connectors A,B] [--update] [--pin]");
 			System.exit(2);
 		}
 		if (pin) {
@@ -118,19 +112,17 @@ public final class GoldenCheck {
 			System.out.println("Revision pin written to " + ComputeChainGoldenCorpus.REVISIONS_FILE.toAbsolutePath());
 			System.exit(0);
 		}
-		System.exit(run(roots, report) > 0 ? 1 : 0);
+		System.exit(run(roots) > 0 ? 1 : 0);
 	}
 
 	/**
-	 * Checks the selected connectors of the repositories, printing every difference and, when asked, the report.
+	 * Checks the selected connectors of the repositories, printing every difference.
 	 *
 	 * @param roots  The repository roots
-	 * @param report Whether to print the content-type report
 	 * @return the number of failing differences
 	 * @throws IOException when a golden cannot be read or written
 	 */
-	static int run(final List<Path> roots, final boolean report) throws IOException {
-		final Map<Repository, ConnectorStore> stores = new LinkedHashMap<>();
+	static int run(final List<Path> roots) throws IOException {
 		final List<String> allConnectorIds = new ArrayList<>();
 		int failing = 0;
 		final List<Path> existing = new ArrayList<>();
@@ -145,11 +137,10 @@ public final class GoldenCheck {
 		for (final Repository repository : Repository.of(existing)) {
 			final LoadedRepository loaded = ComputeChainGoldenCorpus.load(repository);
 			final ConnectorStore store = loaded.store();
-			stores.put(repository, store);
 			final TreeSet<String> connectorIds = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			connectorIds.addAll(store.getStore().keySet());
 			allConnectorIds.addAll(connectorIds);
-			// A connector file that did not load has no golden, no check and no report: a failure, golden or not (its
+			// A connector file that did not load has no golden and no check: a failure, golden or not (its
 			// golden is kept, even in update mode)
 			allConnectorIds.addAll(loaded.unloaded().keySet());
 			for (final Map.Entry<String, String> unloaded : loaded.unloaded().entrySet()) {
@@ -183,10 +174,6 @@ public final class GoldenCheck {
 		for (final String unknown : ComputeChainGoldenCorpus.unknownSelection(allConnectorIds)) {
 			System.out.println(unknown + ": unknown connector");
 			failing++;
-		}
-		if (report) {
-			System.out.println(ComputeChainGoldenCorpus.contentTypeReport(stores));
-			System.out.println(ComputeChainGoldenCorpus.contentTypeCheckReport(stores));
 		}
 		System.out.println(failing + " failing difference(s)");
 		return failing;

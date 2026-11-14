@@ -277,16 +277,15 @@ class ConnectorParserTest {
 	}
 
 	@Test
-	void testMonitorTaskSourceDepUpdateUseCase12() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement(
-			"connector/management/monitorTaskSourceDep/useCase12"
-		).parse("sourceDep");
-
-		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
-
-		final List<Set<String>> expected = buildUseCase12Dependency();
-
-		assertEquals(expected, monitorJob.getDiscovery().getSourceDep());
+	void testMonitorTaskSourceDepUpdateUseCase12() {
+		// A copy of a source the connector does not have: the connector does not load
+		final IOException error = assertThrows(
+			IOException.class,
+			() -> new ConnectorParserUpdateManagement("connector/management/monitorTaskSourceDep/useCase12").parse(
+				"sourceDep"
+			)
+		);
+		assertTrue(error.getMessage().contains("UNRESOLVED_REFERENCE"), error.getMessage());
 	}
 
 	@Test
@@ -665,37 +664,6 @@ class ConnectorParserTest {
 		expected.add(level1);
 		expected.add(level2);
 		expected.add(level3);
-
-		return expected;
-	}
-
-	private List<Set<String>> buildUseCase12Dependency() {
-		final List<Set<String>> expected = new ArrayList<>();
-		final Set<String> level1 = new HashSet<>();
-		// WBEM queries
-		level1.add("source(1)");
-		level1.add("source(2)");
-		level1.add("source(3)");
-		level1.add("source(6)");
-		// Copy of a bad source
-		level1.add("source(4)");
-
-		final Set<String> level2 = new HashSet<>();
-		// tableUnion of source(2) and source(4)
-		level2.add("source(5)");
-
-		final Set<String> level3 = new HashSet<>();
-		// tableJoin of source(1) and source(5)
-		level3.add("source(7)");
-
-		final Set<String> level4 = new HashSet<>();
-		// tableJoin of source(6) and source(7)
-		level4.add("source(8)");
-
-		expected.add(level1);
-		expected.add(level2);
-		expected.add(level3);
-		expected.add(level4);
 
 		return expected;
 	}

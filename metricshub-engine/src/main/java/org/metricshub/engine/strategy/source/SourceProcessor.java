@@ -442,15 +442,7 @@ public class SourceProcessor implements ISourceProcessor {
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
-		// A text union when every member that holds something is a text: joined as a textUnion joins its members.
-		// Otherwise the rows of the members, copied (a compute on the union must not change them)
-		final boolean textUnion = sourceTablesToConcat.stream()
-			.anyMatch(member -> member.getContentType() == ContentType.TEXT) &&
-			sourceTablesToConcat.stream().allMatch(member -> member.getContentType() == ContentType.TEXT || member.isEmpty());
-		if (textUnion) {
-			return SourceTable.ofText(joinTexts(sourceTablesToConcat));
-		}
-
+		// The rows of the members, copied (a compute on the union must not change them)
 		return SourceTable.ofTable(
 			sourceTablesToConcat.stream()
 				.map(SourceTable::getTable)

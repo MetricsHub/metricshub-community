@@ -77,23 +77,6 @@ class ConversionComputesTest {
 	}
 
 	/**
-	 * The <code>toTable</code> the content-type desugaring inserts after a legacy text producer
-	 * (<code>commandLine</code>, the <code>awk</code> source and compute) converts like a written one: the canonical
-	 * conversion, {@link SourceTable#asTable()}. A table is left as it is.
-	 */
-	@Test
-	void generatedToTableConverts() {
-		final SourceTable sourceTable = SourceTable.ofText("a;b;;\r\n\r\n;\nc");
-		processor(sourceTable).process(ToTable.generated());
-		// One trailing empty cell dropped, the blank line dropped, ";" a row of one empty cell, CRLF stripped
-		assertEquals(SourceTable.ofTable(table("a|b|", "", "c")), sourceTable);
-
-		final SourceTable alreadyATable = SourceTable.ofTable(table("built"));
-		processor(alreadyATable).process(ToTable.generated());
-		assertEquals(SourceTable.ofTable(table("built")), alreadyATable);
-	}
-
-	/**
 	 * A <code>toTable</code> with line filters or a column selection on a table applies them to its text, as the
 	 * legacy toTable did with the raw text of a table (an <code>sql</code> result, a table after a table compute).
 	 */
@@ -113,40 +96,6 @@ class ConversionComputesTest {
 		final SourceTable sourceTable = SourceTable.ofTable(table("a;b|c", "|d"));
 		processor(sourceTable).process(ToText.builder().build());
 		assertEquals(SourceTable.ofText("a,b;c;\n;d;"), sourceTable);
-	}
-
-	/**
-	 * The <code>toText</code> the content-type desugaring inserts before an <code>awk</code> compute fed a table
-	 * converts like a written one: the canonical conversion, {@link SourceTable#asText()}. A text is left as it is.
-	 */
-	@Test
-	void generatedToTextConverts() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("a;b|c"));
-		processor(sourceTable).process(ToText.generated());
-		assertEquals(SourceTable.ofText("a,b;c;"), sourceTable);
-
-		final SourceTable alreadyAText = SourceTable.ofText("raw;text");
-		processor(alreadyAText).process(ToText.generated());
-		assertEquals(SourceTable.ofText("raw;text"), alreadyAText);
-	}
-
-	@Test
-	void generatedToTextThenAwkMatchesExplicitToTextThenAwk() {
-		for (final String script : List.of("{ print }", "BEGIN { }")) {
-			final SourceTable viaGenerated = SourceTable.ofTable(table("a;b|c", "|d"));
-			processor(viaGenerated).process(ToText.generated());
-			processor(viaGenerated).process(Awk.builder().script(script).build());
-
-			final SourceTable viaExplicit = SourceTable.ofTable(table("a;b|c", "|d"));
-			processor(viaExplicit).process(ToText.builder().type("toText").build());
-			processor(viaExplicit).process(Awk.builder().script(script).build());
-
-			assertEquals(viaExplicit, viaGenerated, script);
-		}
-		final SourceTable echoed = SourceTable.ofTable(table("a;b|c", "|d"));
-		processor(echoed).process(ToText.generated());
-		processor(echoed).process(Awk.builder().script("{ print }").build());
-		assertEquals(SourceTable.ofText("a,b;c;\n;d;"), echoed);
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ monitors:
           keyType: WBEM
           defaultRightLine: ;;;;
       mapping:
-        source: ${source::monitors.enclosure.discovery.sources.Source(7)}
+        source: ${source::monitors.enclosure.discovery.sources.source(7)}
         attributes:
           id: $6
           parent: ""
@@ -80,6 +80,6 @@ monitors:
       mapping:
         attributes:
           id: $1 
-        source: ${source::monitors.enclosure.collect.sources.Source(1)}
+        source: ${source::monitors.enclosure.collect.sources.source(1)}
         metrics:
           hw.status: $2

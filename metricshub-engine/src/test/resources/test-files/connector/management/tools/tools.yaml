@@ -27,6 +27,8 @@ tools:
         method: post
         path: /redfish/v1/Systems/1/Actions/ComputerSystem.Reset
         body: '{"ResetType": "${param::mode}", "Comment": "${esc(json)::param::comment}"}'
+        computes:
+        - type: json2Table
       status:
         type: tableUnion
         tables:
