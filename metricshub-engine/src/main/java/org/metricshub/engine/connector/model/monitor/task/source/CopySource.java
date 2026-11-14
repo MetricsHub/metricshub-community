@@ -26,6 +26,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -39,6 +40,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -61,6 +63,14 @@ public class CopySource extends Source {
 	@JsonSetter(nulls = FAIL)
 	@JsonDeserialize(using = NonBlankDeserializer.class)
 	private String from;
+
+	/**
+	 * What the copy produces: the static type the chain of {@link #from} ends in, set when the connector loads
+	 * ({@link org.metricshub.engine.connector.update.ContentTypeCheck}). Never a YAML field.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private ContentType outputContentType = ContentType.TABLE;
 
 	/**
 	 * Constructs a new {@code CopySource} instance with the provided attributes.
@@ -87,7 +97,7 @@ public class CopySource extends Source {
 	}
 
 	public CopySource copy() {
-		return CopySource.builder()
+		final CopySource copy = CopySource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
@@ -95,6 +105,8 @@ public class CopySource extends Source {
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.from(from)
 			.build();
+		copy.setOutputContentType(outputContentType);
+		return copy;
 	}
 
 	@Override

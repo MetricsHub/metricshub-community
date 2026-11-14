@@ -29,6 +29,7 @@ monitors:
           input: ${source::monitors.enclosure.discovery.sources.source(2)}
           script: |
             { print $1 ";" }
+          output: table
       mapping:
         source: ${source::monitors.enclosure.discovery.sources.source(3)}
         attributes:
