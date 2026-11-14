@@ -263,7 +263,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	/**
 	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>:
-	 * the whole first line of a text, without its line ending, or the first cell of a table.
+	 * the whole first line of a text, without its line ending and its trailing separator (see {@link #referenceLine}),
+	 * or the first cell of a table.
 	 *
 	 * @param originalSourceKey The original source key for debugging purposes.
 	 * @param foreignSourceKey  The foreign source key used to extract the token.
@@ -303,9 +304,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		String value = null;
 		if (sourceTable.getContentType() == ContentType.TEXT) {
-			// A text: its whole first line, without its LF or CR LF ending (a lone CR ends no line)
+			// A text: its whole first line, without its LF or CR LF ending (a lone CR ends no line), and without the
+			// trailing separator an awk text output ends the line with, as a reference in a header gives it
 			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			value = sourceTable.getText().split("\r?\n", 2)[0];
+			value = referenceLine(sourceTable.getText().split("\r?\n", 2)[0]);
 		} else if (!sourceTable.getTable().isEmpty()) {
 			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);

@@ -1,7 +1,9 @@
 package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
@@ -15,6 +17,7 @@ import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AwkTest {
 
@@ -41,6 +44,31 @@ class AwkTest {
 		String result = AwkExecutor.executeAwk(script, input);
 		assertEquals(expectedResult, result, "Results don't match for " + testName);
 		AwkExecutor.resetCache();
+	}
+
+	/**
+	 * A script runs in the Jawk sandbox: it cannot run a command, nor read or write a file. The script is rejected
+	 * when it is compiled, whether the statement would be reached or not.
+	 */
+	@ParameterizedTest
+	@ValueSource(
+		strings = {
+			"BEGIN { system(\"echo x\") }",
+			"BEGIN { \"echo x\" | getline line }",
+			"BEGIN { print \"x\" | \"cat\" }",
+			"BEGIN { getline line < \"pom.xml\" }",
+			"BEGIN { print \"x\" > \"target/sandbox.txt\" }",
+			"BEGIN { printf \"x\" >> \"target/sandbox.txt\" }",
+			"BEGIN { if (0) { system(\"echo x\") } }" }
+	)
+	void testSandboxRejectsScript(final String script) {
+		assertThrows(AwkException.class, () -> AwkExecutor.executeAwk(script, ""));
+		assertFalse(new File("target/sandbox.txt").exists());
+	}
+
+	@Test
+	void testSandboxRejectsExpression() {
+		assertThrows(AwkException.class, () -> AwkExecutor.evalAwk("system(\"echo x\")", ""));
 	}
 
 	/**

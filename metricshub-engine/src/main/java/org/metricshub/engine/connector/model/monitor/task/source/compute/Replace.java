@@ -21,20 +21,18 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static com.fasterxml.jackson.annotation.Nulls.FAIL;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -43,15 +41,13 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class Replace extends Compute {
+public class Replace extends Compute implements TextOrColumnCompute {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The column index used in the Replace computation.
+	 * The column index used in the Replace computation, null to work on the whole text of a text result.
 	 */
-	@NonNull
-	@JsonSetter(nulls = FAIL)
 	private Integer column;
 
 	/**
@@ -76,7 +72,7 @@ public class Replace extends Compute {
 	@JsonCreator
 	public Replace(
 		@JsonProperty("type") String type,
-		@JsonProperty(value = "column", required = true) @NonNull Integer column,
+		@JsonProperty(value = "column") Integer column,
 		@JsonProperty(value = "existingValue") String existingValue,
 		@JsonProperty(value = "newValue") String newValue
 	) {
@@ -84,6 +80,25 @@ public class Replace extends Compute {
 		this.column = column;
 		this.existingValue = existingValue;
 		this.newValue = newValue;
+	}
+
+	/**
+	 * None: the compute works on the content it is fed, a text as a whole or a column of a table. Nothing is ever
+	 * converted for it.
+	 *
+	 * @return null
+	 */
+	@Override
+	public ContentType getInputContentType() {
+		return null;
+	}
+
+	/**
+	 * The compute does not change the type of the content: a text stays a text, a table stays a table.
+	 */
+	@Override
+	public ContentType getOutputContentType(final ContentType input) {
+		return input;
 	}
 
 	@Override

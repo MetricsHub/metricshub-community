@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -50,10 +48,6 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
-import org.metricshub.engine.connector.model.ContentTypeFinding;
-import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
-import org.metricshub.engine.connector.model.ContentTypeReportEntry;
-import org.metricshub.engine.connector.model.ContentTypeReportEntry.Kind;
 import org.metricshub.engine.connector.model.IntermediateConnector;
 import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
@@ -76,13 +70,11 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSourc
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.connector.parser.RawConnectorLibraryParser;
-import org.metricshub.engine.connector.update.ContentTypeDesugaring;
+import org.metricshub.engine.connector.update.ContentTypeCheck;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeUpdaterProcessor;
@@ -418,20 +410,13 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * The computes written in the connector, without the conversions inserted by the content-type desugaring step.
+	 * The computes written in the connector.
 	 *
 	 * @param source The source
 	 * @return the explicit computes
 	 */
 	public static List<Compute> explicitComputes(final Source source) {
-		return source.getComputes() == null
-			? List.of()
-			: source.getComputes().stream().filter(compute -> !isGenerated(compute)).toList();
-	}
-
-	private static boolean isGenerated(final Compute compute) {
-		return ((compute instanceof ToTable toTable && toTable.isGenerated()) ||
-			(compute instanceof ToText toText && toText.isGenerated()));
+		return source.getComputes() == null ? List.of() : source.getComputes();
 	}
 
 	/**
@@ -767,80 +752,6 @@ public class ComputeChainGoldenCorpus {
 	}
 
 	/**
-	 * Renders the content-type desugaring report of the selected connectors of each repository: the worklist of
-	 * stage 2 of #1508 and the exit criterion of stage 4.
-	 *
-	 * @param stores The connector store of each repository, in order
-	 * @return the report
-	 */
-	public static String contentTypeReport(final Map<Repository, ConnectorStore> stores) {
-		final StringBuilder report = new StringBuilder();
-		final Map<Kind, Integer> totals = new EnumMap<>(Kind.class);
-		int connectorsWithFindings = 0;
-		for (final Map.Entry<Repository, ConnectorStore> repository : stores.entrySet()) {
-			final Map<Kind, Integer> counts = new EnumMap<>(Kind.class);
-			final Path root = repository.getKey().getRoot();
-			report.append("# ").append(root.toAbsolutePath().normalize()).append('\n');
-			for (final Map.Entry<String, Connector> entry : new TreeMap<>(repository.getValue().getStore()).entrySet()) {
-				final List<ContentTypeReportEntry> findings = entry.getValue().getContentTypeReport();
-				if (findings.isEmpty() || !isSelected(entry.getKey())) {
-					continue;
-				}
-				connectorsWithFindings++;
-				report.append('\n').append(entry.getKey()).append(" (").append(findings.size()).append(")\n");
-				for (final ContentTypeReportEntry finding : findings) {
-					report.append("  ").append(finding).append('\n');
-					counts.merge(finding.kind(), 1, Integer::sum);
-				}
-			}
-			report.append("\nTotals for ").append(root.getFileName()).append(":\n");
-			counts.forEach((kind, count) -> report.append("  ").append(kind).append(": ").append(count).append('\n'));
-			counts.forEach((kind, count) -> totals.merge(kind, count, Integer::sum));
-			report.append('\n');
-		}
-		report.append("Connectors with findings: ").append(connectorsWithFindings).append('\n');
-		totals.forEach((kind, count) -> report.append("  ").append(kind).append(": ").append(count).append('\n'));
-		return report.toString();
-	}
-
-	/**
-	 * Renders the findings of the load-time content-type check of the selected connectors of each repository: the
-	 * worklist of step 2 of #1560, whose exit criterion is an empty list.
-	 *
-	 * @param stores The connector store of each repository, in order
-	 * @return the report
-	 */
-	public static String contentTypeCheckReport(final Map<Repository, ConnectorStore> stores) {
-		final StringBuilder report = new StringBuilder("== Content type check (#1560)\n");
-		final Map<Rule, Integer> totals = new EnumMap<>(Rule.class);
-		int connectorsWithFindings = 0;
-		for (final Map.Entry<Repository, ConnectorStore> repository : stores.entrySet()) {
-			final Map<Rule, Integer> counts = new EnumMap<>(Rule.class);
-			final Path root = repository.getKey().getRoot();
-			report.append("# ").append(root.toAbsolutePath().normalize()).append('\n');
-			for (final Map.Entry<String, Connector> entry : new TreeMap<>(repository.getValue().getStore()).entrySet()) {
-				final List<ContentTypeFinding> findings = entry.getValue().getContentTypeFindings();
-				if (findings.isEmpty() || !isSelected(entry.getKey())) {
-					continue;
-				}
-				connectorsWithFindings++;
-				report.append('\n').append(entry.getKey()).append(" (").append(findings.size()).append(")\n");
-				for (final ContentTypeFinding finding : findings) {
-					report.append("  ").append(finding).append('\n');
-					counts.merge(finding.rule(), 1, Integer::sum);
-				}
-			}
-			report.append("\nCheck totals for ").append(root.getFileName()).append(":\n");
-			counts.forEach((rule, count) -> report.append("  ").append(rule).append(": ").append(count).append('\n'));
-			counts.forEach((rule, count) -> totals.merge(rule, count, Integer::sum));
-			report.append('\n');
-		}
-		report.append("Connectors with check findings: ").append(connectorsWithFindings).append('\n');
-		totals.forEach((rule, count) -> report.append("  ").append(rule).append(": ").append(count).append('\n'));
-		return report.toString();
-	}
-
-	/**
 	 * The golden of one connector: one entry per source holding computes.
 	 */
 	@Data
@@ -1011,33 +922,15 @@ public class ComputeChainGoldenCorpus {
 		}
 
 		/**
-		 * The type a source produces before its computes run, as the engine types it at run time: a copy produces
-		 * what the chain of its origin ends in, a tableUnion a text when the desugaring finds a text union.
+		 * The type a source produces before its computes run, its static type (see
+		 * {@link ContentTypeCheck#startType}).
 		 *
 		 * @param source  The source
 		 * @param sources Every source of the connector
-		 * @param depth   The number of copies followed so far, to stop on a cycle
 		 * @return the type
 		 */
-		static ContentType resultType(final Source source, final Map<String, Source> sources, final int depth) {
-			if (source instanceof CopySource copySource) {
-				final Source origin = copySource.getFrom() == null
-					? null
-					: sources.get(ContentTypeDesugaring.resolveReference(copySource.getFrom(), copySource.getKey(), sources));
-				if (origin == null || depth > 5) {
-					return ContentType.TABLE;
-				}
-				final List<Compute> computes = origin.getComputes();
-				return computes == null || computes.isEmpty()
-					? resultType(origin, sources, depth + 1)
-					: computes.get(computes.size() - 1).getOutputContentType();
-			}
-			if (source instanceof TableUnionSource union) {
-				return ContentTypeDesugaring.isTextUnion(union, sources, new HashSet<>())
-					? ContentType.TEXT
-					: ContentType.TABLE;
-			}
-			return source.getResultContentType();
+		static ContentType resultType(final Source source, final Map<String, Source> sources) {
+			return ContentTypeCheck.startType(source, sources);
 		}
 
 		/**
@@ -1050,7 +943,7 @@ public class ComputeChainGoldenCorpus {
 		public static Map<String, Supplier<SourceTable>> inputsFor(final Source source, final Map<String, Source> sources) {
 			final Map<String, Supplier<Shape>> shapes = new LinkedHashMap<>();
 			addShapes(shapes, source, sources, 0);
-			final ContentType type = resultType(source, sources, 0);
+			final ContentType type = resultType(source, sources);
 			final Map<String, Supplier<SourceTable>> inputs = new LinkedHashMap<>();
 			shapes.forEach((name, shape) -> inputs.put(name, () -> shape.get().as(type)));
 			inputs.put("empty", () -> type == ContentType.TEXT ? SourceTable.ofText("") : SourceTable.empty());
@@ -1093,9 +986,7 @@ public class ComputeChainGoldenCorpus {
 					twins(inputs, "static", table -> csv(table, false));
 				}
 			} else if (source instanceof CopySource copySource) {
-				final Source origin = copySource.getFrom() == null
-					? null
-					: sources.get(ContentTypeDesugaring.resolveReference(copySource.getFrom(), copySource.getKey(), sources));
+				final Source origin = copySource.getFrom() == null ? null : sources.get(copySource.getFrom().trim());
 				if (origin == null || depth > 5) {
 					addDualShapes(inputs);
 				} else if (!explicitComputes(origin).isEmpty()) {

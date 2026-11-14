@@ -9,14 +9,11 @@ monitors:
   plain_number:
     removalDelay: 90
     simple:
-      mapping:
-        source: "${source::monitors.plain_number.simple.sources.source(1)}"
+      mapping: {}
   absent:
     simple:
-      mapping:
-        source: "${source::monitors.absent.simple.sources.source(1)}"
+      mapping: {}
   null_value:
     removalDelay:
     simple:
-      mapping:
-        source: "${source::monitors.null_value.simple.sources.source(1)}"
+      mapping: {}

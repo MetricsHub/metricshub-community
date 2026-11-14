@@ -5,11 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -309,11 +306,11 @@ class ComputeChainGoldenCorpusTest {
 	 * and the text shapes keep their trailing-newline convention.
 	 */
 	@Test
-	void copyWithShortReferenceIsTypedByItsOrigin() {
+	void copyIsTypedByItsOrigin() {
 		final HttpSource http = HttpSource.builder().url("/x").build();
 		http.setKey("${source::monitors.m.discovery.sources.raw}");
 		final CopySource copy = CopySource.builder()
-			.from("${source::raw}")
+			.from("${source::monitors.m.discovery.sources.raw}")
 			.computes(List.of(Append.builder().column(1).value("v").build()))
 			.build();
 		copy.setKey("${source::monitors.m.discovery.sources.copy}");
@@ -324,8 +321,8 @@ class ComputeChainGoldenCorpusTest {
 			copy
 		);
 
-		// The short sibling reference resolves to the http origin: the copy is fed texts, as at run time
-		assertEquals(ContentType.TEXT, Inputs.resultType(copy, sources, 0));
+		// The copy of the http text is fed texts, as at run time
+		assertEquals(ContentType.TEXT, Inputs.resultType(copy, sources));
 		final Map<String, Supplier<SourceTable>> inputs = Inputs.inputsFor(copy, sources);
 		assertTrue(inputs.containsKey("text"), inputs.keySet().toString());
 		assertEquals(SourceTable.ofText(""), inputs.get("empty").get());
@@ -505,56 +502,39 @@ class ComputeChainGoldenCorpusTest {
 
 			// A listed id no connector carries is a failure, not a silent no-op (a misspelt id would pass otherwise)
 			assertEquals(List.of("Other"), ComputeChainGoldenCorpus.unknownSelection(List.of("GoldenA", "GoldenB")));
-			assertEquals(2, GoldenCheck.run(List.of(root), false), "GoldenA has no stored golden, Other is unknown");
+			assertEquals(2, GoldenCheck.run(List.of(root)), "GoldenA has no stored golden, Other is unknown");
 			System.setProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY, "goldena");
 			assertEquals(List.of(), ComputeChainGoldenCorpus.unknownSelection(List.of("GoldenA", "GoldenB")));
 
 			// Nothing stored yet: one failing difference for the selected connector only
-			assertEquals(1, GoldenCheck.run(List.of(root), false));
+			assertEquals(1, GoldenCheck.run(List.of(root)));
 
 			System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
-			assertEquals(0, GoldenCheck.run(List.of(root), false));
+			assertEquals(0, GoldenCheck.run(List.of(root)));
 			assertTrue(Files.exists(goldens.resolve("GoldenA.json")));
 			assertTrue(!Files.exists(goldens.resolve("GoldenB.json")), "not selected: not written");
 			final String written = Files.readString(goldens.resolve("GoldenA.json"));
 			assertTrue(written.contains("\"commandLineWide\""), written);
 			assertTrue(written.contains("\"r1c16\""), written);
 			assertTrue(!written.contains("ending"), "the ending content type is not stored");
-			// One side per output: commandLine produces a text, the generated toTable makes it a table
+			// One side per output: commandLine produces a text, its toTable makes it a table
 			assertTrue(!written.contains("rawData"), written);
 
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
-			// The report ends with the content-type check: GoldenA's append reads the text of its commandLine
-			final PrintStream out = System.out;
-			final ByteArrayOutputStream printed = new ByteArrayOutputStream();
-			System.setOut(new PrintStream(printed, true, StandardCharsets.UTF_8));
-			try {
-				assertEquals(0, GoldenCheck.run(List.of(root), true), "the stored golden matches");
-			} finally {
-				System.setOut(out);
-			}
-			final String report = printed.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
-			final String check = report.substring(report.indexOf("== Content type check (#1560)\n"));
-			assertTrue(
-				check.contains(
-					"\nGoldenA (1)\n  TEXT_FEEDS_TABLE ${source::monitors.thing.simple.sources.s} at append #0: expected TABLE"
-				),
-				check
-			);
-			assertTrue(check.contains("Connectors with check findings: 1\n  TEXT_FEEDS_TABLE: 1\n"), check);
+			assertEquals(0, GoldenCheck.run(List.of(root)), "the stored golden matches");
 
 			System.clearProperty(ComputeChainGoldenCorpus.CONNECTORS_PROPERTY);
 			assertTrue(ComputeChainGoldenCorpus.isSelected("GoldenB"));
-			assertEquals(1, GoldenCheck.run(List.of(root), false), "GoldenB has no stored golden");
+			assertEquals(1, GoldenCheck.run(List.of(root)), "GoldenB has no stored golden");
 			// A golden of a connector that no longer exists: reported, then deleted in update mode
 			Files.copy(goldens.resolve("GoldenA.json"), goldens.resolve("Zombie.json"));
 			assertEquals(
 				List.of("Zombie"),
 				ComputeChainGoldenCorpus.orphanGoldens(Repository.of(root), List.of("GoldenA", "GoldenB"))
 			);
-			assertEquals(2, GoldenCheck.run(List.of(root), false), "GoldenB has no stored golden, Zombie no connector");
+			assertEquals(2, GoldenCheck.run(List.of(root)), "GoldenB has no stored golden, Zombie no connector");
 			System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
-			assertEquals(0, GoldenCheck.run(List.of(root), false));
+			assertEquals(0, GoldenCheck.run(List.of(root)));
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
 			assertTrue(!Files.exists(goldens.resolve("Zombie.json")), "deleted by the update mode");
 
@@ -563,13 +543,13 @@ class ComputeChainGoldenCorpusTest {
 			Files.writeString(root.resolve("Broken.yaml"), "connector: [ not: a valid: connector");
 			Files.copy(goldens.resolve("GoldenA.json"), goldens.resolve("Broken.json"));
 			System.setProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY, "true");
-			assertEquals(3, GoldenCheck.run(List.of(root), false), "Broken, GoldenA and GoldenB did not load");
+			assertEquals(3, GoldenCheck.run(List.of(root)), "Broken, GoldenA and GoldenB did not load");
 			System.clearProperty(ComputeChainGoldenCorpus.UPDATE_PROPERTY);
 			assertTrue(Files.exists(goldens.resolve("Broken.json")), "kept by the update mode");
 			assertTrue(Files.exists(goldens.resolve("GoldenA.json")), "kept by the update mode");
 			Files.delete(root.resolve("Broken.yaml"));
 			Files.delete(goldens.resolve("Broken.json"));
-			assertEquals(0, GoldenCheck.run(List.of(root), false));
+			assertEquals(0, GoldenCheck.run(List.of(root)));
 		} finally {
 			previous.forEach((property, value) -> {
 				if (value == null) {
@@ -638,7 +618,7 @@ class ComputeChainGoldenCorpusTest {
 			System.clearProperty(property);
 		}
 		try {
-			assertEquals(5, GoldenCheck.run(List.of(base, extending), false));
+			assertEquals(5, GoldenCheck.run(List.of(base, extending)));
 			assertEquals(List.of("Thing.json"), fileNames(ComputeChainGoldenCorpus.goldenDirectory(base)));
 			assertEquals(List.of("Broken.json"), fileNames(ComputeChainGoldenCorpus.goldenDirectory(extending)));
 		} finally {
@@ -657,6 +637,8 @@ class ComputeChainGoldenCorpusTest {
 	}
 
 	private static String connectorYaml(final String displayName, final String type, final String fields) {
+		// The append reads a table: a commandLine text is converted first
+		final String toTable = "commandLine".equals(type) ? "- type: toTable\n          " : "";
 		return """
 			connector:
 			  displayName: %s
@@ -673,13 +655,13 @@ class ComputeChainGoldenCorpusTest {
 			          type: %s
 			          %s
 			          computes:
-			          - type: append
+			          %s- type: append
 			            column: 1
 			            value: v
 			      mapping:
 			        source: ${source::s}
 			        attributes:
 			          id: $1
-			""".formatted(displayName, type, fields);
+			""".formatted(displayName, type, fields, toTable);
 	}
 }

@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
 import io.jawk.AwkProgram;
+import io.jawk.SandboxedAwk;
 import io.jawk.ext.GawkExtension;
 import io.jawk.ext.JawkExtension;
 import io.jawk.jrt.InputSource;
@@ -82,7 +83,7 @@ public class AwkExecutor {
 		final List<JawkExtension> all = new ArrayList<>(Arrays.asList(extensions));
 		all.add(UtilityExtensionForJawk.INSTANCE);
 		all.add(new GawkExtension());
-		return new Awk(all, newAwkSettings(fieldSeparator));
+		return new SandboxedAwk(all, newAwkSettings(fieldSeparator));
 	}
 
 	/**

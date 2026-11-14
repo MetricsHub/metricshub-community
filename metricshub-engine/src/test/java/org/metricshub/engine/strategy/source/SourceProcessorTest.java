@@ -566,10 +566,8 @@ class SourceProcessorTest {
 	}
 
 	/**
-	 * The text of a union of text sources, which the awk scripts parsing glued command outputs read: the members'
-	 * texts one after the other, an empty member (text or table) skipped, a line feed added only after a member that
-	 * does not end with one, the blank lines inside a member kept (#1555). A member holding rows makes the union a
-	 * table: the rows of the table members.
+	 * A tableUnion is a table: the rows of its members, a text member reading no rows (the load-time check rejects
+	 * such a member, a textUnion joins texts).
 	 */
 	@Test
 	void testProcessTableUnionSourceText() {
@@ -600,7 +598,7 @@ class SourceProcessorTest {
 		final SourceTable result = sourceProcessor.process(
 			TableUnionSource.builder().tables(Arrays.asList(empty, lines, emptyTable, last)).build()
 		);
-		assertEquals(SourceTable.ofText("x\n\n\ny\nz"), result);
+		assertEquals(SourceTable.ofTable(List.of()), result);
 
 		final SourceTable mixed = sourceProcessor.process(
 			TableUnionSource.builder().tables(Arrays.asList(empty, lines, tableOnly, last)).build()
@@ -609,11 +607,11 @@ class SourceProcessorTest {
 	}
 
 	/**
-	 * The text union adds a line feed only at a join after a member that does not end with one, and never changes
-	 * the inside of a member: its blank lines and its CRLF are kept (#1555).
+	 * The textUnion adds a line feed only at a join after a member that does not end with one, and never changes the
+	 * inside of a member: its blank lines and its CRLF are kept (#1555).
 	 */
 	@Test
-	void testProcessTableUnionSourceTextJoins() {
+	void testProcessTextUnionSourceJoins() {
 		// A blank line inside a member is kept, two stay two
 		assertEquals("a\n\nb\nc", textUnion("a\n\nb", "c"));
 		assertEquals("a\n\n\nb\nc\n", textUnion("a\n\n\nb\n", "c\n"));
@@ -645,7 +643,7 @@ class SourceProcessorTest {
 	}
 
 	/**
-	 * Runs a union of text sources.
+	 * Runs a textUnion of text sources.
 	 *
 	 * @param texts The texts of the members, in order
 	 * @return the text of the union
@@ -669,10 +667,8 @@ class SourceProcessorTest {
 			.clientsExecutor(clientsExecutorMock)
 			.connectorId(MY_CONNECTOR_1_NAME)
 			.build();
-		final SourceTable union = sourceProcessor.process(TableUnionSource.builder().tables(new ArrayList<>(keys)).build());
+		final SourceTable union = sourceProcessor.process(TextUnionSource.builder().texts(keys).build());
 		assertEquals(ContentType.TEXT, union.getContentType());
-		// A textUnion of the same members joins them exactly as the text tableUnion does
-		assertEquals(union, sourceProcessor.process(TextUnionSource.builder().texts(keys).build()));
 		return union.getText();
 	}
 

@@ -27,6 +27,7 @@ import io.jawk.ext.annotations.JawkFunction;
 import io.jawk.jrt.JRT;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -40,6 +41,11 @@ import lombok.EqualsAndHashCode;
 public class UtilityExtensionForJawk extends AbstractExtension {
 
 	public static final UtilityExtensionForJawk INSTANCE = new UtilityExtensionForJawk();
+
+	/**
+	 * The longest pause of one <code>sleep()</code> call, in seconds.
+	 */
+	static final int MAX_SLEEP_SECONDS = 60;
 
 	@Override
 	public String getExtensionName() {
@@ -177,5 +183,30 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 			return "";
 		}
 		return Base64.getEncoder().encodeToString(toAwkString(input).getBytes(StandardCharsets.UTF_8));
+	}
+
+	/**
+	 * Pauses the script, as the <code>sleep()</code> of gawk's time extension does. A script runs in the Jawk sandbox
+	 * and cannot run <code>system("sleep 1")</code>: this is how it waits between two requests.
+	 * <p>
+	 * One call pauses for {@value #MAX_SLEEP_SECONDS} seconds at most, so that a script cannot hold a collect thread
+	 * for hours with a single call.
+	 *
+	 * @param seconds the duration in seconds, which may have a fractional part (<code>0.1</code> is 100 ms)
+	 * @return 0, or -1 when the duration is not a positive number or when the thread is interrupted
+	 */
+	@JawkFunction("sleep")
+	public int sleep(final Object seconds) {
+		final double duration = JRT.toDouble(seconds);
+		if (Double.isNaN(duration) || duration < 0) {
+			return -1;
+		}
+		try {
+			TimeUnit.NANOSECONDS.sleep((long) (Math.min(duration, MAX_SLEEP_SECONDS) * 1_000_000_000L));
+			return 0;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return -1;
+		}
 	}
 }

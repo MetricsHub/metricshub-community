@@ -18,6 +18,8 @@ beforeAll:
   logLines:
     type: file
     paths: /var/log/before.log
+    computes:
+    - type: toTable
   # Union of two inventories, read by the before_all_union job: partB had data in the previous run and fails
   partA:
     type: snmpTable
@@ -169,6 +171,8 @@ monitors:
         source(1):
           type: file
           paths: /var/log/test.log
+          computes:
+          - type: toTable
       mapping:
         source: "${source::monitors.log_file.simple.sources.source(1)}"
         attributes:
@@ -181,6 +185,8 @@ monitors:
           type: file
           paths: /var/test.csv
           mode: flat
+          computes:
+          - type: toTable
       mapping:
         source: "${source::monitors.flat_file.simple.sources.source(1)}"
         attributes:
@@ -192,7 +198,7 @@ monitors:
         source: "${source::monitors.enclosure.simple.sources.source(1)}"
         attributes:
           id: $1
-  # Guard: the mapping source table is not found
+  # Guard: the mapping source table is not found: the source of a tool, which no strategy runs
   missing_source_table:
     simple:
       sources:
@@ -201,7 +207,7 @@ monitors:
           oid: 1.3.6.1.12
           selectColumns: "ID,1"
       mapping:
-        source: "${source::monitors.missing_source_table.simple.sources.source(2)}"
+        source: "${source::tools.unused.sources.table}"
         attributes:
           id: $1
   # Guard: no mapping source
@@ -269,3 +275,11 @@ monitors:
         source: "${source::monitors.connector.simple.sources.source(1)}"
         attributes:
           id: $1
+tools:
+  unused:
+    description: Never run by a strategy
+    sources:
+      table:
+        type: snmpTable
+        oid: 1.3.6.1.12
+        selectColumns: "ID,1"
