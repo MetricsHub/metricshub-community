@@ -44,14 +44,14 @@ public class Prepend extends AbstractConcat {
 	 * Construct a new instance of Prepend.
 	 *
 	 * @param type   The type of the computation task.
-	 * @param column The column index used in the computation.
+	 * @param column The column index used in the computation, null to work on the whole text of a text result.
 	 * @param value  The value to be concatenated.
 	 */
 	@Builder
 	@JsonCreator
 	public Prepend(
 		@JsonProperty("type") String type,
-		@JsonProperty(value = "column", required = true) @NonNull Integer column,
+		@JsonProperty(value = "column") Integer column,
 		@JsonProperty(value = "value", required = true) @NonNull String value
 	) {
 		super(type, column, value);

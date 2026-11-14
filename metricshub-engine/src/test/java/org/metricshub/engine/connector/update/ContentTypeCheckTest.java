@@ -231,6 +231,60 @@ class ContentTypeCheckTest {
 		);
 	}
 
+	/**
+	 * <code>append</code>, <code>prepend</code>, <code>replace</code> and <code>substring</code> work on what they are
+	 * fed: a <code>column</code> on a text and a missing <code>column</code> on a table are reported (#1577).
+	 */
+	@Test
+	void computeWithOrWithoutColumn() throws IOException {
+		assertEquals(
+			// The four computes of "text" give no finding, and leave a text, which the mapping cannot read
+			Set.of(
+				"NO_COLUMN_ON_TABLE prepend #0",
+				"COLUMN_ON_TEXT append #0",
+				"TEXT_FEEDS_TABLE monitors.thing.simple.mapping"
+			),
+			lines(findings("""
+				monitors:
+				  thing:
+				    simple:
+				      sources:
+				        text:
+				          type: http
+				          url: /
+				          computes:
+				          - type: prepend
+				            value: "Bearer "
+				          - type: append
+				            value: x
+				          - type: replace
+				            existingValue: a
+				            newValue: b
+				          - type: substring
+				            start: 1
+				            length: 2
+				        noColumnOnTable:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1"
+				          computes:
+				          - type: prepend
+				            value: x
+				        columnOnText:
+				          type: http
+				          url: /
+				          computes:
+				          - type: append
+				            column: 1
+				            value: x
+				      mapping:
+				        source: ${source::text}
+				        attributes:
+				          id: $1
+				"""))
+		);
+	}
+
 	@Test
 	void stringLiteralRows() throws IOException {
 		assertEquals(Set.of("STRING_LITERAL_ROWS tables[0]", "STRING_LITERAL_ROWS rightTable"), lines(findings("""

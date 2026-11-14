@@ -64,6 +64,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSourc
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 
@@ -278,7 +279,14 @@ public class ContentTypeCheck {
 			final String where = compute.getType() + " #" + index;
 			// An awk reads whatever it gets: no input type
 			final ContentType input = compute.getInputContentType();
-			if (input != null && input != current) {
+			if (compute instanceof TextOrColumnCompute textOrColumn) {
+				// The content decides whether such a compute takes a column: a text has none, a table needs one
+				if (current == ContentType.TEXT && textOrColumn.getColumn() != null) {
+					add(key, where, Rule.COLUMN_ON_TEXT, "no column", "column: " + textOrColumn.getColumn());
+				} else if (current == ContentType.TABLE && textOrColumn.getColumn() == null) {
+					add(key, where, Rule.NO_COLUMN_ON_TABLE, "column", "no column");
+				}
+			} else if (input != null && input != current) {
 				add(
 					key,
 					where,
@@ -298,7 +306,7 @@ public class ContentTypeCheck {
 			}
 			final Compute copy = compute.copy();
 			checkInterpolated(key, where + " ", copy, copy::update);
-			current = compute.getOutputContentType();
+			current = compute.getOutputContentType(current);
 		}
 	}
 
@@ -525,17 +533,20 @@ public class ContentTypeCheck {
 	}
 
 	/**
-	 * What the source's chain ends in: its last compute's output, or what the source produces.
+	 * What the source's chain ends in: what the source produces, through its computes (a compute such as an
+	 * <code>append</code> leaves the type as it is).
 	 */
 	private ContentType typeOf(final Source source) {
 		final ContentType known = types.get(source);
 		if (known != null) {
 			return known;
 		}
-		final List<Compute> computes = source.getComputes();
-		final ContentType type = computes == null || computes.isEmpty()
-			? startType(source)
-			: computes.get(computes.size() - 1).getOutputContentType();
+		ContentType type = startType(source);
+		if (source.getComputes() != null) {
+			for (final Compute compute : source.getComputes()) {
+				type = compute.getOutputContentType(type);
+			}
+		}
 		types.put(source, type);
 		return type;
 	}
