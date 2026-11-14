@@ -1027,10 +1027,14 @@ public class ComputeChainGoldenCorpus {
 				if (origin == null || depth > 5) {
 					return ContentType.TABLE;
 				}
-				final List<Compute> computes = origin.getComputes();
-				return computes == null || computes.isEmpty()
-					? resultType(origin, sources, depth + 1)
-					: computes.get(computes.size() - 1).getOutputContentType();
+				// The type flows through the computes of the origin: a compute such as append leaves it as it is
+				ContentType type = resultType(origin, sources, depth + 1);
+				if (origin.getComputes() != null) {
+					for (final Compute compute : origin.getComputes()) {
+						type = compute.getOutputContentType(type);
+					}
+				}
+				return type;
 			}
 			if (source instanceof TableUnionSource union) {
 				return ContentTypeDesugaring.isTextUnion(union, sources, new HashSet<>())
