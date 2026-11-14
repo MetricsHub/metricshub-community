@@ -112,7 +112,6 @@ public class AwkExecutor {
 	 * <p>
 	 * Retrieves the program from the cache if present to avoid compiling the same
 	 * script again and again.
-	 * <p>
 	 *
 	 * @param awkScript Script to compile
 	 * @param awkEngine The Awk engine used to compile the script
