@@ -19,7 +19,6 @@ import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 
 class ConnectorStoreComposerTest {
 
@@ -241,10 +240,6 @@ class ConnectorStoreComposerTest {
 		return ((SimpleMonitorJob) connector.getMonitors().get("process")).getSimple()
 			.getSources()
 			.get("process")
-			.getComputes()
-			.stream()
-			// The content-type desugaring inserts conversions: the test addresses the written computes
-			.filter(compute -> !(compute instanceof ToTable toTable && toTable.isGenerated()))
-			.toList();
+			.getComputes();
 	}
 }

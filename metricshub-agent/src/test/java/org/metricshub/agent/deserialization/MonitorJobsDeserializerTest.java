@@ -2,6 +2,8 @@ package org.metricshub.agent.deserialization;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.TestConstants.COPY_SOURCE_KEY;
 import static org.metricshub.agent.helper.TestConstants.COPY_SOURCE_REF;
 import static org.metricshub.agent.helper.TestConstants.COPY_SOURCE_TYPE;
@@ -41,6 +43,7 @@ import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -86,6 +89,7 @@ class MonitorJobsDeserializerTest {
 				.url(HTTP_SERVICE_URL)
 				.key(GRAFANA_HEALTH_SOURCE_REF)
 				.type(HTTP_KEY_TYPE)
+				.computes(List.of(ToTable.builder().type("toTable").build()))
 				.build()
 		);
 
@@ -123,14 +127,28 @@ class MonitorJobsDeserializerTest {
 
 		assertEquals(expected, result);
 		assertNotNull(resourceConfig.getConnector());
-		// The content-type check runs on these monitors too: the mapping reads the http text as a table
-		assertEquals(
-			List.of("TEXT_FEEDS_TABLE " + GRAFANA_HEALTH_SOURCE_REF),
-			resourceConfig.getConnector()
-				.getContentTypeFindings()
-				.stream()
-				.map(finding -> finding.rule() + " " + finding.sourceKey())
-				.toList()
+	}
+
+	@Test
+	void testDeserializeRejectsWhatBreaksTheContentTypes() throws IOException {
+		// The mapping reads the http text as a table: the monitors do not load, as a connector would not
+		doReturn(ConfigHelper.newObjectMapper().readTree("""
+			grafana:
+			  simple:
+			    sources:
+			      grafanaHealth:
+			        type: http
+			        url: https://localhost/api/health
+			    mapping:
+			      source: ${source::monitors.grafana.simple.sources.grafanaHealth}
+			      attributes:
+			        id: $1
+			""")).when(yamlParserMock).readValueAs(JsonNode.class);
+
+		final IOException error = assertThrows(
+			IOException.class,
+			() -> new MonitorJobsDeserializer().deserialize(yamlParserMock, null)
 		);
+		assertTrue(error.getMessage().contains("TEXT_FEEDS_TABLE " + GRAFANA_HEALTH_SOURCE_REF), error.getMessage());
 	}
 }

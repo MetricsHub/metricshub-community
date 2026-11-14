@@ -21,13 +21,8 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
 import lombok.Data;
@@ -49,15 +44,6 @@ public class ToText extends Compute {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Whether the compute was inserted by the content-type desugaring step rather than written in the connector. It
-	 * converts like a written one; a later pass of the step removes it before desugaring the chain as written again.
-	 * Never set from YAML.
-	 */
-	@JsonIgnore
-	@EqualsAndHashCode.Exclude
-	private boolean generated;
-
-	/**
 	 * Construct a new instance of ToText.
 	 *
 	 * @param type The type of the computation task.
@@ -66,18 +52,6 @@ public class ToText extends Compute {
 	@JsonCreator
 	public ToText(@JsonProperty("type") String type) {
 		super(type);
-	}
-
-	/**
-	 * A <code>toText</code> inserted by the content-type desugaring step: it converts the table like a written one,
-	 * and a later pass of the step removes it.
-	 *
-	 * @return a new generated instance
-	 */
-	public static ToText generated() {
-		final ToText toText = ToText.builder().type("toText").build();
-		toText.setGenerated(true);
-		return toText;
 	}
 
 	@Override
@@ -92,17 +66,12 @@ public class ToText extends Compute {
 
 	@Override
 	public String toString() {
-		final StringJoiner stringJoiner = new StringJoiner(NEW_LINE);
-		stringJoiner.add(super.toString());
-		addNonNull(stringJoiner, "- generated=", generated ? Boolean.TRUE : null);
-		return stringJoiner.toString();
+		return super.toString();
 	}
 
 	@Override
 	public ToText copy() {
-		final ToText copy = ToText.builder().type(type).build();
-		copy.setGenerated(generated);
-		return copy;
+		return ToText.builder().type(type).build();
 	}
 
 	@Override

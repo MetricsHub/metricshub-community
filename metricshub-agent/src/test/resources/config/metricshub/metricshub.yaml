@@ -92,6 +92,8 @@ resourceGroups:
                   method: GET
                   header: "Accept: application/json"
                   resultContent: body
+                  computes:
+                  - type: toTable
               mapping:
                 source: ${source::monitors.grafana.simple.sources.grafanaHealth}
                 attributes:

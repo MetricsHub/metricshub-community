@@ -11,6 +11,7 @@ monitors:
             script: "${file::embeddedFile-8}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;EnclosureID;EnclosureDisplayID;EnclosureVendor;EnclosureModel;EnclosureType;AdditionalInformation
@@ -39,6 +40,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;EnclosureeID;EnclosureStatus;EnclosureConsumption;EnergyUsage;IntrusionStatus
@@ -97,6 +99,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4"
+          - type: toTable
             # Duplicate State
             # logicalDeviceID;state;state;alivePathCount;
           - type: duplicateColumn
@@ -133,6 +136,7 @@ monitors:
             script: "${file::embeddedFile-2}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           - type: excludeMatchingLines
             column: 2
             valueList: 0
@@ -165,6 +169,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
             # The BatterytatusTranslationTable --> PatrolStatus
             # COLLECT;BatteryDeviceID
           - type: translate
@@ -191,6 +196,7 @@ monitors:
             script: "${file::embeddedFile-3}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           - type: keepOnlyMatchingLines
             column: 3
             valueList: "Blade1,Blade2"
@@ -227,6 +233,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;BladeID;BladeStatus;PowerState
@@ -282,6 +289,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;CPUid;CPUstatus;CPUcurrSpeed;CorrectedErrorCount;PredictedFailure
@@ -304,6 +312,7 @@ monitors:
             script: "${file::embeddedFile-6}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           - type: extract
             column: 5
             subColumn: 1
@@ -337,6 +346,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # DiskControllerID;DiskControllerStatus;BatteryStatus
@@ -356,6 +366,7 @@ monitors:
             script: "${file::embeddedFile-9}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;FanID;FanDisplayID;FanType;PercentWarningThreshold;PercentAlarmThreshold;AttachedToDeviceID;AttachedToDeviceTyp;AdditionalInformation
@@ -386,6 +397,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;FanID;FanStatus;FanSpeed;SpeedPercent
@@ -407,6 +419,7 @@ monitors:
             script: "${file::embeddedFile-10}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;LedID;LedDisplayId;AttachedToDeviceID;AttachedToDeviceType;Name;OnStatus;OffStatus;BlinkingStatus;AlarmOnColor;WarningOnColor;AdditionalInformation
@@ -437,6 +450,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;LedID;LedStatus;LedColor
@@ -456,6 +470,7 @@ monitors:
             script: "${file::embeddedFile-11}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           # Multiply byte -> Gigabyt
           - type: multiply
             column: 7
@@ -490,6 +505,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
           # Devide
           - type: divide
             column: 3
@@ -516,6 +532,7 @@ monitors:
             script: "${file::embeddedFile-12}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           # Add
           - type: add
             column: 10
@@ -552,6 +569,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6,7"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;MemoryID;MemStatus;PredictedFailure;ErrorStatus;LastError;ErrorCount
@@ -573,6 +591,7 @@ monitors:
             script: "${file::embeddedFile-13}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;NCid;NCdisplatId;AttachedToDeviceID;Vendor;Model;NCtype;PhysicalAddress;LogicalAddress;LogicalAddressType;SN;AdditionalInformation
@@ -606,6 +625,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6,7,8,9,10,11,12"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # NCid;NCstatus;NSlinkStatus;NClinkSpeed;DuplexMode;ErrorCount;ReceivedBytes;TransmittedBytes;ReceivedPackets;TransmittedPackets;ZeroBufferCreditCount
@@ -665,6 +685,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6,7"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # OdId;OdStatus;OdStatusInformation;OdUsageCount;OdPowerConsumption,Value
@@ -690,6 +711,7 @@ monitors:
             script: "${file::embeddedFile-21}"
             keep: ^JOIN1;
             separators: ;
+          - type: toTable
         source(2):
           computes:
           # JOIN2;PdID;PdDisplayId;AttachedToDeviceID;AttachedToDeviceType;ControllerNumber;Vendor;Model;FirmwareVersion;Size;SerialNumber;AdditionalInformation
@@ -697,6 +719,7 @@ monitors:
             script: "${file::embeddedFile-21}"
             keep: ^JOIN2;
             separators: ;
+          - type: toTable
         source(3):
           # JOIN1;PdID;JOIN2;PdID;PdDisplayId;AttachedToDeviceID;AttachedToDeviceType;ControllerNumber;Vendor;Model;FirmwareVersion;Size;SerialNumber;AdditionalInformation
           type: tableJoin
@@ -738,6 +761,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6,7,8,9,10,11,12,13,14"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # PdID;PdStatus;StatusInformation;PredictedFailure;ErrorCount;DeviceNotReadyErrorCount;MediaErrorCount;NoDeviceErrorCount;HardErrorCount;IllegalRequestErrorCount;RecoverableErrorCount;TransportErrorCount;EnduranceRemaining
@@ -769,6 +793,7 @@ monitors:
             script: "${file::embeddedFile-16}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           # Convert PowerSupplyPower form Hex to Dec
           - type: convert
             column: 7
@@ -802,6 +827,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;PsId;PsStatus;UsedWatts
@@ -823,6 +849,7 @@ monitors:
             script: "${file::embeddedFile-17}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;RoboId;RoboDisplayID;AttachedToDeviceID;AttachedToDeviceType;RoboticType;Vendor;Model;SerialNumber;AdditionalInformation
@@ -853,6 +880,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;RoboId;RoboStatus;RobotStatusInformation;MoveCount;ErrorCount
@@ -876,6 +904,7 @@ monitors:
             script: "${file::embeddedFile-18}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;TdId;TdDisplayId;AttachedToDeviceID;AttachedToDeviceType;Vendor;Model;SerialNumber;ControllerNumber;AdditionalInformation
@@ -905,6 +934,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5,6,7,8"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;TdId;TdStatus;StatusInformation;MountCount;UnmountCount;ErrorCount;NeedsCleaning
@@ -930,6 +960,7 @@ monitors:
             script: "${file::embeddedFile-19}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;TempId;TempDisplayId;AttachedToDeviceID;AttachedToDeviceType;TemperatureType;WarningThreshold;AlarmThreshold;AdditionalInformation
@@ -960,6 +991,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;TempId;TempStatus;TempStatusInformation;Temperature
@@ -982,6 +1014,7 @@ monitors:
             script: "${file::embeddedFile-20}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;VoltId;VoltDisplayId;AttachedToDeviceID;AttachedToDeviceType;VoltageType;AdditionalInformation
@@ -1009,6 +1042,7 @@ monitors:
             keep: ^COLLECT;
             separators: ;
             selectColumns: "2,3,4,5"
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;VoltId;VoltStatus;VoltStatusInformation;Voltage
@@ -1031,6 +1065,7 @@ monitors:
             script: "${file::embeddedFile-22}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # InstanceTable = Source(1)
         # DISCOVERY;DeviceID;DisplayID;Vendor;Model;DriverVersion;FirmwareVersion;SerialNumber;Size;Location
@@ -1063,6 +1098,7 @@ monitors:
             script: "${file::embeddedFile-22}"
             keep: ^COLLECT;
             separators: ;
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;DeviceID;Status;StatusInformation;PredictedFailure;CorrectedErrorCount;ErrorCount;UsedTime;DecoderUsedTime;
@@ -1097,6 +1133,7 @@ monitors:
             script: "${file::embeddedFile-23}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
       mapping:
         # DISCOVERY;DeviceID;DisplayID;AttachedToDeviceID;AttachedToDeviceType;Hostname;AdditionalInformation1
         source: "${source::monitors.vm.discovery.sources.source(1)}"
@@ -1122,6 +1159,7 @@ monitors:
             script: "${file::embeddedFile-23}"
             keep: ^COLLECT;
             separators: ;
+          - type: toTable
       mapping:
         # ValueTable = Source(1)
         # COLLECT;DeviceID;PowerShare;PowerState

@@ -50,6 +50,7 @@ import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpExtension;
@@ -132,6 +133,7 @@ class AgentContextTest {
 						.url(HTTP_SERVICE_URL)
 						.key(GRAFANA_HEALTH_SOURCE_REF)
 						.type(HTTP_KEY_TYPE)
+						.computes(List.of(ToTable.builder().type("toTable").build()))
 						.build()
 				)
 			)

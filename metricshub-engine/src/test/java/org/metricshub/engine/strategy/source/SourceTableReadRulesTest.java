@@ -479,12 +479,15 @@ class SourceTableReadRulesTest {
 
 	/**
 	 * The HTTP authentication token is the first cell of the first row of a table, or the whole first line of a text
-	 * without its line ending (#1560): a <code>;</code> in the line is part of the token.
+	 * without its line ending (#1560): a <code>;</code> in the line is part of the token, but the trailing
+	 * <code>;</code> an awk text output ends a line of one value with.
 	 */
 	@Test
 	void httpTokenIsFirstCellOfATableOrFirstLineOfAText() {
 		assertEquals("tok", extractToken(SourceTable.ofTable(table("tok|x"))));
 		assertEquals("tok;en", extractToken(SourceTable.ofText("tok;en\nline2")));
+		assertEquals("token", extractToken(SourceTable.ofText("token;\n")));
+		assertEquals("tok;en;", extractToken(SourceTable.ofText("tok;en;")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\ndef")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\r\ndef")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\n")));

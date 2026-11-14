@@ -79,6 +79,7 @@ monitors:
 
                 printf "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n", pid,ppid,comm,user,cpuSeconds,mem,rss,vsz,thcount,elapsedSeconds,command
               }
+            output: table
           # Filter by process name
           - type: keepOnlyMatchingLines
             column: 3

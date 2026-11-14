@@ -26,7 +26,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
@@ -70,15 +69,6 @@ public class ToTable extends Compute {
 	private String selectColumns;
 
 	/**
-	 * Whether the compute was inserted by the content-type desugaring step rather than written in the connector. It
-	 * converts like a written one; a later pass of the step removes it before desugaring the chain as written again.
-	 * Never set from YAML.
-	 */
-	@JsonIgnore
-	@EqualsAndHashCode.Exclude
-	private boolean generated;
-
-	/**
 	 * Construct a new instance of ToTable.
 	 *
 	 * @param type          The type of the computation task.
@@ -103,18 +93,6 @@ public class ToTable extends Compute {
 		this.selectColumns = selectColumns;
 	}
 
-	/**
-	 * A <code>toTable(";")</code> inserted by the content-type desugaring step: it converts the text like a written
-	 * one, and a later pass of the step removes it.
-	 *
-	 * @return a new generated instance
-	 */
-	public static ToTable generated() {
-		final ToTable toTable = ToTable.builder().type("toTable").build();
-		toTable.setGenerated(true);
-		return toTable;
-	}
-
 	@Override
 	public ContentType getInputContentType() {
 		return ContentType.TEXT;
@@ -133,21 +111,18 @@ public class ToTable extends Compute {
 		addNonNull(stringJoiner, "- keep=", keep);
 		addNonNull(stringJoiner, "- exclude=", exclude);
 		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
-		addNonNull(stringJoiner, "- generated=", generated ? Boolean.TRUE : null);
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public ToTable copy() {
-		final ToTable copy = ToTable.builder()
+		return ToTable.builder()
 			.type(type)
 			.separator(separator)
 			.keep(keep)
 			.exclude(exclude)
 			.selectColumns(selectColumns)
 			.build();
-		copy.setGenerated(generated);
-		return copy;
 	}
 
 	@Override

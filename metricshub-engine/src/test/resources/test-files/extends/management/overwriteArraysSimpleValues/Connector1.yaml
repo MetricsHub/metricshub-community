@@ -1,4 +1,4 @@
 beforeAll:
   testTableUnionSource:
     type: tableUnion
-    tables: [ testTable1, testTable2, testTable3 ]
+    tables: [ [ [ testTable1 ] ], [ [ testTable2 ] ], [ [ testTable3 ] ] ]

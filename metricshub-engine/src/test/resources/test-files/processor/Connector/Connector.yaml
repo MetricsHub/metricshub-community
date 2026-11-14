@@ -38,6 +38,7 @@ monitors:
                 printf("\n")
               }
             separators: ;
+            output: table
         source_2:
           type: http
           method: get
@@ -47,7 +48,7 @@ monitors:
             concatMethod: list
           path: /api/v1/system/$1
           computes:
-          - type: json2Csv
+          - type: json2Table
             entryKey: /
             properties: id;model;device_count;spare_disk_count;cache_size_mb;local
             separator: ;
@@ -89,6 +90,7 @@ monitors:
                 printf("\n")
               }
             separators: ;
+            output: table
         source_2:
           type: http
           method: get
@@ -98,7 +100,7 @@ monitors:
             concatMethod: list
           path: /api/v1/system/metrics/$1
           computes:
-          - type: json2Csv
+          - type: json2Table
             entryKey: /
             properties: id;local
           - type: excludeMatchingLines
