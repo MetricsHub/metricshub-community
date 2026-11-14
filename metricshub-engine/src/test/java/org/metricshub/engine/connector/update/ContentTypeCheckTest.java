@@ -1,7 +1,7 @@
 package org.metricshub.engine.connector.update;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -13,9 +13,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
+import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeFinding;
 import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
+import org.metricshub.engine.connector.model.IntermediateConnector;
+import org.metricshub.engine.connector.model.RawConnector;
+import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus;
 
 /**
@@ -40,14 +46,32 @@ class ContentTypeCheckTest {
 	Path directory;
 
 	/**
-	 * The findings of a connector made of the header and the given body.
+	 * The findings of a connector made of the header and the given body, parsed and updated as the agent does. The
+	 * agent loads the connector only when there is none.
 	 */
 	private List<ContentTypeFinding> findings(final String body) throws IOException {
-		Files.writeString(directory.resolve("Test.yaml"), HEADER + body);
-		final Connector connector = ComputeChainGoldenCorpus.loadConnectors(directory).getStore().get("Test");
-		assertNotNull(connector, "the connector loads");
-		connector.getContentTypeFindings().forEach(finding -> assertEquals("Test", finding.connectorId()));
-		return connector.getContentTypeFindings();
+		final List<ContentTypeFinding> findings = ContentTypeCheck.check(parse(body), "Test");
+		findings.forEach(finding -> assertEquals("Test", finding.connectorId()));
+		assertEquals(
+			findings.isEmpty(),
+			ComputeChainGoldenCorpus.loadConnectors(directory).getStore().containsKey("Test"),
+			"the connector loads only without finding: " + findings
+		);
+		return findings;
+	}
+
+	/**
+	 * A connector made of the header and the given body, parsed and updated as the agent does, not checked.
+	 */
+	private Connector parse(final String body) throws IOException {
+		final Path file = directory.resolve("Test.yaml");
+		Files.writeString(file, HEADER + body);
+		final RawConnector raw = ConnectorParser.withNodeProcessorAndUpdateChain(directory).parseRaw(file.toFile());
+		final ConnectorDeserializer deserializer = new ConnectorDeserializer(JsonHelper.buildYamlMapper());
+		PostDeserializeHelper.addPostDeserializeSupport(deserializer.getMapper());
+		final Connector connector = deserializer.deserialize(new IntermediateConnector("Test", raw).getConnectorNode());
+		ConnectorParser.createUpdateChain().update(connector);
+		return connector;
 	}
 
 	/**
@@ -424,6 +448,7 @@ class ContentTypeCheckTest {
 				"UNRESOLVED_REFERENCE url" + missing,
 				"UNRESOLVED_REFERENCE computes[1].variables.rows" + missing,
 				"UNRESOLVED_REFERENCE monitors.thing.simple.mapping.source" + missing,
+				"UNRESOLVED_REFERENCE texts[1]" + missing,
 				// A short reference the parser cannot make absolute stays short, and the engine finds no such key
 				"UNRESOLVED_REFERENCE commandLine -> ${source::raw+x}"
 			),
@@ -438,6 +463,9 @@ class ContentTypeCheckTest {
 				        other:
 				          type: commandLine
 				          commandLine: "echo ${source::raw+x}"
+				        texts:
+				          type: textUnion
+				          texts: [ "${source::other}", "${source::missing}" ]
 				        request:
 				          type: http
 				          method: get
@@ -571,10 +599,30 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
-	void aFailingCheckReportsNothing() {
-		// Report only: a connector the check cannot read still loads
+	void findingsAreALoadError() throws IOException {
+		final Connector connector = parse("""
+			tools:
+			  run:
+			    description: Runs
+			    sources:
+			      out:
+			        type: commandLine
+			        commandLine: echo
+			    result:
+			      source: ${source::missing}
+			""");
+		final IOException error = assertThrows(IOException.class, () -> ContentTypeCheck.validate(connector, "Test"));
+		assertEquals(
+			"Connector Test breaks the strict content types: UNRESOLVED_REFERENCE ${source::tools.run.sources.missing} at tools.run.result: " +
+				"expected an existing source, actual none (reference an existing source)",
+			error.getMessage()
+		);
+	}
+
+	@Test
+	void aFailingCheckIsALoadError() {
 		final Connector connector = mock(Connector.class);
 		when(connector.getMonitors()).thenThrow(new IllegalStateException());
-		assertEquals(List.of(), ContentTypeCheck.check(connector, "broken"));
+		assertThrows(IOException.class, () -> ContentTypeCheck.validate(connector, "broken"));
 	}
 }

@@ -15,7 +15,7 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.update.AwkScriptCheck;
-import org.metricshub.engine.connector.update.ContentTypeDesugaring;
+import org.metricshub.engine.connector.update.ContentTypeCheck;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Repository;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 
@@ -41,7 +41,7 @@ class AwkCompilationCorpusTest {
 			ComputeChainGoldenCorpus.load(repository)
 				.store()
 				.getStore()
-				.forEach((connectorId, connector) -> ContentTypeDesugaring.forEachSource(connector, source -> {
+				.forEach((connectorId, connector) -> ContentTypeCheck.forEachSource(connector, source -> {
 					final String where = connectorId + " " + source.getKey();
 					if (source instanceof JawkSource jawkSource) {
 						compiled[0]++;

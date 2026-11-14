@@ -8,6 +8,8 @@ grafana:
         method: GET
         header: "Accept: application/json"
         resultContent: body
+        computes:
+        - type: toTable
       copySource:
         type: copy
         from: ${source::grafanaHealth}

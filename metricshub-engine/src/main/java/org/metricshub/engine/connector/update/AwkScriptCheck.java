@@ -84,7 +84,7 @@ public class AwkScriptCheck extends AbstractConnectorUpdateChain {
 
 	@Override
 	void doUpdate(final Connector connector) {
-		ContentTypeDesugaring.forEachSource(connector, source -> {
+		ContentTypeCheck.forEachSource(connector, source -> {
 			if (source.getComputes() == null) {
 				return;
 			}

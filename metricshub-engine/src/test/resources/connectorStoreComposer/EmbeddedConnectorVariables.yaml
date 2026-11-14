@@ -71,6 +71,8 @@ monitors:
           type: wmi
           namespace: root\CIMv2
           query: SELECT AvailableBytes,AvailableBytes,CacheBytes,CacheBytes FROM Win32_PerfRawData_PerfOS_Memory
+          computes:
+          - type: toText
         calculatedMemoryInformation:
         # Free;Free%;Cached;Cached%;Used;Used%;Total
           type: wmi
@@ -168,6 +170,7 @@ monitors:
           - type: subtract
             column: 4
             value: $3
+          - type: toText
         # BytesUsed;BytesFree;UtilizationUsed;UtilizationFree;TotalBytes;PageOutputPersec;PageInputPersec;PageFaultsPersec;WriteCopiesPersec
         pagingCombinedInformation:
           type: wmi
@@ -262,6 +265,8 @@ monitors:
           type: wmi
           namespace: root\CIMv2
           query: SELECT SystemUpTime FROM Win32_PerfFormattedData_PerfOS_System
+          computes:
+          - type: toText
         # SerialNumber;Caption;Version;BuildNumber
         osInformation:
           type: wmi
