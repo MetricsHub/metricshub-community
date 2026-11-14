@@ -45,7 +45,7 @@ class AwkComputeStructuredIoTest {
 	}
 
 	/**
-	 * The compute runs the program it holds, the one compiled when the connector loaded (#1576): here a program that
+	 * The compute runs the program it holds, the one a previous run compiled (#1576): here a program that
 	 * deliberately differs from the script.
 	 */
 	@Test

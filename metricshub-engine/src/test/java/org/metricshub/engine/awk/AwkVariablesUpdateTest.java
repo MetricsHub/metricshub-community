@@ -55,8 +55,8 @@ class AwkVariablesUpdateTest {
 	}
 
 	/**
-	 * The filter properties receive the source replacement. The script does not: it is code, compiled when the
-	 * connector loads (#1576), and a value reaches it through the variables.
+	 * The filter properties receive the source replacement. The script does not: it is code, compiled once and kept
+	 * in the connector (#1576), and a value reaches it through the variables.
 	 */
 	@Test
 	void testEveryComputeFieldExceptScriptAndVariablesReceivesTheReplacement() {

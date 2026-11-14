@@ -60,13 +60,6 @@ public class AwkExecutor {
 	private static final Awk AWK_FOR_EVAL = newAwk(TABLE_SEP);
 
 	/**
-	 * Jawk instance that only compiles the scripts of the awk sources: it knows the functions of the MetricsHub
-	 * extension, which has no context here. A source script runs on an engine of its own, built with the extension
-	 * that holds the context of the run (Jawk finds the extension of a compiled function by its class).
-	 */
-	private static final Awk AWK_FOR_SOURCE_COMPILATION = newAwk(null, MetricsHubExtensionForJawk.builder().build());
-
-	/**
 	 * Map of the scripts that have already been compiled to intermediate code
 	 */
 	private static final ConcurrentHashMap<String, AwkProgram> PROGRAM_CACHE = new ConcurrentHashMap<>();
@@ -143,18 +136,6 @@ public class AwkExecutor {
 		} catch (Exception e) {
 			throw new AwkException("Failed to compile Awk script:\n" + awkScript, e);
 		}
-	}
-
-	/**
-	 * Compiles the script of an awk source, which may call the functions of the MetricsHub extension
-	 * (<code>executeHttpRequest</code>, ...).
-	 *
-	 * @param awkScript Script to compile
-	 * @return the corresponding AwkProgram
-	 * @throws AwkException when unable to compile the script
-	 */
-	public static AwkProgram compileSourceScript(final String awkScript) throws AwkException {
-		return compile(awkScript, AWK_FOR_SOURCE_COMPILATION);
 	}
 
 	/**

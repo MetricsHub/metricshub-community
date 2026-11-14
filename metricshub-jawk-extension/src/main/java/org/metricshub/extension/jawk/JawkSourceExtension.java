@@ -147,10 +147,12 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// Execute
 		try {
 			Awk awkEngine = AwkExecutor.newAwk(null, extension);
-			// The program the connector holds, compiled when it loaded. A source built without a connector has none
-			final AwkProgram program = jawkSource.getProgram() != null
-				? jawkSource.getProgram()
-				: AwkExecutor.compile(awkScript, awkEngine);
+			// The program the connector holds. The first run compiles the script and leaves the program there
+			AwkProgram program = jawkSource.getProgram();
+			if (program == null) {
+				program = AwkExecutor.compile(awkScript, awkEngine);
+				jawkSource.setProgram(program);
+			}
 			if (jawkSource.getOutput() == ContentType.TABLE) {
 				// Each print is a row
 				return SourceTable.ofTable(

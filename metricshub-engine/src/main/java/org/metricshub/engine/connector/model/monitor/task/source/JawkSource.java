@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -108,14 +109,43 @@ public class JawkSource extends Source {
 	private ContentType output = ContentType.TEXT;
 
 	/**
-	 * The script compiled when the connector loads (see
-	 * {@link org.metricshub.engine.connector.update.AwkCompilationUpdate}), null when the source was built without a
-	 * connector or when the script does not compile: it is then compiled when it runs. Never read from nor written to
-	 * YAML or JSON, not part of the equality.
+	 * The compiled script. The script is compiled the first time it runs, and the program is kept here, in the
+	 * connector: every run works on a copy of the source, and the copies share this holder, so the program compiled
+	 * by a run is the one the next runs take. Never read from nor written to YAML or JSON, not part of the equality.
 	 */
 	@JsonIgnore
 	@EqualsAndHashCode.Exclude
-	private AwkProgram program;
+	private AtomicReference<AwkProgram> program = new AtomicReference<>();
+
+	/**
+	 * The compiled script.
+	 *
+	 * @return the program, null as long as the script has not run (or does not compile)
+	 */
+	@JsonIgnore
+	public AwkProgram getProgram() {
+		return program.get();
+	}
+
+	/**
+	 * Replaces the script. The program compiled from the former script no longer applies: this source gets a
+	 * holder of its own, and the source it was copied from keeps its script and its program.
+	 *
+	 * @param script The new script
+	 */
+	public void setScript(@NonNull final String script) {
+		this.script = script;
+		this.program = new AtomicReference<>();
+	}
+
+	/**
+	 * Keeps the compiled script, for this source and for every copy of it.
+	 *
+	 * @param compiled The program compiled from the script
+	 */
+	public void setProgram(final AwkProgram compiled) {
+		program.set(compiled);
+	}
 
 	/**
 	 * Whether the connector writes the deprecated, ignored <code>inputFormat</code> property, which the content-type
@@ -187,7 +217,8 @@ public class JawkSource extends Source {
 			.variables(variables)
 			.output(output)
 			.build();
-		copy.setProgram(program);
+		// The copy shares the holder: the program it compiles is kept in the connector
+		copy.program = program;
 		return copy;
 	}
 

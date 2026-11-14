@@ -419,10 +419,12 @@ public class ComputeProcessor implements IComputeProcessor {
 		);
 
 		try {
-			// The program the connector holds, compiled when it loaded. A compute built without a connector has none
-			final AwkProgram program = awk.getProgram() != null
-				? awk.getProgram()
-				: AwkExecutor.compile(awkScript, AwkExecutor.getUtilityEngine());
+			// The program the connector holds. The first run compiles the script and leaves the program there
+			AwkProgram program = awk.getProgram();
+			if (program == null) {
+				program = AwkExecutor.compile(awkScript, AwkExecutor.getUtilityEngine());
+				awk.setProgram(program);
+			}
 
 			if (awk.getOutputContentType() == ContentType.TABLE) {
 				// Each print is a row: no re-parsing, the text filters and column selection do not apply

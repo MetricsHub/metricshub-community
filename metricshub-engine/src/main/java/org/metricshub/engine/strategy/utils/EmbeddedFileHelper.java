@@ -112,8 +112,8 @@ public class EmbeddedFileHelper {
 	 * Finds the AWK script of an <code>awk</code> compute or source: the embedded file its <code>script</code>
 	 * references, or the <code>script</code> itself when it references none (an inline script).
 	 * <p>
-	 * The scripts are compiled when the connector loads and run later: both go through this method, so that the
-	 * program that was compiled is the script that would run.
+	 * Every place that needs the script goes through this method (the <code>awk</code> compute, the
+	 * <code>awk</code> source, the checks), so that they all read the same code.
 	 *
 	 * @param script                 The <code>script</code> property: a reference to one embedded file, or the code.
 	 * @param connectorEmbeddedFiles Gives all the embedded files referenced in the connector. Only called when the

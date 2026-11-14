@@ -17,6 +17,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
@@ -512,7 +513,7 @@ class JawkSourceExtensionTest {
 	}
 
 	/**
-	 * The awk source runs the program it holds, the one compiled when the connector loaded (#1576): here a program
+	 * The awk source runs the program it holds, the one a previous run compiled (#1576): here a program
 	 * that deliberately differs from the script, and that calls a MetricsHub function.
 	 */
 	@Test
@@ -521,13 +522,36 @@ class JawkSourceExtensionTest {
 
 		final JawkSource source = JawkSource.builder().type("awk").script("BEGIN { print \"from the script\" }").build();
 		source.setProgram(
-			AwkExecutor.compileSourceScript("BEGIN { print \"from the program\"; if (0) { executeHttpRequest(args) } }")
+			AwkExecutor.compile(
+				"BEGIN { print \"from the program\"; if (0) { executeHttpRequest(args) } }",
+				AwkExecutor.newAwk(null, MetricsHubExtensionForJawk.builder().build())
+			)
 		);
 
 		assertEquals(
 			SourceTable.ofText("from the program\n"),
 			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
+	}
+
+	/**
+	 * The first run compiles the script and leaves the program in the source, for the next runs (#1576).
+	 */
+	@Test
+	void testProcessSourceKeepsTheProgramItCompiles() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("unused"));
+		final JawkSource source = JawkSource.builder().type("awk").script("BEGIN { print \"x\" }").build();
+
+		// A run works on a copy of the source: the source of the connector gets the program
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source.copy(),
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals(SourceTable.ofText("x\n"), result);
+		assertNotNull(source.getProgram());
 	}
 
 	/**
