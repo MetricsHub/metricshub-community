@@ -243,6 +243,30 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	/**
+	 * A boolean-typed number (<code>mkbool()</code>, a Java Boolean handed to the script) reaches an
+	 * <code>execute*</code> function as its number: <code>1</code> or <code>0</code>.
+	 */
+	@Test
+	void testBooleanArgumentIsItsNumber() throws Exception {
+		final SourceProcessor sourceProcessor = sourceProcessor();
+		final String script = """
+			BEGIN {
+				request["path"] = "/api"
+				request["header"] = mkbool(1)
+				request["body"] = mkbool(0)
+				print executeHttpRequest(request), (request["header"] ? "on" : "off")
+			}
+			""";
+
+		assertEquals("response on\n", AwkExecutor.executeAwk(script, "", engine(sourceProcessor), null));
+
+		final ArgumentCaptor<HttpSource> source = ArgumentCaptor.forClass(HttpSource.class);
+		verify(sourceProcessor).process(source.capture());
+		assertEquals("1", source.getValue().getHeader());
+		assertEquals("0", source.getValue().getBody());
+	}
+
+	/**
 	 * <code>asorti(a, a)</code> sorts the array in place.
 	 */
 	@Test

@@ -1,0 +1,20 @@
+connector:
+  detection:
+    appliesTo: [ Linux ]
+
+beforeAll:
+  testCompute:
+    type: http
+    url: /testUrl/
+
+    computes:
+      - type: prepend
+        value: "Bearer "
+      - type: append
+        value: suffix
+      - type: replace
+        existingValue: a
+        newValue: b
+      - type: substring
+        start: 1
+        length: 10

@@ -38,7 +38,9 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepColumns;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
@@ -394,6 +396,71 @@ class ContentTypeDesugaringTest {
 		// table it gets; the awk compute ends the chain in text, a legacy dual producer: its toTable is appended
 		assertEquals(List.of("keepColumns", "awk", "toTable"), types(source));
 		assertEquals(List.of(Kind.TABLE_COMPUTE_ON_TEXT_SOURCE, Kind.TO_TABLE_APPENDED), kinds(connector));
+	}
+
+	@Test
+	void computeWithoutColumnReadsTextAndIsReportedAfterTable() {
+		// On a text (pure or legacy): nothing before it. The command's text, still a legacy text after the computes,
+		// gets its toTable appended for the mapping, as after an awk
+		final List<Compute> textComputes = List.of(
+			Prepend.builder().type("prepend").value("a").build(),
+			Append.builder().type("append").value("b").build(),
+			Replace.builder().type("replace").existingValue("a").newValue("b").build(),
+			Substring.builder().type("substring").start("1").length("2").build()
+		);
+		final List<String> written = List.of("prepend", "append", "replace", "substring");
+		final Source http = HttpSource.builder().url("/").computes(textComputes).build();
+		Connector connector = connectorWith(http);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(written, types(http));
+		assertTrue(connector.getContentTypeReport().isEmpty());
+
+		final Source command = CommandLineSource.builder().commandLine("ls").computes(textComputes).build();
+		connector = connectorWith(command);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("prepend", "append", "replace", "substring", "toTable"), types(command));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
+
+		// On a table: nothing inserted. The content-type check reports the missing column
+		final Source table = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("1")
+			.computes(textComputes.subList(0, 1))
+			.build();
+		connector = connectorWith(table);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("prepend"), types(table));
+		assertEquals(List.of(), kinds(connector));
+
+		// The table stays a table through it: the table compute after it gets no toTable
+		final Source tableThenColumn = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("1")
+			.computes(
+				List.of(
+					Prepend.builder().type("prepend").value("a").build(),
+					Append.builder().type("append").column(1).value("b").build()
+				)
+			)
+			.build();
+		connector = connectorWith(tableThenColumn);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("prepend", "append"), types(tableThenColumn));
+		assertEquals(List.of(), kinds(connector));
+
+		// With a column on a text: nothing is converted for it, on a pure text or on a legacy one (whose text still
+		// gets its toTable at the end of the chain). The content-type check reports the column
+		final List<Compute> withColumn = List.of(Prepend.builder().type("prepend").column(1).value("a").build());
+		final Source httpWithColumn = HttpSource.builder().url("/").computes(withColumn).build();
+		connector = connectorWith(httpWithColumn);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("prepend"), types(httpWithColumn));
+		assertEquals(List.of(), kinds(connector));
+		final Source commandWithColumn = CommandLineSource.builder().commandLine("ls").computes(withColumn).build();
+		connector = connectorWith(commandWithColumn);
+		new ContentTypeDesugaring().update(connector);
+		assertEquals(List.of("prepend", "toTable"), types(commandWithColumn));
+		assertEquals(List.of(Kind.TO_TABLE_APPENDED), kinds(connector));
 	}
 
 	@Test

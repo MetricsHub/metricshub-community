@@ -61,6 +61,7 @@ monitors:
             script: "${file::lun.awk}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
             # Add some text to each additional information
             # DISCOVERY,lunname;manufacturerID;logicalDeviceID;deviceWWN;state;policy;alivePathCount;LocalDeviceName;RemoteDeviceName
           - type: prepend
@@ -246,6 +247,7 @@ monitors:
             script: "${file::cpu.awk}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           - type: replace
             column: 3
             existingValue: PROC
@@ -632,6 +634,7 @@ monitors:
             script: "${file::other_device.awk}"
             keep: ^DISCOVERY;
             separators: ;
+          - type: toTable
           - type: substring
             column: 3
             start: 5
