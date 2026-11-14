@@ -3,6 +3,7 @@ package org.metricshub.engine.awk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import io.jawk.AwkProgram;
 import io.jawk.jrt.AssocArray;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -54,13 +55,13 @@ class AwkVariablesUpdateTest {
 	}
 
 	/**
-	 * The regression this guards: protecting the whole compute from the source replacement would leave the script and
-	 * the filter properties executing and filtering on literal <code>${source::...}</code> text.
+	 * The filter properties receive the source replacement. The script does not: it is code, compiled once and kept
+	 * in the connector (#1576), and a value reaches it through the variables.
 	 */
 	@Test
-	void testEveryComputeFieldExceptVariablesStillReceivesTheReplacement() {
+	void testEveryComputeFieldExceptScriptAndVariablesReceivesTheReplacement() {
 		final Awk compute = Awk.builder()
-			.script("BEGIN { print " + SOURCE_REF + " }")
+			.script("BEGIN { print \"" + SOURCE_REF + "\" }")
 			.keep(SOURCE_REF)
 			.exclude(SOURCE_REF)
 			.separators(SOURCE_REF)
@@ -70,12 +71,12 @@ class AwkVariablesUpdateTest {
 
 		compute.update(value -> value == null ? null : value.replace(SOURCE_REF, "RESOLVED"));
 
-		assertEquals("BEGIN { print RESOLVED }", compute.getScript(), "The script must receive the replacement");
+		assertEquals("BEGIN { print \"" + SOURCE_REF + "\" }", compute.getScript(), "The script is never rewritten");
 		assertEquals("RESOLVED", compute.getKeep(), "keep must receive the replacement");
 		assertEquals("RESOLVED", compute.getExclude(), "exclude must receive the replacement");
 		assertEquals("RESOLVED", compute.getSeparators(), "separators must receive the replacement");
 		assertEquals("RESOLVED", compute.getSelectColumns(), "selectColumns must receive the replacement");
-		assertEquals(variables(), compute.getVariables(), "Only the variables are left for AwkVariableHelper");
+		assertEquals(variables(), compute.getVariables(), "The variables are left for AwkVariableHelper");
 	}
 
 	/**
@@ -208,7 +209,7 @@ class AwkVariablesUpdateTest {
 
 		assertEquals(
 			"3 node [] model 0\n3 NetApp one v\n3 BAR\n",
-			AwkExecutor.executeAwk(script, "", AwkExecutor.getUtilityEngine(), variables)
+			AwkExecutor.executeAwk(compile(script), "", AwkExecutor.getUtilityEngine(), variables)
 		);
 	}
 
@@ -230,7 +231,7 @@ class AwkVariablesUpdateTest {
 		assertEquals(
 			"1 1 1 1 0\n",
 			AwkExecutor.executeAwk(
-				"BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[1] > 9) }",
+				compile("BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[1] > 9) }"),
 				"",
 				AwkExecutor.getUtilityEngine(),
 				variables
@@ -246,5 +247,12 @@ class AwkVariablesUpdateTest {
 		copy.getVariables().put("fromSource", "MUTATED");
 
 		assertEquals(SOURCE_REF, source.getVariables().get("fromSource"), "Mutating the copy must not affect the original");
+	}
+
+	/**
+	 * Compiles a script for the utility engine.
+	 */
+	private static AwkProgram compile(final String script) throws AwkException {
+		return AwkExecutor.compile(script, AwkExecutor.getUtilityEngine());
 	}
 }

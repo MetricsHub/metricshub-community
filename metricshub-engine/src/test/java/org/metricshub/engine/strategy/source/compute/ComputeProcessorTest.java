@@ -15,8 +15,10 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL2;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 
+import io.jawk.AwkProgram;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -2575,7 +2577,7 @@ class ComputeProcessorTest {
 				.build();
 
 			// 1) Return a multi-line CSV string
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
+			awkStatic.when(() -> AwkExecutor.executeAwk(nullable(AwkProgram.class), anyString(), any(), any()))
 				.thenReturn(
 					"FOO;ID1;NAME1;MANUFACTURER1;NUMBER_OF_DISKS1\n" +
 						"BAR;ID2;NAME2;MANUFACTURER2;NUMBER_OF_DISKS2\n" +
@@ -2600,7 +2602,8 @@ class ComputeProcessorTest {
 				.selectColumns(ONE_TWO_THREE)
 				.build();
 
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any())).thenReturn(null);
+			awkStatic.when(() -> AwkExecutor.executeAwk(nullable(AwkProgram.class), anyString(), any(), any()))
+				.thenReturn(null);
 
 			computeProcessor.process(awkOK);
 			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
@@ -2616,7 +2619,8 @@ class ComputeProcessorTest {
 				.selectColumns(ONE_TWO_THREE)
 				.build();
 
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any())).thenReturn(EMPTY);
+			awkStatic.when(() -> AwkExecutor.executeAwk(nullable(AwkProgram.class), anyString(), any(), any()))
+				.thenReturn(EMPTY);
 
 			computeProcessor.process(awkOK);
 			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
@@ -2624,7 +2628,7 @@ class ComputeProcessorTest {
 			// 4) Return CSV matching `table`, then filter/select
 			sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
+			awkStatic.when(() -> AwkExecutor.executeAwk(nullable(AwkProgram.class), anyString(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			computeProcessor.process(
@@ -2634,7 +2638,7 @@ class ComputeProcessorTest {
 			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.asTable());
 
 			// 5) Same but with space in selectColumns
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
+			awkStatic.when(() -> AwkExecutor.executeAwk(nullable(AwkProgram.class), anyString(), any(), any()))
 				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
 
 			computeProcessor.process(

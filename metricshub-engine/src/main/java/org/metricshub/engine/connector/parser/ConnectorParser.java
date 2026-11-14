@@ -48,6 +48,7 @@ import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
 import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.update.AvailableSourceUpdate;
+import org.metricshub.engine.connector.update.AwkScriptCheck;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
 import org.metricshub.engine.connector.update.ContentTypeDesugaring;
 import org.metricshub.engine.connector.update.MonitorTaskSourceDepUpdate;
@@ -226,12 +227,14 @@ public class ConnectorParser {
 		final ConnectorUpdateChain monitorTaskSourceDepUpdate = new MonitorTaskSourceDepUpdate();
 		final ConnectorUpdateChain powerMeasurementStatusUpdate = new PowerMeasurementStatusUpdate();
 		final ConnectorUpdateChain contentTypeDesugaring = new ContentTypeDesugaring();
+		final ConnectorUpdateChain awkScriptCheck = new AwkScriptCheck();
 
 		// Create the chain
 		availableSource.setNextUpdateChain(surroundingSourceDepUpdate);
 		surroundingSourceDepUpdate.setNextUpdateChain(monitorTaskSourceDepUpdate);
 		monitorTaskSourceDepUpdate.setNextUpdateChain(powerMeasurementStatusUpdate);
 		powerMeasurementStatusUpdate.setNextUpdateChain(contentTypeDesugaring);
+		contentTypeDesugaring.setNextUpdateChain(awkScriptCheck);
 
 		return availableSource;
 	}

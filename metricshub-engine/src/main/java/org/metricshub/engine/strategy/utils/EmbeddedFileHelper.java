@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -105,5 +106,31 @@ public class EmbeddedFileHelper {
 		}
 
 		return embeddedFiles.entrySet().stream().map(Entry::getValue).findFirst();
+	}
+
+	/**
+	 * Finds the AWK script of an <code>awk</code> compute or source: the embedded file its <code>script</code>
+	 * references, or the <code>script</code> itself when it references none (an inline script).
+	 * <p>
+	 * Every place that needs the script goes through this method (the <code>awk</code> compute, the
+	 * <code>awk</code> source, the checks), so that they all read the same code.
+	 *
+	 * @param script                 The <code>script</code> property: a reference to one embedded file, or the code.
+	 * @param connectorEmbeddedFiles Gives all the embedded files referenced in the connector. Only called when the
+	 *                               script references a file.
+	 * @param hostname               The hostname used to log the failure where many embedded files are referenced.
+	 * @param connectorId            The identifier of the connector used for logging.
+	 * @return An Optional of the script as an {@link EmbeddedFile}, empty when the referenced file is not found.
+	 */
+	public static Optional<EmbeddedFile> findScript(
+		@NonNull final String script,
+		@NonNull final Supplier<Map<Integer, EmbeddedFile>> connectorEmbeddedFiles,
+		final String hostname,
+		final String connectorId
+	) {
+		// The hostname and the connector identifier are only needed, and checked, to look for a file
+		return FILE_PATTERN.matcher(script).find()
+			? findEmbeddedFile(script, connectorEmbeddedFiles.get(), hostname, connectorId)
+			: Optional.of(EmbeddedFile.fromString(script));
 	}
 }
