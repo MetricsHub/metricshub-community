@@ -31,6 +31,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
@@ -55,6 +56,9 @@ public class HttpProtobufClient extends AbstractOtelClient {
 
 	/** Drops the token a {@code 401} refused, given the {@code Authorization} it was sent with. */
 	private final Consumer<String> invalidateCredential;
+
+	/** The {@code Authorization} refused again right after a renewal: a later {@code 401} with it renews nothing. */
+	private volatile String refusedAfterRenewal;
 
 	/**
 	 * Constructor for an HTTP client using Protobuf.
@@ -96,7 +100,24 @@ public class HttpProtobufClient extends AbstractOtelClient {
 	@Override
 	public void send(final ExportMetricsServiceRequest request, final LogContextSetter logContextSetter) {
 		// Serialize Protobuf request
-		post(request.toByteArray(), logContextSetter, true);
+		final byte[] requestBody = request.toByteArray();
+		if (credentialHeaders == null) {
+			post(requestBody, logContextSetter, true);
+			return;
+		}
+		// The token may have to be asked from Central first: never on the collection's thread
+		try {
+			executorService.execute(() -> {
+				try {
+					post(requestBody, logContextSetter, true);
+				} catch (RuntimeException e) {
+					logContextSetter.setContext();
+					log.error("Failed to send metrics: {}", e.getMessage());
+				}
+			});
+		} catch (RejectedExecutionException e) {
+			log.debug("Metrics not sent: the exporter is shut down.");
+		}
 	}
 
 	/**
@@ -117,6 +138,7 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				sentHeaders = credentialHeaders.get();
 			} catch (RuntimeException e) {
 				// Never the token: the token provider's messages name the failure only
+				logContextSetter.setContext();
 				log.warn("Metrics not sent: no token from MetricsHub Central: {}", e.getMessage());
 				return;
 			}
@@ -143,11 +165,23 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				// Any 2xx: VictoriaMetrics answers 200 or 204
 				if (response.statusCode() / 100 == 2) {
 					log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
-				} else if (response.statusCode() == 401 && credentialHeaders != null && mayRenew) {
-					log.debug("Metrics refused with 401: the token is renewed and the batch sent once more.");
-					// The very token refused: a newer one, renewed meanwhile, is kept
-					invalidateCredential.accept(sentHeaders.get(AUTHORIZATION));
-					post(requestBody, logContextSetter, false);
+				} else if (response.statusCode() == 401 && credentialHeaders != null) {
+					final String authorization = sentHeaders.get(AUTHORIZATION);
+					if (mayRenew && !authorization.equals(refusedAfterRenewal)) {
+						log.debug("Metrics refused with 401: the token is renewed and the batch sent once more.");
+						// The very token refused: a newer one, renewed meanwhile, is kept
+						invalidateCredential.accept(authorization);
+						post(requestBody, logContextSetter, false);
+						return;
+					}
+					// A renewed token refused too: renewing cannot fix it, so the token shared with the Central channels
+					// is no longer dropped at each batch, until the agent renews it on its own
+					refusedAfterRenewal = authorization;
+					// Never the body: a proxy may echo the request's headers, the token included
+					log.error("Failed to send metrics. HTTP Response Code: 401, after a token renewal.");
+				} else if (credentialHeaders != null) {
+					// Never the body: a proxy may echo the request's headers, the token included
+					log.error("Failed to send metrics. HTTP Response Code: {}.", response.statusCode());
 				} else {
 					log.error(
 						"Failed to send metrics. HTTP Response Code: {}. Server response: {}",

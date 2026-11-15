@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -22,6 +23,8 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -147,9 +150,17 @@ class MetricsExporterTest {
 			vmauth = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
 			vmauth.createContext("/opentelemetry/v1/metrics", exchange -> {
 				exchange.getRequestBody().readAllBytes();
-				received.add(String.valueOf(exchange.getRequestHeaders().getFirst("Authorization")));
+				final String authorization = String.valueOf(exchange.getRequestHeaders().getFirst("Authorization"));
+				received.add(authorization);
 				final Integer status = answers.poll();
-				exchange.sendResponseHeaders(status == null ? 200 : status, -1);
+				if (status == null || status / 100 == 2) {
+					exchange.sendResponseHeaders(status == null ? 200 : status, -1);
+				} else {
+					// An error body that echoes the request's headers
+					final byte[] body = ("echo Authorization: " + authorization).getBytes(StandardCharsets.UTF_8);
+					exchange.sendResponseHeaders(status, body.length);
+					exchange.getResponseBody().write(body);
+				}
 				exchange.close();
 			});
 			vmauth.start();
@@ -415,5 +426,53 @@ class MetricsExporterTest {
 		when(coordinator.isReadyFor(CENTRAL)).thenReturn(true);
 		when(coordinator.headers(Map.of(), 7L)).thenReturn(Map.of("Authorization", "Bearer new"));
 		assertEquals(Map.of("Authorization", "Bearer new"), credential.get());
+	}
+
+	@Test
+	void centralAuth_shouldNotRenewAtEachBatchOnceARenewedTokenIsRefused() throws Exception {
+		answers.addAll(List.of(401, 401, 401, 401));
+		final HttpProtobufClient client = centralClient();
+		final String logged = logsOf(() -> {
+			exportAndAwait(client, 2);
+			// The next batch, with the renewed token, refused again
+			exportAndAwait(client, 1);
+			client.shutdown();
+		});
+
+		assertEquals(List.of("Bearer token-1", "Bearer token-2", "Bearer token-2"), received);
+		// The token shared with the Central channels is dropped once, not at each batch
+		assertEquals(List.of("Bearer token-1"), invalidated);
+		assertFalse(logged.contains("token-"), logged);
+	}
+
+	@Test
+	void centralAuth_shouldNeverBlockTheCollectionWhileTheTokenIsAsked() throws Exception {
+		final CountDownLatch centralAnswers = new CountDownLatch(1);
+		final HttpProtobufClient slow = HttpProtobufClient.builder()
+			.withEndpoint(vmauthEndpoint())
+			.withHeaders(Map.of())
+			.withTimeout(5)
+			.withPoolSize(1)
+			.withCredentialHeaders(() -> {
+				try {
+					// Central is slow to answer the token request
+					centralAnswers.await(10, TimeUnit.SECONDS);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+				return Map.of("Authorization", "Bearer token-1");
+			})
+			.withInvalidateCredential(invalidated::add)
+			.build();
+		final CountDownLatch handled = new CountDownLatch(1);
+		assertTimeoutPreemptively(
+			Duration.ofSeconds(2),
+			() -> slow.send(ExportMetricsServiceRequest.getDefaultInstance(), handled::countDown)
+		);
+		centralAnswers.countDown();
+		assertTrue(handled.await(10, TimeUnit.SECONDS), "The batch should be sent once the token is there");
+		slow.shutdown();
+
+		assertEquals(List.of("Bearer token-1"), received);
 	}
 }
