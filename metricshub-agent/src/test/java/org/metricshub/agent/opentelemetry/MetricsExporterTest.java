@@ -291,7 +291,7 @@ class MetricsExporterTest {
 			.withEndpoint(vmauthEndpoint())
 			.withHeaders(Map.of())
 			.withTimeout(5)
-			.withPoolSize(1)
+			.withPoolSize(2)
 			.withCredentialHeaders(() -> {
 				asked.incrementAndGet();
 				throw new UncheckedIOException(new CentralTokenProvider.InvalidClientException("invalid_client"));
@@ -474,5 +474,42 @@ class MetricsExporterTest {
 		slow.shutdown();
 
 		assertEquals(List.of("Bearer token-1"), received);
+	}
+
+	@Test
+	void centralAuth_shouldDropTheBatchesBeyondThePoolWhileTheTokenIsAsked() throws Exception {
+		final CountDownLatch centralAnswers = new CountDownLatch(1);
+		final AtomicInteger asked = new AtomicInteger();
+		final HttpProtobufClient slow = HttpProtobufClient.builder()
+			.withEndpoint(vmauthEndpoint())
+			.withHeaders(Map.of())
+			.withTimeout(5)
+			.withPoolSize(1)
+			.withCredentialHeaders(() -> {
+				asked.incrementAndGet();
+				try {
+					// Central is slow to answer the token request
+					centralAnswers.await(10, TimeUnit.SECONDS);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+				return Map.of("Authorization", "Bearer token-1");
+			})
+			.withInvalidateCredential(invalidated::add)
+			.build();
+		final CountDownLatch handled = new CountDownLatch(1);
+		final String logged = logsOf(() -> {
+			slow.send(ExportMetricsServiceRequest.getDefaultInstance(), handled::countDown);
+			// Sent while the first one waits for its token: dropped, never queued and flushed late
+			slow.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
+			slow.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
+			centralAnswers.countDown();
+			assertTrue(handled.await(10, TimeUnit.SECONDS), "The first batch should be sent once the token is there");
+			slow.shutdown();
+		});
+
+		assertEquals(List.of("Bearer token-1"), received);
+		assertEquals(1, asked.get());
+		assertTrue(logged.contains("still wait for a token"), logged);
 	}
 }

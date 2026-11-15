@@ -32,6 +32,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
@@ -60,6 +61,12 @@ public class HttpProtobufClient extends AbstractOtelClient {
 	/** The {@code Authorization} refused again right after a renewal: a later {@code 401} with it renews nothing. */
 	private volatile String refusedAfterRenewal;
 
+	/** The size of the thread pool: how many batches may wait for a token at once. */
+	private final int poolSize;
+
+	/** The batches handed to the pool and not posted yet, their token being asked. */
+	private final AtomicInteger waitingForToken = new AtomicInteger();
+
 	/**
 	 * Constructor for an HTTP client using Protobuf.
 	 *
@@ -84,6 +91,7 @@ public class HttpProtobufClient extends AbstractOtelClient {
 		final Consumer<String> invalidateCredential
 	) {
 		super(endpoint, headers, certificate, timeout, poolSize);
+		this.poolSize = poolSize;
 		this.credentialHeaders = credentialHeaders;
 		this.invalidateCredential = invalidateCredential;
 		resolveEndpoint();
@@ -105,6 +113,13 @@ public class HttpProtobufClient extends AbstractOtelClient {
 			post(requestBody, logContextSetter, true);
 			return;
 		}
+		// No queue: while Central is slow to give a token, the batches beyond one per thread are dropped, never piled up
+		// and flushed late
+		if (waitingForToken.incrementAndGet() > poolSize) {
+			waitingForToken.decrementAndGet();
+			log.warn("Metrics not sent: the batches before it still wait for a token from MetricsHub Central.");
+			return;
+		}
 		// The token may have to be asked from Central first: never on the collection's thread
 		try {
 			executorService.execute(() -> {
@@ -113,9 +128,12 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				} catch (RuntimeException e) {
 					logContextSetter.setContext();
 					log.error("Failed to send metrics: {}", e.getMessage());
+				} finally {
+					waitingForToken.decrementAndGet();
 				}
 			});
 		} catch (RejectedExecutionException e) {
+			waitingForToken.decrementAndGet();
 			log.debug("Metrics not sent: the exporter is shut down.");
 		}
 	}
