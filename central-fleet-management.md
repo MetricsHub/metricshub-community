@@ -677,6 +677,17 @@ Once enrolled, the key is ignored: it may stay in `metricshub.yaml`, which the a
 
 With `auth`, the agent also keeps its current access token in `security/metricshub-agent-token`, for the embedded OpenTelemetry Collector, which authenticates its exports with it. The file is replaced atomically (a temporary file of the security directory, then a rename) at each new token: the first one, each renewal, and the one that follows a `401` or a `4004`; it is restricted like the keystore: `0600` on Linux; on Windows, full control for the file's owner and for the principals that may already change the security directory's access list (typically `SYSTEM` and `Administrators`), every other principal removed, deny entries kept. A file deleted or changed by someone else is written again within 30 seconds. A token is valid for minutes and the agent renews it: the file needs no backup, and a copy of it expires. The collector gets the file's path in `METRICSHUB_AGENT_TOKEN_FILE`, never the token, the agent uid or its secret, and starts only once the agent is enrolled and a token of the configured issuer is written. Without `auth`, the file is neither written nor read, and the collector starts as before.
 
+With `auth`, the agent's own OTLP exporter can also send its metrics straight to Central's metrics endpoint (vmauth, `/opentelemetry/v1/metrics`), without a collector:
+
+```yaml
+otel:
+  otel.exporter.otlp.metrics.auth: central
+  otel.exporter.otlp.metrics.protocol: http/protobuf
+  otel.exporter.otlp.metrics.endpoint: https://metrics.example.com/opentelemetry/v1/metrics
+```
+
+Each batch carries `Authorization: Bearer <token>`, the agent's current token read at each send (`EnrollmentCoordinator`, the same provider as the channels), never a copy taken at startup. A `401` drops that token, gets a new one and sends the batch once more, never more; any `2xx` is a success. Without a token (not enrolled yet, Central unreachable) the batch is not sent and a warning is logged; once the agent is revoked (`invalid_client`), nothing is sent. A failed batch is lost: there is no queue and no retry. The agent refuses to start when `otel.exporter.otlp.metrics.auth` has another value than `central`, or with `central` when `central.auth` is not configured, the protocol is not `http/protobuf` (gRPC, the default, included), the endpoint is missing, or `otel.exporter.otlp.metrics.headers` holds an `Authorization` header. Without the setting, the exporter behaves as before.
+
 ### 9.2 `central.opamp:`
 
 ```yaml

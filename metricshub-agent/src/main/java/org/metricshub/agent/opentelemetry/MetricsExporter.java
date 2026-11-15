@@ -29,6 +29,7 @@ import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.opentelemetry.client.GrpcClient;
 import org.metricshub.agent.opentelemetry.client.HttpProtobufClient;
 import org.metricshub.agent.opentelemetry.client.IOtelClient;
@@ -96,6 +97,14 @@ public class MetricsExporter {
 			final long timeout = parseTimeout(configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_TIMEOUT));
 			final int poolSize = parsePoolSize(configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_POOL_SIZE));
 
+			if (usesCentralAuth(configuration)) {
+				newCentralAuthClient(protocol, endpoint, headers, certificate, timeout, poolSize);
+				isAppendResourceAttributes = Boolean.parseBoolean(
+					configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_APPEND_RESOURCE_ATTRIBUTES)
+				);
+				return this;
+			}
+
 			switch (protocol.toLowerCase().trim()) {
 				case OtelConfigConstants.GRPC:
 					newGrpcClient(endpoint, headers, certificate, timeout, poolSize);
@@ -160,6 +169,65 @@ public class MetricsExporter {
 			}
 
 			return Integer.parseInt(OtelConfigConstants.DEFAULT_OTLP_POOL_SIZE);
+		}
+
+		/**
+		 * Creates the HTTP client that authenticates each send with the agent's MetricsHub Central token. A setting it
+		 * cannot run with refuses the startup, naming the key to fix.
+		 *
+		 * @param protocol    The configured protocol: {@value OtelConfigConstants#HTTP_PROTOBUF} only.
+		 * @param endpoint    The endpoint, required.
+		 * @param headers     The static headers, without {@code Authorization}.
+		 * @param certificate The certificate used by the client.
+		 * @param timeout     The timeout in seconds.
+		 * @param poolSize    The pool size of the client.
+		 */
+		private void newCentralAuthClient(
+			final String protocol,
+			final String endpoint,
+			final String headers,
+			final String certificate,
+			final long timeout,
+			final int poolSize
+		) {
+			if (!OtelConfigConstants.HTTP_PROTOBUF.equals(protocol.toLowerCase().trim())) {
+				throw new IllegalStateException(
+					OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH +
+						": central requires " +
+						OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_PROTOCOL +
+						": http/protobuf."
+				);
+			}
+			if (endpoint == null || endpoint.isBlank()) {
+				throw new IllegalStateException(
+					OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT +
+						" is required with " +
+						OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH +
+						": central."
+				);
+			}
+			final Map<String, String> staticHeaders = parseHeaders(headers);
+			if (staticHeaders.keySet().stream().anyMatch("Authorization"::equalsIgnoreCase)) {
+				throw new IllegalStateException(
+					OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH +
+						": central and an Authorization header in " +
+						OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_HEADERS +
+						" cannot both be configured: remove the Authorization header."
+				);
+			}
+			final EnrollmentCoordinator coordinator = EnrollmentCoordinator.global();
+			// Not built in a try: an endpoint it cannot use refuses the startup instead of a no-op client
+			client = HttpProtobufClient.builder()
+				.withEndpoint(endpoint)
+				.withHeaders(staticHeaders)
+				.withCertificate(certificate)
+				.withTimeout(timeout)
+				.withPoolSize(poolSize)
+				// The current token at each send, never a copy; the exporter talks to vmauth, not Central, so it follows
+				// the provider of the moment
+				.withCredentialHeaders(() -> coordinator.headers(staticHeaders, coordinator.tokenGeneration()))
+				.withInvalidateCredential(coordinator::invalidateToken)
+				.build();
 		}
 
 		/**
@@ -287,6 +355,24 @@ public class MetricsExporter {
 
 			return headerMap;
 		}
+	}
+
+	/**
+	 * @param configuration the OpenTelemetry configuration
+	 * @return whether {@value OtelConfigConstants#OTEL_EXPORTER_OTLP_METRICS_AUTH} is {@code central}
+	 * @throws IllegalStateException when it has another value
+	 */
+	public static boolean usesCentralAuth(final Map<String, String> configuration) {
+		final String auth = configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH);
+		if (auth == null || auth.isBlank()) {
+			return false;
+		}
+		if (OtelConfigConstants.CENTRAL_AUTH.equalsIgnoreCase(auth.trim())) {
+			return true;
+		}
+		throw new IllegalStateException(
+			OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH + " accepts central only, or no value."
+		);
 	}
 
 	/**

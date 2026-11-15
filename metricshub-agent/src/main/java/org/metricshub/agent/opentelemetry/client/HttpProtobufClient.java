@@ -31,6 +31,8 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import lombok.Builder;
@@ -44,16 +46,28 @@ import org.metricshub.agent.opentelemetry.LogContextSetter;
 @Slf4j
 public class HttpProtobufClient extends AbstractOtelClient {
 
+	private static final String AUTHORIZATION = "Authorization";
+
 	private HttpClient client;
+
+	/** The headers of each send, the current token included, instead of the static ones; {@code null} without. */
+	private final Supplier<Map<String, String>> credentialHeaders;
+
+	/** Drops the token a {@code 401} refused, given the {@code Authorization} it was sent with. */
+	private final Consumer<String> invalidateCredential;
 
 	/**
 	 * Constructor for an HTTP client using Protobuf.
 	 *
-	 * @param endpoint    The URL of the OpenTelemetry receiver.
-	 * @param headers     The headers to be sent on OpenTelemetry requests.
-	 * @param certificate The path to the file containing trusted certificates to use when verifying a server's TLS credentials.
-	 * @param timeout     The timeout for the OpenTelemetry requests.
-	 * @param poolSize    The size of the thread pool used by the client.
+	 * @param endpoint             The URL of the OpenTelemetry receiver.
+	 * @param headers              The headers to be sent on OpenTelemetry requests.
+	 * @param certificate          The path to the file containing trusted certificates to use when verifying a server's TLS credentials.
+	 * @param timeout              The timeout for the OpenTelemetry requests.
+	 * @param poolSize             The size of the thread pool used by the client.
+	 * @param credentialHeaders    The headers of each send, the current token included, read at each send instead of
+	 *                             {@code headers}; throws when no token is available. {@code null} for the static headers.
+	 * @param invalidateCredential Drops the token a {@code 401} refused, given the {@code Authorization} it was sent
+	 *                             with. Required with {@code credentialHeaders}.
 	 */
 	@Builder(setterPrefix = "with")
 	public HttpProtobufClient(
@@ -61,9 +75,13 @@ public class HttpProtobufClient extends AbstractOtelClient {
 		final Map<String, String> headers,
 		final String certificate,
 		final long timeout,
-		final int poolSize
+		final int poolSize,
+		final Supplier<Map<String, String>> credentialHeaders,
+		final Consumer<String> invalidateCredential
 	) {
 		super(endpoint, headers, certificate, timeout, poolSize);
+		this.credentialHeaders = credentialHeaders;
+		this.invalidateCredential = invalidateCredential;
 		resolveEndpoint();
 		this.client = createHttpClient();
 	}
@@ -77,16 +95,40 @@ public class HttpProtobufClient extends AbstractOtelClient {
 	 */
 	@Override
 	public void send(final ExportMetricsServiceRequest request, final LogContextSetter logContextSetter) {
-		try {
-			final byte[] requestBody = request.toByteArray(); // Serialize Protobuf request
+		// Serialize Protobuf request
+		post(request.toByteArray(), logContextSetter, true);
+	}
 
+	/**
+	 * Posts a serialized batch. With a credential, a {@code 401} drops the token it was sent with and posts the batch
+	 * once more with a new one, never more.
+	 *
+	 * @param requestBody      the serialized batch
+	 * @param logContextSetter the log context setter
+	 * @param mayRenew         whether a {@code 401} may renew the token and post again
+	 */
+	private void post(final byte[] requestBody, final LogContextSetter logContextSetter, final boolean mayRenew) {
+		final Map<String, String> sentHeaders;
+		if (credentialHeaders == null) {
+			sentHeaders = headers;
+		} else {
+			try {
+				// Read at each send: a renewed token is used by the next batch
+				sentHeaders = credentialHeaders.get();
+			} catch (RuntimeException e) {
+				// Never the token: the token provider's messages name the failure only
+				log.warn("Metrics not sent: no token from MetricsHub Central: {}", e.getMessage());
+				return;
+			}
+		}
+		try {
 			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(url.toURI())
 				.timeout(Duration.ofSeconds(timeout))
 				.header("Content-Type", "application/x-protobuf");
 
 			// Inject headers
-			headers.forEach(requestBuilder::header);
+			sentHeaders.forEach(requestBuilder::header);
 
 			// Build the request with the Protobuf payload
 			final HttpRequest httpRequest = requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(requestBody)).build();
@@ -98,8 +140,14 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				// Set the log context
 				logContextSetter.setContext();
 
-				if (response.statusCode() == 200) {
+				// Any 2xx: VictoriaMetrics answers 200 or 204
+				if (response.statusCode() / 100 == 2) {
 					log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
+				} else if (response.statusCode() == 401 && credentialHeaders != null && mayRenew) {
+					log.debug("Metrics refused with 401: the token is renewed and the batch sent once more.");
+					// The very token refused: a newer one, renewed meanwhile, is kept
+					invalidateCredential.accept(sentHeaders.get(AUTHORIZATION));
+					post(requestBody, logContextSetter, false);
 				} else {
 					log.error(
 						"Failed to send metrics. HTTP Response Code: {}. Server response: {}",

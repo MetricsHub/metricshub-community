@@ -55,6 +55,7 @@ import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.helper.OtelConfigHelper;
 import org.metricshub.agent.helper.PostConfigDeserializeHelper;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
+import org.metricshub.agent.opentelemetry.OtelConfigConstants;
 import org.metricshub.agent.service.ConfigurationService;
 import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
@@ -189,6 +190,14 @@ public class AgentContext implements AutoCloseable {
 
 		// Build OpenTelemetry configuration
 		otelConfiguration = OtelConfigHelper.buildOtelConfiguration(agentConfig);
+		if (
+			MetricsExporter.usesCentralAuth(otelConfiguration) &&
+				!EnrollmentCoordinator.isConfigured(agentConfig.getCentral())
+		) {
+			throw new IllegalStateException(
+				OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH + ": central requires central.auth (and central.enabled)."
+			);
+		}
 
 		// Build the OpenTelemetry Collector Service
 		otelCollectorProcessService = new OtelCollectorProcessService(agentConfig);
