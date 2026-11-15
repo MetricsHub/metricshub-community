@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
@@ -95,6 +96,53 @@ public class HttpSourceProcessor {
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
+		final String result = execute(
+			httpSource,
+			connectorId,
+			telemetryManager,
+			request -> httpRequestExecutor.executeHttp(request, true, telemetryManager)
+		);
+		return result != null && !result.isEmpty() ? SourceTable.ofText(result) : SourceTable.empty();
+	}
+
+	/**
+	 * Executes the HTTP request of the given {@link HttpSource} and gives the response itself: its status code, its
+	 * header and its body, whatever the <code>resultContent</code> of the source.
+	 *
+	 * @param httpSource       The {@link HttpSource} defining HTTP request.
+	 * @param connectorId      The connector identifier used for logging purposes.
+	 * @param telemetryManager The telemetry manager providing access to host configuration and HTTP credentials.
+	 * @return The response, <code>null</code> when the request got none or when HTTP is not configured.
+	 */
+	public HttpResult executeRequest(
+		final HttpSource httpSource,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		return execute(
+			httpSource,
+			connectorId,
+			telemetryManager,
+			request -> httpRequestExecutor.executeHttpRequest(request, true, telemetryManager)
+		);
+	}
+
+	/**
+	 * Builds the HTTP request of the source and executes it.
+	 *
+	 * @param <T>              What the executor gives.
+	 * @param httpSource       The {@link HttpSource} defining HTTP request.
+	 * @param connectorId      The connector identifier used for logging purposes.
+	 * @param telemetryManager The telemetry manager providing access to host configuration and HTTP credentials.
+	 * @param executor         Executes the request.
+	 * @return What the executor gives, <code>null</code> when HTTP is not configured or when the request fails.
+	 */
+	private <T> T execute(
+		final HttpSource httpSource,
+		final String connectorId,
+		final TelemetryManager telemetryManager,
+		final Function<HttpRequest, T> executor
+	) {
 		final HttpConfiguration httpConfiguration = httpConfigurationProvider.apply(telemetryManager);
 
 		if (httpConfiguration == null) {
@@ -104,7 +152,7 @@ public class HttpSourceProcessor {
 				httpSource
 			);
 
-			return SourceTable.empty();
+			return null;
 		}
 
 		// Retrieve the hostname from the HttpConfiguration, otherwise from the telemetryManager
@@ -113,7 +161,7 @@ public class HttpSourceProcessor {
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = telemetryManager.getEmbeddedFiles(connectorId);
 
 		try {
-			final String result = httpRequestExecutor.executeHttp(
+			return executor.apply(
 				HttpRequest.builder()
 					.hostname(hostname)
 					.method(httpSource.getMethod().toString())
@@ -124,14 +172,8 @@ public class HttpSourceProcessor {
 					.resultContent(httpSource.getResultContent())
 					.authenticationToken(httpSource.getAuthenticationToken())
 					.httpConfiguration(httpConfiguration)
-					.build(),
-				true,
-				telemetryManager
+					.build()
 			);
-
-			if (result != null && !result.isEmpty()) {
-				return SourceTable.ofText(result);
-			}
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,
@@ -142,6 +184,6 @@ public class HttpSourceProcessor {
 			);
 		}
 
-		return SourceTable.empty();
+		return null;
 	}
 }

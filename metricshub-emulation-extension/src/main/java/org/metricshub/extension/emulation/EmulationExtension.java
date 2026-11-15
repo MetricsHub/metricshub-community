@@ -62,6 +62,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.extension.HttpResult;
+import org.metricshub.engine.extension.IHttpRequestExtension;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -118,7 +120,7 @@ import org.metricshub.extension.wmi.WmiExtension;
  * of making real network calls.
  */
 @Slf4j
-public class EmulationExtension implements IProtocolExtension {
+public class EmulationExtension implements IProtocolExtension, IHttpRequestExtension {
 
 	/**
 	 * Identifier of the emulation protocol extension.
@@ -399,6 +401,19 @@ public class EmulationExtension implements IProtocolExtension {
 
 		// Emulation is always considered "up" if configured
 		return Optional.of(true);
+	}
+
+	@Override
+	public HttpResult executeHttpRequest(
+		final HttpSource httpSource,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER).executeRequest(
+			httpSource,
+			connectorId,
+			telemetryManager
+		);
 	}
 
 	@Override
