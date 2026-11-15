@@ -452,10 +452,10 @@ public class CentralTokenProvider {
 	}
 
 	/**
-	 * @param endpoint the token endpoint
+	 * @param endpoint an endpoint the agent's token is sent to
 	 * @return whether it is {@code https}, or {@code http} on a loopback literal (the tunnel's rule)
 	 */
-	static boolean isAcceptable(final URI endpoint) {
+	public static boolean isAcceptable(final URI endpoint) {
 		if (endpoint.getHost() == null) {
 			return false;
 		}

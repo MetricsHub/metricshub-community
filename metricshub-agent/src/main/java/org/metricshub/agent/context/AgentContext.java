@@ -197,7 +197,7 @@ public class AgentContext implements AutoCloseable {
 		hostMetricDefinitions = ConfigHelper.readHostMetricDefinitions();
 
 		// Build the Metrics Exporter
-		metricsExporter = MetricsExporter.builder().withConfiguration(otelConfiguration).build();
+		metricsExporter = MetricsExporter.builder().withConfiguration(otelConfiguration, agentConfig.getCentral()).build();
 
 		// Build the TaskScheduling Service
 		taskSchedulingService = TaskSchedulingService.builder()

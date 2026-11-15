@@ -71,6 +71,17 @@ public class OtelConfigConstants {
 	public static final String OTEL_EXPORTER_OTLP_METRICS_APPEND_RESOURCE_ATTRIBUTES = "otel.exporter.otlp.metrics.append_resource_attributes";
 
 	/**
+	 * Property used to authenticate each OTLP metric request with the agent's MetricsHub Central token, renewed by the
+	 * agent: {@value #CENTRAL_AUTH}, with {@code central.auth} and {@value #HTTP_PROTOBUF} only. Absent by default.
+	 */
+	public static final String OTEL_EXPORTER_OTLP_METRICS_AUTH = "otel.exporter.otlp.metrics.auth";
+
+	/**
+	 * The only value of {@value #OTEL_EXPORTER_OTLP_METRICS_AUTH}.
+	 */
+	public static final String CENTRAL_AUTH = "central";
+
+	/**
 	 * OTLP protocol: gRPC
 	 */
 	public static final String GRPC = "grpc";

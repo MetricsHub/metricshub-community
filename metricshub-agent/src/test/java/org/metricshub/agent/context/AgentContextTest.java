@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.GRAFANA_DB_STATE_METRIC;
@@ -27,6 +28,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_K
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOST_NAME;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
@@ -332,5 +336,20 @@ class AgentContextTest {
 		// close() is idempotent
 		assertDoesNotThrow(agentContext::close, "close() should be idempotent");
 		assertTrue(agentContext.isClosed(), "Context should still report closed");
+	}
+
+	@Test
+	void testCentralAuthExportWithoutCentralAuthIsRefused(@TempDir final Path configDirectory) throws IOException {
+		Files.writeString(configDirectory.resolve("metricshub.yaml"), """
+			otel:
+			  otel.exporter.otlp.metrics.auth: central
+			  otel.exporter.otlp.metrics.protocol: http/protobuf
+			  otel.exporter.otlp.metrics.endpoint: http://127.0.0.1:8427/opentelemetry/v1/metrics
+			""");
+		final IllegalStateException refused = assertThrows(
+			IllegalStateException.class,
+			() -> new AgentContext(configDirectory.toString(), extensionManager).close()
+		);
+		assertTrue(refused.getMessage().contains("central.auth"), refused.getMessage());
 	}
 }
