@@ -441,13 +441,13 @@ public class ConnectorStoreComposer {
 			connector.setEmbeddedFiles(embeddedFiles);
 		}
 
-		// Update the compiled filename, before the update chain: it names the connector in the messages of the chain
-		connector.getConnectorIdentity().setCompiledFilename(intermediateConnector.getConnectorId());
-
 		// Run the update chain
 		if (updateChain != null) {
 			updateChain.update(connector);
 		}
+
+		// Update the compiled filename
+		connector.getConnectorIdentity().setCompiledFilename(intermediateConnector.getConnectorId());
 
 		// A connector that breaks the strict content types (#1560) does not load
 		ContentTypeCheck.validate(connector, intermediateConnector.getConnectorId());

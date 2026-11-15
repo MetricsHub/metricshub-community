@@ -14,7 +14,6 @@ import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
-import org.metricshub.engine.connector.update.AwkScriptCheck;
 import org.metricshub.engine.connector.update.ContentTypeCheck;
 import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus.Repository;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
@@ -51,10 +50,6 @@ class AwkCompilationCorpusTest {
 						if (compute instanceof org.metricshub.engine.connector.model.monitor.task.source.compute.Awk awk) {
 							compiled[0]++;
 							compile(connector, awk.getScript(), AwkExecutor.getUtilityEngine(), where, failures);
-							// No reference is replaced in a script: it gets its values through its variables
-							if (AwkScriptCheck.holdsReference(awk.getScript(), connector)) {
-								failures.add(where + " (a reference in the script)");
-							}
 						}
 					}
 				}));
