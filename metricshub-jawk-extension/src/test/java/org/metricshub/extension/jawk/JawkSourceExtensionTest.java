@@ -81,7 +81,7 @@ class JawkSourceExtensionTest {
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		// Http request & Json2CSV.
+		// Http request & json2Table.
 		// The input arrives already resolved: SourceUpdaterProcessor replaces its source references before the source
 		// reaches this extension, so the test passes the content that ${source::...source_one} resolves to.
 		final Source source = JawkSource.builder()
@@ -98,11 +98,8 @@ class JawkSourceExtensionTest {
 					    requestArguments["path"] = "/ConfigurationManager/v1/objects/storages/" $1
 					    requestArguments["resultContent"] = "body"
 					    requestArguments["header"] = getVariable("myVariable")
-					    json2csvArguments["jsonSource"] = executeHttpRequest(requestArguments)
-					    json2csvArguments["entryKey"] = "/"
-					    json2csvArguments["properties"] = "myResult"
-					    json2csvArguments["separator"] = ";"
-					    print json2csv(json2csvArguments)
+					    json2Table(executeHttpRequest(requestArguments), "/", "myResult", rows)
+					    print rows[0][0], rows[0][1], ""
 					}
 				""")
 			.build();

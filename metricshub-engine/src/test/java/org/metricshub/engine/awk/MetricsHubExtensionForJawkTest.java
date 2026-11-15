@@ -1,6 +1,7 @@
 package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -12,23 +13,56 @@ import io.jawk.jrt.AssocArray;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+/**
+ * The MetricsHub functions of an awk source that read JSON (#1578). They are called from a script, as a connector
+ * calls them: a function fills the array it is given.
+ */
 class MetricsHubExtensionForJawkTest {
 
-	private static final String JSON = "{\"items\":[{\"name\":\"a\",\"value\":1},{\"name\":\"b\",\"value\":2}]}";
-	private static final String CSV = "/items[0];a;1;\n/items[1];b;2;";
+	private static final String JSON = "{\"items\":[{\"name\":\"a;b\",\"value\":1,\"note\":\"x\\ny\"},{\"name\":\"b\",\"value\":10}]," +
+		"\"ok\":true,\"off\":false,\"none\":null,\"ratio\":0.5}";
+
+	/**
+	 * Runs a script with the MetricsHub functions. The script reads the JSON document in the <code>json</code>
+	 * variable.
+	 */
+	private static String run(final String script, final MetricsHubExtensionForJawk extension) throws Exception {
+		final Awk awk = new Awk(List.of(extension, UtilityExtensionForJawk.INSTANCE), AwkExecutor.newAwkSettings(null));
+		return awk.script(awk.compile(script)).input("").variables(Map.of("json", JSON)).execute();
+	}
+
+	private static String run(final String script) throws Exception {
+		return run(script, MetricsHubExtensionForJawk.builder().hostname("host").build());
+	}
+
+	/**
+	 * An extension whose HTTP requests give the specified result.
+	 */
+	/**
+	 * The response to a HTTP request: its status, a header, the body.
+	 */
+	private static HttpResult answer(final int status, final String body) {
+		return new HttpResult(status, "Content-Type: application/json\n", body);
+	}
+
+	private static MetricsHubExtensionForJawk httpGiving(final HttpResult result) {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		when(sourceProcessor.executeHttpRequest(any(HttpSource.class))).thenReturn(result);
+		return MetricsHubExtensionForJawk.builder().hostname("host").sourceProcessor(sourceProcessor).build();
+	}
 
 	/**
 	 * A Jawk engine with the MetricsHub, utility and gawk extensions, as a connector script runs them.
@@ -61,33 +95,147 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	@Test
-	void testExecuteJson2csvParsingMode() {
-		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder().hostname("host").build();
-		final AssocArray args = AssocArray.createHash();
-		args.put("jsonSource", JSON);
-		args.put("entryKey", "/items");
-		args.put("properties", "name;value");
-		args.put("separator", ";");
+	void testJson2Table() throws Exception {
+		// rows[i][0] is the path of the entry, the properties follow. A cell keeps its ";" and its line feed, a
+		// missing property is an empty cell, and a cell that looks like a number compares as a number
+		assertEquals("2\n/items[0]|a;b|1|x\ny|4\n/items[1]|b|10||4\n1\n", run("""
+			BEGIN {
+				n = json2Table(json, "/items", "name;value;note", rows)
+				print n
+				for (i = 0; i < n; i++) {
+					print rows[i][0] "|" rows[i][1] "|" rows[i][2] "|" rows[i][3] "|" length(rows[i])
+				}
+				print (rows[1][2] > 9)
+			}
+			"""));
+	}
 
-		try (
-			MockedStatic<ClientsExecutor> clientsExecutor = Mockito.mockStatic(
-				ClientsExecutor.class,
-				Mockito.CALLS_REAL_METHODS
+	/**
+	 * A property of the parent of an entry, which the events parser reads too.
+	 */
+	@Test
+	void testJson2TableParentProperty() throws Exception {
+		assertEquals("2 g1 x g1 y\n", run("""
+			BEGIN {
+				doc = "{\\"groups\\":[{\\"id\\":\\"g1\\",\\"members\\":[{\\"name\\":\\"x\\"},{\\"name\\":\\"y\\"}]}]}"
+				n = json2Table(doc, "/groups/members", "../id;name", rows)
+				print n, rows[0][1], rows[0][2], rows[1][1], rows[1][2]
+			}
+			"""));
+	}
+
+	@Test
+	void testJson2TableEmptiesTheArray() throws Exception {
+		// What the array held is gone, whatever the document
+		assertEquals("0 0\n1 1\n", run("""
+			BEGIN {
+				rows[5] = "old"
+				n = json2Table("not json", "/", "a", rows)
+				print n, length(rows)
+				rows["old"] = "old"
+				n = json2Table(json, "/", "ratio", rows)
+				print n, length(rows)
+			}
+			"""));
+	}
+
+	@Test
+	void testJson2List() throws Exception {
+		// Every leaf value by its path, as the json2List compute writes them
+		assertEquals("9\na;b\nTRUE FALSE [NULL] 0.5\n1\n0\n", run("""
+			BEGIN {
+				list["old"] = "old"
+				n = json2List(json, list)
+				print n
+				print list["/items[0]/name"]
+				print list["/ok"], list["/off"], "[" list["/none"] "]", list["/ratio"]
+				print (list["/items[1]/value"] > 9)
+				print json2List("not json", list)
+			}
+			"""));
+	}
+
+	@Test
+	void testExecuteHttpJsonRequest() throws Exception {
+		// An object is an array indexed by its keys, an array is indexed from 0, a number is a number, true and
+		// false are 1 and 0, null is an empty string
+		assertEquals("200\na;b 11 2\n1 0 [] 1\n", run("""
+			BEGIN {
+				args["method"] = "get"
+				args["path"] = "/api"
+				response["old"] = "old"
+				n = executeHttpJsonRequest(args, response)
+				print n
+				print response["items"][0]["name"], response["items"][1]["value"] + 1, length(response["items"])
+				print response["ok"], response["off"], "[" response["none"] "]", response["ratio"] * 2
+			}
+			""", httpGiving(answer(200, JSON))));
+	}
+
+	@Test
+	void testExecuteHttpJsonRequestOnAnArray() throws Exception {
+		assertEquals(
+			"200 x 3\n",
+			run(
+				"BEGIN { args[\"path\"] = \"/api\"; n = executeHttpJsonRequest(args, response); print n, response[0], response[1][\"a\"] }",
+				httpGiving(answer(200, "[\"x\", {\"a\": 3}]"))
 			)
-		) {
-			// Without parsingMode, the JSON is parsed as a tree
-			assertEquals(CSV, extension.executeJson2csv(args));
-			clientsExecutor.verify(
-				() -> ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), ";", false, "host")
-			);
+		);
+	}
 
-			// parsingMode events (case-insensitive) gives the same CSV
-			args.put("parsingMode", "Events");
-			assertEquals(CSV, extension.executeJson2csv(args));
-			clientsExecutor.verify(
-				() -> ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), ";", true, "host")
-			);
-		}
+	/**
+	 * A number is an AWK number: a 64-bit integer keeps all its digits, anything else is a double.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestNumbers() throws Exception {
+		assertEquals("9223372036854775807 42 3 1\n", run("""
+			BEGIN {
+				args["path"] = "/api"
+				executeHttpJsonRequest(args, r)
+				print r["long"], r["small"], r["half"] * 2, (r["huge"] > r["long"])
+			}
+			""", httpGiving(answer(200, "{\"long\":9223372036854775807,\"small\":42,\"half\":1.5,\"huge\":1e30}"))));
+	}
+
+	@Test
+	void testJson2ListKeepsTheLastValueOfAPath() throws Exception {
+		assertEquals("1 second\n", run("""
+			BEGIN {
+				n = json2List("{\\"a/b\\":\\"first\\",\\"a\\":{\\"b\\":\\"second\\"}}", list)
+				print n, list["/a/b"]
+			}
+			"""));
+	}
+
+	@Test
+	void testExecuteHttpJsonRequestWithoutJson() throws Exception {
+		final String script = "BEGIN { args[\"path\"] = \"/api\"; response[1] = 1; print executeHttpJsonRequest(args, response), length(response) }";
+
+		// Not JSON, a JSON scalar, an empty result, a failed request: the array is empty
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, "<html>"))));
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, "42"))));
+		// A document followed by something else is not a JSON document
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, "{\"status\":\"ok\"}<html>proxy error</html>"))));
+		assertEquals("200 1\n", run(script, httpGiving(answer(200, "{\"status\":\"ok\"} \n"))));
+		assertEquals("200 0\n", run(script, httpGiving(answer(200, ""))));
+		assertEquals("0 0\n", run(script, httpGiving(null)));
+	}
+
+	@Test
+	void testExecuteHttpJsonRequestReturnsTheStatus() throws Exception {
+		final String script = "BEGIN { args[\"path\"] = \"/api\"; args[\"resultContent\"] = \"body\"; " +
+			"print executeHttpJsonRequest(args, response), response[\"error\"] }";
+
+		// A refused request is not an empty answer: the status says so, and the body says why
+		assertEquals("401 bad token\n", run(script, httpGiving(answer(401, "{\"error\":\"bad token\"}"))));
+		assertEquals("204 \n", run(script, httpGiving(answer(204, ""))));
+		assertEquals("200 \n", run(script, httpGiving(answer(200, "{}"))));
+		assertEquals("404 \n", run(script, httpGiving(answer(404, null))));
+	}
+
+	@Test
+	void testJson2csvIsGone() {
+		assertThrows(Exception.class, () -> run("BEGIN { args[\"jsonSource\"] = json; print json2csv(args) }"));
 	}
 
 	/**
@@ -177,27 +325,6 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	/**
-	 * <code>json2csv</code> reads its arguments from fields and from a variable map.
-	 */
-	@Test
-	void testJson2csvReadsFieldsAndVariables() throws Exception {
-		final String script = """
-			{
-				args["jsonSource"] = json
-				args["entryKey"] = $1
-				args["properties"] = $2
-				args["separator"] = ";"
-				print json2csv(args)
-			}
-			""";
-
-		assertEquals(
-			CSV + "\n",
-			AwkExecutor.executeAwk(script, "/items name;value\n", engine(sourceProcessor()), Map.of("json", JSON))
-		);
-	}
-
-	/**
 	 * <code>asorti</code> reads the keys of the source array and fills the script's destination array: it is the
 	 * script's own array after the call.
 	 */
@@ -281,32 +408,5 @@ class MetricsHubExtensionForJawkTest {
 			""";
 
 		assertEquals("2 a b\n", AwkExecutor.executeAwk(script, "", engine(sourceProcessor()), null));
-	}
-
-	/**
-	 * A <code>json2csv</code> argument the script does not set is the empty string, not the text <code>null</code>.
-	 */
-	@Test
-	void testJson2csvMissingArgumentIsEmpty() throws Exception {
-		final String script = """
-			{
-				args["jsonSource"] = json
-				args["entryKey"] = "/items"
-				args["properties"] = "name;value"
-				print json2csv(args)
-			}
-			""";
-
-		try (
-			MockedStatic<ClientsExecutor> clientsExecutor = Mockito.mockStatic(
-				ClientsExecutor.class,
-				Mockito.CALLS_REAL_METHODS
-			)
-		) {
-			AwkExecutor.executeAwk(script, "x\n", engine(sourceProcessor()), Map.of("json", JSON));
-			clientsExecutor.verify(
-				() -> ClientsExecutor.executeJson2Csv(JSON, "/items", List.of("name", "value"), "", false, "host")
-			);
-		}
 	}
 }

@@ -1153,7 +1153,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @return The rows
 	 * @throws IOException when the document does not parse or is not an object or an array
 	 */
-	static List<List<String>> jsonToList(final String json) throws IOException {
+	public static List<List<String>> jsonToList(final String json) throws IOException {
 		// Not JFlat's getFlatMap() (JFlat 1.3.00): that map is sorted ([10] before [2]) and case-insensitive (keys that
 		// differ only in case collapse). This walk keeps the document order and every value.
 		// ponytail: the whole document and its rows are in memory; stream the rows if documents get huge.

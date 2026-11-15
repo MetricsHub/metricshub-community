@@ -45,6 +45,8 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.extension.HttpResult;
+import org.metricshub.engine.extension.IHttpRequestExtension;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -58,7 +60,7 @@ import org.metricshub.extension.http.utils.HttpRequest;
  * processes HTTP sources and criteria.
  */
 @Slf4j
-public class HttpExtension implements IProtocolExtension {
+public class HttpExtension implements IProtocolExtension, IHttpRequestExtension {
 
 	/**
 	 * The identifier for the Http protocol.
@@ -136,6 +138,15 @@ public class HttpExtension implements IProtocolExtension {
 		}
 
 		return Optional.of(httpResult != null);
+	}
+
+	@Override
+	public HttpResult executeHttpRequest(
+		final HttpSource httpSource,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		return new HttpSourceProcessor(httpRequestExecutor).executeRequest(httpSource, connectorId, telemetryManager);
 	}
 
 	@Override

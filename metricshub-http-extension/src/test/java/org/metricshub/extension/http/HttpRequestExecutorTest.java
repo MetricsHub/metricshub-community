@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.http.HttpClient;
@@ -91,6 +92,87 @@ class HttpRequestExecutorTest {
 				.build();
 			final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
 			assertEquals(expecteBody, result);
+		}
+	}
+
+	/**
+	 * A request that the server refuses gives nothing, except to whoever asked for the status: the status and what
+	 * the server answered.
+	 */
+	@Test
+	void testExecuteHttpErrorStatus() {
+		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
+			final String method = "GET";
+			final String username = "username";
+			final char[] password = "pwd".toCharArray();
+			final Map<String, String> headerContent = Map.of("Connection", "keep-alive");
+			final int timeout = 120;
+			final HttpResponse httpResponse = new HttpResponse();
+			httpResponse.setStatusCode(401);
+			httpResponse.appendHeader("Content-Type", "application/json");
+			httpResponse.appendBody("{\"error\":\"bad token\"}");
+			httpClientMock.when(
+				() -> HttpClient.sendRequest(
+					"https://hostname:443/",
+					method,
+					null,
+					username,
+					password,
+					null,
+					0,
+					null,
+					null,
+					null,
+					headerContent,
+					"{}",
+					timeout,
+					null
+				)
+			).thenReturn(httpResponse);
+
+			final String hostname = "hostname";
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
+				.username(username)
+				.password(password)
+				.timeout(timeout * 1L)
+				.build();
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
+				.hostConfiguration(
+					HostConfiguration.builder()
+						.hostname(hostname)
+						.hostId(hostname)
+						.hostType(DeviceKind.LINUX)
+						.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
+						.build()
+				)
+				.build();
+			// 401: refused at once. 503: retried, and refused again
+			for (final int status : new int[] { 401, 503 }) {
+				httpResponse.setStatusCode(status);
+				for (final ResultContent resultContent : ResultContent.values()) {
+					final HttpRequest request = HttpRequest.builder()
+						.path("/")
+						.method(method)
+						.body("{}", Map.of(), "connector", hostname)
+						.hostname(hostname)
+						.httpConfiguration(httpConfiguration)
+						.header("Connection: keep-alive", Map.of(), "connector", hostname)
+						.resultContent(resultContent)
+						.build();
+					final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
+					if (resultContent == ResultContent.ALL_WITH_STATUS) {
+						assertEquals("Status: " + status + "\n" + httpResponse.getHeader() + "\n{\"error\":\"bad token\"}", result);
+					} else {
+						assertEquals("", result, status + " " + resultContent.name());
+					}
+
+					// The response itself has its status, whatever the result content
+					assertEquals(
+						new HttpResult(status, httpResponse.getHeader(), "{\"error\":\"bad token\"}"),
+						new HttpRequestExecutor().executeHttpRequest(request, true, telemetryManager)
+					);
+				}
+			}
 		}
 	}
 

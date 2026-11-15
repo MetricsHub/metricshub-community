@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
@@ -300,6 +301,44 @@ class EmulationHttpRequestExecutorTest {
 	}
 
 	// ---- No matching entry ----
+
+	/**
+	 * The response itself is read back from the recording made with its status, whatever the result content of the
+	 * request.
+	 */
+	@Test
+	void testExecuteHttpRequest(@TempDir Path tempDir) throws IOException {
+		Files.writeString(tempDir.resolve("image.yaml"), """
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/status
+			    response:
+			      file: body.txt
+			      resultContent: body
+			  - request:
+			      method: GET
+			      path: /api/v1/status
+			    response:
+			      file: all.txt
+			      resultContent: all_with_status
+			""", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("body.txt"), "{}", StandardCharsets.UTF_8);
+		Files.writeString(
+			tempDir.resolve("all.txt"),
+			"Status: 401\nContent-Type: application/json\n\n{\"error\":\"bad token\"}",
+			StandardCharsets.UTF_8
+		);
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+
+		assertEquals(
+			new HttpResult(401, "Content-Type: application/json\n", "{\"error\":\"bad token\"}"),
+			executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/status"), false, tm)
+		);
+
+		// Nothing was recorded with the status
+		assertNull(executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/other"), false, tm));
+	}
 
 	@Test
 	void testExecuteHttpNoMatchingEntry(@TempDir Path tempDir) throws IOException {
