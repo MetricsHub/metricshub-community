@@ -31,12 +31,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.jawk.AwkProgram;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
 import lombok.Data;
@@ -105,45 +103,6 @@ public class Awk extends Compute {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private ContentType output = ContentType.TEXT;
-
-	/**
-	 * The compiled script. The script is compiled the first time it runs, and the program is kept here, in the
-	 * connector: every run works on a copy of the compute, and the copies share this holder, so the program compiled
-	 * by a run is the one the next runs take. Never read from nor written to YAML or JSON, not part of the equality.
-	 */
-	@JsonIgnore
-	@EqualsAndHashCode.Exclude
-	private AtomicReference<AwkProgram> program = new AtomicReference<>();
-
-	/**
-	 * The compiled script.
-	 *
-	 * @return the program, null as long as the script has not run (or does not compile)
-	 */
-	@JsonIgnore
-	public AwkProgram getProgram() {
-		return program.get();
-	}
-
-	/**
-	 * Replaces the script. The program compiled from the former script no longer applies: this compute gets a
-	 * holder of its own, and the compute it was copied from keeps its script and its program.
-	 *
-	 * @param script The new script
-	 */
-	public void setScript(@NonNull final String script) {
-		this.script = script;
-		this.program = new AtomicReference<>();
-	}
-
-	/**
-	 * Keeps the compiled script, for this compute and for every copy of it.
-	 *
-	 * @param compiled The program compiled from the script
-	 */
-	public void setProgram(final AwkProgram compiled) {
-		program.set(compiled);
-	}
 
 	/**
 	 * Whether the connector writes the deprecated, ignored <code>input</code> property, which the content-type check
@@ -233,7 +192,7 @@ public class Awk extends Compute {
 
 	@Override
 	public Awk copy() {
-		final Awk copy = Awk.builder()
+		return Awk.builder()
 			.type(type)
 			.script(script)
 			.exclude(exclude)
@@ -243,15 +202,12 @@ public class Awk extends Compute {
 			.variables(variables)
 			.output(output)
 			.build();
-		// The copy shares the holder: the program it compiles is kept in the connector
-		copy.program = program;
-		return copy;
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		// The script is deliberately left out: it is code, compiled once and kept, and no reference is replaced in
-		// it. A script receives a value (${param::days}, ${attribute::id}, a source) through its variables
+		// The script is deliberately left out, as in the awk source: it is code, and no reference is replaced in it.
+		// A script receives a value (${param::days}, ${attribute::id}, a source) through its variables
 		exclude = updater.apply(exclude);
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);

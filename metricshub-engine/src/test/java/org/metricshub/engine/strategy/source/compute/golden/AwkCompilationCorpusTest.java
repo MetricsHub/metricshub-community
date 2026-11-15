@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -21,7 +22,7 @@ import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 /**
  * Every AWK script of the connector repositories compiles, in the Jawk sandbox (#1575): the scripts of the
  * <code>awk</code> computes and those of the <code>awk</code> sources, which the compute-chain goldens do not run.
- * The engine compiles a script the first time it runs (#1576), so nothing else tells that a script of a connector
+ * The engine compiles a script the first time it runs, so nothing else tells that a script of a connector
  * nobody tests does not compile. Skipped when no connector repository is checked out.
  */
 class AwkCompilationCorpusTest {
@@ -71,10 +72,12 @@ class AwkCompilationCorpusTest {
 		final List<String> failures
 	) {
 		try {
-			final String code = EmbeddedFileHelper.findScript(script, connector::getEmbeddedFiles, "n/a", where)
-				.orElseThrow()
-				.getContentAsString();
-			AwkExecutor.compile(code, engine);
+			final String code = MetricsHubConstants.FILE_PATTERN.matcher(script).find()
+				? EmbeddedFileHelper.findEmbeddedFile(script, connector.getEmbeddedFiles(), "n/a", where)
+					.orElseThrow()
+					.getContentAsString()
+				: script;
+			engine.compile(code);
 		} catch (Exception e) {
 			failures.add(where);
 		}
