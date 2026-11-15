@@ -34,6 +34,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -195,9 +196,10 @@ class MetricsExporterTest {
 	}
 
 	/**
-	 * Runs the action with the HttpProtobufClient logs captured.
+	 * Runs the action with the HttpProtobufClient logs captured, until they hold what the test waits for: an answer may
+	 * be handled, and logged, on the HTTP client's own thread after the action ends.
 	 */
-	private static String logsOf(final ThrowingRunnable action) throws Exception {
+	private static String logsOf(final Predicate<String> until, final ThrowingRunnable action) throws Exception {
 		final StringWriter written = new StringWriter();
 		final WriterAppender appender = WriterAppender.newBuilder()
 			.setName("otlp-client")
@@ -213,6 +215,10 @@ class MetricsExporterTest {
 		context.updateLoggers();
 		try {
 			action.run();
+			final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+			while (!until.test(written.toString()) && System.nanoTime() < deadline) {
+				Thread.sleep(20);
+			}
 		} finally {
 			logger.removeAppender("otlp-client");
 			logger.setLevel(level);
@@ -244,7 +250,7 @@ class MetricsExporterTest {
 	void centralAuth_shouldRenewOnceAndResendOnceAfter401() throws Exception {
 		answers.add(401);
 		final HttpProtobufClient client = centralClient();
-		final String logged = logsOf(() -> {
+		final String logged = logsOf(logs -> logs.contains("Metrics sent successfully"), () -> {
 			exportAndAwait(client, 2);
 			client.shutdown();
 		});
@@ -259,7 +265,7 @@ class MetricsExporterTest {
 	void centralAuth_shouldNeverLoopOn401() throws Exception {
 		answers.addAll(List.of(401, 401, 401, 401));
 		final HttpProtobufClient client = centralClient();
-		final String logged = logsOf(() -> {
+		final String logged = logsOf(logs -> logs.contains("HTTP Response Code: 401"), () -> {
 			exportAndAwait(client, 2);
 			client.shutdown();
 		});
@@ -274,7 +280,7 @@ class MetricsExporterTest {
 	void anyTwoHundredShouldBeASuccess() throws Exception {
 		answers.add(204);
 		final HttpProtobufClient client = centralClient();
-		final String logged = logsOf(() -> {
+		final String logged = logsOf(logs -> logs.contains("Metrics sent successfully"), () -> {
 			exportAndAwait(client, 1);
 			client.shutdown();
 		});
@@ -298,7 +304,7 @@ class MetricsExporterTest {
 			})
 			.withInvalidateCredential(invalidated::add)
 			.build();
-		final String logged = logsOf(() -> {
+		final String logged = logsOf(logs -> logs.split("Metrics not sent", -1).length > 2, () -> {
 			revoked.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
 			revoked.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
 			revoked.shutdown();
@@ -432,7 +438,7 @@ class MetricsExporterTest {
 	void centralAuth_shouldNotRenewAtEachBatchOnceARenewedTokenIsRefused() throws Exception {
 		answers.addAll(List.of(401, 401, 401, 401));
 		final HttpProtobufClient client = centralClient();
-		final String logged = logsOf(() -> {
+		final String logged = logsOf(logs -> logs.split("HTTP Response Code: 401", -1).length > 2, () -> {
 			exportAndAwait(client, 2);
 			// The next batch, with the renewed token, refused again
 			exportAndAwait(client, 1);
@@ -498,7 +504,7 @@ class MetricsExporterTest {
 			.withInvalidateCredential(invalidated::add)
 			.build();
 		final CountDownLatch handled = new CountDownLatch(1);
-		final String logged = logsOf(() -> {
+		final String logged = logsOf(logs -> logs.contains("still wait for a token"), () -> {
 			slow.send(ExportMetricsServiceRequest.getDefaultInstance(), handled::countDown);
 			// Sent while the first one waits for its token: dropped, never queued and flushed late
 			slow.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
