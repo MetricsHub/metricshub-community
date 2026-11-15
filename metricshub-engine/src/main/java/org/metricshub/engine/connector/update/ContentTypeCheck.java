@@ -91,7 +91,8 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <code>inputFormat</code>.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
- * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text ({@link ConnectorTool#isTextResult()}).
+ * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
+ * {@link ConnectorTool}).
  */
 @Slf4j
 public class ContentTypeCheck {
@@ -622,7 +623,7 @@ public class ContentTypeCheck {
 	 * Applies the action to every source of the connector: beforeAll, the discovery, collect and simple jobs of every
 	 * monitor, afterAll, the tools.
 	 */
-	private static void forEachSource(final Connector connector, final Consumer<Source> action) {
+	public static void forEachSource(final Connector connector, final Consumer<Source> action) {
 		forEach(connector.getBeforeAll(), action);
 		if (connector.getMonitors() != null) {
 			for (final MonitorJob job : connector.getMonitors().values()) {

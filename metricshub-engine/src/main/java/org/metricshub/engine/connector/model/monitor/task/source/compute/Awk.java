@@ -206,7 +206,8 @@ public class Awk extends Compute {
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		script = updater.apply(script);
+		// The script is deliberately left out, as in the awk source: it is code, and no reference is replaced in it.
+		// A script receives a value (${param::days}, ${attribute::id}, a source) through its variables
 		exclude = updater.apply(exclude);
 		keep = updater.apply(keep);
 		separators = updater.apply(separators);
