@@ -32,7 +32,10 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import org.apache.logging.log4j.Level;
@@ -139,6 +142,11 @@ class MetricsExporterTest {
 
 	private final List<String> invalidated = new CopyOnWriteArrayList<>();
 
+	/** When set, vmauth holds its answer to the first batch sent with the renewed token until it counts down. */
+	private volatile CountDownLatch holdRenewed;
+
+	private final AtomicBoolean heldOnce = new AtomicBoolean();
+
 	@AfterEach
 	void stopVmauth() {
 		if (vmauth != null) {
@@ -153,6 +161,14 @@ class MetricsExporterTest {
 				exchange.getRequestBody().readAllBytes();
 				final String authorization = String.valueOf(exchange.getRequestHeaders().getFirst("Authorization"));
 				received.add(authorization);
+				final CountDownLatch hold = holdRenewed;
+				if (hold != null && "Bearer token-2".equals(authorization) && heldOnce.compareAndSet(false, true)) {
+					try {
+						hold.await(10, TimeUnit.SECONDS);
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+				}
 				final Integer status = answers.poll();
 				if (status == null || status / 100 == 2) {
 					exchange.sendResponseHeaders(status == null ? 200 : status, -1);
@@ -164,6 +180,8 @@ class MetricsExporterTest {
 				}
 				exchange.close();
 			});
+			// Requests answered concurrently, as a real vmauth does
+			vmauth.setExecutor(Executors.newCachedThreadPool());
 			vmauth.start();
 		}
 		return "http://127.0.0.1:" + vmauth.getAddress().getPort() + "/opentelemetry/v1/metrics";
@@ -517,5 +535,94 @@ class MetricsExporterTest {
 		assertEquals(List.of("Bearer token-1"), received);
 		assertEquals(1, asked.get());
 		assertTrue(logged.contains("still wait for a token"), logged);
+	}
+
+	private static void awaitUntil(final BooleanSupplier condition) throws InterruptedException {
+		final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+		while (!condition.getAsBoolean() && System.nanoTime() < deadline) {
+			Thread.sleep(20);
+		}
+		assertTrue(condition.getAsBoolean(), "Condition not met in time");
+	}
+
+	@Test
+	void centralAuth_shouldRenewOnceWhenAnotherBatchIsRefusedDuringTheRenewal() throws Exception {
+		answers.addAll(List.of(401, 401, 401, 401));
+		holdRenewed = new CountDownLatch(1);
+		final HttpProtobufClient client = centralClient();
+		final MetricsExporter exporter = MetricsExporter.builder().withClient(client).build();
+		final String logged = logsOf(logs -> logs.contains("after a token renewal"), () -> {
+			exporter.export(List.of(ResourceMetrics.getDefaultInstance()), () -> {});
+			// token-1 refused, the batch sent again with token-2, whose answer vmauth holds
+			awaitUntil(() -> received.size() == 2);
+			// Another batch, with token-2 too, refused before the renewal ends
+			exporter.export(List.of(ResourceMetrics.getDefaultInstance()), () -> {});
+			awaitUntil(() -> received.size() == 3);
+			Thread.sleep(300);
+			holdRenewed.countDown();
+		});
+		client.shutdown();
+
+		// One renewal: the renewed token, shared with the Central channels, is never dropped by the other batch
+		assertEquals(List.of("Bearer token-1"), invalidated);
+		assertTrue(logged.contains("while the token is being renewed"), logged);
+		assertFalse(logged.contains("token-"), logged);
+	}
+
+	@Test
+	void centralAuth_shouldDropNewBatchesWhileARenewalWaitsForTheToken() throws Exception {
+		answers.add(401);
+		final CountDownLatch centralAnswers = new CountDownLatch(1);
+		final AtomicInteger asked = new AtomicInteger();
+		final HttpProtobufClient client = HttpProtobufClient.builder()
+			.withEndpoint(vmauthEndpoint())
+			.withHeaders(Map.of())
+			.withTimeout(5)
+			.withPoolSize(1)
+			.withCredentialHeaders(() -> {
+				if (asked.incrementAndGet() > 1) {
+					try {
+						// Central is slow to renew the token
+						centralAnswers.await(10, TimeUnit.SECONDS);
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+				}
+				return Map.of("Authorization", "Bearer token-" + token.get());
+			})
+			.withInvalidateCredential(authorization -> {
+				invalidated.add(authorization);
+				token.incrementAndGet();
+			})
+			.build();
+		final String logged = logsOf(logs -> logs.contains("Metrics sent successfully"), () -> {
+			client.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
+			// The 401's renewal waits for the token
+			awaitUntil(() -> asked.get() == 2);
+			// Sent meanwhile: dropped, never queued behind the renewal and sent late
+			client.send(ExportMetricsServiceRequest.getDefaultInstance(), () -> {});
+			centralAnswers.countDown();
+		});
+		client.shutdown();
+
+		assertEquals(List.of("Bearer token-1", "Bearer token-2"), received);
+		assertEquals(2, asked.get());
+		assertTrue(logged.contains("still wait for a token"), logged);
+	}
+
+	@Test
+	void centralAuth_shouldRenewAgainAtTheNextExpiry() throws Exception {
+		// The token expires, is renewed and the batch goes; later the renewed one expires too
+		answers.addAll(List.of(401, 200, 401, 200));
+		final HttpProtobufClient client = centralClient();
+		final String logged = logsOf(logs -> logs.split("Metrics sent successfully", -1).length > 2, () -> {
+			exportAndAwait(client, 2);
+			exportAndAwait(client, 2);
+			client.shutdown();
+		});
+
+		assertEquals(List.of("Bearer token-1", "Bearer token-2", "Bearer token-2", "Bearer token-3"), received);
+		assertEquals(List.of("Bearer token-1", "Bearer token-2"), invalidated);
+		assertFalse(logged.contains("Failed to send metrics"), logged);
 	}
 }

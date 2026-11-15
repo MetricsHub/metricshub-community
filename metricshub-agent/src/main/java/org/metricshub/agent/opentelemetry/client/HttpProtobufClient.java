@@ -31,7 +31,9 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -66,6 +68,9 @@ public class HttpProtobufClient extends AbstractOtelClient {
 
 	/** The batches handed to the pool and not posted yet, their token being asked. */
 	private final AtomicInteger waitingForToken = new AtomicInteger();
+
+	/** Whether a {@code 401} is being answered by a renewal and a second post of its batch. */
+	private final AtomicBoolean renewing = new AtomicBoolean();
 
 	/**
 	 * Constructor for an HTTP client using Protobuf.
@@ -140,11 +145,13 @@ public class HttpProtobufClient extends AbstractOtelClient {
 
 	/**
 	 * Posts a serialized batch. With a credential, a {@code 401} drops the token it was sent with and posts the batch
-	 * once more with a new one, never more.
+	 * once more with a new one, never more, one batch at a time: a {@code 401} received while that renewal runs drops
+	 * its batch and leaves the token alone.
 	 *
 	 * @param requestBody      the serialized batch
 	 * @param logContextSetter the log context setter
-	 * @param mayRenew         whether a {@code 401} may renew the token and post again
+	 * @param mayRenew         whether a {@code 401} may renew the token and post again; {@code false} for the batch
+	 *                         posted again after a renewal, which ends the renewal
 	 */
 	private void post(final byte[] requestBody, final LogContextSetter logContextSetter, final boolean mayRenew) {
 		final Map<String, String> sentHeaders;
@@ -155,6 +162,7 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				// Read at each send: a renewed token is used by the next batch
 				sentHeaders = credentialHeaders.get();
 			} catch (RuntimeException e) {
+				endRenewal(mayRenew);
 				// Never the token: the token provider's messages name the failure only
 				logContextSetter.setContext();
 				log.warn("Metrics not sent: no token from MetricsHub Central: {}", e.getMessage());
@@ -176,47 +184,103 @@ public class HttpProtobufClient extends AbstractOtelClient {
 			// Send request and handle response
 			final long startTime = System.currentTimeMillis();
 
-			client.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString()).thenAccept(response -> {
-				// Set the log context
-				logContextSetter.setContext();
-
-				// Any 2xx: VictoriaMetrics answers 200 or 204
-				if (response.statusCode() / 100 == 2) {
-					log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
-				} else if (response.statusCode() == 401 && credentialHeaders != null) {
-					final String authorization = sentHeaders.get(AUTHORIZATION);
-					if (mayRenew && !authorization.equals(refusedAfterRenewal)) {
-						log.debug("Metrics refused with 401: the token is renewed and the batch sent once more.");
-						// The very token refused: a newer one, renewed meanwhile, is kept
-						invalidateCredential.accept(authorization);
-						post(requestBody, logContextSetter, false);
-						return;
-					}
-					// A renewed token refused too: renewing cannot fix it, so the token shared with the Central channels
-					// is no longer dropped at each batch, until the agent renews it on its own
-					refusedAfterRenewal = authorization;
-					// Never the body: a proxy may echo the request's headers, the token included
-					log.error("Failed to send metrics. HTTP Response Code: 401, after a token renewal.");
-				} else if (credentialHeaders != null) {
-					// Never the body: a proxy may echo the request's headers, the token included
-					log.error("Failed to send metrics. HTTP Response Code: {}.", response.statusCode());
-				} else {
-					log.error(
-						"Failed to send metrics. HTTP Response Code: {}. Server response: {}",
-						response.statusCode(),
-						response.body()
-					);
+			final Consumer<HttpResponse<String>> handler = response -> {
+				try {
+					handle(response, sentHeaders, requestBody, logContextSetter, mayRenew, startTime);
+				} finally {
+					endRenewal(mayRenew);
 				}
-			}).exceptionally(e -> {
-				// Set the log context
-				logContextSetter.setContext();
+			};
+			final CompletableFuture<HttpResponse<String>> sent = client.sendAsync(
+				httpRequest,
+				HttpResponse.BodyHandlers.ofString()
+			);
+			// With a credential, a 401 may wait for a new token: on the exporter's pool, never on the HTTP client's thread
+			(credentialHeaders == null ? sent.thenAccept(handler) : sent.thenAcceptAsync(handler, executorService))
+				.exceptionally(e -> {
+					endRenewal(mayRenew);
+					// Set the log context
+					logContextSetter.setContext();
 
-				log.error("Failed to send metrics: {}", e.getMessage());
-				log.debug("Failed to send metrics:", e);
-				return null;
-			});
+					log.error("Failed to send metrics: {}", e.getMessage());
+					log.debug("Failed to send metrics:", e);
+					return null;
+				});
 		} catch (Exception e) {
+			endRenewal(mayRenew);
 			throw new IllegalStateException("Failed to send metrics: " + e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Handles the answer to a batch.
+	 *
+	 * @param response         the answer
+	 * @param sentHeaders      the headers the batch was sent with
+	 * @param requestBody      the serialized batch
+	 * @param logContextSetter the log context setter
+	 * @param mayRenew         whether a {@code 401} may renew the token and post again
+	 * @param startTime        when the batch was sent
+	 */
+	private void handle(
+		final HttpResponse<String> response,
+		final Map<String, String> sentHeaders,
+		final byte[] requestBody,
+		final LogContextSetter logContextSetter,
+		final boolean mayRenew,
+		final long startTime
+	) {
+		// Set the log context
+		logContextSetter.setContext();
+
+		// Any 2xx: VictoriaMetrics answers 200 or 204
+		if (response.statusCode() / 100 == 2) {
+			log.debug("Metrics sent successfully. Duration: {} ms", System.currentTimeMillis() - startTime);
+		} else if (response.statusCode() == 401 && credentialHeaders != null) {
+			final String authorization = sentHeaders.get(AUTHORIZATION);
+			if (mayRenew && !authorization.equals(refusedAfterRenewal)) {
+				// One renewal at a time: another batch's 401 would drop the token being renewed, or the renewed one
+				if (!renewing.compareAndSet(false, true)) {
+					log.error("Failed to send metrics. HTTP Response Code: 401, while the token is being renewed.");
+					return;
+				}
+				log.debug("Metrics refused with 401: the token is renewed and the batch sent once more.");
+				// The very token refused: a newer one, renewed meanwhile, is kept
+				invalidateCredential.accept(authorization);
+				// Counted with the batches waiting for a token: the new ones are dropped while it waits, never queued
+				waitingForToken.incrementAndGet();
+				try {
+					post(requestBody, logContextSetter, false);
+				} finally {
+					waitingForToken.decrementAndGet();
+				}
+				return;
+			}
+			// A renewed token refused too: renewing cannot fix it, so the token shared with the Central channels is no
+			// longer dropped at each batch, until the agent renews it on its own
+			refusedAfterRenewal = authorization;
+			// Never the body: a proxy may echo the request's headers, the token included
+			log.error("Failed to send metrics. HTTP Response Code: 401, after a token renewal.");
+		} else if (credentialHeaders != null) {
+			// Never the body: a proxy may echo the request's headers, the token included
+			log.error("Failed to send metrics. HTTP Response Code: {}.", response.statusCode());
+		} else {
+			log.error(
+				"Failed to send metrics. HTTP Response Code: {}. Server response: {}",
+				response.statusCode(),
+				response.body()
+			);
+		}
+	}
+
+	/**
+	 * Ends the renewal once the batch posted again after it is answered, or not sent.
+	 *
+	 * @param mayRenew {@code false} for the batch posted again after a renewal
+	 */
+	private void endRenewal(final boolean mayRenew) {
+		if (!mayRenew) {
+			renewing.set(false);
 		}
 	}
 
