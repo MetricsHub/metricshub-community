@@ -23,12 +23,17 @@ package org.metricshub.agent.opentelemetry;
 
 import io.opentelemetry.proto.collector.metrics.v1.ExportMetricsServiceRequest;
 import io.opentelemetry.proto.metrics.v1.ResourceMetrics;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.config.CentralConfig;
+import org.metricshub.agent.fleet.CentralTokenProvider;
 import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.opentelemetry.client.GrpcClient;
 import org.metricshub.agent.opentelemetry.client.HttpProtobufClient;
@@ -83,6 +88,21 @@ public class MetricsExporter {
 		 * @return The builder itself.
 		 */
 		public MetricsExporterBuilder withConfiguration(final Map<String, String> configuration) {
+			return withConfiguration(configuration, null);
+		}
+
+		/**
+		 * Configures the MetricsExporter with the provided configuration.
+		 *
+		 * @param configuration The configuration as key-value pairs.
+		 * @param central       The agent's {@code central} configuration, which
+		 *                      {@value OtelConfigConstants#OTEL_EXPORTER_OTLP_METRICS_AUTH}{@code : central} requires.
+		 * @return The builder itself.
+		 */
+		public MetricsExporterBuilder withConfiguration(
+			final Map<String, String> configuration,
+			final CentralConfig central
+		) {
 			String protocol = configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_PROTOCOL);
 
 			// If the protocol is not defined, fallback to gRPC
@@ -98,7 +118,7 @@ public class MetricsExporter {
 			final int poolSize = parsePoolSize(configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_POOL_SIZE));
 
 			if (usesCentralAuth(configuration)) {
-				newCentralAuthClient(protocol, endpoint, headers, certificate, timeout, poolSize);
+				newCentralAuthClient(central, protocol, endpoint, headers, certificate, timeout, poolSize);
 				isAppendResourceAttributes = Boolean.parseBoolean(
 					configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_APPEND_RESOURCE_ATTRIBUTES)
 				);
@@ -175,14 +195,16 @@ public class MetricsExporter {
 		 * Creates the HTTP client that authenticates each send with the agent's MetricsHub Central token. A setting it
 		 * cannot run with refuses the startup, naming the key to fix.
 		 *
+		 * @param central     The agent's {@code central} configuration, with {@code central.auth}.
 		 * @param protocol    The configured protocol: {@value OtelConfigConstants#HTTP_PROTOBUF} only.
-		 * @param endpoint    The endpoint, required.
+		 * @param endpoint    The endpoint, required: {@code https://}, or {@code http://} on a loopback address.
 		 * @param headers     The static headers, without {@code Authorization}.
 		 * @param certificate The certificate used by the client.
 		 * @param timeout     The timeout in seconds.
 		 * @param poolSize    The pool size of the client.
 		 */
 		private void newCentralAuthClient(
+			final CentralConfig central,
 			final String protocol,
 			final String endpoint,
 			final String headers,
@@ -190,6 +212,11 @@ public class MetricsExporter {
 			final long timeout,
 			final int poolSize
 		) {
+			if (!EnrollmentCoordinator.isConfigured(central)) {
+				throw new IllegalStateException(
+					OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH + ": central requires central.auth (and central.enabled)."
+				);
+			}
 			if (!OtelConfigConstants.HTTP_PROTOBUF.equals(protocol.toLowerCase().trim())) {
 				throw new IllegalStateException(
 					OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH +
@@ -217,17 +244,53 @@ public class MetricsExporter {
 			}
 			final EnrollmentCoordinator coordinator = EnrollmentCoordinator.global();
 			// Not built in a try: an endpoint it cannot use refuses the startup instead of a no-op client
-			client = HttpProtobufClient.builder()
+			final HttpProtobufClient centralClient = HttpProtobufClient.builder()
 				.withEndpoint(endpoint)
 				.withHeaders(staticHeaders)
 				.withCertificate(certificate)
 				.withTimeout(timeout)
 				.withPoolSize(poolSize)
-				// The current token at each send, never a copy; the exporter talks to vmauth, not Central, so it follows
-				// the provider of the moment
-				.withCredentialHeaders(() -> coordinator.headers(staticHeaders, coordinator.tokenGeneration()))
+				.withCredentialHeaders(centralCredential(coordinator, central, staticHeaders))
 				.withInvalidateCredential(coordinator::invalidateToken)
 				.build();
+			// The token never travels in cleartext, except to this host
+			if (!CentralTokenProvider.isAcceptable(centralClient.getUri())) {
+				centralClient.shutdown();
+				throw new IllegalStateException(
+					OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT +
+						" must use https:// with " +
+						OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH +
+						": central (http:// is accepted for a loopback address only)."
+				);
+			}
+			client = centralClient;
+		}
+
+		/**
+		 * The headers of each send: the current token, never a copy, once the coordinator has applied this
+		 * configuration's {@code central} settings. Until a reload is reconciled, the token is the former issuer's and
+		 * nothing is sent with it.
+		 *
+		 * @param coordinator   the process's enrollment coordinator
+		 * @param central       the {@code central} configuration the exporter was built with
+		 * @param staticHeaders the static headers
+		 * @return the headers supplier, which throws when no token of this configuration is available
+		 */
+		static Supplier<Map<String, String>> centralCredential(
+			final EnrollmentCoordinator coordinator,
+			final CentralConfig central,
+			final Map<String, String> staticHeaders
+		) {
+			return () -> {
+				// Read first: a reconciliation after the check moves it, and headers() then refuses
+				final long generation = coordinator.tokenGeneration();
+				if (!coordinator.isReadyFor(central)) {
+					throw new UncheckedIOException(
+						new IOException("The MetricsHub Central settings of this configuration are not applied yet.")
+					);
+				}
+				return coordinator.headers(staticHeaders, generation);
+			};
 		}
 
 		/**

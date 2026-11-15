@@ -6,7 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -36,7 +41,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.agent.config.CentralAuthConfig;
+import org.metricshub.agent.config.CentralConfig;
 import org.metricshub.agent.fleet.CentralTokenProvider;
+import org.metricshub.agent.fleet.EnrollmentCoordinator;
 import org.metricshub.agent.opentelemetry.client.GrpcClient;
 import org.metricshub.agent.opentelemetry.client.HttpProtobufClient;
 import org.metricshub.agent.opentelemetry.client.IOtelClient;
@@ -291,6 +299,12 @@ class MetricsExporterTest {
 		assertTrue(logged.contains("Metrics not sent"), logged);
 	}
 
+	/** A configured central.auth: never enrolled in these tests, so nothing is sent with it. */
+	private static final CentralConfig CENTRAL = CentralConfig.builder()
+		.enabled(true)
+		.auth(CentralAuthConfig.builder().issuerUrl("https://central.example.com").build())
+		.build();
+
 	private static Map<String, String> centralConfig(final String protocol, final String endpoint, final String headers) {
 		final Map<String, String> config = new HashMap<>();
 		config.put(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH, "central");
@@ -309,7 +323,10 @@ class MetricsExporterTest {
 	@Test
 	void centralAuth_shouldBuildAnHttpProtobufClient() {
 		final MetricsExporter exporter = MetricsExporter.builder()
-			.withConfiguration(centralConfig("http/protobuf", "http://127.0.0.1:8427/opentelemetry/v1/metrics", "X-A=b"))
+			.withConfiguration(
+				centralConfig("http/protobuf", "http://127.0.0.1:8427/opentelemetry/v1/metrics", "X-A=b"),
+				CENTRAL
+			)
 			.build();
 		assertTrue(exporter.getClient() instanceof HttpProtobufClient, "Should use HttpProtobufClient");
 		exporter.shutdown();
@@ -319,13 +336,13 @@ class MetricsExporterTest {
 	void centralAuth_shouldRefuseGrpc() {
 		final IllegalStateException grpc = assertThrows(
 			IllegalStateException.class,
-			() -> MetricsExporter.builder().withConfiguration(centralConfig("grpc", "http://127.0.0.1:4317", null))
+			() -> MetricsExporter.builder().withConfiguration(centralConfig("grpc", "http://127.0.0.1:4317", null), CENTRAL)
 		);
 		assertTrue(grpc.getMessage().contains(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_PROTOCOL), grpc.getMessage());
 		// No protocol means gRPC
 		assertThrows(
 			IllegalStateException.class,
-			() -> MetricsExporter.builder().withConfiguration(centralConfig(null, "http://127.0.0.1:4317", null))
+			() -> MetricsExporter.builder().withConfiguration(centralConfig(null, "http://127.0.0.1:4317", null), CENTRAL)
 		);
 	}
 
@@ -333,7 +350,7 @@ class MetricsExporterTest {
 	void centralAuth_shouldRefuseAMissingEndpointAStaticAuthorizationAndAnotherValue() {
 		final IllegalStateException noEndpoint = assertThrows(
 			IllegalStateException.class,
-			() -> MetricsExporter.builder().withConfiguration(centralConfig("http/protobuf", null, null))
+			() -> MetricsExporter.builder().withConfiguration(centralConfig("http/protobuf", null, null), CENTRAL)
 		);
 		assertTrue(
 			noEndpoint.getMessage().contains(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT),
@@ -342,11 +359,61 @@ class MetricsExporterTest {
 		final IllegalStateException staticAuthorization = assertThrows(
 			IllegalStateException.class,
 			() -> MetricsExporter.builder()
-				.withConfiguration(centralConfig("http/protobuf", "http://127.0.0.1:8427", "authorization=Bearer x"))
+				.withConfiguration(centralConfig("http/protobuf", "http://127.0.0.1:8427", "authorization=Bearer x"), CENTRAL)
 		);
 		assertTrue(staticAuthorization.getMessage().contains("Authorization"), staticAuthorization.getMessage());
 		final Map<String, String> other = centralConfig("http/protobuf", "http://127.0.0.1:8427", null);
 		other.put(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_AUTH, "basic");
-		assertThrows(IllegalStateException.class, () -> MetricsExporter.builder().withConfiguration(other));
+		assertThrows(IllegalStateException.class, () -> MetricsExporter.builder().withConfiguration(other, CENTRAL));
+	}
+
+	@Test
+	void centralAuth_shouldRefuseWithoutCentralAuth() {
+		final IllegalStateException refused = assertThrows(
+			IllegalStateException.class,
+			() -> MetricsExporter.builder()
+				.withConfiguration(centralConfig("http/protobuf", "https://metrics.example.com/opentelemetry/v1/metrics", null))
+		);
+		assertTrue(refused.getMessage().contains("central.auth"), refused.getMessage());
+	}
+
+	@Test
+	void centralAuth_shouldRefuseACleartextEndpoint() {
+		final IllegalStateException refused = assertThrows(
+			IllegalStateException.class,
+			() -> MetricsExporter.builder()
+				.withConfiguration(
+					centralConfig("http/protobuf", "http://metrics.example.com/opentelemetry/v1/metrics", null),
+					CENTRAL
+				)
+		);
+		assertTrue(
+			refused.getMessage().contains(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT),
+			refused.getMessage()
+		);
+		// https, and http on a loopback address, are accepted
+		MetricsExporter.builder()
+			.withConfiguration(
+				centralConfig("http/protobuf", "https://metrics.example.com/opentelemetry/v1/metrics", null),
+				CENTRAL
+			)
+			.build()
+			.shutdown();
+	}
+
+	@Test
+	void centralCredential_shouldSendNothingBeforeTheReloadIsReconciled() {
+		final EnrollmentCoordinator coordinator = mock(EnrollmentCoordinator.class);
+		when(coordinator.tokenGeneration()).thenReturn(7L);
+		when(coordinator.isReadyFor(CENTRAL)).thenReturn(false);
+		final var credential = MetricsExporter.MetricsExporterBuilder.centralCredential(coordinator, CENTRAL, Map.of());
+
+		assertThrows(UncheckedIOException.class, credential::get);
+		// The former issuer's token is never asked for
+		verify(coordinator, never()).headers(anyMap(), anyLong());
+
+		when(coordinator.isReadyFor(CENTRAL)).thenReturn(true);
+		when(coordinator.headers(Map.of(), 7L)).thenReturn(Map.of("Authorization", "Bearer new"));
+		assertEquals(Map.of("Authorization", "Bearer new"), credential.get());
 	}
 }
