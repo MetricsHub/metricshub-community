@@ -502,6 +502,9 @@ class ContentTypeCheckTest {
 			            script: "{ print $1 }"
 			            input: table
 			            output: table
+			          - type: toText
+			          - type: json2Table
+			            parsingMode: events
 			        script:
 			          type: awk
 			          script: "{ print $1 }"
@@ -514,11 +517,16 @@ class ContentTypeCheckTest {
 			          id: $1
 			""");
 		assertEquals(
-			Set.of("DEPRECATED_SYNTAX json2Csv #0", "DEPRECATED_SYNTAX awk #1 input", "DEPRECATED_SYNTAX inputFormat"),
+			Set.of(
+				"DEPRECATED_SYNTAX json2Csv #0",
+				"DEPRECATED_SYNTAX awk #1 input",
+				"DEPRECATED_SYNTAX json2Table #3 parsingMode",
+				"DEPRECATED_SYNTAX inputFormat"
+			),
 			lines(findings)
 		);
 		assertEquals(
-			List.of("json2Table/json2Csv", "no input/input", "no inputFormat/inputFormat"),
+			List.of("json2Table/json2Csv", "no input/input", "no inputFormat/inputFormat", "no parsingMode/parsingMode"),
 			findings.stream().map(finding -> finding.expected() + "/" + finding.actual()).sorted().toList()
 		);
 	}

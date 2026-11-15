@@ -1087,12 +1087,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			// The rows come straight from the JSON values: the separator plays no part.
 			// A document that does not parse gives no rows: the result is a table all the same
 			sourceTable.setTable(
-				clientsExecutor.executeJson2Table(
-					sourceTable.getText(),
-					json2csv.getEntryKey(),
-					jsonToCsvProperties,
-					json2csv.getParsingMode() == Json2Csv.ParsingMode.EVENTS
-				)
+				clientsExecutor.executeJson2Table(sourceTable.getText(), json2csv.getEntryKey(), jsonToCsvProperties)
 			);
 		} catch (Exception e) {
 			logComputeError(

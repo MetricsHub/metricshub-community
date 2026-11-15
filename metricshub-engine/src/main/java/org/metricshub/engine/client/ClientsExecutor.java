@@ -55,6 +55,14 @@ public class ClientsExecutor {
 
 	private static final long JSON_2_CSV_TIMEOUT = 60; //seconds
 
+	/**
+	 * The length from which jflat reads a JSON document as a stream of events rather than as a tree: the same rows,
+	 * without the whole document in memory, and faster on a large list. Below it, the tree is faster (#1593).
+	 */
+	// ponytail: a fixed size, measured with jflat 1.2 and 1.3. A property above the array element (../kind from /items)
+	// makes jflat fall back to the tree, slower than the tree alone at every size; upgrade: skip events for such a property
+	public static final int JSON_EVENTS_MIN_LENGTH = 64 * 1024;
+
 	private static final int PRIVATE_USE_FIRST = 0xE000;
 	private static final int PRIVATE_USE_LAST = 0xF8FF;
 
@@ -112,7 +120,8 @@ public class ClientsExecutor {
 	}
 
 	/**
-	 * Execute JSON to CSV operation, the JSON being parsed as a tree.
+	 * Execute JSON to CSV operation. A document of {@link #JSON_EVENTS_MIN_LENGTH} characters or more is read as a
+	 * stream of events, a smaller one as a tree: the CSV is the same.
 	 *
 	 * @param jsonSource    The JSON source string.
 	 * @param jsonEntryKey  The JSON entry key.
@@ -129,31 +138,6 @@ public class ClientsExecutor {
 		String jsonEntryKey,
 		List<String> propertyList,
 		String separator,
-		String hostname
-	) throws InterruptedException, ExecutionException, TimeoutException {
-		return executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, false, hostname);
-	}
-
-	/**
-	 * Execute JSON to CSV operation.
-	 *
-	 * @param jsonSource    The JSON source string.
-	 * @param jsonEntryKey  The JSON entry key.
-	 * @param propertyList  The list of properties.
-	 * @param separator     The separator for CSV.
-	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
-	 * @param hostname      The hostname, for logging purpose.
-	 * @return The CSV representation of the JSON.
-	 * @throws TimeoutException       If the execution times out.
-	 * @throws ExecutionException     If an execution exception occurs.
-	 * @throws InterruptedException   If the execution is interrupted.
-	 */
-	public static String executeJson2Csv(
-		String jsonSource,
-		String jsonEntryKey,
-		List<String> propertyList,
-		String separator,
-		boolean eventParsing,
 		String hostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(
@@ -169,7 +153,7 @@ public class ClientsExecutor {
 
 		final Callable<String> jflatToCSV = () -> {
 			try {
-				JFlat jsonFlat = new JFlat(jsonSource, eventParsing);
+				JFlat jsonFlat = new JFlat(jsonSource, jsonSource != null && jsonSource.length() >= JSON_EVENTS_MIN_LENGTH);
 
 				jsonFlat.parse();
 
@@ -212,19 +196,14 @@ public class ClientsExecutor {
 	 * @param jsonSource    The JSON source string.
 	 * @param jsonEntryKey  The JSON entry key.
 	 * @param propertyList  The list of properties.
-	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
 	 * @return The rows, empty when the JSON does not parse.
 	 * @throws TimeoutException       If the execution times out.
 	 * @throws ExecutionException     If an execution exception occurs.
 	 * @throws InterruptedException   If the execution is interrupted.
 	 */
-	public List<List<String>> executeJson2Table(
-		String jsonSource,
-		String jsonEntryKey,
-		List<String> propertyList,
-		boolean eventParsing
-	) throws InterruptedException, ExecutionException, TimeoutException {
-		return executeJson2Table(jsonSource, jsonEntryKey, propertyList, eventParsing, telemetryManager.getHostname());
+	public List<List<String>> executeJson2Table(String jsonSource, String jsonEntryKey, List<String> propertyList)
+		throws InterruptedException, ExecutionException, TimeoutException {
+		return executeJson2Table(jsonSource, jsonEntryKey, propertyList, telemetryManager.getHostname());
 	}
 
 	/**
@@ -234,7 +213,6 @@ public class ClientsExecutor {
 	 * @param jsonSource    The JSON source string.
 	 * @param jsonEntryKey  The JSON entry key.
 	 * @param propertyList  The list of properties.
-	 * @param eventParsing  Whether jflat reads the JSON as a stream of events instead of a tree.
 	 * @param hostname      The hostname, for logging purpose.
 	 * @return The rows, empty when the JSON does not parse.
 	 * @throws TimeoutException       If the execution times out.
@@ -245,7 +223,6 @@ public class ClientsExecutor {
 		String jsonSource,
 		String jsonEntryKey,
 		List<String> propertyList,
-		boolean eventParsing,
 		String hostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		// jflat only writes text: it ends each cell with the separator and each row with a line feed. A separator
@@ -253,7 +230,7 @@ public class ClientsExecutor {
 		// ponytail: private-use separator because jflat can only write text; the ceiling is a document holding all
 		// 6400 private-use characters (rejected). Upgrade: a jflat method emitting the rows, then drop this split.
 		final String separator = cellSeparatorAbsentFrom(jsonSource == null ? "" : jsonSource);
-		final String csv = executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, eventParsing, hostname);
+		final String csv = executeJson2Csv(jsonSource, jsonEntryKey, propertyList, separator, hostname);
 		final List<List<String>> rows = new ArrayList<>();
 		if (csv == null) {
 			return rows;

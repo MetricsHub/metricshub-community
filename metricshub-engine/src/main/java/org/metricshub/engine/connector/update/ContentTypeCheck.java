@@ -64,6 +64,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSourc
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
@@ -87,8 +88,8 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * the source reads its references as sources, and the mapping fields but its <code>source</code>;</li>
  * <li>{@link Rule#UNRESOLVED_REFERENCE}: a reference, anywhere in a source, a mapping or a tool result, to a source
  * the connector does not have;</li>
- * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored awk <code>input</code> and awk source
- * <code>inputFormat</code>.</li>
+ * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored <code>json2Table</code>
+ * <code>parsingMode</code>, awk <code>input</code> and awk source <code>inputFormat</code>.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -298,6 +299,9 @@ public class ContentTypeCheck {
 			}
 			if ("json2Csv".equalsIgnoreCase(compute.getType())) {
 				add(key, where, Rule.DEPRECATED_SYNTAX, "json2Table", "json2Csv");
+			}
+			if (compute instanceof Json2Csv json2Table && json2Table.isParsingModeDeclared()) {
+				add(key, where + " parsingMode", Rule.DEPRECATED_SYNTAX, "no parsingMode", "parsingMode");
 			}
 			if (compute instanceof Awk awk) {
 				checkVariables(key, where + " ", awk.getVariables());

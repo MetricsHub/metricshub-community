@@ -252,8 +252,6 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 					toAwkString(json),
 					toAwkString(entryKey),
 					Arrays.asList(toAwkString(properties).split(";")),
-					// Read as a stream of events: the same rows, without the whole document as a tree in memory
-					true,
 					hostname
 				)
 			);

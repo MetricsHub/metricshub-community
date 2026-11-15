@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.StringJoiner;
@@ -42,6 +43,11 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
  * The <code>json2Table</code> compute: one row per element of the entry key, one cell per property. The type
  * <code>json2Csv</code> is a deprecated alias with the same behavior; <code>getType()</code> keeps the name written in
  * the connector, so the goldens and the content-type report of a connector still writing it are unchanged.
+ * <p>
+ * The <code>parsingMode</code> property, once how jflat read the document, is deprecated and ignored: a document of
+ * {@link org.metricshub.engine.client.ClientsExecutor#JSON_EVENTS_MIN_LENGTH} characters or more is read as a stream of
+ * events, a smaller one as a tree (#1593). A connector declaring it still deserializes, its value dropped, and the
+ * content-type check rejects it (<code>parsingModeDeclared</code>).
  */
 @Data
 @NoArgsConstructor
@@ -67,10 +73,22 @@ public class Json2Csv extends Compute {
 	private String separator;
 
 	/**
-	 * How the JSON document is parsed. Default is {@link ParsingMode#TREE}.
+	 * Whether the connector writes the deprecated, ignored <code>parsingMode</code> property, which the content-type
+	 * check reports. Never serialized, not part of the equality, not copied.
 	 */
-	@JsonSetter(nulls = SKIP)
-	private ParsingMode parsingMode = ParsingMode.TREE;
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean parsingModeDeclared;
+
+	/**
+	 * Records that the connector writes the deprecated <code>parsingMode</code> property, whose value is ignored.
+	 *
+	 * @param parsingMode The ignored value
+	 */
+	@JsonSetter("parsingMode")
+	private void declareParsingMode(final Object parsingMode) {
+		parsingModeDeclared = true;
+	}
 
 	/**
 	 * Construct a new instance of Json2Csv.
@@ -79,7 +97,6 @@ public class Json2Csv extends Compute {
 	 * @param entryKey    The entry key for Json2Csv computation.
 	 * @param properties  The properties for Json2Csv computation.
 	 * @param separator   Deprecated, ignored by the compute; still accepted so that the connectors setting it load.
-	 * @param parsingMode How the JSON document is parsed; null defaults to {@link ParsingMode#TREE}.
 	 */
 	@Builder
 	@JsonCreator
@@ -87,27 +104,12 @@ public class Json2Csv extends Compute {
 		@JsonProperty("type") String type,
 		@JsonProperty("entryKey") String entryKey,
 		@JsonProperty("properties") String properties,
-		@JsonProperty("separator") String separator,
-		@JsonProperty("parsingMode") ParsingMode parsingMode
+		@JsonProperty("separator") String separator
 	) {
 		super(type);
 		this.entryKey = entryKey == null ? "/" : entryKey;
 		this.properties = properties;
 		this.separator = separator == null ? TABLE_SEP : separator;
-		this.parsingMode = parsingMode == null ? ParsingMode.TREE : parsingMode;
-	}
-
-	/**
-	 * How the JSON document is parsed.
-	 */
-	public enum ParsingMode {
-		/** Loads the whole document as a tree in memory. */
-		TREE,
-		/**
-		 * Reads the document as a stream of events and keeps only one element of the entry key array in memory
-		 * at a time. Use it for large lists. The result is the same as with {@link #TREE}.
-		 */
-		EVENTS
 	}
 
 	@Override
@@ -129,20 +131,13 @@ public class Json2Csv extends Compute {
 		addNonNull(stringJoiner, "- entryKey=", entryKey);
 		addNonNull(stringJoiner, "- properties=", properties);
 		addNonNull(stringJoiner, "- separator=", separator);
-		addNonNull(stringJoiner, "- parsingMode=", parsingMode);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Json2Csv copy() {
-		return Json2Csv.builder()
-			.type(type)
-			.entryKey(entryKey)
-			.properties(properties)
-			.separator(separator)
-			.parsingMode(parsingMode)
-			.build();
+		return Json2Csv.builder().type(type).entryKey(entryKey).properties(properties).separator(separator).build();
 	}
 
 	@Override
