@@ -249,6 +249,133 @@ class MetricsHubExtensionForJawkTest {
 			"""));
 	}
 
+	/**
+	 * The HTTP sources a script requested, in order.
+	 */
+	private static List<HttpSource> requested(final SourceProcessor sourceProcessor, final int times) {
+		final ArgumentCaptor<HttpSource> sources = ArgumentCaptor.forClass(HttpSource.class);
+		verify(sourceProcessor, Mockito.times(times)).executeHttpRequest(sources.capture());
+		return sources.getAllValues();
+	}
+
+	/**
+	 * A body given as an array is written as JSON: an array indexed from 0 is an array, any other an object with its
+	 * properties in alphabetical order, a number a number, a boolean read from a response a boolean, and anything
+	 * else a string, a numeric string of the input included. The array of the script keeps its body.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestWithAnArrayBody() throws Exception {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		when(sourceProcessor.executeHttpRequest(any(HttpSource.class))).thenReturn(answer(200, "{\"flag\":true}"));
+		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder()
+			.hostname("host")
+			.sourceProcessor(sourceProcessor)
+			.build();
+
+		assertEquals("200 11 Reads\n", run("""
+			BEGIN {
+				args["method"] = "post"
+				args["path"] = "/api"
+				args["header"] = "Accept: application/json"
+				executeHttpJsonRequest(args, response)
+
+				split("001 7", fields, " ")
+				args["body"]["id"] = fields[1]
+				args["body"]["count"] = fields[2] + 0
+				args["body"]["ratio"] = 1 / 4
+				args["body"]["total"] = 6 / 2
+				args["body"]["name"] = "a \\"quoted\\" \\\\ name"
+				args["body"]["enabled"] = response["flag"]
+				args["body"]["missing"] = response["none"]
+				args["body"]["metrics"][0] = "Reads"
+				args["body"]["metrics"][1] = "Writes"
+				args["body"]["range"]["first"] = 1
+				args["body"]["parts"][1] = "from 1"
+				args["body"]["empty"]["x"] = 1
+				delete args["body"]["empty"]["x"]
+				print executeHttpJsonRequest(args, response), length(args["body"]), args["body"]["metrics"][0]
+			}
+			""", extension));
+
+		final List<HttpSource> sources = requested(sourceProcessor, 2);
+		// Without a body, the request is the one of the script
+		assertNull(sources.get(0).getBody());
+		assertEquals("Accept: application/json", sources.get(0).getHeader());
+		assertEquals(
+			"{\"count\":7,\"empty\":{},\"enabled\":true,\"id\":\"001\",\"metrics\":[\"Reads\",\"Writes\"],\"missing\":\"\"," +
+				"\"name\":\"a \\\"quoted\\\" \\\\ name\",\"parts\":{\"1\":\"from 1\"},\"range\":{\"first\":1},\"ratio\":0.25,\"total\":3}",
+			sources.get(1).getBody()
+		);
+		assertEquals("Accept: application/json\nContent-Type: application/json", sources.get(1).getHeader());
+	}
+
+	/**
+	 * The content type of a body given as an array is JSON unless the header names one. A body given as a string is
+	 * sent as it is, with the header of the script.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestBodyContentType() throws Exception {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder()
+			.hostname("host")
+			.sourceProcessor(sourceProcessor)
+			.build();
+
+		run("""
+			BEGIN {
+				array["body"][0] = "a"
+				executeHttpJsonRequest(array, response)
+
+				array["header"] = "Accept: */*\\ncontent-type: application/vnd.api+json"
+				executeHttpJsonRequest(array, response)
+
+				text["body"] = "{\\"a\\": 1}"
+				executeHttpJsonRequest(text, response)
+			}
+			""", extension);
+
+		final List<HttpSource> sources = requested(sourceProcessor, 3);
+		assertEquals("[\"a\"]", sources.get(0).getBody());
+		assertEquals("Content-Type: application/json", sources.get(0).getHeader());
+		assertEquals("[\"a\"]", sources.get(1).getBody());
+		assertEquals("Accept: */*\ncontent-type: application/vnd.api+json", sources.get(1).getHeader());
+		assertEquals("{\"a\": 1}", sources.get(2).getBody());
+		assertNull(sources.get(2).getHeader());
+	}
+
+	/**
+	 * <code>executeHttpRequest()</code> takes a body given as an array too, in a script run as a connector runs it: a
+	 * field that looks like a number is a string, and a number once 0 is added to it; <code>mkbool()</code> gives a
+	 * boolean.
+	 */
+	@Test
+	void testExecuteHttpRequestWithAnArrayBody() throws Exception {
+		final SourceProcessor sourceProcessor = sourceProcessor();
+		final String script = """
+			{
+				args["body"]["id"] = $1
+				args["body"]["start"] = $2 + 0
+				args["body"]["user"] = $3
+				args["body"]["average"] = mkbool(1)
+				args["body"]["raw"] = mkbool(0)
+				print executeHttpRequest(args)
+			}
+			""";
+
+		assertEquals(
+			"response\n",
+			AwkExecutor.executeAwk(script, "000123 1700000000 a\"b\\c\n", engine(sourceProcessor), null)
+		);
+
+		final ArgumentCaptor<HttpSource> source = ArgumentCaptor.forClass(HttpSource.class);
+		verify(sourceProcessor).process(source.capture());
+		assertEquals(
+			"{\"average\":true,\"id\":\"000123\",\"raw\":false,\"start\":1700000000,\"user\":\"a\\\"b\\\\c\"}",
+			source.getValue().getBody()
+		);
+		assertEquals("Content-Type: application/json", source.getValue().getHeader());
+	}
+
 	@Test
 	void testExecuteHttpJsonRequestWithoutJson() throws Exception {
 		final String script = "BEGIN { args[\"path\"] = \"/api\"; response[1] = 1; print executeHttpJsonRequest(args, response), length(response) }";
