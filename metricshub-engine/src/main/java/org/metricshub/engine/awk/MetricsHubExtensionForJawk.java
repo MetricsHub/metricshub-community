@@ -38,7 +38,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -184,10 +183,9 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * <p>
 	 * A JSON object is an array indexed by its keys, a JSON array an array indexed from 0. A string is a string,
 	 * <code>true</code> and <code>false</code> are 1 and 0. An integer is a 64-bit integer, and any other number
-	 * computes as a double and prints with the digits of the document. A <code>null</code> property is left out of
-	 * its array (it reads as an empty string, or as an empty array), a <code>null</code> in a JSON array is an empty
-	 * string. A result followed by anything else than
-	 * white space is not JSON.
+	 * computes as a double and prints with the digits of the document. A <code>null</code> is an element without a
+	 * value, as Jawk makes it: it reads as an empty string, or as an empty array where the script expects an object.
+	 * A result followed by anything else than white space is not JSON.
 	 * The function fills an array instead of returning one: Jawk cannot assign a returned array to a variable.
 	 * <p>
 	 * It returns the HTTP status code, so that a script tells a refused request (401) from an empty answer (200). The
@@ -303,15 +301,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	}
 
 	/**
-	 * Prepares a JSON document for an AWK script, in place and at any depth:
-	 * <ul>
-	 * <li>A <code>null</code> property of an object is left out. The script reads it as an empty string, and as an
-	 * empty array where it expects an object (<code>member["Status"]["Health"]</code>): a <code>null</code> kept as an
-	 * empty string would stop the script there.</li>
-	 * <li>A number that is not a 64-bit integer becomes its text, which the script gets as a numeric string, like a
-	 * field: it computes and compares as a number, and prints with the digits of the document, where a double prints
-	 * with <code>OFMT</code> (6 significant digits).</li>
-	 * </ul>
+	 * Prepares a JSON document for an AWK script, in place and at any depth: a number that is not a 64-bit integer
+	 * becomes its text, which the script gets as a numeric string, like a field. It computes and compares as a
+	 * number, and prints with the digits of the document, where a double prints with <code>OFMT</code> (6
+	 * significant digits).
 	 *
 	 * @param value A value of the document, as Jackson reads it
 	 * @return the value to give to the script
@@ -319,9 +312,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	@SuppressWarnings("unchecked")
 	private static Object prepare(final Object value) {
 		if (value instanceof Map) {
-			final Map<Object, Object> map = (Map<Object, Object>) value;
-			map.values().removeIf(Objects::isNull);
-			map.replaceAll((key, item) -> prepare(item));
+			((Map<Object, Object>) value).replaceAll((key, item) -> prepare(item));
 		} else if (value instanceof List) {
 			((List<Object>) value).replaceAll(MetricsHubExtensionForJawk::prepare);
 		} else if (value instanceof BigDecimal || value instanceof BigInteger) {

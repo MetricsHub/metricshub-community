@@ -219,13 +219,13 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	/**
-	 * A null property is left out of its array: it reads as an empty string, and as an empty array where the script
-	 * expects an object. A null in a JSON array keeps its index.
+	 * A null is in its array, without a value: it reads as an empty string, and as an empty array where the script
+	 * expects an object.
 	 */
 	@Test
 	void testExecuteHttpJsonRequestNull() throws Exception {
 		assertEquals(
-			"0 0 [] [] 2 [] b\n",
+			"1 0 [] [] 2 [] b\n",
 			run(
 				"""
 					BEGIN {
