@@ -62,7 +62,10 @@ public record ContentTypeFinding(
 		TABLE_INTERPOLATED("interpolate a text"),
 		/** <code>${source::x}</code> of a source the connector does not have. */
 		UNRESOLVED_REFERENCE("reference an existing source"),
-		/** A deprecated syntax: the <code>json2Csv</code> type, the ignored awk <code>input</code> and <code>inputFormat</code>. */
+		/**
+		 * A deprecated syntax: the <code>json2Csv</code> type, the ignored <code>json2Table</code> <code>parsingMode</code>,
+		 * awk <code>input</code> and <code>inputFormat</code>.
+		 */
 		DEPRECATED_SYNTAX("remove or rename it"),
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */
 		COLUMN_ON_TEXT("remove the column, or write a toTable before"),

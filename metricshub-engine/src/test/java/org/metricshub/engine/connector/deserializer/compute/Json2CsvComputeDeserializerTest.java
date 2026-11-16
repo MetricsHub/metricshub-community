@@ -28,14 +28,7 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(Json2Csv.builder().type("json2Csv").properties("property;test;here").entryKey("/").build());
-		computes.add(
-			Json2Csv.builder()
-				.type("json2Csv")
-				.properties("name")
-				.entryKey("/items")
-				.parsingMode(Json2Csv.ParsingMode.EVENTS)
-				.build()
-		);
+		computes.add(Json2Csv.builder().type("json2Csv").properties("name").entryKey("/items").build());
 		// json2Table is the name, json2Csv its deprecated alias: same class, same fields, only the written type differs
 		final Json2Csv json2Table = (Json2Csv) computes.get(1).copy();
 		json2Table.setType("json2Table");
@@ -54,5 +47,16 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 		);
 
 		assertEquals(expected, connector.getBeforeAll());
+
+		// parsingMode is ignored, only recorded for the content-type check
+		assertEquals(
+			List.of(false, true, true),
+			connector.getBeforeAll()
+				.get("testCompute")
+				.getComputes()
+				.stream()
+				.map(compute -> ((Json2Csv) compute).isParsingModeDeclared())
+				.toList()
+		);
 	}
 }

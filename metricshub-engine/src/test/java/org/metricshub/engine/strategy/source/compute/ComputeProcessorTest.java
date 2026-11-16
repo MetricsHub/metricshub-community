@@ -1325,9 +1325,9 @@ class ComputeProcessorTest {
 		);
 		assertEquals(expectedResult, sourceTable);
 
-		// The events parsing mode gives the same result
-		sourceTable.setText(rawData);
-		jsonToCsv.setParsingMode(Json2Csv.ParsingMode.EVENTS);
+		// A document long enough to be read as a stream of events gives the same result
+		final String largeData = rawData + " ".repeat(ClientsExecutor.JSON_EVENTS_MIN_LENGTH);
+		sourceTable.setText(largeData);
 		computeProcessor.process(jsonToCsv);
 		assertEquals(expectedResult, sourceTable);
 
@@ -1335,7 +1335,7 @@ class ComputeProcessorTest {
 		computeProcessor.process(jsonToCsv);
 		assertEquals(expectedResult, sourceTable);
 		Mockito.verify(clientsExecutorMock)
-			.executeJson2Table(rawData, "/monitors", List.of("id", "name", "monitorType", "hostId"), true);
+			.executeJson2Table(largeData, "/monitors", List.of("id", "name", "monitorType", "hostId"));
 	}
 
 	/**
@@ -1351,15 +1351,15 @@ class ComputeProcessorTest {
 			{"name":"\\u00e9","text":"\\n","last":"end"}
 			]}""";
 
+		// Read as a tree, then, padded with spaces, as a stream of events
 		for (final String separator : List.of(";", "|", "\u001F")) {
-			for (final Json2Csv.ParsingMode parsingMode : Json2Csv.ParsingMode.values()) {
-				sourceTable.setText(json);
+			for (final String padding : List.of("", " ".repeat(ClientsExecutor.JSON_EVENTS_MIN_LENGTH))) {
+				sourceTable.setText(json + padding);
 				computeProcessor.process(
 					Json2Csv.builder()
 						.entryKey("/items")
 						.properties("name;text;nested/id;list[0]/v;last")
 						.separator(separator)
-						.parsingMode(parsingMode)
 						.build()
 				);
 				assertEquals(
@@ -1371,7 +1371,7 @@ class ComputeProcessorTest {
 						)
 					),
 					sourceTable,
-					separator + " " + parsingMode
+					separator + " " + padding.length()
 				);
 			}
 		}
@@ -1389,23 +1389,22 @@ class ComputeProcessorTest {
 				"[{\"v\":\"\\ue000\\uE001" + privateUse.charAt(2) + "\",\"w\":\"x\"}]",
 				"/",
 				List.of("v", "w"),
-				false,
 				LOCALHOST
 			)
 		);
 
-		// A ../ property resolves in both parsing modes
-		for (final Json2Csv.ParsingMode parsingMode : Json2Csv.ParsingMode.values()) {
-			sourceTable.setText("{\"members\":[{\"name\":\"m;1\",\"disks\":[{\"id\":\"d1\"},{\"id\":\"d\\n2\"}]}]}");
-			computeProcessor.process(
-				Json2Csv.builder().entryKey("/members/*/disks").properties("id;../name").parsingMode(parsingMode).build()
+		// A ../ property resolves whether the document is read as a tree or as events
+		for (final String padding : List.of("", " ".repeat(ClientsExecutor.JSON_EVENTS_MIN_LENGTH))) {
+			sourceTable.setText(
+				"{\"members\":[{\"name\":\"m;1\",\"disks\":[{\"id\":\"d1\"},{\"id\":\"d\\n2\"}]}]}" + padding
 			);
+			computeProcessor.process(Json2Csv.builder().entryKey("/members/*/disks").properties("id;../name").build());
 			assertEquals(
 				SourceTable.ofTable(
 					List.of(List.of("/members[0]/disks[0]", "d1", "m;1"), List.of("/members[0]/disks[1]", "d\n2", "m;1"))
 				),
 				sourceTable,
-				parsingMode.name()
+				"padding " + padding.length()
 			);
 		}
 	}
