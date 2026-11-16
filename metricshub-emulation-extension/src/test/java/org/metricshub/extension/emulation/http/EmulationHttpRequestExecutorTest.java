@@ -368,6 +368,13 @@ class EmulationHttpRequestExecutorTest {
 			new HttpResult(200, "", "{\"state\":\"ok\"}"),
 			executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/status"), false, tm)
 		);
+
+		// A recorded body that looks like a response with its status is still the body
+		Files.writeString(tempDir.resolve("body.txt"), "Status: 503", StandardCharsets.UTF_8);
+		assertEquals(
+			new HttpResult(200, "", "Status: 503"),
+			executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/status"), false, tm)
+		);
 	}
 
 	@Test

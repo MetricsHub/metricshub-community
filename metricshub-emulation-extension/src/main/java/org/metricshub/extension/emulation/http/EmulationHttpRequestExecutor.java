@@ -78,14 +78,19 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final boolean logMode,
 		final TelemetryManager telemetryManager
 	) {
-		final String recorded = readRecordedResponse(
+		final Map.Entry<ResultContent, String> recorded = readRecordedResponse(
 			httpRequest,
 			telemetryManager,
 			ResultContent.ALL_WITH_STATUS,
 			ResultContent.BODY
 		);
-		final HttpResult response = HttpResult.parse(recorded);
-		return response != null || recorded == null ? response : new HttpResult(HTTP_OK, "", recorded);
+		if (recorded == null) {
+			return null;
+		}
+		// Only a response recorded with its status is read back: a recorded body is the body, whatever it looks like
+		return recorded.getKey() == ResultContent.ALL_WITH_STATUS
+			? HttpResult.parse(recorded.getValue())
+			: new HttpResult(HTTP_OK, "", recorded.getValue());
 	}
 
 	@Override
@@ -94,7 +99,12 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final boolean logMode,
 		final TelemetryManager telemetryManager
 	) {
-		return readRecordedResponse(httpRequest, telemetryManager, httpRequest.getResultContent());
+		final Map.Entry<ResultContent, String> recorded = readRecordedResponse(
+			httpRequest,
+			telemetryManager,
+			httpRequest.getResultContent()
+		);
+		return recorded == null ? null : recorded.getValue();
 	}
 
 	/**
@@ -103,9 +113,10 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	 * @param httpRequest      The request.
 	 * @param telemetryManager The telemetry manager, which gives the emulation configuration.
 	 * @param resultContents   The result contents the response may be recorded with, the preferred one first.
-	 * @return The recorded text, <code>null</code> when there is none.
+	 * @return The result content the response was recorded with and the recorded text, <code>null</code> when there
+	 *         is none.
 	 */
-	private String readRecordedResponse(
+	private Map.Entry<ResultContent, String> readRecordedResponse(
 		final HttpRequest httpRequest,
 		final TelemetryManager telemetryManager,
 		final ResultContent... resultContents
@@ -244,7 +255,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		}
 
 		try {
-			return AbstractEmulationExecutor.readResponseFile(responseFile);
+			return Map.entry(resultContent, AbstractEmulationExecutor.readResponseFile(responseFile));
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to read HTTP emulation response file {}. Error: {}",
