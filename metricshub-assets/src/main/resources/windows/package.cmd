@@ -128,6 +128,14 @@ if errorlevel 1 (
 echo installable packaging completed.
 echo.
 
+REM -----------------------------------------------------------------------------
+REM Clear the read-only attribute in the app-image
+REM -----------------------------------------------------------------------------
+REM jpackage marks every launcher .exe it generates as read-only, and
+REM maven-clean-plugin cannot delete read-only files on Windows (mvn clean fails).
+REM This runs after the installable step, so the MSI is not affected.
+attrib -R "%DEST_DIR%\MetricsHub\*" /S /D
+
 echo All packaging steps completed successfully! Output in: %DEST_DIR%
 
 echo %DEST_DIR% content:
