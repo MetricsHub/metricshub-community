@@ -32,8 +32,6 @@ import io.jawk.ext.annotations.JawkAssocArray;
 import io.jawk.ext.annotations.JawkFunction;
 import io.jawk.jrt.AssocArray;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -75,7 +73,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	private static final ObjectReader JSON_READER = JsonHelper.buildObjectMapper()
 		.readerFor(Object.class)
 		.with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
-		// A number that is not an integer keeps the digits of the document
+		// A number that is not an integer keeps the digits of the document: Jawk gives a BigDecimal to the script
+		// as a numeric string
 		.with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 
 	@EqualsAndHashCode.Exclude
@@ -215,7 +214,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			// Jackson gives the maps, the lists and the values that Jawk reads
 			final Object document = JSON_READER.readValue(body);
 			if (document instanceof Map || document instanceof List) {
-				fill(response, prepare(document));
+				fill(response, document);
 			} else {
 				log.warn("Hostname {} - executeHttpJsonRequest: the body is not a JSON object or array.", hostname);
 			}
@@ -298,27 +297,6 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			);
 		}
 		return list.size();
-	}
-
-	/**
-	 * Prepares a JSON document for an AWK script, in place and at any depth: a number that is not a 64-bit integer
-	 * becomes its text, which the script gets as a numeric string, like a field. It computes and compares as a
-	 * number, and prints with the digits of the document, where a double prints with <code>OFMT</code> (6
-	 * significant digits).
-	 *
-	 * @param value A value of the document, as Jackson reads it
-	 * @return the value to give to the script
-	 */
-	@SuppressWarnings("unchecked")
-	private static Object prepare(final Object value) {
-		if (value instanceof Map) {
-			((Map<Object, Object>) value).replaceAll((key, item) -> prepare(item));
-		} else if (value instanceof List) {
-			((List<Object>) value).replaceAll(MetricsHubExtensionForJawk::prepare);
-		} else if (value instanceof BigDecimal || value instanceof BigInteger) {
-			return value.toString();
-		}
-		return value;
 	}
 
 	/**
