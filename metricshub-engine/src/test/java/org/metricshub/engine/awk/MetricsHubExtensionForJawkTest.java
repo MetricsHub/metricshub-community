@@ -197,6 +197,48 @@ class MetricsHubExtensionForJawkTest {
 			""", httpGiving(answer(200, "{\"long\":9223372036854775807,\"small\":42,\"half\":1.5,\"huge\":1e30}"))));
 	}
 
+	/**
+	 * A number that is not an integer prints with the digits of the document, where a double would print with 6
+	 * significant digits, and still computes and compares as a number. The result of a computation is a double.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestDecimals() throws Exception {
+		assertEquals(
+			"1234567.891 12.50 1234567.891;x 2.46914e+06 1 1 1E+3\n",
+			run(
+				"""
+					BEGIN {
+						args["path"] = "/api"
+						executeHttpJsonRequest(args, r)
+						print r["energy"], r["volts"], r["energy"] ";x", r["energy"] * 2, (r["volts"] == 12.5), (r["volts"] < 100), r["list"][0]
+					}
+					""",
+				httpGiving(answer(200, "{\"energy\":1234567.891,\"volts\":12.50,\"list\":[1e3]}"))
+			)
+		);
+	}
+
+	/**
+	 * A null is in its array, without a value: it reads as an empty string, and as an empty array where the script
+	 * expects an object.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestNull() throws Exception {
+		assertEquals(
+			"1 0 [] [] 2 [] b\n",
+			run(
+				"""
+					BEGIN {
+						args["path"] = "/api"
+						executeHttpJsonRequest(args, r)
+						print ("none" in r), length(r["members"][0]["Status"]), "[" r["members"][0]["Status"]["Health"] "]", "[" r["none"] "]", length(r["list"]), "[" r["list"][0] "]", r["list"][1]
+					}
+					""",
+				httpGiving(answer(200, "{\"none\":null,\"members\":[{\"Status\":null}],\"list\":[null,\"b\"]}"))
+			)
+		);
+	}
+
 	@Test
 	void testJson2ListKeepsTheLastValueOfAPath() throws Exception {
 		assertEquals("1 second\n", run("""

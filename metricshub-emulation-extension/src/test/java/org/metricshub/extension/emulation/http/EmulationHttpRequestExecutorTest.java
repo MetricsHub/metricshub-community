@@ -336,8 +336,45 @@ class EmulationHttpRequestExecutorTest {
 			executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/status"), false, tm)
 		);
 
-		// Nothing was recorded with the status
+		// Nothing was recorded
 		assertNull(executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/other"), false, tm));
+	}
+
+	/**
+	 * A response recorded as its body only, for an <code>http</code> source, is served with the status 200.
+	 */
+	@Test
+	void testExecuteHttpRequestOnARecordedBody(@TempDir Path tempDir) throws IOException {
+		Files.writeString(tempDir.resolve("image.yaml"), """
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/status
+			    response:
+			      file: header.txt
+			      resultContent: header
+			  - request:
+			      method: GET
+			      path: /api/v1/status
+			    response:
+			      file: body.txt
+			      resultContent: body
+			""", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("header.txt"), "Content-Type: application/json", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("body.txt"), "{\"state\":\"ok\"}", StandardCharsets.UTF_8);
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+
+		assertEquals(
+			new HttpResult(200, "", "{\"state\":\"ok\"}"),
+			executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/status"), false, tm)
+		);
+
+		// A recorded body that looks like a response with its status is still the body
+		Files.writeString(tempDir.resolve("body.txt"), "Status: 503", StandardCharsets.UTF_8);
+		assertEquals(
+			new HttpResult(200, "", "Status: 503"),
+			executor.executeHttpRequest(buildHttpRequest("GET", "/api/v1/status"), false, tm)
+		);
 	}
 
 	@Test

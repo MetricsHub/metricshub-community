@@ -61,12 +61,16 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 	private static final String HTTP_EMULATION_YAML = "image.yaml";
 
+	/** The status of a response recorded without it */
+	private static final int HTTP_OK = 200;
+
 	private final EmulationRoundRobinManager roundRobinManager;
 	private final EmulationImageCacheManager imageCacheManager;
 
 	/**
 	 * The recorded response to the request, read back from the text it was recorded as: the response with its
-	 * status.
+	 * status. Where only the body was recorded, as for an <code>http</code> source, the response is that body, with
+	 * the status 200 and no header: an existing recording replays whatever function reads it.
 	 */
 	@Override
 	public HttpResult executeHttpRequest(
@@ -74,7 +78,19 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final boolean logMode,
 		final TelemetryManager telemetryManager
 	) {
-		return HttpResult.parse(readRecordedResponse(httpRequest, ResultContent.ALL_WITH_STATUS, telemetryManager));
+		final Map.Entry<ResultContent, String> recorded = readRecordedResponse(
+			httpRequest,
+			telemetryManager,
+			ResultContent.ALL_WITH_STATUS,
+			ResultContent.BODY
+		);
+		if (recorded == null) {
+			return null;
+		}
+		// Only a response recorded with its status is read back: a recorded body is the body, whatever it looks like
+		return recorded.getKey() == ResultContent.ALL_WITH_STATUS
+			? HttpResult.parse(recorded.getValue())
+			: new HttpResult(HTTP_OK, "", recorded.getValue());
 	}
 
 	@Override
@@ -83,21 +99,27 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final boolean logMode,
 		final TelemetryManager telemetryManager
 	) {
-		return readRecordedResponse(httpRequest, httpRequest.getResultContent(), telemetryManager);
+		final Map.Entry<ResultContent, String> recorded = readRecordedResponse(
+			httpRequest,
+			telemetryManager,
+			httpRequest.getResultContent()
+		);
+		return recorded == null ? null : recorded.getValue();
 	}
 
 	/**
 	 * Reads the response recorded for the request and the result content.
 	 *
 	 * @param httpRequest      The request.
-	 * @param resultContent    The result content the response was recorded with.
 	 * @param telemetryManager The telemetry manager, which gives the emulation configuration.
-	 * @return The recorded text, <code>null</code> when there is none.
+	 * @param resultContents   The result contents the response may be recorded with, the preferred one first.
+	 * @return The result content the response was recorded with and the recorded text, <code>null</code> when there
+	 *         is none.
 	 */
-	private String readRecordedResponse(
+	private Map.Entry<ResultContent, String> readRecordedResponse(
 		final HttpRequest httpRequest,
-		final ResultContent resultContent,
-		final TelemetryManager telemetryManager
+		final TelemetryManager telemetryManager,
+		final ResultContent... resultContents
 	) {
 		final EmulationConfiguration emulationConfiguration = (EmulationConfiguration) telemetryManager
 			.getHostConfiguration()
@@ -175,16 +197,13 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			)
 			: Collections.emptyMap();
 
-		// Find all matching entries
-		final List<HttpEmulationEntry> matchingEntries = findMatchingEntries(
-			entries,
-			method,
-			path,
-			url,
-			resolvedBody,
-			resolvedHeaders,
-			resultContent
-		);
+		// Find all matching entries, recorded with the first result content that has any
+		List<HttpEmulationEntry> matchingEntries = List.of();
+		ResultContent resultContent = null;
+		for (int i = 0; i < resultContents.length && matchingEntries.isEmpty(); i++) {
+			resultContent = resultContents[i];
+			matchingEntries = findMatchingEntries(entries, method, path, url, resolvedBody, resolvedHeaders, resultContent);
+		}
 
 		if (matchingEntries.isEmpty()) {
 			log.warn(
@@ -236,7 +255,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		}
 
 		try {
-			return AbstractEmulationExecutor.readResponseFile(responseFile);
+			return Map.entry(resultContent, AbstractEmulationExecutor.readResponseFile(responseFile));
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to read HTTP emulation response file {}. Error: {}",

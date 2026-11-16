@@ -72,7 +72,10 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	private static final ObjectReader JSON_READER = JsonHelper.buildObjectMapper()
 		.readerFor(Object.class)
-		.with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+		.with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+		// A number that is not an integer keeps the digits of the document: Jawk gives a BigDecimal to the script
+		// as a numeric string
+		.with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 
 	@EqualsAndHashCode.Exclude
 	private SourceProcessor sourceProcessor;
@@ -177,10 +180,11 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * Execute a HTTP request through the context and parse its result as JSON: the script crawls the document as
 	 * nested arrays, such as <code>response["data"]["items"][0]["name"]</code>.
 	 * <p>
-	 * A JSON object is an array indexed by its keys, a JSON array an array indexed from 0. A string is a string, a
-	 * number an AWK number (a 64-bit integer or a double, as everywhere in Jawk), <code>true</code> and
-	 * <code>false</code> are 1 and 0, <code>null</code> is an empty string. A result followed by anything else than
-	 * white space is not JSON.
+	 * A JSON object is an array indexed by its keys, a JSON array an array indexed from 0. A string is a string,
+	 * <code>true</code> and <code>false</code> are 1 and 0. An integer is a 64-bit integer, and any other number
+	 * computes as a double and prints with the digits of the document. A <code>null</code> is an element without a
+	 * value, as Jawk makes it: it reads as an empty string, or as an empty array where the script expects an object.
+	 * A result followed by anything else than white space is not JSON.
 	 * The function fills an array instead of returning one: Jawk cannot assign a returned array to a variable.
 	 * <p>
 	 * It returns the HTTP status code, so that a script tells a refused request (401) from an empty answer (200). The
