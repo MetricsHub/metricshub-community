@@ -69,8 +69,8 @@ class AwkComputeStructuredIoTest {
 			Awk.builder().script("BEGIN { print \"a\\r\\nb\", \"c\" }").output(ContentType.TABLE).build()
 		);
 		assertEquals(SourceTable.ofTable(table("a\r\nb|c")), sourceTable);
-		// Its text never has a CRLF
-		assertEquals("a\nb;c;", sourceTable.asText());
+		// Its text has one line per row: the line break of the cell becomes a space
+		assertEquals("a b;c;", sourceTable.asText());
 	}
 
 	@Test
