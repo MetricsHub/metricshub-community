@@ -23,7 +23,6 @@ package org.metricshub.engine.strategy.source;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -493,23 +492,21 @@ public class SourceProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Joins the texts of the members of a union: the non-empty members, CRLF converted to LF, one after the other, a
-	 * line feed added only when the text so far does not end with one; the blank lines of the members are kept.
+	 * Joins the texts of the members of a union: the non-empty members, whose line endings are LF, one after the
+	 * other, a line feed added only when the text so far does not end with one; the blank lines of the members are
+	 * kept.
 	 *
 	 * @param members The members, a table being read as its text ({@link SourceTable#asText()})
 	 * @return the joined text
 	 */
 	static String joinTexts(final List<SourceTable> members) {
 		final StringBuilder text = new StringBuilder();
-		members.stream()
-			.filter(member -> !member.isEmpty())
-			.map(member -> member.asText().replace(WINDOWS_NEW_LINE, NEW_LINE))
-			.forEach(memberText -> {
-				if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
-					text.append(NEW_LINE);
-				}
-				text.append(memberText);
-			});
+		members.stream().filter(member -> !member.isEmpty()).map(SourceTable::asText).forEach(memberText -> {
+			if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
+				text.append(NEW_LINE);
+			}
+			text.append(memberText);
+		});
 		return text.toString();
 	}
 

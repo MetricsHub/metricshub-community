@@ -131,6 +131,21 @@ class WinCommandLineSourceProcessorTest {
 			SourceTable.ofText("16384 MB\n8192 MB"),
 			winCommandLineSourceProcessor.process(commandLineSource, telemetryManager)
 		);
+
+		// A Windows host answers with CRLF: the lines are filtered and their columns selected without the carriage
+		// return, which a column selection would otherwise move inside the line
+		commandLineSource.setSelectColumns("2,1");
+		doReturn(
+			new OsCommandResult(
+				"Total Physical Memory:16384 MB\r\nOther:1\r\nAvailable Physical Memory:8192 MB\r\n",
+				COMMAND_LINE
+			)
+		).when(winCommandServiceMock).runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+
+		assertEquals(
+			"16384 MB;Total Physical Memory\n8192 MB;Available Physical Memory",
+			winCommandLineSourceProcessor.process(commandLineSource, telemetryManager).getText()
+		);
 	}
 
 	@Test

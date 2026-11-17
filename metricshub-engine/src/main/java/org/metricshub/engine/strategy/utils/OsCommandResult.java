@@ -21,14 +21,31 @@ package org.metricshub.engine.strategy.utils;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
+
 import lombok.Data;
 
 /**
  * The {@code OsCommandResult} class represents the result of an operating system command execution.
+ * <p>
+ * The result has LF line endings whatever the host: the line filters, the column selection and the criteria read
+ * the same lines from a host that answers with CRLF.
  */
 @Data
 public class OsCommandResult {
 
 	private final String result;
 	private final String noPasswordCommand;
+
+	/**
+	 * The result of a command.
+	 *
+	 * @param result            The output of the command, stored with each CRLF converted to LF
+	 * @param noPasswordCommand The command with its passwords masked
+	 */
+	public OsCommandResult(final String result, final String noPasswordCommand) {
+		this.result = result == null ? null : result.replace(WINDOWS_NEW_LINE, NEW_LINE);
+		this.noPasswordCommand = noPasswordCommand;
+	}
 }

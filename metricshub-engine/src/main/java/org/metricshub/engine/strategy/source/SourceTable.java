@@ -44,6 +44,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 /**
  * The result of a source or of a compute: either a text or a table, as its {@link ContentType} tells.
  * <p>
+ * A text has LF line endings whatever produced it: it is stored with each CRLF converted to LF. A carriage return
+ * that no line feed follows is kept, and so are the cells of a table.
+ * <p>
  * A reader of the other type sees an empty value: a table reader of a text sees no rows, a text reader of a table
  * sees an empty text. {@link #asText()} and {@link #asTable()} are the conversions.
  */
@@ -59,7 +62,7 @@ public class SourceTable {
 	private ContentType contentType;
 
 	/**
-	 * The text, non-null only when the content type is {@link ContentType#TEXT}.
+	 * The text, non-null only when the content type is {@link ContentType#TEXT}, with LF line endings.
 	 */
 	private String text;
 
@@ -73,7 +76,7 @@ public class SourceTable {
 	/**
 	 * A source table holding a text.
 	 *
-	 * @param text The text, null meaning empty
+	 * @param text The text, null meaning empty, stored with each CRLF converted to LF
 	 * @return a new source table whose content type is {@link ContentType#TEXT}
 	 */
 	public static SourceTable ofText(final String text) {
@@ -115,7 +118,7 @@ public class SourceTable {
 	/**
 	 * The text of this source table.
 	 *
-	 * @return the text, an empty text for a table
+	 * @return the text, with LF line endings, an empty text for a table
 	 */
 	public String getText() {
 		return text == null ? EMPTY : text;
@@ -133,11 +136,11 @@ public class SourceTable {
 	/**
 	 * Makes this source table a text, dropping its table.
 	 *
-	 * @param text The text, null meaning empty
+	 * @param text The text, null meaning empty, stored with each CRLF converted to LF
 	 */
 	public void setText(final String text) {
 		this.contentType = ContentType.TEXT;
-		this.text = text == null ? EMPTY : text;
+		this.text = text == null ? EMPTY : text.replace(WINDOWS_NEW_LINE, NEW_LINE);
 		this.table = null;
 	}
 
@@ -164,7 +167,8 @@ public class SourceTable {
 	/**
 	 * This source table as a text: the text itself, or the table with one line per row, cells joined with
 	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code>, and
-	 * never a CRLF. This source table is not changed.
+	 * the CRLF of a cell converted to LF. Either way, the text has LF line endings. This source table is not
+	 * changed.
 	 *
 	 * @return the text
 	 */
