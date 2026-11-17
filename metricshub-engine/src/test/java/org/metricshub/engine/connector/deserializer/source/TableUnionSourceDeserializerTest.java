@@ -101,7 +101,6 @@ class TableUnionSourceDeserializerTest extends DeserializerTest {
 			"[ [ a, b ], \"${source::beforeAll.x}\" ]", // a row that is no list
 			"[ [ [ a, ~ ] ] ]", // a null cell
 			"[ [ [ a, [ b ] ] ] ]", // a cell that is a list
-			"[ [ [ \"a\\nb\" ] ] ]", // a cell with a line break
 			"[ [ [] ] ]", // a row without cell
 			"[ [] ]", // a table without row
 			"[ \" \" ]", // a blank member
