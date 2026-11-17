@@ -263,7 +263,7 @@ public final class ConnectorToolCallbacks {
 		strategy.run();
 
 		if (tool.isTextResult()) {
-			return new ToolText(strategy.getResult().asText().replace("\r\n", "\n"));
+			return new ToolText(strategy.getResult().asText());
 		}
 		return new ToolTable(tool.getResult().columns(), strategy.getResult().getTable());
 	}

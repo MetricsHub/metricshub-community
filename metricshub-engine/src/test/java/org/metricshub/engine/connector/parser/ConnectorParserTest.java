@@ -691,6 +691,25 @@ class ConnectorParserTest {
 		);
 	}
 
+	/**
+	 * The sources of a level are listed in the order of the YAML, also a source that references a source declared
+	 * after it (coolingDevices). The hash order of these names differs: temperatures, voltages, fans, then sensors,
+	 * coolingDevices.
+	 */
+	@Test
+	void testMonitorTaskSourceDepUpdateUseCase15() throws IOException {
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/monitorTaskSourceDep/useCase15"
+		).parse("sourceDep");
+
+		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
+
+		assertEquals(
+			List.of(List.of("voltages", "temperatures", "fans"), List.of("coolingDevices", "sensors")),
+			monitorJob.getDiscovery().getSourceDep().stream().map(List::copyOf).toList()
+		);
+	}
+
 	@Test
 	void withNodeProcessorExtendsAndConstantsProcessorTest() {
 		final AbstractNodeProcessor processor = ConnectorParser.withNodeProcessor(RESOURCES_TEST_FILES_PATH).getProcessor();
