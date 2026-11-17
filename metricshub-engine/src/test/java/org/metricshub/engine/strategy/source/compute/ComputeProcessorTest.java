@@ -1325,6 +1325,13 @@ class ComputeProcessorTest {
 		);
 		assertEquals(expectedResult, sourceTable);
 
+		// The properties written as a list give the same table
+		sourceTable.setText(rawData);
+		computeProcessor.process(
+			Json2Csv.builder().entryKey("/monitors").properties(List.of("id", "name", "monitorType", "hostId")).build()
+		);
+		assertEquals(expectedResult, sourceTable);
+
 		// A document long enough to be read as a stream of events gives the same result
 		final String largeData = rawData + " ".repeat(ClientsExecutor.JSON_EVENTS_MIN_LENGTH);
 		sourceTable.setText(largeData);
