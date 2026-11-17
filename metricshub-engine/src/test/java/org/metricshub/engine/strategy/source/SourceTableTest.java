@@ -19,10 +19,12 @@ class SourceTableTest {
 
 	/**
 	 * A text is stored with LF line endings, whatever produced it. A carriage return that no line feed follows stays.
+	 * The conversion is a single pass: CR CR LF becomes CRLF.
 	 */
 	@Test
 	void testTextIsStoredWithLfLineEndings() {
 		assertEquals("a\nb\rc\n", SourceTable.ofText("a\r\nb\rc\r\n").getText());
+		assertEquals("a\r\nb", SourceTable.ofText("a\r\r\nb").getText());
 
 		final SourceTable sourceTable = SourceTable.empty();
 		sourceTable.setText("a;b\r\n\r\nc;");

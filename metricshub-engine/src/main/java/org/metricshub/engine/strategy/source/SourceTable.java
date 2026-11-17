@@ -45,7 +45,8 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * The result of a source or of a compute: either a text or a table, as its {@link ContentType} tells.
  * <p>
  * A text has LF line endings whatever produced it: it is stored with each CRLF converted to LF. A carriage return
- * that no line feed follows is kept, and so are the cells of a table.
+ * that no line feed follows is kept, and so are the cells of a table. The conversion is a single pass: of the
+ * CR CR LF that some Windows commands print, a CRLF remains.
  * <p>
  * A reader of the other type sees an empty value: a table reader of a text sees no rows, a text reader of a table
  * sees an empty text. {@link #asText()} and {@link #asTable()} are the conversions.

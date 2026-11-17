@@ -30,7 +30,8 @@ import lombok.Data;
  * The {@code OsCommandResult} class represents the result of an operating system command execution.
  * <p>
  * The result has LF line endings whatever the host: the line filters, the column selection and the criteria read
- * the same lines from a host that answers with CRLF.
+ * the same lines from a host that answers with CRLF. The conversion is a single pass: of the CR CR LF that some
+ * Windows commands print, a CRLF remains.
  */
 @Data
 public class OsCommandResult {
