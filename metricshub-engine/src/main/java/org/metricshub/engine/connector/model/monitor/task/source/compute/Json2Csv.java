@@ -23,6 +23,7 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
@@ -30,19 +31,25 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * The <code>json2Table</code> compute: one row per element of the entry key, one cell per property. The type
  * <code>json2Csv</code> is a deprecated alias with the same behavior; <code>getType()</code> keeps the name written in
- * the connector, so the goldens and the content-type report of a connector still writing it are unchanged.
+ * the connector, which the findings of the content-type check name.
  * <p>
  * The <code>parsingMode</code> property, once how jflat read the document, is deprecated and ignored: a document of
  * {@link org.metricshub.engine.client.ClientsExecutor#JSON_EVENTS_MIN_LENGTH} characters or more is read as a stream of
@@ -63,9 +70,12 @@ public class Json2Csv extends Compute {
 	private String entryKey = "/";
 
 	/**
-	 * The properties for Json2Csv computation.
+	 * The properties, one per column after the entry identifier. Written in the connector as a YAML list, each item
+	 * one property, or as a string (legacy form) split on <code>;</code> when the compute is built, one trailing
+	 * empty item dropped. Null when the connector sets none.
 	 */
-	private String properties;
+	private List<String> properties;
+
 	/**
 	 * Deprecated, ignored: the compute builds its rows from the JSON values, with one cell per property, so no
 	 * separator splits them. Still accepted so that the connectors setting it load.
@@ -95,7 +105,8 @@ public class Json2Csv extends Compute {
 	 *
 	 * @param type        The type of the computation task.
 	 * @param entryKey    The entry key for Json2Csv computation.
-	 * @param properties  The properties for Json2Csv computation.
+	 * @param properties  The properties: a {@link List} of strings, or a {@link String} split on <code>;</code>
+	 *                    (legacy form).
 	 * @param separator   Deprecated, ignored by the compute; still accepted so that the connectors setting it load.
 	 */
 	@Builder
@@ -103,12 +114,16 @@ public class Json2Csv extends Compute {
 	public Json2Csv(
 		@JsonProperty("type") String type,
 		@JsonProperty("entryKey") String entryKey,
-		@JsonProperty("properties") String properties,
+		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.Properties.class) Object properties,
 		@JsonProperty("separator") String separator
 	) {
 		super(type);
 		this.entryKey = entryKey == null ? "/" : entryKey;
-		this.properties = properties;
+		if (properties instanceof List<?> items) {
+			this.properties = items.stream().map(String.class::cast).collect(Collectors.toCollection(ArrayList::new));
+		} else if (properties != null) {
+			this.properties = SourceTable.lineToList((String) properties, SEMICOLON);
+		}
 		this.separator = separator == null ? TABLE_SEP : separator;
 	}
 
@@ -144,7 +159,9 @@ public class Json2Csv extends Compute {
 	public void update(UnaryOperator<String> updater) {
 		entryKey = updater.apply(entryKey);
 		separator = updater.apply(separator);
-		properties = updater.apply(properties);
+		if (properties != null) {
+			properties.replaceAll(updater);
+		}
 	}
 
 	@Override

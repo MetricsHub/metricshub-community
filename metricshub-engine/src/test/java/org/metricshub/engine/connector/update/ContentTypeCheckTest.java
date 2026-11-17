@@ -28,7 +28,6 @@ import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.parser.ConnectorParser;
-import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -61,7 +60,7 @@ class ContentTypeCheckTest {
 		findings.forEach(finding -> assertEquals("Test", finding.connectorId()));
 		assertEquals(
 			findings.isEmpty(),
-			ComputeChainGoldenCorpus.loadConnectors(directory).getStore().containsKey("Test"),
+			new ConnectorStore(directory).getStore().containsKey("Test"),
 			"the connector loads only without finding: " + findings
 		);
 		return findings;

@@ -25,7 +25,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,11 +37,16 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.ToString;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * The result of a source or of a compute: either a text or a table, as its {@link ContentType} tells.
+ * <p>
+ * A text has LF line endings whatever produced it: it is stored with each CRLF converted to LF. A carriage return
+ * that no line feed follows is kept, and so are the cells of a table. The CR CR LF that some Windows commands print
+ * through a pipe is one line ending too.
  * <p>
  * A reader of the other type sees an empty value: a table reader of a text sees no rows, a text reader of a table
  * sees an empty text. {@link #asText()} and {@link #asTable()} are the conversions.
@@ -59,7 +63,7 @@ public class SourceTable {
 	private ContentType contentType;
 
 	/**
-	 * The text, non-null only when the content type is {@link ContentType#TEXT}.
+	 * The text, non-null only when the content type is {@link ContentType#TEXT}, with LF line endings.
 	 */
 	private String text;
 
@@ -73,7 +77,7 @@ public class SourceTable {
 	/**
 	 * A source table holding a text.
 	 *
-	 * @param text The text, null meaning empty
+	 * @param text The text, null meaning empty, stored with each CRLF converted to LF
 	 * @return a new source table whose content type is {@link ContentType#TEXT}
 	 */
 	public static SourceTable ofText(final String text) {
@@ -115,7 +119,7 @@ public class SourceTable {
 	/**
 	 * The text of this source table.
 	 *
-	 * @return the text, an empty text for a table
+	 * @return the text, with LF line endings, an empty text for a table
 	 */
 	public String getText() {
 		return text == null ? EMPTY : text;
@@ -133,11 +137,11 @@ public class SourceTable {
 	/**
 	 * Makes this source table a text, dropping its table.
 	 *
-	 * @param text The text, null meaning empty
+	 * @param text The text, null meaning empty, stored with each CRLF converted to LF
 	 */
 	public void setText(final String text) {
 		this.contentType = ContentType.TEXT;
-		this.text = text == null ? EMPTY : text;
+		this.text = text == null ? EMPTY : StringHelper.toLf(text);
 		this.table = null;
 	}
 
@@ -164,7 +168,8 @@ public class SourceTable {
 	/**
 	 * This source table as a text: the text itself, or the table with one line per row, cells joined with
 	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code>, and
-	 * never a CRLF. This source table is not changed.
+	 * the CRLF of a cell converted to LF. Either way, the text has LF line endings. This source table is not
+	 * changed.
 	 *
 	 * @return the text
 	 */
@@ -172,7 +177,7 @@ public class SourceTable {
 		if (contentType == ContentType.TEXT) {
 			return text;
 		}
-		return tableToCsv(table, TABLE_SEP, true).replace(WINDOWS_NEW_LINE, NEW_LINE);
+		return StringHelper.toLf(tableToCsv(table, TABLE_SEP, true));
 	}
 
 	/**
@@ -189,11 +194,11 @@ public class SourceTable {
 	}
 
 	/**
-	 * Splits a text into a table: one row per line, CRLF or LF, split on a literal separator. The empty cells are
+	 * Splits a text into a table: one row per line, split on a literal separator. The empty cells are
 	 * kept but the one after a trailing separator; a blank separator (a space, a tab) splits on runs of it and keeps
 	 * no empty cell. A blank line, or a line that gives no cell, gives no row.
 	 *
-	 * @param text      The text, null meaning empty
+	 * @param text      The text, with LF line endings as the text of a source table has, null meaning empty
 	 * @param separator The literal separator
 	 * @return a new table
 	 */
@@ -202,7 +207,7 @@ public class SourceTable {
 		if (text == null) {
 			return rows;
 		}
-		for (final String line : lineToList(text.replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE)) {
+		for (final String line : lineToList(text, NEW_LINE)) {
 			final List<String> cells = splitLine(line, separator);
 			if (!cells.isEmpty()) {
 				rows.add(cells);

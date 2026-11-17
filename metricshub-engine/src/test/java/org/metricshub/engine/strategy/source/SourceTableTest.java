@@ -17,6 +17,22 @@ class SourceTableTest {
 	private static final String HARDCODED_SOURCE = "Hardcoded Source";
 	private static final String SOURCE_REF_KEY = "${source::monitors.cpu.discovery.sources.source5}";
 
+	/**
+	 * A text is stored with LF line endings, whatever produced it. A carriage return that no line feed follows stays.
+	 * CR CR LF is one line ending too.
+	 */
+	@Test
+	void testTextIsStoredWithLfLineEndings() {
+		assertEquals("a\nb\rc\n", SourceTable.ofText("a\r\nb\rc\r\n").getText());
+		assertEquals("a\nb", SourceTable.ofText("a\r\r\nb").getText());
+
+		final SourceTable sourceTable = SourceTable.empty();
+		sourceTable.setText("a;b\r\n\r\nc;");
+		assertEquals("a;b\n\nc;", sourceTable.getText());
+		assertEquals("a;b\n\nc;", sourceTable.asText());
+		assertEquals(SourceTable.ofText("a;b\n\nc;"), sourceTable);
+	}
+
 	@Test
 	void testLookupSourceTableFromHardcodedSource() {
 		final HostProperties hostProperties = HostProperties.builder().build();

@@ -75,11 +75,6 @@ public class FileSourceProcessor {
 	 */
 	public static final String READ_FILE_CONTENT_COMMAND = "powershell.exe -ExecutionPolicy Bypass -File \"%s\" -Path \"%s\"";
 
-	/**
-	 *
-	 */
-	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
-
 	@NonNull
 	private IWinRequestExecutor winRequestExecutor;
 

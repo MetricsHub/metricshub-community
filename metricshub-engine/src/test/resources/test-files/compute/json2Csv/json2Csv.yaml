@@ -19,3 +19,9 @@ beforeAll:
         entryKey: /items
         properties: name
         parsingMode: Events
+      - type: json2Table
+        properties: property;;here;
+      - type: json2Table
+        properties: [ property, "", here ]
+      - type: json2Table
+        properties: [ "a;b", 1 ]

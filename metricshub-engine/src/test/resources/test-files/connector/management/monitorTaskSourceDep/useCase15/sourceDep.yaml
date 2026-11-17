@@ -1,0 +1,44 @@
+---
+connector:
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: wbem
+      query: testQuery
+      namespace: testNamespace
+      expectedResult: testExpectedResult
+      errorMessage: testErrorMessage
+      forceSerialization: true
+
+monitors:
+  enclosure:
+    discovery:
+      sources:
+        coolingDevices:
+          type: tableUnion
+          tables:
+            - ${source::fans}
+        voltages:
+          type: wbem
+          query: SELECT __PATH,Name FROM Test_VoltageSensor
+          namespace: root/test
+        temperatures:
+          type: wbem
+          query: SELECT __PATH,Name FROM Test_TemperatureSensor
+          namespace: root/test
+        sensors:
+          type: tableUnion
+          tables:
+            - ${source::voltages}
+            - ${source::temperatures}
+        fans:
+          type: wbem
+          query: SELECT __PATH,Name FROM Test_Fan
+          namespace: root/test
+      mapping:
+        source: ${source::sensors}
+        attributes:
+          id: $1
+          parent: ""
+          name: $2
+          type: Storage
