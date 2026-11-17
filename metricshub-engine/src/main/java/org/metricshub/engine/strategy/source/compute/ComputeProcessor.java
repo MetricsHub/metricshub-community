@@ -458,7 +458,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 			// The script may print a cell that holds CRLF: the lines are filtered and their columns selected
 			// without it
-			final List<String> lines = SourceTable.lineToList(lfText(awkResult), NEW_LINE);
+			final List<String> lines = SourceTable.lineToList(StringHelper.toLf(awkResult), NEW_LINE);
 
 			final List<String> filterLines = FilterResultHelper.filterLines(
 				lines,
@@ -1452,7 +1452,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// No column: every occurrence in the whole text, the values taken literally (a text has no column)
 		if (columnToReplace == null) {
-			sourceTable.setText(sourceTable.getText().replace(lfText(strToReplace), replacement));
+			sourceTable.setText(sourceTable.getText().replace(strToReplace, replacement));
 			return;
 		}
 
@@ -1665,17 +1665,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		performSubstring(substring.getColumn() - 1, start, startColumnIndex, length, lengthColumnIndex);
-	}
-
-	/**
-	 * A text with LF line endings only, as the text of a source result is: a value written in a connector with CRLF
-	 * matches it.
-	 *
-	 * @param text The text
-	 * @return the text with each CRLF replaced by LF
-	 */
-	private static String lfText(final String text) {
-		return StringHelper.toLf(text);
 	}
 
 	/**
@@ -2290,7 +2279,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			// No column: the value before or after the whole text, taken literally (a text has no column)
 			if (abstractConcat.getColumn() == null) {
 				final String text = sourceTable.getText();
-				final String value = lfText(abstractConcat.getValue());
+				final String value = abstractConcat.getValue();
 				sourceTable.setText(abstractConcat instanceof Prepend ? value.concat(text) : text.concat(value));
 				return;
 			}

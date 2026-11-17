@@ -194,11 +194,11 @@ public class SourceTable {
 	}
 
 	/**
-	 * Splits a text into a table: one row per line, CRLF or LF, split on a literal separator. The empty cells are
+	 * Splits a text into a table: one row per line, split on a literal separator. The empty cells are
 	 * kept but the one after a trailing separator; a blank separator (a space, a tab) splits on runs of it and keeps
 	 * no empty cell. A blank line, or a line that gives no cell, gives no row.
 	 *
-	 * @param text      The text, null meaning empty
+	 * @param text      The text, with LF line endings as the text of a source table has, null meaning empty
 	 * @param separator The literal separator
 	 * @return a new table
 	 */
@@ -207,7 +207,7 @@ public class SourceTable {
 		if (text == null) {
 			return rows;
 		}
-		for (final String line : lineToList(StringHelper.toLf(text), NEW_LINE)) {
+		for (final String line : lineToList(text, NEW_LINE)) {
 			final List<String> cells = splitLine(line, separator);
 			if (!cells.isEmpty()) {
 				rows.add(cells);
