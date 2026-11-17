@@ -856,6 +856,17 @@ class SourceProcessorTest {
 		final SourceTable breakResult = sourceProcessor.process(staticSource);
 		assertEquals(SourceTable.ofTable(List.of(List.of("x y", "z"))), breakResult);
 		assertEquals("x y;z;", breakResult.asText());
+
+		// A list of rows is exactly these rows, an empty list is an empty table
+		staticSource = StaticSource.builder().value(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))).build();
+		assertEquals(
+			SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))),
+			sourceProcessor.process(staticSource)
+		);
+		assertEquals(
+			SourceTable.ofTable(List.of()),
+			sourceProcessor.process(StaticSource.builder().value(List.of()).build())
+		);
 	}
 
 	@Test

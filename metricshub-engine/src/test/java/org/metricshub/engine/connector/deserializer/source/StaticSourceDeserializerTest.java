@@ -59,21 +59,57 @@ class StaticSourceDeserializerTest extends DeserializerTest {
 		);
 		final StaticSource source = (StaticSource) connector.getBeforeAll().get("row");
 
-		// The list form is the exact cells, a ';' in a cell included; the string form stays null
-		assertEquals(List.of("DDN", "", "Disk;Array"), source.getCells());
+		// A list of cells is one row of the exact cells, a ';' in a cell included; the string form stays null
+		assertEquals(List.of(List.of("DDN", "", "Disk;Array")), source.getRows());
 		assertNull(source.getValue());
 		assertEquals(source, source.copy());
-		assertEquals(List.of("a", "b"), StaticSource.builder().value(List.of("a", "b")).build().getCells());
+		assertEquals(List.of(List.of("a", "b")), StaticSource.builder().value(List.of("a", "b")).build().getRows());
 
 		// Reference substitution applies to each cell
 		source.update(value -> value == null ? null : value + "!");
-		assertEquals(List.of("DDN!", "!", "Disk;Array!"), source.getCells());
-		assertTrue(source.toString().contains("- value=[DDN!, !, Disk;Array!]"));
+		assertEquals(List.of(List.of("DDN!", "!", "Disk;Array!")), source.getRows());
+		assertTrue(source.toString().contains("- value=[[DDN!, !, Disk;Array!]]"));
 
 		// A scalar keeps its text in the string form
 		final StaticSource number = (StaticSource) connector.getBeforeAll().get("number");
 		assertEquals("0", number.getValue());
-		assertNull(number.getCells());
+		assertNull(number.getRows());
+	}
+
+	private StaticSource staticSource(final String value) throws IOException {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  table:
+			    type: static
+			    value: %s
+			""".formatted(value);
+		return (StaticSource) deserializer.deserialize(
+			new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml))
+		).getBeforeAll().get("table");
+	}
+
+	@Test
+	void testDeserializeStaticRows() throws IOException {
+		// A list of lists is one row per list, an empty list is an empty table
+		final StaticSource rows = staticSource("[ [ a, 1 ], [ b ] ]");
+		assertEquals(List.of(List.of("a", "1"), List.of("b")), rows.getRows());
+		assertEquals(List.of(List.of("a")), staticSource("[ [ a ] ]").getRows());
+		assertEquals(List.of(), staticSource("[]").getRows());
+		assertEquals(rows, rows.copy());
+		assertEquals(rows.getRows(), StaticSource.builder().value(rows.getRows()).build().getRows());
+
+		// Reference substitution applies to each cell of each row
+		rows.update(value -> value == null ? null : value + "!");
+		assertEquals(List.of(List.of("a!", "1!"), List.of("b!")), rows.getRows());
+
+		// Cells and rows do not mix, and a row needs a cell
+		for (final String value : List.of("[ a, [ b ] ]", "[ [ a ], b ]", "[ [] ]", "[ [ a, ~ ] ]", "[ [ [ a ] ] ]")) {
+			final Exception e = assertThrows(MismatchedInputException.class, () -> staticSource(value), value);
+			assertTrue(e.getMessage().contains("value"), e.getMessage());
+		}
 	}
 
 	@Test
@@ -88,25 +124,6 @@ class StaticSourceDeserializerTest extends DeserializerTest {
 			    value: [ ~, "a" ]
 			""";
 		// A null item would be a null cell, which the string form can never produce
-		final Exception e = assertThrows(
-			MismatchedInputException.class,
-			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
-		);
-		assertTrue(e.getMessage().contains("value"), e.getMessage());
-	}
-
-	@Test
-	void testDeserializeStaticEmptyList() {
-		final String yaml = """
-			connector:
-			  detection:
-			    appliesTo: [ Linux ]
-			beforeAll:
-			  row:
-			    type: static
-			    value: []
-			""";
-		// An empty list is no row at all
 		final Exception e = assertThrows(
 			MismatchedInputException.class,
 			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))

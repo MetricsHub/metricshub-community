@@ -32,8 +32,8 @@ import java.util.List;
 /**
  * Deserializes a property written either as a scalar, returned as a {@link String} holding its text, or as a
  * YAML list, returned as a {@link List} of strings: the string (legacy) and list forms of
- * <code>tableJoin.defaultRightLine</code>, <code>static.value</code>, <code>json2Table.properties</code> and
- * <code>xml2Csv.properties</code>. A list item must be a scalar other than null.
+ * <code>tableJoin.defaultRightLine</code>, <code>json2Table.properties</code> and <code>xml2Csv.properties</code>. A
+ * list item must be a scalar other than null.
  */
 public class StringOrListDeserializer extends JsonDeserializer<Object> {
 
@@ -53,7 +53,7 @@ public class StringOrListDeserializer extends JsonDeserializer<Object> {
 				cells.add(parser.getText());
 			}
 			if (cells.isEmpty() && !acceptsEmptyList()) {
-				// An empty list is no row at all: a static source needs at least one cell
+				// An empty list is no row at all: the default right line of a join needs at least one cell
 				return context.reportInputMismatch(List.class, "Expected at least one cell, got an empty list");
 			}
 			return cells;

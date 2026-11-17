@@ -255,12 +255,14 @@ public class SourceProcessor implements ISourceProcessor {
 		final String staticValue = staticSource.getValue();
 		final List<List<String>> rows;
 
-		if (staticSource.getCells() != null) {
-			// The list form is the single row of exactly these cells. A line break a reference resolved into at run time
-			// becomes a space, so the row stays one line for a text consumer (a toText)
-			rows = List.of(
-				staticSource.getCells().stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList()
-			);
+		if (staticSource.getRows() != null) {
+			// The list form is exactly these rows and cells, an empty list being an empty table. A line break a
+			// reference resolved into at run time becomes a space, so a row stays one line for a text consumer (a
+			// toText)
+			rows = staticSource.getRows()
+				.stream()
+				.map(row -> row.stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList())
+				.toList();
 		} else if (staticValue == null || staticValue.isEmpty()) {
 			log.error(
 				"Hostname {} - Static Source reference cannot be null. Returning an empty table for source {}.",
