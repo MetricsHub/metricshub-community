@@ -21,6 +21,7 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -53,6 +54,7 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -64,6 +66,7 @@ import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 
 /**
  * This class implements the {@link JawkExtension} contract, reports the supported features, processes sources and
@@ -98,6 +101,17 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	private static final Pattern CONTENT_TYPE_HEADER = Pattern.compile("(?im)^\\s*content-type\\s*:");
 
 	private static final String JSON_CONTENT_TYPE = "Content-Type: application/json";
+
+	/**
+	 * A macro that names no escape, as <code>MacrosUpdater</code> reads it: <code>%{USERNAME}</code>,
+	 * <code>${::PASSWORD}</code>.
+	 */
+	private static final Pattern UNESCAPED_MACRO = Pattern.compile("([$%]\\{)(?:::)?([A-Z0-9_-]+\\})");
+
+	/**
+	 * The start of a reference to an embedded file, after its <code>$</code>.
+	 */
+	private static final Pattern FILE_REFERENCE = Pattern.compile("(?i)\\$(\\{file::)");
 
 	private static final String BODY = "body";
 
@@ -142,6 +156,17 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * </ul>
 	 * <code>Content-Type: application/json</code> is added to a header that names no content type. The array of the
 	 * script is not modified.
+	 * <p>
+	 * What the request does to its body and to its header afterwards does not undo that:
+	 * <ul>
+	 * <li>A macro in a value (<code>%{USERNAME}</code>) is replaced when the request is sent: it becomes
+	 * <code>%{esc(json)::USERNAME}</code>, so that its value is escaped as the rest of the document is. A macro
+	 * that names its escape is left as it is.</li>
+	 * <li>A value that reads as a reference to an embedded file is the text of the value: the reference would
+	 * otherwise replace the whole body.</li>
+	 * <li>A header that is an embedded file without a content type is replaced by its content, which is what the
+	 * request sends, with the content type.</li>
+	 * </ul>
 	 *
 	 * @param argMap The array of arguments of the script
 	 * @return the HTTP source
@@ -152,12 +177,23 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		}
 		final Map<Object, Object> arguments = new LinkedHashMap<>(argMap);
 		try {
-			arguments.put(BODY, JSON_WRITER.writeValueAsString(toJson(argMap.get(BODY))));
+			// In a JSON document, "${" and "%{" are only found in a string: both replacements stay in it
+			final String json = JSON_WRITER.writeValueAsString(toJson(argMap.get(BODY)));
+			final String escaped = UNESCAPED_MACRO.matcher(json).replaceAll("$1esc(json)::$2");
+			arguments.put(BODY, FILE_REFERENCE.matcher(escaped).replaceAll("\\\\u0024$1"));
 		} catch (JsonProcessingException e) {
 			// Maps, lists, strings, numbers and booleans: Jackson writes them all
 			throw new UncheckedIOException(e);
 		}
-		final String header = Objects.toString(argMap.get(HEADER), "");
+		String header = Objects.toString(argMap.get(HEADER), "");
+		if (FILE_PATTERN.matcher(header).find()) {
+			header = EmbeddedFileHelper.findEmbeddedFile(
+				header,
+				sourceProcessor.getTelemetryManager().getEmbeddedFiles(connectorId),
+				hostname,
+				connectorId
+			).map(EmbeddedFile::getContentAsString).orElse(header);
+		}
 		if (!CONTENT_TYPE_HEADER.matcher(header).find()) {
 			arguments.put(HEADER, header.isBlank() ? JSON_CONTENT_TYPE : header.stripTrailing() + "\n" + JSON_CONTENT_TYPE);
 		}
