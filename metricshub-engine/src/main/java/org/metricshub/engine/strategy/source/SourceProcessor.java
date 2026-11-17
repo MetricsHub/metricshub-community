@@ -22,7 +22,6 @@ package org.metricshub.engine.strategy.source;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
@@ -253,51 +252,20 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final String staticValue = staticSource.getValue();
-		final List<List<String>> rows;
+		final List<List<String>> rows = new ArrayList<>();
 
-		if (staticSource.getCells() != null) {
-			// The list form is the single row of exactly these cells. A line break a reference resolved into at run time
-			// becomes a space, so the row stays one line for a text consumer (a toText)
-			rows = List.of(
-				staticSource.getCells().stream().map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " ")).toList()
+		// The single row of exactly these cells, no row for an empty list. A line break a reference resolved into at
+		// run time becomes a space, so the row stays one line for a text consumer (a toText)
+		if (staticSource.getValue() != null && !staticSource.getValue().isEmpty()) {
+			rows.add(
+				staticSource.getValue()
+					.stream()
+					.map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " "))
+					.collect(Collectors.toCollection(ArrayList::new))
 			);
-		} else if (staticValue == null || staticValue.isEmpty()) {
-			log.error(
-				"Hostname {} - Static Source reference cannot be null. Returning an empty table for source {}.",
-				hostname,
-				staticSource
-			);
-			return SourceTable.empty();
-		} else {
-			log.debug(
-				"Hostname {} - Got Static Source value [{}] referenced in source [{}].",
-				hostname,
-				staticValue,
-				staticSource.getKey()
-			);
-
-			final Optional<SourceTable> maybeStaticTable = SourceTable.lookupSourceTable(
-				staticValue,
-				connectorId,
-				telemetryManager
-			);
-
-			if (maybeStaticTable.isEmpty()) {
-				return SourceTable.empty();
-			}
-
-			// Note: In case of the static source getSourceTable never returns null
-			rows = maybeStaticTable.get().getTable();
 		}
 
-		return SourceTable.ofTable(
-			rows.stream()
-				// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
-				.map(ArrayList::new)
-				.filter(row -> !row.isEmpty())
-				.collect(Collectors.toList())
-		);
+		return SourceTable.ofTable(rows);
 	}
 
 	@WithSpan("Source TableJoin Exec")
@@ -387,10 +355,7 @@ public class SourceProcessor implements ISourceProcessor {
 			rightTable.getTable(),
 			tableJoinSource.getLeftKeyColumn(),
 			tableJoinSource.getRightKeyColumn(),
-			// The list form is the exact cells; the string form is split on ';' as it always was
-			tableJoinSource.getDefaultRightLineCells() != null
-				? tableJoinSource.getDefaultRightLineCells()
-				: SourceTable.lineToList(tableJoinSource.getDefaultRightLine(), SEMICOLON),
+			tableJoinSource.getDefaultRightLine() != null ? tableJoinSource.getDefaultRightLine() : new ArrayList<>(),
 			"wbem".equalsIgnoreCase(tableJoinSource.getKeyType()),
 			true
 		);

@@ -24,18 +24,18 @@ tools:
         required: true
     sources:
       things:
-        type: static
-        value: |-
-          alpha;1
-          beta;2
-          gamma;3
+        type: tableUnion
+        tables:
+        - - [ alpha, 1 ]
+          - [ beta, 2 ]
+          - [ gamma, 3 ]
         computes:
         - type: keepOnlyMatchingLines
           column: 1
           regExp: ${param::pattern}
       owned:
-        type: static
-        value: ${source::things}
+        type: copy
+        from: ${source::things}
         computes:
         - type: append
           column: 2
@@ -48,7 +48,7 @@ tools:
     sources:
       notes:
         type: static
-        value: unused
+        value: [ unused ]
         computes:
         - type: awk
           script: 'BEGIN { print "first note"; print "second, then a semicolon; here" }'
@@ -60,6 +60,6 @@ tools:
     sources:
       reset:
         type: static
-        value: done
+        value: [ done ]
     result:
       source: ${source::reset}

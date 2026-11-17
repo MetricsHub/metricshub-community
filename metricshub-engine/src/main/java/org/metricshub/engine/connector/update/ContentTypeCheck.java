@@ -83,6 +83,9 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * member);</li>
  * <li>{@link Rule#STRING_LITERAL_ROWS}: a <code>;</code> string literal in <code>tables</code>,
  * <code>leftTable</code> or <code>rightTable</code>;</li>
+ * <li>{@link Rule#NOT_A_REFERENCE}: anything but a source reference in the <code>source</code> of a mapping, of a
+ * tool result, of an <code>executeForEachEntryOf</code> or of an <code>internalDbQuery</code> table, or in the
+ * <code>from</code> of a <code>copy</code>;</li>
  * <li>{@link Rule#TABLE_INTERPOLATED}: a table referenced in a field the engine interpolates: the fields a source or
  * a compute updates ({@link Source#update}, {@link Compute#update}, <code>authenticationToken</code> included) unless
  * the source reads its references as sources, and the mapping fields but its <code>source</code>;</li>
@@ -247,8 +250,11 @@ public class ContentTypeCheck {
 			checkJoinInput(key, "rightTable", join.getRightTable());
 		} else if (source instanceof InternalDbQuerySource query && query.getTables() != null) {
 			for (int index = 0; index < query.getTables().size(); index++) {
+				checkReference(key, "tables[" + index + "]", query.getTables().get(index).getSource());
 				checkTableRead(key, "tables[" + index + "]", query.getTables().get(index).getSource());
 			}
+		} else if (source instanceof CopySource copy) {
+			checkReference(key, "from", copy.getFrom());
 		} else if (source instanceof JawkSource jawk) {
 			checkVariables(key, "", jawk.getVariables());
 			if (jawk.isInputFormatDeclared()) {
@@ -257,10 +263,11 @@ public class ContentTypeCheck {
 		}
 
 		if (source.isExecuteForEachEntryOf()) {
+			checkReference(key, "executeForEachEntryOf", source.getExecuteForEachEntryOf());
 			checkTableRead(key, "executeForEachEntryOf", source.getExecuteForEachEntryOf());
 		}
 
-		// A source reading its references as sources (copy, static, unions, join, awk on a source) interpolates none
+		// A source reading its references as sources (copy, unions, join, awk on a source) interpolates none
 		if (!SourceUpdaterProcessor.isSourceWithProtectedReferences(source)) {
 			final Source copy = source.copy();
 			checkInterpolated(key, "", copy, copy::update);
@@ -393,6 +400,16 @@ public class ContentTypeCheck {
 	}
 
 	/**
+	 * A field the engine reads as a source: a hard-coded table is not written there, a <code>static</code> source
+	 * holds it.
+	 */
+	private void checkReference(final String key, final String location, final String value) {
+		if (value != null && !hasReference(value)) {
+			add(key, location, Rule.NOT_A_REFERENCE, "a source reference", "a literal");
+		}
+	}
+
+	/**
 	 * A field read as a table.
 	 */
 	private void checkTableRead(final String key, final String location, final String value) {
@@ -440,8 +457,12 @@ public class ContentTypeCheck {
 		if (task == null || task.getMapping() == null) {
 			return;
 		}
-		final String mappingSource = task.getMapping().getSource() == null ? NONE : task.getMapping().getSource().trim();
 		final String location = job + ".mapping";
+		// The finding does not name a literal source: it is a value of the connector
+		checkReference(NONE, location + ".source", task.getMapping().getSource());
+		final String mappingSource = hasReference(task.getMapping().getSource())
+			? task.getMapping().getSource().trim()
+			: NONE;
 		walk(toTree(task.getMapping()), "", (field, value) -> {
 			for (final String reference : references(value)) {
 				final ContentType type = typeOf(reference);
@@ -469,10 +490,14 @@ public class ContentTypeCheck {
 	 * source ends in text.
 	 */
 	private void checkTool(final String name, final ConnectorTool tool) {
-		if (tool.getResult() == null || !hasReference(tool.getResult().source())) {
+		if (tool.getResult() == null) {
 			return;
 		}
 		final String location = "tools." + name + ".result";
+		if (!hasReference(tool.getResult().source())) {
+			checkReference(NONE, location + ".source", tool.getResult().source());
+			return;
+		}
 		final Source result = toolResultSource(tool);
 		if (result == null) {
 			add(tool.getResult().source().trim(), location, Rule.UNRESOLVED_REFERENCE, EXISTING_SOURCE, NONE);

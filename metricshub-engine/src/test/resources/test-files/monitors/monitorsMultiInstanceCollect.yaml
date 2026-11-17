@@ -43,7 +43,7 @@ monitors:
           leftKeyColumn: 1
           rightKeyColumn: 1
           keyType: WBEM
-          defaultRightLine: ;;
+          defaultRightLine: [ "", "" ]
         source(7):
           type: tableJoin
           leftTable: ${source::monitors.enclosure.discovery.sources.source(6)}
@@ -51,7 +51,7 @@ monitors:
           leftKeyColumn: 5
           rightKeyColumn: 1
           keyType: WBEM
-          defaultRightLine: ;;;;
+          defaultRightLine: [ "", "", "", "" ]
       mapping:
         source: ${source::monitors.enclosure.discovery.sources.Source(7)}
         attributes:

@@ -5,4 +5,4 @@ connector:
 beforeAll:
   testStaticSource:
     type: static
-    value: testValue
+    value: [ testValue ]

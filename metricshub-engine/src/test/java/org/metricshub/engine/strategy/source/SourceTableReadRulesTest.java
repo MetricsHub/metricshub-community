@@ -499,6 +499,20 @@ class SourceTableReadRulesTest {
 		assertNull(extractToken(SourceTable.empty()));
 	}
 
+	/**
+	 * An HTTP authentication token that is not a source reference is the token itself, whole: it is never parsed as
+	 * a <code>;</code> table.
+	 */
+	@Test
+	void httpTokenThatIsNotAReferenceIsTheTokenItself() {
+		final SourceUpdaterProcessor processor = sourceUpdaterProcessor(
+			telemetryManagerWith(SOURCE_REF, SourceTable.empty())
+		);
+		assertEquals("to;ken;", processor.extractHttpTokenFromSource("original", "to;ken;", "authenticationToken"));
+		assertEquals(EMPTY, processor.extractHttpTokenFromSource("original", EMPTY, "authenticationToken"));
+		assertNull(processor.extractHttpTokenFromSource("original", null, "authenticationToken"));
+	}
+
 	private String extractToken(final SourceTable sourceTable) {
 		return sourceUpdaterProcessor(telemetryManagerWith(SOURCE_REF, sourceTable)).extractHttpTokenFromSource(
 			"original",

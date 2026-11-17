@@ -24,18 +24,18 @@ tools:
         required: true
     sources:
       things:
-        type: static
-        value: |-
-          alpha;1
-          beta;2
-          gamma;3
+        type: tableUnion
+        tables:
+        - - [ alpha, 1 ]
+          - [ beta, 2 ]
+          - [ gamma, 3 ]
         computes:
         - type: keepOnlyMatchingLines
           column: 1
           regExp: ${param::pattern}
       owned:
-        type: static
-        value: ${source::things}
+        type: copy
+        from: ${source::things}
         computes:
         - type: append
           column: 2
@@ -47,8 +47,8 @@ tools:
     description: Uses the session token the connector fetched in beforeAll.
     sources:
       authenticated:
-        type: static
-        value: ${source::beforeAll.session}
+        type: copy
+        from: ${source::beforeAll.session}
         computes:
         - type: append
           column: 1
@@ -58,8 +58,8 @@ tools:
 beforeAll:
   session:
     type: static
-    value: token-123
+    value: [ token-123 ]
 afterAll:
   logout:
     type: static
-    value: bye
+    value: [ bye ]

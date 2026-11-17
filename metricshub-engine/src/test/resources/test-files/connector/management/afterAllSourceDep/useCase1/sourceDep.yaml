@@ -39,7 +39,7 @@ afterAll:
     leftKeyColumn: 1
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: ;;
+    defaultRightLine: [ "", "" ]
   source(7):
     type: tableJoin
     leftTable: ${source::afterAll.source(6)}
@@ -47,7 +47,7 @@ afterAll:
     leftKeyColumn: 5
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: ;;;;
+    defaultRightLine: [ "", "", "", "" ]
 
 monitors:
   enclosure:

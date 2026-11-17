@@ -55,8 +55,8 @@ public class TableUnionSource extends Source {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The list of tables to be included in the union operation, in order: a {@link String} is a source reference or a
-	 * legacy table literal written as <code>;</code> CSV text, a {@link List} is a table literal, a list of rows each a
+	 * The list of tables to be included in the union operation, in order: a {@link String} is a source reference
+	 * (the load-time check rejects any other string), a {@link List} is a table literal, a list of rows each a
 	 * {@link List} of cells.
 	 */
 	@NonNull
@@ -70,8 +70,8 @@ public class TableUnionSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
-	 * @param tables               List of tables to be included in the union operation: source references, legacy
-	 *                             <code>;</code> CSV literals or table literals (lists of rows).
+	 * @param tables               List of tables to be included in the union operation: source references or table
+	 *                             literals (lists of rows).
 	 * @param key                  The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 */

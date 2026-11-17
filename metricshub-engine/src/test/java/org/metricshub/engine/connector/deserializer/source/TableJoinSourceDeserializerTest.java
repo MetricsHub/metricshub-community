@@ -44,7 +44,7 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 					.rightTable("testRight")
 					.leftKeyColumn(2)
 					.rightKeyColumn(3)
-					.defaultRightLine("testdefault;;;")
+					.defaultRightLine(List.of("testdefault", "", ""))
 					.key("${source::beforeAll.testTableJoinSource}")
 					.computes(Collections.emptyList())
 					.build()
@@ -76,19 +76,16 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 		);
 		final TableJoinSource source = (TableJoinSource) connector.getBeforeAll().get("join");
 
-		// The list form is the exact cells, a ';' in a cell included; the string form stays null
-		assertEquals(List.of("", "a;b", ""), source.getDefaultRightLineCells());
-		assertNull(source.getDefaultRightLine());
+		// The exact cells, a ';' in a cell included
+		assertEquals(List.of("", "a;b", ""), source.getDefaultRightLine());
 		assertEquals(source, source.copy());
-		assertEquals(
-			List.of("", "a;b", ""),
-			TableJoinSource.builder().defaultRightLine(List.of("", "a;b", "")).build().getDefaultRightLineCells()
-		);
 
-		// Reference substitution applies to each cell
-		source.update(value -> value == null ? null : value + "!");
-		assertEquals(List.of("!", "a;b!", "!"), source.getDefaultRightLineCells());
-		assertTrue(source.toString().contains("- defaultRightLine=[!, a;b!, !]"));
+		// Reference substitution applies to each cell of a copy, never to the original
+		final TableJoinSource copy = source.copy();
+		copy.update(value -> value == null ? null : value + "!");
+		assertEquals(List.of("!", "a;b!", "!"), copy.getDefaultRightLine());
+		assertEquals(List.of("", "a;b", ""), source.getDefaultRightLine());
+		assertTrue(copy.toString().contains("- defaultRightLine=[!, a;b!, !]"));
 	}
 
 	@Test
@@ -106,7 +103,7 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 			    rightKeyColumn: 1
 			    defaultRightLine: [ ~, "a" ]
 			""";
-		// A null item would be a null cell, which the string form can never produce
+		// A null item would be a null cell
 		final Exception e = Assertions.assertThrows(
 			MismatchedInputException.class,
 			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
@@ -114,8 +111,9 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 		assertTrue(e.getMessage().contains("defaultRightLine"), e.getMessage());
 	}
 
-	@Test
-	void testDeserializeTableJoinEmptyList() {
+	@ParameterizedTest
+	@ValueSource(strings = { ";;", "testdefault;;;", "\"\"", "0" })
+	void testDeserializeTableJoinDefaultRightLineNotAList(final String defaultRightLine) {
 		final String yaml = """
 			connector:
 			  detection:
@@ -127,14 +125,14 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 			    rightTable: testRight
 			    leftKeyColumn: 1
 			    rightKeyColumn: 1
-			    defaultRightLine: []
-			""";
-		// An empty list is no row at all
+			    defaultRightLine: %s
+			""".formatted(defaultRightLine);
+		// The default line is never written as a string
 		final Exception e = Assertions.assertThrows(
 			MismatchedInputException.class,
 			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
 		);
-		assertTrue(e.getMessage().contains("defaultRightLine"), e.getMessage());
+		assertTrue(e.getMessage().contains("Expected a list of cells"), e.getMessage());
 	}
 
 	@Test

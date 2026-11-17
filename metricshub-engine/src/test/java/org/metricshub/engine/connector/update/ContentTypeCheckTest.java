@@ -1,6 +1,7 @@
 package org.metricshub.engine.connector.update;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -316,6 +317,87 @@ class ContentTypeCheckTest {
 			          rightKeyColumn: 1
 			      mapping:
 			        source: ${source::literalJoin}
+			        attributes:
+			          id: $1
+			""")));
+	}
+
+	@Test
+	void notAReference() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        copied:
+			          type: copy
+			          from: a;b;c
+			        each:
+			          type: http
+			          method: get
+			          path: /$1
+			          executeForEachEntryOf:
+			            source: a;b;c
+			            concatMethod: list
+			        query:
+			          type: internalDbQuery
+			          tables:
+			          - source: a;b;c
+			            alias: T1
+			            columns:
+			            - name: COL1
+			              number: 1
+			              type: VARCHAR(255)
+			          query: SELECT COL1 FROM T1
+			      mapping:
+			        source: a;b;c
+			        attributes:
+			          id: $1
+			tools:
+			  show:
+			    description: Shows a row.
+			    sources:
+			      row:
+			        type: static
+			        value: [ a, b, c ]
+			    result:
+			      source: a;b;c
+			""");
+		assertEquals(
+			Set.of(
+				"NOT_A_REFERENCE from",
+				"NOT_A_REFERENCE executeForEachEntryOf",
+				"NOT_A_REFERENCE tables[0]",
+				"NOT_A_REFERENCE monitors.thing.simple.mapping.source",
+				"NOT_A_REFERENCE tools.show.result.source"
+			),
+			lines(findings)
+		);
+		// A finding never holds a value of the connector
+		findings.forEach(finding -> assertFalse(finding.toString().contains("a;b;c"), finding.toString()));
+	}
+
+	@Test
+	void staticCellInterpolatesATextOnly() throws IOException {
+		// A static source does not read a reference as a source, a copy does: its cells are interpolated
+		assertEquals(Set.of("TABLE_INTERPOLATED value[1] -> " + THING + "table}"), lines(findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        table:
+			          type: snmpTable
+			          oid: 1.3
+			          selectColumns: "1,2"
+			        text:
+			          type: http
+			          method: get
+			          path: /x
+			        row:
+			          type: static
+			          value: [ "${source::text}", "${source::table}" ]
+			      mapping:
+			        source: ${source::row}
 			        attributes:
 			          id: $1
 			""")));

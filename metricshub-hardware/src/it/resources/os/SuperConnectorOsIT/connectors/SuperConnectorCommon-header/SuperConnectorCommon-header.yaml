@@ -727,7 +727,7 @@ monitors:
           rightTable: "${source::monitors.physical_disk.discovery.sources.source(2)}"
           leftKeyColumn: 2
           rightKeyColumn: 2
-          defaultRightLine: ;
+          defaultRightLine: [ "" ]
       mapping:
         # InstanceTable = Source(1)
         # JOIN1;PdID;JOIN2;PdID;PdDisplayId;AttachedToDeviceID;AttachedToDeviceType;ControllerNumber;Vendor;Model;FirmwareVersion;Size;SerialNumber;AdditionalInformation

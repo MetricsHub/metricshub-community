@@ -264,7 +264,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	/**
 	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>:
 	 * the whole first line of a text, without its line ending and its trailing separator (see {@link #referenceLine}),
-	 * or the first cell of a table.
+	 * or the first cell of a table. A <em>foreignSourceKey</em> that is not a source reference is returned as it is.
 	 *
 	 * @param originalSourceKey The original source key for debugging purposes.
 	 * @param foreignSourceKey  The foreign source key used to extract the token.
@@ -277,8 +277,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return null;
 		}
 
-		if (foreignSourceKey.isEmpty()) {
-			return EMPTY;
+		// A token that is not a source reference is the token itself
+		if (!SOURCE_REF_PATTERN.matcher(foreignSourceKey).find()) {
+			return foreignSourceKey;
 		}
 
 		// Get the source table defining where we are going to fetch the value
@@ -482,7 +483,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 */
 	public static boolean isSourceWithProtectedReferences(final Source source) {
 		return (source instanceof CopySource ||
-			source instanceof StaticSource ||
 			source instanceof TableUnionSource ||
 			source instanceof TextUnionSource ||
 			source instanceof TableJoinSource ||

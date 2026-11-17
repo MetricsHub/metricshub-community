@@ -342,12 +342,12 @@ public class SourceTable {
 	}
 
 	/**
-	 * Find the source table instance from the connector namespace.<br>
-	 * A hard-coded source gives a new table parsed from the csv input.
-	 * @param sourceKey The reference of the source or hard-coded source information
+	 * Find the source table instance from the connector namespace.
+	 * @param sourceKey The reference of the source
 	 * @param connectorId The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
 	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
-	 * @return {@link Optional} instance of {@link SourceTable}
+	 * @return {@link Optional} instance of {@link SourceTable}, empty when the source has no table yet or when
+	 *         <em>sourceKey</em> is not a source reference: the load-time check rejects a hard-coded table there
 	 */
 	public static Optional<SourceTable> lookupSourceTable(
 		final String sourceKey,
@@ -362,8 +362,7 @@ public class SourceTable {
 			);
 		}
 
-		// Hard-coded source
-		return Optional.of(ofTable(csvToTable(sourceKey, TABLE_SEP)));
+		return Optional.empty();
 	}
 
 	/**
