@@ -3,12 +3,14 @@ package org.metricshub.engine.connector.deserializer.compute;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -69,6 +71,21 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 				.map(compute -> ((Json2Csv) compute).isParsingModeDeclared())
 				.toList()
 		);
+	}
+
+	/**
+	 * An empty list is accepted, as the empty string is: both are a compute without a property.
+	 */
+	@Test
+	void testEmptyProperties() throws IOException {
+		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
+		for (final String type : List.of("json2Table", "xml2Csv")) {
+			assertEquals(
+				mapper.readValue("type: " + type + "\nproperties: \"\"", Compute.class),
+				mapper.readValue("type: " + type + "\nproperties: []", Compute.class)
+			);
+		}
+		assertEquals(List.of(), Json2Csv.builder().properties(List.of()).build().getProperties());
 	}
 
 	@Test

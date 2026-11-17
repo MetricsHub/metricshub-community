@@ -52,7 +52,7 @@ public class StringOrListDeserializer extends JsonDeserializer<Object> {
 				}
 				cells.add(parser.getText());
 			}
-			if (cells.isEmpty()) {
+			if (cells.isEmpty() && !acceptsEmptyList()) {
 				// An empty list is no row at all: a static source needs at least one cell
 				return context.reportInputMismatch(List.class, "Expected at least one cell, got an empty list");
 			}
@@ -62,5 +62,25 @@ public class StringOrListDeserializer extends JsonDeserializer<Object> {
 			return parser.getText();
 		}
 		return context.handleUnexpectedToken(Object.class, parser);
+	}
+
+	/**
+	 * Whether an empty list is accepted. It is not for a row of cells.
+	 *
+	 * @return false
+	 */
+	protected boolean acceptsEmptyList() {
+		return false;
+	}
+
+	/**
+	 * The properties of a compute: the list may be empty, as the string form may be.
+	 */
+	public static class Properties extends StringOrListDeserializer {
+
+		@Override
+		protected boolean acceptsEmptyList() {
+			return true;
+		}
 	}
 }
