@@ -30,6 +30,12 @@ class Xml2CsvComputeDeserializerTest extends DeserializerTest {
 		computes.add(
 			Xml2Csv.builder().type("xml2Csv").recordTag("recordTagTest").properties("properties,test,here").build()
 		);
+		// The list form is the string form, its items joined with ;
+		computes.add(Xml2Csv.builder().type("xml2Csv").properties("tag>attribute;tag/child").build());
+		assertEquals(
+			computes.get(1),
+			Xml2Csv.builder().type("xml2Csv").properties(List.of("tag>attribute", "tag/child")).build()
+		);
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(

@@ -32,8 +32,8 @@ import java.util.List;
 /**
  * Deserializes a property written either as a scalar, returned as a {@link String} holding its text, or as a
  * YAML list, returned as a {@link List} of strings: the string (legacy) and list forms of
- * <code>tableJoin.defaultRightLine</code> and <code>static.value</code>. A list item must be a scalar other than
- * null.
+ * <code>tableJoin.defaultRightLine</code>, <code>static.value</code>, <code>json2Table.properties</code> and
+ * <code>xml2Csv.properties</code>. A list item must be a scalar other than null.
  */
 public class StringOrListDeserializer extends JsonDeserializer<Object> {
 

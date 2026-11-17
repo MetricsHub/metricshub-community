@@ -23,17 +23,22 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
@@ -55,7 +60,8 @@ public class Xml2Csv extends Compute {
 	private String recordTag = "/";
 
 	/**
-	 * The properties associated with the Xml2Csv computation.
+	 * The properties, as the <code>;</code> separated string that XFlat reads. Written in the connector as that
+	 * string or as a YAML list, each item one property, which is joined with <code>;</code> when the compute is built.
 	 */
 	private String properties;
 
@@ -64,18 +70,20 @@ public class Xml2Csv extends Compute {
 	 *
 	 * @param type       The type of the computation task.
 	 * @param recordTag  The record tag used in the computation.
-	 * @param properties The properties associated with the computation.
+	 * @param properties The properties: a <code>;</code> separated {@link String} or a {@link List} of strings.
 	 */
 	@Builder
 	@JsonCreator
 	public Xml2Csv(
 		@JsonProperty("type") String type,
 		@JsonProperty("recordTag") String recordTag,
-		@JsonProperty("properties") String properties
+		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties
 	) {
 		super(type);
 		this.recordTag = recordTag == null ? "/" : recordTag;
-		this.properties = properties;
+		this.properties = properties instanceof List<?> items
+			? items.stream().map(String.class::cast).collect(Collectors.joining(SEMICOLON))
+			: (String) properties;
 	}
 
 	@Override
