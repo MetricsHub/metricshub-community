@@ -92,12 +92,16 @@ public final class ConnectorToolCallbacks {
 
 		/**
 		 * @param value the value of a cell, {@code null} for none
-		 * @return the value on one line of a Markdown table
+		 * @return the value on one line of a Markdown table: a pipe is escaped, with the backslashes right before
+		 *         it, which would otherwise escape the escape and leave the pipe to end the cell
 		 */
 		private static String cell(final String value) {
 			return value == null
 				? ""
-				: value.replace("|", "\\|").replace("\r\n", "<br>").replace("\n", "<br>").replace("\r", "<br>");
+				: value.replaceAll("(\\\\*)\\|", "$1$1\\\\|")
+					.replace("\r\n", "<br>")
+					.replace("\n", "<br>")
+					.replace("\r", "<br>");
 		}
 	}
 

@@ -66,6 +66,8 @@ class ConnectorToolCallbacksTest {
 			names(callbacks)
 		);
 		assertTrue(((DynamicToolCallback) callbacks.get(2)).isDestructive());
+		// The agent's MCP servers render the result of a connector tool
+		assertTrue(callbacks.stream().allMatch(callback -> ((DynamicToolCallback) callback).isRendered()));
 	}
 
 	@Test

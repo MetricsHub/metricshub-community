@@ -61,6 +61,11 @@ class ConnectorToolRenderTest {
 				List.of(List.of("x | y"), List.of("one\r\ntwo\nthree\rfour"), Arrays.asList((String) null))
 			).toMarkdown()
 		);
+		// A backslash before a pipe is escaped with it, any other backslash is kept
+		assertEquals(
+			"| Column 1 |\n| --- |\n| C:\\tmp a\\\\\\|b c\\\\\\\\\\|d |",
+			new ToolTable(List.of(), List.of(List.of("C:\\tmp a\\|b c\\\\|d"))).toMarkdown()
+		);
 	}
 
 	@Test
