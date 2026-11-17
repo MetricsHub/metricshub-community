@@ -57,6 +57,11 @@ public class StringHelper {
 	private static final Pattern SQL_PATTERN = Pattern.compile("(?i)select\\s+(.*?)\\s+from", Pattern.CASE_INSENSITIVE);
 
 	/**
+	 * One or more carriage returns followed by a line feed
+	 */
+	private static final Pattern CR_BEFORE_LF_PATTERN = Pattern.compile("\r+\n");
+
+	/**
 	 * Execute the given callable to get the resulting Object as String value.
 	 *
 	 * @param call         Callable providing a value.
@@ -293,5 +298,16 @@ public class StringHelper {
 			return Stream.of(matcher.group(1).trim().split(",")).map(String::trim).toArray(String[]::new);
 		}
 		return new String[] {}; // Return empty if no match is found
+	}
+
+	/**
+	 * Converts the Windows line endings of a text to LF: a CRLF, and the CR CR LF that some Windows commands print
+	 * through a pipe, become one LF. A carriage return that no line feed follows is kept.
+	 *
+	 * @param text The text, not null
+	 * @return the text, in which no line feed follows a carriage return
+	 */
+	public static String toLf(final String text) {
+		return text.indexOf('\r') < 0 ? text : CR_BEFORE_LF_PATTERN.matcher(text).replaceAll("\n");
 	}
 }

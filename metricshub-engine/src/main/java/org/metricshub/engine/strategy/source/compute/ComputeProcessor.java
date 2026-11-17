@@ -33,7 +33,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -1676,7 +1675,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @return the text with each CRLF replaced by LF
 	 */
 	private static String lfText(final String text) {
-		return text.replace(WINDOWS_NEW_LINE, NEW_LINE);
+		return StringHelper.toLf(text);
 	}
 
 	/**
