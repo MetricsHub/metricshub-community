@@ -4,12 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.jawk.jrt.AssocArray;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -231,6 +235,49 @@ class AwkVariablesUpdateTest {
 			"1 1 1 1 0\n",
 			AwkExecutor.executeAwk(
 				"BEGIN { print (scalar > 9), (list[0] > 9), (map[\"key\"] > 9), (table[0][0] > 9), (list[1] > 9) }",
+				"",
+				AwkExecutor.getUtilityEngine(),
+				variables
+			)
+		);
+	}
+
+	/**
+	 * A variable that is one reference to an embedded file is the text of the file, at any depth and as it is: a
+	 * script reads it and extends it. A reference to a file the connector does not hold stays as written.
+	 */
+	@Test
+	void testFileReferenceIsTheTextOfTheFile() throws Exception {
+		final String text = "Accept: a\\b\nX-Id: ${attribute::id} ${source::x}\n";
+		final ConnectorStore connectorStore = new ConnectorStore();
+		connectorStore.setStore(
+			Map.of(
+				CONNECTOR_ID,
+				Connector.builder()
+					.embeddedFiles(Map.of(2, EmbeddedFile.builder().id(2).content(text.getBytes(StandardCharsets.UTF_8)).build()))
+					.build()
+			)
+		);
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
+			.connectorStore(connectorStore)
+			.build();
+
+		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+			Map.of("header", "${file::2}", "files", List.of("${File::2}"), "missing", "${file::9}"),
+			telemetryManager,
+			CONNECTOR_ID,
+			Map.of("id", "monitor-42"),
+			"someOperation"
+		);
+
+		assertEquals(text, variables.get("header"));
+		assertEquals(List.of(text), variables.get("files"));
+		assertEquals("${file::9}", variables.get("missing"));
+		assertEquals(
+			text + "Content-Type: text/plain\n",
+			AwkExecutor.executeAwk(
+				"BEGIN { printf \"%s\", header \"Content-Type: text/plain\\n\" }",
 				"",
 				AwkExecutor.getUtilityEngine(),
 				variables

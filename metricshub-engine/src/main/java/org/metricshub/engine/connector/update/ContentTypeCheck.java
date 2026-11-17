@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -43,6 +44,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
@@ -50,6 +52,7 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeFinding;
 import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -89,7 +92,10 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#UNRESOLVED_REFERENCE}: a reference, anywhere in a source, a mapping or a tool result, to a source
  * the connector does not have;</li>
  * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored <code>json2Table</code>
- * <code>parsingMode</code>, awk <code>input</code> and awk source <code>inputFormat</code>.</li>
+ * <code>parsingMode</code>, awk <code>input</code> and awk source <code>inputFormat</code>;</li>
+ * <li>{@link Rule#FILE_REFERENCE_IN_SCRIPT}: a <code>${file::}</code> reference in the script of an awk source or
+ * compute, written inline or in the file that the <code>script</code> property names, in a comment included. A script
+ * gets a file through its variables.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -113,7 +119,17 @@ public class ContentTypeCheck {
 	private static final String EXISTING_SOURCE = "an existing source";
 	private static final String NONE = "none";
 
+	/**
+	 * A script that is one reference to an embedded file. The parser has numbered the files it found: the first group
+	 * is that number, and is null for a file the parser did not read (the monitors of a resource).
+	 */
+	private static final Pattern SCRIPT_FILE = Pattern.compile(
+		"\\s*\\$\\{file::(?:(\\d{1,9})|[^}]*)\\}\\s*",
+		Pattern.CASE_INSENSITIVE
+	);
+
 	private final String connectorId;
+	private Map<Integer, EmbeddedFile> embeddedFiles;
 	private final Map<String, Source> sources = new LinkedHashMap<>();
 	private final Map<Source, ContentType> types = new IdentityHashMap<>();
 	private final Set<Source> copying = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -196,6 +212,7 @@ public class ContentTypeCheck {
 	}
 
 	private void run(final Connector connector) {
+		embeddedFiles = connector.getEmbeddedFiles();
 		forEachSource(connector, source -> sources.put(source.getKey(), source));
 		sources.values().forEach(this::checkSource);
 		if (connector.getMonitors() != null) {
@@ -250,6 +267,7 @@ public class ContentTypeCheck {
 				checkTableRead(key, "tables[" + index + "]", query.getTables().get(index).getSource());
 			}
 		} else if (source instanceof JawkSource jawk) {
+			checkScript(key, "script", jawk.getScript());
 			checkVariables(key, "", jawk.getVariables());
 			if (jawk.isInputFormatDeclared()) {
 				add(key, "inputFormat", Rule.DEPRECATED_SYNTAX, "no inputFormat", "inputFormat");
@@ -304,6 +322,7 @@ public class ContentTypeCheck {
 				add(key, where + " parsingMode", Rule.DEPRECATED_SYNTAX, "no parsingMode", "parsingMode");
 			}
 			if (compute instanceof Awk awk) {
+				checkScript(key, where + " script", awk.getScript());
 				checkVariables(key, where + " ", awk.getVariables());
 				if (awk.isInputDeclared()) {
 					add(key, where + " input", Rule.DEPRECATED_SYNTAX, "no input", "input");
@@ -363,6 +382,28 @@ public class ContentTypeCheck {
 			checkTableRead(key, field, table);
 		} else {
 			add(key, field, Rule.STRING_LITERAL_ROWS, "list of rows", "string");
+		}
+	}
+
+	/**
+	 * An awk script holds no <code>${file::}</code> reference. The code is the text of the embedded file when the
+	 * <code>script</code> property is one reference to it, the property itself otherwise: an inline script that holds
+	 * a reference is not a file. A file the connector does not hold is not a matter of this rule.
+	 */
+	private void checkScript(final String key, final String location, final String script) {
+		if (script == null) {
+			return;
+		}
+		String code = script;
+		final Matcher file = SCRIPT_FILE.matcher(script);
+		if (file.matches()) {
+			final EmbeddedFile embeddedFile = file.group(1) == null || embeddedFiles == null
+				? null
+				: embeddedFiles.get(Integer.valueOf(file.group(1)));
+			code = embeddedFile == null ? "" : embeddedFile.getContentAsString();
+		}
+		if (FILE_PATTERN.matcher(code).find()) {
+			add(key, location, Rule.FILE_REFERENCE_IN_SCRIPT, "no ${file::} in an AWK script", "${file::}");
 		}
 	}
 
