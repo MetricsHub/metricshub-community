@@ -42,7 +42,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 /**
  * The <code>json2Table</code> compute: one row per element of the entry key, one cell per property. The type
  * <code>json2Csv</code> is a deprecated alias with the same behavior; <code>getType()</code> keeps the name written in
- * the connector, so the goldens and the content-type report of a connector still writing it are unchanged.
+ * the connector, which the findings of the content-type check name.
  * <p>
  * The <code>parsingMode</code> property, once how jflat read the document, is deprecated and ignored: a document of
  * {@link org.metricshub.engine.client.ClientsExecutor#JSON_EVENTS_MIN_LENGTH} characters or more is read as a stream of
