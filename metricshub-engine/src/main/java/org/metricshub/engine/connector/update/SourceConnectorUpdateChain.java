@@ -128,8 +128,8 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 
 		// Build the final result
 		// A result like: [ [Source1, Source2], [Source3] ]
-		// The sources of a level are put in the order they are declared: the loop above adds them in the hash order
-		// of their names, and adds a source that references a source declared after it one pass late.
+		// The loop above visits the sources in the hash order of their names, and adds a source visited before one
+		// of its dependencies one pass late: each level is put back in declaration order here.
 		final List<Set<String>> levels = new ArrayList<>();
 		for (final Set<String> level : mapLevels.values()) {
 			final Set<String> declarationOrder = new LinkedHashSet<>(sources.keySet());

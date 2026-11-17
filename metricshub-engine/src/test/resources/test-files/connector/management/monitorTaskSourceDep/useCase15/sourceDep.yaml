@@ -20,12 +20,12 @@ monitors:
             - ${source::fans}
         voltages:
           type: wbem
-          query: SELECT __PATH,Name FROM EMC_VoltageSensor
-          namespace: root/emc
+          query: SELECT __PATH,Name FROM Test_VoltageSensor
+          namespace: root/test
         temperatures:
           type: wbem
-          query: SELECT __PATH,Name FROM EMC_TemperatureSensor
-          namespace: root/emc
+          query: SELECT __PATH,Name FROM Test_TemperatureSensor
+          namespace: root/test
         sensors:
           type: tableUnion
           tables:
@@ -33,8 +33,8 @@ monitors:
             - ${source::temperatures}
         fans:
           type: wbem
-          query: SELECT __PATH,Name FROM EMC_Fan
-          namespace: root/emc
+          query: SELECT __PATH,Name FROM Test_Fan
+          namespace: root/test
       mapping:
         source: ${source::sensors}
         attributes:
