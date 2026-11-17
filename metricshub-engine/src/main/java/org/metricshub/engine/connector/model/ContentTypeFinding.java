@@ -70,9 +70,7 @@ public record ContentTypeFinding(
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */
 		COLUMN_ON_TEXT("remove the column, or write a toTable before"),
 		/** No <code>column</code> on an append, prepend, replace or substring that is fed a table. */
-		NO_COLUMN_ON_TABLE("set the column, or write a toText before"),
-		/** A <code>${file::}</code> reference in the script of an awk source or compute, in a comment included. */
-		FILE_REFERENCE_IN_SCRIPT("pass the file through the variables");
+		NO_COLUMN_ON_TABLE("set the column, or write a toText before");
 
 		private final String hint;
 

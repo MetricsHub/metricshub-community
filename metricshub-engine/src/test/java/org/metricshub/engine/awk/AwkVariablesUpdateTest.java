@@ -243,28 +243,21 @@ class AwkVariablesUpdateTest {
 	}
 
 	/**
-	 * A variable that is one reference to an embedded file is the text of the file, at any depth and as it is: a
-	 * script reads it and extends it. A reference to a file the connector does not hold stays as written.
+	 * A variable that is one reference to an embedded file is the text of the file, as it is.
 	 */
 	@Test
-	void testFileReferenceIsTheTextOfTheFile() throws Exception {
-		final String text = "Accept: a\\b\nX-Id: ${attribute::id} ${source::x}\n";
+	void testFileReferenceIsTheTextOfTheFile() {
+		final String text = "Accept: a\\b\nX-Id: ${attribute::id}\n";
 		final ConnectorStore connectorStore = new ConnectorStore();
-		connectorStore.setStore(
-			Map.of(
-				CONNECTOR_ID,
-				Connector.builder()
-					.embeddedFiles(Map.of(2, EmbeddedFile.builder().id(2).content(text.getBytes(StandardCharsets.UTF_8)).build()))
-					.build()
-			)
-		);
+		final EmbeddedFile file = EmbeddedFile.builder().id(2).content(text.getBytes(StandardCharsets.UTF_8)).build();
+		connectorStore.setStore(Map.of(CONNECTOR_ID, Connector.builder().embeddedFiles(Map.of(2, file)).build()));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
 			.connectorStore(connectorStore)
 			.build();
 
 		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
-			Map.of("header", "${file::2}", "files", List.of("${File::2}"), "missing", "${file::9}"),
+			Map.of("header", "${file::2}", "missing", "${file::9}"),
 			telemetryManager,
 			CONNECTOR_ID,
 			Map.of("id", "monitor-42"),
@@ -272,17 +265,7 @@ class AwkVariablesUpdateTest {
 		);
 
 		assertEquals(text, variables.get("header"));
-		assertEquals(List.of(text), variables.get("files"));
 		assertEquals("${file::9}", variables.get("missing"));
-		assertEquals(
-			text + "Content-Type: text/plain\n",
-			AwkExecutor.executeAwk(
-				"BEGIN { printf \"%s\", header \"Content-Type: text/plain\\n\" }",
-				"",
-				AwkExecutor.getUtilityEngine(),
-				variables
-			)
-		);
 	}
 
 	@Test

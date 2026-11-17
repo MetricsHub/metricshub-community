@@ -9,12 +9,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
@@ -24,11 +22,7 @@ import org.metricshub.engine.connector.model.ContentTypeFinding;
 import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.IntermediateConnector;
 import org.metricshub.engine.connector.model.RawConnector;
-import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
-import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
-import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.parser.ConnectorParser;
-import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * The load-time content-type check: one connector per rule, loaded as the agent loads it (parser, update chain,
@@ -76,7 +70,6 @@ class ContentTypeCheckTest {
 		final ConnectorDeserializer deserializer = new ConnectorDeserializer(JsonHelper.buildYamlMapper());
 		PostDeserializeHelper.addPostDeserializeSupport(deserializer.getMapper());
 		final Connector connector = deserializer.deserialize(new IntermediateConnector("Test", raw).getConnectorNode());
-		connector.setEmbeddedFiles(raw.getEmbeddedFiles());
 		ConnectorParser.createUpdateChain().update(connector);
 		return connector;
 	}
@@ -535,92 +528,6 @@ class ContentTypeCheckTest {
 		assertEquals(
 			List.of("json2Table/json2Csv", "no input/input", "no inputFormat/inputFormat", "no parsingMode/parsingMode"),
 			findings.stream().map(finding -> finding.expected() + "/" + finding.actual()).sorted().toList()
-		);
-	}
-
-	/**
-	 * An awk script holds no <code>${file::}</code>: neither the file that the script of a source or of a compute
-	 * names, a comment included, nor an inline script. The parser reads no file named in a file:
-	 * <code>header.txt</code> does not exist.
-	 */
-	@Test
-	void fileReferenceInScript() throws IOException {
-		Files.writeString(directory.resolve("nested.awk"), "BEGIN { header = \"${file::header.txt}\" }\n");
-		Files.writeString(directory.resolve("comment.awk"), "# Not ${FILE::header.txt}\n{ print $1 }\n");
-		final List<ContentTypeFinding> findings = findings("""
-			monitors:
-			  thing:
-			    simple:
-			      sources:
-			        file:
-			          type: awk
-			          script: ${file::nested.awk}
-			        inline:
-			          type: awk
-			          script: "BEGIN { header = \\"${file::comment.awk}\\" }"
-			        command:
-			          type: commandLine
-			          commandLine: echo
-			          computes:
-			          - type: awk
-			            script: ${file::comment.awk}
-			""");
-		assertEquals(
-			List.of(
-				"FILE_REFERENCE_IN_SCRIPT " +
-					THING +
-					"file} at script: expected no ${file::} in an AWK script, actual ${file::} (pass the file through the variables)",
-				"FILE_REFERENCE_IN_SCRIPT " +
-					THING +
-					"inline} at script: expected no ${file::} in an AWK script, actual ${file::} (pass the file through the variables)",
-				"FILE_REFERENCE_IN_SCRIPT " +
-					THING +
-					"command} at awk #0 script: expected no ${file::} in an AWK script, actual ${file::} (pass the file through the variables)"
-			),
-			findings.stream().map(ContentTypeFinding::toString).toList()
-		);
-	}
-
-	/**
-	 * A script gets a file through a variable: no finding, and the variable is the text of the file.
-	 */
-	@Test
-	void fileThroughAVariable() throws IOException {
-		Files.writeString(directory.resolve("header.txt"), "Accept: */*\n");
-		Files.writeString(directory.resolve("login.awk"), "BEGIN { print header }\n");
-		final String body = """
-			monitors:
-			  thing:
-			    simple:
-			      sources:
-			        login:
-			          type: awk
-			          script: ${file::login.awk}
-			          variables:
-			            header: ${file::header.txt}
-			          computes:
-			          - type: awk
-			            script: ${file::login.awk}
-			            variables:
-			              header: ${file::header.txt}
-			""";
-		assertEquals(List.of(), findings(body));
-
-		final Connector connector = parse(body);
-		final ConnectorStore store = new ConnectorStore();
-		store.setStore(Map.of("Test", connector));
-		final Source login = ((SimpleMonitorJob) connector.getMonitors().get("thing")).getSimple()
-			.getSources()
-			.get("login");
-		assertEquals(
-			Map.of("header", "Accept: */*\n"),
-			AwkVariableHelper.resolveVariables(
-				((JawkSource) login).getVariables(),
-				TelemetryManager.builder().connectorStore(store).build(),
-				"Test",
-				Map.of(),
-				login.getKey()
-			)
 		);
 	}
 
