@@ -71,6 +71,13 @@ public final class DynamicToolCallback implements ToolCallback {
 	@Getter
 	private final org.metricshub.engine.tool.ToolDefinition declaration;
 
+	/**
+	 * Whether the agent's own MCP servers answer with the result rendered for reading, one text per host (see
+	 * {@link ConnectorToolCallbacks#render}), rather than with its JSON: the case of the connector tools.
+	 */
+	@Getter
+	private final boolean rendered;
+
 	private final Function<JsonNode, Object> function;
 
 	/**
@@ -93,7 +100,7 @@ public final class DynamicToolCallback implements ToolCallback {
 		final Function<JsonNode, Object> function,
 		final boolean destructive
 	) {
-		this(toolDefinition, function, destructive, null, null);
+		this(toolDefinition, function, destructive, null, null, false);
 	}
 
 	/**
@@ -102,23 +109,40 @@ public final class DynamicToolCallback implements ToolCallback {
 	 * @param destructive    whether the tool changes the state of a host
 	 * @param owner          the protocol extension or connector identifier that declares the tool
 	 * @param declaration    the engine's declaration the tool was built from
+	 * @param rendered       whether the agent's own MCP servers render the result rather than send its JSON
 	 */
 	public DynamicToolCallback(
 		final ToolDefinition toolDefinition,
 		final Function<JsonNode, Object> function,
 		final boolean destructive,
 		final String owner,
-		final org.metricshub.engine.tool.ToolDefinition declaration
+		final org.metricshub.engine.tool.ToolDefinition declaration,
+		final boolean rendered
 	) {
 		this.toolDefinition = toolDefinition;
 		this.function = function;
 		this.destructive = destructive;
 		this.owner = owner;
 		this.declaration = declaration;
+		this.rendered = rendered;
 	}
 
 	@Override
 	public String call(final String toolInput) {
+		try {
+			return MAPPER.writeValueAsString(apply(toolInput));
+		} catch (JsonProcessingException e) {
+			throw new IllegalStateException("Tool %s: the result cannot be serialized".formatted(toolDefinition.name()), e);
+		}
+	}
+
+	/**
+	 * Runs the tool.
+	 *
+	 * @param toolInput the arguments, as JSON
+	 * @return the result, which {@link #call(String)} serializes to JSON
+	 */
+	public Object apply(final String toolInput) {
 		final JsonNode arguments;
 		try {
 			arguments = toolInput == null || toolInput.isBlank() ? MAPPER.createObjectNode() : MAPPER.readTree(toolInput);
@@ -127,10 +151,6 @@ public final class DynamicToolCallback implements ToolCallback {
 				"Tool %s: the arguments are not valid JSON: %s".formatted(toolDefinition.name(), e.getOriginalMessage())
 			);
 		}
-		try {
-			return MAPPER.writeValueAsString(function.apply(arguments));
-		} catch (JsonProcessingException e) {
-			throw new IllegalStateException("Tool %s: the result cannot be serialized".formatted(toolDefinition.name()), e);
-		}
+		return function.apply(arguments);
 	}
 }

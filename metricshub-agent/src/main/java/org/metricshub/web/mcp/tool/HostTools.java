@@ -108,7 +108,7 @@ public final class HostTools {
 	}
 
 	/**
-	 * Builds the MCP tool.
+	 * Builds the MCP tool, whose result every interface receives as JSON.
 	 *
 	 * @param owner      the extension or connector identifier that declares the tool
 	 * @param name       the advertised tool name
@@ -122,6 +122,27 @@ public final class HostTools {
 		final String name,
 		final ToolDefinition definition,
 		final BiFunction<String, Map<String, String>, Object> perHost
+	) {
+		return perHost(owner, name, definition, perHost, false);
+	}
+
+	/**
+	 * Builds the MCP tool.
+	 *
+	 * @param owner      the extension or connector identifier that declares the tool
+	 * @param name       the advertised tool name
+	 * @param definition what the tool takes and does
+	 * @param perHost    the body, run once per host with the resolved arguments; it returns the host's result or
+	 *                   throws, in which case the host answers with an error
+	 * @param rendered   whether the agent's own MCP servers render the result rather than send its JSON
+	 * @return the callback
+	 */
+	public static ToolCallback perHost(
+		final String owner,
+		final String name,
+		final ToolDefinition definition,
+		final BiFunction<String, Map<String, String>, Object> perHost,
+		final boolean rendered
 	) {
 		if (name.length() > MAX_NAME_LENGTH) {
 			throw new IllegalArgumentException(
@@ -146,7 +167,8 @@ public final class HostTools {
 			arguments -> call(definition, perHost, arguments),
 			definition.destructive(),
 			owner,
-			definition
+			definition,
+			rendered
 		);
 	}
 

@@ -1,5 +1,8 @@
 package org.metricshub.web.mcp.tool;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -8,6 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.server.McpSyncServerExchange;
+import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
+import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
+import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -78,6 +85,57 @@ class McpToolRegistrySyncTest {
 		verify(server).addTool(argThat(specification -> "ipmi_sensors".equals(specification.tool().name())));
 		verify(server).addTool(argThat(specification -> "ipmi_sel".equals(specification.tool().name())));
 		verify(server, never()).addTool(argThat(specification -> "ListHosts".equals(specification.tool().name())));
+	}
+
+	/**
+	 * A tool on hosts, as the connectors and the protocol extensions declare them.
+	 */
+	private static ToolCallback hostTool(final boolean rendered) {
+		return HostTools.perHost(
+			"Windows",
+			"Windows_listProcesses",
+			new org.metricshub.engine.tool.ToolDefinition("listProcesses", "Lists the processes.", Map.of(), false),
+			(hostname, arguments) -> new ConnectorToolCallbacks.ToolTable(List.of("pid"), List.of(List.of("4212"))),
+			rendered
+		);
+	}
+
+	private static List<String> texts(final CallToolResult result) {
+		return result.content().stream().map(content -> ((TextContent) content).text()).toList();
+	}
+
+	@Test
+	void testARenderedToolAnswersWithOneTextPerHost() {
+		final var handler = McpToolRegistrySync.toSpecification(hostTool(true)).callHandler();
+
+		final CallToolResult result = handler.apply(
+			null,
+			new CallToolRequest("Windows_listProcesses", Map.of("hostname", List.of("win-01", "win-02")))
+		);
+		assertEquals(
+			List.of("## win-01\n\n| pid |\n| --- |\n| 4212 |", "## win-02\n\n| pid |\n| --- |\n| 4212 |"),
+			texts(result)
+		);
+		assertFalse(result.isError());
+
+		// The call as a whole failed
+		final CallToolResult noHost = handler.apply(null, new CallToolRequest("Windows_listProcesses", Map.of()));
+		assertEquals(List.of("The hostname parameter is required."), texts(noHost));
+		assertTrue(noHost.isError());
+	}
+
+	@Test
+	void testAnyOtherToolAnswersWithItsJson() {
+		final ToolCallback callback = hostTool(false);
+
+		final CallToolResult result = McpToolRegistrySync.toSpecification(callback)
+			.callHandler()
+			.apply(
+				mock(McpSyncServerExchange.class),
+				new CallToolRequest("Windows_listProcesses", Map.of("hostname", List.of("win-01")))
+			);
+
+		assertEquals(List.of(callback.call("{\"hostname\":[\"win-01\"]}")), texts(result));
 	}
 
 	@Test
