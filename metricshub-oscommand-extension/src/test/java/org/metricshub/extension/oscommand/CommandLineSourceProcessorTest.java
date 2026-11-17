@@ -30,6 +30,39 @@ class CommandLineSourceProcessorTest {
 
 	@Test
 	void textKeepsLinesAsIsAndTableIsTheCanonicalConversion() throws Exception {
+		final SourceTable result = process("a;b;;\n\nc;d\n;e\n", CommandLineSource.builder().commandLine("cmd").build());
+
+		assertEquals(SourceTable.ofText("a;b;;\n\nc;d\n;e"), result);
+		assertEquals(List.of(List.of("a", "b", ""), List.of("c", "d"), List.of("", "e")), result.asTable());
+	}
+
+	/**
+	 * A host that answers with CRLF gives the text of a host that answers with LF: the lines are filtered and their
+	 * columns selected without the carriage return, which a column selection would otherwise move inside the line.
+	 */
+	@Test
+	void crlfOutputGivesLfTextAndColumnsWithoutCarriageReturn() throws Exception {
+		assertEquals(
+			"a;b\nc;d",
+			process("a;b\r\nc;d\r\n", CommandLineSource.builder().commandLine("cmd").build()).getText()
+		);
+		assertEquals(
+			"b;a\nd;c",
+			process(
+				"a;b\r\nc;d\r\n",
+				CommandLineSource.builder().commandLine("cmd").separators(";").selectColumns("2,1").build()
+			).getText()
+		);
+	}
+
+	/**
+	 * Runs a <code>commandLine</code> source on a host whose command prints the given output.
+	 *
+	 * @param output The output of the command
+	 * @param source The source
+	 * @return the result of the source
+	 */
+	private static SourceTable process(final String output, final CommandLineSource source) throws Exception {
 		final String connectorId = "connector";
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.addOne(connectorId, Connector.builder().embeddedFiles(Map.of()).build());
@@ -42,16 +75,9 @@ class CommandLineSourceProcessorTest {
 			.build();
 
 		final OsCommandService osCommandService = mock(OsCommandService.class);
-		doReturn(new OsCommandResult("a;b;;\n\nc;d\n;e\n", "cmd")).when(osCommandService)
+		doReturn(new OsCommandResult(output, "cmd")).when(osCommandService)
 			.runOsCommand(any(), any(), any(), anyBoolean(), anyBoolean(), any());
 
-		final SourceTable result = new CommandLineSourceProcessor(osCommandService).process(
-			CommandLineSource.builder().commandLine("cmd").build(),
-			connectorId,
-			telemetryManager
-		);
-
-		assertEquals(SourceTable.ofText("a;b;;\n\nc;d\n;e"), result);
-		assertEquals(List.of(List.of("a", "b", ""), List.of("c", "d"), List.of("", "e")), result.asTable());
+		return new CommandLineSourceProcessor(osCommandService).process(source, connectorId, telemetryManager);
 	}
 }

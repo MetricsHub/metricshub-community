@@ -317,8 +317,8 @@ class ConversionComputesTest {
 	void conversionsReturnNewValues() {
 		final SourceTable text = SourceTable.ofText("a;b\r\nc;");
 		assertEquals(table("a|b", "c"), text.asTable());
-		assertEquals("a;b\r\nc;", text.asText());
-		assertEquals(SourceTable.ofText("a;b\r\nc;"), text);
+		assertEquals("a;b\nc;", text.asText());
+		assertEquals(SourceTable.ofText("a;b\nc;"), text);
 
 		final SourceTable tableSource = SourceTable.ofTable(table("a;x|b"));
 		assertEquals("a,x;b;", tableSource.asText());
