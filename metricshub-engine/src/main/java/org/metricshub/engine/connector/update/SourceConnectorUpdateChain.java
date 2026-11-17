@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,7 +49,8 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 	 * @param sources       The sources map defined in the monitor's task or under the pre section.
 	 * @param context       Context pattern
 	 * @param sourceGroup  The index of a capturing source identifier group in the matcher's context pattern
-	 * @return A list of source levels. Structure example: [ [Source1, Source2], [Source3] ]
+	 * @return A list of source levels. Structure example: [ [Source1, Source2], [Source3] ]. The sources of a level
+	 * are in the order of the sources map, that is the order in which they are declared.
 	 */
 	protected List<Set<String>> updateSourceDependency(
 		final Map<String, Source> sources,
@@ -128,7 +128,15 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 
 		// Build the final result
 		// A result like: [ [Source1, Source2], [Source3] ]
-		return mapLevels.values().stream().map(Function.identity()).collect(Collectors.toList()); //NOSONAR;
+		// The sources of a level are put in the order they are declared: the loop above adds them in the hash order
+		// of their names, and adds a source that references a source declared after it one pass late.
+		final List<Set<String>> levels = new ArrayList<>();
+		for (final Set<String> level : mapLevels.values()) {
+			final Set<String> declarationOrder = new LinkedHashSet<>(sources.keySet());
+			declarationOrder.retainAll(level);
+			levels.add(declarationOrder);
+		}
+		return levels;
 	}
 
 	/**
