@@ -17,12 +17,12 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.ContentTypeFinding;
 import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.IntermediateConnector;
 import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.parser.ConnectorParser;
-import org.metricshub.engine.strategy.source.compute.golden.ComputeChainGoldenCorpus;
 
 /**
  * The load-time content-type check: one connector per rule, loaded as the agent loads it (parser, update chain,
@@ -54,7 +54,7 @@ class ContentTypeCheckTest {
 		findings.forEach(finding -> assertEquals("Test", finding.connectorId()));
 		assertEquals(
 			findings.isEmpty(),
-			ComputeChainGoldenCorpus.loadConnectors(directory).getStore().containsKey("Test"),
+			new ConnectorStore(directory).getStore().containsKey("Test"),
 			"the connector loads only without finding: " + findings
 		);
 		return findings;

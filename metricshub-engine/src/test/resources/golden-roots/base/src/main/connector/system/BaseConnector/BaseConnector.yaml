@@ -1,9 +1,0 @@
-extends:
-- ../../semconv/Thing
-connector:
-  displayName: Base connector
-  detection:
-    appliesTo: [ linux ]
-    criteria:
-    - type: deviceType
-      keep: [ linux ]
