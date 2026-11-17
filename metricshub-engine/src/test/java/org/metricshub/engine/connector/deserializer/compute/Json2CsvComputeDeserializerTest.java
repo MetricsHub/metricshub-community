@@ -80,6 +80,11 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 		// The copy has its own list
 		assertEquals(List.of("id", "", "name"), origin.getProperties());
 
+		// A reference is resolved inside its item: its value is never split, also in the string form
+		final Json2Csv reference = Json2Csv.builder().properties("id;${reference}").build();
+		reference.update(value -> value.replace("${reference}", "a;b"));
+		assertEquals(List.of("id", "a;b"), reference.getProperties());
+
 		// No properties: nothing to update
 		final Json2Csv none = Json2Csv.builder().build();
 		none.update(value -> value + "!");
