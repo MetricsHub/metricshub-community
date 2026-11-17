@@ -1,8 +1,10 @@
 package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -10,9 +12,13 @@ import static org.mockito.Mockito.when;
 
 import io.jawk.Awk;
 import io.jawk.jrt.AssocArray;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -23,6 +29,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -247,6 +254,191 @@ class MetricsHubExtensionForJawkTest {
 				print n, list["/a/b"]
 			}
 			"""));
+	}
+
+	/**
+	 * The HTTP sources a script requested, in order.
+	 */
+	private static List<HttpSource> requested(final SourceProcessor sourceProcessor, final int times) {
+		final ArgumentCaptor<HttpSource> sources = ArgumentCaptor.forClass(HttpSource.class);
+		verify(sourceProcessor, Mockito.times(times)).executeHttpRequest(sources.capture());
+		return sources.getAllValues();
+	}
+
+	/**
+	 * A body given as an array is written as JSON: an array indexed from 0 is an array, any other an object with its
+	 * properties in alphabetical order, a number a number, a boolean read from a response a boolean, and anything
+	 * else a string, a numeric string of the input included. The array of the script keeps its body.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestWithAnArrayBody() throws Exception {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		when(sourceProcessor.executeHttpRequest(any(HttpSource.class))).thenReturn(answer(200, "{\"flag\":true}"));
+		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder()
+			.hostname("host")
+			.sourceProcessor(sourceProcessor)
+			.build();
+
+		assertEquals("200 11 Reads\n", run("""
+			BEGIN {
+				args["method"] = "post"
+				args["path"] = "/api"
+				args["header"] = "Accept: application/json"
+				executeHttpJsonRequest(args, response)
+
+				split("001 7", fields, " ")
+				args["body"]["id"] = fields[1]
+				args["body"]["count"] = fields[2] + 0
+				args["body"]["ratio"] = 1 / 4
+				args["body"]["total"] = 6 / 2
+				args["body"]["name"] = "a \\"quoted\\" \\\\ name"
+				args["body"]["enabled"] = response["flag"]
+				args["body"]["missing"] = response["none"]
+				args["body"]["metrics"][0] = "Reads"
+				args["body"]["metrics"][1] = "Writes"
+				args["body"]["range"]["first"] = 1
+				args["body"]["parts"][1] = "from 1"
+				args["body"]["empty"]["x"] = 1
+				delete args["body"]["empty"]["x"]
+				print executeHttpJsonRequest(args, response), length(args["body"]), args["body"]["metrics"][0]
+			}
+			""", extension));
+
+		final List<HttpSource> sources = requested(sourceProcessor, 2);
+		// Without a body, the request is the one of the script
+		assertNull(sources.get(0).getBody());
+		assertEquals("Accept: application/json", sources.get(0).getHeader());
+		assertEquals(
+			"{\"count\":7,\"empty\":{},\"enabled\":true,\"id\":\"001\",\"metrics\":[\"Reads\",\"Writes\"],\"missing\":\"\"," +
+				"\"name\":\"a \\\"quoted\\\" \\\\ name\",\"parts\":{\"1\":\"from 1\"},\"range\":{\"first\":1},\"ratio\":0.25,\"total\":3}",
+			sources.get(1).getBody()
+		);
+		assertEquals("Accept: application/json\nContent-Type: application/json", sources.get(1).getHeader());
+	}
+
+	/**
+	 * The content type of a body given as an array is JSON unless the header names one. A body given as a string is
+	 * sent as it is, with the header of the script.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestBodyContentType() throws Exception {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder()
+			.hostname("host")
+			.sourceProcessor(sourceProcessor)
+			.build();
+
+		run("""
+			BEGIN {
+				array["body"][0] = "a"
+				executeHttpJsonRequest(array, response)
+
+				array["header"] = "Accept: */*\\ncontent-type: application/vnd.api+json"
+				executeHttpJsonRequest(array, response)
+
+				text["body"] = "{\\"a\\": 1}"
+				executeHttpJsonRequest(text, response)
+			}
+			""", extension);
+
+		final List<HttpSource> sources = requested(sourceProcessor, 3);
+		assertEquals("[\"a\"]", sources.get(0).getBody());
+		assertEquals("Content-Type: application/json", sources.get(0).getHeader());
+		assertEquals("[\"a\"]", sources.get(1).getBody());
+		assertEquals("Accept: */*\ncontent-type: application/vnd.api+json", sources.get(1).getHeader());
+		assertEquals("{\"a\": 1}", sources.get(2).getBody());
+		assertNull(sources.get(2).getHeader());
+	}
+
+	/**
+	 * What the request does afterwards does not undo a body given as an array. A macro in a value is escaped as JSON
+	 * when the request replaces it, unless it names its escape. A value that reads as a reference to an embedded file
+	 * is the text of the value, and does not replace the body. A header that is an embedded file gets the content
+	 * type when its content names none, and stays a reference otherwise.
+	 */
+	@Test
+	void testExecuteHttpJsonRequestBodyMacrosAndEmbeddedFiles() throws Exception {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
+		when(sourceProcessor.getTelemetryManager()).thenReturn(telemetryManager);
+		when(telemetryManager.getEmbeddedFiles("connector")).thenReturn(
+			Map.of(
+				1,
+				EmbeddedFile.builder().id(1).content("Accept: application/json\n".getBytes(StandardCharsets.UTF_8)).build(),
+				2,
+				EmbeddedFile.builder().id(2).content("content-type: text/json\n".getBytes(StandardCharsets.UTF_8)).build()
+			)
+		);
+		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder()
+			.hostname("host")
+			.connectorId("connector")
+			.sourceProcessor(sourceProcessor)
+			.build();
+
+		run("""
+			BEGIN {
+				array["header"] = "${file::1}"
+				array["body"]["user"] = "%{USERNAME}"
+				array["body"]["password"] = "${PASSWORD}"
+				array["body"]["token"] = "${esc(url)::AUTHENTICATIONTOKEN}"
+				array["body"]["file"] = "${file::2}"
+				executeHttpJsonRequest(array, response)
+
+				array["header"] = "${file::2}"
+				executeHttpJsonRequest(array, response)
+			}
+			""", extension);
+
+		final List<HttpSource> sources = requested(sourceProcessor, 2);
+		final String body = sources.get(0).getBody();
+		assertEquals(
+			"{\"file\":\"\\u0024{file::2}\",\"password\":\"${esc(json)::PASSWORD}\"," +
+				"\"token\":\"${esc(url)::AUTHENTICATIONTOKEN}\",\"user\":\"%{esc(json)::USERNAME}\"}",
+			body
+		);
+		assertEquals("Accept: application/json\nContent-Type: application/json", sources.get(0).getHeader());
+		assertEquals("${file::2}", sources.get(1).getHeader());
+
+		// The request: the body is not an embedded file, and is still a document once the macros are replaced
+		assertFalse(FILE_PATTERN.matcher(body).find());
+		assertEquals(
+			Map.of("file", "${file::2}", "password", "c\\d\ne", "token", "tk", "user", "a\"b"),
+			JsonHelper.buildObjectMapper()
+				.readValue(MacrosUpdater.update(body, "a\"b", "c\\d\ne".toCharArray(), "tk", "host", false), Map.class)
+		);
+	}
+
+	/**
+	 * <code>executeHttpRequest()</code> takes a body given as an array too, in a script run as a connector runs it: a
+	 * field that looks like a number is a string, and a number once 0 is added to it; <code>mkbool()</code> gives a
+	 * boolean.
+	 */
+	@Test
+	void testExecuteHttpRequestWithAnArrayBody() throws Exception {
+		final SourceProcessor sourceProcessor = sourceProcessor();
+		final String script = """
+			{
+				args["body"]["id"] = $1
+				args["body"]["start"] = $2 + 0
+				args["body"]["user"] = $3
+				args["body"]["average"] = mkbool(1)
+				args["body"]["raw"] = mkbool(0)
+				print executeHttpRequest(args)
+			}
+			""";
+
+		assertEquals(
+			"response\n",
+			AwkExecutor.executeAwk(script, "000123 1700000000 a\"b\\c\n", engine(sourceProcessor), null)
+		);
+
+		final ArgumentCaptor<HttpSource> source = ArgumentCaptor.forClass(HttpSource.class);
+		verify(sourceProcessor).process(source.capture());
+		assertEquals(
+			"{\"average\":true,\"id\":\"000123\",\"raw\":false,\"start\":1700000000,\"user\":\"a\\\"b\\\\c\"}",
+			source.getValue().getBody()
+		);
+		assertEquals("Content-Type: application/json", source.getValue().getHeader());
 	}
 
 	@Test

@@ -21,21 +21,30 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.jawk.ext.AbstractExtension;
 import io.jawk.ext.JawkExtension;
 import io.jawk.ext.annotations.JawkAssocArray;
 import io.jawk.ext.annotations.JawkFunction;
 import io.jawk.jrt.AssocArray;
+import io.jawk.jrt.GawkBool;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
+import java.util.stream.LongStream;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -45,6 +54,7 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -56,6 +66,7 @@ import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 
 /**
  * This class implements the {@link JawkExtension} contract, reports the supported features, processes sources and
@@ -77,6 +88,35 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		// as a numeric string
 		.with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 
+	/**
+	 * Writes the JSON body of a HTTP request, on one line
+	 */
+	private static final ObjectWriter JSON_WRITER = JsonHelper.buildObjectMapper()
+		.writer()
+		.without(SerializationFeature.INDENT_OUTPUT);
+
+	/**
+	 * A <code>Content-Type</code> line in the header of a HTTP request
+	 */
+	private static final Pattern CONTENT_TYPE_HEADER = Pattern.compile("(?im)^\\s*content-type\\s*:");
+
+	private static final String JSON_CONTENT_TYPE = "Content-Type: application/json";
+
+	/**
+	 * A macro that names no escape, as <code>MacrosUpdater</code> reads it: <code>%{USERNAME}</code>,
+	 * <code>${::PASSWORD}</code>.
+	 */
+	private static final Pattern UNESCAPED_MACRO = Pattern.compile("([$%]\\{)(?:::)?([A-Z0-9_-]+\\})");
+
+	/**
+	 * The start of a reference to an embedded file, after its <code>$</code>.
+	 */
+	private static final Pattern FILE_REFERENCE = Pattern.compile("(?i)\\$(\\{file::)");
+
+	private static final String BODY = "body";
+
+	private static final String HEADER = "header";
+
 	@EqualsAndHashCode.Exclude
 	private SourceProcessor sourceProcessor;
 
@@ -91,12 +131,98 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	/**
 	 * Execute a HTTP request through the context.
 	 *
-	 * @param argMap The array of arguments to use to create the {@link HttpSource}.
+	 * @param argMap The array of arguments to use to create the {@link HttpSource}. Its <code>body</code> may be an
+	 *               array, written as JSON: see {@link #httpSource(Map)}.
 	 * @return The table result from the execution of the {@link HttpSource}.
 	 */
 	@JawkFunction("executeHttpRequest")
 	public String executeHttpRequest(final @JawkAssocArray Map<Object, Object> argMap) {
-		return executeSource(Source.fromMap(HttpSource.class, argMap));
+		return executeSource(httpSource(argMap));
+	}
+
+	/**
+	 * Creates the HTTP source of a request from the arguments of a script. A <code>body</code> that is an array is
+	 * written as the JSON body of the request, the way a response is read by
+	 * {@link #executeHttpJsonRequest(Map, Map)}, the other way round:
+	 * <ul>
+	 * <li>An array whose indexes are 0 to n-1 is a JSON array, any other array an object, an empty one included. The
+	 * properties of an object are written in alphabetical order: an AWK array has no order, and a recorded request
+	 * is found by its body.</li>
+	 * <li>A number is a number (<code>3</code>, not <code>3.0</code>), a boolean-typed number <code>true</code> or
+	 * <code>false</code>.</li>
+	 * <li>Anything else is a string: a string, a numeric string read from the input (<code>$4</code> holding
+	 * <code>001</code> is <code>"001"</code>, and <code>$4 + 0</code> the number 1), an element without a value (an
+	 * empty string: <code>null</code> cannot be written).</li>
+	 * </ul>
+	 * <code>Content-Type: application/json</code> is added to a header that names no content type. The array of the
+	 * script is not modified.
+	 * <p>
+	 * What the request does to its body and to its header afterwards does not undo that:
+	 * <ul>
+	 * <li>A macro in a value (<code>%{USERNAME}</code>) is replaced when the request is sent: it becomes
+	 * <code>%{esc(json)::USERNAME}</code>, so that its value is escaped as the rest of the document is. A macro
+	 * that names its escape is left as it is.</li>
+	 * <li>A value that reads as a reference to an embedded file is the text of the value: the reference would
+	 * otherwise replace the whole body.</li>
+	 * <li>A header that is an embedded file without a content type is replaced by its content, which is what the
+	 * request sends, with the content type.</li>
+	 * </ul>
+	 *
+	 * @param argMap The array of arguments of the script
+	 * @return the HTTP source
+	 */
+	private HttpSource httpSource(final Map<Object, Object> argMap) {
+		if (!(argMap.get(BODY) instanceof Map)) {
+			return Source.fromMap(HttpSource.class, argMap);
+		}
+		final Map<Object, Object> arguments = new LinkedHashMap<>(argMap);
+		try {
+			// In a JSON document, "${" and "%{" are only found in a string: both replacements stay in it
+			final String json = JSON_WRITER.writeValueAsString(toJson(argMap.get(BODY)));
+			final String escaped = UNESCAPED_MACRO.matcher(json).replaceAll("$1esc(json)::$2");
+			arguments.put(BODY, FILE_REFERENCE.matcher(escaped).replaceAll("\\\\u0024$1"));
+		} catch (JsonProcessingException e) {
+			// Maps, lists, strings, numbers and booleans: Jackson writes them all
+			throw new UncheckedIOException(e);
+		}
+		String header = Objects.toString(argMap.get(HEADER), "");
+		if (FILE_PATTERN.matcher(header).find()) {
+			header = EmbeddedFileHelper.findEmbeddedFile(
+				header,
+				sourceProcessor.getTelemetryManager().getEmbeddedFiles(connectorId),
+				hostname,
+				connectorId
+			).map(EmbeddedFile::getContentAsString).orElse(header);
+		}
+		if (!CONTENT_TYPE_HEADER.matcher(header).find()) {
+			arguments.put(HEADER, header.isBlank() ? JSON_CONTENT_TYPE : header.stripTrailing() + "\n" + JSON_CONTENT_TYPE);
+		}
+		return Source.fromMap(HttpSource.class, arguments);
+	}
+
+	/**
+	 * The JSON value of an AWK value, as {@link #httpSource(Map)} describes it.
+	 *
+	 * @param value A value of the array of a script, as its plain view gives it
+	 * @return a list, a map, a number, a boolean or a string
+	 */
+	private Object toJson(final Object value) {
+		if (value instanceof Map<?, ?> array) {
+			final int size = array.size();
+			if (size > 0 && LongStream.range(0, size).allMatch(array::containsKey)) {
+				return LongStream.range(0, size).mapToObj(index -> toJson(array.get(index))).toList();
+			}
+			final Map<String, Object> object = new TreeMap<>();
+			array.forEach((key, item) -> object.put(toAwkString(key), toJson(item)));
+			return object;
+		}
+		if (value instanceof GawkBool bool) {
+			return bool.booleanValue();
+		}
+		if (value instanceof Double number && number == Math.rint(number) && Math.abs(number) < Long.MAX_VALUE) {
+			return number.longValue();
+		}
+		return value;
 	}
 
 	/**
@@ -190,8 +316,9 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * It returns the HTTP status code, so that a script tells a refused request (401) from an empty answer (200). The
 	 * body of an error response is parsed too: it often says why.
 	 *
-	 * @param argMap   The array of arguments to use to create the {@link HttpSource}. Its <code>resultContent</code>
-	 *                 plays no part: the function reads the status and the body of the response.
+	 * @param argMap   The array of arguments to use to create the {@link HttpSource}. Its <code>body</code> may be
+	 *                 an array, written as JSON: see {@link #httpSource(Map)}. Its <code>resultContent</code> plays
+	 *                 no part: the function reads the status and the body of the response.
 	 * @param response The array to fill with the document. It is emptied first, and stays empty when the body is
 	 *                 not a JSON object or array.
 	 * @return The HTTP status code of the response (200, 401, ...), 0 when the request got no response.
@@ -202,7 +329,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		final @JawkAssocArray Map<Object, Object> response
 	) {
 		response.clear();
-		final HttpResult result = sourceProcessor.executeHttpRequest(Source.fromMap(HttpSource.class, argMap));
+		final HttpResult result = sourceProcessor.executeHttpRequest(httpSource(argMap));
 		if (result == null) {
 			return 0;
 		}
