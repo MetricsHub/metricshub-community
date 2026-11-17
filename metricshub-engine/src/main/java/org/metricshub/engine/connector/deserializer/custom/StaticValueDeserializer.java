@@ -34,7 +34,7 @@ import java.util.List;
  * a YAML list, returned as the rows of the table, a {@link List} of {@link List} of {@link String}. The list holds
  * either cells, which are the single row (<code>[ a, b ]</code>), or rows, each a list of cells
  * (<code>[ [ a, 1 ], [ b, 2 ] ]</code>), never both. An empty list is an empty table. A row needs one cell at
- * least; a cell is a scalar other than null, without a line break.
+ * least; a cell is a scalar other than null, and may hold a line break.
  */
 public class StaticValueDeserializer extends JsonDeserializer<Object> {
 
@@ -82,16 +82,12 @@ public class StaticValueDeserializer extends JsonDeserializer<Object> {
 	 * @param parser  The parser
 	 * @param context The deserialization context
 	 * @return the text of the cell
-	 * @throws IOException when the token is no scalar, is null, or holds a line break
+	 * @throws IOException when the token is no scalar, or is null
 	 */
 	private static String readCell(final JsonParser parser, final DeserializationContext context) throws IOException {
 		// A null cell (~) is rejected: the string form can never produce one
 		if (!parser.currentToken().isScalarValue() || parser.hasToken(JsonToken.VALUE_NULL)) {
 			return context.reportInputMismatch(String.class, "A cell must be a scalar other than null");
-		}
-		// A line break would split the row into several records once the table is read as a text
-		if (parser.getText().indexOf('\n') >= 0 || parser.getText().indexOf('\r') >= 0) {
-			return context.reportInputMismatch(String.class, "A cell cannot hold a line break");
 		}
 		return parser.getText();
 	}

@@ -851,10 +851,10 @@ class SourceProcessorTest {
 		final SourceTable listResult = sourceProcessor.process(staticSource);
 		assertEquals(SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "", "b;1"))), listResult);
 
-		// A line break a reference resolved into at run time becomes a space: the row never splits for an awk reader
+		// A cell keeps its line break; as a text, the row is one line
 		staticSource = StaticSource.builder().value(List.of("x\r\ny", "z")).build();
 		final SourceTable breakResult = sourceProcessor.process(staticSource);
-		assertEquals(SourceTable.ofTable(List.of(List.of("x y", "z"))), breakResult);
+		assertEquals(SourceTable.ofTable(List.of(List.of("x\r\ny", "z"))), breakResult);
 		assertEquals("x y;z;", breakResult.asText());
 
 		// A list of rows is exactly these rows, an empty list is an empty table

@@ -57,6 +57,8 @@ public class SourceTable {
 
 	private static final String ALTERNATE_COLUMN_SEPARATOR = ",";
 
+	private static final Pattern LINE_BREAKS_PATTERN = Pattern.compile("[\r\n]+");
+
 	/**
 	 * Never null: tells whether {@link #text} or {@link #table} holds the value.
 	 */
@@ -168,8 +170,8 @@ public class SourceTable {
 	/**
 	 * This source table as a text: the text itself, or the table with one line per row, cells joined with
 	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code>, and
-	 * the CRLF of a cell converted to LF. Either way, the text has LF line endings. This source table is not
-	 * changed.
+	 * the line breaks inside a cell replaced by a space, so that a row is one line. Either way, the text has LF line
+	 * endings. This source table is not changed.
 	 *
 	 * @return the text
 	 */
@@ -177,7 +179,22 @@ public class SourceTable {
 		if (contentType == ContentType.TEXT) {
 			return text;
 		}
-		return StringHelper.toLf(tableToCsv(table, TABLE_SEP, true));
+		return table.stream()
+			.filter(Objects::nonNull)
+			.map(row -> lineToCsv(row.stream().map(SourceTable::onOneLine).toList(), TABLE_SEP, true))
+			.collect(Collectors.joining(NEW_LINE));
+	}
+
+	/**
+	 * A cell without a line break.
+	 *
+	 * @param cell The cell, which may be null
+	 * @return the cell, each run of line breaks replaced by a space
+	 */
+	private static String onOneLine(final String cell) {
+		return cell == null || (cell.indexOf('\n') < 0 && cell.indexOf('\r') < 0)
+			? cell
+			: LINE_BREAKS_PATTERN.matcher(cell).replaceAll(" ");
 	}
 
 	/**
