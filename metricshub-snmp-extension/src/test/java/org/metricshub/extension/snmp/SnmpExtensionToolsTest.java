@@ -45,12 +45,23 @@ class SnmpExtensionToolsTest {
 	}
 
 	@Test
-	void testExecuteToolGetNext() throws Exception {
+	void testExecuteToolGetAndGetNext() throws Exception {
 		final SnmpConfiguration configuration = configuration();
+		when(snmpRequestExecutorMock.executeSNMPGet("1.3.6.1.2.1.1.1.0", configuration, "host", false, null)).thenReturn(
+			"Linux"
+		);
 		when(snmpRequestExecutorMock.executeSNMPGetNext("1.3.6.1.2.1.1", configuration, "host", false, null)).thenReturn(
 			"1.3.6.1.2.1.1.1.0 OCTET_STRING Linux"
 		);
 
+		assertEquals(
+			new ToolText("Linux"),
+			snmpExtension.executeTool(
+				"get",
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("oid", "1.3.6.1.2.1.1.1.0")
+			)
+		);
 		assertEquals(
 			new ToolText("1.3.6.1.2.1.1.1.0 OCTET_STRING Linux"),
 			snmpExtension.executeTool(

@@ -261,7 +261,7 @@ public final class HostTools {
 		}
 	}
 
-	private static String messageOf(final Exception e) {
+	static String messageOf(final Exception e) {
 		return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
 	}
 

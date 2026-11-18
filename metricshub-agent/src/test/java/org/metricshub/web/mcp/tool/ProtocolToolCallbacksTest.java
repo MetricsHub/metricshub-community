@@ -16,6 +16,7 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
 import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -162,6 +163,20 @@ class ProtocolToolCallbacksTest {
 		assertEquals(
 			"An error has occurred when running the tool: timeout",
 			result.get("hosts").get(0).get("response").get("error").asText()
+		);
+	}
+
+	@Test
+	void testExtensionFailureWithoutMessageIsNamedAfterItsException() throws Exception {
+		// The timeout of a request has no message
+		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenThrow(new TimeoutException());
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
+
+		assertEquals(
+			"{\"hosts\":[{\"hostname\":\"host-01\"," +
+				"\"response\":{\"error\":\"An error has occurred when running the tool: TimeoutException\"}}]," +
+				"\"errorMessage\":null}",
+			callback.call("{\"hostname\":[\"host-01\"]}")
 		);
 	}
 

@@ -206,7 +206,7 @@ public final class ProtocolToolCallbacks {
 			return extension.executeTool(toolName, configuration, argumentsNode);
 		} catch (Exception e) {
 			return QueryResponse.builder()
-				.error("An error has occurred when running the tool: %s".formatted(e.getMessage()))
+				.error("An error has occurred when running the tool: %s".formatted(HostTools.messageOf(e)))
 				.build();
 		}
 	}

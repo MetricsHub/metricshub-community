@@ -103,6 +103,21 @@ class HttpExtensionToolsTest {
 	}
 
 	@Test
+	void testExecuteToolFailsWhenTheHostGivesNoResponse() {
+		// The executor returns nothing for a host that did not answer: an error for the host, not a text
+		when(httpRequestExecutorMock.executeHttp(any(), eq(false), any(TelemetryManager.class))).thenReturn(null);
+
+		assertThrows(
+			IllegalStateException.class,
+			() -> httpExtension.executeTool(
+				"get",
+				HttpConfiguration.builder().hostname("host").build(),
+				JsonNodeFactory.instance.objectNode()
+			)
+		);
+	}
+
+	@Test
 	void testExecuteToolRejectsUnknownTool() {
 		assertThrows(
 			IllegalArgumentException.class,

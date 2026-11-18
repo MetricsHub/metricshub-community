@@ -342,6 +342,11 @@ public class HttpExtension implements IProtocolExtension, IHttpRequestExtension 
 		if (!query.hasNonNull("resultContent")) {
 			query.put("resultContent", "body");
 		}
-		return new ToolText(executeQuery(configuration, query));
+		final String response = executeQuery(configuration, query);
+		if (response == null) {
+			// The executor returns nothing when the host gave no response: an error for the host, not a text
+			throw new IllegalStateException("The HTTP request got no response");
+		}
+		return new ToolText(response);
 	}
 }
