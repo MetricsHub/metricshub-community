@@ -24,11 +24,11 @@ tools:
         required: true
     sources:
       things:
-        type: tableUnion
-        tables:
-        - - [ alpha, 1 ]
-          - [ beta, 2 ]
-          - [ gamma, 3 ]
+        type: static
+        value:
+        - [ alpha, 1 ]
+        - [ beta, 2 ]
+        - [ gamma, 3 ]
         computes:
         - type: keepOnlyMatchingLines
           column: 1
