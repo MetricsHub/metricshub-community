@@ -73,7 +73,9 @@ public record ContentTypeFinding(
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */
 		COLUMN_ON_TEXT("remove the column, or write a toTable before"),
 		/** No <code>column</code> on an append, prepend, replace or substring that is fed a table. */
-		NO_COLUMN_ON_TABLE("set the column, or write a toText before");
+		NO_COLUMN_ON_TABLE("set the column, or write a toText before"),
+		/** A column (<code>$1</code>) in a value of a mapping without a source: the simple mapping has no row. */
+		COLUMN_IN_SIMPLE_MAPPING("set the mapping source, or reference a text source");
 
 		private final String hint;
 

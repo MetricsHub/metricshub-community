@@ -363,7 +363,8 @@ public class CollectStrategy extends AbstractStrategy {
 
 		final String mappingSource = mapping.getSource();
 
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupSourceTable(
+		// A mapping without a source is the simple mapping: one row without any cell
+		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
 			mappingSource,
 			connectorId,
 			telemetryManager

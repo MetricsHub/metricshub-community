@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -94,7 +95,10 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored <code>json2Table</code>
  * <code>parsingMode</code>, awk <code>input</code>, awk source <code>inputFormat</code>, and the removed awk
  * <code>keep</code>, <code>exclude</code>, <code>separators</code>, <code>selectColumns</code> and awk source
- * <code>separators</code>.</li>
+ * <code>separators</code>;</li>
+ * <li>{@link Rule#COLUMN_IN_SIMPLE_MAPPING}: a column (<code>$1</code>) in a value of a mapping without a
+ * <code>source</code>. Such a mapping is the simple mapping: it gives exactly one monitor instance, whose values are
+ * constants and references to text sources.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -472,7 +476,12 @@ public class ContentTypeCheck {
 		final String mappingSource = hasReference(task.getMapping().getSource())
 			? task.getMapping().getSource().trim()
 			: NONE;
+		// A mapping without a source is the simple mapping: exactly one instance, read from no row
+		final boolean simple = task.getMapping().getSource() == null;
 		walk(toTree(task.getMapping()), "", (field, value) -> {
+			if (simple && COLUMN_REFERENCE_PATTERN.matcher(value).find()) {
+				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
+			}
 			for (final String reference : references(value)) {
 				final ContentType type = typeOf(reference);
 				if (type == null) {

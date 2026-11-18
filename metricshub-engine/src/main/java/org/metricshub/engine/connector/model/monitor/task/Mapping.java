@@ -48,7 +48,8 @@ public class Mapping implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The source associated with the mapping.
+	 * The reference of the table source the mapping reads, one monitor instance per row. Null for the simple mapping:
+	 * exactly one instance, whose values are constants and references to text sources.
 	 */
 	private String source;
 

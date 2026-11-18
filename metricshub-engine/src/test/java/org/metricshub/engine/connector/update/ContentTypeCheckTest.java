@@ -738,6 +738,73 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
+	void simpleMappingReadsConstantsAndTexts() throws IOException {
+		assertEquals(List.of(), findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        vendor:
+			          type: commandLine
+			          commandLine: echo
+			      mapping:
+			        attributes:
+			          id: thing
+			          vendor: ${source::vendor}
+			        metrics:
+			          thing.count: 1
+			          thing.limit: ${source::vendor}
+			"""));
+	}
+
+	@Test
+	void simpleMappingReadsNoColumnAndNoTable() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        table:
+			          type: snmpTable
+			          oid: 1.3
+			          selectColumns: "1,2"
+			      mapping:
+			        attributes:
+			          id: $1
+			          name: thing $2
+			          vendor: ${source::table}
+			        metrics:
+			          thing.limit: ${awk::$3 * 2}
+			  other:
+			    discovery:
+			      mapping:
+			        attributes:
+			          id: $1
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        attributes:
+			          id: other
+			        metrics:
+			          other.count: rate($1)
+			""");
+		assertEquals(
+			Set.of(
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.name",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.metrics.thing.limit",
+				"TABLE_INTERPOLATED monitors.thing.simple.mapping.attributes.vendor -> " + THING + "table}",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.count"
+			),
+			lines(findings)
+		);
+		final ContentTypeFinding column = findings.get(0);
+		assertEquals("a constant or a text source", column.expected());
+		assertEquals("a column", column.actual());
+	}
+
+	@Test
 	void findingsAreALoadError() throws IOException {
 		final Connector connector = parse("""
 			tools:
