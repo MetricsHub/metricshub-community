@@ -21,7 +21,6 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,7 +53,6 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -66,7 +64,6 @@ import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
-import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 
 /**
  * This class implements the {@link JawkExtension} contract, reports the supported features, processes sources and
@@ -154,18 +151,17 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * <code>001</code> is <code>"001"</code>, and <code>$4 + 0</code> the number 1), an element without a value (an
 	 * empty string: <code>null</code> cannot be written).</li>
 	 * </ul>
-	 * <code>Content-Type: application/json</code> is added to a header that names no content type. The array of the
-	 * script is not modified.
+	 * <code>Content-Type: application/json</code> is added to a header that names no content type. The header is a
+	 * text: a script gets the text of a header file through a variable, and no embedded file is read here. The array of
+	 * the script is not modified.
 	 * <p>
-	 * What the request does to its body and to its header afterwards does not undo that:
+	 * What the request does to its body afterwards does not undo that:
 	 * <ul>
 	 * <li>A macro in a value (<code>%{USERNAME}</code>) is replaced when the request is sent: it becomes
 	 * <code>%{esc(json)::USERNAME}</code>, so that its value is escaped as the rest of the document is. A macro
 	 * that names its escape is left as it is.</li>
 	 * <li>A value that reads as a reference to an embedded file is the text of the value: the reference would
 	 * otherwise replace the whole body.</li>
-	 * <li>A header that is an embedded file without a content type is replaced by its content, which is what the
-	 * request sends, with the content type.</li>
 	 * </ul>
 	 *
 	 * @param argMap The array of arguments of the script
@@ -185,15 +181,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 			// Maps, lists, strings, numbers and booleans: Jackson writes them all
 			throw new UncheckedIOException(e);
 		}
-		String header = Objects.toString(argMap.get(HEADER), "");
-		if (FILE_PATTERN.matcher(header).find()) {
-			header = EmbeddedFileHelper.findEmbeddedFile(
-				header,
-				sourceProcessor.getTelemetryManager().getEmbeddedFiles(connectorId),
-				hostname,
-				connectorId
-			).map(EmbeddedFile::getContentAsString).orElse(header);
-		}
+		final String header = Objects.toString(argMap.get(HEADER), "");
 		if (!CONTENT_TYPE_HEADER.matcher(header).find()) {
 			arguments.put(HEADER, header.isBlank() ? JSON_CONTENT_TYPE : header.stripTrailing() + "\n" + JSON_CONTENT_TYPE);
 		}

@@ -30,10 +30,13 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -54,6 +57,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * <code>length(myVariable)</code> gives the row count. Any other value is exposed as a scalar, which also covers the
  * AWK special variables such as <code>FS</code>.
  * <p>
+ * A value that is one reference to an embedded file, such as <code>${file::header.txt}</code>, is the text of that
+ * file. This is how a script gets a file: its code holds no such reference.
+ * <p>
  * A list is exposed as an AWK array indexed from 0, like a table: <code>myList[0]</code>,
  * <code>length(myList)</code>. A map is exposed as an AWK array indexed by its keys: <code>myMap["key"]</code>,
  * <code>for (key in myMap)</code>. Lists and maps nest, and each scalar they hold, at any depth, is resolved as a
@@ -66,6 +72,14 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class AwkVariableHelper {
+
+	/**
+	 * A value that is one reference to an embedded file, as the parser numbered it.
+	 */
+	private static final Pattern FILE_REFERENCE = Pattern.compile(
+		"\\s*\\$\\{file::(\\d{1,9})\\}\\s*",
+		Pattern.CASE_INSENSITIVE
+	);
 
 	/**
 	 * Resolve the given Awk variables.
@@ -145,6 +159,16 @@ public class AwkVariableHelper {
 				)
 			);
 			return resolved;
+		}
+
+		// A reference to an embedded file is the text of the file, as it is: no reference is replaced in it
+		final Matcher file = FILE_REFERENCE.matcher(rawValue.toString());
+		if (file.matches()) {
+			final EmbeddedFile embeddedFile = telemetryManager.getEmbeddedFiles(connectorId)
+				.get(Integer.valueOf(file.group(1)));
+			if (embeddedFile != null) {
+				return embeddedFile.getContentAsString();
+			}
 		}
 
 		// Every textual reference is replaced first, exactly as it would be in any other field

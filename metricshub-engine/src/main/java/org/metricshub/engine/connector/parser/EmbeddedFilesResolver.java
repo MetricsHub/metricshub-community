@@ -30,16 +30,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -125,55 +120,13 @@ public class EmbeddedFilesResolver {
 			return;
 		}
 
-		final Set<EmbeddedFile> embeddedFilesWithEmbeddedFiles = new HashSet<>();
-
-		// Parse the embedded files to find eventual new embedded files within them.
-		Collection<EmbeddedFile> temporaryEmbeddedFilesList = new ArrayList<>(processedEmbeddedFiles.values());
-		while (!temporaryEmbeddedFilesList.isEmpty()) {
-			// This is the list of new embedded files that we will find in the embedded files to process
-			final List<EmbeddedFile> newEmbeddedFiles = new ArrayList<>();
-			for (EmbeddedFile processedEmbeddedFile : temporaryEmbeddedFilesList) {
-				// Look for "${file::" pattern
-				final Matcher fileMatcher = FILE_PATTERN.matcher(processedEmbeddedFile.getContentAsString());
-				while (fileMatcher.find()) {
-					final String fileName = fileMatcher.group(1);
-					embeddedFilesWithEmbeddedFiles.add(processedEmbeddedFile);
-
-					// If we encounter a new embedded file we process it, add it to the map of processed files
-					// and add it to the temporary list to process in the next loop iteration.
-					processedEmbeddedFiles.computeIfAbsent(fileName, name -> {
-						try {
-							final EmbeddedFile newEmbeddedFile = processFile(name, connectorDirectory);
-							newEmbeddedFiles.add(newEmbeddedFile);
-							return newEmbeddedFile;
-						} catch (Exception e) {
-							final String errorMessage = String.format(
-								"Error while processing file: %s. Current Connector directory: %s .",
-								name,
-								connectorDirectory
-							);
-							log.error(errorMessage, e);
-							throw new EmbeddedFileProcessingException(errorMessage, e);
-						}
-					});
-				}
-			}
-			temporaryEmbeddedFilesList = new ArrayList<>(newEmbeddedFiles);
-		}
-
+		// The content of an embedded file is left as it is: no reference is looked for in a file
 		JsonNodeUpdater.jsonNodeUpdaterBuilder()
 			.withJsonNode(connector)
 			.withPredicate(value -> value.indexOf("${file::") != -1)
 			.withUpdater(this::performFileRefReplacements)
 			.build()
 			.update();
-
-		// Update the embedded files that are referencing other embedded files.
-		for (EmbeddedFile processedEmbeddedFile : embeddedFilesWithEmbeddedFiles) {
-			processedEmbeddedFile.setContent(
-				performFileRefReplacements(processedEmbeddedFile.getContentAsString()).getBytes(StandardCharsets.UTF_8)
-			);
-		}
 	}
 
 	/**

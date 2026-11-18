@@ -12,13 +12,11 @@ import static org.mockito.Mockito.when;
 
 import io.jawk.Awk;
 import io.jawk.jrt.AssocArray;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
-import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -29,7 +27,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -353,22 +350,12 @@ class MetricsHubExtensionForJawkTest {
 	/**
 	 * What the request does afterwards does not undo a body given as an array. A macro in a value is escaped as JSON
 	 * when the request replaces it, unless it names its escape. A value that reads as a reference to an embedded file
-	 * is the text of the value, and does not replace the body. A header that is an embedded file gets the content
-	 * type when its content names none, and stays a reference otherwise.
+	 * is the text of the value, and does not replace the body. A header is a text, such as the text of a file that a
+	 * variable gives: it gets the content type when it names none, and no embedded file is read.
 	 */
 	@Test
 	void testExecuteHttpJsonRequestBodyMacrosAndEmbeddedFiles() throws Exception {
 		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
-		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
-		when(sourceProcessor.getTelemetryManager()).thenReturn(telemetryManager);
-		when(telemetryManager.getEmbeddedFiles("connector")).thenReturn(
-			Map.of(
-				1,
-				EmbeddedFile.builder().id(1).content("Accept: application/json\n".getBytes(StandardCharsets.UTF_8)).build(),
-				2,
-				EmbeddedFile.builder().id(2).content("content-type: text/json\n".getBytes(StandardCharsets.UTF_8)).build()
-			)
-		);
 		final MetricsHubExtensionForJawk extension = MetricsHubExtensionForJawk.builder()
 			.hostname("host")
 			.connectorId("connector")
@@ -377,14 +364,14 @@ class MetricsHubExtensionForJawkTest {
 
 		run("""
 			BEGIN {
-				array["header"] = "${file::1}"
+				array["header"] = "Accept: application/json\\n"
 				array["body"]["user"] = "%{USERNAME}"
 				array["body"]["password"] = "${PASSWORD}"
 				array["body"]["token"] = "${esc(url)::AUTHENTICATIONTOKEN}"
 				array["body"]["file"] = "${file::2}"
 				executeHttpJsonRequest(array, response)
 
-				array["header"] = "${file::2}"
+				array["header"] = "content-type: text/json\\n"
 				executeHttpJsonRequest(array, response)
 			}
 			""", extension);
@@ -397,7 +384,8 @@ class MetricsHubExtensionForJawkTest {
 			body
 		);
 		assertEquals("Accept: application/json\nContent-Type: application/json", sources.get(0).getHeader());
-		assertEquals("${file::2}", sources.get(1).getHeader());
+		assertEquals("content-type: text/json\n", sources.get(1).getHeader());
+		verify(sourceProcessor, Mockito.never()).getTelemetryManager();
 
 		// The request: the body is not an embedded file, and is still a document once the macros are replaced
 		assertFalse(FILE_PATTERN.matcher(body).find());

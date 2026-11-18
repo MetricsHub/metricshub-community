@@ -4,12 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.jawk.jrt.AssocArray;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -236,6 +240,32 @@ class AwkVariablesUpdateTest {
 				variables
 			)
 		);
+	}
+
+	/**
+	 * A variable that is one reference to an embedded file is the text of the file, as it is.
+	 */
+	@Test
+	void testFileReferenceIsTheTextOfTheFile() {
+		final String text = "Accept: a\\b\nX-Id: ${attribute::id}\n";
+		final ConnectorStore connectorStore = new ConnectorStore();
+		final EmbeddedFile file = EmbeddedFile.builder().id(2).content(text.getBytes(StandardCharsets.UTF_8)).build();
+		connectorStore.setStore(Map.of(CONNECTOR_ID, Connector.builder().embeddedFiles(Map.of(2, file)).build()));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
+			.connectorStore(connectorStore)
+			.build();
+
+		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+			Map.of("header", "${file::2}", "missing", "${file::9}"),
+			telemetryManager,
+			CONNECTOR_ID,
+			Map.of("id", "monitor-42"),
+			"someOperation"
+		);
+
+		assertEquals(text, variables.get("header"));
+		assertEquals("${file::9}", variables.get("missing"));
 	}
 
 	@Test
