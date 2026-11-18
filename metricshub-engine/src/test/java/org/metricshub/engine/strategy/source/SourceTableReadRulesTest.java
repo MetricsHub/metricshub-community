@@ -294,9 +294,13 @@ class SourceTableReadRulesTest {
 			SourceTable.ofText("a\nb-\n"),
 			onText(Replace.builder().existingValue(";").newValue("-\r\n").build(), "a\r\nb;")
 		);
-		// A line ending to replace is found whatever its form in the text and in the compute
+		// A line ending to replace is LF, whatever its form in the text that was read: a text holds no CRLF
 		assertEquals(
 			SourceTable.ofText("a-b-"),
+			onText(Replace.builder().existingValue("\n").newValue("-").build(), "a\r\nb\n")
+		);
+		assertEquals(
+			SourceTable.ofText("a\nb\n"),
 			onText(Replace.builder().existingValue("\r\n").newValue("-").build(), "a\r\nb\n")
 		);
 		// The positions count the LF text: a, LF, b
@@ -323,10 +327,6 @@ class SourceTableReadRulesTest {
 		assertEquals(
 			SourceTable.ofText("ab"),
 			onText(Replace.builder().existingValue("$1").newValue(EMPTY).build(), "a$1b")
-		);
-		assertEquals(
-			SourceTable.ofText("a\nb"),
-			onText(Replace.builder().existingValue("\r\n").newValue("\n").build(), "a\r\nb")
 		);
 		// A missing value leaves the text unchanged
 		assertEquals(SourceTable.ofText("a"), onText(Replace.builder().existingValue("a").build(), "a"));

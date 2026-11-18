@@ -443,6 +443,29 @@ class JawkSourceExtensionTest {
 		assertEquals(SourceTable.ofTable(List.of()), emptyResult);
 	}
 
+	/**
+	 * The text of a host that answers with CRLF is read with LF line endings: no field ends with a carriage return.
+	 */
+	@Test
+	void testProcessSourceWithCrlfTextInput() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceTable.ofText("a b\r\nc d\r\n"));
+
+		final Source source = JawkSource.builder()
+			.type("awk")
+			.input("${source::monitors.system.discovery.sources.source_one}")
+			.script("{ print $NF \";\" $1 }")
+			.build();
+
+		final SourceTable result = new JawkSourceExtension().processSource(
+			source,
+			CONNECTOR_ID,
+			telemetryManager,
+			sourceProcessorMock
+		);
+
+		assertEquals("b;a\nd;c\n", result.getText());
+	}
+
 	@Test
 	void testIsValidSource() {
 		final JawkSourceExtension jawkExtension = new JawkSourceExtension();

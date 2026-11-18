@@ -844,19 +844,27 @@ class SourceProcessorTest {
 
 		assertEquals(expectedTable, sourceProcessor.process(staticSource).getTable());
 
-		// An empty list is an empty table
-		assertEquals(SourceTable.empty(), sourceProcessor.process(StaticSource.builder().value(List.of()).build()));
-
 		// The single row of exactly these cells, a ';' in a cell included
 		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1, "", "b;1")).build();
 		final SourceTable listResult = sourceProcessor.process(staticSource);
 		assertEquals(SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "", "b;1"))), listResult);
 
-		// A line break a reference resolved into at run time becomes a space: the row never splits for an awk reader
+		// A cell keeps its line break; as a text, the row is one line
 		staticSource = StaticSource.builder().value(List.of("x\r\ny", "z")).build();
 		final SourceTable breakResult = sourceProcessor.process(staticSource);
-		assertEquals(SourceTable.ofTable(List.of(List.of("x y", "z"))), breakResult);
+		assertEquals(SourceTable.ofTable(List.of(List.of("x\r\ny", "z"))), breakResult);
 		assertEquals("x y;z;", breakResult.asText());
+
+		// A list of rows is exactly these rows, an empty list is an empty table
+		staticSource = StaticSource.builder().value(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))).build();
+		assertEquals(
+			SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))),
+			sourceProcessor.process(staticSource)
+		);
+		assertEquals(
+			SourceTable.ofTable(List.of()),
+			sourceProcessor.process(StaticSource.builder().value(List.of()).build())
+		);
 	}
 
 	@Test

@@ -52,12 +52,6 @@ import org.metricshub.ssh.SshClient;
 @Slf4j
 public class FileSourceProcessor {
 
-	// Line break sequence used in Windows (CRLF).
-	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
-
-	// Line break sequence used in Linux/Unix (LF).
-	public static final String LINUX_LINE_BREAK_SEQUENCE = "\n";
-
 	/**
 	 * Processes a file source by reading files either locally or remotely based on the host configuration.
 	 * Reads file content incrementally using cursors to track position and respects the maximum size per poll limit.

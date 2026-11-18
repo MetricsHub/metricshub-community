@@ -22,7 +22,6 @@ package org.metricshub.engine.strategy.source;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -244,7 +243,7 @@ public class SourceProcessor implements ISourceProcessor {
 	public SourceTable process(@SpanAttribute("source.definition") final StaticSource staticSource) {
 		final String hostname = telemetryManager.getHostname();
 
-		if (staticSource == null) {
+		if (staticSource == null || staticSource.getValue() == null) {
 			log.error(
 				"Hostname {} - Static Source cannot be null, the StaticSource operation will return an empty result.",
 				hostname
@@ -252,20 +251,15 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final List<List<String>> rows = new ArrayList<>();
-
-		// The single row of exactly these cells, no row for an empty list. A line break a reference resolved into at
-		// run time becomes a space, so the row stays one line for a text consumer (a toText)
-		if (staticSource.getValue() != null && !staticSource.getValue().isEmpty()) {
-			rows.add(
-				staticSource.getValue()
-					.stream()
-					.map(cell -> cell == null ? null : cell.replaceAll("[\r\n]+", " "))
-					.collect(Collectors.toCollection(ArrayList::new))
-			);
-		}
-
-		return SourceTable.ofTable(rows);
+		// Exactly these rows and cells, an empty list being an empty table
+		return SourceTable.ofTable(
+			staticSource.getValue()
+				.stream()
+				// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
+				.map(ArrayList::new)
+				.filter(row -> !row.isEmpty())
+				.collect(Collectors.toList())
+		);
 	}
 
 	@WithSpan("Source TableJoin Exec")
@@ -458,23 +452,21 @@ public class SourceProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Joins the texts of the members of a union: the non-empty members, CRLF converted to LF, one after the other, a
-	 * line feed added only when the text so far does not end with one; the blank lines of the members are kept.
+	 * Joins the texts of the members of a union: the non-empty members, whose line endings are LF, one after the
+	 * other, a line feed added only when the text so far does not end with one; the blank lines of the members are
+	 * kept.
 	 *
 	 * @param members The members, a table being read as its text ({@link SourceTable#asText()})
 	 * @return the joined text
 	 */
 	static String joinTexts(final List<SourceTable> members) {
 		final StringBuilder text = new StringBuilder();
-		members.stream()
-			.filter(member -> !member.isEmpty())
-			.map(member -> member.asText().replace(WINDOWS_NEW_LINE, NEW_LINE))
-			.forEach(memberText -> {
-				if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
-					text.append(NEW_LINE);
-				}
-				text.append(memberText);
-			});
+		members.stream().filter(member -> !member.isEmpty()).map(SourceTable::asText).forEach(memberText -> {
+			if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
+				text.append(NEW_LINE);
+			}
+			text.append(memberText);
+		});
 		return text.toString();
 	}
 

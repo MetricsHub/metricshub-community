@@ -380,7 +380,7 @@ class ContentTypeCheckTest {
 	@Test
 	void staticCellInterpolatesATextOnly() throws IOException {
 		// A static source does not read a reference as a source, a copy does: its cells are interpolated
-		assertEquals(Set.of("TABLE_INTERPOLATED value[1] -> " + THING + "table}"), lines(findings("""
+		assertEquals(Set.of("TABLE_INTERPOLATED value[0][1] -> " + THING + "table}"), lines(findings("""
 			monitors:
 			  thing:
 			    simple:

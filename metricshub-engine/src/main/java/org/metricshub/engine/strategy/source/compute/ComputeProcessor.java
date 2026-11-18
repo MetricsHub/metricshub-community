@@ -30,10 +30,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATT
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HEXA_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -437,14 +435,13 @@ public class ComputeProcessor implements IComputeProcessor {
 				return;
 			}
 
-			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			String awkResult = tableInput
 				? AwkExecutor.executeAwk(
 					awkScript,
 					new TableInputSource(sourceTable.getTable()),
 					AwkExecutor.getUtilityEngine(),
 					variables
-				).replace(WINDOWS_NEW_LINE, NEW_LINE)
+				)
 				: AwkExecutor.executeAwk(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
 
 			if (awkResult == null || awkResult.isEmpty()) {
@@ -458,7 +455,9 @@ public class ComputeProcessor implements IComputeProcessor {
 				return;
 			}
 
-			final List<String> lines = SourceTable.lineToList(awkResult, NEW_LINE);
+			// The script may print a cell that holds CRLF: the lines are filtered and their columns selected
+			// without it
+			final List<String> lines = SourceTable.lineToList(StringHelper.toLf(awkResult), NEW_LINE);
 
 			final List<String> filterLines = FilterResultHelper.filterLines(
 				lines,
@@ -1071,7 +1070,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		// An unconfigured parse gives no rows, like a failed one: the result is a table all the same
-		final String properties = json2csv.getProperties();
+		final List<String> properties = json2csv.getProperties();
 		if (properties == null) {
 			log.warn(
 				"Hostname {} - Json2CSV processor encountered null properties. As a result, the table is empty.",
@@ -1082,12 +1081,10 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		try {
-			final List<String> jsonToCsvProperties = SourceTable.lineToList(properties, SEMICOLON);
-
 			// The rows come straight from the JSON values: the separator plays no part.
 			// A document that does not parse gives no rows: the result is a table all the same
 			sourceTable.setTable(
-				clientsExecutor.executeJson2Table(sourceTable.getText(), json2csv.getEntryKey(), jsonToCsvProperties)
+				clientsExecutor.executeJson2Table(sourceTable.getText(), json2csv.getEntryKey(), properties)
 			);
 		} catch (Exception e) {
 			logComputeError(
@@ -1452,7 +1449,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// No column: every occurrence in the whole text, the values taken literally (a text has no column)
 		if (columnToReplace == null) {
-			sourceTable.setText(lfText(lfText(sourceTable.getText()).replace(lfText(strToReplace), replacement)));
+			sourceTable.setText(sourceTable.getText().replace(strToReplace, replacement));
 			return;
 		}
 
@@ -1633,7 +1630,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		// No column: the substring of the whole text, with the start and the end of a cell (a text has no column to
 		// read them from)
 		if (substring != null && substring.getColumn() == null) {
-			final String text = lfText(sourceTable.getText());
+			final String text = sourceTable.getText();
 			final Integer beginIndex = toSubstringIndex(substring.getStart());
 			final Integer endIndex = toSubstringIndex(substring.getLength());
 			if (checkSubstringArguments(beginIndex, endIndex, text.length())) {
@@ -1665,17 +1662,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		performSubstring(substring.getColumn() - 1, start, startColumnIndex, length, lengthColumnIndex);
-	}
-
-	/**
-	 * A text with LF line endings only: what a text compute reads and writes does not depend on the platform that
-	 * produced the text.
-	 *
-	 * @param text The text
-	 * @return the text with each CRLF replaced by LF
-	 */
-	private static String lfText(final String text) {
-		return text.replace(WINDOWS_NEW_LINE, NEW_LINE);
 	}
 
 	/**
@@ -1921,9 +1907,9 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		// A table with line filters or a column selection is read as its text, as the legacy toTable read the raw
-		// text of a table. The text may come with CRLF line endings: the result must not depend on them
+		// text of a table. The text has LF line endings: the result does not depend on the host
 		final List<String> filteredLines = FilterResultHelper.filterLines(
-			SourceTable.lineToList(sourceTable.asText().replace(WINDOWS_NEW_LINE, NEW_LINE), NEW_LINE),
+			SourceTable.lineToList(sourceTable.asText(), NEW_LINE),
 			null,
 			null,
 			toTable.getExclude(),
@@ -2289,8 +2275,8 @@ public class ComputeProcessor implements IComputeProcessor {
 
 			// No column: the value before or after the whole text, taken literally (a text has no column)
 			if (abstractConcat.getColumn() == null) {
-				final String text = lfText(sourceTable.getText());
-				final String value = lfText(abstractConcat.getValue());
+				final String text = sourceTable.getText();
+				final String value = abstractConcat.getValue();
 				sourceTable.setText(abstractConcat instanceof Prepend ? value.concat(text) : text.concat(value));
 				return;
 			}

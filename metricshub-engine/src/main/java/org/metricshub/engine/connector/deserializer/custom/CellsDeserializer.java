@@ -30,9 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Deserializes the cells of one hard-coded row, <code>static.value</code> and
- * <code>tableJoin.defaultRightLine</code>: a YAML list whose items are scalars other than null, an empty list being
- * no cell. A scalar is rejected: a row is never written as a string.
+ * Deserializes the cells of one hard-coded row, <code>tableJoin.defaultRightLine</code>: a YAML list of one cell at
+ * least, each a scalar other than null. A scalar is rejected: a row is never written as a string.
  */
 public class CellsDeserializer extends JsonDeserializer<List<String>> {
 
@@ -51,11 +50,11 @@ public class CellsDeserializer extends JsonDeserializer<List<String>> {
 			if (!parser.currentToken().isScalarValue() || parser.hasToken(JsonToken.VALUE_NULL)) {
 				return context.reportInputMismatch(List.class, "Expected a scalar as a cell, got %s", parser.currentToken());
 			}
-			// A line break would split the single row into several records of the raw text
-			if (parser.getText().indexOf('\n') >= 0 || parser.getText().indexOf('\r') >= 0) {
-				return context.reportInputMismatch(List.class, "A cell of the list form cannot hold a line break");
-			}
 			cells.add(parser.getText());
+		}
+		if (cells.isEmpty()) {
+			// An empty list is no row at all: the default right line of a join needs at least one cell
+			return context.reportInputMismatch(List.class, "Expected a list of cells, got an empty list");
 		}
 		return cells;
 	}

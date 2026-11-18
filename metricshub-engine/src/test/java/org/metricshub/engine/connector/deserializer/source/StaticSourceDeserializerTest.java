@@ -58,29 +58,62 @@ class StaticSourceDeserializerTest extends DeserializerTest {
 			  number:
 			    type: static
 			    value: [ 0 ]
-			  none:
-			    type: static
-			    value: []
 			""";
 		final Connector connector = deserializer.deserialize(
 			new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml))
 		);
 		final StaticSource source = (StaticSource) connector.getBeforeAll().get("row");
 
-		// The exact cells, a ';' in a cell included
-		assertEquals(List.of("DDN", "", "Disk;Array"), source.getValue());
+		// A list of cells is one row of the exact cells, a ';' in a cell included
+		assertEquals(List.of(List.of("DDN", "", "Disk;Array")), source.getValue());
 		assertEquals(source, source.copy());
+		assertEquals(List.of(List.of("a", "b")), StaticSource.builder().value(List.of("a", "b")).build().getValue());
 
 		// Reference substitution applies to each cell of a copy, never to the original
 		final StaticSource copy = source.copy();
 		copy.update(value -> value == null ? null : value + "!");
-		assertEquals(List.of("DDN!", "!", "Disk;Array!"), copy.getValue());
-		assertEquals(List.of("DDN", "", "Disk;Array"), source.getValue());
-		assertTrue(copy.toString().contains("- value=[DDN!, !, Disk;Array!]"));
+		assertEquals(List.of(List.of("DDN!", "!", "Disk;Array!")), copy.getValue());
+		assertEquals(List.of(List.of("DDN", "", "Disk;Array")), source.getValue());
+		assertTrue(copy.toString().contains("- value=[[DDN!, !, Disk;Array!]]"));
 
-		// A cell that is not a string is its text, an empty list is no cell: an empty table
-		assertEquals(List.of("0"), ((StaticSource) connector.getBeforeAll().get("number")).getValue());
-		assertEquals(List.of(), ((StaticSource) connector.getBeforeAll().get("none")).getValue());
+		// A cell that is not a string is its text
+		assertEquals(List.of(List.of("0")), ((StaticSource) connector.getBeforeAll().get("number")).getValue());
+	}
+
+	private StaticSource staticSource(final String value) throws IOException {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  table:
+			    type: static
+			    value: %s
+			""".formatted(value);
+		return (StaticSource) deserializer.deserialize(
+			new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml))
+		).getBeforeAll().get("table");
+	}
+
+	@Test
+	void testDeserializeStaticRows() throws IOException {
+		// A list of lists is one row per list, an empty list is an empty table
+		final StaticSource rows = staticSource("[ [ a, 1 ], [ b ] ]");
+		assertEquals(List.of(List.of("a", "1"), List.of("b")), rows.getValue());
+		assertEquals(List.of(List.of("a")), staticSource("[ [ a ] ]").getValue());
+		assertEquals(List.of(), staticSource("[]").getValue());
+		assertEquals(rows, rows.copy());
+		assertEquals(rows.getValue(), StaticSource.builder().value(rows.getValue()).build().getValue());
+
+		// Reference substitution applies to each cell of each row
+		rows.update(value -> value == null ? null : value + "!");
+		assertEquals(List.of(List.of("a!", "1!"), List.of("b!")), rows.getValue());
+
+		// Cells and rows do not mix, and a row needs a cell
+		for (final String value : List.of("[ a, [ b ] ]", "[ [ a ], b ]", "[ [] ]", "[ [ a, ~ ] ]", "[ [ [ a ] ] ]")) {
+			final Exception e = assertThrows(MismatchedInputException.class, () -> staticSource(value), value);
+			assertTrue(e.getMessage().contains("value"), e.getMessage());
+		}
 	}
 
 	@Test
@@ -105,39 +138,15 @@ class StaticSourceDeserializerTest extends DeserializerTest {
 	@ParameterizedTest
 	@ValueSource(strings = { "a;b;c", "0", "\"\"", "${source::beforeAll.other}", "{ a: b }" })
 	void testDeserializeStaticNotAList(final String value) {
-		final String yaml = """
-			connector:
-			  detection:
-			    appliesTo: [ Linux ]
-			beforeAll:
-			  row:
-			    type: static
-			    value: %s
-			""".formatted(value);
-		// A hard-coded row is never written as a string, and a source is copied by a copy source
-		final Exception e = assertThrows(
-			MismatchedInputException.class,
-			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
-		);
+		// A hard-coded table is never written as a string, and a source is copied by a copy source
+		final Exception e = assertThrows(MismatchedInputException.class, () -> staticSource(value));
 		assertTrue(e.getMessage().contains("Expected a list of cells"), e.getMessage());
 	}
 
 	@Test
-	void testDeserializeStaticLineBreakInCell() {
-		final String yaml = """
-			connector:
-			  detection:
-			    appliesTo: [ Linux ]
-			beforeAll:
-			  row:
-			    type: static
-			    value: [ "a\\nb", "c" ]
-			""";
-		// A line break in a cell would split the single row into several records of the raw text
-		final Exception e = assertThrows(
-			MismatchedInputException.class,
-			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
-		);
-		assertTrue(e.getMessage().contains("value"), e.getMessage());
+	void testDeserializeStaticLineBreakInCell() throws IOException {
+		// A cell may hold a line break: it is the conversion to a text that puts a row on one line
+		assertEquals(List.of(List.of("a\nb", "c")), staticSource("[ \"a\\nb\", \"c\" ]").getValue());
+		assertEquals(List.of(List.of("a\nb"), List.of("c")), staticSource("[ [ \"a\\nb\" ], [ c ] ]").getValue());
 	}
 }

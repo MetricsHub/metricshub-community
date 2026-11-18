@@ -90,7 +90,14 @@ echo Running jpackage for app-image...
  %COMMON_ARGS% ^
  @jpackage.txt ^
  --type app-image
-if errorlevel 1 (
+set "APP_IMAGE_EXIT=%ERRORLEVEL%"
+
+REM jpackage marks every launcher .exe it generates as read-only, and
+REM maven-clean-plugin cannot delete read-only files on Windows (mvn clean fails).
+REM Clear the attribute before any step that can fail. The MSI does not carry it.
+if exist "%DEST_DIR%\MetricsHub" attrib -R "%DEST_DIR%\MetricsHub\*" /S /D
+
+if not "%APP_IMAGE_EXIT%"=="0" (
     echo jpackage failed for app-image.
     exit /b 1
 )

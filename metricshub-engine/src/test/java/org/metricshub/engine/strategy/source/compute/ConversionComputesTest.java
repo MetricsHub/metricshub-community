@@ -186,10 +186,10 @@ class ConversionComputesTest {
 	}
 
 	@Test
-	void toTextNormalizesCrlfInsideCells() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("a\r\nb|c"));
+	void toTextWritesACellWithLineBreaksOnOneLine() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("a\r\nb|c", "d\n\ne|f\rg"));
 		processor(sourceTable).process(ToText.builder().build());
-		assertEquals("a\nb;c;", sourceTable.getText());
+		assertEquals("a b;c;\nd e;f g;", sourceTable.getText());
 	}
 
 	@Test
@@ -317,8 +317,8 @@ class ConversionComputesTest {
 	void conversionsReturnNewValues() {
 		final SourceTable text = SourceTable.ofText("a;b\r\nc;");
 		assertEquals(table("a|b", "c"), text.asTable());
-		assertEquals("a;b\r\nc;", text.asText());
-		assertEquals(SourceTable.ofText("a;b\r\nc;"), text);
+		assertEquals("a;b\nc;", text.asText());
+		assertEquals(SourceTable.ofText("a;b\nc;"), text);
 
 		final SourceTable tableSource = SourceTable.ofTable(table("a;x|b"));
 		assertEquals("a,x;b;", tableSource.asText());

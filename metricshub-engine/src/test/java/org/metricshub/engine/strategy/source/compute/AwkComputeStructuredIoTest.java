@@ -69,8 +69,8 @@ class AwkComputeStructuredIoTest {
 			Awk.builder().script("BEGIN { print \"a\\r\\nb\", \"c\" }").output(ContentType.TABLE).build()
 		);
 		assertEquals(SourceTable.ofTable(table("a\r\nb|c")), sourceTable);
-		// Its text never has a CRLF
-		assertEquals("a\nb;c;", sourceTable.asText());
+		// Its text has one line per row: the line break of the cell becomes a space
+		assertEquals("a b;c;", sourceTable.asText());
 	}
 
 	@Test
@@ -86,6 +86,21 @@ class AwkComputeStructuredIoTest {
 		final SourceTable sourceTable = SourceTable.ofTable(table("x"));
 		processor(sourceTable).process(Awk.builder().script("BEGIN { print \"a\\r\\nb\" }").build());
 		assertEquals(SourceTable.ofText("a;\nb;"), sourceTable);
+	}
+
+	/**
+	 * The text of a host that answers with CRLF is read with LF line endings: the last field of a record does not
+	 * end with a carriage return, and the selected columns do not carry one.
+	 */
+	@Test
+	void textInputOfACrlfHostHasNoCarriageReturn() {
+		final SourceTable sourceTable = SourceTable.ofText("a b\r\nc d\r\n");
+		processor(sourceTable).process(Awk.builder().script("{ print $1, $NF }").output(ContentType.TABLE).build());
+		assertEquals(SourceTable.ofTable(table("a|b", "c|d")), sourceTable);
+
+		final SourceTable text = SourceTable.ofText("a b\r\nc d\r\n");
+		processor(text).process(Awk.builder().script("{ print }").separators(" ").selectColumns("2,1").build());
+		assertEquals("b;a;\nd;c;", text.getText());
 	}
 
 	/**

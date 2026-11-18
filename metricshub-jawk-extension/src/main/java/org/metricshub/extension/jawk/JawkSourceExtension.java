@@ -22,9 +22,7 @@ package org.metricshub.extension.jawk;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 
 import io.jawk.Awk;
 import java.util.List;
@@ -164,7 +162,6 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 						: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables)
 				);
 			}
-			// The text written from a table input never holds CRLF (the legacy text path keeps its result as is)
 			return SourceTable.ofText(
 				tableInput
 					? AwkExecutor.executeAwk(
@@ -172,7 +169,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 						TableInputSource.withRecordText(inputTable, JawkSourceExtension::referenceRow),
 						awkEngine,
 						variables
-					).replace(WINDOWS_NEW_LINE, NEW_LINE)
+					)
 					: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables)
 			);
 		} catch (Exception e) {

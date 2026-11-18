@@ -33,12 +33,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.metricshub.engine.connector.deserializer.custom.CellsDeserializer;
+import org.metricshub.engine.connector.deserializer.custom.StaticValueDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -55,11 +56,12 @@ public class StaticSource extends Source {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The cells of the single row of the source, a YAML list: exactly these cells, <code>[ "", "" ]</code> being two
-	 * empty cells, and <code>[]</code> an empty table.
+	 * The rows of the source, written as a YAML list: exactly these rows and cells. A list of cells is one row,
+	 * <code>[ "", "" ]</code> being a row of two empty cells; a list of lists is one row per list; an empty list is an
+	 * empty table.
 	 */
 	@JsonSetter(nulls = FAIL)
-	private List<String> value;
+	private List<List<String>> value;
 
 	/**
 	 * Constructs a new {@code StaticSource} instance with the provided attributes.
@@ -67,7 +69,8 @@ public class StaticSource extends Source {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
-	 * @param value                 the cells of the single row of the source
+	 * @param value                 the static value associated with the source: a {@link List} of cells (one row), or
+	 *                              a {@link List} of rows, each a {@link List} of cells
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
 	 */
@@ -78,14 +81,18 @@ public class StaticSource extends Source {
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
 		@JsonProperty(value = "value", required = true) @JsonDeserialize(
-			using = CellsDeserializer.class
-		) @NonNull List<String> value,
+			using = StaticValueDeserializer.class
+		) @NonNull List<?> value,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super("static", computes, forceSerialization, key, executeForEachEntryOf);
-		// A mutable copy: update(UnaryOperator) changes the cells of the copy
-		this.value = new ArrayList<>(value);
+		// A list of cells is one row
+		final List<?> rows = value.isEmpty() || value.get(0) instanceof List ? value : List.of(value);
+		this.value = new ArrayList<>();
+		for (final Object row : rows) {
+			this.value.add(((List<?>) row).stream().map(String.class::cast).collect(Collectors.toCollection(ArrayList::new)));
+		}
 	}
 
 	/**
@@ -107,7 +114,7 @@ public class StaticSource extends Source {
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		if (value != null) {
-			value.replaceAll(updater);
+			value.forEach(row -> row.replaceAll(updater));
 		}
 	}
 

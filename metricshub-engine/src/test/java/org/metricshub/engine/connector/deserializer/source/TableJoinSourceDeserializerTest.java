@@ -112,8 +112,8 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { ";;", "testdefault;;;", "\"\"", "0" })
-	void testDeserializeTableJoinDefaultRightLineNotAList(final String defaultRightLine) {
+	@ValueSource(strings = { ";;", "testdefault;;;", "\"\"", "0", "[]" })
+	void testDeserializeTableJoinDefaultRightLineNotCells(final String defaultRightLine) {
 		final String yaml = """
 			connector:
 			  detection:
@@ -127,7 +127,7 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 			    rightKeyColumn: 1
 			    defaultRightLine: %s
 			""".formatted(defaultRightLine);
-		// The default line is never written as a string
+		// The default line is never written as a string, and an empty list is no row at all
 		final Exception e = Assertions.assertThrows(
 			MismatchedInputException.class,
 			() -> deserializer.deserialize(new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml)))
@@ -192,7 +192,7 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"", "[ [ \"a\\rb\" ] ]" })
+	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"" })
 	void testDeserializeTableJoinInvalidLeftTable(final String leftTable) {
 		final String yaml = """
 			connector:
