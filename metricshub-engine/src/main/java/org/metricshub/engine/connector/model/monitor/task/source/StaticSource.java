@@ -39,7 +39,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
+import org.metricshub.engine.connector.deserializer.custom.StaticValueDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -57,16 +57,17 @@ public class StaticSource extends Source {
 
 	/**
 	 * The static value associated with the source, in its legacy string form: a source reference, or a table written
-	 * as <code>;</code> CSV text. Null when the value is written as a list (see {@link #cells}).
+	 * as <code>;</code> CSV text. Null when the value is written as a list (see {@link #rows}).
 	 */
 	@JsonSetter(nulls = FAIL)
 	private String value;
 
 	/**
-	 * The cells of the single row of the source, when the value is written as a YAML list: exactly these cells,
-	 * <code>[ "", "" ]</code> being two empty cells. Null in the string form.
+	 * The rows of the source, when the value is written as a YAML list: exactly these rows and cells. A list of
+	 * cells is one row, <code>[ "", "" ]</code> being a row of two empty cells; a list of lists is one row per
+	 * list; an empty list is an empty table. Null in the string form.
 	 */
-	private List<String> cells;
+	private List<List<String>> rows;
 
 	/**
 	 * Constructs a new {@code StaticSource} instance with the provided attributes.
@@ -75,7 +76,8 @@ public class StaticSource extends Source {
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
 	 * @param value                 the static value associated with the source: a {@link String} (source reference or
-	 *                              <code>;</code> CSV text, legacy form) or a {@link List} of cells, the single row
+	 *                              <code>;</code> CSV text, legacy form), a {@link List} of cells (one row), or a
+	 *                              {@link List} of rows, each a {@link List} of cells
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
 	 */
@@ -86,14 +88,21 @@ public class StaticSource extends Source {
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
 		@JsonProperty(value = "value", required = true) @JsonDeserialize(
-			using = StringOrListDeserializer.class
+			using = StaticValueDeserializer.class
 		) @NonNull Object value,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super("static", computes, forceSerialization, key, executeForEachEntryOf);
 		if (value instanceof List<?> list) {
-			this.cells = list.stream().map(String.class::cast).collect(Collectors.toCollection(ArrayList::new));
+			// A list of cells is one row
+			final List<?> rowList = list.isEmpty() || list.get(0) instanceof List ? list : List.of(list);
+			this.rows = new ArrayList<>();
+			for (final Object row : rowList) {
+				this.rows.add(
+					((List<?>) row).stream().map(String.class::cast).collect(Collectors.toCollection(ArrayList::new))
+				);
+			}
 		} else {
 			this.value = (String) value;
 		}
@@ -111,15 +120,15 @@ public class StaticSource extends Source {
 			.forceSerialization(forceSerialization)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.value(cells != null ? cells : value)
+			.value(rows != null ? rows : value)
 			.build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		value = updater.apply(value);
-		if (cells != null) {
-			cells.replaceAll(updater);
+		if (rows != null) {
+			rows.forEach(row -> row.replaceAll(updater));
 		}
 	}
 
@@ -130,7 +139,7 @@ public class StaticSource extends Source {
 		stringJoiner.add(super.toString());
 
 		addNonNull(stringJoiner, "- value=", value);
-		addNonNull(stringJoiner, "- value=", cells);
+		addNonNull(stringJoiner, "- value=", rows);
 
 		return stringJoiner.toString();
 	}

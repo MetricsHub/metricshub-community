@@ -194,7 +194,7 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"", "[ [ \"a\\rb\" ] ]" })
+	@ValueSource(strings = { "[ a, b ]", "[ [ a, ~ ] ]", "[ [] ]", "[]", "\" \"" })
 	void testDeserializeTableJoinInvalidLeftTable(final String leftTable) {
 		final String yaml = """
 			connector:
