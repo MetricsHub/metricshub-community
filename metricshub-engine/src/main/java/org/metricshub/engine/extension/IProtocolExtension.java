@@ -35,6 +35,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
 
 /**
  * Defines the contract for protocol extensions within the system. Protocol extensions are responsible for
@@ -200,20 +201,17 @@ public interface IProtocolExtension {
 	}
 
 	/**
-	 * Executes one of the tools returned by {@link #getTools()} on a host.
-	 * <p>
-	 * The default implementation hands the arguments to {@link #executeQuery(IConfiguration, JsonNode)} as they
-	 * are. An extension whose {@code executeQuery} dispatches on a field of the node, such as {@code query} or
-	 * {@code queryType}, overrides this method to set that field from the tool name.
+	 * Executes one of the tools returned by {@link #getTools()} on a host. An extension that offers tools
+	 * implements it.
 	 *
 	 * @param toolName      the name of the tool, as declared by {@link #getTools()}
 	 * @param configuration the configuration of the host, hostname and timeout set
 	 * @param arguments     the arguments of the invocation, by parameter name
-	 * @return the result text
+	 * @return the result, a table or a text
 	 * @throws Exception if the tool fails
 	 */
-	default String executeTool(String toolName, IConfiguration configuration, JsonNode arguments) throws Exception {
-		return executeQuery(configuration, arguments);
+	default ToolResult executeTool(String toolName, IConfiguration configuration, JsonNode arguments) throws Exception {
+		throw new UnsupportedOperationException("Extension %s offers no tool".formatted(getIdentifier()));
 	}
 
 	/**

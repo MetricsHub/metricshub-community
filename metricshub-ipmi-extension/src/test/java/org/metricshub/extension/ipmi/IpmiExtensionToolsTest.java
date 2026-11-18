@@ -13,6 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
+import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
+import org.metricshub.ipmi.client.IpmiClientResults;
+import org.metricshub.ipmi.client.SelEntry;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -52,10 +57,42 @@ class IpmiExtensionToolsTest {
 		when(ipmiRequestExecutorMock.executeIpmiGetSensors("bmc", configuration)).thenReturn("sensors");
 		when(ipmiRequestExecutorMock.executeIpmiDetection("bmc", configuration)).thenReturn("on");
 
-		assertEquals("sensors", ipmiExtension.executeTool("sensors", configuration, JsonNodeFactory.instance.objectNode()));
 		assertEquals(
-			"on",
+			new ToolText("sensors"),
+			ipmiExtension.executeTool("sensors", configuration, JsonNodeFactory.instance.objectNode())
+		);
+		assertEquals(
+			new ToolText("on"),
 			ipmiExtension.executeTool("chassisStatus", configuration, JsonNodeFactory.instance.objectNode())
+		);
+	}
+
+	@Test
+	void testExecuteToolSelIsATableOfTheEntries() throws Exception {
+		final IpmiConfiguration configuration = configuration();
+		final List<SelEntry> entries = List.of(IpmiResultConverterTest.psuFailure(5));
+		when(ipmiRequestExecutorMock.executeIpmiSel("bmc", configuration, null, true, 0)).thenReturn(
+			new SelRead(IpmiClientResults.selEntryList(entries, null), null)
+		);
+
+		assertEquals(
+			new ToolTable(
+				List.of(
+					"recordId",
+					"timestamp",
+					"sensorType",
+					"sensorNumber",
+					"sensorName",
+					"entity",
+					"eventType",
+					"description",
+					"direction",
+					"generatorId",
+					"oem"
+				),
+				IpmiResultConverter.convertSel(entries, null)
+			),
+			ipmiExtension.executeTool("sel", configuration, JsonNodeFactory.instance.objectNode())
 		);
 	}
 
@@ -69,7 +106,7 @@ class IpmiExtensionToolsTest {
 		);
 
 		assertEquals(
-			"identify",
+			new ToolText("identify"),
 			ipmiExtension.executeTool(
 				"chassisAction",
 				configuration,
@@ -77,7 +114,7 @@ class IpmiExtensionToolsTest {
 			)
 		);
 		assertEquals(
-			"off",
+			new ToolText("off"),
 			ipmiExtension.executeTool(
 				"chassisAction",
 				configuration,
@@ -85,7 +122,7 @@ class IpmiExtensionToolsTest {
 			)
 		);
 		assertEquals(
-			"00;01",
+			new ToolText("00;01"),
 			ipmiExtension.executeTool(
 				"raw",
 				configuration,

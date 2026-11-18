@@ -46,6 +46,8 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.oscommand.file.FileSourceProcessor;
 
 /**
@@ -433,6 +435,13 @@ public class OsCommandExtension implements IProtocolExtension {
 				.destructive()
 				.build()
 		);
+	}
+
+	@Override
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+		throws Exception {
+		// The only tool, runCommand, takes the arguments of the query
+		return new ToolText(executeQuery(configuration, arguments));
 	}
 
 	@Override

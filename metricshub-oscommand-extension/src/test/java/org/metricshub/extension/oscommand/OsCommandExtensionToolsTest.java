@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolText;
 
 class OsCommandExtensionToolsTest {
 
@@ -31,7 +32,7 @@ class OsCommandExtensionToolsTest {
 		);
 
 		assertEquals(
-			"Filesystem Size",
+			new ToolText("Filesystem Size"),
 			new OsCommandExtension(osCommandService).executeTool(
 				"runCommand",
 				configuration,

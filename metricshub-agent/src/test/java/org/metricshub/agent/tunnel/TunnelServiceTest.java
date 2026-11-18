@@ -155,7 +155,8 @@ class TunnelServiceTest {
 					arguments -> "",
 					false,
 					"ipmi",
-					null
+					null,
+					false
 				) }
 		);
 		final List<TunnelClient> clients = new ArrayList<>();

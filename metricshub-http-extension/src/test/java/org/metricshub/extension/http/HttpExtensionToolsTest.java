@@ -15,6 +15,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.http.utils.HttpRequest;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -50,13 +52,13 @@ class HttpExtensionToolsTest {
 			"{\"Members\":[]}"
 		);
 
-		final String result = httpExtension.executeTool(
+		final ToolResult result = httpExtension.executeTool(
 			"get",
 			configuration,
 			JsonNodeFactory.instance.objectNode().put("path", "/redfish/v1/Systems")
 		);
 
-		assertEquals("{\"Members\":[]}", result);
+		assertEquals(new ToolText("{\"Members\":[]}"), result);
 		assertEquals("GET", request.getValue().getMethod());
 		assertEquals("/redfish/v1/Systems", request.getValue().getPath());
 		assertEquals(ResultContent.BODY, request.getValue().getResultContent());
@@ -98,6 +100,21 @@ class HttpExtensionToolsTest {
 		);
 
 		assertTrue(exception.getMessage().contains("TRACE"), exception.getMessage());
+	}
+
+	@Test
+	void testExecuteToolFailsWhenTheHostGivesNoResponse() {
+		// The executor returns nothing for a host that did not answer: an error for the host, not a text
+		when(httpRequestExecutorMock.executeHttp(any(), eq(false), any(TelemetryManager.class))).thenReturn(null);
+
+		assertThrows(
+			IllegalStateException.class,
+			() -> httpExtension.executeTool(
+				"get",
+				HttpConfiguration.builder().hostname("host").build(),
+				JsonNodeFactory.instance.objectNode()
+			)
+		);
 	}
 
 	@Test

@@ -27,8 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.common.helpers.StringHelper;
-import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.tool.ToolTable;
 
 /**
  * Interface defining the contract for executing Windows Management Instrumentation (WMI) requests
@@ -96,33 +95,26 @@ public interface IWinRequestExecutor {
 	) throws ClientException;
 
 	/**
-	 * Execute a WQL query and render its result as a text table, for the CLI and the MCP tools:
-	 * the columns are the properties the query selects, or no header when it selects {@code *}.
+	 * Execute a WQL query and name the columns of its result, for the CLI and the MCP tools:
+	 * the columns are the properties the query selects, or no name when it selects {@code *}.
 	 *
 	 * @param hostname         The hostname of the device where the WMI service is running.
 	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
 	 * @param query            The WQL to execute.
 	 * @param namespace        The WMI namespace where all the classes reside; {@code null} for {@code root\cimv2}.
-	 * @return The result as a text table.
+	 * @return The result as a table.
 	 * @throws ClientException when anything goes wrong (details in cause).
 	 */
-	default String executeWqlQuery(
+	default ToolTable executeWqlQuery(
 		final String hostname,
 		@NonNull final IWinConfiguration winConfiguration,
 		@NonNull final String query,
 		final String namespace
 	) throws ClientException {
-		final List<List<String>> result = executeWmi(
-			hostname,
-			winConfiguration,
+		return ToolTable.ofQuery(
 			query,
-			namespace == null ? WMI_DEFAULT_NAMESPACE : namespace,
-			null
+			executeWmi(hostname, winConfiguration, query, namespace == null ? WMI_DEFAULT_NAMESPACE : namespace, null)
 		);
-		final String[] columns = StringHelper.extractColumns(query);
-		return columns.length == 1 && "*".equals(columns[0])
-			? TextTableHelper.generateTextTable(result)
-			: TextTableHelper.generateTextTable(columns, result);
 	}
 
 	/**

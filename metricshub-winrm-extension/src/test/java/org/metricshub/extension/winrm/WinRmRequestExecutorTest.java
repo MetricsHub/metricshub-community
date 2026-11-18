@@ -6,25 +6,35 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.TransportProtocols;
+import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinFileOperations;
 import org.metricshub.winrm.AuthScheme;
+import org.metricshub.winrm.RemoteFileInfo;
 import org.metricshub.winrm.WinRMClient;
 import org.metricshub.winrm.exceptions.WinRMFaultException;
 import org.metricshub.winrm.exceptions.WindowsRemoteException;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
 import org.metricshub.winrm.exceptions.WqlSyntaxException;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
+import org.mockito.MockedStatic;
 
 class WinRmRequestExecutorTest {
 
@@ -219,6 +229,30 @@ class WinRmRequestExecutorTest {
 		assertEquals(AuthScheme.KERBEROS, WinRmRequestExecutor.toAuthScheme(AuthenticationEnum.KERBEROS));
 		// Basic used to be silently downgraded to NTLM
 		assertEquals(AuthScheme.BASIC, WinRmRequestExecutor.toAuthScheme(AuthenticationEnum.BASIC));
+	}
+
+	@Test
+	void testListRemoteFilesIsATableOfPathSizeAndLastModified() throws Exception {
+		final RemoteFileInfo file = mock(RemoteFileInfo.class);
+		when(file.path()).thenReturn("C:\\logs\\app.log");
+		when(file.size()).thenReturn(12L);
+		when(file.lastModified()).thenReturn(Instant.parse("2026-01-02T03:04:05Z"));
+		final WinRMClient client = mock(WinRMClient.class, RETURNS_DEEP_STUBS);
+		when(client.file("C:\\logs").list().maxDepth(1).filesOnly().glob("*.log").execute().entries()).thenReturn(
+			List.of(file)
+		);
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+
+			assertEquals(
+				new ToolTable(
+					List.of("Path", "Size", "LastModified"),
+					List.of(List.of("C:\\logs\\app.log", "12", "2026-01-02T03:04:05Z"))
+				),
+				new WinRmRequestExecutor().listRemoteFiles("host", WinRmConfiguration.builder().build(), "C:\\logs\\*.log")
+			);
+		}
 	}
 
 	@Test

@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -51,7 +53,7 @@ class WbemExtensionToolsTest {
 			)
 		).thenReturn(List.of(List.of("array1")));
 
-		final String result = wbemExtension.executeTool(
+		final ToolResult result = wbemExtension.executeTool(
 			"wql",
 			configuration,
 			JsonNodeFactory.instance.objectNode()
@@ -59,7 +61,7 @@ class WbemExtensionToolsTest {
 				.put("namespace", "root/emc")
 		);
 
-		assertTrue(result.contains("array1"), result);
+		assertEquals(new ToolTable(List.of("Name"), List.of(List.of("array1"))), result);
 		assertEquals("root/emc", configuration.getNamespace());
 	}
 

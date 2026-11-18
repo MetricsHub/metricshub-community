@@ -46,6 +46,7 @@ import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 import org.metricshub.extension.win.WinFileOperations;
@@ -557,16 +558,16 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	/**
 	 * List the files matching a path pattern on the remote host, with the syntax of a file
 	 * source's {@code paths} ({@code *} and {@code ?} wildcards in any segment, a trailing
-	 * backslash for all the files of a directory), as a text table.
+	 * backslash for all the files of a directory).
 	 *
 	 * @param hostname           The hostname of the device where the WinRM service is running
 	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout)
 	 * @param pathPattern        The path pattern, e.g. {@code C:\logs\*.log}
-	 * @return A text table with the path, size and last modification time of each matching file
+	 * @return A table with the path, size and last modification time of each matching file
 	 * @throws ClientException when the pattern is invalid or the listing fails (details in cause)
 	 */
 	@WithSpan("List Files WinRM")
-	public String listRemoteFiles(
+	public ToolTable listRemoteFiles(
 		@SpanAttribute("host.hostname") @NonNull final String hostname,
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
 		@SpanAttribute("winrm.path_pattern") @NonNull final String pathPattern
@@ -582,7 +583,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			for (final RemoteFileInfo file : fileOperations.list(pattern)) {
 				rows.add(List.of(file.path(), String.valueOf(file.size()), file.lastModified().toString()));
 			}
-			return TextTableHelper.generateTextTable(new String[] { "Path", "Size", "LastModified" }, rows);
+			return new ToolTable(List.of("Path", "Size", "LastModified"), rows);
 		}
 	}
 }

@@ -42,7 +42,10 @@ import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.web.mcp.MCPConfigHelper;
+import org.metricshub.web.mcp.MultiHostToolResponse;
 import org.metricshub.web.mcp.QueryResponse;
 import org.springframework.ai.tool.ToolCallback;
 
@@ -56,21 +59,6 @@ import org.springframework.ai.tool.ToolCallback;
 public final class ConnectorToolCallbacks {
 
 	private static final String OTHER_DECLARATION_ERROR = "Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
-
-	/**
-	 * What a connector tool returns for one host.
-	 *
-	 * @param columns the column names the tool declares, empty when it declares none
-	 * @param rows    the rows of the tool's result source
-	 */
-	public record ToolTable(List<String> columns, List<List<String>> rows) {}
-
-	/**
-	 * What a tool returns when its result is text (a command output): the text as it is, for the LLM to read.
-	 *
-	 * @param text the text of the result source
-	 */
-	public record ToolText(String text) {}
 
 	/**
 	 * @param agentContext the agent context to build the tools from, the one every callback stays on
@@ -126,6 +114,30 @@ public final class ConnectorToolCallbacks {
 			}
 		}));
 		return callbacks;
+	}
+
+	/**
+	 * What a client of the agent's own MCP servers reads for a connector tool or a protocol tool, instead of the
+	 * JSON the other interfaces receive: one text per host, in the order of the hosts, each under the host name as
+	 * a heading. A table is a Markdown table, a text is the text as it is, an error is one line.
+	 *
+	 * @param result what the tool answered
+	 * @return the texts; the error message alone when the tool ran on no host
+	 */
+	static List<String> render(final MultiHostToolResponse<?> result) {
+		if (result.getErrorMessage() != null) {
+			return List.of(result.getErrorMessage());
+		}
+		return result.getHosts().stream().map(host -> {
+			final String body = switch (host.getResponse()) {
+				case ToolTable table -> table.toMarkdown();
+				case ToolText text -> text.text();
+				case QueryResponse response -> "Error: " + response.getError();
+				case null, default -> String.valueOf(host.getResponse());
+			};
+			// A null entry in the hostnames has no name to show, only its error
+			return host.getHostname() == null ? body : "## " + host.getHostname() + "\n\n" + body;
+		}).toList();
 	}
 
 	/**

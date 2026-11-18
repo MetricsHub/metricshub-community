@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
@@ -21,9 +22,17 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
+import java.util.stream.Stream;
+import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.web.mcp.tool.HostTools;
+import org.metricshub.web.mcp.tool.McpToolRegistrySync;
+import org.metricshub.web.service.AgentLifecycleService;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -38,7 +47,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 /**
- * Shared fixtures for the MCP transport integration tests: a minimal Spring Boot web application exposing one tool
+ * Shared fixtures for the MCP transport integration tests: a minimal Spring Boot web application exposing two tools
  * through the Spring AI MCP auto-configuration and {@link LegacySseMcpServerConfiguration}, plus client-side
  * assertions.
  */
@@ -46,11 +55,13 @@ final class McpTransportTestSupport {
 
 	static final String ECHO_TOOL = "echo";
 
+	static final String RENDERED_TOOL = "Test_listThings";
+
 	private McpTransportTestSupport() {}
 
 	/**
-	 * Minimal web application: Spring Boot auto-configuration without security, the MCP server auto-configuration and
-	 * the legacy SSE configuration under test.
+	 * Minimal web application: Spring Boot auto-configuration without security, the MCP server auto-configuration,
+	 * the legacy SSE configuration under test and the tool registry synchronization, which runs at startup.
 	 */
 	@Configuration
 	@EnableAutoConfiguration(
@@ -60,12 +71,29 @@ final class McpTransportTestSupport {
 			UserDetailsServiceAutoConfiguration.class,
 			ServletWebSecurityAutoConfiguration.class }
 	)
-	@Import(LegacySseMcpServerConfiguration.class)
+	@Import({ LegacySseMcpServerConfiguration.class, McpToolRegistrySync.class })
 	static class TestApplication {
 
 		@Bean
 		ToolCallbackProvider testTools() {
-			return MethodToolCallbackProvider.builder().toolObjects(new EchoTool()).build();
+			// Built as a connector tool is: its result is rendered rather than sent as JSON
+			final ToolCallback renderedTool = HostTools.perHost(
+				"Test",
+				RENDERED_TOOL,
+				new ToolDefinition("listThings", "Lists the things.", Map.of(), false),
+				(hostname, arguments) -> new ToolTable(List.of("name"), List.of(List.of("thing of " + hostname)))
+			);
+			return ToolCallbackProvider.from(
+				Stream.concat(
+					Stream.of(MethodToolCallbackProvider.builder().toolObjects(new EchoTool()).build().getToolCallbacks()),
+					Stream.of(renderedTool)
+				).toList()
+			);
+		}
+
+		@Bean
+		AgentLifecycleService agentLifecycleService() {
+			return mock(AgentLifecycleService.class);
 		}
 	}
 
@@ -78,7 +106,7 @@ final class McpTransportTestSupport {
 	}
 
 	/**
-	 * Initializes an MCP client over the given transport, lists the tools and calls the echo tool.
+	 * Initializes an MCP client over the given transport, lists the tools, calls the echo tool and the rendered tool.
 	 *
 	 * @param transport the client transport under test
 	 */
@@ -111,6 +139,18 @@ final class McpTransportTestSupport {
 					.map(TextContent.class::cast)
 					.anyMatch(content -> content.text().contains("echo:hello")),
 				"Unexpected tool result: " + result
+			);
+
+			// Spring AI registered the tool at startup to answer with JSON: the registry synchronization replaced it
+			final CallToolResult rendered = client.callTool(
+				new CallToolRequest(RENDERED_TOOL, Map.of("hostname", List.of("host-01", "host-02")))
+			);
+			assertEquals(
+				List.of(
+					"## host-01\n\n| name |\n| --- |\n| thing of host-01 |",
+					"## host-02\n\n| name |\n| --- |\n| thing of host-02 |"
+				),
+				rendered.content().stream().map(content -> ((TextContent) content).text()).toList()
 			);
 		}
 	}

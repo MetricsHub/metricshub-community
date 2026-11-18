@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
@@ -46,6 +45,8 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
 
 /**
  * The {@code WbemExtension} class implements the {@link IProtocolExtension} interface to provide
@@ -261,34 +262,39 @@ public class WbemExtension implements IProtocolExtension {
 
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
+		// return a text table containing the WBEM query result.
+		final ToolTable table = executeWql(configuration, queryNode);
+		return TextTableHelper.generateTextTable(table.columns(), table.rows());
+	}
+
+	/**
+	 * Executes the WQL query of a query node.
+	 *
+	 * @param configuration the WBEM configuration of the host
+	 * @param queryNode     the node holding the {@code query}
+	 * @return the result, under the names of the properties the query selects
+	 * @throws Exception if the query fails
+	 */
+	private ToolTable executeWql(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final WbemConfiguration wbemConfiguration = (WbemConfiguration) configuration;
 		final String query = queryNode.get("query").asText();
-		// execute Wbem query
-		final List<List<String>> result = wbemRequestExecutor.executeWbem(
-			configuration.getHostname(),
-			wbemConfiguration,
+		return ToolTable.ofQuery(
 			query,
-			wbemConfiguration.getNamespace(),
-			new TelemetryManager(),
-			null
+			wbemRequestExecutor.executeWbem(
+				configuration.getHostname(),
+				wbemConfiguration,
+				query,
+				wbemConfiguration.getNamespace(),
+				new TelemetryManager(),
+				null
+			)
 		);
-
-		// return a text table containing the WBEM query result.
-		final String[] columns = StringHelper.extractColumns(query);
-		if (columns.length == 1 && columns[0].equals("*")) {
-			return TextTableHelper.generateTextTable(result);
-		} else {
-			return TextTableHelper.generateTextTable(columns, result);
-		}
 	}
 
 	@Override
 	public List<ToolDefinition> getTools() {
 		return List.of(
-			ToolDefinition.builder(
-				"wql",
-				"Runs a WQL query on a WBEM host (SMI-S, CIM) and returns the result as a text table."
-			)
+			ToolDefinition.builder("wql", "Runs a WQL query on a WBEM host (SMI-S, CIM) and returns the result as a table.")
 				.requiredParameter("query", "The WQL query, e.g. SELECT Name, OperationalStatus FROM CIM_ComputerSystem")
 				.parameter(
 					"namespace",
@@ -299,7 +305,7 @@ public class WbemExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
 		if (!"wql".equals(toolName)) {
 			throw new IllegalArgumentException("Unknown WBEM tool: " + toolName);
@@ -307,6 +313,6 @@ public class WbemExtension implements IProtocolExtension {
 		if (arguments.hasNonNull("namespace")) {
 			((WbemConfiguration) configuration).setNamespace(arguments.get("namespace").asText());
 		}
-		return executeQuery(configuration, arguments);
+		return executeWql(configuration, arguments);
 	}
 }

@@ -26,6 +26,18 @@ The legacy transport can be tuned or disabled under the `web:` section of `metri
 | `mcp.sse.initialization-timeout` | `2m` | A session that never completes the `initialize` handshake is closed after this delay |
 | `spring.ai.mcp.server.keep-alive-interval` | `30s` | Keep-alive ping interval of the legacy SSE transport (`spring.ai.mcp.server.streamable-http.keep-alive-interval` for Streamable HTTP) |
 
+### Result of a connector or protocol tool
+
+On both transports, a connector tool (`<connector>_<tool>`) or a protocol tool (`<extension>_<tool>`) answers with one text content block per host, in the order of the `hostname` argument, and no longer with one JSON document. A client that parsed that JSON must read the text instead:
+
+- Each block starts with `## <hostname>`.
+- A table is a GitHub-flavored Markdown table. Its header is the column names, `Column N` for a column without a name. In a cell, `|` is written `\|` and a line break `<br>`.
+- A text is the text as it is.
+- An error on a host is `Error: <message>`.
+- An error of the whole call (no hostname, an invalid argument) is one block with the message, flagged `isError`.
+
+The other tools (`ListHosts`, `PingHost`, `GetMetricsFromCacheForHost`...) still answer with their JSON.
+
 ## File log capture
 
 When a file source uses wildcards or multiple paths, LOG mode includes an empty

@@ -27,9 +27,6 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +48,9 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.snmp.detection.SnmpGetCriterionProcessor;
 import org.metricshub.extension.snmp.detection.SnmpGetNextCriterionProcessor;
 import org.metricshub.extension.snmp.source.SnmpGetSourceProcessor;
@@ -281,7 +281,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 			ToolDefinition.builder("walk", "Walks an SNMP subtree on a host and returns every OID and value under it.")
 				.requiredParameter("oid", "The root OID of the subtree, e.g. 1.3.6.1.2.1.2.2")
 				.build(),
-			ToolDefinition.builder("table", "Reads an SNMP table on a host and returns the selected columns as a text table.")
+			ToolDefinition.builder("table", "Reads an SNMP table on a host and returns the selected columns as a table.")
 				.requiredParameter("oid", "The OID of the table, e.g. 1.3.6.1.2.1.2.2.1")
 				.requiredParameter("columns", "Comma-separated column numbers to select, ID for the row index, e.g. ID,2,8")
 				.build()
@@ -289,22 +289,41 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
-		final ObjectNode query = JsonNodeFactory.instance.objectNode();
-		switch (toolName) {
-			case GET, WALK, TABLE -> query.put("action", toolName);
-			case "getNext" -> query.put("action", GET_NEXT);
+		final ISnmpConfiguration snmpConfiguration = (ISnmpConfiguration) configuration;
+		final String hostname = configuration.getHostname();
+		final AbstractSnmpRequestExecutor executor = getRequestExecutor();
+		final String oid = arguments.path("oid").asText();
+		return switch (toolName) {
+			case GET -> new ToolText(done(executor.executeSNMPGet(oid, snmpConfiguration, hostname, false, null)));
+			case "getNext" -> new ToolText(done(executor.executeSNMPGetNext(oid, snmpConfiguration, hostname, false, null)));
+			// A text, not a table of OID, type and value: a value may hold tabs and line breaks
+			case WALK -> new ToolText(done(executor.executeSNMPWalk(oid, snmpConfiguration, hostname, false, null)));
+			case TABLE -> {
+				final String[] columns = Stream.of(arguments.path("columns").asText().split(","))
+					.map(String::trim)
+					.filter(s -> !s.isEmpty())
+					.toArray(String[]::new);
+				yield new ToolTable(
+					List.of(columns),
+					done(executor.executeSNMPTable(oid, columns, snmpConfiguration, hostname, false, null))
+				);
+			}
 			default -> throw new IllegalArgumentException("Unknown SNMP tool: " + toolName);
+		};
+	}
+
+	/**
+	 * @param result what the request executor returned
+	 * @param <T>    a text or the rows of a table
+	 * @return the result
+	 * @throws IllegalStateException for no result: the executor returns none when the request failed
+	 */
+	private static <T> T done(final T result) {
+		if (result == null) {
+			throw new IllegalStateException("The SNMP request failed");
 		}
-		query.set("oid", arguments.get("oid"));
-		if (arguments.hasNonNull("columns")) {
-			final ArrayNode columns = query.putArray("columns");
-			Stream.of(arguments.get("columns").asText().split(","))
-				.map(String::trim)
-				.filter(s -> !s.isEmpty())
-				.forEach(columns::add);
-		}
-		return executeQuery(configuration, query);
+		return result;
 	}
 }

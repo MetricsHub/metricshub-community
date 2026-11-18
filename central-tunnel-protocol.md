@@ -178,6 +178,21 @@ A host the agent does not monitor is answered `EXECUTION_ERROR`, a missing `host
 
 `result` is the JSON the tool returned, unmodified.
 
+A protocol-extension or connector tool returns one entry per host, in the order asked. The `response` of a host is a table, a text, or an error; `type`, the first field, tells a table from a text. `columns` is empty when the names are not known (a `SELECT *`), so a row may hold more cells than `columns` has names.
+
+```json
+{
+  "hosts": [
+    { "hostname": "server-01", "response": { "type": "table", "columns": ["ID", "2"], "rows": [["1", "eth0"]] } },
+    { "hostname": "server-02", "response": { "type": "text", "text": "Linux" } },
+    { "hostname": "server-03", "response": { "error": "No valid snmp configuration found for server-03." } }
+  ],
+  "errorMessage": null
+}
+```
+
+A call refused before any host is contacted (no `hostname`, an invalid argument) is `{ "hosts": [], "errorMessage": "…" }`.
+
 ### 3.7 `tool.error` (agent → Central)
 
 ```json

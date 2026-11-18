@@ -53,6 +53,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.http.utils.HttpRequest;
 
 /**
@@ -315,7 +317,7 @@ public class HttpExtension implements IProtocolExtension, IHttpRequestExtension 
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
 		final ObjectNode query = JsonNodeFactory.instance.objectNode();
 		if (arguments instanceof ObjectNode argumentsNode) {
@@ -340,6 +342,11 @@ public class HttpExtension implements IProtocolExtension, IHttpRequestExtension 
 		if (!query.hasNonNull("resultContent")) {
 			query.put("resultContent", "body");
 		}
-		return executeQuery(configuration, query);
+		final String response = executeQuery(configuration, query);
+		if (response == null) {
+			// The executor returns nothing when the host gave no response: an error for the host, not a text
+			throw new IllegalStateException("The HTTP request got no response");
+		}
+		return new ToolText(response);
 	}
 }

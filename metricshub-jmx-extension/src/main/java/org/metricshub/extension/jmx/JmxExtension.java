@@ -48,6 +48,8 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
 
 /**
  * This class implements the {@link IProtocolExtension} contract for JMX protocol
@@ -213,6 +215,19 @@ public class JmxExtension implements IProtocolExtension {
 
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
+		final ToolTable table = fetchMBean(configuration, query);
+		return TextTableHelper.generateTextTable(table.columns(), table.rows());
+	}
+
+	/**
+	 * Reads the MBeans of a query.
+	 *
+	 * @param configuration the JMX configuration of the host
+	 * @param query         the object name, the attributes and the key properties
+	 * @return one row per MBean, under the names of the key properties then of the attributes
+	 * @throws Exception if the query is invalid or fails
+	 */
+	private ToolTable fetchMBean(final IConfiguration configuration, final JsonNode query) throws Exception {
 		if (!(configuration instanceof JmxConfiguration)) {
 			throw new IllegalArgumentException("Invalid configuration type for JMX query execution.");
 		}
@@ -259,7 +274,7 @@ public class JmxExtension implements IProtocolExtension {
 		columns.addAll(keyProperties);
 		columns.addAll(attributes);
 
-		return TextTableHelper.generateTextTable(columns, result);
+		return new ToolTable(columns, result);
 	}
 
 	@Override
@@ -267,7 +282,7 @@ public class JmxExtension implements IProtocolExtension {
 		return List.of(
 			ToolDefinition.builder(
 				"fetchMBean",
-				"Reads attributes of the MBeans matching an object name pattern on a JMX host and returns them as a text table."
+				"Reads attributes of the MBeans matching an object name pattern on a JMX host and returns them as a table."
 			)
 				.requiredParameter("objectName", "The MBean object name pattern, e.g. java.lang:type=MemoryPool,name=*")
 				.requiredParameter("attributes", "Comma-separated attributes to read, e.g. Usage,PeakUsage")
@@ -280,7 +295,7 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
 		if (!"fetchMBean".equals(toolName)) {
 			throw new IllegalArgumentException("Unknown JMX tool: " + toolName);
@@ -289,7 +304,7 @@ public class JmxExtension implements IProtocolExtension {
 		query.set("objectName", arguments.get("objectName"));
 		splitList(arguments, "attributes").forEach(query.putArray("attributes")::add);
 		splitList(arguments, "keyProperties").forEach(query.putArray("keyProperties")::add);
-		return executeQuery(configuration, query);
+		return fetchMBean(configuration, query);
 	}
 
 	private static List<String> splitList(final JsonNode arguments, final String field) {

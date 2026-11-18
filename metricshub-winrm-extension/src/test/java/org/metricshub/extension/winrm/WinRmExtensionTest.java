@@ -59,6 +59,7 @@ import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.extension.win.WinCommandService;
 import org.metricshub.extension.win.detection.WmiDetectionService;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
@@ -539,12 +540,16 @@ class WinRmExtensionTest {
 		fileNode.set("queryType", new TextNode("file"));
 		assertEquals("line 1\nline 2", winRmExtension.executeQuery(configuration, fileNode));
 
-		doReturn("Path;Size;LastModified").when(winRmRequestExecutorMock)
+		final List<List<String>> files = List.of(List.of("C:\\logs\\app.log", "12", "2026-01-02T03:04:05Z"));
+		doReturn(new ToolTable(List.of("Path", "Size", "LastModified"), files)).when(winRmRequestExecutorMock)
 			.listRemoteFiles(eq(HOST_NAME), any(WinRmConfiguration.class), eq("C:\\logs\\*.log"));
 		final ObjectNode listNode = JsonNodeFactory.instance.objectNode();
 		listNode.set("query", new TextNode("C:\\logs\\*.log"));
 		listNode.set("queryType", new TextNode("ls"));
-		assertEquals("Path;Size;LastModified", winRmExtension.executeQuery(configuration, listNode));
+		assertEquals(
+			TextTableHelper.generateTextTable(new String[] { "Path", "Size", "LastModified" }, files),
+			winRmExtension.executeQuery(configuration, listNode)
+		);
 
 		// "command", and its deprecated synonym "winremote", run a remote command
 		doReturn("output").when(winRmRequestExecutorMock)

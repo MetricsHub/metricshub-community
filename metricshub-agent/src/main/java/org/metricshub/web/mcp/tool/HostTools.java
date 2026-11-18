@@ -108,7 +108,7 @@ public final class HostTools {
 	}
 
 	/**
-	 * Builds the MCP tool.
+	 * Builds the MCP tool, whose result the agent's own MCP servers render rather than send as JSON.
 	 *
 	 * @param owner      the extension or connector identifier that declares the tool
 	 * @param name       the advertised tool name
@@ -146,7 +146,8 @@ public final class HostTools {
 			arguments -> call(definition, perHost, arguments),
 			definition.destructive(),
 			owner,
-			definition
+			definition,
+			true
 		);
 	}
 
@@ -260,7 +261,7 @@ public final class HostTools {
 		}
 	}
 
-	private static String messageOf(final Exception e) {
+	static String messageOf(final Exception e) {
 		return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
 	}
 

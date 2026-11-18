@@ -39,7 +39,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
@@ -57,6 +56,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.extension.jdbc.driver.DriverResolutionException;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -371,25 +372,32 @@ public class JdbcExtension implements IProtocolExtension {
 
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
-		final String hostname = configuration.getHostname();
+		final ToolTable table = executeSql(configuration, queryNode);
+		return TextTableHelper.generateTextTable(table.columns(), table.rows());
+	}
+
+	/**
+	 * Executes the SQL statement of a query node.
+	 *
+	 * @param configuration the JDBC configuration of the host
+	 * @param queryNode     the node holding the {@code query}
+	 * @return the result, under the names of the columns the statement selects
+	 * @throws Exception if the statement fails
+	 */
+	private ToolTable executeSql(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String sqlQuery = queryNode.get("query").asText();
 		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) configuration;
-		final JdbcDriverSelection selection = resolveSelection(jdbcConfiguration);
-
-		final List<List<String>> resultList = sqlRequestExecutor.executeSql(
-			hostname,
-			jdbcConfiguration,
+		return ToolTable.ofQuery(
 			sqlQuery,
-			false,
-			null,
-			selection
+			sqlRequestExecutor.executeSql(
+				configuration.getHostname(),
+				jdbcConfiguration,
+				sqlQuery,
+				false,
+				null,
+				resolveSelection(jdbcConfiguration)
+			)
 		);
-		final String[] columns = StringHelper.extractColumns(sqlQuery);
-		if (columns.length == 1 && columns[0].equals("*")) {
-			return TextTableHelper.generateTextTable(resultList);
-		} else {
-			return TextTableHelper.generateTextTable(columns, resultList);
-		}
 	}
 
 	/**
@@ -546,7 +554,7 @@ public class JdbcExtension implements IProtocolExtension {
 		return List.of(
 			ToolDefinition.builder(
 				"query",
-				"Runs an SQL statement on a database host with the host's configured JDBC settings and returns the result as a text table."
+				"Runs an SQL statement on a database host with the host's configured JDBC settings and returns the result as a table."
 			)
 				.requiredParameter("query", "The SQL statement, e.g. SELECT name, state FROM pg_stat_activity")
 				.destructive()
@@ -555,7 +563,7 @@ public class JdbcExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
 		if (!"query".equals(toolName)) {
 			throw new IllegalArgumentException("Unknown JDBC tool: " + toolName);
@@ -568,7 +576,7 @@ public class JdbcExtension implements IProtocolExtension {
 					": set the driver in the host's JDBC configuration, or a URL of a known database"
 			);
 		}
-		return executeQuery(configuration, arguments);
+		return executeSql(configuration, arguments);
 	}
 
 	/**

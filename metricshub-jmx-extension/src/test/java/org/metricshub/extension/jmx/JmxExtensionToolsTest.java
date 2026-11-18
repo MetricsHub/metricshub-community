@@ -10,6 +10,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -45,7 +47,7 @@ class JmxExtensionToolsTest {
 			)
 		).thenReturn(List.of(List.of("Metaspace", "10", "12")));
 
-		final String result = jmxExtension.executeTool(
+		final ToolResult result = jmxExtension.executeTool(
 			"fetchMBean",
 			configuration,
 			JsonNodeFactory.instance.objectNode()
@@ -54,7 +56,10 @@ class JmxExtensionToolsTest {
 				.put("keyProperties", "name")
 		);
 
-		assertTrue(result.contains("Metaspace"), result);
+		assertEquals(
+			new ToolTable(List.of("name", "Usage", "PeakUsage"), List.of(List.of("Metaspace", "10", "12"))),
+			result
+		);
 	}
 
 	@Test

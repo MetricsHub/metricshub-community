@@ -12,8 +12,11 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
+import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,8 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.web.AgentContextHolder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.tool.ToolCallback;
@@ -97,12 +102,12 @@ class ProtocolToolCallbacksTest {
 
 	@Test
 	void testToolRunsThroughTheExtensionWithTheHostConfiguration() throws Exception {
-		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn("header\nrow");
+		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn(new ToolText("header\nrow"));
 		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 
 		final JsonNode result = MAPPER.readTree(callback.call("{\"hostname\":[\"host-01\"],\"since\":\"1h\",\"limit\":5}"));
 
-		assertEquals("header\nrow", result.get("hosts").get(0).get("response").get("response").asText());
+		assertEquals("header\nrow", result.get("hosts").get(0).get("response").get("text").asText());
 		verify(configuration).setHostname(HOSTNAME);
 		final ArgumentCaptor<JsonNode> arguments = ArgumentCaptor.forClass(JsonNode.class);
 		verify(extension).executeTool(eq("sel"), eq(configuration), arguments.capture());
@@ -114,7 +119,7 @@ class ProtocolToolCallbacksTest {
 
 	@Test
 	void testTimeoutIsAppliedToTheConfigurationNotPassedToTheExtension() throws Exception {
-		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn("ok");
+		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn(new ToolText("ok"));
 		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
 		assertTrue(callback.getToolDefinition().inputSchema().contains("\"timeout\""));
 
@@ -158,6 +163,78 @@ class ProtocolToolCallbacksTest {
 		assertEquals(
 			"An error has occurred when running the tool: timeout",
 			result.get("hosts").get(0).get("response").get("error").asText()
+		);
+	}
+
+	@Test
+	void testExtensionFailureWithoutMessageIsNamedAfterItsException() throws Exception {
+		// The timeout of a request has no message
+		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenThrow(new TimeoutException());
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
+
+		assertEquals(
+			"{\"hosts\":[{\"hostname\":\"host-01\"," +
+				"\"response\":{\"error\":\"An error has occurred when running the tool: TimeoutException\"}}]," +
+				"\"errorMessage\":null}",
+			callback.call("{\"hostname\":[\"host-01\"]}")
+		);
+	}
+
+	/**
+	 * What MetricsHub Central and the agent's chat receive: the typed result of each host, or its error.
+	 */
+	@Test
+	void testJsonCarriesTheTypeOfTheResult() throws Exception {
+		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn(
+			new ToolTable(List.of("ID", "2"), List.of(List.of("1", "eth0")))
+		);
+		when(extension.executeTool(eq("chassis"), eq(configuration), any())).thenReturn(new ToolText("on"));
+		final List<ToolCallback> callbacks = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext());
+
+		final String table = callbacks.get(0).call("{\"hostname\":[\"host-01\",\"nope\"]}");
+		final String text = callbacks.get(1).call("{\"hostname\":[\"host-01\"]}");
+
+		assertEquals(
+			"{\"hosts\":[],\"errorMessage\":\"The hostname parameter is required.\"}",
+			callbacks.get(0).call("{}")
+		);
+		assertEquals(
+			"{\"hosts\":[" +
+				"{\"hostname\":\"host-01\"," +
+				"\"response\":{\"type\":\"table\",\"columns\":[\"ID\",\"2\"],\"rows\":[[\"1\",\"eth0\"]]}}," +
+				"{\"hostname\":\"nope\",\"response\":{\"error\":\"No valid ipmi configuration found for nope.\"}}" +
+				"],\"errorMessage\":null}",
+			table
+		);
+		assertEquals(
+			"{\"hosts\":[{\"hostname\":\"host-01\",\"response\":{\"type\":\"text\",\"text\":\"on\"}}],\"errorMessage\":null}",
+			text
+		);
+	}
+
+	/**
+	 * What a client of the agent's own MCP servers reads: the result rendered, as for a connector tool.
+	 */
+	@Test
+	void testMcpServersRenderTheResult() throws Exception {
+		when(extension.executeTool(eq("sel"), eq(configuration), any())).thenReturn(
+			new ToolTable(List.of("ID", "2"), List.of(List.of("1", "eth0")))
+		);
+		final ToolCallback callback = ProtocolToolCallbacks.from(agentContextHolder.getAgentContext()).get(0);
+		assertTrue(((DynamicToolCallback) callback).isRendered());
+
+		assertEquals(
+			List.of(
+				"## host-01\n\n| ID | 2 |\n| --- | --- |\n| 1 | eth0 |",
+				"## nope\n\nError: No valid ipmi configuration found for nope."
+			),
+			McpToolRegistrySync.toSpecification(callback)
+				.callHandler()
+				.apply(null, new CallToolRequest("ipmi_sel", Map.of("hostname", List.of("host-01", "nope"))))
+				.content()
+				.stream()
+				.map(content -> ((TextContent) content).text())
+				.toList()
 		);
 	}
 
