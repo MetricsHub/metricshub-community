@@ -45,6 +45,11 @@ class ConnectorToolRenderTest {
 			"| name | Column 2 | Column 3 |\n| --- | --- | --- |\n| a | 1 | x |\n| b |  |  |",
 			new ToolTable(List.of("name"), List.of(List.of("a", "1", "x"), List.of("b"))).toMarkdown()
 		);
+		// A blank name is no name
+		assertEquals(
+			"| name | Column 2 |\n| --- | --- |\n| a | 1 |",
+			new ToolTable(List.of("name", " "), List.of(List.of("a", "1"))).toMarkdown()
+		);
 		// More names than cells
 		assertEquals(
 			"| name | value |\n| --- | --- |\n| a |  |",

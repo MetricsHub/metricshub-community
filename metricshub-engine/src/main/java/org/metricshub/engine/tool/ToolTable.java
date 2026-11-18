@@ -58,7 +58,8 @@ public record ToolTable(List<String> columns, List<List<String>> rows) implement
 		}
 		final StringBuilder markdown = new StringBuilder();
 		for (int i = 0; i < width; i++) {
-			markdown.append("| ").append(i < columns.size() ? cell(columns.get(i)) : "Column " + (i + 1)).append(' ');
+			final String name = i < columns.size() ? columns.get(i) : null;
+			markdown.append("| ").append(name == null || name.isBlank() ? "Column " + (i + 1) : cell(name)).append(' ');
 		}
 		markdown.append("|\n").append("| --- ".repeat(width)).append('|');
 		for (final List<String> row : rows) {
