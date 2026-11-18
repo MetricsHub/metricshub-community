@@ -51,8 +51,8 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
  * Represents an Awk computation task for monitoring.
  * <p>
  * The <code>input</code> property, once how the script read the source result, is deprecated and ignored: the
- * script reads the source result as it is (#1559). A connector declaring it still loads, its value is dropped and
- * the content-type check reports it (<code>inputDeclared</code>).
+ * script reads the source result as it is (#1559). A connector declaring it does not load: the content-type check
+ * reports it (<code>inputDeclared</code>).
  * <p>
  * The <code>keep</code>, <code>exclude</code>, <code>separators</code> and <code>selectColumns</code> options, which
  * once filtered and split the lines the script printed, are removed: the script selects its lines and its columns

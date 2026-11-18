@@ -55,8 +55,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
  * Represents a source that executes an jawk script to retrieve data.
  * <p>
  * The <code>inputFormat</code> property, once how the script read its input, is deprecated and ignored: an input
- * that is a single source reference is read as that source is (#1559). A connector declaring it still loads, its
- * value is dropped and the content-type check reports it (<code>inputFormatDeclared</code>).
+ * that is a single source reference is read as that source is (#1559). A connector declaring it does not load: the
+ * content-type check reports it (<code>inputFormatDeclared</code>).
  * <p>
  * The <code>separators</code> property, which nothing read, is removed (#1623). A connector declaring it does not
  * load: the content-type check reports it (<code>separatorsDeclared</code>).
