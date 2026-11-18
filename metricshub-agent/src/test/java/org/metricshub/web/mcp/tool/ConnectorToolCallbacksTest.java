@@ -80,6 +80,7 @@ class ConnectorToolCallbacksTest {
 		);
 
 		final JsonNode response = result.get("hosts").get(0).get("response");
+		assertEquals("table", response.get("type").asText());
 		assertEquals(List.of("name", "value"), MAPPER.convertValue(response.get("columns"), List.class));
 		assertEquals(List.of(List.of("beta", "2-me")), MAPPER.convertValue(response.get("rows"), List.class));
 
@@ -98,6 +99,7 @@ class ConnectorToolCallbacksTest {
 			.get(0)
 			.get("response");
 		// The text as the source holds it: one line per printed line, the ";" inside a line kept (no split into cells)
+		assertEquals("text", response.get("type").asText());
 		final String text = response.get("text").asText();
 		assertTrue(text.startsWith("first note"), text);
 		assertTrue(text.contains("second, then a semicolon; here"), text);

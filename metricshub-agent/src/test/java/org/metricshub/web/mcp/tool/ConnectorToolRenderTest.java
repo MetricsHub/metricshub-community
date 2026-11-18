@@ -5,14 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.web.mcp.HostToolResponse;
 import org.metricshub.web.mcp.MultiHostToolResponse;
 import org.metricshub.web.mcp.QueryResponse;
-import org.metricshub.web.mcp.tool.ConnectorToolCallbacks.ToolTable;
-import org.metricshub.web.mcp.tool.ConnectorToolCallbacks.ToolText;
 
 /**
- * What a client of the agent's MCP servers reads for a connector tool.
+ * What a client of the agent's MCP servers reads for a connector tool or a protocol tool.
  */
 class ConnectorToolRenderTest {
 

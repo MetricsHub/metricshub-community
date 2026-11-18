@@ -11,6 +11,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -43,19 +45,21 @@ class WmiExtensionToolsTest {
 	@Test
 	void testExecuteToolWqlUsesTheGivenNamespace() throws Exception {
 		final WmiConfiguration configuration = configuration();
-		when(
-			wmiRequestExecutorMock.executeWqlQuery("host", configuration, "SELECT Name FROM Win32_Service", "root\\default")
-		).thenReturn("Name\nSpooler");
-
-		final String result = wmiExtension.executeTool(
-			"wql",
-			configuration,
-			JsonNodeFactory.instance.objectNode()
-				.put("query", "SELECT Name FROM Win32_Service")
-				.put("namespace", "root\\default")
+		final String query = "SELECT Name, State FROM Win32_Service";
+		// The names of the columns come from the interface's default method: run it, the mock only serves the rows
+		when(wmiRequestExecutorMock.executeWqlQuery("host", configuration, query, "root\\default")).thenCallRealMethod();
+		when(wmiRequestExecutorMock.executeWmi("host", configuration, query, "root\\default", null)).thenReturn(
+			List.of(List.of("Spooler", "Running"))
 		);
 
-		assertEquals("Name\nSpooler", result);
+		assertEquals(
+			new ToolTable(List.of("Name", "State"), List.of(List.of("Spooler", "Running"))),
+			wmiExtension.executeTool(
+				"wql",
+				configuration,
+				JsonNodeFactory.instance.objectNode().put("query", query).put("namespace", "root\\default")
+			)
+		);
 		assertEquals("root\\default", configuration.getNamespace());
 	}
 
@@ -65,7 +69,7 @@ class WmiExtensionToolsTest {
 		when(wmiRequestExecutorMock.executeWinRemoteCommand("host", configuration, "hostname", null)).thenReturn("WIN01");
 
 		assertEquals(
-			"WIN01",
+			new ToolText("WIN01"),
 			wmiExtension.executeTool(
 				"runCommand",
 				configuration,

@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 import java.util.stream.Stream;
 import org.metricshub.engine.tool.ToolDefinition;
-import org.metricshub.web.mcp.tool.ConnectorToolCallbacks.ToolTable;
+import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.web.mcp.tool.HostTools;
 import org.metricshub.web.mcp.tool.McpToolRegistrySync;
 import org.metricshub.web.service.AgentLifecycleService;
@@ -81,8 +81,7 @@ final class McpTransportTestSupport {
 				"Test",
 				RENDERED_TOOL,
 				new ToolDefinition("listThings", "Lists the things.", Map.of(), false),
-				(hostname, arguments) -> new ToolTable(List.of("name"), List.of(List.of("thing of " + hostname))),
-				true
+				(hostname, arguments) -> new ToolTable(List.of("name"), List.of(List.of("thing of " + hostname)))
 			);
 			return ToolCallbackProvider.from(
 				Stream.concat(

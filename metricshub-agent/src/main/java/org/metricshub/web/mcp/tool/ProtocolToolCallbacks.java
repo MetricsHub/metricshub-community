@@ -126,7 +126,7 @@ public final class ProtocolToolCallbacks {
 	 * @param agentContext the agent context the tool was built from, where the host's configurations are
 	 * @return the extension's result, or an error
 	 */
-	static QueryResponse execute(
+	static Object execute(
 		final IProtocolExtension extension,
 		final ToolDefinition definition,
 		final String hostname,
@@ -196,14 +196,14 @@ public final class ProtocolToolCallbacks {
 			.build();
 	}
 
-	private static QueryResponse runSafe(
+	private static Object runSafe(
 		final IProtocolExtension extension,
 		final String toolName,
 		final IConfiguration configuration,
 		final ObjectNode argumentsNode
 	) {
 		try {
-			return QueryResponse.builder().response(extension.executeTool(toolName, configuration, argumentsNode)).build();
+			return extension.executeTool(toolName, configuration, argumentsNode);
 		} catch (Exception e) {
 			return QueryResponse.builder()
 				.error("An error has occurred when running the tool: %s".formatted(e.getMessage()))

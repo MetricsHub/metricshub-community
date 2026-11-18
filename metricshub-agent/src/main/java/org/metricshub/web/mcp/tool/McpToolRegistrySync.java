@@ -48,7 +48,7 @@ import org.springframework.stereotype.Service;
  * tools that went away are removed and the new or changed ones added, which notifies the connected clients.
  * <p>
  * It also runs once the application is ready: Spring AI registered every tool with a specification that answers
- * with the JSON of the result, and a connector tool answers with its result rendered (see
+ * with the JSON of the result, and a connector or protocol tool answers with its result rendered (see
  * {@link #toSpecification(ToolCallback)}).
  * </p>
  */

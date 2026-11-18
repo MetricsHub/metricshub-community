@@ -18,6 +18,7 @@ import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.tool.ToolTable;
 import org.springframework.ai.mcp.McpToolUtils;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -90,13 +91,12 @@ class McpToolRegistrySyncTest {
 	/**
 	 * A tool on hosts, as the connectors and the protocol extensions declare them.
 	 */
-	private static ToolCallback hostTool(final boolean rendered) {
+	private static ToolCallback hostTool() {
 		return HostTools.perHost(
 			"Windows",
 			"Windows_listProcesses",
 			new org.metricshub.engine.tool.ToolDefinition("listProcesses", "Lists the processes.", Map.of(), false),
-			(hostname, arguments) -> new ConnectorToolCallbacks.ToolTable(List.of("pid"), List.of(List.of("4212"))),
-			rendered
+			(hostname, arguments) -> new ToolTable(List.of("pid"), List.of(List.of("4212")))
 		);
 	}
 
@@ -106,7 +106,7 @@ class McpToolRegistrySyncTest {
 
 	@Test
 	void testARenderedToolAnswersWithOneTextPerHost() {
-		final var handler = McpToolRegistrySync.toSpecification(hostTool(true)).callHandler();
+		final var handler = McpToolRegistrySync.toSpecification(hostTool()).callHandler();
 
 		final CallToolResult result = handler.apply(
 			null,
@@ -126,16 +126,13 @@ class McpToolRegistrySyncTest {
 
 	@Test
 	void testAnyOtherToolAnswersWithItsJson() {
-		final ToolCallback callback = hostTool(false);
+		final ToolCallback callback = callback("ListThings", "Lists the things.");
 
 		final CallToolResult result = McpToolRegistrySync.toSpecification(callback)
 			.callHandler()
-			.apply(
-				mock(McpSyncServerExchange.class),
-				new CallToolRequest("Windows_listProcesses", Map.of("hostname", List.of("win-01")))
-			);
+			.apply(mock(McpSyncServerExchange.class), new CallToolRequest("ListThings", Map.of()));
 
-		assertEquals(List.of(callback.call("{\"hostname\":[\"win-01\"]}")), texts(result));
+		assertEquals(List.of("{}"), texts(result));
 	}
 
 	@Test

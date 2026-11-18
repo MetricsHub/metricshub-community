@@ -26,8 +26,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +36,7 @@ import java.util.function.UnaryOperator;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
@@ -53,6 +52,9 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
 import org.metricshub.extension.win.WmiRecorder;
@@ -333,9 +335,10 @@ public class WinRmExtension implements IProtocolExtension {
 		}
 
 		return switch (queryType) {
-			case "wql", "wmi" -> winRmRequestExecutor.executeWqlQuery(hostname, winRmConfiguration, query, namespace);
+			case "wql", "wmi" ->
+				textTable(winRmRequestExecutor.executeWqlQuery(hostname, winRmConfiguration, query, namespace));
 			case "file" -> winRmRequestExecutor.readRemoteFile(hostname, winRmConfiguration, query);
-			case "ls" -> winRmRequestExecutor.listRemoteFiles(hostname, winRmConfiguration, query);
+			case "ls" -> textTable(winRmRequestExecutor.listRemoteFiles(hostname, winRmConfiguration, query));
 			case "command", "winremote" ->
 				winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null);
 			default ->
@@ -345,12 +348,16 @@ public class WinRmExtension implements IProtocolExtension {
 		};
 	}
 
+	private static String textTable(final ToolTable table) {
+		return TextTableHelper.generateTextTable(table.columns(), table.rows());
+	}
+
 	@Override
 	public List<ToolDefinition> getTools() {
 		return List.of(
 			ToolDefinition.builder(
 				"wql",
-				"Runs a WQL query on a Windows host through WinRM and returns the result as a text table."
+				"Runs a WQL query on a Windows host through WinRM and returns the result as a table."
 			)
 				.requiredParameter("query", "The WQL query, e.g. SELECT Name, State FROM Win32_Service")
 				.parameter(
@@ -372,21 +379,36 @@ public class WinRmExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
-		final ObjectNode query = JsonNodeFactory.instance.objectNode();
-		switch (toolName) {
+		final WinRmConfiguration winRmConfiguration = (WinRmConfiguration) configuration;
+		final String hostname = configuration.getHostname();
+		return switch (toolName) {
 			case "wql" -> {
 				if (arguments.hasNonNull("namespace")) {
-					((WinRmConfiguration) configuration).setNamespace(arguments.get("namespace").asText());
+					winRmConfiguration.setNamespace(arguments.get("namespace").asText());
 				}
-				query.put("queryType", "wql").set("query", arguments.get("query"));
+				yield winRmRequestExecutor.executeWqlQuery(
+					hostname,
+					winRmConfiguration,
+					arguments.get("query").asText(),
+					winRmConfiguration.getNamespace()
+				);
 			}
-			case "runCommand" -> query.put("queryType", "command").set("query", arguments.get("commandLine"));
-			case "readFile" -> query.put("queryType", "file").set("query", arguments.get("path"));
-			case "listFiles" -> query.put("queryType", "ls").set("query", arguments.get("pattern"));
+			case "runCommand" ->
+				new ToolText(
+					winRmRequestExecutor.executeWinRemoteCommand(
+						hostname,
+						winRmConfiguration,
+						arguments.get("commandLine").asText(),
+						null
+					)
+				);
+			case "readFile" ->
+				new ToolText(winRmRequestExecutor.readRemoteFile(hostname, winRmConfiguration, arguments.get("path").asText()));
+			case "listFiles" ->
+				winRmRequestExecutor.listRemoteFiles(hostname, winRmConfiguration, arguments.get("pattern").asText());
 			default -> throw new IllegalArgumentException("Unknown WinRM tool: " + toolName);
-		}
-		return executeQuery(configuration, query);
+		};
 	}
 }

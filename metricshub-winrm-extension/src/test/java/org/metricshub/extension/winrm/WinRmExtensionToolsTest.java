@@ -10,6 +10,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,18 +48,19 @@ class WinRmExtensionToolsTest {
 	@Test
 	void testExecuteToolWqlUsesTheGivenNamespace() throws Exception {
 		final WinRmConfiguration configuration = configuration();
-		when(
-			winRmRequestExecutorMock.executeWqlQuery("host", configuration, "SELECT Name FROM Win32_Service", "root\\default")
-		).thenReturn("Name\nSpooler");
+		final String query = "SELECT Name, State FROM Win32_Service";
+		// The names of the columns come from the interface's default method: run it, the mock only serves the rows
+		when(winRmRequestExecutorMock.executeWqlQuery("host", configuration, query, "root\\default")).thenCallRealMethod();
+		when(winRmRequestExecutorMock.executeWmi("host", configuration, query, "root\\default", null)).thenReturn(
+			List.of(List.of("Spooler", "Running"))
+		);
 
 		assertEquals(
-			"Name\nSpooler",
+			new ToolTable(List.of("Name", "State"), List.of(List.of("Spooler", "Running"))),
 			winRmExtension.executeTool(
 				"wql",
 				configuration,
-				JsonNodeFactory.instance.objectNode()
-					.put("query", "SELECT Name FROM Win32_Service")
-					.put("namespace", "root\\default")
+				JsonNodeFactory.instance.objectNode().put("query", query).put("namespace", "root\\default")
 			)
 		);
 		assertEquals("root\\default", configuration.getNamespace());
@@ -67,12 +70,11 @@ class WinRmExtensionToolsTest {
 	void testExecuteToolReadFileAndListFiles() throws Exception {
 		final WinRmConfiguration configuration = configuration();
 		when(winRmRequestExecutorMock.readRemoteFile("host", configuration, "C:\\hosts")).thenReturn("127.0.0.1 localhost");
-		when(winRmRequestExecutorMock.listRemoteFiles("host", configuration, "C:\\logs\\*.log")).thenReturn(
-			"C:\\logs\\a.log"
-		);
+		final ToolTable files = new ToolTable(List.of("Path"), List.of(List.of("C:\\logs\\a.log")));
+		when(winRmRequestExecutorMock.listRemoteFiles("host", configuration, "C:\\logs\\*.log")).thenReturn(files);
 
 		assertEquals(
-			"127.0.0.1 localhost",
+			new ToolText("127.0.0.1 localhost"),
 			winRmExtension.executeTool(
 				"readFile",
 				configuration,
@@ -80,7 +82,7 @@ class WinRmExtensionToolsTest {
 			)
 		);
 		assertEquals(
-			"C:\\logs\\a.log",
+			files,
 			winRmExtension.executeTool(
 				"listFiles",
 				configuration,
@@ -95,7 +97,7 @@ class WinRmExtensionToolsTest {
 		when(winRmRequestExecutorMock.executeWinRemoteCommand("host", configuration, "hostname", null)).thenReturn("WIN01");
 
 		assertEquals(
-			"WIN01",
+			new ToolText("WIN01"),
 			winRmExtension.executeTool(
 				"runCommand",
 				configuration,

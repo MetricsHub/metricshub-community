@@ -42,6 +42,8 @@ import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.web.mcp.MCPConfigHelper;
 import org.metricshub.web.mcp.MultiHostToolResponse;
 import org.metricshub.web.mcp.QueryResponse;
@@ -57,60 +59,6 @@ import org.springframework.ai.tool.ToolCallback;
 public final class ConnectorToolCallbacks {
 
 	private static final String OTHER_DECLARATION_ERROR = "Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
-
-	/**
-	 * What a connector tool returns for one host.
-	 *
-	 * @param columns the column names the tool declares, empty when it declares none
-	 * @param rows    the rows of the tool's result source
-	 */
-	public record ToolTable(List<String> columns, List<List<String>> rows) {
-		/**
-		 * @return the table in GitHub-flavored Markdown, as wide as its widest row or as its columns: a column
-		 *         without a name is headed {@code Column N}, a shorter row ends with empty cells, and there is no
-		 *         alignment padding; {@code (empty)} for a table of no column and no cell
-		 */
-		String toMarkdown() {
-			final int width = Math.max(columns.size(), rows.stream().mapToInt(List::size).max().orElse(0));
-			if (width == 0) {
-				return "(empty)";
-			}
-			final StringBuilder markdown = new StringBuilder();
-			for (int i = 0; i < width; i++) {
-				markdown.append("| ").append(i < columns.size() ? cell(columns.get(i)) : "Column " + (i + 1)).append(' ');
-			}
-			markdown.append("|\n").append("| --- ".repeat(width)).append('|');
-			for (final List<String> row : rows) {
-				markdown.append('\n');
-				for (int i = 0; i < width; i++) {
-					markdown.append("| ").append(i < row.size() ? cell(row.get(i)) : "").append(' ');
-				}
-				markdown.append('|');
-			}
-			return markdown.toString();
-		}
-
-		/**
-		 * @param value the value of a cell, {@code null} for none
-		 * @return the value on one line of a Markdown table: a pipe is escaped, with the backslashes right before
-		 *         it, which would otherwise escape the escape and leave the pipe to end the cell
-		 */
-		private static String cell(final String value) {
-			return value == null
-				? ""
-				: value.replaceAll("(\\\\*)\\|", "$1$1\\\\|")
-					.replace("\r\n", "<br>")
-					.replace("\n", "<br>")
-					.replace("\r", "<br>");
-		}
-	}
-
-	/**
-	 * What a tool returns when its result is text (a command output): the text as it is, for the LLM to read.
-	 *
-	 * @param text the text of the result source
-	 */
-	public record ToolText(String text) {}
 
 	/**
 	 * @param agentContext the agent context to build the tools from, the one every callback stays on
@@ -157,8 +105,7 @@ public final class ConnectorToolCallbacks {
 						connectorId,
 						HostTools.toolName(connectorId, toolName),
 						definition,
-						(hostname, arguments) -> run(agentContext, connectorId, toolName, definition, hostname, arguments),
-						true
+						(hostname, arguments) -> run(agentContext, connectorId, toolName, definition, hostname, arguments)
 					)
 				);
 			} catch (IllegalArgumentException e) {
@@ -170,9 +117,9 @@ public final class ConnectorToolCallbacks {
 	}
 
 	/**
-	 * What a client of the agent's own MCP servers reads for a connector tool, instead of the JSON the other
-	 * interfaces receive: one text per host, in the order of the hosts, each under the host name as a heading. A
-	 * table is a Markdown table, a text is the text as it is, an error is one line.
+	 * What a client of the agent's own MCP servers reads for a connector tool or a protocol tool, instead of the
+	 * JSON the other interfaces receive: one text per host, in the order of the hosts, each under the host name as
+	 * a heading. A table is a Markdown table, a text is the text as it is, an error is one line.
 	 *
 	 * @param result what the tool answered
 	 * @return the texts; the error message alone when the tool ran on no host

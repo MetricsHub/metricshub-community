@@ -55,6 +55,9 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
+import org.metricshub.engine.tool.ToolResult;
+import org.metricshub.engine.tool.ToolTable;
+import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
 import org.metricshub.ipmi.client.SelEntry;
@@ -435,7 +438,10 @@ public class IpmiExtension implements IProtocolExtension {
 		final String type = text(query, "query");
 		return switch (type == null ? "sensors" : type.trim().toLowerCase()) {
 			case "sensors" -> ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
-			case "sel" -> selQuery(hostname, ipmiConfiguration, text(query, "since"));
+			case "sel" ->
+				IpmiResultConverter.SEL_HEADER +
+					NEW_LINE +
+					SourceTable.tableToCsv(selRows(hostname, ipmiConfiguration, text(query, "since")), TABLE_SEP, true);
 			case "raw" ->
 				ipmiRequestExecutor.executeIpmiRaw(
 					hostname,
@@ -459,9 +465,13 @@ public class IpmiExtension implements IProtocolExtension {
 	 * @param ipmiConfiguration The IPMI configuration of the host
 	 * @param since             A duration ({@code 30m}, {@code 1h}, {@code 2d}, or seconds) to keep only the entries
 	 *                          logged since then; {@code null} or blank for the whole log
-	 * @return the header line, then one line per entry
+	 * @return one row per entry, with the columns of {@link IpmiResultConverter#SEL_HEADER}
 	 */
-	private String selQuery(final String hostname, final IpmiConfiguration ipmiConfiguration, final String since) {
+	private List<List<String>> selRows(
+		final String hostname,
+		final IpmiConfiguration ipmiConfiguration,
+		final String since
+	) {
 		final SelRead read = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, null, true, 0);
 		List<SelEntry> entries = read.entries();
 		if (since != null && !since.isBlank()) {
@@ -469,8 +479,7 @@ public class IpmiExtension implements IProtocolExtension {
 			final Instant from = Instant.now().minusSeconds(TimeDeserializer.interpretValueOf(since.trim()));
 			entries = entries.stream().filter(entry -> entry.timestamp().map(from::isBefore).orElse(false)).toList();
 		}
-		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
-		return IpmiResultConverter.SEL_HEADER + NEW_LINE + SourceTable.tableToCsv(rows, TABLE_SEP, true);
+		return IpmiResultConverter.convertSel(entries, read.sensors());
 	}
 
 	/**
@@ -529,7 +538,7 @@ public class IpmiExtension implements IProtocolExtension {
 				.build(),
 			ToolDefinition.builder(
 				"sel",
-				"Reads the System Event Log of a server through IPMI, as CSV with a header line. Reading a large log takes" +
+				"Reads the System Event Log of a server through IPMI, as a table. Reading a large log takes" +
 					" several seconds per hundred entries: raise the timeout accordingly."
 			)
 				.parameter(
@@ -563,18 +572,25 @@ public class IpmiExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
+	public ToolResult executeTool(final String toolName, final IConfiguration configuration, final JsonNode arguments)
 		throws Exception {
+		if ("sel".equals(toolName)) {
+			return new ToolTable(
+				List.of(IpmiResultConverter.SEL_HEADER.split(TABLE_SEP)),
+				selRows(configuration.getHostname(), (IpmiConfiguration) configuration, text(arguments, "since"))
+			);
+		}
+		// The other tools return a text: the sensors come as lines of several layouts, one per kind of line
 		final ObjectNode query = JsonNodeFactory.instance.objectNode();
 		if (arguments instanceof ObjectNode argumentsNode) {
 			query.setAll(argumentsNode);
 		}
 		switch (toolName) {
-			case "sensors", "sel", "raw" -> query.put("query", toolName);
+			case "sensors", "raw" -> query.put("query", toolName);
 			case "chassisStatus" -> query.put("query", "chassis").put("action", "status");
 			case "chassisAction" -> query.put("query", "chassis");
 			default -> throw new IllegalArgumentException("Unknown IPMI tool: " + toolName);
 		}
-		return executeQuery(configuration, query);
+		return new ToolText(executeQuery(configuration, query));
 	}
 }

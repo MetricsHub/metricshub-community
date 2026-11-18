@@ -73,7 +73,8 @@ public final class DynamicToolCallback implements ToolCallback {
 
 	/**
 	 * Whether the agent's own MCP servers answer with the result rendered for reading, one text per host (see
-	 * {@link ConnectorToolCallbacks#render}), rather than with its JSON: the case of the connector tools.
+	 * {@link ConnectorToolCallbacks#render}), rather than with its JSON: the case of the connector tools and of
+	 * the protocol tools.
 	 */
 	@Getter
 	private final boolean rendered;

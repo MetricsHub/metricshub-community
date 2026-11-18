@@ -27,21 +27,13 @@ import lombok.Data;
 @Data
 @Builder
 /**
- * Represents the result of a query execution.
- * <p>
- * Contains either a successful {@code response} or an {@code error} message
- * describing why the query failed.
- * </p>
+ * What a host answers when a connector tool or a protocol tool could not run on it, in place of the
+ * {@link org.metricshub.engine.tool.ToolResult} of a success.
  */
 public class QueryResponse {
 
 	/**
-	 * Error message if the query failed, otherwise {@code null}.
+	 * Why the tool failed on the host.
 	 */
 	private final String error;
-
-	/**
-	 * The successful response payload if the query succeeded, otherwise {@code null}.
-	 */
-	private final String response;
 }
