@@ -24,6 +24,6 @@ tools:
     sources:
       thing:
         type: static
-        value: ${param::thing}
+        value: [ "${param::thing}" ]
     result:
       source: ${source::thing}

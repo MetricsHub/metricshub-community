@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * Deserializes a <code>tableJoin</code> input (<code>leftTable</code>, <code>rightTable</code>): a non-blank scalar,
- * returned as a {@link String} (a source reference, or a legacy table literal written as <code>;</code> CSV text), or
+ * returned as a {@link String} (a source reference: the load-time check rejects any other string), or
  * a table literal written as a YAML list of rows, each row a list of cells, returned as a {@link List} of
  * {@link List} of {@link String}: exactly these rows and cells.
  */
@@ -77,7 +77,7 @@ public class TableLiteralDeserializer extends JsonDeserializer<Object> {
 			}
 			final List<String> row = new ArrayList<>();
 			while (parser.nextToken() != JsonToken.END_ARRAY) {
-				// A null cell (~) is rejected: the string form can never produce one
+				// A null cell (~) is rejected: a cell is a text, possibly empty
 				if (!parser.currentToken().isScalarValue() || parser.hasToken(JsonToken.VALUE_NULL)) {
 					return context.reportInputMismatch(
 						String.class,

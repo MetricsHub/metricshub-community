@@ -114,7 +114,7 @@ public class Json2Csv extends Compute {
 	public Json2Csv(
 		@JsonProperty("type") String type,
 		@JsonProperty("entryKey") String entryKey,
-		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.Properties.class) Object properties,
+		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties,
 		@JsonProperty("separator") String separator
 	) {
 		super(type);

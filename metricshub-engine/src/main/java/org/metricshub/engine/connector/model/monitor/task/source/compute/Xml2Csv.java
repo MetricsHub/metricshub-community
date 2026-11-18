@@ -77,7 +77,7 @@ public class Xml2Csv extends Compute {
 	public Xml2Csv(
 		@JsonProperty("type") String type,
 		@JsonProperty("recordTag") String recordTag,
-		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.Properties.class) Object properties
+		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties
 	) {
 		super(type);
 		this.recordTag = recordTag == null ? "/" : recordTag;

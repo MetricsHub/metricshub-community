@@ -42,7 +42,7 @@ afterAll:
     leftKeyColumn: 1
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: ;;
+    defaultRightLine: [ "", "" ]
   source(8):
     type: tableJoin
     leftTable: ${source::afterAll.source(7)}
@@ -50,7 +50,7 @@ afterAll:
     leftKeyColumn: 5
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: ;;;;
+    defaultRightLine: [ "", "", "", "" ]
   source(9):
     type: wbem
     query: SELECT __PATH,ElementName,Description,OtherIdentifyingInfo,OperationalStatus FROM EMC_StorageSystemSlave
@@ -62,7 +62,7 @@ afterAll:
     leftKeyColumn: 1
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: ;;
+    defaultRightLine: [ "", "" ]
   source(11):
     type: tableJoin
     leftTable: ${source::afterAll.source(10)}
@@ -70,7 +70,7 @@ afterAll:
     leftKeyColumn: 5
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: ;;;;
+    defaultRightLine: [ "", "", "", "" ]
   source(12):
     type: tableUnion
     tables:

@@ -30,20 +30,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Deserializes <code>static.value</code>: a scalar, returned as a {@link String} holding its text (legacy form), or
- * a YAML list, returned as the rows of the table, a {@link List} of {@link List} of {@link String}. The list holds
- * either cells, which are the single row (<code>[ a, b ]</code>), or rows, each a list of cells
- * (<code>[ [ a, 1 ], [ b, 2 ] ]</code>), never both. An empty list is an empty table. A row needs one cell at
- * least; a cell is a scalar other than null, and may hold a line break.
+ * Deserializes <code>static.value</code>: a YAML list, returned as the rows of the table, a {@link List} of
+ * {@link List} of {@link String}. The list holds either cells, which are the single row (<code>[ a, b ]</code>), or
+ * rows, each a list of cells (<code>[ [ a, 1 ], [ b, 2 ] ]</code>), never both. An empty list is an empty table. A
+ * row needs one cell at least; a cell is a scalar other than null, and may hold a line break. A scalar is rejected:
+ * a table is never written as a string.
  */
-public class StaticValueDeserializer extends JsonDeserializer<Object> {
+public class StaticValueDeserializer extends JsonDeserializer<List<List<String>>> {
 
 	@Override
-	public Object deserialize(final JsonParser parser, final DeserializationContext context) throws IOException {
+	public List<List<String>> deserialize(final JsonParser parser, final DeserializationContext context)
+		throws IOException {
 		if (!parser.isExpectedStartArrayToken()) {
-			return parser.currentToken().isScalarValue()
-				? parser.getText()
-				: context.handleUnexpectedToken(Object.class, parser);
+			return context.reportInputMismatch(
+				List.class,
+				"Expected a list of cells, such as [ a, b ], or a list of rows, such as [ [ a, 1 ], [ b, 2 ] ], got %s",
+				parser.currentToken()
+			);
 		}
 
 		final List<List<String>> rows = new ArrayList<>();
@@ -85,7 +88,7 @@ public class StaticValueDeserializer extends JsonDeserializer<Object> {
 	 * @throws IOException when the token is no scalar, or is null
 	 */
 	private static String readCell(final JsonParser parser, final DeserializationContext context) throws IOException {
-		// A null cell (~) is rejected: the string form can never produce one
+		// A null cell (~) is rejected: a cell is a text, possibly empty
 		if (!parser.currentToken().isScalarValue() || parser.hasToken(JsonToken.VALUE_NULL)) {
 			return context.reportInputMismatch(String.class, "A cell must be a scalar other than null");
 		}

@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * Deserializes the members of a <code>tableUnion</code>. A list holds non-blank scalars, each returned as a
- * {@link String} (a source reference, or a legacy table literal written as <code>;</code> CSV text), and table
+ * {@link String} (a source reference: the load-time check rejects any other string), and table
  * literals written as lists of rows (see {@link TableLiteralDeserializer}), each returned as a {@link List} of rows. A
  * scalar is the legacy comma-separated list of strings.
  */

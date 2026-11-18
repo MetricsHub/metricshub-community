@@ -108,7 +108,7 @@ class SourceTest {
 	void testReferencesStatic() throws IOException {
 		final String staticSourceYaml = """
 			type: static
-			value: ${source::monitors.cpu.discovery.sources.source1}
+			value: [ "${source::monitors.cpu.discovery.sources.source1}" ]
 			""";
 		final Source source = MAPPER.readValue(staticSourceYaml, Source.class);
 		assertEquals(Set.of(SOURCE_REF1), source.getReferences());
@@ -121,7 +121,7 @@ class SourceTest {
 			forceSerialization: false
 			leftTable: ${source::monitors.cpu.discovery.sources.source1}
 			rightTable: ${source::monitors.cpu.discovery.sources.source2}
-			defaultRightLine: ;;;;;;
+			defaultRightLine: [ "", "", "", "", "", "" ]
 			keyType: WBEM
 			leftKeyColumn: 1
 			rightKeyColumn: 2

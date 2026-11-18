@@ -98,7 +98,7 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(1)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(";;")
+					.defaultRightLine(List.of("", ""))
 					.key("${source::monitors.enclosure.discovery.sources.source(6)}")
 					.build(),
 				"source(7)",
@@ -109,7 +109,7 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(5)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(";;;;")
+					.defaultRightLine(List.of("", "", "", ""))
 					.key("${source::monitors.enclosure.discovery.sources.source(7)}")
 					.build()
 			)
@@ -294,7 +294,7 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(1)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(";;")
+					.defaultRightLine(List.of("", ""))
 					.key("${source::monitors.enclosure.simple.sources.source(6)}")
 					.build(),
 				"source(7)",
@@ -305,7 +305,7 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(5)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(";;;;")
+					.defaultRightLine(List.of("", "", "", ""))
 					.key("${source::monitors.enclosure.simple.sources.source(7)}")
 					.build()
 			)

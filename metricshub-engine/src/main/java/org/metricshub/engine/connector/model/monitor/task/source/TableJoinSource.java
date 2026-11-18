@@ -38,8 +38,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.deserializer.custom.CellsDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.PositiveIntegerDeserializer;
-import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.TableLiteralDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -57,8 +57,8 @@ public class TableJoinSource extends Source {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The left table to join, in its string form: a source reference, or a legacy table literal written as
-	 * <code>;</code> CSV text. Null when the table is written as a list of rows (see {@link #leftTableRows}).
+	 * The left table to join, in its string form: a source reference, the load-time check rejects any other string.
+	 * Null when the table is written as a list of rows (see {@link #leftTableRows}).
 	 */
 	@JsonSetter(nulls = FAIL)
 	private String leftTable;
@@ -72,8 +72,8 @@ public class TableJoinSource extends Source {
 	private List<List<String>> leftTableRows;
 
 	/**
-	 * The right table to join, in its string form: a source reference, or a legacy table literal written as
-	 * <code>;</code> CSV text. Null when the table is written as a list of rows (see {@link #rightTableRows}).
+	 * The right table to join, in its string form: a source reference, the load-time check rejects any other string.
+	 * Null when the table is written as a list of rows (see {@link #rightTableRows}).
 	 */
 	@JsonSetter(nulls = FAIL)
 	private String rightTable;
@@ -100,16 +100,10 @@ public class TableJoinSource extends Source {
 	private Integer rightKeyColumn;
 
 	/**
-	 * The default line for right table entries when there is no match, in its legacy string form: split on
-	 * <code>;</code> when the join runs. Null when the line is written as a list (see {@link #defaultRightLineCells}).
+	 * The cells of the default line for right table entries when there is no match, a YAML list: exactly these cells,
+	 * <code>[ "", "" ]</code> being two empty cells. Null when the join has no default line.
 	 */
-	private String defaultRightLine;
-
-	/**
-	 * The cells of the default line for right table entries when there is no match, when the line is written as a
-	 * YAML list: exactly these cells, <code>[ "", "" ]</code> being two empty cells. Null in the string form.
-	 */
-	private List<String> defaultRightLineCells;
+	private List<String> defaultRightLine;
 
 	/**
 	 * The type of key used for the join.
@@ -127,8 +121,7 @@ public class TableJoinSource extends Source {
 	 * @param rightTable           The right table to join, in the same forms as the left table.
 	 * @param leftKeyColumn        The column index from the left table to use as the key for the join.
 	 * @param rightKeyColumn       The column index from the right table to use as the key for the join.
-	 * @param defaultRightLine     The default line for right table entries when there is no match: a {@link String}
-	 *                             split on <code>;</code> when the join runs (legacy form) or a {@link List} of cells.
+	 * @param defaultRightLine     The cells of the default line for right table entries when there is no match.
 	 * @param keyType              The type of key used for the join.
 	 * @param key                  The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
@@ -147,7 +140,7 @@ public class TableJoinSource extends Source {
 		) Object rightTable,
 		@JsonProperty(value = "leftKeyColumn", required = true) Integer leftKeyColumn,
 		@JsonProperty(value = "rightKeyColumn", required = true) Integer rightKeyColumn,
-		@JsonProperty("defaultRightLine") @JsonDeserialize(using = StringOrListDeserializer.class) Object defaultRightLine,
+		@JsonProperty("defaultRightLine") @JsonDeserialize(using = CellsDeserializer.class) List<String> defaultRightLine,
 		@JsonProperty("keyType") String keyType,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
@@ -165,13 +158,8 @@ public class TableJoinSource extends Source {
 		}
 		this.leftKeyColumn = leftKeyColumn;
 		this.rightKeyColumn = rightKeyColumn;
-		if (defaultRightLine instanceof List<?> cells) {
-			this.defaultRightLineCells = cells.stream()
-				.map(String.class::cast)
-				.collect(Collectors.toCollection(ArrayList::new));
-		} else {
-			this.defaultRightLine = (String) defaultRightLine;
-		}
+		// A mutable copy: update(UnaryOperator) changes the cells of the copy
+		this.defaultRightLine = defaultRightLine != null ? new ArrayList<>(defaultRightLine) : null;
 		this.keyType = keyType;
 	}
 
@@ -187,7 +175,7 @@ public class TableJoinSource extends Source {
 			.rightTable(rightTableRows != null ? rightTableRows : rightTable)
 			.leftKeyColumn(leftKeyColumn)
 			.rightKeyColumn(rightKeyColumn)
-			.defaultRightLine(defaultRightLineCells != null ? defaultRightLineCells : defaultRightLine)
+			.defaultRightLine(defaultRightLine)
 			.keyType(keyType)
 			.build();
 	}
@@ -203,9 +191,8 @@ public class TableJoinSource extends Source {
 			rightTableRows.forEach(row -> row.replaceAll(updater));
 		}
 		keyType = updater.apply(keyType);
-		defaultRightLine = updater.apply(defaultRightLine);
-		if (defaultRightLineCells != null) {
-			defaultRightLineCells.replaceAll(updater);
+		if (defaultRightLine != null) {
+			defaultRightLine.replaceAll(updater);
 		}
 	}
 
@@ -222,7 +209,6 @@ public class TableJoinSource extends Source {
 		addNonNull(stringJoiner, "- leftKeyColumn=", leftKeyColumn);
 		addNonNull(stringJoiner, "- rightKeyColumn=", rightKeyColumn);
 		addNonNull(stringJoiner, "- defaultRightLine=", defaultRightLine);
-		addNonNull(stringJoiner, "- defaultRightLine=", defaultRightLineCells);
 		addNonNull(stringJoiner, "- keyType=", keyType);
 
 		return stringJoiner.toString();

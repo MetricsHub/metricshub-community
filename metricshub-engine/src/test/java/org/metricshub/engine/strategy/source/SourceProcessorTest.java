@@ -102,7 +102,7 @@ class SourceProcessorTest {
 	private static final String LOWERCASE_Z = "z";
 	private static final String TAB2_REF = "${source::monitors.cpu.discovery.sources.tab2}";
 	private static final String TAB3_REF = "${source::monitors.cpu.discovery.sources.tab3}";
-	private static final String VALUE_LIST = "a1;b1;c1";
+	private static final List<String> VALUE_LIST = List.of("a1", "b1", "c1");
 	private static final String ONE = "1";
 	private static final String TWO = "2";
 	private static final String THREE = "3";
@@ -389,7 +389,7 @@ class SourceProcessorTest {
 			.build();
 		assertEquals(expectedResult, sourceProcessor.process(tableJoinExample));
 
-		// list form of the default right line: the exact cells, not split on ';'
+		// the default right line is the exact cells, not split on ';'
 		final List<List<String>> listJoin = List.of(List.of("joined"));
 		doReturn(listJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, List.of("", "a;b", ""), false, true);
@@ -709,7 +709,8 @@ class SourceProcessorTest {
 
 	/**
 	 * A table literal written as a list of rows is exactly these rows, a <code>;</code> in a cell included, next to a
-	 * referenced member and a legacy <code>;</code> CSV literal; the union copies the rows of the literal.
+	 * referenced member; the union copies the rows of the literal. A member that is a string and no source reference
+	 * is no table: the load-time check rejects it.
 	 */
 	@Test
 	void testProcessTableUnionSourceLiteralRows() {
@@ -735,10 +736,7 @@ class SourceProcessorTest {
 		final SourceTable union = sourceProcessor.process(
 			TableUnionSource.builder().tables(List.of(literal, TAB1_REF, "x;y;")).build()
 		);
-		assertEquals(
-			SourceTable.ofTable(List.of(List.of("in", "a;b", ""), List.of("out"), List.of("r", "s"), List.of("x", "y"))),
-			union
-		);
+		assertEquals(SourceTable.ofTable(List.of(List.of("in", "a;b", ""), List.of("out"), List.of("r", "s"))), union);
 		// A compute on the union cannot change the literal
 		union.getTable().get(0).set(0, "changed");
 		assertEquals("in", literal.get(0).get(0));
@@ -835,7 +833,7 @@ class SourceProcessorTest {
 
 		List<List<String>> expectedTable = Arrays.asList(Arrays.asList(LOWERCASE_A1));
 
-		staticSource = StaticSource.builder().value(LOWERCASE_A1).build();
+		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1)).build();
 
 		assertEquals(expectedTable, sourceProcessor.process(staticSource).getTable());
 		assertEquals(SourceTable.empty(), sourceProcessor.process(new StaticSource()));
@@ -846,7 +844,7 @@ class SourceProcessorTest {
 
 		assertEquals(expectedTable, sourceProcessor.process(staticSource).getTable());
 
-		// list form: the single row of exactly these cells, a ';' in a cell included
+		// The single row of exactly these cells, a ';' in a cell included
 		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1, "", "b;1")).build();
 		final SourceTable listResult = sourceProcessor.process(staticSource);
 		assertEquals(SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "", "b;1"))), listResult);

@@ -716,7 +716,7 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		StaticSource staticSource = StaticSource.builder().value(VALUE_VAL1).build();
+		StaticSource staticSource = StaticSource.builder().value(List.of(VALUE_VAL1)).build();
 		final List<List<String>> resultTable = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
 		final SourceTable expected = SourceTable.ofTable(resultTable);
 		doReturn(expected).when(sourceProcessor).process(any(StaticSource.class));

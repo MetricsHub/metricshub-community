@@ -9,4 +9,4 @@ beforeAll:
     rightTable: testRight
     leftKeyColumn: "2"
     rightKeyColumn: 3
-    defaultRightLine: testdefault;;;
+    defaultRightLine: [ "testdefault", "", "" ]

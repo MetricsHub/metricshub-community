@@ -27,6 +27,7 @@ import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
 import org.metricshub.engine.connector.model.common.TranslationTable;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
@@ -499,6 +500,20 @@ class SourceTableReadRulesTest {
 		assertNull(extractToken(SourceTable.empty()));
 	}
 
+	/**
+	 * An HTTP authentication token that is not a source reference is the token itself, whole: it is never parsed as
+	 * a <code>;</code> table.
+	 */
+	@Test
+	void httpTokenThatIsNotAReferenceIsTheTokenItself() {
+		final SourceUpdaterProcessor processor = sourceUpdaterProcessor(
+			telemetryManagerWith(SOURCE_REF, SourceTable.empty())
+		);
+		assertEquals("to;ken;", processor.extractHttpTokenFromSource("original", "to;ken;", "authenticationToken"));
+		assertEquals(EMPTY, processor.extractHttpTokenFromSource("original", EMPTY, "authenticationToken"));
+		assertNull(processor.extractHttpTokenFromSource("original", null, "authenticationToken"));
+	}
+
 	private String extractToken(final SourceTable sourceTable) {
 		return sourceUpdaterProcessor(telemetryManagerWith(SOURCE_REF, sourceTable)).extractHttpTokenFromSource(
 			"original",
@@ -529,5 +544,27 @@ class SourceTableReadRulesTest {
 		assertEquals(SourceTable.ofTable(table("a|b", "c")), tableCopy);
 		tableCopy.getTable().get(0).set(0, "changed");
 		assertEquals("a", origin.getTable().get(0).get(0));
+	}
+
+	/**
+	 * A source reference in a cell of a <code>static</code> source is interpolated as in any other field: the cell
+	 * holds the text of the source. A <code>static</code> source never reads a reference as a source,
+	 * <code>copy</code> does.
+	 */
+	@Test
+	void staticCellInterpolatesTheTextOfASource() {
+		final TelemetryManager telemetryManager = telemetryManagerWith(SOURCE_REF, SourceTable.ofText("body"));
+		final SourceUpdaterProcessor processor = new SourceUpdaterProcessor(
+			SourceProcessor.builder().telemetryManager(telemetryManager).connectorId(MY_CONNECTOR_1_NAME).build(),
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(),
+			extensionManager
+		);
+
+		assertEquals(
+			SourceTable.ofTable(table("id|a-body")),
+			processor.process(StaticSource.builder().value(List.of("id", "a-" + SOURCE_REF)).build())
+		);
 	}
 }

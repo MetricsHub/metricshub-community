@@ -41,14 +41,9 @@ class SourceTableTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostProperties(hostProperties).build();
 
-		Optional<SourceTable> sourceTableOpt = SourceTable.lookupSourceTable(
-			HARDCODED_SOURCE,
-			MY_CONNECTOR_1_NAME,
-			telemetryManager
-		);
-		assertTrue(sourceTableOpt.isPresent());
-
-		assertEquals(HARDCODED_SOURCE, sourceTableOpt.get().getTable().get(0).get(0));
+		// What is not a source reference is no source: a hard-coded table is never parsed
+		assertTrue(SourceTable.lookupSourceTable(HARDCODED_SOURCE, MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
+		assertTrue(SourceTable.lookupSourceTable("a;b;c", MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
 	}
 
 	@Test
