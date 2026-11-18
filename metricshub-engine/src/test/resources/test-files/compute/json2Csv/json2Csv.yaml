@@ -10,18 +10,19 @@ beforeAll:
     computes:
       - type: json2Csv
         entryKey: /
-        properties: property;test;here
+        properties: [ property, test, here ]
       - type: json2Csv
         entryKey: /items
-        properties: name
+        properties: [ name ]
         parsingMode: Events
       - type: json2Table
         entryKey: /items
-        properties: name
+        properties: [ name ]
         parsingMode: Events
-      - type: json2Table
-        properties: property;;here;
       - type: json2Table
         properties: [ property, "", here ]
       - type: json2Table
         properties: [ "a;b", 1 ]
+      - type: json2Table
+        properties: property;here
+        separator: ;

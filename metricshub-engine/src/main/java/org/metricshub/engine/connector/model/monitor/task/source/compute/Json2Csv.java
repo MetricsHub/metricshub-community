@@ -23,8 +23,6 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -36,14 +34,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
@@ -55,6 +51,10 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
  * {@link org.metricshub.engine.client.ClientsExecutor#JSON_EVENTS_MIN_LENGTH} characters or more is read as a stream of
  * events, a smaller one as a tree (#1593). A connector declaring it still deserializes, its value dropped, and the
  * content-type check rejects it (<code>parsingModeDeclared</code>).
+ * <p>
+ * The content-type check also rejects the <code>properties</code> written as a string, once split on <code>;</code>
+ * (<code>propertiesAsString</code>), and the <code>separator</code> property, removed because the result is a table
+ * (<code>separatorDeclared</code>).
  */
 @Data
 @NoArgsConstructor
@@ -71,16 +71,35 @@ public class Json2Csv extends Compute {
 
 	/**
 	 * The properties, one per column after the entry identifier. Written in the connector as a YAML list, each item
-	 * one property, or as a string (legacy form) split on <code>;</code> when the compute is built, one trailing
-	 * empty item dropped. Null when the connector sets none.
+	 * one property. Null when the connector sets none.
 	 */
 	private List<String> properties;
 
 	/**
-	 * Deprecated, ignored: the compute builds its rows from the JSON values, with one cell per property, so no
-	 * separator splits them. Still accepted so that the connectors setting it load.
+	 * Whether the connector writes <code>properties</code> as a string instead of a list, which the content-type
+	 * check reports: the compute then has no properties. Never serialized, not part of the equality, not copied.
 	 */
-	private String separator;
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean propertiesAsString;
+
+	/**
+	 * Whether the connector writes the removed <code>separator</code> property, which the content-type check
+	 * reports. Never serialized, not part of the equality, not copied.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean separatorDeclared;
+
+	/**
+	 * Records that the connector writes the removed <code>separator</code> property.
+	 *
+	 * @param separator The ignored value
+	 */
+	@JsonSetter("separator")
+	private void declareSeparator(final Object separator) {
+		separatorDeclared = true;
+	}
 
 	/**
 	 * Whether the connector writes the deprecated, ignored <code>parsingMode</code> property, which the content-type
@@ -105,26 +124,31 @@ public class Json2Csv extends Compute {
 	 *
 	 * @param type        The type of the computation task.
 	 * @param entryKey    The entry key for Json2Csv computation.
-	 * @param properties  The properties: a {@link List} of strings, or a {@link String} split on <code>;</code>
-	 *                    (legacy form).
-	 * @param separator   Deprecated, ignored by the compute; still accepted so that the connectors setting it load.
+	 * @param properties  The properties, null for none.
 	 */
 	@Builder
-	@JsonCreator
-	public Json2Csv(
-		@JsonProperty("type") String type,
-		@JsonProperty("entryKey") String entryKey,
-		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties,
-		@JsonProperty("separator") String separator
-	) {
+	public Json2Csv(final String type, final String entryKey, final List<String> properties) {
 		super(type);
 		this.entryKey = entryKey == null ? "/" : entryKey;
-		if (properties instanceof List<?> items) {
-			this.properties = items.stream().map(String.class::cast).collect(Collectors.toCollection(ArrayList::new));
-		} else if (properties != null) {
-			this.properties = SourceTable.lineToList((String) properties, SEMICOLON);
-		}
-		this.separator = separator == null ? TABLE_SEP : separator;
+		this.properties = properties == null ? null : new ArrayList<>(properties);
+	}
+
+	/**
+	 * Construct the instance a connector describes.
+	 *
+	 * @param type        The type of the computation task.
+	 * @param entryKey    The entry key for Json2Csv computation.
+	 * @param properties  The properties: a {@link List} of strings, or a {@link String}, which is only recorded for
+	 *                    the content-type check.
+	 */
+	@JsonCreator
+	Json2Csv(
+		@JsonProperty("type") String type,
+		@JsonProperty("entryKey") String entryKey,
+		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties
+	) {
+		this(type, entryKey, properties instanceof List<?> items ? items.stream().map(String.class::cast).toList() : null);
+		propertiesAsString = properties instanceof String;
 	}
 
 	@Override
@@ -145,20 +169,18 @@ public class Json2Csv extends Compute {
 
 		addNonNull(stringJoiner, "- entryKey=", entryKey);
 		addNonNull(stringJoiner, "- properties=", properties);
-		addNonNull(stringJoiner, "- separator=", separator);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Json2Csv copy() {
-		return Json2Csv.builder().type(type).entryKey(entryKey).properties(properties).separator(separator).build();
+		return Json2Csv.builder().type(type).entryKey(entryKey).properties(properties).build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		entryKey = updater.apply(entryKey);
-		separator = updater.apply(separator);
 		if (properties != null) {
 			properties.replaceAll(updater);
 		}

@@ -66,6 +66,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 
@@ -92,8 +93,10 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#UNRESOLVED_REFERENCE}: a reference, anywhere in a source, a mapping or a tool result, to a source
  * the connector does not have;</li>
  * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored <code>json2Table</code>
- * <code>parsingMode</code>, awk <code>input</code>, awk source <code>inputFormat</code>, and the removed awk
- * <code>keep</code>, <code>exclude</code>, <code>separators</code>, <code>selectColumns</code> and awk source
+ * <code>parsingMode</code>, the removed <code>json2Table</code> <code>separator</code>, the <code>properties</code>
+ * of a <code>json2Table</code> or of an <code>xml2Csv</code> written as a string instead of a list, awk
+ * <code>input</code>, awk source <code>inputFormat</code>, and the removed awk <code>keep</code>,
+ * <code>exclude</code>, <code>separators</code>, <code>selectColumns</code> and awk source
  * <code>separators</code>.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
@@ -313,8 +316,19 @@ public class ContentTypeCheck {
 			if ("json2Csv".equalsIgnoreCase(compute.getType())) {
 				add(key, where, Rule.DEPRECATED_SYNTAX, "json2Table", "json2Csv");
 			}
-			if (compute instanceof Json2Csv json2Table && json2Table.isParsingModeDeclared()) {
-				add(key, where + " parsingMode", Rule.DEPRECATED_SYNTAX, "no parsingMode", "parsingMode");
+			if (compute instanceof Json2Csv json2Table) {
+				if (json2Table.isParsingModeDeclared()) {
+					add(key, where + " parsingMode", Rule.DEPRECATED_SYNTAX, "no parsingMode", "parsingMode");
+				}
+				if (json2Table.isSeparatorDeclared()) {
+					add(key, where + " separator", Rule.DEPRECATED_SYNTAX, "no separator", "separator");
+				}
+			}
+			if (
+				compute instanceof Json2Csv json2Table && json2Table.isPropertiesAsString() ||
+					compute instanceof Xml2Csv xml2Csv && xml2Csv.isPropertiesAsString()
+			) {
+				add(key, where + " properties", Rule.DEPRECATED_SYNTAX, "a list: [ a, b ]", "a string");
 			}
 			if (compute instanceof Awk awk) {
 				checkVariables(key, where + " ", awk.getVariables());

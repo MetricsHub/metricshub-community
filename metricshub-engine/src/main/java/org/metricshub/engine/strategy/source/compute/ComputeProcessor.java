@@ -30,6 +30,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATT
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HEXA_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
 
@@ -1063,7 +1064,6 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		try {
-			// The rows come straight from the JSON values: the separator plays no part.
 			// A document that does not parse gives no rows: the result is a table all the same
 			sourceTable.setTable(
 				clientsExecutor.executeJson2Table(sourceTable.getText(), json2csv.getEntryKey(), properties)
@@ -2077,9 +2077,11 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		try {
+			// XFlat reads the properties as one string, with a semicolon between them
+			final List<String> properties = xml2csv.getProperties();
 			final List<List<String>> xmlResult = clientsExecutor.executeXmlParsing(
 				sourceTable.getText(),
-				xml2csv.getProperties(),
+				properties == null ? null : String.join(SEMICOLON, properties),
 				xml2csv.getRecordTag()
 			);
 

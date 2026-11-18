@@ -30,10 +30,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Deserializes a property written either as a scalar, returned as a {@link String} holding its text, or as a
- * YAML list, returned as a {@link List} of strings: the string (legacy) and list forms of
- * <code>json2Table.properties</code> and <code>xml2Csv.properties</code>. A list item must be a scalar other than
- * null; the list may be empty, as the string form may be.
+ * Deserializes a property written either as a YAML list, returned as a {@link List} of strings, or as a scalar,
+ * returned as a {@link String} holding its text: the list form of <code>json2Table.properties</code> and
+ * <code>xml2Csv.properties</code>, and their former string form, which is not read and only lets the content-type
+ * check reject the connector. A list item must be a scalar other than null; the list may be empty.
  */
 public class StringOrListDeserializer extends JsonDeserializer<Object> {
 
@@ -42,7 +42,7 @@ public class StringOrListDeserializer extends JsonDeserializer<Object> {
 		if (parser.isExpectedStartArrayToken()) {
 			final List<String> cells = new ArrayList<>();
 			while (parser.nextToken() != JsonToken.END_ARRAY) {
-				// A null item (~) is rejected: the string form can never produce a null cell
+				// A null item (~) is rejected: a property is a string
 				if (!parser.currentToken().isScalarValue() || parser.hasToken(JsonToken.VALUE_NULL)) {
 					return context.handleUnexpectedToken(String.class, parser);
 				}
