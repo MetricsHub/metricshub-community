@@ -55,8 +55,11 @@ import org.metricshub.engine.strategy.source.SourceTable;
  * Represents a source that executes an jawk script to retrieve data.
  * <p>
  * The <code>inputFormat</code> property, once how the script read its input, is deprecated and ignored: an input
- * that is a single source reference is read as that source is (#1559). A connector declaring it still loads, its
- * value is dropped and the content-type check reports it (<code>inputFormatDeclared</code>).
+ * that is a single source reference is read as that source is (#1559). A connector declaring it does not load: the
+ * content-type check reports it (<code>inputFormatDeclared</code>).
+ * <p>
+ * The <code>separators</code> property, which nothing read, is removed (#1623). A connector declaring it does not
+ * load: the content-type check reports it (<code>separatorsDeclared</code>).
  */
 @Data
 @NoArgsConstructor
@@ -79,11 +82,6 @@ public class JawkSource extends Source {
 	 */
 	@JsonSetter(nulls = SKIP)
 	private String input;
-
-	/**
-	 * The separators parameter for the JAWK task.
-	 */
-	private String separators;
 
 	/**
 	 * The variables to expose to the JAWK script, indexed by variable name.
@@ -125,6 +123,24 @@ public class JawkSource extends Source {
 	}
 
 	/**
+	 * Whether the connector writes the removed <code>separators</code> property, which the content-type check
+	 * reports. Never serialized, not part of the equality, not copied.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private boolean separatorsDeclared;
+
+	/**
+	 * Records that the connector writes the removed <code>separators</code> property.
+	 *
+	 * @param separators The ignored value
+	 */
+	@JsonSetter("separators")
+	private void declareSeparators(final Object separators) {
+		separatorsDeclared = true;
+	}
+
+	/**
 	 * Builder for creating instances of {@code JawkSource}.
 	 *
 	 * @param type                  The type of the source.
@@ -134,7 +150,6 @@ public class JawkSource extends Source {
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 * @param script                The script to execute.
 	 * @param input                 The input on which to execute the JAWK task.
-	 * @param separators            The separators parameter for the JAWK task.
 	 * @param variables             The variables to expose to the JAWK script.
 	 * @param output                What the script produces, null for text.
 	 */
@@ -148,7 +163,6 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf,
 		@JsonProperty(value = "script") String script,
 		@JsonProperty(value = "input") final String input,
-		@JsonProperty(value = "separators") final String separators,
 		@JsonProperty(value = "variables") @JsonDeserialize(
 			using = AwkVariablesDeserializer.class
 		) final Map<String, ?> variables,
@@ -157,7 +171,6 @@ public class JawkSource extends Source {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
 		this.script = script;
 		this.input = input;
-		this.separators = separators;
 		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
@@ -172,7 +185,6 @@ public class JawkSource extends Source {
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.script(script)
 			.input(input)
-			.separators(separators)
 			.variables(variables)
 			.output(output)
 			.build();
@@ -186,7 +198,6 @@ public class JawkSource extends Source {
 		// source updater does not expand it into the source's text (see SourceUpdaterProcessor), the other
 		// substitutions apply
 		input = updater.apply(input);
-		separators = updater.apply(separators);
 		// The variables are deliberately not updated here: every reference they hold, source references included,
 		// is resolved in one pass by AwkVariableHelper just before the script runs
 	}
@@ -221,7 +232,6 @@ public class JawkSource extends Source {
 
 		addNonNull(stringJoiner, "- script=", script);
 		addNonNull(stringJoiner, "- input=", input);
-		addNonNull(stringJoiner, "- separators=", separators);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
 
 		return stringJoiner.toString();

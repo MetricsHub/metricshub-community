@@ -7,7 +7,6 @@ beforeAll:
     type: awk
     script: scriptTest
     input: inputTest
-    separators: ";"
     variables:
       FS: ";"
       aTable: ${source::beforeAll.otherSource}

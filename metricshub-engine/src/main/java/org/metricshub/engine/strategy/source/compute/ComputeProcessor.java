@@ -422,7 +422,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		try {
 			if (awk.getOutputContentType() == ContentType.TABLE) {
-				// Each print is a row: no re-parsing, the text filters and column selection do not apply
+				// Each print is a row: no re-parsing
 				final List<List<String>> rows = tableInput
 					? AwkExecutor.executeAwkToTable(
 						awkScript,
@@ -455,28 +455,10 @@ public class ComputeProcessor implements IComputeProcessor {
 				return;
 			}
 
-			// The script may print a cell that holds CRLF: the lines are filtered and their columns selected
-			// without it
-			final List<String> lines = SourceTable.lineToList(StringHelper.toLf(awkResult), NEW_LINE);
-
-			final List<String> filterLines = FilterResultHelper.filterLines(
-				lines,
-				null,
-				null,
-				awk.getExclude(),
-				awk.getKeep()
-			);
-
-			if (awk.getSeparators() == null || awk.getSeparators().isEmpty()) {
-				log.info("Hostname {} - No separators indicated in Awk operation, the result remains unchanged.", hostname);
-			}
-
-			final List<String> awkResultLines = FilterResultHelper.selectedColumns(
-				filterLines,
-				awk.getSeparators(),
-				awk.getSelectColumns() == null ? EMPTY : awk.getSelectColumns().replaceAll("\\s+", EMPTY)
-			);
-			awkResult = awkResultLines.stream()
+			// The script may print a cell that holds CRLF: it is converted before the lines are split, or a carriage
+			// return would stay in front of the separator added to its line
+			awkResult = SourceTable.lineToList(StringHelper.toLf(awkResult), NEW_LINE)
+				.stream()
 				// add the TABLE_SEP at the end of each lines.
 				.map(line -> line.endsWith(TABLE_SEP) ? line : line + TABLE_SEP)
 				.collect(Collectors.joining(NEW_LINE));

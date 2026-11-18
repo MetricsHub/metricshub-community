@@ -39,7 +39,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 /**
  * Converts a text result into a table: each line becomes a row, split on <code>separator</code>. Lines can be
  * filtered with <code>keep</code> and <code>exclude</code>, and columns selected with <code>selectColumns</code>,
- * with the same semantics as on the <code>commandLine</code> source and the <code>awk</code> compute.
+ * with the same semantics as on the <code>commandLine</code> source.
  */
 @Data
 @NoArgsConstructor
