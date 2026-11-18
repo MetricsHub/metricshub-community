@@ -37,7 +37,6 @@ monitors:
                 }
                 printf("\n")
               }
-            separators: ;
             output: table
         source_2:
           type: http
@@ -89,7 +88,6 @@ monitors:
                 }
                 printf("\n")
               }
-            separators: ;
             output: table
         source_2:
           type: http

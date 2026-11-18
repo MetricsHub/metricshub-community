@@ -98,7 +98,6 @@ class ComputeProcessorTest {
 	private static final String ZERO = "0";
 	private static final String ZERO_POINT_ZERO = "0.0";
 	private static final String ONE = "1";
-	private static final String ONE_TWO_THREE = "1,2,3";
 	private static final String TWO = "2";
 	private static final String FOUR_POINT_ZERO = "4.0";
 	private static final String FIVE = "5";
@@ -2572,39 +2571,17 @@ class ComputeProcessorTest {
 		final String embeddedFileName = "${file::1}";
 
 		try (MockedStatic<AwkExecutor> awkStatic = Mockito.mockStatic(AwkExecutor.class)) {
-			Awk awkOK = Awk.builder()
-				.script(embeddedFileName)
-				.keep("^" + FOO)
-				.exclude("^" + BAR)
-				.separators(TABLE_SEP)
-				.selectColumns(ONE_TWO_THREE)
-				.build();
+			final Awk awkOK = Awk.builder().script(embeddedFileName).build();
 
-			// 1) Return a multi-line CSV string
+			// 1) Return a multi-line string: every line is kept as the script printed it, and ends with a separator
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
-				.thenReturn(
-					"FOO;ID1;NAME1;MANUFACTURER1;NUMBER_OF_DISKS1\n" +
-						"BAR;ID2;NAME2;MANUFACTURER2;NUMBER_OF_DISKS2\n" +
-						"BAZ;ID3;NAME3;MANUFACTURER3;NUMBER_OF_DISKS3"
-				);
+				.thenReturn("FOO;ID1;NAME1\nBAR;ID2;NAME2;");
 
 			computeProcessor.process(awkOK);
-			// The awk writes text: the table is what the toTable the desugaring appends gives
-			String expectedRawData = "FOO;ID1;NAME1;";
-			List<List<String>> expectedTable = Arrays.asList(Arrays.asList(FOO, ID1, NAME1));
-			assertEquals(SourceTable.ofText(expectedRawData), sourceTable);
-			assertEquals(expectedTable, sourceTable.asTable());
+			assertEquals(SourceTable.ofText("FOO;ID1;NAME1;\nBAR;ID2;NAME2;"), sourceTable);
 
 			// 2) Return null
 			sourceTable.setText("OS command result");
-
-			awkOK = Awk.builder()
-				.script(embeddedFileName)
-				.keep("^" + FOO)
-				.exclude("^" + BAR)
-				.separators(TABLE_SEP)
-				.selectColumns(ONE_TWO_THREE)
-				.build();
 
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any())).thenReturn(null);
 
@@ -2614,46 +2591,10 @@ class ComputeProcessorTest {
 			// 3) Return EMPTY
 			sourceTable.setText("OS command result");
 
-			awkOK = Awk.builder()
-				.script(embeddedFileName)
-				.keep("^" + FOO)
-				.exclude("^" + BAR)
-				.separators(TABLE_SEP)
-				.selectColumns(ONE_TWO_THREE)
-				.build();
-
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any())).thenReturn(EMPTY);
 
 			computeProcessor.process(awkOK);
 			assertEquals(SourceTable.ofText(EMPTY), sourceTable);
-
-			// 4) Return CSV matching `table`, then filter/select
-			sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
-
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
-				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
-
-			computeProcessor.process(
-				Awk.builder().script(embeddedFileName).exclude(ID1).keep(ID2).separators(TABLE_SEP).selectColumns("2,3").build()
-			);
-			assertEquals(SourceTable.ofText("NAME2;MANUFACTURER2;"), sourceTable);
-			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.asTable());
-
-			// 5) Same but with space in selectColumns
-			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
-				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
-
-			computeProcessor.process(
-				Awk.builder()
-					.script(embeddedFileName)
-					.exclude(ID1)
-					.keep(ID2)
-					.separators(TABLE_SEP)
-					.selectColumns("2, 3")
-					.build()
-			);
-			assertEquals(SourceTable.ofText("NAME2;MANUFACTURER2;"), sourceTable);
-			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.asTable());
 		} // static mock automatically closed here
 	}
 
@@ -2666,10 +2607,10 @@ class ComputeProcessorTest {
 
 		final Awk awkOK = Awk.builder().script("""
 				BEGIN { FS = ";"; }
-				{
+				$1 == "ID1" {
 					print $1 ";" $2 ";" $3 ";"
 				}
-			""").keep("^" + ID1).separators(TABLE_SEP).selectColumns(ONE_TWO_THREE).build();
+			""").build();
 
 		computeProcessor.process(awkOK);
 		final List<List<String>> expectedTable = Arrays.asList(Arrays.asList(ID1, NAME1, MANUFACTURER1));
@@ -2706,7 +2647,7 @@ class ComputeProcessorTest {
 						print other[row][0] ";" other[row][1] ";" factor * 2 ";"
 					}
 				}
-			""").separators(TABLE_SEP).variables(new LinkedHashMap<>(Map.of("other", sourceRef, "factor", "21"))).build();
+			""").variables(new LinkedHashMap<>(Map.of("other", sourceRef, "factor", "21"))).build();
 
 		computeProcessor.process(awk);
 

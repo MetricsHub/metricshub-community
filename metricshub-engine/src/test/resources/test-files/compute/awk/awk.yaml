@@ -10,8 +10,6 @@ beforeAll:
     computes:
       - type: awk
         script: scriptTest
-        exclude:  excludeTest
-        keep: keepTest
         variables:
           FS: ";"
           someConstant: "365.25"

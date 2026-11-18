@@ -89,7 +89,9 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#UNRESOLVED_REFERENCE}: a reference, anywhere in a source, a mapping or a tool result, to a source
  * the connector does not have;</li>
  * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored <code>json2Table</code>
- * <code>parsingMode</code>, awk <code>input</code> and awk source <code>inputFormat</code>.</li>
+ * <code>parsingMode</code>, awk <code>input</code>, awk source <code>inputFormat</code>, and the removed awk
+ * <code>keep</code>, <code>exclude</code>, <code>separators</code>, <code>selectColumns</code> and awk source
+ * <code>separators</code>.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -112,6 +114,7 @@ public class ContentTypeCheck {
 	private static final String TEXT = ContentType.TEXT.name();
 	private static final String EXISTING_SOURCE = "an existing source";
 	private static final String NONE = "none";
+	private static final String SCRIPT_SELECTS = "lines and columns selected by the script";
 
 	private final String connectorId;
 	private final Map<String, Source> sources = new LinkedHashMap<>();
@@ -254,6 +257,9 @@ public class ContentTypeCheck {
 			if (jawk.isInputFormatDeclared()) {
 				add(key, "inputFormat", Rule.DEPRECATED_SYNTAX, "no inputFormat", "inputFormat");
 			}
+			if (jawk.isSeparatorsDeclared()) {
+				add(key, "separators", Rule.DEPRECATED_SYNTAX, "no separators", "separators");
+			}
 		}
 
 		if (source.isExecuteForEachEntryOf()) {
@@ -307,6 +313,9 @@ public class ContentTypeCheck {
 				checkVariables(key, where + " ", awk.getVariables());
 				if (awk.isInputDeclared()) {
 					add(key, where + " input", Rule.DEPRECATED_SYNTAX, "no input", "input");
+				}
+				for (final String option : awk.getRemovedOptions()) {
+					add(key, where + " " + option, Rule.DEPRECATED_SYNTAX, SCRIPT_SELECTS, option);
 				}
 			}
 			final Compute copy = compute.copy();

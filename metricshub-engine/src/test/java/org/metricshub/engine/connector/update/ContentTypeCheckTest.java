@@ -532,6 +532,55 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
+	void removedAwkOptions() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        command:
+			          type: commandLine
+			          commandLine: x
+			          keep: ^a
+			          separators: ;
+			          selectColumns: "1,2"
+			          computes:
+			          - type: awk
+			            script: "{ print $1 }"
+			            keep: ^a
+			            exclude: ^b
+			            separators: ;
+			            selectColumns: "1,2"
+			          - type: toTable
+			            keep: ^a
+			            exclude: ^b
+			            selectColumns: "1,2"
+			        script:
+			          type: awk
+			          script: "BEGIN { print 1 }"
+			          separators: ;
+			          output: table
+			      mapping:
+			        source: ${source::command}
+			        attributes:
+			          id: $1
+			""");
+		// One finding per removed property, which names it. The same options of the other sources and computes stay
+		assertEquals(
+			List.of(
+				"DEPRECATED_SYNTAX awk #0 exclude: lines and columns selected by the script/exclude",
+				"DEPRECATED_SYNTAX awk #0 keep: lines and columns selected by the script/keep",
+				"DEPRECATED_SYNTAX awk #0 selectColumns: lines and columns selected by the script/selectColumns",
+				"DEPRECATED_SYNTAX awk #0 separators: lines and columns selected by the script/separators",
+				"DEPRECATED_SYNTAX separators: no separators/separators"
+			),
+			findings.stream()
+				.map(finding -> finding.rule() + " " + finding.location() + ": " + finding.expected() + "/" + finding.actual())
+				.toList()
+		);
+	}
+
+	@Test
 	void compliantConnectorHasNoFinding() throws IOException {
 		assertEquals(List.of(), findings("""
 			monitors:

@@ -31,7 +31,6 @@ class JawkSourceDeserializerTest extends DeserializerTest {
 					.type("awk")
 					.script("scriptTest")
 					.input("inputTest")
-					.separators(";")
 					.variables(new LinkedHashMap<>(Map.of("FS", ";", "aTable", "${source::beforeAll.otherSource}")))
 					.build()
 			)

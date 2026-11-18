@@ -34,7 +34,9 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.function.UnaryOperator;
 import lombok.Builder;
 import lombok.Data;
@@ -51,6 +53,11 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
  * The <code>input</code> property, once how the script read the source result, is deprecated and ignored: the
  * script reads the source result as it is (#1559). A connector declaring it still loads, its value is dropped and
  * the content-type check reports it (<code>inputDeclared</code>).
+ * <p>
+ * The <code>keep</code>, <code>exclude</code>, <code>separators</code> and <code>selectColumns</code> options, which
+ * once filtered and split the lines the script printed, are removed: the script selects its lines and its columns
+ * itself (#1623). A connector declaring one does not load: the content-type check reports each of them
+ * (<code>removedOptions</code>).
  */
 @Data
 @NoArgsConstructor
@@ -65,23 +72,6 @@ public class Awk extends Compute {
 	@NonNull
 	@JsonSetter(nulls = FAIL)
 	private String script;
-
-	/**
-	 * The exclude parameter for the AWK task.
-	 */
-	private String exclude;
-	/**
-	 * The keep parameter for the AWK task.
-	 */
-	private String keep;
-	/**
-	 * The separators parameter for the AWK task.
-	 */
-	private String separators;
-	/**
-	 * The selectColumns parameter for the AWK task.
-	 */
-	private String selectColumns;
 
 	/**
 	 * The variables to expose to the AWK script, indexed by variable name.
@@ -123,35 +113,52 @@ public class Awk extends Compute {
 	}
 
 	/**
+	 * The removed options the connector writes, among <code>keep</code>, <code>exclude</code>,
+	 * <code>separators</code> and <code>selectColumns</code>, sorted by name, which the content-type check reports.
+	 * Never serialized, not part of the equality, not copied.
+	 */
+	@JsonIgnore
+	@EqualsAndHashCode.Exclude
+	private Set<String> removedOptions = new TreeSet<>();
+
+	@JsonSetter("keep")
+	private void declareKeep(final Object keep) {
+		removedOptions.add("keep");
+	}
+
+	@JsonSetter("exclude")
+	private void declareExclude(final Object exclude) {
+		removedOptions.add("exclude");
+	}
+
+	@JsonSetter("separators")
+	private void declareSeparators(final Object separators) {
+		removedOptions.add("separators");
+	}
+
+	@JsonSetter("selectColumns")
+	private void declareSelectColumns(final Object selectColumns) {
+		removedOptions.add("selectColumns");
+	}
+
+	/**
 	 * Construct a new instance of Awk.
 	 *
-	 * @param type          The type of the computation task.
-	 * @param script        The AWK script to be executed.
-	 * @param exclude       The exclude parameter for the AWK task.
-	 * @param keep          The keep parameter for the AWK task.
-	 * @param separators    The separators parameter for the AWK task.
-	 * @param selectColumns The selectColumns parameter for the AWK task.
-	 * @param variables     The variables to expose to the AWK script.
-	 * @param output        What the script produces, null for text.
+	 * @param type      The type of the computation task.
+	 * @param script    The AWK script to be executed.
+	 * @param variables The variables to expose to the AWK script.
+	 * @param output    What the script produces, null for text.
 	 */
 	@Builder
 	@JsonCreator
 	public Awk(
 		@JsonProperty("type") String type,
 		@JsonProperty(value = "script", required = true) @NonNull String script,
-		@JsonProperty("exclude") String exclude,
-		@JsonProperty("keep") String keep,
-		@JsonProperty("separators") String separators,
-		@JsonProperty("selectColumns") String selectColumns,
 		@JsonProperty("variables") @JsonDeserialize(using = AwkVariablesDeserializer.class) Map<String, ?> variables,
 		@JsonProperty("output") ContentType output
 	) {
 		super(type);
 		this.script = script;
-		this.exclude = exclude;
-		this.keep = keep;
-		this.separators = separators;
-		this.selectColumns = selectColumns;
 		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
 	}
@@ -180,10 +187,6 @@ public class Awk extends Compute {
 		stringJoiner.add(super.toString());
 
 		addNonNull(stringJoiner, "- script=", script);
-		addNonNull(stringJoiner, "- exclude=", exclude);
-		addNonNull(stringJoiner, "- keep=", keep);
-		addNonNull(stringJoiner, "- separators=", separators);
-		addNonNull(stringJoiner, "- selectColumns=", selectColumns);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
 		addNonNull(stringJoiner, "- output=", output == ContentType.TABLE ? output : null);
 
@@ -192,27 +195,14 @@ public class Awk extends Compute {
 
 	@Override
 	public Awk copy() {
-		return Awk.builder()
-			.type(type)
-			.script(script)
-			.exclude(exclude)
-			.keep(keep)
-			.separators(separators)
-			.selectColumns(selectColumns)
-			.variables(variables)
-			.output(output)
-			.build();
+		return Awk.builder().type(type).script(script).variables(variables).output(output).build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		// The script is deliberately left out, as in the awk source: it is code, and no reference is replaced in it.
-		// A script receives a value (${param::days}, ${attribute::id}, a source) through its variables
-		exclude = updater.apply(exclude);
-		keep = updater.apply(keep);
-		separators = updater.apply(separators);
-		selectColumns = updater.apply(selectColumns);
-		// The variables are deliberately not updated here: every reference they hold, source references included,
+		// Nothing to update. The script is deliberately left out, as in the awk source: it is code, and no reference
+		// is replaced in it. A script receives a value (${param::days}, ${attribute::id}, a source) through its
+		// variables, which are deliberately not updated here: every reference they hold, source references included,
 		// is resolved in one pass by AwkVariableHelper just before the script runs
 	}
 

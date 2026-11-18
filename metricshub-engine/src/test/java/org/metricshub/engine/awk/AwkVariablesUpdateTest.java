@@ -54,27 +54,16 @@ class AwkVariablesUpdateTest {
 	}
 
 	/**
-	 * The filter properties receive the source replacement. The script does not: it is code (#1576), and a value
-	 * reaches it through the variables.
+	 * The update of the compute replaces nothing. The script is code (#1576), and a value reaches it through the
+	 * variables.
 	 */
 	@Test
-	void testEveryComputeFieldExceptScriptAndVariablesReceivesTheReplacement() {
-		final Awk compute = Awk.builder()
-			.script("BEGIN { print \"" + SOURCE_REF + "\" }")
-			.keep(SOURCE_REF)
-			.exclude(SOURCE_REF)
-			.separators(SOURCE_REF)
-			.selectColumns(SOURCE_REF)
-			.variables(variables())
-			.build();
+	void testComputeUpdateLeavesScriptAndVariablesUntouched() {
+		final Awk compute = Awk.builder().script("BEGIN { print \"" + SOURCE_REF + "\" }").variables(variables()).build();
 
 		compute.update(value -> value == null ? null : value.replace(SOURCE_REF, "RESOLVED"));
 
 		assertEquals("BEGIN { print \"" + SOURCE_REF + "\" }", compute.getScript(), "The script is never rewritten");
-		assertEquals("RESOLVED", compute.getKeep(), "keep must receive the replacement");
-		assertEquals("RESOLVED", compute.getExclude(), "exclude must receive the replacement");
-		assertEquals("RESOLVED", compute.getSeparators(), "separators must receive the replacement");
-		assertEquals("RESOLVED", compute.getSelectColumns(), "selectColumns must receive the replacement");
 		assertEquals(variables(), compute.getVariables(), "The variables are left for AwkVariableHelper");
 	}
 

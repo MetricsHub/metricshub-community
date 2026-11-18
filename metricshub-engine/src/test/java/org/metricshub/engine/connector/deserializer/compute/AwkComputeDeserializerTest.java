@@ -31,8 +31,6 @@ class AwkComputeDeserializerTest extends DeserializerTest {
 			Awk.builder()
 				.type("awk")
 				.script("scriptTest")
-				.keep("keepTest")
-				.exclude("excludeTest")
 				.variables(
 					new LinkedHashMap<>(Map.of("FS", ";", "someConstant", "365.25", "aTable", "${source::beforeAll.otherSource}"))
 				)
