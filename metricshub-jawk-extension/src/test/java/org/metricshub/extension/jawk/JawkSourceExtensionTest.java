@@ -256,14 +256,15 @@ class JawkSourceExtensionTest {
 				}
 			""");
 
-		doReturn(SourceTable.ofTable(List.of(List.of("result1", "result2")))).when(sourceProcessorMock)
+		// The value comes back as it is, without a separator after it
+		doReturn(SourceTable.ofTable(List.of(List.of("result1;result2")))).when(sourceProcessorMock)
 			.process(any(SnmpGetSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<SnmpGetSource> snmpGetCaptor = ArgumentCaptor.forClass(SnmpGetSource.class);
 
 		assertEquals(
-			SourceTable.ofText("result1;result2;\n"),
+			SourceTable.ofText("result1;result2\n"),
 			jawkExtension.processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 

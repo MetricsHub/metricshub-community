@@ -22,8 +22,8 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
+import static org.metricshub.engine.strategy.source.SourceTable.DEFAULT_SEPARATOR;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -51,7 +51,7 @@ public class ToTable extends Compute {
 	/**
 	 * The column separator of the text. Default <code>;</code>.
 	 */
-	private String separator = TABLE_SEP;
+	private String separator = DEFAULT_SEPARATOR;
 
 	/**
 	 * Regular expression of the lines to keep.
@@ -87,7 +87,7 @@ public class ToTable extends Compute {
 		@JsonProperty("selectColumns") String selectColumns
 	) {
 		super(type);
-		this.separator = separator == null || separator.isEmpty() ? TABLE_SEP : separator;
+		this.separator = separator == null || separator.isEmpty() ? DEFAULT_SEPARATOR : separator;
 		this.keep = keep;
 		this.exclude = exclude;
 		this.selectColumns = selectColumns;
@@ -129,7 +129,7 @@ public class ToTable extends Compute {
 	public void update(UnaryOperator<String> updater) {
 		// A reference resolving to nothing must not leave an empty separator: back to the default
 		final String updated = updater.apply(separator);
-		separator = updated == null || updated.isEmpty() ? TABLE_SEP : updated;
+		separator = updated == null || updated.isEmpty() ? DEFAULT_SEPARATOR : updated;
 		keep = updater.apply(keep);
 		exclude = updater.apply(exclude);
 		selectColumns = updater.apply(selectColumns);

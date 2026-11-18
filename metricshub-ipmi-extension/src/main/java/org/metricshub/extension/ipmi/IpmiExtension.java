@@ -22,7 +22,6 @@ package org.metricshub.extension.ipmi;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,6 +49,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.deserialization.TimeDeserializer;
 import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
@@ -280,7 +280,12 @@ public class IpmiExtension implements IProtocolExtension {
 		);
 
 		final List<List<String>> rows = IpmiResultConverter.convertSel(entries, read.sensors());
-		record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, SourceTable.tableToCsv(rows, ";", true));
+		record(
+			telemetryManager,
+			IpmiRecorder.GET_SEL_REQUEST,
+			null,
+			SourceTable.tableToCsv(rows, AbstractRecorder.CSV_SEPARATOR, true)
+		);
 		return SourceTable.ofTable(rows);
 	}
 
@@ -441,7 +446,11 @@ public class IpmiExtension implements IProtocolExtension {
 			case "sel" ->
 				IpmiResultConverter.SEL_HEADER +
 					NEW_LINE +
-					SourceTable.tableToCsv(selRows(hostname, ipmiConfiguration, text(query, "since")), TABLE_SEP, true);
+					SourceTable.tableToCsv(
+						selRows(hostname, ipmiConfiguration, text(query, "since")),
+						IpmiResultConverter.SEPARATOR,
+						true
+					);
 			case "raw" ->
 				ipmiRequestExecutor.executeIpmiRaw(
 					hostname,
@@ -576,7 +585,7 @@ public class IpmiExtension implements IProtocolExtension {
 		throws Exception {
 		if ("sel".equals(toolName)) {
 			return new ToolTable(
-				List.of(IpmiResultConverter.SEL_HEADER.split(TABLE_SEP)),
+				List.of(IpmiResultConverter.SEL_HEADER.split(IpmiResultConverter.SEPARATOR)),
 				selRows(configuration.getHostname(), (IpmiConfiguration) configuration, text(arguments, "since"))
 			);
 		}

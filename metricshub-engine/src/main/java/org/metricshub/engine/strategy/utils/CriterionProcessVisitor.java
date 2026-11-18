@@ -22,7 +22,6 @@ package org.metricshub.engine.strategy.utils;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -164,7 +163,7 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 							%s""",
 						processCriterion.getCommandLine(),
 						result.stream()
-							.map(line -> line.stream().collect(Collectors.joining(TABLE_SEP)))
+							.map(line -> String.join(CriterionTestResult.RESULT_SEPARATOR, line))
 							.collect(Collectors.joining(NEW_LINE))
 					)
 				)

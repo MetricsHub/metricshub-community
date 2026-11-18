@@ -21,8 +21,6 @@ package org.metricshub.extension.win.detection;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import java.util.List;
 import java.util.function.Function;
 import lombok.NonNull;
@@ -122,7 +120,7 @@ public class WinServiceCriterionProcessor {
 		final String result = wmiTestResult.getResult();
 
 		// Check whether the reported state is "Running"
-		if (result != null && result.toLowerCase().contains(TABLE_SEP + "running")) {
+		if (result != null && result.toLowerCase().contains(CriterionTestResult.RESULT_SEPARATOR + "running")) {
 			return CriterionTestResult.success(
 				serviceCriterion,
 				String.format("The %s Windows Service is currently running.", serviceName)

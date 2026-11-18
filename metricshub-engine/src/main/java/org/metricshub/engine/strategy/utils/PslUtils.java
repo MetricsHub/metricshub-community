@@ -23,7 +23,6 @@ package org.metricshub.engine.strategy.utils;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.util.ArrayList;
@@ -163,7 +162,6 @@ public class PslUtils {
 	 * Converts an entry and its result into an extended JSON format:
 	 * 	{
 	 * 		"Entry":{
-	 * 			"Full":"&lt;entry&gt;",
 	 * 			"Column(1)":"&lt;1st field value&gt;",
 	 * 	    	"Column(2)":"&lt;2nd field value&gt;",
 	 * 			"Column(3)":"&lt;3rd field value&gt;",
@@ -182,8 +180,6 @@ public class PslUtils {
 			return EMPTY;
 		}
 
-		final String rowCsv = SourceTable.lineToCsvSafe(row, TABLE_SEP, true);
-
 		final String text = tableResult.asText();
 		if (text.isEmpty()) {
 			log.error("formatExtendedJSON received Empty SourceTable data {}. Returning empty string.", tableResult);
@@ -191,7 +187,7 @@ public class PslUtils {
 		}
 
 		StringBuilder jsonContent = new StringBuilder();
-		jsonContent.append("{\n\"Entry\":{\n\"Full\":\"").append(rowCsv).append("\",\n");
+		jsonContent.append("{\n\"Entry\":{\n");
 
 		int i = 1;
 

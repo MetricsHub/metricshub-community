@@ -58,7 +58,7 @@ class FileSourceProcessorTest {
 
 	private static String expectedMarkedLogCell(final String path, final String rawContent) {
 		final StringBuilder logBlock = new StringBuilder();
-		FileHelper.appendLogBlock(logBlock, path, FileHelper.escapeSemiColon(rawContent));
+		FileHelper.appendLogBlock(logBlock, path, rawContent);
 		return logBlock.toString();
 	}
 
@@ -361,7 +361,6 @@ class FileSourceProcessorTest {
 				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
-			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
@@ -416,7 +415,6 @@ class FileSourceProcessorTest {
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
-			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
@@ -479,7 +477,6 @@ class FileSourceProcessorTest {
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
-			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
@@ -654,8 +651,8 @@ class FileSourceProcessorTest {
 		assertNotNull(text);
 		assertTrue(text.contains("<<<LOG:file=\"" + path1 + "\">>>"), text);
 		assertTrue(text.contains("<<<LOG:file=\"" + path2 + "\">>>"), text);
-		assertTrue(text.contains(FileHelper.escapeSemiColon(content1)), text);
-		assertTrue(text.contains(FileHelper.escapeSemiColon(content2)), text);
+		assertTrue(text.contains(content1), text);
+		assertTrue(text.contains(content2), text);
 	}
 
 	@Test
@@ -692,7 +689,6 @@ class FileSourceProcessorTest {
 				.thenReturn(Set.of(path1, path2));
 			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.isSinglePathMapping(anySet(), anySet(), anyList())).thenCallRealMethod();
-			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
 			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
 				mockWinRequestExecutor,

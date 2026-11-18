@@ -65,6 +65,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.extension.IHttpRequestExtension;
 import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -465,7 +466,7 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiCfg, emulCfg);
 			if (result != null) {
-				return SourceTable.ofTable(SourceTable.csvToTable(result, ";"));
+				return SourceTable.ofTable(SourceTable.csvToTable(result, AbstractRecorder.CSV_SEPARATOR));
 			}
 			return SourceTable.empty();
 		} else if (source instanceof IpmiSource) {

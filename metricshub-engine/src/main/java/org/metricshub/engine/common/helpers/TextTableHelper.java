@@ -21,7 +21,6 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.util.ArrayList;
@@ -81,23 +80,6 @@ public class TextTableHelper {
 			.collect(Collectors.toList()); //NOSONAR
 
 		return generateTextTable(headers, rows);
-	}
-
-	/**
-	 * Creates a text table for the given <code>rows</code>.<br><br>
-	 * Each row is designed as a {@link List} of {@link String} values.<br><br>
-	 * The headers are generated based on <em>semiColonSeparatedColumns</em> (e.g. : <em>column1;column2</em>).
-	 *
-	 * @param semiColonSeparatedColumns	A semicolon-separated list of column names.
-	 * @param rows						The {@link List} of rows.
-	 *
-	 * @return							A formatted text table representing the given rows,
-	 * 									with the given column names as the headers.
-	 */
-	public static String generateTextTable(String semiColonSeparatedColumns, List<List<String>> rows) {
-		return (semiColonSeparatedColumns == null || semiColonSeparatedColumns.isBlank())
-			? generateTextTable(rows)
-			: generateTextTable(semiColonSeparatedColumns.split(TABLE_SEP), rows);
 	}
 
 	/**
