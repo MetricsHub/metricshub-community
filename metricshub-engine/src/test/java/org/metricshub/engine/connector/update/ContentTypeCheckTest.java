@@ -841,6 +841,36 @@ class ContentTypeCheckTest {
 			      mapping:
 			        metrics:
 			          mono.count: 1
+			  cased:
+			    simple:
+			      mapping:
+			        attributes:
+			          Id: cased
+			  looked:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: lookup("thing", "id", "id", "x")
+			  awked:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: ${awk::sprintf("%s", "x")}
+			  indexed:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: disk$index
+			  columned:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: $1
+			  plain:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: costs 15 (Hz)
 			""");
 		// The monoInstance collect is given its monitor: it needs no key
 		assertEquals(
@@ -848,13 +878,22 @@ class ContentTypeCheckTest {
 				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id: a source reference",
 				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.slot: none",
 				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id: none",
-				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.collect.mapping.attributes.id: none"
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.collect.mapping.attributes.id: none",
+				// The run time reads the key with its exact case
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.cased.simple.mapping.attributes.id: none",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.looked.simple.mapping.attributes.id: a computed value",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.awked.simple.mapping.attributes.id: a computed value",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.indexed.simple.mapping.attributes.id: a computed value",
+				// Reported once, by the column rule
+				"COLUMN_IN_SIMPLE_MAPPING monitors.columned.simple.mapping.attributes.id: a column"
 			),
 			findings.stream()
 				.map(finding -> finding.rule() + " " + finding.location() + ": " + finding.actual())
 				.collect(Collectors.toSet())
 		);
-		findings.forEach(finding -> assertEquals("a constant", finding.expected()));
+		findings.stream()
+			.filter(finding -> finding.rule() == Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING)
+			.forEach(finding -> assertEquals("a constant", finding.expected()));
 	}
 
 	@Test

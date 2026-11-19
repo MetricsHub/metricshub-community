@@ -77,8 +77,9 @@ public record ContentTypeFinding(
 		/** A column (<code>$1</code>) in a value of a mapping without a source: the simple mapping has no row. */
 		COLUMN_IN_SIMPLE_MAPPING("set the mapping source, or reference a text source"),
 		/**
-		 * A key attribute of the job that a mapping without a source does not write, or writes with a source reference:
-		 * the one instance of the simple mapping would not be created, or would change with the text.
+		 * A key attribute of the job that a mapping without a source does not write with its exact case, or writes with
+		 * anything but a plain constant: the one instance of the simple mapping would not be created, or would change
+		 * with the text.
 		 */
 		NO_CONSTANT_KEY_IN_SIMPLE_MAPPING("write the key attribute as a constant, or set the mapping source");
 

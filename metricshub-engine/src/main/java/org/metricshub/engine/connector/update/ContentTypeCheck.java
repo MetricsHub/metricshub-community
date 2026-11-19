@@ -71,6 +71,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Cs
 import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
+import org.metricshub.engine.strategy.utils.MappingProcessor;
 
 /**
  * The load-time check of the strict content types (#1560): every rule a connector breaks is a load error
@@ -102,8 +103,8 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <code>source</code>. Such a mapping is the simple mapping: it gives exactly one monitor instance, whose values are
  * constants and references to text sources;</li>
  * <li>{@link Rule#NO_CONSTANT_KEY_IN_SIMPLE_MAPPING}: a key attribute of the job (<code>keys</code>, <code>id</code>
- * by default) that a simple mapping does not write, or writes with a source reference, where the engine reads it to
- * create or to find the instance: a discovery, a simple job, a <code>multiInstance</code> collect.</li>
+ * by default) that a simple mapping does not write with its exact case, or writes with a source reference, a function,
+ * an <code>${awk::...}</code> or <code>$index</code>, where the engine reads it to create or to find the instance: a discovery, a simple job, a <code>multiInstance</code> collect.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -494,25 +495,30 @@ public class ContentTypeCheck {
 		// A mapping without a source is the simple mapping: exactly one instance, read from no row
 		final boolean simple = task.getMapping().getSource() == null;
 		if (simple) {
-			// Its identity depends on no source: a missing key gives no instance, the text of a source that fails later
-			// gives a second one
+			// Its identity is a plain constant: a missing key, or a function that gives nothing, gives no instance; the
+			// text of a source that fails later gives a second one. The run time reads the key with its exact case
 			final Map<String, String> attributes = task.getMapping().getAttributes();
 			keys.stream().sorted().forEach(key -> {
-				final String value = attributes == null ? null : attributes.get(key);
-				if (value == null || hasReference(value)) {
-					add(
-						NONE,
-						location + ".attributes." + key,
-						Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING,
-						"a constant",
-						value == null ? NONE : "a source reference"
-					);
+				final String value = attributes == null || attributes.keySet().stream().noneMatch(key::equals)
+					? null
+					: attributes.get(key);
+				final String actual;
+				if (value == null) {
+					actual = NONE;
+				} else if (hasReference(value)) {
+					actual = "a source reference";
+				} else if (!readsColumn(value) && !MappingProcessor.isPlainConstant(value)) {
+					// A column is the other rule's finding
+					actual = "a computed value";
+				} else {
+					return;
 				}
+				add(NONE, location + ".attributes." + key, Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING, "a constant", actual);
 			});
 		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
 			// What the mapping reads as a column: $0 too, when it is the whole value
-			if (simple && (COLUMN_REFERENCE_PATTERN.matcher(value).find() || COLUMN_PATTERN.matcher(value).matches())) {
+			if (simple && readsColumn(value)) {
 				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
 			}
 			for (final String reference : references(value)) {
@@ -534,6 +540,14 @@ public class ContentTypeCheck {
 				}
 			}
 		});
+	}
+
+	/**
+	 * @return whether the mapping reads the value as a column: <code>$1</code> anywhere, <code>$0</code> as the whole
+	 *         value
+	 */
+	private static boolean readsColumn(final String value) {
+		return COLUMN_REFERENCE_PATTERN.matcher(value).find() || COLUMN_PATTERN.matcher(value).matches();
 	}
 
 	/**
