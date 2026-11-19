@@ -150,7 +150,7 @@ class AbstractSnmpExtensionTest {
 		final SnmpGetSource source = SnmpGetSource.builder().oid(TEST_OID).build();
 		when(requestExecutor.executeSNMPGet(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("value");
 		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
-		assertNotNull(result);
+		assertEquals(SourceTable.ofText("value"), result);
 	}
 
 	@Test
