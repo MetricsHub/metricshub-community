@@ -383,9 +383,9 @@ class SourceTableReadRulesTest {
 
 	/**
 	 * JSON_ARRAY concatenates the non-blank entry texts with <code>,\n</code> inside <code>[]</code>;
-	 * JSON_ARRAY_EXTENDED wraps each entry's text with the entry row (serialized with <code>,</code> for
-	 * <code>;</code> inside a cell); the custom method surrounds each entry's text with the start and end strings
-	 * where <code>$n</code> is the entry column. The result is a text.
+	 * JSON_ARRAY_EXTENDED wraps each entry's text with the cells of the entry row (<code>Column(n)</code>, each cell
+	 * as it is); the custom method surrounds each entry's text with the start and end strings where <code>$n</code>
+	 * is the entry column. The result is a text.
 	 */
 	@Test
 	void executeForEachEntryOfJsonAndCustomConcatenateText() {
