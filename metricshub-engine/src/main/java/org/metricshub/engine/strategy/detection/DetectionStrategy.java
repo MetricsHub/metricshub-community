@@ -102,6 +102,15 @@ public class DetectionStrategy extends AbstractStrategy {
 		final String hostname = hostConfiguration.getHostname();
 		log.debug("Hostname {} - Start detection strategy.", hostname);
 
+		// Create the host monitor before any connector test, so it exists even when the detection fails or times out:
+		// the next strategies and the CLI collect metrics on it
+		MonitorFactory.builder()
+			.telemetryManager(telemetryManager)
+			.discoveryTime(strategyTime)
+			.keys(new HashSet<>(Set.of(MetricsHubConstants.HOST_NAME)))
+			.build()
+			.createEndpointHostMonitor();
+
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = hostConfiguration.getConfigurations();
 		if (configurations == null || configurations.isEmpty()) {
 			log.error(
@@ -162,14 +171,6 @@ public class DetectionStrategy extends AbstractStrategy {
 				).run()
 			);
 		}
-
-		// Create Host monitor
-		final MonitorFactory monitorFactory = MonitorFactory.builder()
-			.telemetryManager(telemetryManager)
-			.discoveryTime(strategyTime)
-			.keys(new HashSet<>(Set.of(MetricsHubConstants.HOST_NAME)))
-			.build();
-		monitorFactory.createEndpointHostMonitor();
 
 		// Create monitors
 		createConnectorMonitors(connectorTestResults);
