@@ -64,7 +64,8 @@ public class Xml2Csv extends Compute {
 
 	/**
 	 * The properties, one per column. Written in the connector as a YAML list, each item one property. Null when the
-	 * connector sets none.
+	 * connector sets none. An item must not hold a <code>;</code>: XFlat takes the properties as one string, the items
+	 * joined with <code>;</code>, removes the white space and the empty items, and splits it on <code>;</code>.
 	 */
 	private List<String> properties;
 
