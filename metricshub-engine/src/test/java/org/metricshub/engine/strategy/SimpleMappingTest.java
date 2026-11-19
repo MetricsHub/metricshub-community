@@ -3,6 +3,7 @@ package org.metricshub.engine.strategy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.CONNECTOR;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
@@ -138,9 +139,6 @@ class SimpleMappingTest {
 		assertEquals("", settings.getAttribute("location"));
 		assertNull(metric(settings, "test.failed"));
 
-		// The instance exists even when its identifying attribute is a text that failed
-		assertEquals(1, monitors("unidentified").size());
-
 		// The next run updates the same instance
 		texts.put("limit", "43");
 		new PrepareCollectStrategy(telemetryManager, STRATEGY_TIME + 60_000, clientsExecutorMock, extensionManager).run();
@@ -149,6 +147,43 @@ class SimpleMappingTest {
 		assertEquals(1, monitors("settings").size());
 		assertSame(settings, monitors("settings").values().iterator().next());
 		assertEquals(43.0, metric(settings, "test.limit"));
+	}
+
+	@Test
+	void textThatAnsweredThenFailsGivesAnEmptyValueAndStillOneInstance() {
+		new SimpleStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
+
+		final Set<String> unanswered = telemetryManager.getHostProperties()
+			.getConnectorNamespace(CONNECTOR_ID)
+			.getUnansweredSourceKeys();
+		assertEquals(Set.of(), unanswered);
+		final Monitor settings = monitors("settings").values().iterator().next();
+		assertEquals("Acme", settings.getAttribute("vendor"));
+		assertEquals(42.0, metric(settings, "test.limit"));
+
+		// The texts that answered do not answer any more: each source is retried, then given up
+		texts.clear();
+		final long nextTime = STRATEGY_TIME + 60_000;
+		new PrepareCollectStrategy(telemetryManager, nextTime, clientsExecutorMock, extensionManager).run();
+		new SimpleStrategy(telemetryManager, nextTime, clientsExecutorMock, extensionManager).run();
+
+		assertTrue(
+			unanswered.containsAll(
+				Set.of(
+					"${source::monitors.settings.simple.sources.vendor}",
+					"${source::monitors.settings.simple.sources.limit}"
+				)
+			),
+			() -> "unanswered: " + unanswered
+		);
+
+		// Still the one instance: its attribute is empty, its metric is not collected at this run
+		assertEquals(Set.of(CONNECTOR_ID + "_settings_settings"), monitors("settings").keySet());
+		assertSame(settings, monitors("settings").values().iterator().next());
+		assertEquals("", settings.getAttribute("vendor"));
+		assertEquals("Settings of ", settings.getAttribute("name"));
+		assertEquals(nextTime, settings.getMetric("test.count", NumberMetric.class).getCollectTime());
+		assertEquals(STRATEGY_TIME, settings.getMetric("test.limit", NumberMetric.class).getCollectTime());
 	}
 
 	@Test

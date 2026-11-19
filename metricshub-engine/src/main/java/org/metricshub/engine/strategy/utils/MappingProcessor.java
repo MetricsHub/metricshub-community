@@ -24,6 +24,7 @@ package org.metricshub.engine.strategy.utils;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -215,7 +216,13 @@ public class MappingProcessor {
 				key
 			);
 
-			processKeyValue(key, updatedValue, result);
+			// A value that is exactly one source reference is the text of that source as is: what the device says is not
+			// read as mapping syntax ($1, rate(...))
+			if (SOURCE_REF_PATTERN.matcher(value.trim()).matches()) {
+				result.put(key, updatedValue);
+			} else {
+				processKeyValue(key, updatedValue, result);
+			}
 		});
 
 		return result;

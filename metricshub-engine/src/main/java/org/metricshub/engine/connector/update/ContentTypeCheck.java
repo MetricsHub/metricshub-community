@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
@@ -56,6 +57,7 @@ import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
+import org.metricshub.engine.connector.model.monitor.task.MultiInstanceCollect;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
@@ -98,7 +100,10 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <code>separators</code>;</li>
  * <li>{@link Rule#COLUMN_IN_SIMPLE_MAPPING}: a column (<code>$1</code>) in a value of a mapping without a
  * <code>source</code>. Such a mapping is the simple mapping: it gives exactly one monitor instance, whose values are
- * constants and references to text sources.</li>
+ * constants and references to text sources;</li>
+ * <li>{@link Rule#NO_CONSTANT_KEY_IN_SIMPLE_MAPPING}: a key attribute of the job (<code>keys</code>, <code>id</code>
+ * by default) that a simple mapping does not write, or writes with a source reference, where the engine reads it to
+ * create or to find the instance: a discovery, a simple job, a <code>multiInstance</code> collect.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -211,10 +216,14 @@ public class ContentTypeCheck {
 		if (connector.getMonitors() != null) {
 			connector.getMonitors().forEach((name, job) -> {
 				if (job instanceof StandardMonitorJob standard) {
-					checkMapping("monitors." + name + ".discovery", standard.getDiscovery());
-					checkMapping("monitors." + name + ".collect", standard.getCollect());
+					checkMapping("monitors." + name + ".discovery", standard.getDiscovery(), job.getKeys());
+					checkMapping(
+						"monitors." + name + ".collect",
+						standard.getCollect(),
+						standard.getCollect() instanceof MultiInstanceCollect ? job.getKeys() : Set.of()
+					);
 				} else if (job instanceof SimpleMonitorJob simple) {
-					checkMapping("monitors." + name + ".simple", simple.getSimple());
+					checkMapping("monitors." + name + ".simple", simple.getSimple(), job.getKeys());
 				}
 			});
 		}
@@ -466,7 +475,13 @@ public class ContentTypeCheck {
 		});
 	}
 
-	private void checkMapping(final String job, final AbstractMonitorTask task) {
+	/**
+	 * @param job  Where the task is, e.g. <code>monitors.cpu.discovery</code>
+	 * @param task The task
+	 * @param keys The key attributes the engine reads in the mapping to create or to find the instance: none for a
+	 *             <code>monoInstance</code> collect, which is given its monitor
+	 */
+	private void checkMapping(final String job, final AbstractMonitorTask task, final Set<String> keys) {
 		if (task == null || task.getMapping() == null) {
 			return;
 		}
@@ -478,8 +493,26 @@ public class ContentTypeCheck {
 			: NONE;
 		// A mapping without a source is the simple mapping: exactly one instance, read from no row
 		final boolean simple = task.getMapping().getSource() == null;
+		if (simple) {
+			// Its identity depends on no source: a missing key gives no instance, the text of a source that fails later
+			// gives a second one
+			final Map<String, String> attributes = task.getMapping().getAttributes();
+			keys.stream().sorted().forEach(key -> {
+				final String value = attributes == null ? null : attributes.get(key);
+				if (value == null || hasReference(value)) {
+					add(
+						NONE,
+						location + ".attributes." + key,
+						Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING,
+						"a constant",
+						value == null ? NONE : "a source reference"
+					);
+				}
+			});
+		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
-			if (simple && COLUMN_REFERENCE_PATTERN.matcher(value).find()) {
+			// What the mapping reads as a column: $0 too, when it is the whole value
+			if (simple && (COLUMN_REFERENCE_PATTERN.matcher(value).find() || COLUMN_PATTERN.matcher(value).matches())) {
 				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
 			}
 			for (final String reference : references(value)) {

@@ -34,16 +34,6 @@ monitors:
           test.count: 1
           test.limit: ${source::limit}
           test.failed: ${source::failed}
-  # Its identifying attribute is a text that failed: the instance still exists
-  unidentified:
-    simple:
-      sources:
-        failed:
-          type: commandLine
-          commandLine: failed
-      mapping:
-        attributes:
-          id: ${source::failed}
   # Discovery and mono-instance collect, both with a simple mapping
   mono:
     discovery:

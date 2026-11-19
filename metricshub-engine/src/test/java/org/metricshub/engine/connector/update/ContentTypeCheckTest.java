@@ -772,6 +772,7 @@ class ContentTypeCheckTest {
 			        attributes:
 			          id: $1
 			          name: thing $2
+			          serial: $0
 			          vendor: ${source::table}
 			        metrics:
 			          thing.limit: ${awk::$3 * 2}
@@ -792,6 +793,7 @@ class ContentTypeCheckTest {
 			Set.of(
 				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id",
 				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.name",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.serial",
 				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.metrics.thing.limit",
 				"TABLE_INTERPOLATED monitors.thing.simple.mapping.attributes.vendor -> " + THING + "table}",
 				"COLUMN_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id",
@@ -802,6 +804,57 @@ class ContentTypeCheckTest {
 		final ContentTypeFinding column = findings.get(0);
 		assertEquals("a constant or a text source", column.expected());
 		assertEquals("a column", column.actual());
+	}
+
+	@Test
+	void simpleMappingWritesItsKeysAsConstants() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    keys: [ id, slot ]
+			    simple:
+			      sources:
+			        serial:
+			          type: commandLine
+			          commandLine: echo
+			      mapping:
+			        attributes:
+			          id: ${source::serial}
+			        metrics:
+			          thing.count: 1
+			  other:
+			    discovery:
+			      mapping:
+			        attributes:
+			          name: other
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        metrics:
+			          other.count: 1
+			  mono:
+			    discovery:
+			      mapping:
+			        attributes:
+			          id: mono
+			    collect:
+			      mapping:
+			        metrics:
+			          mono.count: 1
+			""");
+		// The monoInstance collect is given its monitor: it needs no key
+		assertEquals(
+			Set.of(
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id: a source reference",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.slot: none",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id: none",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.collect.mapping.attributes.id: none"
+			),
+			findings.stream()
+				.map(finding -> finding.rule() + " " + finding.location() + ": " + finding.actual())
+				.collect(Collectors.toSet())
+		);
+		findings.forEach(finding -> assertEquals("a constant", finding.expected()));
 	}
 
 	@Test

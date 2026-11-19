@@ -75,7 +75,12 @@ public record ContentTypeFinding(
 		/** No <code>column</code> on an append, prepend, replace or substring that is fed a table. */
 		NO_COLUMN_ON_TABLE("set the column, or write a toText before"),
 		/** A column (<code>$1</code>) in a value of a mapping without a source: the simple mapping has no row. */
-		COLUMN_IN_SIMPLE_MAPPING("set the mapping source, or reference a text source");
+		COLUMN_IN_SIMPLE_MAPPING("set the mapping source, or reference a text source"),
+		/**
+		 * A key attribute of the job that a mapping without a source does not write, or writes with a source reference:
+		 * the one instance of the simple mapping would not be created, or would change with the text.
+		 */
+		NO_CONSTANT_KEY_IN_SIMPLE_MAPPING("write the key attribute as a constant, or set the mapping source");
 
 		private final String hint;
 
