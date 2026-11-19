@@ -89,6 +89,17 @@ public record ContentTypeFinding(
 		}
 	}
 
+	/**
+	 * How to comply: the hint of the rule, and for a text read as the source of a mapping, the other way to read it.
+	 *
+	 * @return constant text
+	 */
+	public String hint() {
+		return rule == Rule.TEXT_FEEDS_TABLE && location.endsWith(".mapping")
+			? "write a toTable, or keep a table as the mapping source and read the text as ${source::<key>} in a value"
+			: rule.hint();
+	}
+
 	@Override
 	public String toString() {
 		return rule +
@@ -101,7 +112,7 @@ public record ContentTypeFinding(
 			", actual " +
 			actual +
 			" (" +
-			rule.hint() +
+			hint() +
 			")";
 	}
 }
