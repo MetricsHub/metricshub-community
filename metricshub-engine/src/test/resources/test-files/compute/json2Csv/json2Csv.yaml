@@ -23,6 +23,6 @@ beforeAll:
         properties: [ property, "", here ]
       - type: json2Table
         properties: [ "a;b", 1 ]
+        separator: ;
       - type: json2Table
         properties: property;here
-        separator: ;

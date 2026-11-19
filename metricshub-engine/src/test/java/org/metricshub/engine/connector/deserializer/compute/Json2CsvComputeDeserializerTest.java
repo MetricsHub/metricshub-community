@@ -74,7 +74,7 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 			actual.stream().map(Json2Csv::isParsingModeDeclared).toList()
 		);
 		assertEquals(
-			List.of(false, false, false, false, false, true),
+			List.of(false, false, false, false, true, false),
 			actual.stream().map(Json2Csv::isSeparatorDeclared).toList()
 		);
 		assertEquals(
