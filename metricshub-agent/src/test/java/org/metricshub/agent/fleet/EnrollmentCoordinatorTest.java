@@ -1268,6 +1268,9 @@ class EnrollmentCoordinatorTest {
 		final EnrollmentCoordinator coordinator = tracked(
 			new EnrollmentCoordinator(() -> new AgentCredentialStore(directory), Duration.ofMillis(200), new Random(0))
 		);
+		// The delays chosen, not the time elapsed: a slow machine must not fail the test
+		final List<Duration> pauses = new CopyOnWriteArrayList<>();
+		coordinator.beforePause = pauses::add;
 		assertFalse(coordinator.ready(central(KEY), DESCRIPTION));
 		// The fourth request, answered 410 for the former key once the new one is configured
 		while (enrollBodies.size() < 3) {
@@ -1278,13 +1281,14 @@ class EnrollmentCoordinatorTest {
 			Thread.sleep(5);
 		}
 		assertFalse(coordinator.ready(central(OTHER_KEY), DESCRIPTION));
-		final long releasedAt = System.nanoTime();
 		holdEnrollAnswer.countDown();
 		coordinator.awaitWorker();
 
-		// After the 503 of the new key: the first backoff (at most 200 ms), not the fourth (at least 800 ms)
 		assertTrue(coordinator.isReady());
-		assertTrue(Duration.ofNanos(System.nanoTime() - releasedAt).toMillis() < 700, "the backoff started over");
+		// The former key's third backoff (at least 400 ms), then, after the 503 of the new key, the first backoff (at
+		// most 200 ms), not the fourth (at least 800 ms)
+		assertTrue(pauses.get(2).toMillis() >= 400, "the former key's backoff grew");
+		assertTrue(pauses.get(3).toMillis() <= 200, "the backoff started over");
 	}
 
 	@Test

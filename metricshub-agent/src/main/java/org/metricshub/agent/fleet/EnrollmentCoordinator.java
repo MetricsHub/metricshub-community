@@ -181,6 +181,8 @@ public class EnrollmentCoordinator {
 	private volatile boolean firstTokenDone;
 	/** Runs when the worker has decided to end, before it does (tests). */
 	volatile Runnable beforeWorkerEnds = () -> {};
+	/** Receives each delay the worker's backoff waits (tests). */
+	volatile Consumer<Duration> beforePause = delay -> {};
 	/** The token the token file holds, {@code null} before the first write. */
 	private String writtenToken;
 	/** The collector launch waiting for the token file, and the configuration it was launched with. */
@@ -964,6 +966,7 @@ public class EnrollmentCoordinator {
 		final Duration bounded = floor == null || floor.compareTo(MAX_RETRY_AFTER) <= 0 ? floor : MAX_RETRY_AFTER;
 		final Duration delay = retrySchedule.nextDelayAfterFailure(bounded);
 		log.warn("{}: {}. Next attempt in {}.", step, failure, delay);
+		beforePause.accept(delay);
 		final long until = System.nanoTime() + delay.toNanos();
 		synchronized (backoff) {
 			long left;
