@@ -81,11 +81,11 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#TABLE_FEEDS_TEXT}: a table read by a text compute or a <code>textUnion</code> member;</li>
  * <li>{@link Rule#TABLE_UNION_OF_TEXTS} (once per union) and {@link Rule#MIXED_UNION} (once per union, plus each text
  * member);</li>
- * <li>{@link Rule#STRING_LITERAL_ROWS}: a <code>;</code> string literal in <code>tables</code>,
- * <code>leftTable</code> or <code>rightTable</code>;</li>
- * <li>{@link Rule#NOT_A_REFERENCE}: anything but a source reference in the <code>source</code> of a mapping, of a
- * tool result, of an <code>executeForEachEntryOf</code> or of an <code>internalDbQuery</code> table, or in the
- * <code>from</code> of a <code>copy</code>;</li>
+ * <li>{@link Rule#STRING_LITERAL_ROWS}: a string in <code>tables</code>, <code>leftTable</code> or
+ * <code>rightTable</code> that is not exactly one source reference;</li>
+ * <li>{@link Rule#NOT_A_REFERENCE}: anything but exactly one source reference in the <code>source</code> of a
+ * mapping, of a tool result, of an <code>executeForEachEntryOf</code> or of an <code>internalDbQuery</code> table, or
+ * in the <code>from</code> of a <code>copy</code>;</li>
  * <li>{@link Rule#TABLE_INTERPOLATED}: a table referenced in a field the engine interpolates: the fields a source or
  * a compute updates ({@link Source#update}, {@link Compute#update}, <code>authenticationToken</code> included) unless
  * the source reads its references as sources, and the mapping fields but its <code>source</code>;</li>
@@ -343,7 +343,7 @@ public class ContentTypeCheck {
 		boolean hasTable = false;
 		for (int index = 0; index < tables.size(); index++) {
 			final Object member = tables.get(index);
-			if (member instanceof String reference && hasReference(reference)) {
+			if (member instanceof String reference && isReference(reference)) {
 				final ContentType type = typeOf(reference);
 				if (type == ContentType.TEXT) {
 					texts.put(index, reference.trim());
@@ -375,7 +375,7 @@ public class ContentTypeCheck {
 		if (table == null) {
 			return;
 		}
-		if (hasReference(table)) {
+		if (isReference(table)) {
 			checkTableRead(key, field, table);
 		} else {
 			add(key, field, Rule.STRING_LITERAL_ROWS, "list of rows", "string");
@@ -413,7 +413,7 @@ public class ContentTypeCheck {
 	 * holds it.
 	 */
 	private void checkReference(final String key, final String location, final String value) {
-		if (value != null && !hasReference(value)) {
+		if (value != null && !isReference(value)) {
 			add(key, location, Rule.NOT_A_REFERENCE, "a source reference", "a literal");
 		}
 	}
@@ -469,7 +469,7 @@ public class ContentTypeCheck {
 		final String location = job + ".mapping";
 		// The finding does not name a literal source: it is a value of the connector
 		checkReference(NONE, location + ".source", task.getMapping().getSource());
-		final String mappingSource = hasReference(task.getMapping().getSource())
+		final String mappingSource = isReference(task.getMapping().getSource())
 			? task.getMapping().getSource().trim()
 			: NONE;
 		walk(toTree(task.getMapping()), "", (field, value) -> {
@@ -503,7 +503,7 @@ public class ContentTypeCheck {
 			return;
 		}
 		final String location = "tools." + name + ".result";
-		if (!hasReference(tool.getResult().source())) {
+		if (!isReference(tool.getResult().source())) {
 			checkReference(NONE, location + ".source", tool.getResult().source());
 			return;
 		}
@@ -608,8 +608,12 @@ public class ContentTypeCheck {
 		findings.add(new ContentTypeFinding(connectorId, sourceKey, location, rule, expected, actual));
 	}
 
-	private static boolean hasReference(final String value) {
-		return value != null && SOURCE_REF_PATTERN.matcher(value).find();
+	/**
+	 * Whether the whole value, trimmed, is exactly one <code>${source::...}</code> reference: a value that only holds
+	 * one among other text is a literal.
+	 */
+	private static boolean isReference(final String value) {
+		return value != null && SOURCE_REF_PATTERN.matcher(value.trim()).matches();
 	}
 
 	/**
