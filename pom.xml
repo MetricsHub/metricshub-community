@@ -285,7 +285,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>wmi-java</artifactId>
-				<version>1.0.07</version>
+				<version>1.0.08</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
