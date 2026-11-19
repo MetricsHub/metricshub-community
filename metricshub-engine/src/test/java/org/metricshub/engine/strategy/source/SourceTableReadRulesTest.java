@@ -592,7 +592,10 @@ class SourceTableReadRulesTest {
 
 	/**
 	 * A <code>static</code> cell that references the text, then <code>excludeMatchingLines</code> <code>^$</code> on
-	 * that cell: one row of one cell, the whole value, whatever it holds. An empty text (a failed request): no row.
+	 * that cell: one row of one cell, the value, a <code>;</code> or a line break inside it does not split it. Except:
+	 * a line whose only <code>;</code> is its last character loses it ({@link SourceUpdaterProcessor#referenceLine}),
+	 * <code>$$</code> becomes <code>$</code>, and trailing line breaks are dropped, so a value made only of line
+	 * breaks gives no row. An empty text (a failed request): no row.
 	 */
 	@Test
 	void staticCellOfATextThenEmptyCellFilterIsOneCell() {
@@ -600,6 +603,13 @@ class SourceTableReadRulesTest {
 			assertEquals(List.of(List.of(value)), staticCellWithoutEmptyRow(value), value);
 		}
 		assertEquals(List.of(), staticCellWithoutEmptyRow(""));
+
+		// The boundaries
+		assertEquals(List.of(List.of("a")), staticCellWithoutEmptyRow("a;"));
+		assertEquals(List.of(List.of("a\nb")), staticCellWithoutEmptyRow("a;\nb;"));
+		assertEquals(List.of(List.of("x")), staticCellWithoutEmptyRow("x\n"));
+		assertEquals(List.of(), staticCellWithoutEmptyRow("\n"));
+		assertEquals(List.of(List.of("$x")), staticCellWithoutEmptyRow("$$x"));
 	}
 
 	/**

@@ -163,7 +163,7 @@ class ContentTypeCheckTest {
 			""");
 		assertEquals(Set.of("TEXT_FEEDS_TABLE monitors.thing.simple.mapping"), lines(findings));
 		assertEquals(
-			"write a toTable, or keep a table as the mapping source and read the text as ${source::<key>} in a value",
+			"write a toTable, or remove the mapping source and read the text as ${source::<key>} in a value",
 			findings.get(0).hint()
 		);
 

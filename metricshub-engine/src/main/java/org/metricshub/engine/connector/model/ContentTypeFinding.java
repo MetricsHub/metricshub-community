@@ -90,13 +90,14 @@ public record ContentTypeFinding(
 	}
 
 	/**
-	 * How to comply: the hint of the rule, and for a text read as the source of a mapping, the other way to read it.
+	 * How to comply: the hint of the rule, and for a text read as the source of a mapping, also the simple mapping
+	 * (#342): no mapping source, and the text read as a source reference in a value.
 	 *
 	 * @return constant text
 	 */
 	public String hint() {
 		return rule == Rule.TEXT_FEEDS_TABLE && location.endsWith(".mapping")
-			? "write a toTable, or keep a table as the mapping source and read the text as ${source::<key>} in a value"
+			? "write a toTable, or remove the mapping source and read the text as ${source::<key>} in a value"
 			: rule.hint();
 	}
 
