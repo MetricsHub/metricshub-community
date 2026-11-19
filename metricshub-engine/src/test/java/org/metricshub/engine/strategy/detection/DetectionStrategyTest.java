@@ -19,6 +19,7 @@ import static org.metricshub.engine.constants.Constants.HOSTNAME;
 import static org.metricshub.engine.constants.Constants.HOST_ID;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMAT;
+import static org.metricshub.engine.strategy.AbstractStrategy.HOST_OBSERVED_METRIC_NAME;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -54,9 +55,11 @@ import org.metricshub.engine.connector.model.metric.MetricType;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.TestConfiguration;
+import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.AbstractMetric;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.metricshub.engine.telemetry.metric.StateSetMetric;
 import org.mockito.MockedStatic;
 
@@ -548,5 +551,35 @@ class DetectionStrategyTest {
 		// while the remote requirement from the second connector must be added.
 		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesLocally());
 		assertTrue(telemetryManager.getHostProperties().isOsCommandExecutesRemotely());
+	}
+
+	@Test
+	void testHostMonitorCreatedWhenDetectionFails() {
+		// The connector tests fail, as when the detection times out
+		final ConnectorStore connectorStore = mock(ConnectorStore.class);
+		when(connectorStore.getStore()).thenThrow(new IllegalStateException("Detection interrupted"));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostType(DeviceKind.WINDOWS)
+					.hostname(HOSTNAME)
+					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.build();
+		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
+		final long strategyTime = new Date().getTime();
+
+		telemetryManager.run(
+			new DetectionStrategy(telemetryManager, strategyTime, clientsExecutor, ExtensionManager.empty()),
+			new ProtocolHealthCheckStrategy(telemetryManager, strategyTime, clientsExecutor, ExtensionManager.empty())
+		);
+
+		// The host monitor exists, and the protocol health check collected its metric on it
+		final Monitor hostMonitor = telemetryManager.getEndpointHostMonitor();
+		assertNotNull(hostMonitor);
+		assertEquals(0.0, hostMonitor.getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue());
 	}
 }
