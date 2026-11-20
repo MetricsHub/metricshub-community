@@ -71,7 +71,7 @@ class AwkComputeStructuredIoTest {
 		// A text output is standard AWK
 		final SourceTable text = SourceTable.ofTable(table("fan1|3000"));
 		processor(text).process(Awk.builder().script("{ print $2 / 9000 }").build());
-		assertEquals("0.333333;", text.getText());
+		assertEquals("0.333333\n", text.getText());
 	}
 
 	@Test
