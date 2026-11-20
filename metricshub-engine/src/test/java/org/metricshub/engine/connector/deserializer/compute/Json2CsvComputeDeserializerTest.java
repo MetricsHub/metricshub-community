@@ -2,7 +2,9 @@ package org.metricshub.engine.connector.deserializer.compute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -11,12 +13,14 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
 
 class Json2CsvComputeDeserializerTest extends DeserializerTest {
 
@@ -30,22 +34,18 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 		final Connector connector = getConnector("json2Csv");
 
 		final List<Compute> computes = new ArrayList<>();
-		computes.add(Json2Csv.builder().type("json2Csv").properties("property;test;here").entryKey("/").build());
-		computes.add(Json2Csv.builder().type("json2Csv").properties("name").entryKey("/items").build());
+		computes.add(
+			Json2Csv.builder().type("json2Csv").properties(List.of("property", "test", "here")).entryKey("/").build()
+		);
+		computes.add(Json2Csv.builder().type("json2Csv").properties(List.of("name")).entryKey("/items").build());
 		// json2Table is the name, json2Csv its deprecated alias: same class, same fields, only the written type differs
 		final Json2Csv json2Table = (Json2Csv) computes.get(1).copy();
 		json2Table.setType("json2Table");
 		computes.add(json2Table);
-		// The string form and the list form give the same compute: an empty item is kept, one trailing ; is dropped
-		final Json2Csv list = Json2Csv.builder().type("json2Table").properties(List.of("property", "", "here")).build();
-		computes.add(Json2Csv.builder().type("json2Table").properties("property;;here;").build());
-		computes.add(list);
-		assertEquals(List.of("property", "", "here"), list.getProperties());
-		assertEquals(computes.get(3), list);
-		// An item of the list form is one property, whatever it holds
-		final Json2Csv verbatim = Json2Csv.builder().type("json2Table").properties(List.of("a;b", "1")).build();
-		computes.add(verbatim);
-		assertEquals(List.of("a;b", "1"), verbatim.getProperties());
+		// An empty item is kept
+		computes.add(Json2Csv.builder().type("json2Table").properties(List.of("property", "", "here")).build());
+		// An item is one property, whatever it holds
+		computes.add(Json2Csv.builder().type("json2Table").properties(List.of("a;b", "1")).build());
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
@@ -61,31 +61,63 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 
 		assertEquals(expected, connector.getBeforeAll());
 
-		// parsingMode is ignored, only recorded for the content-type check
+		// parsingMode and separator are only recorded for the content-type check
+		final List<Json2Csv> actual = connector.getBeforeAll()
+			.get("testCompute")
+			.getComputes()
+			.stream()
+			.map(Json2Csv.class::cast)
+			.toList();
 		assertEquals(
-			List.of(false, true, true, false, false, false),
-			connector.getBeforeAll()
-				.get("testCompute")
-				.getComputes()
-				.stream()
-				.map(compute -> ((Json2Csv) compute).isParsingModeDeclared())
-				.toList()
+			List.of(false, true, true, false, false),
+			actual.stream().map(Json2Csv::isParsingModeDeclared).toList()
+		);
+		assertEquals(
+			List.of(false, false, false, false, true),
+			actual.stream().map(Json2Csv::isSeparatorDeclared).toList()
 		);
 	}
 
 	/**
-	 * An empty list is accepted, as the empty string is: both are a compute without a property.
+	 * The properties of a json2Table and of an xml2Csv are a list: an empty list is a compute without a property, and a
+	 * connector whose properties are a string, even an empty one, or hold a null or a nested item does not load.
 	 */
 	@Test
-	void testEmptyProperties() throws IOException {
-		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
+	void testPropertiesAreAList() throws IOException {
 		for (final String type : List.of("json2Table", "xml2Csv")) {
+			final Compute compute = deserialize(type, "[]").getBeforeAll().get("testCompute").getComputes().get(0);
 			assertEquals(
-				mapper.readValue("type: " + type + "\nproperties: \"\"", Compute.class),
-				mapper.readValue("type: " + type + "\nproperties: []", Compute.class)
+				List.of(),
+				compute instanceof Json2Csv json2Table ? json2Table.getProperties() : ((Xml2Csv) compute).getProperties()
 			);
+			for (final String properties : List.of("a;b", "\"\"", "[ a, ~ ]", "[ a, [ b ] ]")) {
+				assertThrows(JsonMappingException.class, () -> deserialize(type, properties), type + " " + properties);
+			}
 		}
-		assertEquals(List.of(), Json2Csv.builder().properties(List.of()).build().getProperties());
+	}
+
+	/**
+	 * Deserializes a connector whose only source holds one compute.
+	 *
+	 * @param type       The type of the compute
+	 * @param properties The properties of the compute, as written in YAML
+	 * @return The connector
+	 * @throws IOException When the connector does not load
+	 */
+	private static Connector deserialize(final String type, final String properties) throws IOException {
+		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
+		return new ConnectorDeserializer(mapper).deserialize(mapper.readTree("""
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  testCompute:
+			    type: http
+			    url: /testUrl/
+			    computes:
+			    - type: %s
+			      properties: %s
+			""".formatted(type, properties)));
 	}
 
 	@Test
@@ -97,8 +129,8 @@ class Json2CsvComputeDeserializerTest extends DeserializerTest {
 		// The copy has its own list
 		assertEquals(List.of("id", "", "name"), origin.getProperties());
 
-		// A reference is resolved inside its item: its value is never split, also in the string form
-		final Json2Csv reference = Json2Csv.builder().properties("id;${reference}").build();
+		// A reference is resolved inside its item: its value is never split
+		final Json2Csv reference = Json2Csv.builder().properties(List.of("id", "${reference}")).build();
 		reference.update(value -> value.replace("${reference}", "a;b"));
 		assertEquals(List.of("id", "a;b"), reference.getProperties());
 

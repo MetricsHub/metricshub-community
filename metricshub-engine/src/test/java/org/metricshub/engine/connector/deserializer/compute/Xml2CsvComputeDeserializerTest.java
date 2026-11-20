@@ -28,13 +28,11 @@ class Xml2CsvComputeDeserializerTest extends DeserializerTest {
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(
-			Xml2Csv.builder().type("xml2Csv").recordTag("recordTagTest").properties("properties,test,here").build()
-		);
-		// The list form is the string form, its items joined with ;
-		computes.add(Xml2Csv.builder().type("xml2Csv").properties("tag>attribute;tag/child").build());
-		assertEquals(
-			computes.get(1),
-			Xml2Csv.builder().type("xml2Csv").properties(List.of("tag>attribute", "tag/child")).build()
+			Xml2Csv.builder()
+				.type("xml2Csv")
+				.recordTag("recordTagTest")
+				.properties(List.of("tag>attribute", "tag/child"))
+				.build()
 		);
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
@@ -50,5 +48,12 @@ class Xml2CsvComputeDeserializerTest extends DeserializerTest {
 		);
 
 		assertEquals(expected, connector.getBeforeAll());
+
+		// Each property is updated on its own, and the copy has its own list
+		final Xml2Csv origin = Xml2Csv.builder().properties(List.of("a", "b")).build();
+		final Xml2Csv copy = origin.copy();
+		copy.update(value -> value + "!");
+		assertEquals(List.of("a!", "b!"), copy.getProperties());
+		assertEquals(List.of("a", "b"), origin.getProperties());
 	}
 }

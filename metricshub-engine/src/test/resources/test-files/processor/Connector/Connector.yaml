@@ -49,8 +49,7 @@ monitors:
           computes:
           - type: json2Table
             entryKey: /
-            properties: id;model;device_count;spare_disk_count;cache_size_mb;local
-            separator: ;
+            properties: [ id, model, device_count, spare_disk_count, cache_size_mb, local ]
           - type: excludeMatchingLines
             column: 6
             valueList: "false"
@@ -100,7 +99,7 @@ monitors:
           computes:
           - type: json2Table
             entryKey: /
-            properties: id;local
+            properties: [ id, local ]
           - type: excludeMatchingLines
             column: 3
             valueList: "false"

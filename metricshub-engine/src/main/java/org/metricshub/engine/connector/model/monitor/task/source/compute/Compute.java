@@ -54,7 +54,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = ExtractPropertyFromWbemPath.class, name = "extractPropertyFromWbemPath"),
 		@JsonSubTypes.Type(value = Head.class, name = "head"),
 		@JsonSubTypes.Type(value = InsertColumn.class, name = "insertColumn"),
-		// json2Csv: deprecated alias of json2Table, removed by step 3 of #1560
+		// json2Csv: deprecated alias of json2Table, registered so that the content-type check reports it
 		@JsonSubTypes.Type(value = Json2Csv.class, name = "json2Table", names = { "json2Csv" }),
 		@JsonSubTypes.Type(value = Json2List.class, name = "json2List"),
 		@JsonSubTypes.Type(value = KeepColumns.class, name = "keepColumns"),
