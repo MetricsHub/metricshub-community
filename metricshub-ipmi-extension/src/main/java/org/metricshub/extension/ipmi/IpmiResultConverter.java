@@ -63,6 +63,11 @@ public final class IpmiResultConverter {
 
 	private static final String EMPTY = "";
 
+	/**
+	 * The separator between the columns of a line of the IPMI text.
+	 */
+	static final String SEPARATOR = ";";
+
 	private static final HexFormat HEX = HexFormat.ofDelimiter(" ").withUpperCase();
 
 	/**
@@ -89,7 +94,7 @@ public final class IpmiResultConverter {
 	private record FruDevice(String vendor, String model, String serialNumber, String details) {
 		@Override
 		public String toString() {
-			return "FRU;" + vendor + ";" + model + ";" + serialNumber;
+			return String.join(SEPARATOR, "FRU", vendor, model, serialNumber);
 		}
 	}
 
@@ -152,7 +157,7 @@ public final class IpmiResultConverter {
 		}
 		return Stream.of(
 			String.join(
-				";",
+				SEPARATOR,
 				"Chassis",
 				flag(status.powerOn()),
 				flag(status.powerFault()),
@@ -240,7 +245,7 @@ public final class IpmiResultConverter {
 	 */
 	private static FruDevice fromSpd(final Fru fru, final SpdInfo spd) {
 		final String type = spd.getMemoryType() + " " + spd.getModuleType() + (spd.isEcc() ? " ECC" : EMPTY);
-		return withIdentity(fru, String.join(";", positive(spd.getCapacityMegabytes()), type.trim(), EMPTY, EMPTY));
+		return withIdentity(fru, String.join(SEPARATOR, positive(spd.getCapacityMegabytes()), type.trim(), EMPTY, EMPTY));
 	}
 
 	/**
@@ -275,7 +280,10 @@ public final class IpmiResultConverter {
 		if (!isBlank(pirom.getPartNumber())) {
 			info.add("Part number " + pirom.getPartNumber());
 		}
-		return withIdentity(fru, String.join(";", EMPTY, EMPTY, positive(Math.max(base, max)), String.join(", ", info)));
+		return withIdentity(
+			fru,
+			String.join(SEPARATOR, EMPTY, EMPTY, positive(Math.max(base, max)), String.join(", ", info))
+		);
 	}
 
 	/**
@@ -355,7 +363,7 @@ public final class IpmiResultConverter {
 			headsByEntity.computeIfAbsent(entity, key -> {
 				final FruDevice fru = frusByEntity.getOrDefault(key, NO_FRU);
 				return String.join(
-					";",
+					SEPARATOR,
 					deviceType,
 					Byte.toString(instance),
 					key,
@@ -371,7 +379,7 @@ public final class IpmiResultConverter {
 			.stream()
 			.map(
 				entry -> String.join(
-					";",
+					SEPARATOR,
 					entry.getValue(),
 					statesByEntity.get(entry.getKey()),
 					frusByEntity.getOrDefault(entry.getKey(), NO_FRU).details()
@@ -500,7 +508,7 @@ public final class IpmiResultConverter {
 		final String... thresholds
 	) {
 		return Stream.concat(Stream.of(type, id, name, entity, String.valueOf(value)), Arrays.stream(thresholds))
-			.collect(Collectors.joining(";"));
+			.collect(Collectors.joining(SEPARATOR));
 	}
 
 	/**
@@ -551,7 +559,7 @@ public final class IpmiResultConverter {
 	 * @return the row: the completion code and the data
 	 */
 	public static List<String> rawRow(final String result) {
-		return Arrays.asList(result.split(";", 2));
+		return Arrays.asList(result.split(SEPARATOR, 2));
 	}
 
 	/**

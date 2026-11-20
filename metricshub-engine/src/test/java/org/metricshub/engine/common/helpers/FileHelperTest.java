@@ -516,12 +516,6 @@ class FileHelperTest {
 	}
 
 	@Test
-	void escapeSemiColon_replacesSemicolons() {
-		assertEquals("a,b", FileHelper.escapeSemiColon("a;b"));
-		assertEquals("no change", FileHelper.escapeSemiColon("no change"));
-	}
-
-	@Test
 	void isSingleAbsolutePath_trueWhenSingleMatchingPathAndOneRow() {
 		final Set<String> paths = Set.of("/var/log/app.log");
 		final Set<String> resolved = Set.of("/var/log/app.log");
@@ -563,21 +557,21 @@ class FileHelperTest {
 		final List<List<String>> rows = new ArrayList<>();
 		rows.add(List.of("/opt/a.log", "line1;part"));
 		final String out = FileHelper.buildLogBlock(rows, Set.of("/opt/a.log"), Set.of("/opt/a.log"));
-		assertEquals("line1,part", out);
+		assertEquals("line1;part", out);
 	}
 
 	@Test
 	void buildLogBlock_multipleResolution_emitsOneMarkedCell() {
 		final List<List<String>> rows = new ArrayList<>();
 		rows.add(List.of("/opt/a.log", FileHelper.escapeNewLines("A\n")));
-		rows.add(List.of("/opt/b.log", FileHelper.escapeNewLines("B")));
+		rows.add(List.of("/opt/b.log", "B;C"));
 		final String out = FileHelper.buildLogBlock(rows, Set.of("/opt/*.log"), Set.of("/opt/a.log", "/opt/b.log"));
 		assertNotNull(out);
 		assertTrue(out.contains("<<<LOG:file=\"/opt/a.log\">>>"));
 		assertTrue(out.contains("<<<LOG:file=\"/opt/b.log\">>>"));
 		assertTrue(out.contains("<<<END_LOG>>>"));
-		assertTrue(out.contains(FileHelper.escapeSemiColon(FileHelper.escapeNewLines("A\n"))));
-		assertTrue(out.contains(FileHelper.escapeSemiColon(FileHelper.escapeNewLines("B"))));
+		assertTrue(out.contains(FileHelper.escapeNewLines("A\n")));
+		assertTrue(out.contains("\nB;C\n"));
 	}
 
 	@Test

@@ -82,7 +82,8 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	/**
-	 * A source processor that answers every source with the text <code>response</code>.
+	 * A source processor that answers every source with the text <code>response</code>, but an <code>snmpGet</code>
+	 * with the table it returns: the value <code>v;w</code> first, no row after that.
 	 *
 	 * @return the mocked source processor
 	 */
@@ -91,7 +92,10 @@ class MetricsHubExtensionForJawkTest {
 		final SourceTable response = SourceTable.ofText("response");
 		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(IpmiSource.class))).thenReturn(response);
-		when(sourceProcessor.process(any(SnmpGetSource.class))).thenReturn(response);
+		when(sourceProcessor.process(any(SnmpGetSource.class))).thenReturn(
+			SourceTable.ofTable(List.of(List.of("v;w"))),
+			SourceTable.empty()
+		);
 		when(sourceProcessor.process(any(SnmpTableSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(WbemSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(WmiSource.class))).thenReturn(response);
@@ -501,7 +505,8 @@ class MetricsHubExtensionForJawkTest {
 
 	/**
 	 * Every <code>execute*</code> function registers with Jawk and builds its source from the AWK array, numeric
-	 * strings included. <code>executeIpmiRequest</code> also runs without argument.
+	 * strings included. <code>executeIpmiRequest</code> also runs without argument, and <code>executeSnmpGet</code>
+	 * returns the value as it is, an empty string when there is none.
 	 */
 	@Test
 	void testEveryExecuteFunctionReadsTheAwkArray() throws Exception {
@@ -518,11 +523,12 @@ class MetricsHubExtensionForJawkTest {
 				ipmi["type"] = "ipmi"
 				printf "%s %s %s %s %s %s\\n", executeSnmpGet(get), executeSnmpTable(table), executeWbemRequest(wbem), \
 					executeWmiRequest(wmi), executeIpmiRequest(ipmi), executeIpmiRequest()
+				printf "[%s]\\n", executeSnmpGet(get)
 			}
 			""";
 
 		assertEquals(
-			"response response response response response response\n",
+			"v;w response response response response response\n[]\n",
 			AwkExecutor.executeAwk(
 				script,
 				"1.3.6.1.2.1.1.5.0 1,2,3 SELECT_Name_FROM_Win32_Fan\n",
@@ -532,7 +538,7 @@ class MetricsHubExtensionForJawkTest {
 		);
 
 		final ArgumentCaptor<SnmpGetSource> get = ArgumentCaptor.forClass(SnmpGetSource.class);
-		verify(sourceProcessor).process(get.capture());
+		verify(sourceProcessor, Mockito.times(2)).process(get.capture());
 		assertEquals("1.3.6.1.2.1.1.5.0", get.getValue().getOid());
 		final ArgumentCaptor<SnmpTableSource> table = ArgumentCaptor.forClass(SnmpTableSource.class);
 		verify(sourceProcessor).process(table.capture());

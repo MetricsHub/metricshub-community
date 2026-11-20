@@ -21,8 +21,6 @@ package org.metricshub.extension.win.detection;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -106,7 +104,7 @@ public class WmiDetectionService {
 		}
 
 		// Serialize the result as a CSV
-		String actualResult = SourceTable.tableToCsv(queryResult, TABLE_SEP, true);
+		String actualResult = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 		// Empty result? ==> failure
 		if (actualResult == null || actualResult.isBlank()) {

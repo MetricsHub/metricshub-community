@@ -1,7 +1,5 @@
 package org.metricshub.engine.constants;
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
@@ -60,14 +58,8 @@ public class Constants {
 	public static final String EXPECTED_VAL_2 = "expectedVal2";
 	public static final String EXPECTED_VAL_1_AND_2 = "expectedVal1\nexpectedVal2";
 	public static final String EXPECTED_VAL_1_AND_2_ARRAY = "[expectedVal1,\nexpectedVal2]";
-	private static final String EXPECTED_FULL_ROW_1 = String.join(TABLE_SEP, VALUE_VAL1, VALUE_VAL2, VALUE_VAL3) +
-		TABLE_SEP;
-	private static final String EXPECTED_FULL_ROW_2 = String.join(TABLE_SEP, VALUE_A1, VALUE_B1, VALUE_C1) + TABLE_SEP;
 	public static final String EXPECTED_RESULT = "[{\n" +
 		"\"Entry\":{\n" +
-		"\"Full\":\"" +
-		EXPECTED_FULL_ROW_1 +
-		"\",\n" +
 		"\"Column(1)\":\"val1\",\n" +
 		"\"Column(2)\":\"val2\",\n" +
 		"\"Column(3)\":\"val3\",\n" +
@@ -76,9 +68,6 @@ public class Constants {
 		"},\n" +
 		"{\n" +
 		"\"Entry\":{\n" +
-		"\"Full\":\"" +
-		EXPECTED_FULL_ROW_2 +
-		"\",\n" +
 		"\"Column(1)\":\"a1\",\n" +
 		"\"Column(2)\":\"b1\",\n" +
 		"\"Column(3)\":\"c1\",\n" +

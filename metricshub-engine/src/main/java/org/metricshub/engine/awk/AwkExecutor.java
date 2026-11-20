@@ -23,7 +23,6 @@ package org.metricshub.engine.awk;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
@@ -54,10 +53,14 @@ public class AwkExecutor {
 	private static final Awk AWK_PLUS_UTILITY = newAwk(null);
 
 	/**
-	 * Jawk instance dedicated to expression evaluation, where the record is a table row and the fields are therefore
-	 * separated by the table separator
+	 * The field separator of the expression evaluation, which also joins the cells of the row in <code>$0</code>
 	 */
-	private static final Awk AWK_FOR_EVAL = newAwk(TABLE_SEP);
+	private static final String EVAL_FIELD_SEPARATOR = ";";
+
+	/**
+	 * Jawk instance dedicated to expression evaluation, where the record is a table row
+	 */
+	private static final Awk AWK_FOR_EVAL = newAwk(EVAL_FIELD_SEPARATOR);
 
 	/**
 	 * Map of the scripts that have already been compiled to intermediate code
@@ -339,7 +342,7 @@ public class AwkExecutor {
 
 	/**
 	 * Evaluate the given <code>awkExpression</code> on one table row: the cells are <code>$1..$NF</code>, whatever
-	 * they contain, and <code>$0</code> is the row joined with the table separator, as it has always been.
+	 * they contain, and <code>$0</code> is the row joined with <code>;</code>, as it has always been.
 	 *
 	 * @param awkExpression The AWK expression to process and interpret
 	 * @param row           The row exposed to the expression
@@ -352,7 +355,7 @@ public class AwkExecutor {
 			throw new AwkException("Failed to compile Awk expression: " + awkExpression);
 		}
 		try {
-			return String.valueOf(AWK_FOR_EVAL.eval(expression, TableInputSource.ofRow(row, TABLE_SEP)));
+			return String.valueOf(AWK_FOR_EVAL.eval(expression, TableInputSource.ofRow(row, EVAL_FIELD_SEPARATOR)));
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
 		}

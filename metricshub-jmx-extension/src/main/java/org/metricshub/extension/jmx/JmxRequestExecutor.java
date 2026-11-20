@@ -22,7 +22,6 @@ package org.metricshub.extension.jmx;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -39,6 +38,7 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
@@ -91,7 +91,7 @@ public class JmxRequestExecutor {
 				attributes.forEach(attrList::add);
 			}
 			final List<String> keyPropList = keyProperties != null ? new ArrayList<>(keyProperties) : List.of();
-			final String csv = SourceTable.tableToCsv(result, TABLE_SEP, true);
+			final String csv = SourceTable.tableToCsv(result, AbstractRecorder.CSV_SEPARATOR, true);
 			JmxRecorder.getInstance(recordOutputDirectory).record(objectNamePattern, attrList, keyPropList, csv);
 		}
 

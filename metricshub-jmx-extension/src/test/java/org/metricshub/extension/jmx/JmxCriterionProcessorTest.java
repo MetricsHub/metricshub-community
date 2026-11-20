@@ -3,7 +3,6 @@ package org.metricshub.extension.jmx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -69,7 +68,7 @@ class JmxCriterionProcessorTest {
 
 		final CriterionTestResult result = processor.process(criterion, "connector123", telemetryManager);
 
-		final String expectedCsv = SourceTable.tableToCsv(response, TABLE_SEP, true);
+		final String expectedCsv = SourceTable.tableToCsv(response, ";", true);
 
 		assertTrue(result.isSuccess(), "Expected success for non-empty result with no expected match");
 		assertEquals(expectedCsv, result.getResult(), "Result should match the CSV-formatted response");

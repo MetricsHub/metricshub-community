@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.EMPTY;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 import static org.metricshub.engine.constants.Constants.SINGLE_SPACE;
@@ -2596,7 +2595,7 @@ class ComputeProcessorTest {
 		List<List<String>> table = Arrays.asList(LINE_1, LINE_2, LINE_3);
 
 		// The text the toText the desugaring inserts gives
-		sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		sourceTable.setText(SourceTable.tableToCsv(table, ";", true));
 
 		final Awk awkOK = Awk.builder().script("""
 				BEGIN { FS = ";"; }

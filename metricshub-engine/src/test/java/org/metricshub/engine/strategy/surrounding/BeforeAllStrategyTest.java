@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -183,9 +182,8 @@ class BeforeAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
-			protocolExtensionMock
-		).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -194,9 +192,8 @@ class BeforeAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
-			protocolExtensionMock
-		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
+			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		final SnmpTableSource beforeSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.5")
@@ -205,11 +202,9 @@ class BeforeAllStrategyTest {
 			.key("${source::beforeAll.snmpSource}")
 			.build();
 		// Mock source table information for the snmp beforeAll source
-		doReturn(
-			SourceTable.ofTable(
-				SourceTable.csvToTable("beforeAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", MetricsHubConstants.TABLE_SEP)
-			)
-		).when(protocolExtensionMock).processSource(eq(beforeSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("beforeAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", ";")))
+			.when(protocolExtensionMock)
+			.processSource(eq(beforeSource), anyString(), any(TelemetryManager.class));
 
 		collectStrategy.run();
 
@@ -306,9 +301,8 @@ class BeforeAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.discovery.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))).when(
-			protocolExtensionMock
-		).processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
 		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
@@ -317,11 +311,9 @@ class BeforeAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.discovery.sources.source(1)}")
 			.build();
-		doReturn(
-			SourceTable.ofTable(
-				SourceTable.csvToTable("diskController-1;1;2;3;4;5;6;7;healthy;health-ok", MetricsHubConstants.TABLE_SEP)
-			)
-		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("diskController-1;1;2;3;4;5;6;7;healthy;health-ok", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for the snmp beforeAll source
 		final SnmpTableSource beforeAllSource = SnmpTableSource.builder()
@@ -331,11 +323,9 @@ class BeforeAllStrategyTest {
 			.key("${source::beforeAll.snmpSource}")
 			.build();
 		// Mock source table information for the snmp beforeAll source
-		doReturn(
-			SourceTable.ofTable(
-				SourceTable.csvToTable("beforeAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", MetricsHubConstants.TABLE_SEP)
-			)
-		).when(protocolExtensionMock).processSource(eq(beforeAllSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("beforeAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", ";")))
+			.when(protocolExtensionMock)
+			.processSource(eq(beforeAllSource), anyString(), any(TelemetryManager.class));
 
 		discoveryStrategy.run();
 

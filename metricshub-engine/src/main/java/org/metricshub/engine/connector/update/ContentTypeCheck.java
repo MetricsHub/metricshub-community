@@ -81,7 +81,7 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#TABLE_FEEDS_TEXT}: a table read by a text compute or a <code>textUnion</code> member;</li>
  * <li>{@link Rule#TABLE_UNION_OF_TEXTS} (once per union) and {@link Rule#MIXED_UNION} (once per union, plus each text
  * member);</li>
- * <li>{@link Rule#STRING_LITERAL_ROWS}: a <code>;</code> string literal in <code>tables</code>,
+ * <li>{@link Rule#STRING_LITERAL_ROWS}: a string literal in <code>tables</code>,
  * <code>leftTable</code> or <code>rightTable</code>;</li>
  * <li>{@link Rule#NOT_A_REFERENCE}: anything but a source reference in the <code>source</code> of a mapping, of a
  * tool result, of an <code>executeForEachEntryOf</code> or of an <code>internalDbQuery</code> table, or in the
@@ -436,8 +436,8 @@ public class ContentTypeCheck {
 	}
 
 	/**
-	 * The fields the engine interpolates are exactly those the holder's update visits: each table referenced there is
-	 * serialized as <code>;</code> text (or, for <code>authenticationToken</code>, read as its first cell).
+	 * The fields the engine interpolates are exactly those the holder's update visits: a table referenced there
+	 * gives an empty text (or, for <code>authenticationToken</code>, is read as its first cell).
 	 *
 	 * @param holder A copy of the source or the compute, to name the fields
 	 * @param update The holder's update
