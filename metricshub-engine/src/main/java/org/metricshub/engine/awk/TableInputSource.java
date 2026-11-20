@@ -73,21 +73,6 @@ public class TableInputSource implements InputSource {
 	}
 
 	/**
-	 * A source over the rows of a table that also exposes the text the given function makes of each row as
-	 * <code>$0</code>, while <code>$1..$NF</code> are the cells.
-	 *
-	 * @param rows         The rows, null meaning no record
-	 * @param recordTextOf The text of a row (its cells, a null cell given as empty) as <code>$0</code>
-	 * @return the source
-	 */
-	public static TableInputSource withRecordText(
-		final List<List<String>> rows,
-		final Function<List<String>, String> recordTextOf
-	) {
-		return new TableInputSource(rows, recordTextOf);
-	}
-
-	/**
 	 * A source holding one record: the given row.
 	 *
 	 * @param row       The cells of the record

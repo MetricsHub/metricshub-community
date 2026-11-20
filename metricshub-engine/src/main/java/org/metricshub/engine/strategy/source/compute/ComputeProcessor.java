@@ -152,11 +152,6 @@ public class ComputeProcessor implements IComputeProcessor {
 
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
 
-	/**
-	 * What ends each line of the text result of an awk compute.
-	 */
-	private static final String AWK_TEXT_LINE_END = ";";
-
 	private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
 	private static final Function<ComputeValue, String> GET_VALUE_FROM_ROW = computeValue -> {
@@ -459,13 +454,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				return;
 			}
 
-			// The script may print a cell that holds CRLF: it is converted before the lines are split, or a carriage
-			// return would stay in front of the separator added to its line
-			awkResult = SourceTable.lineToList(StringHelper.toLf(awkResult), NEW_LINE)
-				.stream()
-				.map(line -> line.endsWith(AWK_TEXT_LINE_END) ? line : line + AWK_TEXT_LINE_END)
-				.collect(Collectors.joining(NEW_LINE));
-
+			// The text the script printed
 			sourceTable.setText(awkResult);
 		} catch (Exception e) {
 			logComputeError(connectorId, computeKey, "AWK: " + embeddedFile.description(), e, hostname);

@@ -30,8 +30,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.ArgumentCaptor;
@@ -379,7 +381,7 @@ class JawkSourceExtensionTest {
 			new JawkSourceExtension().processSource(textOutput, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
-		// With output: table, a bare print writes the cells (#1566), not the reference line $0 is
+		// With output: table, a bare print writes the cells (#1566), print $0 one cell: the cells joined with FS
 		final JawkSource barePrint = JawkSource.builder()
 			.input(inputRef)
 			.output(ContentType.TABLE)
@@ -389,28 +391,29 @@ class JawkSourceExtensionTest {
 			SourceTable.ofTable(
 				List.of(
 					List.of("fan1", "x;y", "3000"),
-					List.of("fan1;x;y;3000;"),
+					List.of("fan1 x;y 3000"),
 					List.of("fan2", "z", "0"),
-					List.of("fan2;z;0;")
+					List.of("fan2 z 0")
 				)
 			),
 			new JawkSourceExtension().processSource(barePrint, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
-		// With output: text, a bare print writes $0
+		// With output: text, a bare print writes $0, as the awk compute reads the same table
 		final JawkSource barePrintText = JawkSource.builder().input(inputRef).script("{ print }").build();
 		assertEquals(
-			SourceTable.ofText("fan1;x;y;3000;\nfan2;z;0;\n"),
+			SourceTable.ofText("fan1 x;y 3000\nfan2 z 0\n"),
 			new JawkSourceExtension().processSource(barePrintText, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
-
-		// $0 is the line the reference expanded to before #1559, trailing ";" included: a ";" taken from $0 (a
-		// password) is kept, and a script matching the line end sees the same text
-		final JawkSource wholeLine = JawkSource.builder().input(inputRef).script("{ print $0 }").build();
-		assertEquals(
-			SourceTable.ofText("fan1;x;y;3000;\nfan2;z;0;\n"),
-			new JawkSourceExtension().processSource(wholeLine, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		final SourceTable computed = SourceTable.ofTable(
+			List.of(List.of("fan1", "x;y", "3000"), List.of("fan2", "z", "0"))
 		);
+		ComputeProcessor.builder()
+			.hostname(telemetryManager.getHostname())
+			.sourceTable(computed)
+			.build()
+			.process(Awk.builder().script("{ print }").build());
+		assertEquals(SourceTable.ofText("fan1 x;y 3000\nfan2 z 0\n"), computed);
 
 		// The text written from a table input never holds CRLF
 		final JawkSource crlf = JawkSource.builder().input(inputRef).script("BEGIN { print \"a\\r\\nb\" }").build();
@@ -692,18 +695,5 @@ class JawkSourceExtensionTest {
 		telemetryManager.setHostProperties(hostProperties);
 
 		return telemetryManager;
-	}
-
-	/**
-	 * The $0 of a table row is the line a source reference gives: the trailing ";" kept, unless the row has a single
-	 * cell (whose only ";" is the trailing one).
-	 */
-	@Test
-	void testReferenceRowIsTheLegacyReferenceLine() {
-		assertEquals("a;b;", JawkSourceExtension.referenceRow(List.of("a", "b")));
-		assertEquals("token", JawkSourceExtension.referenceRow(List.of("token")));
-		assertEquals("pa;ss;", JawkSourceExtension.referenceRow(List.of("pa;ss")));
-		assertEquals(";;", JawkSourceExtension.referenceRow(Arrays.asList(null, "")));
-		assertEquals("", JawkSourceExtension.referenceRow(List.of()));
 	}
 }
