@@ -35,6 +35,7 @@ import io.jawk.util.AwkSettings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,6 +72,11 @@ public class AwkExecutor {
 	 * Map of the expressions that have already been compiled to intermediate code
 	 */
 	private static final ConcurrentHashMap<String, AwkExpression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
+
+	/**
+	 * The <code>OFMT</code> a script whose output is a table starts with
+	 */
+	private static final String TABLE_OFMT = "%.15g";
 
 	/**
 	 * Build a Jawk engine with the extensions every MetricsHub script can call: the given ones, the MetricsHub utility
@@ -282,7 +288,7 @@ public class AwkExecutor {
 	/**
 	 * Execute the given <code>awkScript</code> on the <code>awkInput</code> text and collect its output as a
 	 * table: each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into
-	* rows on <code>ORS</code> and into cells on <code>OFS</code>.
+	* rows on <code>ORS</code> and into cells on <code>OFS</code>. <code>OFMT</code> starts as <code>%.15g</code>.
 	 *
 	 * @param awkScript    The AWK script to process and interpret
 	 * @param awkInput     The input to modify via the AWK script
@@ -305,7 +311,7 @@ public class AwkExecutor {
 	/**
 	 * Execute the given <code>awkScript</code> on structured records (a table) and collect its output as a table:
 	 * each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into rows on
-	* <code>ORS</code> and into cells on <code>OFS</code>.
+	* <code>ORS</code> and into cells on <code>OFS</code>. <code>OFMT</code> starts as <code>%.15g</code>.
 	 *
 	 * @param awkScript    The AWK script to process and interpret
 	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
@@ -328,9 +334,14 @@ public class AwkExecutor {
 		final Awk.AwkRunBuilder runBuilder,
 		final Map<String, Object> awkVariables
 	) {
-		if (awkVariables != null && !awkVariables.isEmpty()) {
-			runBuilder.variables(awkVariables);
+		// A number printed into a table keeps 15 significant digits instead of the 6 of the AWK default OFMT. Like any
+		// -v assignment, it is made before BEGIN, so a script that sets OFMT keeps its own.
+		final Map<String, Object> variables = new HashMap<>();
+		variables.put("OFMT", TABLE_OFMT);
+		if (awkVariables != null) {
+			variables.putAll(awkVariables);
 		}
+		runBuilder.variables(variables);
 		final TableSink sink = new TableSink();
 		try {
 			runBuilder.execute(sink);

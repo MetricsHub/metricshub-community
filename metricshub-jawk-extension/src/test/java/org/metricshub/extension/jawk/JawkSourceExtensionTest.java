@@ -433,6 +433,22 @@ class JawkSourceExtensionTest {
 			new JawkSourceExtension().processSource(unknown, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
 		);
 
+		// A table output prints its numbers with 15 significant digits (#1649), a text output with 6
+		final JawkSource ofmtTable = JawkSource.builder()
+			.input(inputRef)
+			.output(ContentType.TABLE)
+			.script("$3 > 0 { print $3 / 9000, 2.5, $3 }")
+			.build();
+		assertEquals(
+			SourceTable.ofTable(List.of(List.of("0.333333333333333", "2.5", "3000"))),
+			new JawkSourceExtension().processSource(ofmtTable, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+		final JawkSource ofmtText = JawkSource.builder().input(inputRef).script("$3 > 0 { print $3 / 9000 }").build();
+		assertEquals(
+			SourceTable.ofText("0.333333\n"),
+			new JawkSourceExtension().processSource(ofmtText, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
 		// An empty table output stays a table
 		final JawkSource empty = JawkSource.builder().input(inputRef).output(ContentType.TABLE).script("BEGIN { }").build();
 		final SourceTable emptyResult = new JawkSourceExtension().processSource(
