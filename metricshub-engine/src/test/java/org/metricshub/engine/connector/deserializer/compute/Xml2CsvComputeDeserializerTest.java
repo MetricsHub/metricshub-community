@@ -34,8 +34,6 @@ class Xml2CsvComputeDeserializerTest extends DeserializerTest {
 				.properties(List.of("tag>attribute", "tag/child"))
 				.build()
 		);
-		// A string is not read: the compute has no properties
-		computes.add(Xml2Csv.builder().type("xml2Csv").build());
 
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
@@ -50,17 +48,6 @@ class Xml2CsvComputeDeserializerTest extends DeserializerTest {
 		);
 
 		assertEquals(expected, connector.getBeforeAll());
-
-		// The properties written as a string are only recorded for the content-type check
-		assertEquals(
-			List.of(false, true),
-			connector.getBeforeAll()
-				.get("testCompute")
-				.getComputes()
-				.stream()
-				.map(compute -> ((Xml2Csv) compute).isPropertiesAsString())
-				.toList()
-		);
 
 		// Each property is updated on its own, and the copy has its own list
 		final Xml2Csv origin = Xml2Csv.builder().properties(List.of("a", "b")).build();

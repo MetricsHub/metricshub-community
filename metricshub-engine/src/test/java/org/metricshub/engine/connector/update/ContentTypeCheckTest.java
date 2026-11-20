@@ -587,17 +587,10 @@ class ContentTypeCheckTest {
 			          - type: toText
 			          - type: json2Table
 			            parsingMode: events
-			            properties: id;name
-			          - type: toText
-			          - type: xml2Csv
-			            properties: id;name
 			          - type: toText
 			          - type: json2Table
 			            properties: [ id, name ]
 			            separator: ;
-			          - type: toText
-			          - type: xml2Csv
-			            properties: [ id, name ]
 			        script:
 			          type: awk
 			          script: "{ print $1 }"
@@ -614,19 +607,13 @@ class ContentTypeCheckTest {
 				"DEPRECATED_SYNTAX json2Csv #0",
 				"DEPRECATED_SYNTAX awk #1 input",
 				"DEPRECATED_SYNTAX json2Table #3 parsingMode",
-				// The properties written as a string, not those written as a list (#7 and #9)
-				"DEPRECATED_SYNTAX json2Table #3 properties",
-				"DEPRECATED_SYNTAX xml2Csv #5 properties",
-				// A separator is a finding on its own, whatever the form of the properties
-				"DEPRECATED_SYNTAX json2Table #7 separator",
+				"DEPRECATED_SYNTAX json2Table #5 separator",
 				"DEPRECATED_SYNTAX inputFormat"
 			),
 			lines(findings)
 		);
 		assertEquals(
 			List.of(
-				"a list: [ a, b ]/a string",
-				"a list: [ a, b ]/a string",
 				"json2Table/json2Csv",
 				"no input/input",
 				"no inputFormat/inputFormat",

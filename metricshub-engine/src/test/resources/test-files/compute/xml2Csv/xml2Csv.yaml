@@ -11,5 +11,3 @@ beforeAll:
       - type: xml2Csv
         recordTag: recordTagTest
         properties: [ "tag>attribute", tag/child ]
-      - type: xml2Csv
-        properties: tag>attribute;tag/child
