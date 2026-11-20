@@ -651,16 +651,14 @@ public class FileHelper {
 
 		// One-to-one path resolution with a single read result: emit text only, without segment markers.
 		if (isSinglePathMapping(paths, resolvedPaths, monitoringResults)) {
-			return escapeSemiColon(monitoringResults.get(0).get(1));
+			return monitoringResults.get(0).get(1);
 		}
 
 		final StringBuilder logBlocks = new StringBuilder();
 
 		monitoringResults.forEach(row -> {
 			final String path = row.get(0);
-			final String content = escapeSemiColon(row.get(1));
-
-			appendLogBlock(logBlocks, path, content);
+			appendLogBlock(logBlocks, path, row.get(1));
 		});
 
 		return logBlocks.toString();
@@ -688,16 +686,6 @@ public class FileHelper {
 		}
 
 		rawData.append(LOG_END_MARKER).append("\n\n");
-	}
-
-	/**
-	 * Escapes semicolons in a string so delimiter-sensitive downstream processing is not broken.
-	 *
-	 * @param value text to escape; must not be {@code null}
-	 * @return a new string with each {@code ';'} replaced by the configured escape token
-	 */
-	public static String escapeSemiColon(final String value) {
-		return value.replace(";", ",");
 	}
 
 	/**

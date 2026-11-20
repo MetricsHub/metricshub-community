@@ -36,6 +36,12 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 @Builder
 public class CriterionTestResult {
 
+	/**
+	 * The separator between the cells of a row in the result of a criterion that runs a query: the rows are
+	 * serialized as lines of cells, and the expected result is matched against that text.
+	 */
+	public static final String RESULT_SEPARATOR = ";";
+
 	private String result;
 
 	private boolean success;

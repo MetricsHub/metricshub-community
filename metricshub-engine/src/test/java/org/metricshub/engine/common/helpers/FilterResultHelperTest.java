@@ -2,7 +2,6 @@ package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.SINGLE_SPACE;
 
 import java.util.List;
@@ -95,18 +94,18 @@ class FilterResultHelperTest {
 
 	@Test
 	void testSelectedColumns() {
-		assertThrows(IllegalArgumentException.class, () -> FilterResultHelper.selectedColumns(null, TABLE_SEP, "-4"));
+		assertThrows(IllegalArgumentException.class, () -> FilterResultHelper.selectedColumns(null, ";", "-4"));
 
 		// no separator
 		assertEquals(LINE_RAW_DATA, FilterResultHelper.selectedColumns(LINE_RAW_DATA, null, "-3"));
 		assertEquals(LINE_RAW_DATA, FilterResultHelper.selectedColumns(LINE_RAW_DATA, "", "-3"));
 
 		// no selected columns
-		assertEquals(LINE_RAW_DATA, FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, null)); // no selected columns
-		assertEquals(LINE_RAW_DATA, FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, "")); // no selected columns
+		assertEquals(LINE_RAW_DATA, FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", null)); // no selected columns
+		assertEquals(LINE_RAW_DATA, FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", "")); // no selected columns
 
 		// out of bounds
-		assertEquals(List.of("", "", ""), FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, "50"));
+		assertEquals(List.of("", "", ""), FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", "50"));
 
 		// other separator
 		final List<String> rawDataLinesOtherSeparator = List.of(
@@ -120,12 +119,12 @@ class FilterResultHelperTest {
 			"BAR;ID2;NAME2;MANUFACTURER2",
 			"BAZ;ID3;NAME3;MANUFACTURER3"
 		);
-		assertEquals(expected, FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, "-4")); // use case trad
+		assertEquals(expected, FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", "-4")); // use case trad
 		assertEquals(expected, FilterResultHelper.selectedColumns(rawDataLinesOtherSeparator, "_", "-4")); // use case trad
 
 		assertEquals(
 			List.of("ID1;NAME1", "ID2;NAME2", "ID3;NAME3"),
-			FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, "2,3")
+			FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", "2,3")
 		); // use case trad
 
 		assertEquals(
@@ -148,7 +147,7 @@ class FilterResultHelperTest {
 
 		assertEquals(
 			List.of("MANUFACTURER1;NUMBER_OF_DISKS1", "MANUFACTURER2;NUMBER_OF_DISKS2", "MANUFACTURER3;NUMBER_OF_DISKS3"),
-			FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, "4-")
+			FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", "4-")
 		); // use case trad
 
 		assertEquals(
@@ -157,7 +156,7 @@ class FilterResultHelperTest {
 				"BAR;ID2;MANUFACTURER2;NUMBER_OF_DISKS2",
 				"BAZ;ID3;MANUFACTURER3;NUMBER_OF_DISKS3"
 			),
-			FilterResultHelper.selectedColumns(LINE_RAW_DATA, TABLE_SEP, "-2,4-")
+			FilterResultHelper.selectedColumns(LINE_RAW_DATA, ";", "-2,4-")
 		); // use case trad
 	}
 }

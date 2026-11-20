@@ -22,7 +22,6 @@ package org.metricshub.extension.jawk;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import io.jawk.Awk;
 import java.util.List;
@@ -51,6 +50,11 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  */
 @Slf4j
 public class JawkSourceExtension implements ICompositeSourceScriptExtension {
+
+	/**
+	 * What follows each cell of a table row in the <code>$0</code> of a script.
+	 */
+	private static final String CELL_SEPARATOR = ";";
 
 	@Override
 	public boolean isValidSource(final Source source) {
@@ -179,13 +183,13 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	}
 
 	/**
-	 * The text of a table row as a source reference expands it: its cells joined with ";", with the trailing ";"
-	 * unless the row has a single cell.
+	 * The <code>$0</code> of a table row, as a source reference expanded the row when it still expanded a table: its
+	 * cells joined with ";", with the trailing ";" unless the row has a single cell.
 	 *
 	 * @param cells The cells of the row
 	 * @return the line
 	 */
 	static String referenceRow(final List<String> cells) {
-		return SourceUpdaterProcessor.referenceLine(SourceTable.lineToCsv(cells, TABLE_SEP, false));
+		return SourceUpdaterProcessor.referenceLine(SourceTable.lineToCsv(cells, CELL_SEPARATOR, false));
 	}
 }

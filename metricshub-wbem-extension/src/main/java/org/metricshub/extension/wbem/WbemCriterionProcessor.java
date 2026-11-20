@@ -22,7 +22,6 @@ package org.metricshub.extension.wbem;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.AUTOMATIC_NAMESPACE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.Collections;
 import java.util.List;
@@ -403,7 +402,7 @@ public class WbemCriterionProcessor {
 		}
 
 		// Serialize the result as a CSV
-		String actualResult = SourceTable.tableToCsv(queryResult, TABLE_SEP, true);
+		String actualResult = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 		// Empty result? ==> failure
 		if (actualResult == null || actualResult.isBlank()) {

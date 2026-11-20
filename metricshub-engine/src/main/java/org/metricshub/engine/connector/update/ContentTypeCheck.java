@@ -92,8 +92,9 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#UNRESOLVED_REFERENCE}: a reference, anywhere in a source, a mapping or a tool result, to a source
  * the connector does not have;</li>
  * <li>{@link Rule#DEPRECATED_SYNTAX}: the <code>json2Csv</code> type, the ignored <code>json2Table</code>
- * <code>parsingMode</code>, awk <code>input</code>, awk source <code>inputFormat</code>, and the removed awk
- * <code>keep</code>, <code>exclude</code>, <code>separators</code>, <code>selectColumns</code> and awk source
+ * <code>parsingMode</code>, the removed <code>json2Table</code> <code>separator</code>, awk <code>input</code>, awk
+ * source <code>inputFormat</code>, and the removed awk <code>keep</code>, <code>exclude</code>,
+ * <code>separators</code>, <code>selectColumns</code> and awk source
  * <code>separators</code>.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
@@ -313,8 +314,13 @@ public class ContentTypeCheck {
 			if ("json2Csv".equalsIgnoreCase(compute.getType())) {
 				add(key, where, Rule.DEPRECATED_SYNTAX, "json2Table", "json2Csv");
 			}
-			if (compute instanceof Json2Csv json2Table && json2Table.isParsingModeDeclared()) {
-				add(key, where + " parsingMode", Rule.DEPRECATED_SYNTAX, "no parsingMode", "parsingMode");
+			if (compute instanceof Json2Csv json2Table) {
+				if (json2Table.isParsingModeDeclared()) {
+					add(key, where + " parsingMode", Rule.DEPRECATED_SYNTAX, "no parsingMode", "parsingMode");
+				}
+				if (json2Table.isSeparatorDeclared()) {
+					add(key, where + " separator", Rule.DEPRECATED_SYNTAX, "no separator", "separator");
+				}
 			}
 			if (compute instanceof Awk awk) {
 				checkVariables(key, where + " ", awk.getVariables());
@@ -430,8 +436,8 @@ public class ContentTypeCheck {
 	}
 
 	/**
-	 * The fields the engine interpolates are exactly those the holder's update visits: each table referenced there is
-	 * serialized as <code>;</code> text (or, for <code>authenticationToken</code>, read as its first cell).
+	 * The fields the engine interpolates are exactly those the holder's update visits: a table referenced there
+	 * gives an empty text (or, for <code>authenticationToken</code>, is read as its first cell).
 	 *
 	 * @param holder A copy of the source or the compute, to name the fields
 	 * @param update The holder's update

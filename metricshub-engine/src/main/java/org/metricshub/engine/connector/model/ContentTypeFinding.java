@@ -58,7 +58,7 @@ public record ContentTypeFinding(
 		MIXED_UNION("convert the members to one type"),
 		/**
 		 * A string in <code>tables</code>, <code>leftTable</code> or <code>rightTable</code> that is not exactly one source
-		 * reference: rows joined with <code>;</code>, or several references in one string.
+		 * reference.
 		 */
 		STRING_LITERAL_ROWS("write a list of rows, or exactly one source reference per table"),
 		/** Anything but exactly one source reference where the engine reads a source: a mapping, a tool result, a copy. */
@@ -69,8 +69,9 @@ public record ContentTypeFinding(
 		UNRESOLVED_REFERENCE("reference an existing source"),
 		/**
 		 * A deprecated syntax: the <code>json2Csv</code> type, the ignored <code>json2Table</code> <code>parsingMode</code>,
-		 * awk <code>input</code> and <code>inputFormat</code>, and the removed awk <code>keep</code>,
-		 * <code>exclude</code>, <code>separators</code> and <code>selectColumns</code>.
+		 * the removed <code>json2Table</code> <code>separator</code>, awk <code>input</code> and <code>inputFormat</code>,
+		 * and the removed awk <code>keep</code>, <code>exclude</code>, <code>separators</code> and
+		 * <code>selectColumns</code>.
 		 */
 		DEPRECATED_SYNTAX("remove or rename it"),
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */

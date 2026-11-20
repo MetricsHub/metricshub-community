@@ -116,8 +116,8 @@ public class TableJoinSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
-	 * @param leftTable            The left table to join: a {@link String} (source reference or <code>;</code> CSV
-	 *                             literal) or a {@link List} of rows, each a {@link List} of cells.
+	 * @param leftTable            The left table to join: a {@link String} (a source reference) or a {@link List}
+	 *                             of rows, each a {@link List} of cells.
 	 * @param rightTable           The right table to join, in the same forms as the left table.
 	 * @param leftKeyColumn        The column index from the left table to use as the key for the join.
 	 * @param rightKeyColumn       The column index from the right table to use as the key for the join.
