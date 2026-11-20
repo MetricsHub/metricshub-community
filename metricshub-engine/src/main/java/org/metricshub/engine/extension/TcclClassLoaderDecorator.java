@@ -70,10 +70,10 @@ public final class TcclClassLoaderDecorator {
 	}
 
 	/**
-	 * Lists the interfaces the proxy implements: {@code spi} first, then every other public interface
-	 * of {@code type} and its superclasses that {@code spi}'s class loader resolves to the same class.
-	 * The engine checks optional capabilities such as {@link IHttpRequestExtension} with
-	 * {@code instanceof} on the proxy, so the proxy must keep them.
+	 * Lists the interfaces the proxy implements: {@code spi} first, then the interfaces of
+	 * {@code type} and its superclasses that the proxy can implement. The engine checks optional
+	 * capabilities such as {@link IHttpRequestExtension} with {@code instanceof} on the proxy, so the
+	 * proxy must keep them.
 	 *
 	 * @param spi  the SPI interface class.
 	 * @param type the class of the wrapped extension instance.
@@ -83,23 +83,46 @@ public final class TcclClassLoaderDecorator {
 		final Set<Class<?>> interfaces = new LinkedHashSet<>();
 		interfaces.add(spi);
 		for (Class<?> current = type; current != null; current = current.getSuperclass()) {
-			for (final Class<?> candidate : current.getInterfaces()) {
-				if (Modifier.isPublic(candidate.getModifiers()) && isVisible(candidate, spi.getClassLoader())) {
-					interfaces.add(candidate);
-				}
-			}
+			addProxiable(current.getInterfaces(), spi.getClassLoader(), interfaces);
 		}
 		return interfaces.toArray(Class<?>[]::new);
 	}
 
 	/**
-	 * Tells whether {@code loader} resolves {@code type}'s name to {@code type} itself.
+	 * Adds each candidate the proxy can implement to {@code interfaces}, and for each one it cannot
+	 * implement (an interface of the extension's own loader, for example), looks at its
+	 * superinterfaces instead.
 	 *
-	 * @param type   the class to look up.
+	 * @param candidates the interfaces to add.
+	 * @param loader     the class loader the proxy is defined in.
+	 * @param interfaces the interfaces of the proxy, completed in place.
+	 */
+	private static void addProxiable(
+		final Class<?>[] candidates,
+		final ClassLoader loader,
+		final Set<Class<?>> interfaces
+	) {
+		for (final Class<?> candidate : candidates) {
+			if (isProxiable(candidate, loader)) {
+				interfaces.add(candidate);
+			} else {
+				addProxiable(candidate.getInterfaces(), loader, interfaces);
+			}
+		}
+	}
+
+	/**
+	 * Tells whether a proxy defined in {@code loader} can implement {@code type}: a public interface
+	 * that is not sealed and that {@code loader} resolves to {@code type} itself.
+	 *
+	 * @param type   the interface to check.
 	 * @param loader the class loader the proxy is defined in.
 	 * @return {@code true} when the proxy may implement {@code type}.
 	 */
-	private static boolean isVisible(final Class<?> type, final ClassLoader loader) {
+	private static boolean isProxiable(final Class<?> type, final ClassLoader loader) {
+		if (!Modifier.isPublic(type.getModifiers()) || type.isSealed()) {
+			return false;
+		}
 		try {
 			return Class.forName(type.getName(), false, loader) == type;
 		} catch (ClassNotFoundException | LinkageError e) {
