@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.source.SourceTable;
 
@@ -137,7 +136,7 @@ public class WmiRecorder extends AbstractRecorder<WmiRecorder.WmiRecordRequest> 
 		final String responseFileName = UUID.randomUUID() + ".csv";
 		Files.writeString(
 			outputDir.resolve(responseFileName),
-			SourceTable.tableToCsv(request.responseTable(), MetricsHubConstants.TABLE_SEP, true),
+			SourceTable.tableToCsv(request.responseTable(), CSV_SEPARATOR, true),
 			StandardCharsets.UTF_8
 		);
 		return responseFileName;

@@ -21,24 +21,22 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static com.fasterxml.jackson.annotation.Nulls.FAIL;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
@@ -60,30 +58,31 @@ public class Xml2Csv extends Compute {
 	private String recordTag = "/";
 
 	/**
-	 * The properties, as the <code>;</code> separated string that XFlat reads. Written in the connector as that
-	 * string or as a YAML list, each item one property, which is joined with <code>;</code> when the compute is built.
+	 * The properties, one per column. Written in the connector as a YAML list, each item one property. Null when the
+	 * connector sets none. An item must not hold a <code>;</code>: XFlat takes the properties as one string, the items
+	 * joined with <code>;</code>, removes the white space and the empty items, and splits it on <code>;</code>. An item
+	 * is never null.
 	 */
-	private String properties;
+	@JsonSetter(contentNulls = FAIL)
+	private List<String> properties;
 
 	/**
 	 * Construct a new instance of Xml2Csv.
 	 *
 	 * @param type       The type of the computation task.
 	 * @param recordTag  The record tag used in the computation.
-	 * @param properties The properties: a <code>;</code> separated {@link String} or a {@link List} of strings.
+	 * @param properties The properties, null for none.
 	 */
 	@Builder
 	@JsonCreator
 	public Xml2Csv(
-		@JsonProperty("type") String type,
-		@JsonProperty("recordTag") String recordTag,
-		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties
+		@JsonProperty("type") final String type,
+		@JsonProperty("recordTag") final String recordTag,
+		@JsonProperty("properties") final List<String> properties
 	) {
 		super(type);
 		this.recordTag = recordTag == null ? "/" : recordTag;
-		this.properties = properties instanceof List<?> items
-			? items.stream().map(String.class::cast).collect(Collectors.joining(SEMICOLON))
-			: (String) properties;
+		this.properties = properties == null ? null : new ArrayList<>(properties);
 	}
 
 	@Override
@@ -116,7 +115,9 @@ public class Xml2Csv extends Compute {
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		recordTag = updater.apply(recordTag);
-		properties = updater.apply(properties);
+		if (properties != null) {
+			properties.replaceAll(updater);
+		}
 	}
 
 	@Override

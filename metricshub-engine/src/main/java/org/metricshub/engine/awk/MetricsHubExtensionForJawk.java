@@ -21,8 +21,6 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -111,6 +109,11 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	private static final Pattern FILE_REFERENCE = Pattern.compile("(?i)\\$(\\{file::)");
 
 	private static final String BODY = "body";
+
+	/**
+	 * What follows each cell in the text that an <code>execute*</code> function returns for a table.
+	 */
+	private static final String CELL_SEPARATOR = ";";
 
 	private static final String HEADER = "header";
 
@@ -284,7 +287,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 		if (sourceTableResult != null && !sourceTableResult.isEmpty()) {
 			return sourceTableResult.getContentType() == ContentType.TEXT
 				? sourceTableResult.getText()
-				: SourceTable.tableToCsv(sourceTableResult.getTable(), TABLE_SEP, false);
+				: SourceTable.tableToCsv(sourceTableResult.getTable(), CELL_SEPARATOR, false);
 		} else {
 			return "";
 		}

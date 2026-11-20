@@ -138,20 +138,16 @@ class SourceTableReadRulesTest {
 	// ---------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * <code>${source::x}</code> substituted into a text field is a table as CSV, or a text as is. The trailing
-	 * <code>;</code> is stripped on the lines holding a single cell only, in both cases.
+	 * <code>${source::x}</code> substituted into a text field is the text as is, the trailing <code>;</code> stripped
+	 * on the lines holding a single value. A table is not interpolated: it gives an empty text.
 	 */
 	@Test
-	void sourceReferenceContentSerializesATableAndStripsTrailingSeparatorOnSingleCellLines() {
-		// "d;e" is a single cell containing the separator: its line "d;e;" is not stripped
-		// "" is a single empty cell: its line ";" becomes ""
-		assertEquals(
-			"a\nb;c;\nd;e;\n",
-			extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofTable(table("a", "b|c", "d;e", ""))))
-		);
-
+	void sourceReferenceContentIsTheTextAndStripsTrailingSeparatorOnSingleValueLines() {
 		// A text, line by line
 		assertEquals("k\nv1;v2\n\nz", extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText("k;\nv1;v2\n\nz;"))));
+
+		// A table
+		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofTable(table("a", "b|c")))));
 
 		// Nothing at all
 		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceTable.empty())));
@@ -388,9 +384,9 @@ class SourceTableReadRulesTest {
 
 	/**
 	 * JSON_ARRAY concatenates the non-blank entry texts with <code>,\n</code> inside <code>[]</code>;
-	 * JSON_ARRAY_EXTENDED wraps each entry's text with the entry row (serialized with <code>,</code> for
-	 * <code>;</code> inside a cell); the custom method surrounds each entry's text with the start and end strings
-	 * where <code>$n</code> is the entry column. The result is a text.
+	 * JSON_ARRAY_EXTENDED wraps each entry's text with the cells of the entry row (<code>Column(n)</code>, each cell
+	 * as it is); the custom method surrounds each entry's text with the start and end strings where <code>$n</code>
+	 * is the entry column. The result is a text.
 	 */
 	@Test
 	void executeForEachEntryOfJsonAndCustomConcatenateText() {
@@ -409,8 +405,8 @@ class SourceTableReadRulesTest {
 		final SourceTable extended = runForEachEntry(EntryConcatMethod.JSON_ARRAY_EXTENDED, results);
 		assertEquals(
 			SourceTable.ofText(
-				"[{\n\"Entry\":{\n\"Full\":\"a;x,y;\",\n\"Column(1)\":\"a\",\n\"Column(2)\":\"x;y\",\n\"Value\":{\"v\":1}\n}\n},\n" +
-					"{\n\"Entry\":{\n\"Full\":\"c;x,y;\",\n\"Column(1)\":\"c\",\n\"Column(2)\":\"x;y\",\n\"Value\":{\"v\":3}\n}\n}]"
+				"[{\n\"Entry\":{\n\"Column(1)\":\"a\",\n\"Column(2)\":\"x;y\",\n\"Value\":{\"v\":1}\n}\n},\n" +
+					"{\n\"Entry\":{\n\"Column(1)\":\"c\",\n\"Column(2)\":\"x;y\",\n\"Value\":{\"v\":3}\n}\n}]"
 			),
 			extended
 		);

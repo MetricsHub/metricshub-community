@@ -90,7 +90,7 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.24</community-connectors.version>
+		<community-connectors.version>1.0.25-SNAPSHOT</community-connectors.version>
 		<maven.compiler.release>25</maven.compiler.release>
 
 		<project.build.outputTimestamp>2026-11-02T14:36:17Z</project.build.outputTimestamp>
@@ -285,7 +285,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>wmi-java</artifactId>
-				<version>1.0.07</version>
+				<version>1.0.08</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>

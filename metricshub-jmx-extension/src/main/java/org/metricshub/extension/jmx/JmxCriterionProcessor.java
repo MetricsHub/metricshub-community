@@ -21,8 +21,6 @@ package org.metricshub.extension.jmx;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -121,7 +119,7 @@ public class JmxCriterionProcessor {
 			);
 
 			// Serialize the result as a CSV
-			final String result = SourceTable.tableToCsv(queryResult, TABLE_SEP, true);
+			final String result = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 			return checkJmxResult(jmxConfiguration.getHostname(), result, jmxCriterion.getExpectedResult());
 		} catch (Exception e) {

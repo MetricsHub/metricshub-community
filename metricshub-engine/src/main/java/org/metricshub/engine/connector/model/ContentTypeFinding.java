@@ -56,7 +56,7 @@ public record ContentTypeFinding(
 		TABLE_UNION_OF_TEXTS("use textUnion"),
 		/** A <code>tableUnion</code> of texts and tables. */
 		MIXED_UNION("convert the members to one type"),
-		/** A <code>;</code>-joined string literal in <code>tables</code>, <code>leftTable</code>, <code>rightTable</code>. */
+		/** A string literal in <code>tables</code>, <code>leftTable</code>, <code>rightTable</code>. */
 		STRING_LITERAL_ROWS("write a list of rows"),
 		/** Anything but a source reference where the engine reads a source: a mapping, a tool result, a copy. */
 		NOT_A_REFERENCE("reference a source, a static source holds a hard-coded table"),
@@ -66,8 +66,9 @@ public record ContentTypeFinding(
 		UNRESOLVED_REFERENCE("reference an existing source"),
 		/**
 		 * A deprecated syntax: the <code>json2Csv</code> type, the ignored <code>json2Table</code> <code>parsingMode</code>,
-		 * awk <code>input</code> and <code>inputFormat</code>, and the removed awk <code>keep</code>,
-		 * <code>exclude</code>, <code>separators</code> and <code>selectColumns</code>.
+		 * the removed <code>json2Table</code> <code>separator</code>, awk <code>input</code> and <code>inputFormat</code>,
+		 * and the removed awk <code>keep</code>, <code>exclude</code>, <code>separators</code> and
+		 * <code>selectColumns</code>.
 		 */
 		DEPRECATED_SYNTAX("remove or rename it"),
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */

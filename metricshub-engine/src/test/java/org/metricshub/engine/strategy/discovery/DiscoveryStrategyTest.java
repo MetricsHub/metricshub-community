@@ -32,7 +32,6 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -142,11 +141,9 @@ class DiscoveryStrategyTest {
 			.key("${source::monitors.disk_controller.discovery.sources.source(1)}")
 			.build();
 		// Mock source table information for disk controller
-		doReturn(
-			SourceTable.ofTable(
-				SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP)
-			)
-		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
 		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
@@ -161,9 +158,9 @@ class DiscoveryStrategyTest {
 			)
 			.build();
 		// Mock source table information for physical_disk
-		doReturn(
-			SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
-		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
 		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
@@ -174,9 +171,9 @@ class DiscoveryStrategyTest {
 			.computes(List.of(Multiply.builder().column(3).value("1048576").type("multiply").build()))
 			.build();
 		// Mock source table information for logical_disk
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP)))
-			.when(protocolExtensionMock)
-			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
 		// Check discovered monitors
@@ -357,11 +354,9 @@ class DiscoveryStrategyTest {
 			.key("${source::monitors.disk_controller.discovery.sources.source(1)}")
 			.build();
 		// Mock source table information for disk controller
-		doReturn(
-			SourceTable.ofTable(
-				SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP)
-			)
-		).when(protocolExtensionMock).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
@@ -446,9 +441,9 @@ class DiscoveryStrategyTest {
 			)
 			.build();
 		// Mock source table information for physical_disk
-		doReturn(
-			SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
-		).when(protocolExtensionMock).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
 		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
@@ -459,9 +454,9 @@ class DiscoveryStrategyTest {
 			.computes(List.of(Multiply.builder().column(3).value("1048576").type("multiply").build()))
 			.build();
 		// Mock source table information for logical_disk
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP)))
-			.when(protocolExtensionMock)
-			.processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", ";"))).when(
+			protocolExtensionMock
+		).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
 		// Check discovered monitors
@@ -539,10 +534,7 @@ class DiscoveryStrategyTest {
 		doReturn(Set.of(SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 		doAnswer(
 			invocation -> SourceTable.ofTable(
-				SourceTable.csvToTable(
-					sourceTables.get(invocation.<Source>getArgument(0).getKey()),
-					MetricsHubConstants.TABLE_SEP
-				)
+				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), ";")
 			)
 		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 

@@ -25,7 +25,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_RE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import java.util.ArrayList;
@@ -565,37 +564,44 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return EMPTY;
 		}
 
-		// A table is serialized with ';' as is, a text is taken as is
-		final boolean text = sourceTable.getContentType() == ContentType.TEXT;
-		log.debug(
-			"Hostname {} - Get {} referenced in {} ({}) from {}.",
-			hostname,
-			sourceRefKey,
-			operationType,
-			operationKey,
-			text ? "raw data" : "list table"
-		);
-		final String sourceReferenceContent = text
-			? sourceTable.getText()
-			: SourceTable.tableToCsv(sourceTable.getTable(), SEMICOLON, false);
+		// The load-time check rejects a table in an interpolation: a table here is the empty result of a source that
+		// failed, or the table that a failed compute left in place
+		if (sourceTable.getContentType() != ContentType.TEXT) {
+			if (!sourceTable.isEmpty()) {
+				log.warn(
+					"Hostname {} - {} referenced in {} ({}) is a table, not a text. The source reference will be replaced with an empty value.",
+					hostname,
+					sourceRefKey,
+					operationType,
+					operationKey
+				);
+			}
+			return EMPTY;
+		}
 
-		return Stream.of(sourceReferenceContent.split(NEW_LINE))
+		log.debug("Hostname {} - Get {} referenced in {} ({}).", hostname, sourceRefKey, operationType, operationKey);
+
+		return Stream.of(sourceTable.getText().split(NEW_LINE))
 			.map(SourceUpdaterProcessor::referenceLine)
 			.collect(Collectors.joining(NEW_LINE));
 	}
 
 	/**
-	 * A line of a source reference as the reference gives it: a line whose only semicolon is its last character (a
-	 * row of one cell, serialized with its trailing separator) loses that semicolon, any other line is kept as is.
-	 * For instance, the last semicolon leads to HTTP errors when the reference is in a header.
+	 * What ends each line of an awk text result.
+	 */
+	private static final String LINE_END = ";";
+
+	/**
+	 * A line of a source reference as the reference gives it: a line whose only <code>;</code> is its last character
+	 * (a single value, with the <code>;</code> that ends each line of an awk text result) loses it, any other line is
+	 * kept as is. For instance, that last character leads to HTTP errors when the reference is in a header.
 	 *
-	 * @param line A line of the serialized source
+	 * @param line A line of the text of the source
 	 * @return the line as the reference gives it
 	 */
 	public static String referenceLine(final String line) {
-		final int indexOfSemicolon = line.indexOf(SEMICOLON);
-		if (indexOfSemicolon == line.length() - 1) {
-			return line.replace(SEMICOLON, EMPTY);
+		if (line.indexOf(LINE_END) == line.length() - 1) {
+			return line.replace(LINE_END, EMPTY);
 		}
 		return line;
 	}

@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -905,10 +904,7 @@ class SourceUpdaterProcessorTest {
 			final String value = String.format("%s value", vendorSource1Ref);
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(
-					vendorSource1Ref,
-					SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
-				);
+				.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
 				value,
@@ -924,10 +920,7 @@ class SourceUpdaterProcessorTest {
 			final String value = String.format("%s %s value", vendorSource1Ref, vendorSource1Ref);
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(
-					vendorSource1Ref,
-					SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
-				);
+				.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
 				value,
@@ -942,10 +935,7 @@ class SourceUpdaterProcessorTest {
 			final String value = String.format("%s%s value", vendorSource1Ref, vendorSource1Ref);
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(
-					vendorSource1Ref,
-					SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
-				);
+				.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
 				value,
@@ -955,6 +945,23 @@ class SourceUpdaterProcessorTest {
 				"object"
 			);
 			assertEquals("vendorvendor value", result);
+		}
+		{
+			// A table is not interpolated: the reference gives an empty text
+			telemetryManager.getHostProperties()
+				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+				.addSourceTable(vendorSource1Ref, SourceTable.ofTable(List.of(List.of("a", "b"))));
+
+			assertEquals(
+				" value",
+				SourceUpdaterProcessor.replaceSourceReferenceContent(
+					vendorSource1Ref + " value",
+					telemetryManager,
+					MY_CONNECTOR_1_NAME,
+					"source",
+					"object"
+				)
+			);
 		}
 	}
 
@@ -1054,13 +1061,10 @@ class SourceUpdaterProcessorTest {
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).build())
 			.hostProperties(HostProperties.builder().build())
 			.build();
-		// A table whose only cell looks like a source reference
+		// A text that looks like a source reference
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(
-				inputRef,
-				SourceTable.ofTable(List.of(List.of("${source::monitors.enclosure.discovery.sources.other}")))
-			);
+			.addSourceTable(inputRef, SourceTable.ofText("${source::monitors.enclosure.discovery.sources.other}"));
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(JawkSource.class));
 		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(
 			sourceProcessor,
@@ -1076,7 +1080,7 @@ class SourceUpdaterProcessorTest {
 		final ArgumentCaptor<JawkSource> captor = ArgumentCaptor.forClass(JawkSource.class);
 		verify(sourceProcessor, times(2)).process(captor.capture());
 		assertEquals(inputRef, captor.getAllValues().get(0).getInput(), "single reference: kept");
-		// Inside a text: the reference is expanded into the source's text (the cell, which looks like a reference)
+		// Inside a text: the reference is expanded into the source's text (which looks like a reference)
 		assertEquals("x ${source::monitors.enclosure.discovery.sources.other}", captor.getAllValues().get(1).getInput());
 	}
 }

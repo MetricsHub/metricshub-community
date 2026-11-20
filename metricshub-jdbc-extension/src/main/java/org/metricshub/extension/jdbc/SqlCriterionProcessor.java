@@ -21,8 +21,6 @@ package org.metricshub.extension.jdbc;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -164,7 +162,7 @@ public class SqlCriterionProcessor {
 		}
 
 		// Serialize the result as a CSV
-		final String result = SourceTable.tableToCsv(queryResult, TABLE_SEP, true);
+		final String result = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 		return checkSqlResult(hostname, result, sqlCriterion.getExpectedResult());
 	}

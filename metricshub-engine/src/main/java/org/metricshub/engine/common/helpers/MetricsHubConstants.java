@@ -48,20 +48,12 @@ import org.metricshub.engine.connector.model.metric.StateSet;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class MetricsHubConstants {
 
-	// Table separators, tabulations, new line characters
+	// Separators, tabulations, new line characters
 
-	/**
-	 * Semicolon
-	 */
-	public static final String SEMICOLON = ";";
 	/**
 	 * Separator: Comma
 	 */
 	public static final String COMMA = ",";
-	/**
-	 * Separator: Table Separator (Uses SEMICOLON)
-	 */
-	public static final String TABLE_SEP = SEMICOLON;
 	/**
 	 * Empty String
 	 */

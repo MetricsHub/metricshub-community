@@ -24,7 +24,6 @@ package org.metricshub.engine.common.helpers;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COMMA;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TAB;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.util.List;
@@ -41,6 +40,11 @@ import org.metricshub.engine.strategy.utils.PslUtils;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FilterResultHelper {
+
+	/**
+	 * What joins the selected columns of a line.
+	 */
+	private static final String COLUMN_SEPARATOR = ";";
 
 	/**
 	 * Filter the lines:
@@ -110,21 +114,20 @@ public class FilterResultHelper {
 		}
 
 		return lines.stream().map(line -> {
-			// protect the initial string that contains ";" and replace it with "," if this
-			// latest is not in Separators list. Otherwise, just remove the ";"
-			// replace all separators by ";", which is the standard separator used by MS_HW
-			if (!separators.contains(TABLE_SEP) && !separators.contains(COMMA)) {
-				return line.replace(TABLE_SEP, COMMA);
+			// The selected columns are joined with ";": a ";" that is not one of the separators is replaced by ","
+			// when "," is not a separator either, and is removed otherwise
+			if (!separators.contains(COLUMN_SEPARATOR) && !separators.contains(COMMA)) {
+				return line.replace(COLUMN_SEPARATOR, COMMA);
 			}
-			if (!separators.contains(TABLE_SEP)) {
-				return line.replace(TABLE_SEP, EMPTY);
+			if (!separators.contains(COLUMN_SEPARATOR)) {
+				return line.replace(COLUMN_SEPARATOR, EMPTY);
 			}
 			return line;
 		})
 			.map(
 				line -> !separators.contains(TAB) && !separators.contains(WHITE_SPACE)
-					? PslUtils.nthArgf(line, selectColumns, separators, TABLE_SEP) // equivalent to ntharg // if separator = tab or simple space, then ignore empty cells
-					: PslUtils.nthArg(line, selectColumns, separators, TABLE_SEP)
+					? PslUtils.nthArgf(line, selectColumns, separators, COLUMN_SEPARATOR) // equivalent to ntharg // if separator = tab or simple space, then ignore empty cells
+					: PslUtils.nthArg(line, selectColumns, separators, COLUMN_SEPARATOR)
 			)
 			.collect(Collectors.toList());
 	}

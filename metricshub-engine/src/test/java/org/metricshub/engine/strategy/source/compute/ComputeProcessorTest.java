@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.EMPTY;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 import static org.metricshub.engine.constants.Constants.SINGLE_SPACE;
@@ -1310,8 +1309,7 @@ class ComputeProcessorTest {
 		// Check the case of a non-null {@link Json2Csv} instance
 		jsonToCsv = Json2Csv.builder()
 			.entryKey("/monitors")
-			.separator(";")
-			.properties("id;name;monitorType;hostId")
+			.properties(List.of("id", "name", "monitorType", "hostId"))
 			.build();
 
 		computeProcessor.process(jsonToCsv);
@@ -1321,13 +1319,6 @@ class ComputeProcessorTest {
 				List.of("/monitors[0]", "enclosure-1", "enclosure-1", "ENCLOSURE", "hostId"),
 				List.of("/monitors[1]", "enclosure-2", "enclosure-2", "ENCLOSURE", "hostId")
 			)
-		);
-		assertEquals(expectedResult, sourceTable);
-
-		// The properties written as a list give the same table
-		sourceTable.setText(rawData);
-		computeProcessor.process(
-			Json2Csv.builder().entryKey("/monitors").properties(List.of("id", "name", "monitorType", "hostId")).build()
 		);
 		assertEquals(expectedResult, sourceTable);
 
@@ -1358,33 +1349,30 @@ class ComputeProcessorTest {
 			]}""";
 
 		// Read as a tree, then, padded with spaces, as a stream of events
-		for (final String separator : List.of(";", "|", "\u001F")) {
-			for (final String padding : List.of("", " ".repeat(ClientsExecutor.JSON_EVENTS_MIN_LENGTH))) {
-				sourceTable.setText(json + padding);
-				computeProcessor.process(
-					Json2Csv.builder()
-						.entryKey("/items")
-						.properties("name;text;nested/id;list[0]/v;last")
-						.separator(separator)
-						.build()
-				);
-				assertEquals(
-					SourceTable.ofTable(
-						List.of(
-							List.of("/items[0]", "a", "line 1\nline 2", "", "", ""),
-							List.of("/items[1]", "b;c", "x|y", "7", "first", ""),
-							List.of("/items[2]", "\u00e9", "\n", "", "", "end")
-						)
-					),
-					sourceTable,
-					separator + " " + padding.length()
-				);
-			}
+		for (final String padding : List.of("", " ".repeat(ClientsExecutor.JSON_EVENTS_MIN_LENGTH))) {
+			sourceTable.setText(json + padding);
+			computeProcessor.process(
+				Json2Csv.builder()
+					.entryKey("/items")
+					.properties(List.of("name", "text", "nested/id", "list[0]/v", "last"))
+					.build()
+			);
+			assertEquals(
+				SourceTable.ofTable(
+					List.of(
+						List.of("/items[0]", "a", "line 1\nline 2", "", "", ""),
+						List.of("/items[1]", "b;c", "x|y", "7", "first", ""),
+						List.of("/items[2]", "\u00e9", "\n", "", "", "end")
+					)
+				),
+				sourceTable,
+				"padding " + padding.length()
+			);
 		}
 
 		// A document that does not parse gives an empty table
 		sourceTable.setText("{not json");
-		computeProcessor.process(Json2Csv.builder().entryKey("/items").properties("name").build());
+		computeProcessor.process(Json2Csv.builder().entryKey("/items").properties(List.of("name")).build());
 		assertEquals(SourceTable.empty(), sourceTable);
 
 		// The cells are cut on a character the document holds neither raw nor escaped (in any case): here U+E003
@@ -1404,7 +1392,9 @@ class ComputeProcessorTest {
 			sourceTable.setText(
 				"{\"members\":[{\"name\":\"m;1\",\"disks\":[{\"id\":\"d1\"},{\"id\":\"d\\n2\"}]}]}" + padding
 			);
-			computeProcessor.process(Json2Csv.builder().entryKey("/members/*/disks").properties("id;../name").build());
+			computeProcessor.process(
+				Json2Csv.builder().entryKey("/members/*/disks").properties(List.of("id", "../name")).build()
+			);
 			assertEquals(
 				SourceTable.ofTable(
 					List.of(List.of("/members[0]/disks[0]", "d1", "m;1"), List.of("/members[0]/disks[1]", "d\n2", "m;1"))
@@ -2031,12 +2021,14 @@ class ComputeProcessorTest {
 		final String xml = ResourceHelper.getResourceAsString("/test-files/compute/xml2Csv/xml2Csv.xml", this.getClass());
 		sourceTable.setText(xml);
 
-		final String properties = ">classId;" +
-			"outConfigs/equipmentFan>dn;" +
-			"outConfigs/equipmentFan>serial;" +
-			"outConfigs/equipmentFan>model;" +
-			"outConfigs/equipmentFan>vendor;" +
-			"outConfigs/equipmentFan>operState";
+		final List<String> properties = List.of(
+			">classId",
+			"outConfigs/equipmentFan>dn",
+			"outConfigs/equipmentFan>serial",
+			"outConfigs/equipmentFan>model",
+			"outConfigs/equipmentFan>vendor",
+			"outConfigs/equipmentFan>operState"
+		);
 
 		final String recordTag = "/configResolveClass";
 
@@ -2603,7 +2595,7 @@ class ComputeProcessorTest {
 		List<List<String>> table = Arrays.asList(LINE_1, LINE_2, LINE_3);
 
 		// The text the toText the desugaring inserts gives
-		sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		sourceTable.setText(SourceTable.tableToCsv(table, ";", true));
 
 		final Awk awkOK = Awk.builder().script("""
 				BEGIN { FS = ";"; }
