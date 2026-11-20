@@ -69,7 +69,7 @@ public class Json2Csv extends Compute {
 
 	/**
 	 * The properties, one per column after the entry identifier. Written in the connector as a YAML list, each item
-	 * one property, never null. Null when the connector sets none.
+	 * one property; an item is never null. Null when the connector sets none.
 	 */
 	@JsonSetter(contentNulls = FAIL)
 	private List<String> properties;
