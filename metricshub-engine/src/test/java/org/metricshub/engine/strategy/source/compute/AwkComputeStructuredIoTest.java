@@ -63,6 +63,18 @@ class AwkComputeStructuredIoTest {
 	}
 
 	@Test
+	void tableOutputPrintsNumbersWith15SignificantDigits() {
+		final SourceTable sourceTable = SourceTable.ofTable(table("fan1|3000"));
+		processor(sourceTable).process(Awk.builder().script("{ print $2 / 9000, 2.5 }").output(ContentType.TABLE).build());
+		assertEquals(table("0.333333333333333|2.5"), sourceTable.getTable());
+
+		// A text output is standard AWK
+		final SourceTable text = SourceTable.ofTable(table("fan1|3000"));
+		processor(text).process(Awk.builder().script("{ print $2 / 9000 }").build());
+		assertEquals("0.333333;", text.getText());
+	}
+
+	@Test
 	void tableOutputKeepsCrlfInACell() {
 		final SourceTable sourceTable = SourceTable.ofText("");
 		processor(sourceTable).process(

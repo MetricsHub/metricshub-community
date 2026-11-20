@@ -37,7 +37,8 @@ import java.util.regex.Pattern;
  * completes it; {@link #getRows()} turns whatever is still pending into the last row.
  * <p>
  * The values are rendered as <code>print</code> renders them: a string as is, an integral number without decimals,
- * any other number through <code>OFMT</code>.
+ * any other number through <code>OFMT</code>, which {@link AwkExecutor} sets to <code>%.15g</code> before the script
+ * runs (a script that sets <code>OFMT</code> keeps its own).
  */
 public class TableSink extends AwkSink {
 
