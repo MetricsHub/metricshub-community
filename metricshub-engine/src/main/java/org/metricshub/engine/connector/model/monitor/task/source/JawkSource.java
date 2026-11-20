@@ -96,7 +96,7 @@ public class JawkSource extends Source {
 	private Map<String, Object> variables = new LinkedHashMap<>();
 
 	/**
-	 * What the script produces: {@link ContentType#TEXT} (the printed lines, re-parsed into a table) or
+	 * What the script produces: {@link ContentType#TEXT} (the text the script printed, as it is) or
 	 * {@link ContentType#TABLE} (each <code>print</code> is one row, the text of <code>printf</code> is split into rows
 	* on <code>ORS</code> and into cells on <code>OFS</code>).
 	 * Default text.

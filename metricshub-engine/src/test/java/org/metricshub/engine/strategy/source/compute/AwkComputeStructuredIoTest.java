@@ -40,7 +40,7 @@ class AwkComputeStructuredIoTest {
 		final SourceTable sourceTable = SourceTable.ofTable(table("a;b|c", "|d"));
 		processor(sourceTable).process(Awk.builder().script("{ print $1 \";\" NF \";\" $2 }").build());
 		// Text output: the ";" inside the first cell is a field separator for whoever splits the text
-		assertEquals(SourceTable.ofText("a;b;2;c;\n;2;d;"), sourceTable);
+		assertEquals(SourceTable.ofText("a;b;2;c\n;2;d\n"), sourceTable);
 	}
 
 	@Test
@@ -85,12 +85,12 @@ class AwkComputeStructuredIoTest {
 	void textOutputOfTableInputHasNoCrlf() {
 		final SourceTable sourceTable = SourceTable.ofTable(table("x"));
 		processor(sourceTable).process(Awk.builder().script("BEGIN { print \"a\\r\\nb\" }").build());
-		assertEquals(SourceTable.ofText("a;\nb;"), sourceTable);
+		assertEquals(SourceTable.ofText("a\nb\n"), sourceTable);
 
 		// Neither when the CRLF comes from a cell
 		final SourceTable cell = SourceTable.ofTable(table("a\r\nb|c"));
 		processor(cell).process(Awk.builder().script("{ print $1 }").build());
-		assertEquals(SourceTable.ofText("a;\nb;"), cell);
+		assertEquals(SourceTable.ofText("a\nb\n"), cell);
 	}
 
 	/**
@@ -105,7 +105,7 @@ class AwkComputeStructuredIoTest {
 
 		final SourceTable text = SourceTable.ofText("a b\r\nc d\r\n");
 		processor(text).process(Awk.builder().script("{ print $NF \";\" $1 }").build());
-		assertEquals("b;a;\nd;c;", text.getText());
+		assertEquals("b;a\nd;c\n", text.getText());
 	}
 
 	/**
@@ -166,11 +166,11 @@ class AwkComputeStructuredIoTest {
 		// Text output, both ways
 		final SourceTable fromTable = SourceTable.ofTable(table("fan;1|3000"));
 		runThroughUpdater("script: '{ print $1 \"#\" NF }'\ninput: text", fromTable);
-		assertEquals(SourceTable.ofText("fan;1#2;"), fromTable);
+		assertEquals(SourceTable.ofText("fan;1#2\n"), fromTable);
 
 		final SourceTable fromText = SourceTable.ofText("fan1 3000\n");
 		runThroughUpdater("script: '{ print $1 \"#\" NF }'\ninput: table", fromText);
-		assertEquals(SourceTable.ofText("fan1#2;"), fromText);
+		assertEquals(SourceTable.ofText("fan1#2\n"), fromText);
 	}
 
 	@Test
