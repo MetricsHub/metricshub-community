@@ -66,12 +66,11 @@ public record ContentTypeFinding(
 		UNRESOLVED_REFERENCE("reference an existing source"),
 		/**
 		 * A deprecated syntax: the <code>json2Csv</code> type, the ignored <code>json2Table</code> <code>parsingMode</code>,
-		 * the removed <code>json2Table</code> <code>separator</code>, the <code>properties</code> of a
-		 * <code>json2Table</code> or of an <code>xml2Csv</code> written as a string instead of a list, awk
-		 * <code>input</code> and <code>inputFormat</code>, and the removed awk <code>keep</code>, <code>exclude</code>,
-		 * <code>separators</code> and <code>selectColumns</code>.
+		 * the removed <code>json2Table</code> <code>separator</code>, awk <code>input</code> and <code>inputFormat</code>,
+		 * and the removed awk <code>keep</code>, <code>exclude</code>, <code>separators</code> and
+		 * <code>selectColumns</code>.
 		 */
-		DEPRECATED_SYNTAX("remove, rename or rewrite it"),
+		DEPRECATED_SYNTAX("remove or rename it"),
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */
 		COLUMN_ON_TEXT("remove the column, or write a toTable before"),
 		/** No <code>column</code> on an append, prepend, replace or substring that is fed a table. */

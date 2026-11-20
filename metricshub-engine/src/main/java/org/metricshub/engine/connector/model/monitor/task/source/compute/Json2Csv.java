@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static com.fasterxml.jackson.annotation.Nulls.FAIL;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
@@ -29,7 +30,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
@@ -38,7 +38,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.metricshub.engine.connector.deserializer.custom.StringOrListDeserializer;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
@@ -52,8 +51,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
  * events, a smaller one as a tree (#1593). A connector declaring it still deserializes, its value dropped, and the
  * content-type check rejects it (<code>parsingModeDeclared</code>).
  * <p>
- * The content-type check also rejects the <code>properties</code> written as a string, once split on <code>;</code>
- * (<code>propertiesAsString</code>), and the <code>separator</code> property, removed because the result is a table
+ * The content-type check also rejects the <code>separator</code> property, removed because the result is a table
  * (<code>separatorDeclared</code>).
  */
 @Data
@@ -71,17 +69,10 @@ public class Json2Csv extends Compute {
 
 	/**
 	 * The properties, one per column after the entry identifier. Written in the connector as a YAML list, each item
-	 * one property. Null when the connector sets none.
+	 * one property, never null. Null when the connector sets none.
 	 */
+	@JsonSetter(contentNulls = FAIL)
 	private List<String> properties;
-
-	/**
-	 * Whether the connector writes <code>properties</code> as a string instead of a list, which the content-type
-	 * check reports: the compute then has no properties. Never serialized, not part of the equality, not copied.
-	 */
-	@JsonIgnore
-	@EqualsAndHashCode.Exclude
-	private boolean propertiesAsString;
 
 	/**
 	 * Whether the connector writes the removed <code>separator</code> property, which the content-type check
@@ -127,28 +118,15 @@ public class Json2Csv extends Compute {
 	 * @param properties  The properties, null for none.
 	 */
 	@Builder
-	public Json2Csv(final String type, final String entryKey, final List<String> properties) {
+	@JsonCreator
+	public Json2Csv(
+		@JsonProperty("type") final String type,
+		@JsonProperty("entryKey") final String entryKey,
+		@JsonProperty("properties") final List<String> properties
+	) {
 		super(type);
 		this.entryKey = entryKey == null ? "/" : entryKey;
 		this.properties = properties == null ? null : new ArrayList<>(properties);
-	}
-
-	/**
-	 * Construct the instance a connector describes.
-	 *
-	 * @param type        The type of the computation task.
-	 * @param entryKey    The entry key for Json2Csv computation.
-	 * @param properties  The properties: a {@link List} of strings, or a {@link String}, which is only recorded for
-	 *                    the content-type check.
-	 */
-	@JsonCreator
-	Json2Csv(
-		@JsonProperty("type") String type,
-		@JsonProperty("entryKey") String entryKey,
-		@JsonProperty("properties") @JsonDeserialize(using = StringOrListDeserializer.class) Object properties
-	) {
-		this(type, entryKey, properties instanceof List<?> items ? items.stream().map(String.class::cast).toList() : null);
-		propertiesAsString = properties instanceof String;
 	}
 
 	@Override
