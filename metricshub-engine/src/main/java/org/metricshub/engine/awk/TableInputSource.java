@@ -25,7 +25,6 @@ import io.jawk.jrt.InputSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Feeds a table to an AWK script as structured records: each row is one record whose cells are
@@ -35,13 +34,13 @@ import java.util.function.Function;
  * <code>$0</code> is not provided: Jawk synthesizes it only when the script reads it, joining the cells with the
  * <code>FS</code> in force when the record was read, taken literally (with <code>BEGIN { FS = "@" }</code>, the
  * cells <code>b</code> and <code>c d</code> make <code>b@c d</code>), or with <code>OFS</code> once the script
- * assigned a field or <code>NF</code>. Use {@link #withRecordText(List, String)} to expose a given text as
- * <code>$0</code> as well, for instance to keep the legacy <code>;</code>-joined row of a mapping expression.
+ * assigned a field or <code>NF</code>. {@link #ofRow(List, String)} also exposes the row joined with a given
+ * separator as <code>$0</code>, for the <code>;</code>-joined row of a mapping expression.
  */
 public class TableInputSource implements InputSource {
 
 	private final List<List<String>> rows;
-	private final Function<List<String>, String> recordTextOf;
+	private final String separator;
 	private int index = -1;
 	private List<String> fields;
 	private String recordText;
@@ -52,35 +51,24 @@ public class TableInputSource implements InputSource {
 	 * @param rows The rows, null meaning no record
 	 */
 	public TableInputSource(final List<List<String>> rows) {
-		this(rows, (Function<List<String>, String>) null);
+		this(rows, null);
 	}
 
-	private TableInputSource(final List<List<String>> rows, final Function<List<String>, String> recordTextOf) {
+	private TableInputSource(final List<List<String>> rows, final String separator) {
 		this.rows = rows == null ? List.of() : rows;
-		this.recordTextOf = recordTextOf;
+		this.separator = separator;
 	}
 
 	/**
-	 * A source over the rows of a table that also exposes each row joined with the separator as <code>$0</code>,
-	 * while <code>$1..$NF</code> are the cells.
-	 *
-	 * @param rows      The rows, null meaning no record
-	 * @param separator The separator joining the cells in <code>$0</code>
-	 * @return the source
-	 */
-	public static TableInputSource withRecordText(final List<List<String>> rows, final String separator) {
-		return new TableInputSource(rows, cells -> String.join(separator, cells));
-	}
-
-	/**
-	 * A source holding one record: the given row.
+	 * A source holding one record: the given row, its cells as <code>$1..$NF</code> and joined with the separator as
+	 * <code>$0</code>.
 	 *
 	 * @param row       The cells of the record
 	 * @param separator The separator joining the cells in <code>$0</code>
 	 * @return the source
 	 */
 	public static TableInputSource ofRow(final List<String> row, final String separator) {
-		return withRecordText(List.of(row == null ? List.of() : row), separator);
+		return new TableInputSource(List.of(row == null ? List.of() : row), separator);
 	}
 
 	@Override
@@ -100,7 +88,7 @@ public class TableInputSource implements InputSource {
 			}
 		}
 		fields = Collections.unmodifiableList(cells);
-		recordText = recordTextOf == null ? null : recordTextOf.apply(fields);
+		recordText = separator == null ? null : String.join(separator, fields);
 		return true;
 	}
 

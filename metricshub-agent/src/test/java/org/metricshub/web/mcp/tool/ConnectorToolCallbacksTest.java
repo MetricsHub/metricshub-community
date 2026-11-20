@@ -98,11 +98,9 @@ class ConnectorToolCallbacksTest {
 			.get("hosts")
 			.get(0)
 			.get("response");
-		// The text as the source holds it: one line per printed line, the ";" inside a line kept (no split into cells)
+		// Exactly what the script printed: the ";" inside a line kept, no ";" added at the end of a line
 		assertEquals("text", response.get("type").asText());
-		final String text = response.get("text").asText();
-		assertTrue(text.startsWith("first note"), text);
-		assertTrue(text.contains("second, then a semicolon; here"), text);
+		assertEquals("first note\nsecond, then a semicolon; here\n", response.get("text").asText());
 		assertTrue(response.get("rows") == null, response.toString());
 	}
 

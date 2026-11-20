@@ -38,7 +38,7 @@ class AwkStructuredIoTest {
 
 		assertFalse(new TableInputSource(null).nextRecord());
 
-		final TableInputSource withText = TableInputSource.withRecordText(table("a;b|c"), ";");
+		final TableInputSource withText = TableInputSource.ofRow(List.of("a;b", "c"), ";");
 		assertTrue(withText.nextRecord());
 		assertEquals("a;b;c", withText.getRecordText());
 		assertEquals(List.of("a;b", "c"), withText.getFields());

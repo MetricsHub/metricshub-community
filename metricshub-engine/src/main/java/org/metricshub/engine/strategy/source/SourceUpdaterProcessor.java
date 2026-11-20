@@ -260,7 +260,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	/**
 	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>:
-	 * the whole first line of a text, without its line ending, or the first cell of a table. A <em>foreignSourceKey</em> that is not a source reference is returned as it is.
+	 * the whole first line of a text, without its line ending, or the first cell of a table.
+	 * A <em>foreignSourceKey</em> that is not a source reference is returned as it is.
 	 *
 	 * @param originalSourceKey The original source key for debugging purposes.
 	 * @param foreignSourceKey  The foreign source key used to extract the token.
