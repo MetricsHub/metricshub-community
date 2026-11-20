@@ -22,6 +22,8 @@ package org.metricshub.engine.extension;
  */
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -29,6 +31,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 class TcclClassLoaderDecoratorTest {
 
@@ -112,8 +116,43 @@ class TcclClassLoaderDecoratorTest {
 		assertSame(original, thread.getContextClassLoader(), "TCCL fully restored after nested calls");
 	}
 
+	@Test
+	void testKeepsOtherInterfacesOfTheExtension() {
+		final ClassLoader extensionLoader = new URLClassLoader(new URL[0], ClassLoader.getPlatformClassLoader());
+		final Thread thread = Thread.currentThread();
+		final ClassLoader original = thread.getContextClassLoader();
+		final HttpProbe delegate = new HttpProbe();
+
+		final Probe probe = TcclClassLoaderDecorator.wrap(Probe.class, delegate, extensionLoader);
+
+		final IHttpRequestExtension httpExtension = assertInstanceOf(
+			IHttpRequestExtension.class,
+			probe,
+			"The proxy keeps IHttpRequestExtension, which SourceProcessor.executeHttpRequest() looks for"
+		);
+		assertNull(httpExtension.executeHttpRequest(null, "connector", null));
+		assertSame(extensionLoader, delegate.tcclDuringRequest, "The extension's request runs under its own loader");
+		assertSame(original, thread.getContextClassLoader(), "TCCL is restored after the call");
+	}
+
+	/** A probe that also executes HTTP requests, recording the TCCL it ran under. */
+	private static final class HttpProbe extends ProbeImpl implements IHttpRequestExtension {
+
+		private ClassLoader tcclDuringRequest;
+
+		@Override
+		public HttpResult executeHttpRequest(
+			final HttpSource httpSource,
+			final String connectorId,
+			final TelemetryManager telemetryManager
+		) {
+			tcclDuringRequest = Thread.currentThread().getContextClassLoader();
+			return null;
+		}
+	}
+
 	/** Simple probe returning the current TCCL. */
-	private static final class ProbeImpl implements Probe {
+	private static class ProbeImpl implements Probe {
 
 		@Override
 		public ClassLoader tccl() {

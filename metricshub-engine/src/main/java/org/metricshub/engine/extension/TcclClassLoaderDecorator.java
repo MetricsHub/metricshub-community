@@ -24,7 +24,10 @@ package org.metricshub.engine.extension;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -60,10 +63,48 @@ public final class TcclClassLoaderDecorator {
 	public static <T> T wrap(final Class<T> spi, final T delegate, final ClassLoader loader) {
 		final Object proxy = Proxy.newProxyInstance(
 			spi.getClassLoader(),
-			new Class<?>[] { spi },
+			proxiedInterfaces(spi, delegate.getClass()),
 			new TcclInvocationHandler(delegate, loader)
 		);
 		return spi.cast(proxy);
+	}
+
+	/**
+	 * Lists the interfaces the proxy implements: {@code spi} first, then every other public interface
+	 * of {@code type} and its superclasses that {@code spi}'s class loader resolves to the same class.
+	 * The engine checks optional capabilities such as {@link IHttpRequestExtension} with
+	 * {@code instanceof} on the proxy, so the proxy must keep them.
+	 *
+	 * @param spi  the SPI interface class.
+	 * @param type the class of the wrapped extension instance.
+	 * @return the interfaces to proxy.
+	 */
+	private static Class<?>[] proxiedInterfaces(final Class<?> spi, final Class<?> type) {
+		final Set<Class<?>> interfaces = new LinkedHashSet<>();
+		interfaces.add(spi);
+		for (Class<?> current = type; current != null; current = current.getSuperclass()) {
+			for (final Class<?> candidate : current.getInterfaces()) {
+				if (Modifier.isPublic(candidate.getModifiers()) && isVisible(candidate, spi.getClassLoader())) {
+					interfaces.add(candidate);
+				}
+			}
+		}
+		return interfaces.toArray(Class<?>[]::new);
+	}
+
+	/**
+	 * Tells whether {@code loader} resolves {@code type}'s name to {@code type} itself.
+	 *
+	 * @param type   the class to look up.
+	 * @param loader the class loader the proxy is defined in.
+	 * @return {@code true} when the proxy may implement {@code type}.
+	 */
+	private static boolean isVisible(final Class<?> type, final ClassLoader loader) {
+		try {
+			return Class.forName(type.getName(), false, loader) == type;
+		} catch (ClassNotFoundException | LinkageError e) {
+			return false;
+		}
 	}
 
 	/**
