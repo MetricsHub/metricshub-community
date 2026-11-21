@@ -28,9 +28,9 @@ monitors:
           namespace: root/emc
         source(4):
           type: tableUnion
-          tables: |
-           ${source::monitors.enclosure.discovery.sources.source(2)}
-           ${source::monitors.enclosure.discovery.sources.source(3)}
+          tables:
+          - ${source::monitors.enclosure.discovery.sources.source(2)}
+          - ${source::monitors.enclosure.discovery.sources.source(3)}
         source(5):
           type: wbem
           query: SELECT __PATH,ElementName,Description,OtherIdentifyingInfo,OperationalStatus FROM EMC_StorageSystem
