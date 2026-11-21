@@ -39,6 +39,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.KeepOnl
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Prepend;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Replace;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Substring;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
@@ -589,5 +590,65 @@ class SourceTableReadRulesTest {
 			SourceTable.ofTable(table("id|a-body")),
 			processor.process(StaticSource.builder().value(List.of("id", "a-" + SOURCE_REF)).build())
 		);
+	}
+
+	// ---------------------------------------------------------------------------------------------------------------
+	// snmpGet text (#1615): the two forms that give back the one-cell row an snmpGet source gave as a table
+	// ---------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * A value without <code>;</code> or line break, as a text, then <code>toTable</code>: one row of one cell, the
+	 * value. An empty text (a failed request): no row.
+	 */
+	@Test
+	void toTableOfAValueWithoutSeparatorOrLineBreakIsOneCell() {
+		for (final String value : List.of("1", "-12.5", "OK", "a b", " ", "x,y", "a|b")) {
+			final SourceTable sourceTable = SourceTable.ofText(value);
+			computeProcessor(sourceTable).process(ToTable.builder().build());
+			assertEquals(SourceTable.ofTable(List.of(List.of(value))), sourceTable, value);
+		}
+
+		final SourceTable empty = SourceTable.ofText(null);
+		computeProcessor(empty).process(ToTable.builder().build());
+		assertEquals(SourceTable.ofTable(List.of()), empty);
+	}
+
+	/**
+	 * A <code>static</code> cell that references the text, then <code>excludeMatchingLines</code> <code>^$</code> on
+	 * that cell: one row of one cell, the value, a <code>;</code> or a line break inside it does not split it. Except:
+	 * a line whose only <code>;</code> is its last character loses it ({@link SourceUpdaterProcessor#referenceLine}),
+	 * <code>$$</code> becomes <code>$</code>, and trailing line breaks are dropped, so a value made only of line
+	 * breaks gives no row. An empty text (a failed request): no row.
+	 */
+	@Test
+	void staticCellOfATextThenEmptyCellFilterIsOneCell() {
+		for (final String value : List.of("1", "a;b", "two\nlines", "a;b\nc;d", " ", "x,y")) {
+			assertEquals(List.of(List.of(value)), staticCellWithoutEmptyRow(value), value);
+		}
+		assertEquals(List.of(), staticCellWithoutEmptyRow(""));
+
+		// The boundaries
+		assertEquals(List.of(List.of("a")), staticCellWithoutEmptyRow("a;"));
+		assertEquals(List.of(List.of("a\nb")), staticCellWithoutEmptyRow("a;\nb;"));
+		assertEquals(List.of(List.of("x")), staticCellWithoutEmptyRow("x\n"));
+		assertEquals(List.of(), staticCellWithoutEmptyRow("\n"));
+		assertEquals(List.of(List.of("$x")), staticCellWithoutEmptyRow("$$x"));
+	}
+
+	/**
+	 * The table of <code>value: [ "${source::x}" ]</code> followed by <code>excludeMatchingLines column: 1, regExp:
+	 * ^$</code>, where <code>x</code> holds the given text.
+	 */
+	private List<List<String>> staticCellWithoutEmptyRow(final String text) {
+		final TelemetryManager telemetryManager = telemetryManagerWith(SOURCE_REF, SourceTable.ofText(text));
+		final SourceTable cell = new SourceUpdaterProcessor(
+			SourceProcessor.builder().telemetryManager(telemetryManager).connectorId(MY_CONNECTOR_1_NAME).build(),
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(),
+			extensionManager
+		).process(StaticSource.builder().value(List.of(SOURCE_REF)).build());
+		computeProcessor(cell).process(ExcludeMatchingLines.builder().column(1).regExp("^$").build());
+		return cell.getTable();
 	}
 }

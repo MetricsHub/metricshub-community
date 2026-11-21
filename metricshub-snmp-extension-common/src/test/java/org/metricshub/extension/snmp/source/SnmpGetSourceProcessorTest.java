@@ -5,7 +5,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +42,7 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceTable.ofText(null), result);
 	}
 
 	// Test case for when snmpconfiguration is null."
@@ -54,7 +53,7 @@ class SnmpGetSourceProcessorTest {
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(null);
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceTable.ofText(null), result);
 	}
 
 	// Test case when the requestExecutor throws an exception.
@@ -68,7 +67,7 @@ class SnmpGetSourceProcessorTest {
 			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname");
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceTable.ofText(null), result);
 	}
 
 	//Test case when requestExecutor returns a valid result.
@@ -84,7 +83,30 @@ class SnmpGetSourceProcessorTest {
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.ofTable(List.of(List.of("result"))), result);
+		assertEquals(SourceTable.ofText("result"), result);
+	}
+
+	// The value is the text, whole: no split on ";" or on a line break. No value (null) is an empty text.
+	@Test
+	void testProcess_ValueIsTheWholeText() throws Exception {
+		SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid("test_oid").build();
+		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
+		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
+		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
+		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname")).thenReturn(
+			"a;b",
+			"two\r\nlines",
+			"",
+			null
+		);
+
+		assertEquals(SourceTable.ofText("a;b"), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(
+			SourceTable.ofText("two\nlines"),
+			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
+		);
+		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 	}
 
 	/**

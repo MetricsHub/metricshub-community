@@ -29,13 +29,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
- * Represents a source task that retrieves data using SNMP GET.
+ * Represents a source task that retrieves data using SNMP GET. Its result is the value of the OID, as a text.
  */
 @Data
 @NoArgsConstructor
@@ -81,6 +82,12 @@ public class SnmpGetSource extends SnmpSource {
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.oid(oid)
 			.build();
+	}
+
+	@Override
+	public ContentType getOutputContentType() {
+		// The value of the OID, as a text: a toTable makes it a row, a static cell keeps it whole
+		return ContentType.TEXT;
 	}
 
 	@Override

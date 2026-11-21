@@ -24,8 +24,6 @@ package org.metricshub.extension.snmp.source;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +37,7 @@ import org.metricshub.extension.snmp.ISnmpConfiguration;
 /**
  * A utility class for processing SNMP Get sources.
  * This class processes SNMP GET sources, fetch data from SNMP devices using
- * the given configuration, and return it as a {@link SourceTable} object.
+ * the given configuration, and return the value as a text {@link SourceTable}.
  */
 @Slf4j
 @AllArgsConstructor
@@ -52,15 +50,15 @@ public class SnmpGetSourceProcessor {
 	private Function<TelemetryManager, ISnmpConfiguration> configurationRetriever;
 
 	/**
-	 * Fetches data from an SNMP device based on the provided {@link SnmpGetSource} connector's directive,
-	 * parses the data into a structured table format, and returns it.
-	 * If any errors occur during the fetch or processing, or if the provided configurations are invalid,
-	 * an empty {@link SourceTable} is returned.
+	 * Fetches the value of the OID of the provided {@link SnmpGetSource} from an SNMP device and returns it as a
+	 * text, whole: a <code>;</code> or a line break in the value does not split it.
+	 * If any errors occur during the fetch, or if the provided configurations are invalid, an empty text is
+	 * returned.
 	 *
 	 * @param snmpGetSource    The {@link SnmpGetSource} defining the SNMP OID.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} containing the fetched SNMP GET data, or an empty table if processing fails.
+	 * @return a text {@link SourceTable} holding the value, or an empty text if processing fails.
 	 */
 	public SourceTable process(
 		final SnmpGetSource snmpGetSource,
@@ -72,39 +70,34 @@ public class SnmpGetSourceProcessor {
 				"Hostname {} - SNMP Get Source cannot be null, the SNMP Get operation will return an empty result.",
 				telemetryManager.getHostname()
 			);
-			return SourceTable.empty();
+			return SourceTable.ofText(null);
 		}
 		// Find the configured protocol (Snmp or SnmpV3)
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
 			log.debug(
-				"Hostname {} - The SNMP credentials are not configured. Returning an empty table for SNMP Get Source {}.",
+				"Hostname {} - The SNMP credentials are not configured. Returning an empty text for SNMP Get Source {}.",
 				telemetryManager.getHostname(),
 				snmpGetSource
 			);
-			return SourceTable.empty();
+			return SourceTable.ofText(null);
 		}
 
 		// Retrieve the hostname from the ISnmpConfiguration, otherwise from the telemetryManager
 		final String hostname = telemetryManager.getHostname(List.of(snmpConfiguration.getClass()));
 
 		try {
-			final String result = snmpRequestExecutor.executeSNMPGet(
-				snmpGetSource.getOid(),
-				snmpConfiguration,
-				hostname,
-				true,
-				telemetryManager.getHostname()
+			// A null value is an empty text
+			return SourceTable.ofText(
+				snmpRequestExecutor.executeSNMPGet(
+					snmpGetSource.getOid(),
+					snmpConfiguration,
+					hostname,
+					true,
+					telemetryManager.getHostname()
+				)
 			);
-
-			if (result != null) {
-				return SourceTable.ofTable(
-					Stream.of(
-						Stream.of(result).collect(Collectors.toList()) // NOSONAR
-					).collect(Collectors.toList()) // NOSONAR
-				);
-			}
 		} catch (Exception e) {
 			// NOSONAR on interruption
 			LoggingHelper.logSourceError(
@@ -114,8 +107,7 @@ public class SnmpGetSourceProcessor {
 				hostname,
 				e
 			);
+			return SourceTable.ofText(null);
 		}
-
-		return SourceTable.empty();
 	}
 }

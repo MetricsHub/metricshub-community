@@ -768,8 +768,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return;
 		}
 
-		// The text concatenations read each entry as a text (a table is serialized) and skip a failed entry: an empty
-		// table, what a processor returns on a failure (an empty text is an answer, which the custom method wraps)
+		// The text concatenations read each entry as a text (a table is serialized) and skip an empty table, what most
+		// processors return on a failure. An empty text is wrapped by the custom method: an empty answer, and also the
+		// failure of a processor that returns an empty text (snmpGet), which cannot be told from an empty answer
 		if (sourceTableToConcat.getContentType() == ContentType.TABLE && sourceTableToConcat.isEmpty()) {
 			return;
 		}

@@ -83,7 +83,7 @@ class MetricsHubExtensionForJawkTest {
 
 	/**
 	 * A source processor that answers every source with the text <code>response</code>, but an <code>snmpGet</code>
-	 * with the table it returns: the value <code>v;w</code> first, no row after that.
+	 * with the text <code>v;w</code> first, no result after that.
 	 *
 	 * @return the mocked source processor
 	 */
@@ -92,10 +92,7 @@ class MetricsHubExtensionForJawkTest {
 		final SourceTable response = SourceTable.ofText("response");
 		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(IpmiSource.class))).thenReturn(response);
-		when(sourceProcessor.process(any(SnmpGetSource.class))).thenReturn(
-			SourceTable.ofTable(List.of(List.of("v;w"))),
-			SourceTable.empty()
-		);
+		when(sourceProcessor.process(any(SnmpGetSource.class))).thenReturn(SourceTable.ofText("v;w"), SourceTable.empty());
 		when(sourceProcessor.process(any(SnmpTableSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(WbemSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(WmiSource.class))).thenReturn(response);

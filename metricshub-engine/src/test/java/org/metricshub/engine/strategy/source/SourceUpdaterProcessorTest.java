@@ -411,17 +411,18 @@ class SourceUpdaterProcessorTest {
 				ENCLOSURE_COLLECT_SOURCE_1,
 				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
 			);
-		final SnmpGetSource snmpGetSource = SnmpGetSource.builder()
+		final SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("$1")
+			.selectColumns("1,2")
 			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build())
 			.build();
 		doAnswer(invocation -> {
-			final String entry = invocation.<SnmpGetSource>getArgument(0).getOid();
+			final String entry = invocation.<SnmpTableSource>getArgument(0).getOid();
 			if ("c".equals(entry)) {
 				return SourceTable.ofTable(new ArrayList<>(List.of(new ArrayList<>(), new ArrayList<>(List.of("")))));
 			}
 			return "d".equals(entry) ? SourceTable.empty() : SourceTable.ofTable(List.of(List.of(entry, "x")));
-		}).when(sourceProcessor).process(any(SnmpGetSource.class));
+		}).when(sourceProcessor).process(any(SnmpTableSource.class));
 
 		final SourceTable result = new SourceUpdaterProcessor(
 			sourceProcessor,
@@ -429,7 +430,7 @@ class SourceUpdaterProcessorTest {
 			MY_CONNECTOR_1_NAME,
 			Map.of(),
 			extensionManager
-		).process(snmpGetSource);
+		).process(snmpTableSource);
 
 		assertEquals(SourceTable.ofTable(List.of(List.of("a", "x"), List.of("b", "x"), List.of(""))), result);
 	}
@@ -523,9 +524,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(SnmpGetSource.class));
+		doReturn(SourceTable.ofText(null)).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceTable.ofText(null),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -677,8 +678,7 @@ class SourceUpdaterProcessorTest {
 
 		final SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid(OID).build();
 
-		final List<List<String>> resultSnmp = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expectedSnmp = SourceTable.ofTable(resultSnmp);
+		final SourceTable expectedSnmp = SourceTable.ofText(VALUE_VAL1);
 		doReturn(expectedSnmp).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
 			expectedSnmp,
