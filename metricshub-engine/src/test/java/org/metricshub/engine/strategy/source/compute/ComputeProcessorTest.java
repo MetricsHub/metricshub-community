@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.EMPTY;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 import static org.metricshub.engine.constants.Constants.SINGLE_SPACE;
@@ -2566,12 +2565,12 @@ class ComputeProcessorTest {
 		try (MockedStatic<AwkExecutor> awkStatic = Mockito.mockStatic(AwkExecutor.class)) {
 			final Awk awkOK = Awk.builder().script(embeddedFileName).build();
 
-			// 1) Return a multi-line string: every line is kept as the script printed it, and ends with a separator
+			// 1) Return a multi-line string: the text is what the script printed
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
 				.thenReturn("FOO;ID1;NAME1\nBAR;ID2;NAME2;");
 
 			computeProcessor.process(awkOK);
-			assertEquals(SourceTable.ofText("FOO;ID1;NAME1;\nBAR;ID2;NAME2;"), sourceTable);
+			assertEquals(SourceTable.ofText("FOO;ID1;NAME1\nBAR;ID2;NAME2;"), sourceTable);
 
 			// 2) Return null
 			sourceTable.setText("OS command result");
@@ -2596,7 +2595,7 @@ class ComputeProcessorTest {
 		List<List<String>> table = Arrays.asList(LINE_1, LINE_2, LINE_3);
 
 		// The text the toText the desugaring inserts gives
-		sourceTable.setText(SourceTable.tableToCsv(table, TABLE_SEP, true));
+		sourceTable.setText(SourceTable.tableToCsv(table, ";", true));
 
 		final Awk awkOK = Awk.builder().script("""
 				BEGIN { FS = ";"; }
@@ -2607,8 +2606,7 @@ class ComputeProcessorTest {
 
 		computeProcessor.process(awkOK);
 		final List<List<String>> expectedTable = Arrays.asList(Arrays.asList(ID1, NAME1, MANUFACTURER1));
-		String expectedRawData = SourceTable.tableToCsv(expectedTable, ";", false);
-		assertEquals(SourceTable.ofText(expectedRawData), sourceTable);
+		assertEquals(SourceTable.ofText(ID1 + ";" + NAME1 + ";" + MANUFACTURER1 + ";\n"), sourceTable);
 		assertEquals(expectedTable, sourceTable.asTable());
 	}
 

@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.hardware.common.Constants.ENCLOSURE_PRESENT_METRIC;
 import static org.metricshub.hardware.constants.CommonConstants.CONNECTOR;
 import static org.metricshub.hardware.constants.CommonConstants.ENCLOSURE;
@@ -383,7 +382,7 @@ class HardwarePostDiscoveryStrategyTest {
 		);
 		doAnswer(
 			invocation -> SourceTable.ofTable(
-				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), TABLE_SEP)
+				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), ";")
 			)
 		).when(protocolExtension).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 

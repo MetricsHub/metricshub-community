@@ -24,7 +24,6 @@ package org.metricshub.engine.strategy.source;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +53,12 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @EqualsAndHashCode
 @ToString
 public class SourceTable {
+
+	/**
+	 * The separator between the cells of a line when a text is converted to a table, or a table to a text, and the
+	 * connector gives none: the default of <code>toTable</code>, and what <code>toText</code> writes.
+	 */
+	public static final String DEFAULT_SEPARATOR = ";";
 
 	private static final String ALTERNATE_COLUMN_SEPARATOR = ",";
 
@@ -181,7 +186,7 @@ public class SourceTable {
 		}
 		return table.stream()
 			.filter(Objects::nonNull)
-			.map(row -> lineToCsv(row.stream().map(SourceTable::onOneLine).toList(), TABLE_SEP, true))
+			.map(row -> lineToCsv(row.stream().map(SourceTable::onOneLine).toList(), DEFAULT_SEPARATOR, true))
 			.collect(Collectors.joining(NEW_LINE));
 	}
 
@@ -207,7 +212,7 @@ public class SourceTable {
 		if (contentType == ContentType.TABLE) {
 			return table.stream().map(row -> row == null ? null : new ArrayList<>(row)).collect(Collectors.toList()); //NOSONAR
 		}
-		return textToTable(text, TABLE_SEP);
+		return textToTable(text, DEFAULT_SEPARATOR);
 	}
 
 	/**
@@ -299,25 +304,6 @@ public class SourceTable {
 		}
 
 		return stream.collect(Collectors.joining(separator, EMPTY, separator));
-	}
-
-	/**
-	 * Safe version of the {@link #lineToCsv(List, String, boolean)} method that handles null input.
-	 *
-	 * @param line The row of data to convert.
-	 * @param separator The non-null separator to use between values.
-	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
-	 * @return The CSV-formatted string.
-	 */
-	public static String lineToCsvSafe(
-		final List<String> line,
-		@NonNull final String separator,
-		final boolean replaceSeparator
-	) {
-		if (line == null) {
-			return EMPTY;
-		}
-		return lineToCsv(line, separator, replaceSeparator);
 	}
 
 	/**

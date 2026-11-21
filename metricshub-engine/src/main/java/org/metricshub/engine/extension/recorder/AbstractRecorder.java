@@ -44,6 +44,11 @@ public abstract class AbstractRecorder<R> {
 	 */
 	protected static final String IMAGE_YAML = "image.yaml";
 
+	/**
+	 * The separator between the cells of a row in the CSV file that records a table.
+	 */
+	public static final String CSV_SEPARATOR = ";";
+
 	private final Path protocolDir;
 	private final Path indexFile;
 	private final ObjectMapper yamlMapper;

@@ -377,6 +377,82 @@ class ContentTypeCheckTest {
 		findings.forEach(finding -> assertFalse(finding.toString().contains("a;b;c"), finding.toString()));
 	}
 
+	/**
+	 * A field that must be a source reference holds exactly one, the whole value: a reference among other text is a
+	 * literal (#1639).
+	 */
+	@Test
+	void aValueThatOnlyHoldsAReferenceIsNotAReference() throws IOException {
+		assertEquals(
+			Set.of(
+				"STRING_LITERAL_ROWS tables[0]",
+				"STRING_LITERAL_ROWS tables[1]",
+				"STRING_LITERAL_ROWS leftTable",
+				"STRING_LITERAL_ROWS rightTable",
+				"NOT_A_REFERENCE from",
+				"NOT_A_REFERENCE executeForEachEntryOf",
+				"NOT_A_REFERENCE tables[0]",
+				"NOT_A_REFERENCE monitors.thing.simple.mapping.source",
+				"NOT_A_REFERENCE tools.show.result.source"
+			),
+			lines(findings("""
+				monitors:
+				  thing:
+				    simple:
+				      sources:
+				        raw:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1,2"
+				        union:
+				          type: tableUnion
+				          tables:
+				          - "a;b;${source::raw}"
+				          - "${source::raw}${source::raw}"
+				          - ${source::raw}
+				        joined:
+				          type: tableJoin
+				          leftTable: "x;${source::raw}"
+				          rightTable: "${source::raw};x"
+				          leftKeyColumn: 1
+				          rightKeyColumn: 1
+				        copied:
+				          type: copy
+				          from: "a;b;${source::raw}"
+				        each:
+				          type: http
+				          method: get
+				          path: /$1
+				          executeForEachEntryOf:
+				            source: "${source::raw} ${source::raw}"
+				            concatMethod: list
+				        query:
+				          type: internalDbQuery
+				          tables:
+				          - source: "a;${source::raw}"
+				            alias: T1
+				            columns:
+				            - name: COL1
+				              number: 1
+				              type: VARCHAR(255)
+				          query: SELECT COL1 FROM T1
+				      mapping:
+				        source: "a;${source::raw}"
+				        attributes:
+				          id: $1
+				tools:
+				  show:
+				    description: Shows a row.
+				    sources:
+				      row:
+				        type: static
+				        value: [ a, b, c ]
+				    result:
+				      source: "a;${source::row}"
+				"""))
+		);
+	}
+
 	@Test
 	void staticCellInterpolatesATextOnly() throws IOException {
 		// A static source does not read a reference as a source, a copy does: its cells are interpolated

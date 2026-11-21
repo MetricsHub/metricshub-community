@@ -56,9 +56,12 @@ public record ContentTypeFinding(
 		TABLE_UNION_OF_TEXTS("use textUnion"),
 		/** A <code>tableUnion</code> of texts and tables. */
 		MIXED_UNION("convert the members to one type"),
-		/** A <code>;</code>-joined string literal in <code>tables</code>, <code>leftTable</code>, <code>rightTable</code>. */
-		STRING_LITERAL_ROWS("write a list of rows"),
-		/** Anything but a source reference where the engine reads a source: a mapping, a tool result, a copy. */
+		/**
+		 * A string in <code>tables</code>, <code>leftTable</code> or <code>rightTable</code> that is not exactly one source
+		 * reference.
+		 */
+		STRING_LITERAL_ROWS("write a list of rows, or exactly one source reference per table"),
+		/** Anything but exactly one source reference where the engine reads a source: a mapping, a tool result, a copy. */
 		NOT_A_REFERENCE("reference a source, a static source holds a hard-coded table"),
 		/** <code>${source::x}</code> of a table interpolated in a string field. */
 		TABLE_INTERPOLATED("interpolate a text"),

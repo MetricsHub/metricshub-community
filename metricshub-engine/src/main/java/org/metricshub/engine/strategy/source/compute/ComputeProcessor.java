@@ -30,8 +30,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATT
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HEXA_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_BAR;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -456,14 +454,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				return;
 			}
 
-			// The script may print a cell that holds CRLF: it is converted before the lines are split, or a carriage
-			// return would stay in front of the separator added to its line
-			awkResult = SourceTable.lineToList(StringHelper.toLf(awkResult), NEW_LINE)
-				.stream()
-				// add the TABLE_SEP at the end of each lines.
-				.map(line -> line.endsWith(TABLE_SEP) ? line : line + TABLE_SEP)
-				.collect(Collectors.joining(NEW_LINE));
-
+			// The text the script printed
 			sourceTable.setText(awkResult);
 		} catch (Exception e) {
 			logComputeError(connectorId, computeKey, "AWK: " + embeddedFile.description(), e, hostname);
@@ -1882,7 +1873,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final boolean hasOptions = toTable.getKeep() != null ||
 			toTable.getExclude() != null ||
 			toTable.getSelectColumns() != null ||
-			!TABLE_SEP.equals(toTable.getSeparator());
+			!SourceTable.DEFAULT_SEPARATOR.equals(toTable.getSeparator());
 		if (sourceTable.getContentType() == ContentType.TABLE && !hasOptions) {
 			log.debug("Hostname {} - Compute Operation (ToTable) on a table: the table remains unchanged.", hostname);
 			return;
@@ -2077,11 +2068,9 @@ public class ComputeProcessor implements IComputeProcessor {
 		}
 
 		try {
-			// XFlat reads the properties as one string, with a semicolon between them
-			final List<String> properties = xml2csv.getProperties();
 			final List<List<String>> xmlResult = clientsExecutor.executeXmlParsing(
 				sourceTable.getText(),
-				properties == null ? null : String.join(SEMICOLON, properties),
+				xml2csv.getProperties(),
 				xml2csv.getRecordTag()
 			);
 

@@ -23,7 +23,6 @@ package org.metricshub.engine.awk;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
@@ -36,6 +35,7 @@ import io.jawk.util.AwkSettings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,10 +54,14 @@ public class AwkExecutor {
 	private static final Awk AWK_PLUS_UTILITY = newAwk(null);
 
 	/**
-	 * Jawk instance dedicated to expression evaluation, where the record is a table row and the fields are therefore
-	 * separated by the table separator
+	 * The field separator of the expression evaluation, which also joins the cells of the row in <code>$0</code>
 	 */
-	private static final Awk AWK_FOR_EVAL = newAwk(TABLE_SEP);
+	private static final String EVAL_FIELD_SEPARATOR = ";";
+
+	/**
+	 * Jawk instance dedicated to expression evaluation, where the record is a table row
+	 */
+	private static final Awk AWK_FOR_EVAL = newAwk(EVAL_FIELD_SEPARATOR);
 
 	/**
 	 * Map of the scripts that have already been compiled to intermediate code
@@ -68,6 +72,11 @@ public class AwkExecutor {
 	 * Map of the expressions that have already been compiled to intermediate code
 	 */
 	private static final ConcurrentHashMap<String, AwkExpression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
+
+	/**
+	 * The <code>OFMT</code> a script whose output is a table starts with
+	 */
+	private static final String TABLE_OFMT = "%.15g";
 
 	/**
 	 * Build a Jawk engine with the extensions every MetricsHub script can call: the given ones, the MetricsHub utility
@@ -279,7 +288,7 @@ public class AwkExecutor {
 	/**
 	 * Execute the given <code>awkScript</code> on the <code>awkInput</code> text and collect its output as a
 	 * table: each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into
-	* rows on <code>ORS</code> and into cells on <code>OFS</code>.
+	* rows on <code>ORS</code> and into cells on <code>OFS</code>. <code>OFMT</code> starts as <code>%.15g</code>.
 	 *
 	 * @param awkScript    The AWK script to process and interpret
 	 * @param awkInput     The input to modify via the AWK script
@@ -302,7 +311,7 @@ public class AwkExecutor {
 	/**
 	 * Execute the given <code>awkScript</code> on structured records (a table) and collect its output as a table:
 	 * each <code>print</code> is one row holding its values, the text of <code>printf</code> is split into rows on
-	* <code>ORS</code> and into cells on <code>OFS</code>.
+	* <code>ORS</code> and into cells on <code>OFS</code>. <code>OFMT</code> starts as <code>%.15g</code>.
 	 *
 	 * @param awkScript    The AWK script to process and interpret
 	 * @param input        The records exposed to the script, each one as <code>$1..$NF</code>
@@ -325,9 +334,14 @@ public class AwkExecutor {
 		final Awk.AwkRunBuilder runBuilder,
 		final Map<String, Object> awkVariables
 	) {
-		if (awkVariables != null && !awkVariables.isEmpty()) {
-			runBuilder.variables(awkVariables);
+		// A number printed into a table keeps 15 significant digits instead of the 6 of the AWK default OFMT. Like any
+		// -v assignment, it is made before BEGIN, so a script that sets OFMT keeps its own.
+		final Map<String, Object> variables = new HashMap<>();
+		variables.put("OFMT", TABLE_OFMT);
+		if (awkVariables != null) {
+			variables.putAll(awkVariables);
 		}
+		runBuilder.variables(variables);
 		final TableSink sink = new TableSink();
 		try {
 			runBuilder.execute(sink);
@@ -339,7 +353,7 @@ public class AwkExecutor {
 
 	/**
 	 * Evaluate the given <code>awkExpression</code> on one table row: the cells are <code>$1..$NF</code>, whatever
-	 * they contain, and <code>$0</code> is the row joined with the table separator, as it has always been.
+	 * they contain, and <code>$0</code> is the row joined with <code>;</code>, as it has always been.
 	 *
 	 * @param awkExpression The AWK expression to process and interpret
 	 * @param row           The row exposed to the expression
@@ -352,7 +366,7 @@ public class AwkExecutor {
 			throw new AwkException("Failed to compile Awk expression: " + awkExpression);
 		}
 		try {
-			return String.valueOf(AWK_FOR_EVAL.eval(expression, TableInputSource.ofRow(row, TABLE_SEP)));
+			return String.valueOf(AWK_FOR_EVAL.eval(expression, TableInputSource.ofRow(row, EVAL_FIELD_SEPARATOR)));
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
 		}

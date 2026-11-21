@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.JobInfo;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
@@ -83,14 +82,8 @@ class MappingProcessorTest {
 
 		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME);
-		connectorNamespace.addSourceTable(
-			vendorSource1Ref,
-			SourceTable.ofTable(SourceTable.csvToTable("vendor", MetricsHubConstants.TABLE_SEP))
-		);
-		connectorNamespace.addSourceTable(
-			vendorIdSource1Ref,
-			SourceTable.ofTable(SourceTable.csvToTable("1", MetricsHubConstants.TABLE_SEP))
-		);
+		connectorNamespace.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
+		connectorNamespace.addSourceTable(vendorIdSource1Ref, SourceTable.ofText("1"));
 
 		// Value conversion tests, basic value and invalid value
 		{

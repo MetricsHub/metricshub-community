@@ -2,7 +2,6 @@ package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.MY_CONNECTOR_1_NAME;
 
 import java.util.Arrays;
@@ -79,16 +78,16 @@ class SourceTableTest {
 
 	@Test
 	void testLineToCsvAppendsTrailingSeparator() {
-		assertEquals("a;b;c;", SourceTable.lineToCsv(List.of("a", "b", "c"), TABLE_SEP, false));
+		assertEquals("a;b;c;", SourceTable.lineToCsv(List.of("a", "b", "c"), ";", false));
 	}
 
 	@Test
 	void testLineToCsvConvertsNullsToEmpty() {
-		assertEquals("a;;c;", SourceTable.lineToCsv(Arrays.asList("a", null, "c"), TABLE_SEP, false));
+		assertEquals("a;;c;", SourceTable.lineToCsv(Arrays.asList("a", null, "c"), ";", false));
 	}
 
 	@Test
 	void testLineToCsvReplacesSeparatorWhenEnabled() {
-		assertEquals("a,b;c;", SourceTable.lineToCsv(List.of("a;b", "c"), TABLE_SEP, true));
+		assertEquals("a,b;c;", SourceTable.lineToCsv(List.of("a;b", "c"), ";", true));
 	}
 }
