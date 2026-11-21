@@ -444,18 +444,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	) {
 		final String connectorId = connector.getCompiledFilename();
 
-		// Check the source, so that, we can create the monitor later
+		// A mapping without a source is the simple mapping: exactly one instance
 		final String source = mapping.getSource();
-		if (source == null) {
-			log.warn(
-				"Hostname {} - No instance tables found with {} during the {} job for the connector {}. Skip processing.",
-				hostname,
-				monitorType,
-				getJobName(),
-				connectorId
-			);
-			return false;
-		}
 
 		// Checking for defined attributes to create monitors based on them
 		// If no attributes are found, skip processing
@@ -471,8 +461,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			return false;
 		}
 
-		// Call lookupSourceTable to find the source table
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupSourceTable(source, connectorId, telemetryManager);
+		// Call lookupMappingTable to find the source table
+		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
+			source,
+			connectorId,
+			telemetryManager
+		);
 
 		if (maybeSourceTable.isEmpty()) {
 			log.warn(

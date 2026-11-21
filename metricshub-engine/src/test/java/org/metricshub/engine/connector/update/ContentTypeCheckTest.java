@@ -825,6 +825,165 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
+	void simpleMappingReadsConstantsAndTexts() throws IOException {
+		assertEquals(List.of(), findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        vendor:
+			          type: commandLine
+			          commandLine: echo
+			      mapping:
+			        attributes:
+			          id: thing
+			          vendor: ${source::vendor}
+			        metrics:
+			          thing.count: 1
+			          thing.limit: ${source::vendor}
+			"""));
+	}
+
+	@Test
+	void simpleMappingReadsNoColumnAndNoTable() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        table:
+			          type: snmpTable
+			          oid: 1.3
+			          selectColumns: "1,2"
+			      mapping:
+			        attributes:
+			          id: $1
+			          name: thing $2
+			          serial: $0
+			          vendor: ${source::table}
+			        metrics:
+			          thing.limit: ${awk::$3 * 2}
+			  other:
+			    discovery:
+			      mapping:
+			        attributes:
+			          id: $1
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        attributes:
+			          id: other
+			        metrics:
+			          other.count: rate($1)
+			""");
+		assertEquals(
+			Set.of(
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.name",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.serial",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.metrics.thing.limit",
+				"TABLE_INTERPOLATED monitors.thing.simple.mapping.attributes.vendor -> " + THING + "table}",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.count"
+			),
+			lines(findings)
+		);
+		final ContentTypeFinding column = findings.get(0);
+		assertEquals("a constant or a text source", column.expected());
+		assertEquals("a column", column.actual());
+	}
+
+	@Test
+	void simpleMappingWritesItsKeysAsConstants() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    keys: [ id, slot ]
+			    simple:
+			      sources:
+			        serial:
+			          type: commandLine
+			          commandLine: echo
+			      mapping:
+			        attributes:
+			          id: ${source::serial}
+			        metrics:
+			          thing.count: 1
+			  other:
+			    discovery:
+			      mapping:
+			        attributes:
+			          name: other
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        metrics:
+			          other.count: 1
+			  mono:
+			    discovery:
+			      mapping:
+			        attributes:
+			          id: mono
+			    collect:
+			      mapping:
+			        metrics:
+			          mono.count: 1
+			  cased:
+			    simple:
+			      mapping:
+			        attributes:
+			          Id: cased
+			  looked:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: lookup("thing", "id", "id", "x")
+			  awked:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: ${awk::sprintf("%s", "x")}
+			  indexed:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: disk$index
+			  columned:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: $1
+			  plain:
+			    simple:
+			      mapping:
+			        attributes:
+			          id: costs 15 (Hz)
+			""");
+		// The monoInstance collect is given its monitor: it needs no key
+		assertEquals(
+			Set.of(
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id: a source reference",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.slot: none",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id: none",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.other.collect.mapping.attributes.id: none",
+				// The run time reads the key with its exact case
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.cased.simple.mapping.attributes.id: none",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.looked.simple.mapping.attributes.id: a computed value",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.awked.simple.mapping.attributes.id: a computed value",
+				"NO_CONSTANT_KEY_IN_SIMPLE_MAPPING monitors.indexed.simple.mapping.attributes.id: a computed value",
+				// Reported once, by the column rule
+				"COLUMN_IN_SIMPLE_MAPPING monitors.columned.simple.mapping.attributes.id: a column"
+			),
+			findings.stream()
+				.map(finding -> finding.rule() + " " + finding.location() + ": " + finding.actual())
+				.collect(Collectors.toSet())
+		);
+		findings.stream()
+			.filter(finding -> finding.rule() == Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING)
+			.forEach(finding -> assertEquals("a constant", finding.expected()));
+	}
+
+	@Test
 	void findingsAreALoadError() throws IOException {
 		final Connector connector = parse("""
 			tools:

@@ -24,6 +24,7 @@ package org.metricshub.engine.strategy.utils;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -215,7 +216,13 @@ public class MappingProcessor {
 				key
 			);
 
-			processKeyValue(key, updatedValue, result);
+			// A value that is exactly one source reference is the text of that source as is: what the device says is not
+			// read as mapping syntax ($1, rate(...))
+			if (SOURCE_REF_PATTERN.matcher(value.trim()).matches()) {
+				result.put(key, updatedValue);
+			} else {
+				processKeyValue(key, updatedValue, result);
+			}
 		});
 
 		return result;
@@ -230,6 +237,11 @@ public class MappingProcessor {
 	 */
 	private void processKeyValue(final String key, final String value, final Map<String, String> result) {
 		if (value == null) {
+			return;
+		}
+
+		if (isPlainConstant(value)) {
+			result.put(key, value);
 			return;
 		}
 
@@ -279,9 +291,42 @@ public class MappingProcessor {
 			result.put(key, replaceColumnReferences(value, key));
 		} else if (value.contains("$index")) {
 			result.put(key, replaceIndexReferences(value));
-		} else {
-			result.put(key, value);
 		}
+	}
+
+	/**
+	 * Whether the mapping puts the value as written: no column, no <code>$index</code>, no <code>${awk::...}</code> and
+	 * no function. Every other written form is computed at each run and may give nothing.
+	 *
+	 * @param value The written value, its source references already replaced
+	 * @return true when the value is a plain constant
+	 */
+	public static boolean isPlainConstant(final String value) {
+		return (!value.contains("$index") &&
+			Stream.of(
+				COLUMN_PATTERN,
+				COLUMN_REFERENCE_PATTERN,
+				AWK_SCRIPT_PATTERN,
+				MEGABIT_2_BIT_PATTERN,
+				MEGABIT_2_BYTE_PATTERN,
+				PERCENT_2_RATIO_PATTERN,
+				MEGAHERTZ_2_HERTZ_PATTERN,
+				MEBIBYTE_2_BYTE_PATTERN,
+				MILLIVOLT_2_VOLT_PATTERN,
+				BOOLEAN_PATTERN,
+				LEGACY_LED_STATUS_PATTERN,
+				LEGACY_INTRUSION_STATUS_PATTERN,
+				LEGACY_PREDICTED_FAILURE_PATTERN,
+				LEGACY_NEEDS_CLEANING_PATTERN,
+				LEGACY_LINK_STATUS_PATTERN,
+				LEGACY_FULL_DUPLEX_PATTERN,
+				LOOKUP_PATTERN,
+				COMPUTE_POWER_SHARE_RATIO_PATTERN,
+				LEGACY_POWER_SUPPLY_UTILIZATION_PATTERN,
+				FAKE_COUNTER_PATTERN,
+				ACCUMULATE_PATTERN,
+				RATE_PATTERN
+			).noneMatch(pattern -> pattern.matcher(value).find()));
 	}
 
 	/**

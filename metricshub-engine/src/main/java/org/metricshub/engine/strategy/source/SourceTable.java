@@ -374,6 +374,26 @@ public class SourceTable {
 	}
 
 	/**
+	 * Find the table a mapping reads, one monitor instance per row: the table of the mapping source, or, for a mapping
+	 * without a source (the simple mapping), a table of exactly one row without any cell.
+	 *
+	 * @param mappingSource    The source of the mapping, null for a simple mapping
+	 * @param connectorId      The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
+	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
+	 * @return {@link Optional} instance of {@link SourceTable}
+	 */
+	public static Optional<SourceTable> lookupMappingTable(
+		final String mappingSource,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		if (mappingSource == null) {
+			return Optional.of(ofTable(List.of(List.of())));
+		}
+		return lookupSourceTable(mappingSource, connectorId, telemetryManager);
+	}
+
+	/**
 	 * Find the table of a <code>tableUnion</code> member or of a <code>tableJoin</code> input: a table literal written
 	 * as a list of rows gives a new table of exactly these rows, a string is looked up by
 	 * {@link #lookupSourceTable(String, String, TelemetryManager)}.

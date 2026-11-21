@@ -21,6 +21,8 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,6 +57,7 @@ import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
+import org.metricshub.engine.connector.model.monitor.task.MultiInstanceCollect;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
@@ -68,6 +71,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Cs
 import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
+import org.metricshub.engine.strategy.utils.MappingProcessor;
 
 /**
  * The load-time check of the strict content types (#1560): every rule a connector breaks is a load error
@@ -95,7 +99,13 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <code>parsingMode</code>, the removed <code>json2Table</code> <code>separator</code>, awk <code>input</code>, awk
  * source <code>inputFormat</code>, and the removed awk <code>keep</code>, <code>exclude</code>,
  * <code>separators</code>, <code>selectColumns</code> and awk source
- * <code>separators</code>.</li>
+ * <code>separators</code>;</li>
+ * <li>{@link Rule#COLUMN_IN_SIMPLE_MAPPING}: a column (<code>$1</code>) in a value of a mapping without a
+ * <code>source</code>. Such a mapping is the simple mapping: it gives exactly one monitor instance, whose values are
+ * constants and references to text sources;</li>
+ * <li>{@link Rule#NO_CONSTANT_KEY_IN_SIMPLE_MAPPING}: a key attribute of the job (<code>keys</code>, <code>id</code>
+ * by default) that a simple mapping does not write with its exact case, or writes with a source reference, a function,
+ * an <code>${awk::...}</code> or <code>$index</code>, where the engine reads it to create or to find the instance: a discovery, a simple job, a <code>multiInstance</code> collect.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -208,10 +218,14 @@ public class ContentTypeCheck {
 		if (connector.getMonitors() != null) {
 			connector.getMonitors().forEach((name, job) -> {
 				if (job instanceof StandardMonitorJob standard) {
-					checkMapping("monitors." + name + ".discovery", standard.getDiscovery());
-					checkMapping("monitors." + name + ".collect", standard.getCollect());
+					checkMapping("monitors." + name + ".discovery", standard.getDiscovery(), job.getKeys());
+					checkMapping(
+						"monitors." + name + ".collect",
+						standard.getCollect(),
+						standard.getCollect() instanceof MultiInstanceCollect ? job.getKeys() : Set.of()
+					);
 				} else if (job instanceof SimpleMonitorJob simple) {
-					checkMapping("monitors." + name + ".simple", simple.getSimple());
+					checkMapping("monitors." + name + ".simple", simple.getSimple(), job.getKeys());
 				}
 			});
 		}
@@ -468,7 +482,13 @@ public class ContentTypeCheck {
 		});
 	}
 
-	private void checkMapping(final String job, final AbstractMonitorTask task) {
+	/**
+	 * @param job  Where the task is, e.g. <code>monitors.cpu.discovery</code>
+	 * @param task The task
+	 * @param keys The key attributes the engine reads in the mapping to create or to find the instance: none for a
+	 *             <code>monoInstance</code> collect, which is given its monitor
+	 */
+	private void checkMapping(final String job, final AbstractMonitorTask task, final Set<String> keys) {
 		if (task == null || task.getMapping() == null) {
 			return;
 		}
@@ -478,7 +498,35 @@ public class ContentTypeCheck {
 		final String mappingSource = isReference(task.getMapping().getSource())
 			? task.getMapping().getSource().trim()
 			: NONE;
+		// A mapping without a source is the simple mapping: exactly one instance, read from no row
+		final boolean simple = task.getMapping().getSource() == null;
+		if (simple) {
+			// Its identity is a plain constant: a missing key, or a function that gives nothing, gives no instance; the
+			// text of a source that fails later gives a second one. The run time reads the key with its exact case
+			final Map<String, String> attributes = task.getMapping().getAttributes();
+			keys.stream().sorted().forEach(key -> {
+				final String value = attributes == null || attributes.keySet().stream().noneMatch(key::equals)
+					? null
+					: attributes.get(key);
+				final String actual;
+				if (value == null) {
+					actual = NONE;
+				} else if (hasReference(value)) {
+					actual = "a source reference";
+				} else if (!readsColumn(value) && !MappingProcessor.isPlainConstant(value)) {
+					// A column is the other rule's finding
+					actual = "a computed value";
+				} else {
+					return;
+				}
+				add(NONE, location + ".attributes." + key, Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING, "a constant", actual);
+			});
+		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
+			// What the mapping reads as a column: $0 too, when it is the whole value
+			if (simple && readsColumn(value)) {
+				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
+			}
 			for (final String reference : references(value)) {
 				final ContentType type = typeOf(reference);
 				if (type == null) {
@@ -498,6 +546,14 @@ public class ContentTypeCheck {
 				}
 			}
 		});
+	}
+
+	/**
+	 * @return whether the mapping reads the value as a column: <code>$1</code> anywhere, <code>$0</code> as the whole
+	 *         value
+	 */
+	private static boolean readsColumn(final String value) {
+		return COLUMN_REFERENCE_PATTERN.matcher(value).find() || COLUMN_PATTERN.matcher(value).matches();
 	}
 
 	/**

@@ -28,6 +28,42 @@ class MappingProcessorTest {
 	private static final String HW_VM_POWER_RATIO_RAW_POWER_SHARE = "__hw.vm.power_ratio.raw_power_share";
 
 	@Test
+	void testValueThatIsOneSourceReferenceIsTheTextAsIs() {
+		final TelemetryManager telemetryManager = new TelemetryManager();
+		telemetryManager.setHostConfiguration(HostConfiguration.builder().hostname("hostname").build());
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
+			.getConnectorNamespace(MY_CONNECTOR_1_NAME);
+		connectorNamespace.addSourceTable("${source::price}", SourceTable.ofText("costs $1"));
+		connectorNamespace.addSourceTable("${source::description}", SourceTable.ofText("Refresh rate(Hz)"));
+		connectorNamespace.addSourceTable("${source::column}", SourceTable.ofText("$1"));
+
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
+			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
+			.telemetryManager(telemetryManager)
+			.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
+			.row(List.of("cell"))
+			.build();
+
+		// What the device says is not read as a column or as a function, what the connector writes is
+		assertEquals(
+			Map.of("price", "costs $1", "description", "Refresh rate(Hz)", "column", "$1", "written", "cell"),
+			mappingProcessor.interpretNonContextMapping(
+				Map.of(
+					"price",
+					"${source::price}",
+					"description",
+					"${source::description}",
+					"column",
+					"${source::column}",
+					"written",
+					"$1"
+				)
+			)
+		);
+		assertEquals(Map.of(), mappingProcessor.getComputationFunctions());
+	}
+
+	@Test
 	void testInterpretNonContextMapping() {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		telemetryManager.setHostConfiguration(HostConfiguration.builder().hostname("hostname").build());
