@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -42,8 +41,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * The simple mapping, a mapping without a source: exactly one monitor instance, whose values are constants and
- * references to text sources, in the simple, discovery and collect jobs.
+ * The simple mapping (<code>type: simple</code>): exactly one monitor instance of its type for the connector, without
+ * key attribute, whose values are constants and references to text sources, in the simple, discovery and collect jobs.
  */
 @ExtendWith(MockitoExtension.class)
 class SimpleMappingTest {
@@ -77,7 +76,7 @@ class SimpleMappingTest {
 				final String text = texts.get(commandLine.getCommandLine());
 				return text == null ? SourceTable.empty() : SourceTable.ofText(text);
 			}
-			return SourceTable.ofTable(SourceTable.csvToTable("row-1;10\nrow-2;20", MetricsHubConstants.TABLE_SEP));
+			return SourceTable.ofTable(SourceTable.csvToTable("row-1;10\nrow-2;20", ";"));
 		}).when(protocolExtensionMock).processSource(any(), anyString(), any(TelemetryManager.class));
 		extensionManager = ExtensionManager.builder().withProtocolExtensions(List.of(protocolExtensionMock)).build();
 
@@ -128,8 +127,11 @@ class SimpleMappingTest {
 	void simpleJobCreatesExactlyOneInstance() {
 		new SimpleStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
 
-		assertEquals(Set.of(CONNECTOR_ID + "_settings_settings"), monitors("settings").keySet());
+		// The singleton is identified by the connector and the monitor type: no key attribute
+		assertEquals(Set.of(CONNECTOR_ID + "_settings"), monitors("settings").keySet());
 		final Monitor settings = monitors("settings").values().iterator().next();
+		assertEquals(Set.of(), settings.getIdentifyingAttributeKeys());
+		assertEquals("Acme", settings.getAttribute(MONITOR_ATTRIBUTE_ID));
 		assertEquals("Acme", settings.getAttribute("vendor"));
 		assertEquals("Settings of Acme", settings.getAttribute("name"));
 		assertEquals(1.0, metric(settings, "test.count"));
@@ -139,14 +141,32 @@ class SimpleMappingTest {
 		assertEquals("", settings.getAttribute("location"));
 		assertNull(metric(settings, "test.failed"));
 
-		// The next run updates the same instance
+		// The next run updates the same instance, although its id attribute changed: it is a plain attribute
 		texts.put("limit", "43");
+		texts.put("vendor", "Globex");
 		new PrepareCollectStrategy(telemetryManager, STRATEGY_TIME + 60_000, clientsExecutorMock, extensionManager).run();
 		new SimpleStrategy(telemetryManager, STRATEGY_TIME + 60_000, clientsExecutorMock, extensionManager).run();
 
-		assertEquals(1, monitors("settings").size());
+		assertEquals(Set.of(CONNECTOR_ID + "_settings"), monitors("settings").keySet());
 		assertSame(settings, monitors("settings").values().iterator().next());
+		assertEquals("Globex", settings.getAttribute(MONITOR_ATTRIBUTE_ID));
 		assertEquals(43.0, metric(settings, "test.limit"));
+	}
+
+	@Test
+	void simpleMappingWithoutAttributeCreatesOneInstance() {
+		new SimpleStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
+
+		assertEquals(Set.of(CONNECTOR_ID + "_bare"), monitors("bare").keySet());
+		final Monitor bare = monitors("bare").values().iterator().next();
+		assertNull(bare.getAttribute(MONITOR_ATTRIBUTE_ID));
+		assertEquals(1.0, metric(bare, "test.count"));
+
+		new PrepareCollectStrategy(telemetryManager, STRATEGY_TIME + 60_000, clientsExecutorMock, extensionManager).run();
+		new SimpleStrategy(telemetryManager, STRATEGY_TIME + 60_000, clientsExecutorMock, extensionManager).run();
+
+		assertSame(bare, monitors("bare").values().iterator().next());
+		assertEquals(1, monitors("bare").size());
 	}
 
 	@Test
@@ -177,8 +197,9 @@ class SimpleMappingTest {
 			() -> "unanswered: " + unanswered
 		);
 
-		// Still the one instance: its attribute is empty, its metric is not collected at this run
-		assertEquals(Set.of(CONNECTOR_ID + "_settings_settings"), monitors("settings").keySet());
+		// Still the one instance: its attributes are empty, its metric is not collected at this run
+		assertEquals(Set.of(CONNECTOR_ID + "_settings"), monitors("settings").keySet());
+		assertEquals("", settings.getAttribute(MONITOR_ATTRIBUTE_ID));
 		assertSame(settings, monitors("settings").values().iterator().next());
 		assertEquals("", settings.getAttribute("vendor"));
 		assertEquals("Settings of ", settings.getAttribute("name"));
@@ -200,17 +221,20 @@ class SimpleMappingTest {
 	void discoveryAndCollectJobsReadASimpleMapping() {
 		new DiscoveryStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
 
-		assertEquals(Set.of(CONNECTOR_ID + "_mono_mono"), monitors("mono").keySet());
-		assertEquals(Set.of(CONNECTOR_ID + "_multi_multi"), monitors("multi").keySet());
+		assertEquals(Set.of(CONNECTOR_ID + "_mono"), monitors("mono").keySet());
+		assertEquals(Set.of(CONNECTOR_ID + "_multi"), monitors("multi").keySet());
 		final Monitor mono = monitors("mono").values().iterator().next();
 		final Monitor multi = monitors("multi").values().iterator().next();
 		assertEquals("Acme", mono.getAttribute("vendor"));
+		assertEquals("multi", multi.getAttribute("hw.id"));
 
 		new CollectStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
 
+		// The multiInstance collect finds the singleton without a key: the id its mapping writes is not read
 		assertEquals(42.0, metric(mono, "test.limit"));
 		assertEquals(42.0, metric(multi, "test.limit"));
 		assertEquals(1, monitors("mono").size());
 		assertEquals(1, monitors("multi").size());
+		assertNull(multi.getAttribute(MONITOR_ATTRIBUTE_ID));
 	}
 }

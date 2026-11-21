@@ -9,11 +9,11 @@ monitors:
   plain_number:
     removalDelay: 90
     simple:
-      mapping: { attributes: { id: one } }
+      mapping: { type: simple }
   absent:
     simple:
-      mapping: { attributes: { id: one } }
+      mapping: { type: simple }
   null_value:
     removalDelay:
     simple:
-      mapping: { attributes: { id: one } }
+      mapping: { type: simple }

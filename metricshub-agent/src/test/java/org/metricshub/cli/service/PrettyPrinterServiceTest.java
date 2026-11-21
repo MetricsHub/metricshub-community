@@ -10,6 +10,7 @@ import java.io.Writer;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.fusesource.jansi.Ansi;
 import org.junit.jupiter.api.Test;
 import org.metricshub.cli.helper.StringBuilderWriter;
@@ -322,5 +323,19 @@ class PrettyPrinterServiceTest {
 			MetricDefinition.builder().unit(unit).build()
 		);
 		assertEquals(Optional.of(unit), PrettyPrinterService.fetchUnit(energyMetric, metricDefintionsMap));
+	}
+
+	@Test
+	void testMonitorDisplayNameOfSingleton() throws IOException {
+		// The singleton of a simple mapping has no key attribute and here no name: its internal id is shown
+		final Monitor singleton = Monitor.builder().id("connector_settings").identifyingAttributeKeys(Set.of()).build();
+		final PrettyPrinterService prettyPrinterService = new PrettyPrinterService(
+			new TelemetryManager(),
+			new PrintWriter(new StringBuilderWriter(new StringBuilder()))
+		);
+		assertEquals("connector_settings", prettyPrinterService.getMonitorDisplayName(singleton));
+
+		singleton.addAttribute("name", "Settings");
+		assertEquals("Settings", prettyPrinterService.getMonitorDisplayName(singleton));
 	}
 }

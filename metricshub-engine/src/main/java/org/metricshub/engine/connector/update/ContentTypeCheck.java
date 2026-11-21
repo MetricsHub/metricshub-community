@@ -41,11 +41,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.Connector;
@@ -53,11 +55,12 @@ import org.metricshub.engine.connector.model.ContentTypeFinding;
 import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
+import org.metricshub.engine.connector.model.monitor.AbstractMonitorJob;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
-import org.metricshub.engine.connector.model.monitor.task.MultiInstanceCollect;
+import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
@@ -71,7 +74,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Cs
 import org.metricshub.engine.connector.model.monitor.task.source.compute.TextOrColumnCompute;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
-import org.metricshub.engine.strategy.utils.MappingProcessor;
 
 /**
  * The load-time check of the strict content types (#1560): every rule a connector breaks is a load error
@@ -100,12 +102,15 @@ import org.metricshub.engine.strategy.utils.MappingProcessor;
  * source <code>inputFormat</code>, and the removed awk <code>keep</code>, <code>exclude</code>,
  * <code>separators</code>, <code>selectColumns</code> and awk source
  * <code>separators</code>;</li>
- * <li>{@link Rule#COLUMN_IN_SIMPLE_MAPPING}: a column (<code>$1</code>) in a value of a mapping without a
- * <code>source</code>. Such a mapping is the simple mapping: it gives exactly one monitor instance, whose values are
- * constants and references to text sources;</li>
- * <li>{@link Rule#NO_CONSTANT_KEY_IN_SIMPLE_MAPPING}: a key attribute of the job (<code>keys</code>, <code>id</code>
- * by default) that a simple mapping does not write with its exact case, or writes with a source reference, a function,
- * an <code>${awk::...}</code> or <code>$index</code>, where the engine reads it to create or to find the instance: a discovery, a simple job, a <code>multiInstance</code> collect.</li>
+ * <li>{@link Rule#TABLE_MAPPING_WITHOUT_SOURCE}: a mapping of the default type <code>table</code> without a
+ * <code>source</code>;</li>
+ * <li>{@link Rule#SOURCE_IN_SIMPLE_MAPPING}: a <code>type: simple</code> mapping with a <code>source</code>;</li>
+ * <li>{@link Rule#COLUMN_IN_SIMPLE_MAPPING}: a column (<code>$1</code>) in a value of a simple mapping, which gives
+ * exactly one monitor instance whose values are constants and references to text sources;</li>
+ * <li>{@link Rule#MIXED_MAPPING_TYPES}: a monitor job whose mappings (discovery, collect) do not all have the same
+ * type: a simple mapping makes the monitor type a singleton for the connector;</li>
+ * <li>{@link Rule#KEYS_WITH_SIMPLE_MAPPING}: <code>keys</code> written on a job with a simple mapping, whose one
+ * instance has no key attribute.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -218,14 +223,12 @@ public class ContentTypeCheck {
 		if (connector.getMonitors() != null) {
 			connector.getMonitors().forEach((name, job) -> {
 				if (job instanceof StandardMonitorJob standard) {
-					checkMapping("monitors." + name + ".discovery", standard.getDiscovery(), job.getKeys());
-					checkMapping(
-						"monitors." + name + ".collect",
-						standard.getCollect(),
-						standard.getCollect() instanceof MultiInstanceCollect ? job.getKeys() : Set.of()
-					);
+					checkMapping("monitors." + name + ".discovery", standard.getDiscovery());
+					checkMapping("monitors." + name + ".collect", standard.getCollect());
+					checkMappingTypes("monitors." + name, standard, standard.getDiscovery(), standard.getCollect());
 				} else if (job instanceof SimpleMonitorJob simple) {
-					checkMapping("monitors." + name + ".simple", simple.getSimple(), job.getKeys());
+					checkMapping("monitors." + name + ".simple", simple.getSimple());
+					checkMappingTypes("monitors." + name, simple, simple.getSimple());
 				}
 			});
 		}
@@ -483,12 +486,35 @@ public class ContentTypeCheck {
 	}
 
 	/**
+	 * A simple mapping makes the monitor type a singleton for the connector: every mapping of the job has its type, and
+	 * the job writes no keys, since the one instance has no key attribute.
+	 *
+	 * @param location Where the job is, e.g. <code>monitors.cpu</code>
+	 * @param job      The job
+	 * @param tasks    Its tasks, any of them null
+	 */
+	private void checkMappingTypes(
+		final String location,
+		final AbstractMonitorJob job,
+		final AbstractMonitorTask... tasks
+	) {
+		final Set<Mapping.Type> mappingTypes = Stream.of(tasks)
+			.filter(task -> task != null && task.getMapping() != null)
+			.map(task -> task.getMapping().getType())
+			.collect(Collectors.toCollection(TreeSet::new));
+		if (mappingTypes.size() > 1) {
+			add(NONE, location, Rule.MIXED_MAPPING_TYPES, "one mapping type", mappingTypes.toString());
+		}
+		if (job.isSingleton() && job.getWrittenKeys() != null) {
+			add(NONE, location + ".keys", Rule.KEYS_WITH_SIMPLE_MAPPING, NONE, job.getWrittenKeys().toString());
+		}
+	}
+
+	/**
 	 * @param job  Where the task is, e.g. <code>monitors.cpu.discovery</code>
 	 * @param task The task
-	 * @param keys The key attributes the engine reads in the mapping to create or to find the instance: none for a
-	 *             <code>monoInstance</code> collect, which is given its monitor
 	 */
-	private void checkMapping(final String job, final AbstractMonitorTask task, final Set<String> keys) {
+	private void checkMapping(final String job, final AbstractMonitorTask task) {
 		if (task == null || task.getMapping() == null) {
 			return;
 		}
@@ -498,29 +524,12 @@ public class ContentTypeCheck {
 		final String mappingSource = isReference(task.getMapping().getSource())
 			? task.getMapping().getSource().trim()
 			: NONE;
-		// A mapping without a source is the simple mapping: exactly one instance, read from no row
-		final boolean simple = task.getMapping().getSource() == null;
-		if (simple) {
-			// Its identity is a plain constant: a missing key, or a function that gives nothing, gives no instance; the
-			// text of a source that fails later gives a second one. The run time reads the key with its exact case
-			final Map<String, String> attributes = task.getMapping().getAttributes();
-			keys.stream().sorted().forEach(key -> {
-				final String value = attributes == null || attributes.keySet().stream().noneMatch(key::equals)
-					? null
-					: attributes.get(key);
-				final String actual;
-				if (value == null) {
-					actual = NONE;
-				} else if (hasReference(value)) {
-					actual = "a source reference";
-				} else if (!readsColumn(value) && !MappingProcessor.isPlainConstant(value)) {
-					// A column is the other rule's finding
-					actual = "a computed value";
-				} else {
-					return;
-				}
-				add(NONE, location + ".attributes." + key, Rule.NO_CONSTANT_KEY_IN_SIMPLE_MAPPING, "a constant", actual);
-			});
+		// A table mapping reads a source, one instance per row; a simple mapping reads none, exactly one instance
+		final boolean simple = task.getMapping().getType() == Mapping.Type.SIMPLE;
+		if (simple && task.getMapping().getSource() != null) {
+			add(NONE, location + ".source", Rule.SOURCE_IN_SIMPLE_MAPPING, NONE, "a source");
+		} else if (!simple && task.getMapping().getSource() == null) {
+			add(NONE, location, Rule.TABLE_MAPPING_WITHOUT_SOURCE, "a source", NONE);
 		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
 			// What the mapping reads as a column: $0 too, when it is the whole value

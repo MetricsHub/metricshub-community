@@ -210,7 +210,7 @@ monitors:
         source: "${source::tools.unused.sources.table}"
         attributes:
           id: $1
-  # Trusted simple job with a simple mapping (no source): its one instance is mapped at each run
+  # Trusted simple job with a simple mapping and no attribute: its singleton is mapped at each run
   simple_mapping:
     simple:
       sources:
@@ -219,8 +219,7 @@ monitors:
           oid: 1.3.6.1.13
           selectColumns: "ID,1"
       mapping:
-        attributes:
-          id: new
+        type: simple
   # Guard: no source of its own, the mapping reads the incremental file source of beforeAll
   before_all_log:
     simple:

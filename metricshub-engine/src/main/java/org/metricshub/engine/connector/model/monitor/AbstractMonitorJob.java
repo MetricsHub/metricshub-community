@@ -23,16 +23,21 @@ package org.metricshub.engine.connector.model.monitor;
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankInLinkedHashSetDeserializer;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
+import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
@@ -55,11 +60,43 @@ public class AbstractMonitorJob implements MonitorJob {
 	}
 
 	/**
-	 * The monitor job keys needed to build the monitor id
+	 * The monitor job keys as written, null when the job writes none
 	 */
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = NonBlankInLinkedHashSetDeserializer.class)
-	private Set<String> keys = DEFAULT_KEYS;
+	private Set<String> keys;
+
+	/**
+	 * @return the keys as written, null when the job writes none
+	 */
+	@JsonIgnore
+	public Set<String> getWrittenKeys() {
+		return keys;
+	}
+
+	/**
+	 * The key attributes that build the monitor id: none for a singleton, the written keys or <code>id</code> otherwise.
+	 *
+	 * @return a set of attribute names
+	 */
+	@Override
+	public Set<String> getKeys() {
+		if (isSingleton()) {
+			return Set.of();
+		}
+		return keys == null ? DEFAULT_KEYS : keys;
+	}
+
+	/**
+	 * @param tasks The tasks of the job, any of them null
+	 * @return whether a task of the job has a {@link Mapping.Type#SIMPLE} mapping
+	 */
+	protected static boolean hasSimpleMapping(final AbstractMonitorTask... tasks) {
+		return Stream.of(tasks)
+			.filter(Objects::nonNull)
+			.map(AbstractMonitorTask::getMapping)
+			.anyMatch(mapping -> mapping != null && mapping.getType() == Mapping.Type.SIMPLE);
+	}
 
 	/**
 	 * How long (in seconds) a monitor may stay without being rediscovered by its job before it is removed. 0 (the default)

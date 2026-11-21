@@ -363,7 +363,8 @@ public class CollectStrategy extends AbstractStrategy {
 
 		final String mappingSource = mapping.getSource();
 
-		// A mapping without a source is the simple mapping: one row without any cell
+		// A simple mapping has no source: one row without any cell, and the job's keys are empty, so a multiInstance
+		// collect finds the singleton of the connector without a key lookup
 		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
 			mappingSource,
 			connectorId,

@@ -91,11 +91,16 @@ public class MonitorFactory {
 	}
 
 	/**
-	 * This method creates or updates the monitor
+	 * This method creates or updates the monitor identified by its keys: <code>[connectorId]_[monitorType]_[keys]</code>,
+	 * or <code>[connectorId]_[monitorType]</code> for the singleton of a simple mapping, which has no key.
 	 *
 	 * @return created or updated {@link Monitor} instance
 	 */
 	public Monitor createOrUpdateMonitor() {
+		if (keys.isEmpty()) {
+			return createOrUpdateMonitor(attributes, monitorType, connectorId + UNDERSCORE + monitorType);
+		}
+
 		// Retrieve the keys values. The keys are located under the corresponding
 		// monitor section in the connector file
 		final String keysString = keys.stream()

@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.model.monitor;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
@@ -40,10 +41,21 @@ import org.metricshub.engine.connector.model.metric.MetricDefinition;
 @JsonSubTypes({ @JsonSubTypes.Type(SimpleMonitorJob.class), @JsonSubTypes.Type(StandardMonitorJob.class) })
 public interface MonitorJob extends Serializable {
 	/**
-	 * Returns the monitor job keys used to create the monitor id
+	 * Returns the monitor job keys used to create the monitor id: none for a singleton
 	 * @return A set of String representing the monitor job keys
 	 */
 	Set<String> getKeys();
+
+	/**
+	 * Whether the job maps exactly one monitor instance of its type for the connector: its mappings are
+	 * {@link org.metricshub.engine.connector.model.monitor.task.Mapping.Type#SIMPLE} mappings. The engine identifies
+	 * that instance by the connector and the monitor type, with no key attribute.
+	 * @return true for a singleton
+	 */
+	@JsonIgnore
+	default boolean isSingleton() {
+		return false;
+	}
 
 	/**
 	 * Returns how long (in seconds) a monitor may stay without being rediscovered by its job before it is removed.

@@ -345,7 +345,8 @@ public class PrettyPrinterService {
 	public String getMonitorDisplayName(final Monitor monitor) {
 		String displayName = monitor.getAttribute(MONITOR_ATTRIBUTE_NAME);
 		displayName = displayName != null ? displayName : monitor.formatIdentifyingAttributes();
-		return displayName != null ? displayName : monitor.getId();
+		// The singleton of a simple mapping has no key attribute: without a name, it shows its internal id
+		return displayName == null || displayName.isEmpty() ? monitor.getId() : displayName;
 	}
 
 	/**

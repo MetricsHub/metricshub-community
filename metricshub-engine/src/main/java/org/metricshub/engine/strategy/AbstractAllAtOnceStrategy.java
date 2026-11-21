@@ -444,7 +444,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	) {
 		final String connectorId = connector.getCompiledFilename();
 
-		// A mapping without a source is the simple mapping: exactly one instance
+		// A simple mapping has no source: exactly one instance, the singleton that the job's empty keys identify
 		final String source = mapping.getSource();
 
 		// Checking for defined attributes to create monitors based on them

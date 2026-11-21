@@ -552,8 +552,11 @@ class SimpleStrategyTest {
 		trustedTypes.forEach(type -> {
 			final Map<String, Monitor> monitors = telemetryManager.getMonitors().get(type);
 			assertNull(monitors.get(staleMonitors.get(type).getId()), type);
-			// The monitor refreshed by the run is kept
-			assertNotNull(monitors.get("%s_%s_new".formatted(REMOVAL_CONNECTOR_ID, type)), type);
+			// The monitor refreshed by the run is kept: the singleton of the simple mapping has no key
+			final String refreshedId = "simple_mapping".equals(type)
+				? REMOVAL_CONNECTOR_ID + "_simple_mapping"
+				: "%s_%s_new".formatted(REMOVAL_CONNECTOR_ID, type);
+			assertNotNull(monitors.get(refreshedId), type);
 		});
 		untrustedTypes.forEach(
 			type -> assertSame(

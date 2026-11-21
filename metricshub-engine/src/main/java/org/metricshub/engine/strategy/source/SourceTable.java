@@ -374,8 +374,8 @@ public class SourceTable {
 	}
 
 	/**
-	 * Find the table a mapping reads, one monitor instance per row: the table of the mapping source, or, for a mapping
-	 * without a source (the simple mapping), a table of exactly one row without any cell.
+	 * Find the table a mapping reads, one monitor instance per row: the table of the mapping source, or, for a simple
+	 * mapping (<code>type: simple</code>, no source), a table of exactly one row without any cell.
 	 *
 	 * @param mappingSource    The source of the mapping, null for a simple mapping
 	 * @param connectorId      The connector identifier used to retrieve {@link SourceTable} from the connector namespace.

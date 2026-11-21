@@ -60,4 +60,9 @@ public class SimpleMonitorJob extends AbstractMonitorJob {
 	 * The simple task associated with this monitor job.
 	 */
 	private Simple simple;
+
+	@Override
+	public boolean isSingleton() {
+		return hasSimpleMapping(simple);
+	}
 }

@@ -3,7 +3,7 @@ connector:
   platforms: Test platform
   reliesOn: SomeCommand
   version: 1.0
-  information: Test connector for the simple mapping, a mapping without a source
+  information: Test connector for the simple mapping (type simple), the singleton of its monitor type
   detection:
     appliesTo:
       - Linux
@@ -11,7 +11,14 @@ connector:
       - type: deviceType
         keep: [ linux ]
 monitors:
-  # Simple job: one instance, its values are constants and texts
+  # Simple job, no attribute at all: one instance
+  bare:
+    simple:
+      mapping:
+        type: simple
+        metrics:
+          test.count: 1
+  # Simple job: one instance, its values are constants and texts, its id a plain attribute read from a text
   settings:
     simple:
       sources:
@@ -25,8 +32,9 @@ monitors:
           type: commandLine
           commandLine: failed
       mapping:
+        type: simple
         attributes:
-          id: settings
+          id: ${source::vendor}
           vendor: ${source::vendor}
           location: ${source::failed}
           name: Settings of ${source::vendor}
@@ -42,8 +50,8 @@ monitors:
           type: commandLine
           commandLine: vendor
       mapping:
+        type: simple
         attributes:
-          id: mono
           vendor: ${source::vendor}
     collect:
       type: monoInstance
@@ -52,24 +60,26 @@ monitors:
           type: commandLine
           commandLine: limit
       mapping:
+        type: simple
         metrics:
           test.limit: ${source::limit}
-  # Discovery and multi-instance collect, both with a simple mapping
+  # Discovery and multi-instance collect, both with a simple mapping: the collect finds the singleton without a key
   multi:
     discovery:
       mapping:
+        type: simple
         attributes:
-          id: multi
+          hw.id: multi
     collect:
       type: multiInstance
-      keys: [ id ]
       sources:
         limit:
           type: commandLine
           commandLine: limit
       mapping:
+        type: simple
         attributes:
-          id: multi
+          id: not-a-key
         metrics:
           test.limit: ${source::limit}
   # A mapping with a source: one instance per row, a text in a value

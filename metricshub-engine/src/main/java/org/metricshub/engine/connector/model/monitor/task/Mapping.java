@@ -48,8 +48,29 @@ public class Mapping implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The reference of the table source the mapping reads, one monitor instance per row. Null for the simple mapping:
-	 * exactly one instance, whose values are constants and references to text sources.
+	 * The type of a mapping, read from <code>type</code> in YAML.
+	 */
+	public enum Type {
+		/** The default: one monitor instance per row of the table that the mapping <code>source</code> references. */
+		TABLE,
+		/**
+		 * No <code>source</code>: exactly one monitor instance of the monitor type for the connector (a singleton), whose
+		 * values are constants and references to text sources. It has no key attribute: the engine identifies it by the
+		 * connector and the monitor type, and its attributes (<code>id</code> included) are plain attributes.
+		 */
+		SIMPLE
+	}
+
+	/**
+	 * The type of the mapping, {@link Type#TABLE} by default.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private Type type = Type.TABLE;
+
+	/**
+	 * The reference of the table source a {@link Type#TABLE} mapping reads, one monitor instance per row. A
+	 * {@link Type#SIMPLE} mapping has none.
 	 */
 	private String source;
 
