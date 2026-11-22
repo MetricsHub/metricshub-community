@@ -444,7 +444,6 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	) {
 		final String connectorId = connector.getCompiledFilename();
 
-		// A simple mapping has no source: exactly one instance, the singleton that the job's empty keys identify
 		final String source = mapping.getSource();
 
 		// Checking for defined attributes to create monitors based on them
@@ -461,9 +460,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			return false;
 		}
 
-		// Call lookupMappingTable to find the source table
+		// A simple mapping gives one row without any cell: the singleton that the job's empty keys identify
 		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
-			source,
+			mapping,
 			connectorId,
 			telemetryManager
 		);
