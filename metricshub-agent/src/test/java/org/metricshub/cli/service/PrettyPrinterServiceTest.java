@@ -338,4 +338,48 @@ class PrettyPrinterServiceTest {
 		singleton.addAttribute("name", "Settings");
 		assertEquals("Settings", prettyPrinterService.getMonitorDisplayName(singleton));
 	}
+
+	@Test
+	void testPrintSingletonsOfTheSameType() throws IOException {
+		// Two connectors each map the singleton of the memory type; the first writes id: memory and is a parent
+		final TelemetryManager telemetryManager = new TelemetryManager();
+		final Monitor host = Monitor.builder()
+			.type(KnownMonitorType.HOST.getKey())
+			.id(HOST_ID_VALUE)
+			.attributes(Map.of(ID_ATTRIBUTE_KEY, HOST_ID_VALUE))
+			.isEndpoint(true)
+			.build();
+		telemetryManager.addNewMonitor(host, KnownMonitorType.HOST.getKey(), HOST_ID_VALUE);
+		final Monitor singletonA = Monitor.builder()
+			.type("memory")
+			.id("A_memory")
+			.identifyingAttributeKeys(Set.of())
+			.attributes(Map.of(ID_ATTRIBUTE_KEY, "memory"))
+			.build();
+		telemetryManager.addNewMonitor(singletonA, "memory", "A_memory");
+		final Monitor singletonB = Monitor.builder()
+			.type("memory")
+			.id("B_memory")
+			.identifyingAttributeKeys(Set.of())
+			.build();
+		telemetryManager.addNewMonitor(singletonB, "memory", "B_memory");
+		final Monitor child = Monitor.builder()
+			.type("disk")
+			.id("disk-1")
+			.attributes(
+				Map.of(ID_ATTRIBUTE_KEY, "disk-1", HW_PARENT_TYPE_ATTRIBUTE_KEY, "memory", HW_PARENT_ID_ATTRIBUTE_KEY, "memory")
+			)
+			.build();
+		telemetryManager.addNewMonitor(child, "disk", "disk-1");
+
+		final StringBuilder builder = new StringBuilder();
+		final PrintWriter printWriter = new PrintWriter(new StringBuilderWriter(builder));
+		new PrettyPrinterService(telemetryManager, printWriter).print(null);
+		final String result = builder.toString();
+
+		// Both singletons are printed, and the child is printed under the singleton whose id attribute it names
+		assertTrue(result.contains("    - memory: " + Ansi.ansi().fgCyan().a("A_memory").reset()), result);
+		assertTrue(result.contains("    - memory: " + Ansi.ansi().fgCyan().a("B_memory").reset()), result);
+		assertTrue(result.contains("\n        - disk: " + Ansi.ansi().fgCyan().a("disk-1").reset()), result);
+	}
 }

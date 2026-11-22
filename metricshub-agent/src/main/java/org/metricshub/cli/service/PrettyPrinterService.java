@@ -22,6 +22,7 @@ package org.metricshub.cli.service;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_PARENT_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
@@ -491,7 +492,12 @@ public class PrettyPrinterService {
 			// Create MonitorChildren for each Monitor and put them in the map
 			for (final Monitor monitorInstance : monitors) {
 				final MonitorChildren monitorChildren = new MonitorChildren(monitorInstance);
-				final String attributeId = monitorInstance.formatIdentifyingAttributes();
+				String attributeId = monitorInstance.formatIdentifyingAttributes();
+				if (attributeId.isEmpty()) {
+					// The singleton of a simple mapping has no key attribute: its id attribute links its children, else its internal id keeps it apart
+					attributeId = Optional.ofNullable(monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID))
+						.orElse(monitorInstance.getId());
+				}
 				final String monitorType = monitorInstance.getType();
 				monitorMap.put(String.format(MONITOR_ID_FORMAT, monitorType, attributeId), monitorChildren);
 			}
