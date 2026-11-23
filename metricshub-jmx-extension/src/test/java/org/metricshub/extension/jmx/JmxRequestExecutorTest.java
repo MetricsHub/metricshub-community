@@ -474,6 +474,8 @@ class JmxRequestExecutorTest {
 			release.countDown();
 		}
 
+		// Nothing was sent: the request never reached connect
+		verify(jmxRequestExecutor, never()).connect(any(), any(), any(), any());
 		assertTrue(requestStats.snapshot().isEmpty());
 	}
 
@@ -507,8 +509,9 @@ class JmxRequestExecutorTest {
 			);
 			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
-			deadline.join(TimeUnit.SECONDS.toMillis(10));
+			// Clear the interrupt flag first: join would throw on it
 			Thread.interrupted();
+			deadline.join(TimeUnit.SECONDS.toMillis(10));
 			release.countDown();
 		}
 

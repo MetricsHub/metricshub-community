@@ -78,12 +78,17 @@ public class ThreadHelper {
 	 * @param callable the task to be executed
 	 * @param timeout  the maximum time to wait for the task to complete, in seconds
 	 * @return the result of the executed task
-	 * @throws InterruptedException if the current thread was interrupted while waiting
+	 * @throws InterruptedException if the current thread was interrupted before the task started (the task is never
+	 *                              submitted) or while waiting; its interrupt status is kept
 	 * @throws ExecutionException   if the computation threw an exception
 	 * @throws TimeoutException     if the wait timed out
 	 */
 	public static <T> T execute(final Callable<T> callable, final long timeout) throws InterruptedException,
 		ExecutionException, TimeoutException {
+		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedException("Interrupted before the task started");
+		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
 			final Future<T> future = executor.submit(callable);

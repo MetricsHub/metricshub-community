@@ -24,6 +24,8 @@ package org.metricshub.extension.jdbc;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -168,23 +170,40 @@ public class SqlRequestExecutor {
 	 * interruption ({@link RequestOutcome#of(Throwable)}) and for SQLState {@value #QUERY_CANCELED_SQL_STATE}, which
 	 * is how PostgreSQL reports the expiry of {@link java.sql.Statement#setQueryTimeout(int)} (a cancellation by an
 	 * administrator looks the same, but MetricsHub never cancels a query itself), {@link RequestOutcome#FAILED}
-	 * otherwise.
+	 * otherwise. Both the causes and the {@link SQLException#getNextException()} chain are searched.
 	 *
 	 * @param exception The exception thrown by the request.
 	 * @return {@link RequestOutcome#TIMEOUT} or {@link RequestOutcome#FAILED}.
 	 */
 	static RequestOutcome classify(final SQLException exception) {
-		if (RequestOutcome.of(exception) == RequestOutcome.TIMEOUT) {
-			return RequestOutcome.TIMEOUT;
-		}
-		Throwable current = exception;
-		for (int depth = 0; current != null && depth < MAX_CAUSE_DEPTH; depth++) {
-			if (current instanceof SQLException sqlException && QUERY_CANCELED_SQL_STATE.equals(sqlException.getSQLState())) {
+		// JDBC keeps the getNextException() chain apart from the causes, and a wrapper can hold either: walk both
+		final Deque<Throwable> pending = new ArrayDeque<>(List.of(exception));
+		for (int visited = 0; !pending.isEmpty() && visited < MAX_CAUSE_DEPTH; visited++) {
+			final Throwable current = pending.pop();
+			if (isTimeout(current)) {
 				return RequestOutcome.TIMEOUT;
 			}
-			current = current.getCause();
+			if (current instanceof SQLException sqlException && sqlException.getNextException() != null) {
+				pending.push(sqlException.getNextException());
+			}
+			if (current.getCause() != null) {
+				pending.push(current.getCause());
+			}
 		}
 		return RequestOutcome.FAILED;
+	}
+
+	/**
+	 * Whether the given exception itself reports a timeout.
+	 *
+	 * @param exception The exception.
+	 * @return {@code true} for a timeout type or SQLState {@value #QUERY_CANCELED_SQL_STATE}.
+	 */
+	private static boolean isTimeout(final Throwable exception) {
+		if (exception instanceof SQLException sqlException && QUERY_CANCELED_SQL_STATE.equals(sqlException.getSQLState())) {
+			return true;
+		}
+		return RequestOutcome.of(exception) == RequestOutcome.TIMEOUT;
 	}
 
 	/**

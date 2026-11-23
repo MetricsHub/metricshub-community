@@ -82,7 +82,8 @@ public class PingRequestExecutor {
 			record(requestStats, reachable ? RequestOutcome.COMPLETED : classifyNoAnswer(nanoTime() - start, timeout));
 			return reachable;
 		} catch (IOException e) {
-			record(requestStats, RequestOutcome.FAILED);
+			// A SocketTimeoutException or another InterruptedIOException is a timeout
+			record(requestStats, RequestOutcome.of(e));
 			log.error("Hostname {}. A network error occurred: %s", hostname, e);
 			return false;
 		}

@@ -334,6 +334,8 @@ class AbstractSnmpRequestExecutorTest {
 			Thread.interrupted();
 		}
 
+		// Nothing was sent
+		verify(client, never()).get(any());
 		assertTrue(requestStats.snapshot().isEmpty());
 	}
 
@@ -366,9 +368,9 @@ class AbstractSnmpRequestExecutorTest {
 				() -> executor.executeSNMPGet(OID, configuration, HOSTNAME, true, requestStats)
 			);
 		} finally {
-			deadline.join();
-			// Clear the interrupt flag restored by the executor
+			// Clear the interrupt flag restored by the executor first: join would throw on it
 			Thread.interrupted();
+			deadline.join();
 		}
 
 		assertCounts(requestStats, 0, 1, 0);

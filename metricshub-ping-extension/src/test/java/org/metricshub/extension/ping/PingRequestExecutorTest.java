@@ -11,6 +11,7 @@ import static org.metricshub.engine.telemetry.RequestOutcome.FAILED;
 import static org.metricshub.engine.telemetry.RequestOutcome.TIMEOUT;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +55,15 @@ class PingRequestExecutorTest {
 		executor.pingError = new IOException("network error");
 		assertFalse(executor.ping(HOSTNAME, TIMEOUT_MS, stats));
 		assertEquals(counts(0, 0, 1), stats.snapshot());
+	}
+
+	@Test
+	void testIoTimeoutExceptionIsTimeout() throws Exception {
+		executor.pingError = new SocketTimeoutException("timed out");
+		assertFalse(executor.ping(HOSTNAME, TIMEOUT_MS, stats));
+		executor.pingError = new IOException("network error", new SocketTimeoutException("timed out"));
+		assertFalse(executor.ping(HOSTNAME, TIMEOUT_MS, stats));
+		assertEquals(counts(0, 2, 0), stats.snapshot());
 	}
 
 	@Test

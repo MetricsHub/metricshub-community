@@ -257,6 +257,25 @@ class SqlRequestExecutorTest {
 	}
 
 	@Test
+	void testTimeoutInTheNextExceptionChainIsTimeout() throws SQLException {
+		final SQLException timeoutInNext = new SQLException("Batch failed", "08006");
+		timeoutInNext.setNextException(new SQLTimeoutException("Query timed out"));
+		assertEquals(counts(0, 1, 0), countsWhenConnectThrows(timeoutInNext));
+
+		final SQLException canceledInNext = new SQLException("Batch failed", "08006");
+		canceledInNext.setNextException(new SQLException("canceling statement due to user request", "57014"));
+		assertEquals(counts(0, 1, 0), countsWhenConnectThrows(canceledInNext));
+	}
+
+	@Test
+	void testCauseCycleIsFailed() throws SQLException {
+		final SQLException first = new SQLException("Connection refused", "08001");
+		final SQLException second = new SQLException("Connection refused", "08001", first);
+		first.initCause(second);
+		assertEquals(counts(0, 0, 1), countsWhenConnectThrows(first));
+	}
+
+	@Test
 	void testConnectionRefusedIsFailed() throws SQLException {
 		assertEquals(counts(0, 0, 1), countsWhenConnectThrows(new SQLException("Connection refused", "08001")));
 	}
