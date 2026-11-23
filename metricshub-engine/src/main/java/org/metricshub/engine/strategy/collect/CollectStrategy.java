@@ -181,6 +181,13 @@ public class CollectStrategy extends AbstractStrategy {
 		// If monitor jobs execution is set to "sequential", execute monitor jobs one by one
 		if (isSequential) {
 			otherMonitorJobs.entrySet().forEach(entry -> processMonitorJob(currentConnector, hostname, entry));
+		} else if (Thread.currentThread().isInterrupted()) {
+			// The new threads of a pool would not inherit the interrupt and would send the requests of an abandoned run
+			log.warn(
+				"Hostname {} - Thread interrupted: skipping the parallel monitor jobs. Connector: {}.",
+				hostname,
+				currentConnector.getCompiledFilename()
+			);
 		} else {
 			// Execute monitor jobs in parallel
 			// Create a thread pool with a fixed number of threads

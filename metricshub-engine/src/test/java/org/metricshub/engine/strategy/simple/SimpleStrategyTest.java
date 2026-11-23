@@ -586,18 +586,13 @@ class SimpleStrategyTest {
 		final Monitor staleEnclosure = addStaleMonitor(telemetryManager, ENCLOSURE.getKey());
 		sourceTables.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
 
-		// The strategy thread is interrupted (abandoned run): waiting for the jobs of the thread pool throws
+		// The strategy thread is interrupted (abandoned run)
 		Thread.currentThread().interrupt();
 		try {
 			collect(telemetryManager, strategyTime);
 
-			// The enclosure job, run sequentially on the interrupted thread, sends no request: nothing is mapped and
-			// nothing is removed. The jobs of the thread pool may start before shutdownNow() interrupts them.
-			verify(protocolExtensionMock, never()).processSource(
-				argThat(source -> source != null && SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()).equals(source.getKey())),
-				anyString(),
-				any(TelemetryManager.class)
-			);
+			// No request, neither from the sequential jobs nor from the parallel ones: nothing is mapped or removed
+			verify(protocolExtensionMock, never()).processSource(any(), anyString(), any(TelemetryManager.class));
 			assertEquals(
 				Map.of(staleEnclosure.getId(), staleEnclosure),
 				telemetryManager.getMonitors().get(ENCLOSURE.getKey())

@@ -197,6 +197,14 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// If monitor jobs execution is set to "sequential", execute monitor jobs one by one
 		if (isSequential) {
 			otherMonitorJobs.entrySet().forEach(runJob);
+		} else if (Thread.currentThread().isInterrupted()) {
+			// The new threads of a pool would not inherit the interrupt and would send the requests of an abandoned run
+			poolAbandoned = true;
+			log.warn(
+				"Hostname {} - Thread interrupted: skipping the parallel monitor jobs. Connector: {}.",
+				hostname,
+				currentConnector.getCompiledFilename()
+			);
 		} else {
 			// Execute monitor jobs in parallel
 			// Create a thread pool with a fixed number of threads
