@@ -495,11 +495,10 @@ public class PrettyPrinterService {
 			for (final Monitor monitorInstance : monitors) {
 				final MonitorChildren monitorChildren = new MonitorChildren(monitorInstance);
 				allChildren.add(monitorChildren);
-				String attributeId = monitorInstance.formatIdentifyingAttributes();
-				if (attributeId.isEmpty()) {
-					// The singleton of a simple mapping has no key attribute: its id attribute, if any, links its children
-					attributeId = monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID);
-				}
+				// The singleton of a simple mapping has no key attribute: its id attribute, if any, links its children
+				final String attributeId = monitorInstance.getIdentifyingAttributeKeys().isEmpty()
+					? monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID)
+					: monitorInstance.formatIdentifyingAttributes();
 				if (attributeId != null) {
 					final String key = String.format(MONITOR_ID_FORMAT, monitorInstance.getType(), attributeId);
 					monitorMap.put(key, monitorChildren);
@@ -570,11 +569,15 @@ public class PrettyPrinterService {
 		public int compareTo(final MonitorChildren other) {
 			final String currentName = monitor.getAttribute(MONITOR_ATTRIBUTE_NAME);
 			final String otherName = other.getMonitor().getAttribute(MONITOR_ATTRIBUTE_NAME);
-			if (currentName != null && otherName != null) {
+			if (currentName != null && otherName != null && !currentName.equals(otherName)) {
 				return currentName.compareTo(otherName);
 			}
 
-			return monitor.getId().compareTo(other.getMonitor().getId());
+			return Objects.compare(
+				monitor.getId(),
+				other.getMonitor().getId(),
+				Comparator.nullsFirst(Comparator.naturalOrder())
+			);
 		}
 	}
 }

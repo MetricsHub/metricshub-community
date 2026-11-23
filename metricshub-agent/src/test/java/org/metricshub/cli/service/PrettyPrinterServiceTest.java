@@ -396,4 +396,35 @@ class PrettyPrinterServiceTest {
 		assertTrue(subtreeA.contains(diskA) && !subtreeA.contains(diskB), result);
 		assertTrue(subtreeB.contains(diskB) && !subtreeB.contains(diskA), result);
 	}
+
+	@Test
+	void testPrintMonitorsWithTheSameName() throws IOException {
+		// Two connectors each map the singleton of the memory type, both named Settings
+		final TelemetryManager telemetryManager = new TelemetryManager();
+		final Monitor host = Monitor.builder()
+			.type(KnownMonitorType.HOST.getKey())
+			.id(HOST_ID_VALUE)
+			.attributes(Map.of(ID_ATTRIBUTE_KEY, HOST_ID_VALUE))
+			.isEndpoint(true)
+			.build();
+		telemetryManager.addNewMonitor(host, KnownMonitorType.HOST.getKey(), HOST_ID_VALUE);
+		for (final String connector : List.of("A", "B")) {
+			final Monitor singleton = Monitor.builder()
+				.type("memory")
+				.id(connector + "_memory")
+				.identifyingAttributeKeys(Set.of())
+				.attributes(Map.of("name", "Settings", "connector_id", connector))
+				.build();
+			telemetryManager.addNewMonitor(singleton, "memory", singleton.getId());
+		}
+
+		final StringBuilder builder = new StringBuilder();
+		final PrintWriter printWriter = new PrintWriter(new StringBuilderWriter(builder));
+		new PrettyPrinterService(telemetryManager, printWriter).print(null);
+		final String result = builder.toString();
+
+		// Both are printed
+		final String line = "    - memory: " + Ansi.ansi().fgCyan().a("Settings").reset();
+		assertTrue(result.indexOf(line) >= 0 && result.indexOf(line) != result.lastIndexOf(line), result);
+	}
 }
