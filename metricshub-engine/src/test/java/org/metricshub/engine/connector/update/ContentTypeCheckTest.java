@@ -825,6 +825,171 @@ class ContentTypeCheckTest {
 	}
 
 	@Test
+	void simpleMappingReadsConstantsAndTexts() throws IOException {
+		assertEquals(List.of(), findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        vendor:
+			          type: commandLine
+			          commandLine: echo
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: ${source::vendor}
+			          vendor: ${source::vendor}
+			        metrics:
+			          thing.count: 1
+			          thing.limit: ${source::vendor}
+			  bare:
+			    simple:
+			      mapping:
+			        type: simple
+			        metrics:
+			          bare.count: 1
+			  both:
+			    discovery:
+			      mapping:
+			        type: simple
+			        attributes:
+			          hw.id: both
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        type: simple
+			        metrics:
+			          both.count: 1
+			"""));
+	}
+
+	@Test
+	void simpleMappingReadsNoColumnAndNoTable() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        table:
+			          type: snmpTable
+			          oid: 1.3
+			          selectColumns: "1,2"
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: $1
+			          name: thing $2
+			          serial: $0
+			          vendor: ${source::table}
+			        metrics:
+			          thing.limit: ${awk::$3 * 2}
+			  other:
+			    discovery:
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: $1
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: other
+			        metrics:
+			          other.count: rate($1)
+			          other.rate: rate($0)
+			          other.size: ${awk::$0 * 2}
+			          other.price: $$0
+			""");
+		assertEquals(
+			Set.of(
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.name",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.serial",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.metrics.thing.limit",
+				"TABLE_INTERPOLATED monitors.thing.simple.mapping.attributes.vendor -> " + THING + "table}",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.count",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.rate",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.size"
+			),
+			lines(findings)
+		);
+		final ContentTypeFinding column = findings.get(0);
+		assertEquals("a constant or a text source", column.expected());
+		assertEquals("a column", column.actual());
+	}
+
+	@Test
+	void mappingTypeDecidesTheSourceTheTypesAndTheKeys() throws IOException {
+		assertEquals(
+			Set.of(
+				"TABLE_MAPPING_WITHOUT_SOURCE monitors.nosource.simple.mapping: a source, none",
+				"SOURCE_IN_SIMPLE_MAPPING monitors.sourced.simple.mapping.source: none, a source",
+				"MIXED_MAPPING_TYPES monitors.mixed: one mapping type, [TABLE, SIMPLE]",
+				"KEYS_WITH_SIMPLE_MAPPING monitors.keyed.keys: none, [id]"
+			),
+			findings("""
+				monitors:
+				  nosource:
+				    simple:
+				      mapping:
+				        attributes:
+				          id: one
+				  sourced:
+				    simple:
+				      sources:
+				        table:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1,2"
+				      mapping:
+				        type: simple
+				        source: ${source::table}
+				  mixed:
+				    discovery:
+				      sources:
+				        table:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1,2"
+				      mapping:
+				        source: ${source::table}
+				        attributes:
+				          id: $1
+				    collect:
+				      type: monoInstance
+				      mapping:
+				        type: simple
+				        metrics:
+				          mixed.count: 1
+				  keyed:
+				    keys: [ id ]
+				    simple:
+				      mapping:
+				        type: simple
+				        attributes:
+				          id: one
+				""").stream()
+				.map(f -> f.rule() + " " + f.location() + ": " + f.expected() + ", " + f.actual())
+				.collect(Collectors.toSet())
+		);
+	}
+
+	@Test
+	void unknownMappingTypeFailsToLoad() throws IOException {
+		final String body = """
+			monitors:
+			  thing:
+			    simple:
+			      mapping:
+			        type: keyValue
+			""";
+		assertThrows(IOException.class, () -> parse(body));
+		assertFalse(new ConnectorStore(directory).getStore().containsKey("Test"));
+	}
+
+	@Test
 	void findingsAreALoadError() throws IOException {
 		final Connector connector = parse("""
 			tools:

@@ -1,0 +1,115 @@
+connector:
+  displayName: TestConnectorWithSimpleMapping
+  platforms: Test platform
+  reliesOn: SomeCommand
+  version: 1.0
+  information: Test connector for the simple mapping (type simple), the singleton of its monitor type
+  detection:
+    appliesTo:
+      - Linux
+    criteria:
+      - type: deviceType
+        keep: [ linux ]
+monitors:
+  # Simple job, no attribute at all: one instance
+  bare:
+    simple:
+      mapping:
+        type: simple
+        metrics:
+          test.count: 1
+  # Simple job: one instance, its values are constants and texts, its id a plain attribute read from a text
+  settings:
+    simple:
+      sources:
+        vendor:
+          type: commandLine
+          commandLine: vendor
+        limit:
+          type: commandLine
+          commandLine: limit
+        failed:
+          type: commandLine
+          commandLine: failed
+      mapping:
+        type: simple
+        attributes:
+          id: ${source::vendor}
+          vendor: ${source::vendor}
+          location: ${source::failed}
+          name: Settings of ${source::vendor}
+        metrics:
+          test.count: 1
+          test.limit: ${source::limit}
+          test.failed: ${source::failed}
+  # Discovery and mono-instance collect, both with a simple mapping
+  mono:
+    discovery:
+      sources:
+        vendor:
+          type: commandLine
+          commandLine: vendor
+      mapping:
+        type: simple
+        attributes:
+          vendor: ${source::vendor}
+    collect:
+      type: monoInstance
+      sources:
+        limit:
+          type: commandLine
+          commandLine: limit
+      mapping:
+        type: simple
+        metrics:
+          test.limit: ${source::limit}
+  # Discovery and multi-instance collect, both with a simple mapping: the collect finds the singleton without a key
+  multi:
+    discovery:
+      mapping:
+        type: simple
+        attributes:
+          hw.id: multi
+    collect:
+      type: multiInstance
+      sources:
+        limit:
+          type: commandLine
+          commandLine: limit
+      mapping:
+        type: simple
+        attributes:
+          id: not-a-key
+        metrics:
+          test.limit: ${source::limit}
+  # A mapping with a source: one instance per row, a text in a value
+  rows:
+    simple:
+      sources:
+        table:
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1"
+        vendor:
+          type: commandLine
+          commandLine: vendor
+      mapping:
+        source: ${source::table}
+        attributes:
+          id: $1
+          vendor: ${source::vendor}
+        metrics:
+          test.limit: $2
+  # A table mapping with keys: [] keeps the id of a keyed monitor whose keys are empty, not the singleton id
+  emptyKeys:
+    keys: []
+    simple:
+      sources:
+        table:
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1"
+      mapping:
+        source: ${source::table}
+        attributes:
+          id: $1

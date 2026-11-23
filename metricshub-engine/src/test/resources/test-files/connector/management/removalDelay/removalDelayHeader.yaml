@@ -2,8 +2,8 @@ monitors:
   inherited:
     removalDelay: 1h
     simple:
-      mapping: {}
+      mapping: { type: simple }
   overridden:
     removalDelay: 1h
     simple:
-      mapping: {}
+      mapping: { type: simple }

@@ -77,7 +77,17 @@ public record ContentTypeFinding(
 		/** A <code>column</code> on an append, prepend, replace or substring that is fed a text. */
 		COLUMN_ON_TEXT("remove the column, or write a toTable before"),
 		/** No <code>column</code> on an append, prepend, replace or substring that is fed a table. */
-		NO_COLUMN_ON_TABLE("set the column, or write a toText before");
+		NO_COLUMN_ON_TABLE("set the column, or write a toText before"),
+		/** A mapping of the default type <code>table</code> without a <code>source</code>. */
+		TABLE_MAPPING_WITHOUT_SOURCE("set the source, or write type: simple"),
+		/** A <code>source</code> in a <code>type: simple</code> mapping, which reads no table. */
+		SOURCE_IN_SIMPLE_MAPPING("remove the source, or the type: simple"),
+		/** A column (<code>$1</code>) in a value of a simple mapping: it has no row. */
+		COLUMN_IN_SIMPLE_MAPPING("write a table mapping with a source, or reference a text source"),
+		/** A monitor job whose mappings do not all have the same type. */
+		MIXED_MAPPING_TYPES("give every mapping of the job the same type"),
+		/** <code>keys</code> on a job with a simple mapping: its one instance has no key attribute. */
+		KEYS_WITH_SIMPLE_MAPPING("remove the keys");
 
 		private final String hint;
 
