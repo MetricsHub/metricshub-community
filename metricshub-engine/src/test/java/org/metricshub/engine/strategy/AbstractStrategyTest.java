@@ -400,6 +400,39 @@ class AbstractStrategyTest {
 	}
 
 	@Test
+	void testInterruptedValidationLeavesConnectorStatus() {
+		final Connector connector = Connector.builder()
+			.connectorIdentity(
+				ConnectorIdentity.builder()
+					.compiledFilename(TEST_CONNECTOR_ID)
+					.detection(
+						Detection.builder()
+							.appliesTo(Set.of(DeviceKind.LINUX))
+							.criteria(
+								List.of(DeviceTypeCriterion.builder().type("deviceType").keep(Set.of(DeviceKind.LINUX)).build())
+							)
+							.build()
+					)
+					.build()
+			)
+			.build();
+		final CollectStrategy strategy = newValidationStrategy(connector);
+		assertTrue(strategy.validateConnectorDetectionCriteria(connector, HOST_NAME, "collect"));
+		assertConnectorStatus(strategy.getTelemetryManager(), STATE_SET_METRIC_OK, true, 0);
+
+		// Interrupted validations (job timeout, reload) count no failure and never stop the connector's job
+		Thread.currentThread().interrupt();
+		try {
+			for (int run = 0; run < MAX_CONSECUTIVE_DETECTION_FAILURES; run++) {
+				assertTrue(strategy.validateConnectorDetectionCriteria(connector, HOST_NAME, "collect"));
+			}
+			assertConnectorStatus(strategy.getTelemetryManager(), STATE_SET_METRIC_OK, true, 0);
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
 	void testOneHealthCheckValidation() {
 		final Criterion detectionCriterion = DeviceTypeCriterion.builder()
 			.type("deviceType")

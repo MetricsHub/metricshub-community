@@ -568,6 +568,18 @@ public abstract class AbstractStrategy implements IStrategy {
 			jobEndTime
 		);
 
+		// A validation cut short by an interrupt (job timeout, reload) proves nothing: the connector status and its
+		// failure counter are left as they are, and the job, whose sources are skipped, carries on
+		if (Thread.currentThread().isInterrupted()) {
+			log.warn(
+				"Hostname {} - {} validation of connector {} interrupted. The connector status is left unchanged.",
+				hostname,
+				validationType,
+				connectorId
+			);
+			return true;
+		}
+
 		final Monitor monitor = telemetryManager.findMonitorByTypeAndId(
 			KnownMonitorType.CONNECTOR.getKey(),
 			String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), connectorId)

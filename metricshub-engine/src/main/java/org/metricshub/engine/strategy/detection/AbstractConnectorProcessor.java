@@ -139,6 +139,12 @@ public abstract class AbstractConnectorProcessor {
 			connectorTestResults
 		);
 
+		// The new threads of a pool would not inherit the interrupt and would send the requests of an abandoned run
+		if (Thread.currentThread().isInterrupted()) {
+			log.warn("Hostname {} - Thread interrupted: skipping the detection of the connectors.", hostname);
+			return connectorTestResults;
+		}
+
 		final List<Connector> connectorList = connectors.collect(Collectors.toList());
 		final ExecutorService threadsPool = Executors.newFixedThreadPool(
 			Math.max(1, Math.min(MAX_THREADS_COUNT, connectorList.size()))
