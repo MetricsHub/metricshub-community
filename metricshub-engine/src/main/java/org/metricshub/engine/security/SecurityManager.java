@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -145,6 +146,13 @@ public class SecurityManager {
 	 * {@link FileLock} cannot be taken twice in one JVM, so only the outermost holder takes it.
 	 */
 	private static final ReentrantLock KEY_STORE_LOCK = new ReentrantLock();
+
+	/**
+	 * How many times {@link #moveDurably(Path, Path)} tries a move that is denied, and how long it waits in between.
+	 */
+	private static final int MOVE_ATTEMPTS = 40;
+
+	private static final long MOVE_RETRY_DELAY_MS = 50;
 
 	/**
 	 * A change made to a loaded KeyStore by {@link #updateKeyStore(File, KeyStoreUpdate)}.
@@ -411,22 +419,46 @@ public class SecurityManager {
 
 	/**
 	 * Moves a file over another atomically, or, where the file system cannot, by a plain replacement as an in-place
-	 * write did; then forces the directory, so a power loss cannot undo the move.
+	 * write did; then forces the directory, so a power loss cannot undo the move. On Windows, a file that another
+	 * process (an antivirus scanning the file just written, a reader of the KeyStore) holds open for a moment cannot
+	 * be replaced: the move is denied, so it is tried again for up to two seconds.
 	 *
 	 * @param source the file to move
 	 * @param target the file it replaces
 	 * @throws IOException when the move fails
 	 */
 	public static void moveDurably(final Path source, final Path target) throws IOException {
-		try {
-			Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-		} catch (AtomicMoveNotSupportedException e) {
-			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+		for (int attempt = 1;; attempt++) {
+			try {
+				move(source, target);
+				break;
+			} catch (AccessDeniedException e) {
+				if (attempt == MOVE_ATTEMPTS) {
+					throw e;
+				}
+				try {
+					Thread.sleep(MOVE_RETRY_DELAY_MS);
+				} catch (InterruptedException interrupted) {
+					Thread.currentThread().interrupt();
+					throw e;
+				}
+			}
 		}
 		try (FileChannel directory = FileChannel.open(target.toAbsolutePath().getParent(), StandardOpenOption.READ)) {
 			directory.force(true);
 		} catch (IOException e) {
 			// A directory cannot be opened on Windows, where the move is already durable once it returns
+		}
+	}
+
+	/**
+	 * Moves a file over another atomically, or by a plain replacement where the file system cannot.
+	 */
+	private static void move(final Path source, final Path target) throws IOException {
+		try {
+			Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
 		}
 	}
 
