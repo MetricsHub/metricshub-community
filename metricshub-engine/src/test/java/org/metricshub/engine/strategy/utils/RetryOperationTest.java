@@ -1,10 +1,8 @@
 package org.metricshub.engine.strategy.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -18,13 +16,30 @@ class RetryOperationTest {
 	}
 
 	@Test
-	void retryClearsInterruptFlagBeforeRetryAttempt() {
+	void interruptedThreadIsNotRetried() {
 		final AtomicInteger attempts = new AtomicInteger();
-		final AtomicBoolean interruptedOnFirstAttempt = new AtomicBoolean();
-		final AtomicBoolean interruptedOnRetry = new AtomicBoolean();
 
-		// Simulate a stale interrupt left by a previous operation
-		Thread.currentThread().interrupt();
+		// The job deadline expired during the first attempt
+		final String result = RetryOperation.<String>builder()
+			.withHostname("hostname")
+			.withDescription("description")
+			.withDefaultValue("default")
+			.withMaxRetries(1)
+			.build()
+			.run(() -> {
+				attempts.incrementAndGet();
+				Thread.currentThread().interrupt();
+				throw new RetryableException();
+			});
+
+		assertEquals("default", result);
+		assertEquals(1, attempts.get());
+		assertTrue(Thread.currentThread().isInterrupted());
+	}
+
+	@Test
+	void retrySucceeds() {
+		final AtomicInteger attempts = new AtomicInteger();
 
 		final RetryOperation<String> retryOperation = RetryOperation.<String>builder()
 			.withHostname("hostname")
@@ -35,16 +50,12 @@ class RetryOperationTest {
 
 		final String result = retryOperation.run(() -> {
 			if (attempts.getAndIncrement() == 0) {
-				interruptedOnFirstAttempt.set(Thread.currentThread().isInterrupted());
 				throw new RetryableException();
 			}
-			interruptedOnRetry.set(Thread.currentThread().isInterrupted());
 			return "success";
 		});
 
 		assertEquals("success", result);
-		assertTrue(interruptedOnFirstAttempt.get());
-		assertFalse(interruptedOnRetry.get());
-		assertFalse(Thread.currentThread().isInterrupted());
+		assertEquals(2, attempts.get());
 	}
 }

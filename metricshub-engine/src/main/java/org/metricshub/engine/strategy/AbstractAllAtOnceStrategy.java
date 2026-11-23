@@ -662,8 +662,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	/**
 	 * Whether this strategy run is still within its timeout. {@link ContextExecutor} interrupts and abandons a strategy
 	 * thread after {@link #getStrategyTimeout()} seconds. An abandoned thread must not remove monitors: its jobs may have
-	 * been cut short and it would race with the next run of the same jobs. RetryOperation clears the
-	 * interrupt flag before it retries, hence the elapsed time, measured with {@link System#nanoTime()} like the timeout
+	 * been cut short and it would race with the next run of the same jobs. Code that swallows an
+	 * interrupt may clear the flag, hence the elapsed time, measured with {@link System#nanoTime()} like the timeout
 	 * of {@link ContextExecutor} so that a clock step does not change it.
 	 *
 	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started

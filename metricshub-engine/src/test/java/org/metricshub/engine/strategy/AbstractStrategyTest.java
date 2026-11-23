@@ -17,6 +17,12 @@ import static org.metricshub.engine.constants.Constants.HOST_NAME;
 import static org.metricshub.engine.constants.Constants.MONITOR_ID_ATTRIBUTE_VALUE;
 import static org.metricshub.engine.constants.Constants.TEST_CONNECTOR_ID;
 import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMAT;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -24,8 +30,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
@@ -36,19 +44,23 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.detection.ConnectorSelection;
 import org.metricshub.engine.strategy.detection.ConnectorTestResult;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
@@ -654,6 +666,124 @@ class AbstractStrategyTest {
 
 		// A fresh result every time
 		assertFalse(AbstractStrategy.emptyResult(copy) == AbstractStrategy.emptyResult(copy));
+	}
+
+	@Test
+	void testInterruptedJobSkipsRemainingSources() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(SnmpTableSource.class)).when(extension).getSupportedSources();
+		final AtomicInteger requests = new AtomicInteger();
+		doAnswer(invocation -> {
+			// The job deadline expires during the first source
+			requests.incrementAndGet();
+			Thread.currentThread().interrupt();
+			return SourceTable.ofTable(SourceTable.csvToTable("a;1", ";"));
+		}).when(extension).processSource(any(), anyString(), any());
+
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		// The tables of the previous cycle must not survive for the sources that did not run
+		namespace.addSourceTable("${source::b}", SourceTable.ofTable(SourceTable.csvToTable("old;1", ";")));
+
+		final List<Source> sources = List.of("a", "b", "c")
+			.stream()
+			.map(
+				key -> (Source) SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::" + key + "}").build()
+			)
+			.toList();
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				sources,
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("simple")
+					.monitorType("enclosure")
+					.build()
+			);
+
+			assertEquals(1, requests.get());
+			assertFalse(allAnswered);
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertEquals(List.of(List.of("a", "1")), namespace.getSourceTable("${source::a}").getTable());
+			assertTrue(namespace.getSourceTable("${source::b}").isEmpty());
+			assertTrue(namespace.getSourceTable("${source::c}").isEmpty());
+			assertEquals(Set.of("${source::b}", "${source::c}"), namespace.getUnansweredSourceKeys());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptedDetectionSkipsRemainingCriteria() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(SnmpGetCriterion.class)).when(extension).getSupportedCriteria();
+		final AtomicInteger requests = new AtomicInteger();
+		doAnswer(invocation -> {
+			requests.incrementAndGet();
+			Thread.currentThread().interrupt();
+			return CriterionTestResult.success(invocation.getArgument(0), "ok");
+		}).when(extension).processCriterion(any(), anyString(), any(), anyBoolean());
+
+		final Connector connector = Connector.builder()
+			.connectorIdentity(
+				ConnectorIdentity.builder()
+					.compiledFilename(TEST_CONNECTOR_ID)
+					.detection(
+						Detection.builder()
+							.appliesTo(Set.of(DeviceKind.LINUX))
+							.criteria(
+								List.of(
+									SnmpGetCriterion.builder().oid("1.3.1").build(),
+									SnmpGetCriterion.builder().oid("1.3.2").build()
+								)
+							)
+							.build()
+					)
+					.build()
+			)
+			.build();
+
+		try {
+			final ConnectorTestResult result = new ConnectorSelection(
+				telemetryManager,
+				new ClientsExecutor(telemetryManager),
+				Set.of(TEST_CONNECTOR_ID),
+				ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build()
+			).runConnectorDetectionCriteria(connector, HOST_NAME);
+
+			assertEquals(1, requests.get());
+			// A detection cut short never matches
+			assertFalse(result.isSuccess());
+			assertEquals(2, result.getCriterionTestResults().size());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	private TelemetryManager newInterruptibleTelemetryManager() {
+		return TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostname(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.sequential(true)
+					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
+					.build()
+			)
+			.build();
 	}
 
 	private void assertConnectorStatus(

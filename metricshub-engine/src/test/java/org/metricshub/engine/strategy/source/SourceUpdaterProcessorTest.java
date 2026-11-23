@@ -3,6 +3,7 @@ package org.metricshub.engine.strategy.source;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.constants.Constants.EMPTY;
 import static org.metricshub.engine.constants.Constants.ENCLOSURE_COLLECT_SOURCE_1;
@@ -432,6 +433,29 @@ class SourceUpdaterProcessorTest {
 		).process(snmpGetSource);
 
 		assertEquals(SourceTable.ofTable(List.of(List.of("a", "x"), List.of("b", "x"), List.of(""))), result);
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryStopsWhenInterrupted() {
+		final AtomicInteger requests = new AtomicInteger();
+		try {
+			final SourceTable result = runForEachEntry(
+				ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build(),
+				false,
+				false,
+				invocation -> {
+					// The job deadline expires during the first request
+					requests.incrementAndGet();
+					Thread.currentThread().interrupt();
+					return SourceTable.ofText("{}");
+				}
+			);
+			assertEquals(1, requests.get());
+			assertTrue(result.isEmpty());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test

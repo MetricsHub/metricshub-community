@@ -621,6 +621,15 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		try {
 			for (List<String> row : table) {
+				// The job deadline expired or the job was cancelled: send no more request
+				if (Thread.currentThread().isInterrupted()) {
+					log.warn(
+						"Hostname {} - Thread interrupted: skipping the remaining 'execute for each entry' requests.",
+						hostname
+					);
+					return SourceTable.empty();
+				}
+
 				if (row == null) {
 					continue;
 				}

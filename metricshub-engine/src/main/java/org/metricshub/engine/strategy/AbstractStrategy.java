@@ -151,7 +151,12 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
-		for (final Source source : sources) {
+		for (int sourceIndex = 0; sourceIndex < sources.size(); sourceIndex++) {
+			if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+				return false;
+			}
+
+			final Source source = sources.get(sourceIndex);
 			final String sourceKey = source.getKey();
 
 			logBeginOperation(SOURCE, source, sourceKey, connectorId, hostname);
@@ -235,6 +240,11 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			// Loop over the computes to process each compute
 			for (int index = 0; index < computes.size(); index++) {
+				// A source whose computes were cut short is skipped as well: its table is half computed
+				if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+					return false;
+				}
+
 				final Compute compute = computes.get(index);
 				computeProcessor.setIndex(index);
 
@@ -263,6 +273,41 @@ public abstract class AbstractStrategy implements IStrategy {
 		}
 
 		return allSourcesAnswered;
+	}
+
+	/**
+	 * When the thread of the job is interrupted (its deadline expired or it was cancelled), the given sources are not
+	 * executed: each one gets an empty result and is reported unanswered, so that no mapping reads the table of a
+	 * previous cycle or of another monitor and no monitor is removed on their account.
+	 *
+	 * @param remainingSources The sources of the job not executed yet
+	 * @param connectorId      The connector identifier
+	 * @param hostname         The host name
+	 * @return {@code true} if the thread is interrupted and the remaining sources were skipped
+	 */
+	private boolean skipSourcesIfInterrupted(
+		final List<Source> remainingSources,
+		final String connectorId,
+		final String hostname
+	) {
+		if (!Thread.currentThread().isInterrupted()) {
+			return false;
+		}
+
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
+			.getConnectorNamespace(connectorId);
+		for (final Source source : remainingSources) {
+			connectorNamespace.addSourceTable(source.getKey(), emptyResult(source));
+			connectorNamespace.getUnansweredSourceKeys().add(source.getKey());
+		}
+
+		log.warn(
+			"Hostname {} - The job was interrupted. Connector {} - Skipped sources: {}.",
+			hostname,
+			connectorId,
+			remainingSources.stream().map(Source::getKey).toList()
+		);
+		return true;
 	}
 
 	/**

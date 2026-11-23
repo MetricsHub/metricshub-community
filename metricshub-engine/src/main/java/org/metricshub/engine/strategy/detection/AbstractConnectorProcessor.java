@@ -452,6 +452,18 @@ public abstract class AbstractConnectorProcessor {
 		final ConnectorTestResult connectorTestResult = ConnectorTestResult.builder().connector(connector).build();
 
 		for (final Criterion criterion : criteria) {
+			// The job deadline expired or the job was cancelled: a detection cut short does not match
+			if (Thread.currentThread().isInterrupted()) {
+				log.warn(
+					"Hostname {} - Thread interrupted: skipping the remaining criteria of connector {}.",
+					hostname,
+					connector.getConnectorIdentity().getCompiledFilename()
+				);
+				connectorTestResult.getCriterionTestResults()
+					.add(CriterionTestResult.error(criterion, "Interrupted before this criterion was tested."));
+				break;
+			}
+
 			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector);
 			if (!criterionTestResult.isSuccess()) {
 				log.debug(

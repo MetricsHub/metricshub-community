@@ -21,6 +21,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -581,10 +583,25 @@ class SimpleStrategyTest {
 	void testRunDoesNotRemoveMonitorsWhenInterrupted() {
 		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder());
 
+		final Monitor staleEnclosure = addStaleMonitor(telemetryManager, ENCLOSURE.getKey());
+		sourceTables.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
+
 		// The strategy thread is interrupted (abandoned run): waiting for the jobs of the thread pool throws
 		Thread.currentThread().interrupt();
 		try {
-			assertStaleEnclosureKept(telemetryManager);
+			collect(telemetryManager, strategyTime);
+
+			// The enclosure job, run sequentially on the interrupted thread, sends no request: nothing is mapped and
+			// nothing is removed. The jobs of the thread pool may start before shutdownNow() interrupts them.
+			verify(protocolExtensionMock, never()).processSource(
+				argThat(source -> source != null && SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()).equals(source.getKey())),
+				anyString(),
+				any(TelemetryManager.class)
+			);
+			assertEquals(
+				Map.of(staleEnclosure.getId(), staleEnclosure),
+				telemetryManager.getMonitors().get(ENCLOSURE.getKey())
+			);
 		} finally {
 			Thread.interrupted();
 		}
