@@ -306,6 +306,9 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		try {
 			final T result = ThreadHelper.execute(callable, protocol.getTimeout());
+			// ponytail: snmp-java 2.1.02 ends a walk on any error after its first GETNEXT and turns a failed cell GET of
+			// a table into "", so a walk or table cut short by a timeout counts as completed with partial data; record
+			// timeout once snmp-java rethrows a timeout from walk() and table()
 			recordRequest(requestStats, RequestOutcome.COMPLETED);
 			return result;
 		} catch (TimeoutException | InterruptedException e) {

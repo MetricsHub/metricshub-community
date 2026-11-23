@@ -19,6 +19,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -178,15 +179,51 @@ class OsCommandRequestStatsTest {
 		final Set<Long> before = descendants();
 		final OsCommandService osCommandService = new OsCommandService();
 
-		// The engine interrupts the job when its deadline expires
-		Thread.currentThread().interrupt();
-		assertThrows(
-			InterruptedException.class,
-			() -> osCommandService.runOsCommand(LONG_COMMAND, telemetryManager, 20L, false, true, Map.of())
-		);
+		// The engine interrupts the job when its deadline expires, while the command runs
+		final Thread caller = Thread.currentThread();
+		final long giveUp = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+		final Thread deadline = new Thread(() -> {
+			// Wait until the command has started a process
+			while (before.containsAll(descendants()) && System.nanoTime() < giveUp) {
+				Thread.onSpinWait();
+			}
+			caller.interrupt();
+		});
+		deadline.start();
+		try {
+			assertThrows(
+				InterruptedException.class,
+				() -> osCommandService.runOsCommand(LONG_COMMAND, telemetryManager, 20L, false, true, Map.of())
+			);
+		} finally {
+			// Clear the interrupt flag first: join would throw on it
+			Thread.interrupted();
+			deadline.join(TimeUnit.SECONDS.toMillis(10));
+		}
 
 		assertEquals(counts(OS_COMMAND_IDENTIFIER, 0, 1, 0), telemetryManager.getRequestStats().snapshot());
 		assertNoProcessLeftSince(before);
+	}
+
+	@Test
+	void testLocalCommandOnAnInterruptedThreadStartsNothing() throws Exception {
+		final TelemetryManager telemetryManager = localTelemetryManager();
+		final OsCommandService osCommandService = spy(new OsCommandService());
+
+		// An earlier deadline of the job interrupted the thread
+		Thread.currentThread().interrupt();
+		try {
+			assertThrows(
+				InterruptedException.class,
+				() -> osCommandService.runOsCommand(LONG_COMMAND, telemetryManager, 20L, false, true, Map.of())
+			);
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		verify(osCommandService, never()).createProcessBuilder(any());
+		assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
 	}
 
 	@Test

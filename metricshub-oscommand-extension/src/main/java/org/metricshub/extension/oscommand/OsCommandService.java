@@ -200,8 +200,10 @@ public class OsCommandService {
 	/**
 	 * Runs a local command and records its outcome as an {@value OsCommandExtension#OS_COMMAND_IDENTIFIER} request:
 	 * completed when it returns an output, whatever the exit code; failed when it returns {@code null} (an execution
-	 * failure) or cannot start; timeout when it times out or is interrupted. A runtime exception (invalid argument) is
-	 * thrown before the process starts and records nothing.
+	 * failure) or cannot start; timeout when it times out or is interrupted while it runs. A runtime exception (invalid
+	 * argument) is thrown before the process starts and records nothing. A thread already interrupted (an expired
+	 * deadline of its job) starts nothing and records nothing: an {@link InterruptedException} is thrown, the interrupt
+	 * status is kept.
 	 *
 	 * @param requestStats The request statistics of the monitored resource, {@code null} to record nothing.
 	 * @param call         The call of the local command.
@@ -212,6 +214,10 @@ public class OsCommandService {
 	 */
 	public static String recordLocalCommand(final RequestStats requestStats, final LocalCommandCall call)
 		throws InterruptedException, IOException, TimeoutException {
+		// A caller already interrupted (an expired deadline of its job) must not start a process it will not wait for
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedException("Interrupted before the command started");
+		}
 		final String result;
 		try {
 			result = call.run();

@@ -395,7 +395,11 @@ public class WbemRequestExecutor {
 		final String namespace,
 		final RequestStats requestStats
 	) throws Exception {
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A caller already interrupted (an expired deadline of its job) must not send a query it will not wait for:
+		// WbemExecutor submits the query to its worker before it waits, and does not cancel it on interruption
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedException("Interrupted before the WBEM query was sent");
+		}
 		final WbemQueryResult wbemQueryResult;
 		try {
 			wbemQueryResult = WbemExecutor.executeWql(
@@ -409,7 +413,7 @@ public class WbemRequestExecutor {
 			);
 		} catch (Exception e) {
 			if (!isRejectedBeforeSending(e, wbemConfig)) {
-				recordError(requestStats, e, interruptedBefore);
+				record(requestStats, RequestOutcome.of(e));
 			}
 			throw e;
 		}

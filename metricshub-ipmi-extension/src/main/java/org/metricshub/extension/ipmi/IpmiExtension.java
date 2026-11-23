@@ -64,6 +64,7 @@ import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
+import org.metricshub.ipmi.client.IpmiClientException;
 import org.metricshub.ipmi.client.IpmiTimeoutException;
 import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
@@ -339,8 +340,10 @@ public class IpmiExtension implements IProtocolExtension {
 	 * Sends one request of the resource and counts its outcome in the request statistics of the resource, as soon as
 	 * the request returns or throws: before its result is recorded or converted, and before an error becomes an empty
 	 * result. A timeout of ipmi-java, or an interrupted wait (the engine cancelling the request on its deadline), is a
-	 * timeout; any other error, a malformed answer of the BMC included, is a failure. A thread that was already
-	 * interrupted (an expired deadline of its job) when the request began sends nothing and counts nothing.
+	 * timeout, and so is any error thrown while the thread is interrupted; any other error, a malformed answer of the
+	 * BMC included, is a failure. A thread that was already interrupted (an expired deadline of its job) when the
+	 * request began sends nothing and counts nothing: an {@link IpmiClientException} caused by an
+	 * {@link InterruptedException} is thrown, the interrupt status is kept.
 	 *
 	 * @param <T>              The type of the result
 	 * @param telemetryManager The telemetry manager of the resource, which counts the request
@@ -354,7 +357,11 @@ public class IpmiExtension implements IProtocolExtension {
 		final Function<T, RequestOutcome> outcome
 	) {
 		final RequestStats requestStats = telemetryManager.getRequestStats();
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for:
+		// ipmi-java submits the request to its worker before it waits
+		if (Thread.currentThread().isInterrupted()) {
+			throw new IpmiClientException("Interrupted before the IPMI request started", new InterruptedException());
+		}
 		final T result;
 		try {
 			result = request.get();
@@ -362,10 +369,12 @@ public class IpmiExtension implements IProtocolExtension {
 			requestStats.record(IDENTIFIER, RequestOutcome.TIMEOUT);
 			throw e;
 		} catch (RuntimeException e) {
-			final RequestOutcome errorOutcome = RequestOutcome.of(e);
-			if (!(interruptedBefore && errorOutcome == RequestOutcome.TIMEOUT)) {
-				requestStats.record(IDENTIFIER, errorOutcome);
-			}
+			// ipmi-java gives up a SEL, sensor or FRU read interrupted by the deadline with an exception without cause:
+			// the interrupt status of the thread is the signal
+			requestStats.record(
+				IDENTIFIER,
+				Thread.currentThread().isInterrupted() ? RequestOutcome.TIMEOUT : RequestOutcome.of(e)
+			);
 			throw e;
 		}
 		requestStats.record(IDENTIFIER, outcome.apply(result));

@@ -8,9 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.telemetry.RequestOutcome.COMPLETED;
 import static org.metricshub.engine.telemetry.RequestOutcome.FAILED;
 import static org.metricshub.engine.telemetry.RequestOutcome.TIMEOUT;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -149,17 +152,32 @@ class IpmiExtensionRequestStatsTest {
 
 	@Test
 	void testDetectionOnAnInterruptedThreadCountsNothing() {
-		// An earlier deadline of the job interrupted the thread: ipmi-java fails before sending
-		doThrow(new IpmiClientException("Interrupted while waiting", new InterruptedException())).when(ipmiRequestExecutor)
-			.executeIpmiDetection(HOST_NAME, configuration);
-
+		// An earlier deadline of the job interrupted the thread: nothing is started
 		Thread.currentThread().interrupt();
+		try {
+			assertFalse(processCriterion().isSuccess());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+		verify(ipmiRequestExecutor, never()).executeIpmiDetection(HOST_NAME, configuration);
+		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testReadGivenUpAtTheDeadlineIsTimeout() {
+		// ipmi-java gives up a read interrupted by the deadline of the job with an exception without cause
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			throw new IpmiClientException("The read of SEL was given up at the deadline of its caller");
+		}).when(ipmiRequestExecutor).executeIpmiDetection(HOST_NAME, configuration);
+
 		try {
 			assertFalse(processCriterion().isSuccess());
 		} finally {
 			Thread.interrupted();
 		}
-		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
+		assertCounts(0, 1, 0);
 	}
 
 	@Test

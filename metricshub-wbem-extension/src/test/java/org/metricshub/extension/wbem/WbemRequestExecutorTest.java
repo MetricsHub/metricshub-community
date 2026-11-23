@@ -2,6 +2,7 @@ package org.metricshub.extension.wbem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -283,17 +284,32 @@ class WbemRequestExecutorTest {
 
 	@Test
 	void testThreadInterruptedBeforeTheRequestCountsNothing() {
-		// An earlier deadline of the job interrupted the thread: WbemExecutor and ThreadHelper fail before sending
+		// An earlier deadline of the job interrupted the thread: the query is never handed to WbemExecutor, whose
+		// worker would send it anyway
 		Thread.currentThread().interrupt();
 		try {
-			assertTrue(executeWbemThrowing(new InterruptedException()).snapshot().isEmpty());
+			final TelemetryManager queryTelemetryManager = buildTelemetryManager();
+			try (MockedStatic<WbemExecutor> wbemExecutorMock = mockStatic(WbemExecutor.class)) {
+				final ClientException thrown = assertThrows(
+					ClientException.class,
+					() -> wbemRequestExecutor.executeWbem(
+						HOST_NAME,
+						buildConfiguration(null),
+						QUERY,
+						NAMESPACE,
+						queryTelemetryManager
+					)
+				);
+				assertInstanceOf(InterruptedException.class, thrown.getCause());
+				wbemExecutorMock.verifyNoInteractions();
+			}
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertTrue(queryTelemetryManager.getRequestStats().snapshot().isEmpty());
 
+			// ThreadHelper fails the vCenter ticket request before sending
 			final TelemetryManager telemetryManager = buildTelemetryManager();
 			executeVCenterTicketFailure(telemetryManager, stubbing -> stubbing.thenThrow(new InterruptedException()));
 			assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
-
-			// An error that is not the interruption is still counted
-			assertCounts(executeWbemThrowing(new WBEMException(WBEMException.CIM_ERR_ACCESS_DENIED)), 0, 0, 1);
 		} finally {
 			Thread.interrupted();
 		}
