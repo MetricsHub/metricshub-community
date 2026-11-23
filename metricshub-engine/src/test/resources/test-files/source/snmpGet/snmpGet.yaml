@@ -8,3 +8,7 @@ beforeAll:
     type: snmpGet
     oid: testOidString
     forceSerialization: true
+  testSnmpGetTable:
+    type: snmpGet
+    oid: testOidString
+    output: table

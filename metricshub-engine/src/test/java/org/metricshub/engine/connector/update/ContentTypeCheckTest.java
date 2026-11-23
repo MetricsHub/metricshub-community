@@ -139,16 +139,16 @@ class ContentTypeCheckTest {
 		assertEquals(THING + "computed}", compute.sourceKey());
 		assertEquals("TABLE", compute.expected());
 		assertEquals("TEXT", compute.actual());
-		assertEquals("write a toTable", compute.hint());
+		assertEquals("write a toTable, or output: table on an awk or snmpGet source", compute.hint());
 	}
 
 	/**
-	 * An <code>snmpGet</code> source returns a text (#1615): read as the source of a mapping, it is a finding whose hint
-	 * gives both ways out; after a <code>toTable</code>, or referenced in a <code>static</code> cell, it is not.
+	 * An <code>snmpGet</code> source returns a text by default (#1615): read as the source of a mapping, it is a finding
+	 * whose hint names <code>output: table</code> and the simple mapping; with <code>output: table</code>, it is not.
 	 */
 	@Test
-	void snmpGetIsAText() throws IOException {
-		final List<ContentTypeFinding> findings = findings("""
+	void snmpGetIsATextUnlessOutputTable() throws IOException {
+		final String connector = """
 			monitors:
 			  thing:
 			    simple:
@@ -156,55 +156,17 @@ class ContentTypeCheckTest {
 			        value:
 			          type: snmpGet
 			          oid: 1.3.6.1.4.1.99999.1.0
+			          %s
 			      mapping:
 			        source: ${source::value}
 			        attributes:
 			          id: $1
-			""");
+			""";
+		final List<ContentTypeFinding> findings = findings(connector.formatted(""));
 		assertEquals(Set.of("TEXT_FEEDS_TABLE monitors.thing.simple.mapping"), lines(findings));
-		assertEquals(
-			"write a toTable, or remove the mapping source and read the text as ${source::<key>} in a value",
-			findings.get(0).hint()
-		);
+		assertEquals("write a toTable, output: table on an awk or snmpGet source, or type: simple", findings.get(0).hint());
 
-		assertEquals(List.of(), findings("""
-			monitors:
-			  thing:
-			    simple:
-			      sources:
-			        code:
-			          type: snmpGet
-			          oid: 1.3.6.1.4.1.99999.1.0
-			          computes:
-			          - type: toTable
-			          - type: translate
-			            column: 1
-			            translationTable: ${translation::codes}
-			        nameValue:
-			          type: snmpGet
-			          oid: 1.3.6.1.4.1.99999.2.0
-			        name:
-			          type: static
-			          value: [ "${source::nameValue}" ]
-			          computes:
-			          - type: excludeMatchingLines
-			            column: 1
-			            regExp: ^$
-			        rows:
-			          type: tableJoin
-			          leftTable: ${source::name}
-			          rightTable: ${source::code}
-			          leftKeyColumn: 1
-			          rightKeyColumn: 1
-			      mapping:
-			        source: ${source::rows}
-			        attributes:
-			          id: $1
-			          info: ${source::nameValue}
-			translations:
-			  codes:
-			    "1": ok
-			"""));
+		assertEquals(List.of(), findings(connector.formatted("output: table")));
 	}
 
 	@Test

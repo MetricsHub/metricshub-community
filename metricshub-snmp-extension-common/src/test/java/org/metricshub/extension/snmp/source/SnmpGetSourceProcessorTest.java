@@ -5,12 +5,14 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -107,6 +109,39 @@ class SnmpGetSourceProcessorTest {
 		);
 		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+	}
+
+	// output: table: one row of one cell holding the value, never split; an empty value is one empty cell; no value,
+	// a failed request or no configuration is no row
+	@Test
+	void testProcess_OutputTable() throws Exception {
+		SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid("test_oid").output(ContentType.TABLE).build();
+		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
+		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
+		when(configurationRetriever.apply(telemetryManager)).thenReturn(
+			snmpConfiguration,
+			snmpConfiguration,
+			snmpConfiguration,
+			snmpConfiguration,
+			null
+		);
+		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname")).thenReturn(
+			"a;b\nc;d",
+			"",
+			null
+		).thenThrow(new InterruptedException("Test exception"));
+
+		assertEquals(
+			SourceTable.ofTable(List.of(List.of("a;b\nc;d"))),
+			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
+		);
+		assertEquals(
+			SourceTable.ofTable(List.of(List.of(""))),
+			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
+		);
+		assertEquals(SourceTable.empty(), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceTable.empty(), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceTable.empty(), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 	}
 
 	/**

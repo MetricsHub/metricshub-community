@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 
@@ -35,7 +36,19 @@ class SnmpGetSourceDeserializerTest extends DeserializerTest {
 				.computes(Collections.emptyList())
 				.build()
 		);
+		expected.put(
+			"testSnmpGetTable",
+			SnmpGetSource.builder()
+				.key("${source::beforeAll.testSnmpGetTable}")
+				.type("snmpGet")
+				.oid("testOidString")
+				.output(ContentType.TABLE)
+				.computes(Collections.emptyList())
+				.build()
+		);
 
 		assertEquals(expected, connector.getBeforeAll());
+		assertEquals(ContentType.TEXT, expected.get("testSnmpGetSource").getOutputContentType());
+		assertEquals(ContentType.TABLE, connector.getBeforeAll().get("testSnmpGetTable").getOutputContentType());
 	}
 }

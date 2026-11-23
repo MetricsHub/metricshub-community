@@ -21,8 +21,11 @@ package org.metricshub.engine.connector.model.monitor.task.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static com.fasterxml.jackson.annotation.Nulls.SKIP;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
@@ -36,7 +39,8 @@ import org.metricshub.engine.strategy.source.ISourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
- * Represents a source task that retrieves data using SNMP GET. Its result is the value of the OID, as a text.
+ * Represents a source task that retrieves data using SNMP GET. Its result is the value of the OID, as a text, or with
+ * <code>output: table</code> as a table of one row of one cell.
  */
 @Data
 @NoArgsConstructor
@@ -44,6 +48,13 @@ import org.metricshub.engine.strategy.source.SourceTable;
 public class SnmpGetSource extends SnmpSource {
 
 	private static final long serialVersionUID = 1L;
+
+	/**
+	 * What the source produces: {@link ContentType#TEXT} (the value, as it is) or {@link ContentType#TABLE} (one row of
+	 * one cell holding the value, never split). Default text.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private ContentType output = ContentType.TEXT;
 
 	/**
 	 * Constructs a new {@code SnmpGetSource} instance with the provided attributes.
@@ -54,6 +65,7 @@ public class SnmpGetSource extends SnmpSource {
 	 * @param oid                   the SNMP OID to retrieve data
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
+	 * @param output                what the source produces, null for text
 	 */
 	@Builder
 	@JsonCreator
@@ -63,9 +75,11 @@ public class SnmpGetSource extends SnmpSource {
 		@JsonProperty("forceSerialization") boolean forceSerialization,
 		@JsonProperty(value = "oid", required = true) String oid,
 		@JsonProperty("key") String key,
-		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
+		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf,
+		@JsonProperty("output") ContentType output
 	) {
 		super(type, computes, forceSerialization, oid, key, executeForEachEntryOf);
+		this.output = output == null ? ContentType.TEXT : output;
 	}
 
 	/**
@@ -81,13 +95,13 @@ public class SnmpGetSource extends SnmpSource {
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.oid(oid)
+			.output(output)
 			.build();
 	}
 
 	@Override
 	public ContentType getOutputContentType() {
-		// The value of the OID, as a text: a toTable makes it a row, a static cell keeps it whole
-		return ContentType.TEXT;
+		return output == null ? ContentType.TEXT : output;
 	}
 
 	@Override

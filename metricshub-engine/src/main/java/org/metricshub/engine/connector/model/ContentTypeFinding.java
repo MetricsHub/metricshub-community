@@ -49,7 +49,7 @@ public record ContentTypeFinding(
 	 */
 	public enum Rule {
 		/** A text feeds a table consumer: a join, a union member, a mapping, a tool with columns, a column compute. */
-		TEXT_FEEDS_TABLE("write a toTable"),
+		TEXT_FEEDS_TABLE("write a toTable, or output: table on an awk or snmpGet source"),
 		/** A table feeds a text consumer: a text compute, a <code>textUnion</code> member. */
 		TABLE_FEEDS_TEXT("write a toText"),
 		/** A <code>tableUnion</code> whose members are all texts. */
@@ -105,13 +105,13 @@ public record ContentTypeFinding(
 
 	/**
 	 * How to comply: the hint of the rule, and for a text read as the source of a mapping, also the simple mapping
-	 * (#342): no mapping source, and the text read as a source reference in a value.
+	 * (#342), which reads a text in its values.
 	 *
 	 * @return constant text
 	 */
 	public String hint() {
 		return rule == Rule.TEXT_FEEDS_TABLE && location.endsWith(".mapping")
-			? "write a toTable, or remove the mapping source and read the text as ${source::<key>} in a value"
+			? "write a toTable, output: table on an awk or snmpGet source, or type: simple"
 			: rule.hint();
 	}
 

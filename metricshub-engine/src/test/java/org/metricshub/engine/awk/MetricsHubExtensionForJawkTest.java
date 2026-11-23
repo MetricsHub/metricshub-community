@@ -17,6 +17,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -503,7 +504,7 @@ class MetricsHubExtensionForJawkTest {
 	/**
 	 * Every <code>execute*</code> function registers with Jawk and builds its source from the AWK array, numeric
 	 * strings included. <code>executeIpmiRequest</code> also runs without argument, and <code>executeSnmpGet</code>
-	 * returns the value as it is, an empty string when there is none.
+	 * returns the value as it is, a text even with <code>output: table</code>, an empty string when there is none.
 	 */
 	@Test
 	void testEveryExecuteFunctionReadsTheAwkArray() throws Exception {
@@ -511,6 +512,7 @@ class MetricsHubExtensionForJawkTest {
 		final String script = """
 			{
 				get["oid"] = $1
+				get["output"] = "table"
 				table["oid"] = $1
 				table["selectColumns"] = $2
 				wbem["query"] = $3
@@ -537,6 +539,7 @@ class MetricsHubExtensionForJawkTest {
 		final ArgumentCaptor<SnmpGetSource> get = ArgumentCaptor.forClass(SnmpGetSource.class);
 		verify(sourceProcessor, Mockito.times(2)).process(get.capture());
 		assertEquals("1.3.6.1.2.1.1.5.0", get.getValue().getOid());
+		assertEquals(ContentType.TEXT, get.getValue().getOutputContentType());
 		final ArgumentCaptor<SnmpTableSource> table = ArgumentCaptor.forClass(SnmpTableSource.class);
 		verify(sourceProcessor).process(table.capture());
 		assertEquals("1,2,3", table.getValue().getSelectColumns());

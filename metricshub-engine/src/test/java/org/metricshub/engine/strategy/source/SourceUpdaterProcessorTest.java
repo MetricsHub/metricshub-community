@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
@@ -411,18 +412,18 @@ class SourceUpdaterProcessorTest {
 				ENCLOSURE_COLLECT_SOURCE_1,
 				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
 			);
-		final SnmpTableSource snmpTableSource = SnmpTableSource.builder()
+		final SnmpGetSource snmpGetSource = SnmpGetSource.builder()
 			.oid("$1")
-			.selectColumns("1,2")
+			.output(ContentType.TABLE)
 			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build())
 			.build();
 		doAnswer(invocation -> {
-			final String entry = invocation.<SnmpTableSource>getArgument(0).getOid();
+			final String entry = invocation.<SnmpGetSource>getArgument(0).getOid();
 			if ("c".equals(entry)) {
 				return SourceTable.ofTable(new ArrayList<>(List.of(new ArrayList<>(), new ArrayList<>(List.of("")))));
 			}
 			return "d".equals(entry) ? SourceTable.empty() : SourceTable.ofTable(List.of(List.of(entry, "x")));
-		}).when(sourceProcessor).process(any(SnmpTableSource.class));
+		}).when(sourceProcessor).process(any(SnmpGetSource.class));
 
 		final SourceTable result = new SourceUpdaterProcessor(
 			sourceProcessor,
@@ -430,7 +431,7 @@ class SourceUpdaterProcessorTest {
 			MY_CONNECTOR_1_NAME,
 			Map.of(),
 			extensionManager
-		).process(snmpTableSource);
+		).process(snmpGetSource);
 
 		assertEquals(SourceTable.ofTable(List.of(List.of("a", "x"), List.of("b", "x"), List.of(""))), result);
 	}
@@ -524,9 +525,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		doReturn(SourceTable.ofText(null)).when(sourceProcessor).process(any(SnmpGetSource.class));
+		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
-			SourceTable.ofText(null),
+			SourceTable.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -678,7 +679,8 @@ class SourceUpdaterProcessorTest {
 
 		final SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid(OID).build();
 
-		final SourceTable expectedSnmp = SourceTable.ofText(VALUE_VAL1);
+		final List<List<String>> resultSnmp = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
+		final SourceTable expectedSnmp = SourceTable.ofTable(resultSnmp);
 		doReturn(expectedSnmp).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
 			expectedSnmp,
