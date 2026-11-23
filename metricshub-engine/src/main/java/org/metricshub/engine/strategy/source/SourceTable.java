@@ -38,6 +38,7 @@ import lombok.NonNull;
 import lombok.ToString;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -371,6 +372,26 @@ public class SourceTable {
 		}
 
 		return Optional.empty();
+	}
+
+	/**
+	 * Find the table a mapping reads, one monitor instance per row: the table of the mapping source, or, for a
+	 * {@link Mapping.Type#SIMPLE} mapping, a table of exactly one row without any cell.
+	 *
+	 * @param mapping          The mapping
+	 * @param connectorId      The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
+	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
+	 * @return {@link Optional} instance of {@link SourceTable}
+	 */
+	public static Optional<SourceTable> lookupMappingTable(
+		final Mapping mapping,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
+		if (mapping.getType() == Mapping.Type.SIMPLE) {
+			return Optional.of(ofTable(List.of(List.of())));
+		}
+		return lookupSourceTable(mapping.getSource(), connectorId, telemetryManager);
 	}
 
 	/**

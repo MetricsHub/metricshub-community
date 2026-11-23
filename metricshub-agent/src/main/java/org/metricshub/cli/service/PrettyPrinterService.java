@@ -22,12 +22,14 @@ package org.metricshub.cli.service;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_PARENT_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -345,7 +347,8 @@ public class PrettyPrinterService {
 	public String getMonitorDisplayName(final Monitor monitor) {
 		String displayName = monitor.getAttribute(MONITOR_ATTRIBUTE_NAME);
 		displayName = displayName != null ? displayName : monitor.formatIdentifyingAttributes();
-		return displayName != null ? displayName : monitor.getId();
+		// The singleton of a simple mapping has no key attribute: without a name, it shows its internal id
+		return displayName == null || displayName.isEmpty() ? monitor.getId() : displayName;
 	}
 
 	/**
@@ -485,18 +488,27 @@ public class PrettyPrinterService {
 		 */
 		public static MonitorChildren build(final Monitor rootMonitor, final List<Monitor> monitors) {
 			final MonitorChildren root = new MonitorChildren(rootMonitor);
+			// Every monitor is printed; the map only finds a parent by the id its children name
+			final List<MonitorChildren> allChildren = new ArrayList<>();
 			final Map<String, MonitorChildren> monitorMap = new HashMap<>();
 
-			// Create MonitorChildren for each Monitor and put them in the map
 			for (final Monitor monitorInstance : monitors) {
 				final MonitorChildren monitorChildren = new MonitorChildren(monitorInstance);
-				final String attributeId = monitorInstance.formatIdentifyingAttributes();
-				final String monitorType = monitorInstance.getType();
-				monitorMap.put(String.format(MONITOR_ID_FORMAT, monitorType, attributeId), monitorChildren);
+				allChildren.add(monitorChildren);
+				// The singleton of a simple mapping has no key attribute: its id attribute, if any, links its children
+				final String attributeId = monitorInstance.getIdentifyingAttributeKeys().isEmpty()
+					? monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID)
+					: monitorInstance.formatIdentifyingAttributes();
+				if (attributeId != null) {
+					final String key = String.format(MONITOR_ID_FORMAT, monitorInstance.getType(), attributeId);
+					monitorMap.put(key, monitorChildren);
+					// Also by connector, so that a child finds the parent of its own connector first
+					monitorMap.put(key + "@" + monitorInstance.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID), monitorChildren);
+				}
 			}
 
 			// Loop over the children and build the hierarchy
-			for (final MonitorChildren monitorChildren : monitorMap.values()) {
+			for (final MonitorChildren monitorChildren : allChildren) {
 				final Optional<MonitorChildren> maybeParent = lookupParent(monitorMap, monitorChildren);
 				maybeParent.ifPresentOrElse(parent -> parent.addOne(monitorChildren), () -> root.addOne(monitorChildren));
 			}
@@ -542,7 +554,14 @@ public class PrettyPrinterService {
 			}
 
 			return parentId != null && parentType != null
-				? Optional.ofNullable(monitorChildrenMap.get(String.format(MONITOR_ID_FORMAT, parentType, parentId)))
+				? Optional.ofNullable(
+					monitorChildrenMap.getOrDefault(
+						String.format(MONITOR_ID_FORMAT, parentType, parentId) +
+							"@" +
+							monitorChildren.getMonitor().getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID),
+						monitorChildrenMap.get(String.format(MONITOR_ID_FORMAT, parentType, parentId))
+					)
+				)
 				: Optional.empty();
 		}
 
@@ -550,11 +569,15 @@ public class PrettyPrinterService {
 		public int compareTo(final MonitorChildren other) {
 			final String currentName = monitor.getAttribute(MONITOR_ATTRIBUTE_NAME);
 			final String otherName = other.getMonitor().getAttribute(MONITOR_ATTRIBUTE_NAME);
-			if (currentName != null && otherName != null) {
+			if (currentName != null && otherName != null && !currentName.equals(otherName)) {
 				return currentName.compareTo(otherName);
 			}
 
-			return monitor.getId().compareTo(other.getMonitor().getId());
+			return Objects.compare(
+				monitor.getId(),
+				other.getMonitor().getId(),
+				Comparator.nullsFirst(Comparator.naturalOrder())
+			);
 		}
 	}
 }

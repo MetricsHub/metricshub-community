@@ -443,6 +443,82 @@ class ContentTypeCheckTest {
 		findings.forEach(finding -> assertFalse(finding.toString().contains("a;b;c"), finding.toString()));
 	}
 
+	/**
+	 * A field that must be a source reference holds exactly one, the whole value: a reference among other text is a
+	 * literal (#1639).
+	 */
+	@Test
+	void aValueThatOnlyHoldsAReferenceIsNotAReference() throws IOException {
+		assertEquals(
+			Set.of(
+				"STRING_LITERAL_ROWS tables[0]",
+				"STRING_LITERAL_ROWS tables[1]",
+				"STRING_LITERAL_ROWS leftTable",
+				"STRING_LITERAL_ROWS rightTable",
+				"NOT_A_REFERENCE from",
+				"NOT_A_REFERENCE executeForEachEntryOf",
+				"NOT_A_REFERENCE tables[0]",
+				"NOT_A_REFERENCE monitors.thing.simple.mapping.source",
+				"NOT_A_REFERENCE tools.show.result.source"
+			),
+			lines(findings("""
+				monitors:
+				  thing:
+				    simple:
+				      sources:
+				        raw:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1,2"
+				        union:
+				          type: tableUnion
+				          tables:
+				          - "a;b;${source::raw}"
+				          - "${source::raw}${source::raw}"
+				          - ${source::raw}
+				        joined:
+				          type: tableJoin
+				          leftTable: "x;${source::raw}"
+				          rightTable: "${source::raw};x"
+				          leftKeyColumn: 1
+				          rightKeyColumn: 1
+				        copied:
+				          type: copy
+				          from: "a;b;${source::raw}"
+				        each:
+				          type: http
+				          method: get
+				          path: /$1
+				          executeForEachEntryOf:
+				            source: "${source::raw} ${source::raw}"
+				            concatMethod: list
+				        query:
+				          type: internalDbQuery
+				          tables:
+				          - source: "a;${source::raw}"
+				            alias: T1
+				            columns:
+				            - name: COL1
+				              number: 1
+				              type: VARCHAR(255)
+				          query: SELECT COL1 FROM T1
+				      mapping:
+				        source: "a;${source::raw}"
+				        attributes:
+				          id: $1
+				tools:
+				  show:
+				    description: Shows a row.
+				    sources:
+				      row:
+				        type: static
+				        value: [ a, b, c ]
+				    result:
+				      source: "a;${source::row}"
+				"""))
+		);
+	}
+
 	@Test
 	void staticCellInterpolatesATextOnly() throws IOException {
 		// A static source does not read a reference as a source, a copy does: its cells are interpolated
@@ -812,6 +888,171 @@ class ContentTypeCheckTest {
 			    result:
 			      source: ${source::out}
 			"""));
+	}
+
+	@Test
+	void simpleMappingReadsConstantsAndTexts() throws IOException {
+		assertEquals(List.of(), findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        vendor:
+			          type: commandLine
+			          commandLine: echo
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: ${source::vendor}
+			          vendor: ${source::vendor}
+			        metrics:
+			          thing.count: 1
+			          thing.limit: ${source::vendor}
+			  bare:
+			    simple:
+			      mapping:
+			        type: simple
+			        metrics:
+			          bare.count: 1
+			  both:
+			    discovery:
+			      mapping:
+			        type: simple
+			        attributes:
+			          hw.id: both
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        type: simple
+			        metrics:
+			          both.count: 1
+			"""));
+	}
+
+	@Test
+	void simpleMappingReadsNoColumnAndNoTable() throws IOException {
+		final List<ContentTypeFinding> findings = findings("""
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        table:
+			          type: snmpTable
+			          oid: 1.3
+			          selectColumns: "1,2"
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: $1
+			          name: thing $2
+			          serial: $0
+			          vendor: ${source::table}
+			        metrics:
+			          thing.limit: ${awk::$3 * 2}
+			  other:
+			    discovery:
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: $1
+			    collect:
+			      type: multiInstance
+			      mapping:
+			        type: simple
+			        attributes:
+			          id: other
+			        metrics:
+			          other.count: rate($1)
+			          other.rate: rate($0)
+			          other.size: ${awk::$0 * 2}
+			          other.price: $$0
+			""");
+		assertEquals(
+			Set.of(
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.name",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.attributes.serial",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.metrics.thing.limit",
+				"TABLE_INTERPOLATED monitors.thing.simple.mapping.attributes.vendor -> " + THING + "table}",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.count",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.rate",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.size"
+			),
+			lines(findings)
+		);
+		final ContentTypeFinding column = findings.get(0);
+		assertEquals("a constant or a text source", column.expected());
+		assertEquals("a column", column.actual());
+	}
+
+	@Test
+	void mappingTypeDecidesTheSourceTheTypesAndTheKeys() throws IOException {
+		assertEquals(
+			Set.of(
+				"TABLE_MAPPING_WITHOUT_SOURCE monitors.nosource.simple.mapping: a source, none",
+				"SOURCE_IN_SIMPLE_MAPPING monitors.sourced.simple.mapping.source: none, a source",
+				"MIXED_MAPPING_TYPES monitors.mixed: one mapping type, [TABLE, SIMPLE]",
+				"KEYS_WITH_SIMPLE_MAPPING monitors.keyed.keys: none, [id]"
+			),
+			findings("""
+				monitors:
+				  nosource:
+				    simple:
+				      mapping:
+				        attributes:
+				          id: one
+				  sourced:
+				    simple:
+				      sources:
+				        table:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1,2"
+				      mapping:
+				        type: simple
+				        source: ${source::table}
+				  mixed:
+				    discovery:
+				      sources:
+				        table:
+				          type: snmpTable
+				          oid: 1.3
+				          selectColumns: "1,2"
+				      mapping:
+				        source: ${source::table}
+				        attributes:
+				          id: $1
+				    collect:
+				      type: monoInstance
+				      mapping:
+				        type: simple
+				        metrics:
+				          mixed.count: 1
+				  keyed:
+				    keys: [ id ]
+				    simple:
+				      mapping:
+				        type: simple
+				        attributes:
+				          id: one
+				""").stream()
+				.map(f -> f.rule() + " " + f.location() + ": " + f.expected() + ", " + f.actual())
+				.collect(Collectors.toSet())
+		);
+	}
+
+	@Test
+	void unknownMappingTypeFailsToLoad() throws IOException {
+		final String body = """
+			monitors:
+			  thing:
+			    simple:
+			      mapping:
+			        type: keyValue
+			""";
+		assertThrows(IOException.class, () -> parse(body));
+		assertFalse(new ConnectorStore(directory).getStore().containsKey("Test"));
 	}
 
 	@Test

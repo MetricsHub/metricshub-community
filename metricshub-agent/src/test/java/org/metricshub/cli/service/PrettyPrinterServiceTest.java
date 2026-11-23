@@ -8,8 +8,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.fusesource.jansi.Ansi;
 import org.junit.jupiter.api.Test;
 import org.metricshub.cli.helper.StringBuilderWriter;
@@ -322,5 +324,107 @@ class PrettyPrinterServiceTest {
 			MetricDefinition.builder().unit(unit).build()
 		);
 		assertEquals(Optional.of(unit), PrettyPrinterService.fetchUnit(energyMetric, metricDefintionsMap));
+	}
+
+	@Test
+	void testMonitorDisplayNameOfSingleton() throws IOException {
+		// The singleton of a simple mapping has no key attribute and here no name: its internal id is shown
+		final Monitor singleton = Monitor.builder().id("connector_settings").identifyingAttributeKeys(Set.of()).build();
+		final PrettyPrinterService prettyPrinterService = new PrettyPrinterService(
+			new TelemetryManager(),
+			new PrintWriter(new StringBuilderWriter(new StringBuilder()))
+		);
+		assertEquals("connector_settings", prettyPrinterService.getMonitorDisplayName(singleton));
+
+		singleton.addAttribute("name", "Settings");
+		assertEquals("Settings", prettyPrinterService.getMonitorDisplayName(singleton));
+	}
+
+	@Test
+	void testPrintSingletonsOfTheSameType() throws IOException {
+		// Two connectors each map the singleton of the memory type, both writing id: memory; each has a child naming it
+		final TelemetryManager telemetryManager = new TelemetryManager();
+		final Monitor host = Monitor.builder()
+			.type(KnownMonitorType.HOST.getKey())
+			.id(HOST_ID_VALUE)
+			.attributes(Map.of(ID_ATTRIBUTE_KEY, HOST_ID_VALUE))
+			.isEndpoint(true)
+			.build();
+		telemetryManager.addNewMonitor(host, KnownMonitorType.HOST.getKey(), HOST_ID_VALUE);
+		for (final String connector : List.of("A", "B")) {
+			final Monitor singleton = Monitor.builder()
+				.type("memory")
+				.id(connector + "_memory")
+				.identifyingAttributeKeys(Set.of())
+				.attributes(Map.of(ID_ATTRIBUTE_KEY, "memory", "connector_id", connector))
+				.build();
+			telemetryManager.addNewMonitor(singleton, "memory", singleton.getId());
+			final Monitor child = Monitor.builder()
+				.type("disk")
+				.id("disk-" + connector)
+				.attributes(
+					Map.of(
+						ID_ATTRIBUTE_KEY,
+						"disk-" + connector,
+						HW_PARENT_TYPE_ATTRIBUTE_KEY,
+						"memory",
+						HW_PARENT_ID_ATTRIBUTE_KEY,
+						"memory",
+						"connector_id",
+						connector
+					)
+				)
+				.build();
+			telemetryManager.addNewMonitor(child, "disk", child.getId());
+		}
+
+		final StringBuilder builder = new StringBuilder();
+		final PrintWriter printWriter = new PrintWriter(new StringBuilderWriter(builder));
+		new PrettyPrinterService(telemetryManager, printWriter).print(null);
+		final String result = builder.toString();
+
+		// Both singletons are printed, each with the child of its own connector, and only that one, under it
+		final String a = "    - memory: " + Ansi.ansi().fgCyan().a("A_memory").reset();
+		final String b = "    - memory: " + Ansi.ansi().fgCyan().a("B_memory").reset();
+		final String diskA = "        - disk: " + Ansi.ansi().fgCyan().a("disk-A").reset();
+		final String diskB = "        - disk: " + Ansi.ansi().fgCyan().a("disk-B").reset();
+		final int indexA = result.indexOf(a);
+		final int indexB = result.indexOf(b);
+		assertTrue(indexA >= 0 && indexB >= 0, result);
+		final String subtreeA = indexA < indexB ? result.substring(indexA, indexB) : result.substring(indexA);
+		final String subtreeB = indexB < indexA ? result.substring(indexB, indexA) : result.substring(indexB);
+		assertTrue(subtreeA.contains(diskA) && !subtreeA.contains(diskB), result);
+		assertTrue(subtreeB.contains(diskB) && !subtreeB.contains(diskA), result);
+	}
+
+	@Test
+	void testPrintMonitorsWithTheSameName() throws IOException {
+		// Two connectors each map the singleton of the memory type, both named Settings
+		final TelemetryManager telemetryManager = new TelemetryManager();
+		final Monitor host = Monitor.builder()
+			.type(KnownMonitorType.HOST.getKey())
+			.id(HOST_ID_VALUE)
+			.attributes(Map.of(ID_ATTRIBUTE_KEY, HOST_ID_VALUE))
+			.isEndpoint(true)
+			.build();
+		telemetryManager.addNewMonitor(host, KnownMonitorType.HOST.getKey(), HOST_ID_VALUE);
+		for (final String connector : List.of("A", "B")) {
+			final Monitor singleton = Monitor.builder()
+				.type("memory")
+				.id(connector + "_memory")
+				.identifyingAttributeKeys(Set.of())
+				.attributes(Map.of("name", "Settings", "connector_id", connector))
+				.build();
+			telemetryManager.addNewMonitor(singleton, "memory", singleton.getId());
+		}
+
+		final StringBuilder builder = new StringBuilder();
+		final PrintWriter printWriter = new PrintWriter(new StringBuilderWriter(builder));
+		new PrettyPrinterService(telemetryManager, printWriter).print(null);
+		final String result = builder.toString();
+
+		// Both are printed
+		final String line = "    - memory: " + Ansi.ansi().fgCyan().a("Settings").reset();
+		assertTrue(result.indexOf(line) >= 0 && result.indexOf(line) != result.lastIndexOf(line), result);
 	}
 }

@@ -38,8 +38,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -262,8 +260,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	/**
 	 * Extracts the HTTP authentication token from the specified foreign source identified by <em>foreignSourceKey</em>:
-	 * the whole first line of a text, without its line ending and its trailing separator (see {@link #referenceLine}),
-	 * or the first cell of a table. A <em>foreignSourceKey</em> that is not a source reference is returned as it is.
+	 * the whole first line of a text, without its line ending, or the first cell of a table.
+	 * A <em>foreignSourceKey</em> that is not a source reference is returned as it is.
 	 *
 	 * @param originalSourceKey The original source key for debugging purposes.
 	 * @param foreignSourceKey  The foreign source key used to extract the token.
@@ -304,10 +302,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		String value = null;
 		if (sourceTable.getContentType() == ContentType.TEXT) {
-			// A text: its whole first line, without its line ending (a text has LF line endings only), and without the
-			// trailing separator an awk text output ends the line with, as a reference in a header gives it
+			// A text: its whole first line, without its line ending (a text has LF line endings only)
 			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			value = referenceLine(sourceTable.getText().split("\n", 2)[0]);
+			value = sourceTable.getText().split("\n", 2)[0];
 		} else if (!sourceTable.getTable().isEmpty()) {
 			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);
@@ -581,29 +578,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		log.debug("Hostname {} - Get {} referenced in {} ({}).", hostname, sourceRefKey, operationType, operationKey);
 
-		return Stream.of(sourceTable.getText().split(NEW_LINE))
-			.map(SourceUpdaterProcessor::referenceLine)
-			.collect(Collectors.joining(NEW_LINE));
-	}
-
-	/**
-	 * What ends each line of an awk text result.
-	 */
-	private static final String LINE_END = ";";
-
-	/**
-	 * A line of a source reference as the reference gives it: a line whose only <code>;</code> is its last character
-	 * (a single value, with the <code>;</code> that ends each line of an awk text result) loses it, any other line is
-	 * kept as is. For instance, that last character leads to HTTP errors when the reference is in a header.
-	 *
-	 * @param line A line of the text of the source
-	 * @return the line as the reference gives it
-	 */
-	public static String referenceLine(final String line) {
-		if (line.indexOf(LINE_END) == line.length() - 1) {
-			return line.replace(LINE_END, EMPTY);
-		}
-		return line;
+		// The text as it is, without its final line feeds, which would end up in a URL, a body or an attribute
+		return String.join(NEW_LINE, sourceTable.getText().split(NEW_LINE));
 	}
 
 	/**

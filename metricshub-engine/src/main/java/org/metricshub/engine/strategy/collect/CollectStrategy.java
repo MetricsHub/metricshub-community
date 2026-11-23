@@ -63,6 +63,7 @@ import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -262,7 +263,17 @@ public class CollectStrategy extends AbstractStrategy {
 				.sources(collect.getSources(), collect.getExecutionOrder().stream().toList(), collect.getSourceDep(), jobInfo)
 				.build();
 
-			if (collect instanceof MultiInstanceCollect multiInstanceCollect) {
+			if (monitorJob.getValue().isSingleton()) {
+				// The singleton of a simple mapping, by its internal id: never a stale keyed instance kept by removalDelay
+				final Monitor singleton = telemetryManager.findMonitorByTypeAndId(
+					monitorType,
+					MonitorFactory.buildSingletonId(currentConnector.getCompiledFilename(), monitorType)
+				);
+				if (singleton != null) {
+					processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo);
+					processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+				}
+			} else if (collect instanceof MultiInstanceCollect multiInstanceCollect) {
 				final Map<String, Monitor> monitors = telemetryManager.findMonitorsByType(monitorType);
 				if (monitors == null) {
 					return;
@@ -363,8 +374,9 @@ public class CollectStrategy extends AbstractStrategy {
 
 		final String mappingSource = mapping.getSource();
 
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupSourceTable(
-			mappingSource,
+		// A simple mapping gives one row without any cell, read for its singleton
+		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
+			mapping,
 			connectorId,
 			telemetryManager
 		);

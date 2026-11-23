@@ -91,6 +91,17 @@ public class MonitorFactory {
 	}
 
 	/**
+	 * The id of the singleton of a simple mapping, which has no key: <code>[connectorId]_[monitorType]</code>.
+	 *
+	 * @param connectorId The connector identifier
+	 * @param monitorType The monitor type
+	 * @return The monitor id
+	 */
+	public static String buildSingletonId(final String connectorId, final String monitorType) {
+		return connectorId + UNDERSCORE + monitorType;
+	}
+
+	/**
 	 * This method creates or updates the monitor
 	 *
 	 * @return created or updated {@link Monitor} instance

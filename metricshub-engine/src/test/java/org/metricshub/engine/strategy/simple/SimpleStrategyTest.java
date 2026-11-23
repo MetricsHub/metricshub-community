@@ -484,7 +484,7 @@ class SimpleStrategyTest {
 
 		// Each job type has a monitor discovered by a previous run. The enclosure job runs sequentially, the others in the
 		// thread pool
-		final List<String> trustedTypes = List.of(ENCLOSURE.getKey(), PROCESS, "flat_file", "no_sources");
+		final List<String> trustedTypes = List.of(ENCLOSURE.getKey(), PROCESS, "flat_file", "no_sources", "simple_mapping");
 		final List<String> untrustedTypes = List.of(
 			"empty_source",
 			"no_identifying_attribute",
@@ -494,7 +494,6 @@ class SimpleStrategyTest {
 			"event_log",
 			"log_file",
 			"missing_source_table",
-			"no_mapping_source",
 			"before_all_log",
 			"before_all_log_copy",
 			"null_source",
@@ -553,8 +552,11 @@ class SimpleStrategyTest {
 		trustedTypes.forEach(type -> {
 			final Map<String, Monitor> monitors = telemetryManager.getMonitors().get(type);
 			assertNull(monitors.get(staleMonitors.get(type).getId()), type);
-			// The monitor refreshed by the run is kept
-			assertNotNull(monitors.get("%s_%s_new".formatted(REMOVAL_CONNECTOR_ID, type)), type);
+			// The monitor refreshed by the run is kept: the singleton of the simple mapping has no key
+			final String refreshedId = "simple_mapping".equals(type)
+				? REMOVAL_CONNECTOR_ID + "_simple_mapping"
+				: "%s_%s_new".formatted(REMOVAL_CONNECTOR_ID, type);
+			assertNotNull(monitors.get(refreshedId), type);
 		});
 		untrustedTypes.forEach(
 			type -> assertSame(

@@ -120,17 +120,45 @@ class SourceTableReadRulesTest {
 	// ---------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * The <code>awk</code> compute writes text: a <code>;</code> appended to every output line that lacks one, a blank
-	 * output line becoming the line <code>;</code>, which the canonical conversion reads as a row holding one empty
-	 * cell.
+	 * The <code>awk</code> compute writes the text the script printed: a blank line stays blank, and
+	 * <code>toTable</code> drops it.
 	 */
 	@Test
-	void awkComputeOutputGetsTrailingSeparatorAndBlankLineBecomesEmptyCell() {
+	void awkComputeOutputIsThePrintedText() {
 		final SourceTable sourceTable = SourceTable.ofText("in");
 		computeProcessor(sourceTable).process(Awk.builder().script("{ print \"a;b\"; print \"\"; print \"c;\" }").build());
 		assertEquals(ContentType.TEXT, sourceTable.getContentType());
-		assertEquals("a;b;\n;\nc;", sourceTable.getText());
-		assertEquals(table("a|b", "", "c"), sourceTable.asTable());
+		assertEquals("a;b\n\nc;\n", sourceTable.getText());
+		assertEquals(table("a|b", "c"), sourceTable.asTable());
+	}
+
+	/**
+	 * A token that an <code>awk</code> compute prints is the text <code>abc</code>, and a header or an
+	 * <code>authenticationToken</code> that references it receives <code>abc</code>.
+	 */
+	@Test
+	void awkComputeTokenReachesTheHeaderAsPrinted() {
+		final SourceTable printf = SourceTable.ofText("in");
+		computeProcessor(printf).process(Awk.builder().script("{ printf \"abc\" }").build());
+		assertEquals("abc", printf.getText());
+
+		final SourceTable print = SourceTable.ofText("in");
+		computeProcessor(print).process(Awk.builder().script("{ print \"abc\" }").build());
+		assertEquals("abc\n", print.getText());
+
+		for (final SourceTable token : List.of(printf, print)) {
+			assertEquals(
+				"X-Auth-Token: abc",
+				SourceUpdaterProcessor.replaceSourceReferenceContent(
+					"X-Auth-Token: " + SOURCE_REF,
+					telemetryManagerWith(SOURCE_REF, token),
+					MY_CONNECTOR_1_NAME,
+					"HttpSource",
+					"key"
+				)
+			);
+			assertEquals("abc", extractToken(token));
+		}
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------
@@ -138,13 +166,14 @@ class SourceTableReadRulesTest {
 	// ---------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * <code>${source::x}</code> substituted into a text field is the text as is, the trailing <code>;</code> stripped
-	 * on the lines holding a single value. A table is not interpolated: it gives an empty text.
+	 * <code>${source::x}</code> substituted into a text field is the text as is, without its final line feeds. A table
+	 * is not interpolated: it gives an empty text.
 	 */
 	@Test
-	void sourceReferenceContentIsTheTextAndStripsTrailingSeparatorOnSingleValueLines() {
-		// A text, line by line
-		assertEquals("k\nv1;v2\n\nz", extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText("k;\nv1;v2\n\nz;"))));
+	void sourceReferenceContentIsTheText() {
+		// A text
+		assertEquals("k;\nv1;v2\n\nz;", extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText("k;\nv1;v2\n\nz;"))));
+		assertEquals("abc", extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText("abc\n\n"))));
 
 		// A table
 		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofTable(table("a", "b|c")))));
@@ -477,14 +506,12 @@ class SourceTableReadRulesTest {
 
 	/**
 	 * The HTTP authentication token is the first cell of the first row of a table, or the whole first line of a text
-	 * without its line ending (#1560): a <code>;</code> in the line is part of the token, but the trailing
-	 * <code>;</code> an awk text output ends a line of one value with.
+	 * without its line ending (#1560): a <code>;</code> in the line is part of the token.
 	 */
 	@Test
 	void httpTokenIsFirstCellOfATableOrFirstLineOfAText() {
 		assertEquals("tok", extractToken(SourceTable.ofTable(table("tok|x"))));
 		assertEquals("tok;en", extractToken(SourceTable.ofText("tok;en\nline2")));
-		assertEquals("token", extractToken(SourceTable.ofText("token;\n")));
 		assertEquals("tok;en;", extractToken(SourceTable.ofText("tok;en;")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\ndef")));
 		assertEquals("abc", extractToken(SourceTable.ofText("abc\r\ndef")));

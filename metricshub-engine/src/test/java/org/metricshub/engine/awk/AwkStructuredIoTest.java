@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -38,7 +39,7 @@ class AwkStructuredIoTest {
 
 		assertFalse(new TableInputSource(null).nextRecord());
 
-		final TableInputSource withText = TableInputSource.withRecordText(table("a;b|c"), ";");
+		final TableInputSource withText = TableInputSource.ofRow(List.of("a;b", "c"), ";");
 		assertTrue(withText.nextRecord());
 		assertEquals("a;b;c", withText.getRecordText());
 		assertEquals(List.of("a;b", "c"), withText.getFields());
@@ -151,6 +152,38 @@ class AwkStructuredIoTest {
 
 		// Text output is unchanged: a bare print writes $0
 		assertEquals("a;b  c\n", AwkExecutor.executeAwk("{ print }", "a;b  c\n", AwkExecutor.getUtilityEngine(), null));
+	}
+
+	@Test
+	void tableOutputPrintsNumbersWith15SignificantDigits() throws Exception {
+		// print 1/3, 2.5, an integer, a number assigned to a field then a bare print, a number stored in an array
+		assertEquals(
+			List.of(List.of("0.333333333333333", "2.5", "42", "0.333333333333333"), List.of("a", "0.333333333333333")),
+			AwkExecutor.executeAwkToTable(
+				"{ x[1] = 1 / 3; print 1 / 3, 2.5, $2 * 2, x[1]; $2 = 1 / 3; print }",
+				"a 21\n",
+				AwkExecutor.getUtilityEngine(),
+				null
+			)
+		);
+
+		// A script that sets OFMT keeps its own, and so does a caller passing it
+		assertEquals(
+			List.of(List.of("0.33")),
+			AwkExecutor.executeAwkToTable("BEGIN { OFMT = \"%.2f\"; print 1 / 3 }", "", AwkExecutor.getUtilityEngine(), null)
+		);
+		assertEquals(
+			List.of(List.of("0.3")),
+			AwkExecutor.executeAwkToTable(
+				"BEGIN { print 1 / 3 }",
+				new TableInputSource(List.of()),
+				AwkExecutor.getUtilityEngine(),
+				Map.of("OFMT", "%.1f")
+			)
+		);
+
+		// A text output is standard AWK
+		assertEquals("0.333333\n", AwkExecutor.executeAwk("BEGIN { print 1 / 3 }", "", AwkExecutor.getUtilityEngine()));
 	}
 
 	@Test

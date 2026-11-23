@@ -444,18 +444,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	) {
 		final String connectorId = connector.getCompiledFilename();
 
-		// Check the source, so that, we can create the monitor later
 		final String source = mapping.getSource();
-		if (source == null) {
-			log.warn(
-				"Hostname {} - No instance tables found with {} during the {} job for the connector {}. Skip processing.",
-				hostname,
-				monitorType,
-				getJobName(),
-				connectorId
-			);
-			return false;
-		}
 
 		// Checking for defined attributes to create monitors based on them
 		// If no attributes are found, skip processing
@@ -471,8 +460,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			return false;
 		}
 
-		// Call lookupSourceTable to find the source table
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupSourceTable(source, connectorId, telemetryManager);
+		// A simple mapping gives one row without any cell: the singleton that the job's empty keys identify
+		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
+			mapping,
+			connectorId,
+			telemetryManager
+		);
 
 		if (maybeSourceTable.isEmpty()) {
 			log.warn(
@@ -555,7 +548,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			}
 
 			// Create or update the monitor
-			final Monitor monitor = monitorFactory.createOrUpdateMonitor();
+			final Monitor monitor = monitorJob.isSingleton()
+				? monitorFactory.createOrUpdateMonitor(MonitorFactory.buildSingletonId(connectorId, monitorType))
+				: monitorFactory.createOrUpdateMonitor();
 			mappedMonitors++;
 
 			final Map<String, String> contextAttributes = mappingProcessor.interpretContextMappingAttributes(monitor);

@@ -72,4 +72,9 @@ public class StandardMonitorJob extends AbstractMonitorJob {
 	 * The collection task associated with this standard monitor job.
 	 */
 	private AbstractCollect collect;
+
+	@Override
+	public boolean isSingleton() {
+		return hasSimpleMapping(discovery, collect);
+	}
 }

@@ -5,4 +5,4 @@ monitors:
   negative:
     removalDelay: -1
     simple:
-      mapping: {}
+      mapping: { type: simple }

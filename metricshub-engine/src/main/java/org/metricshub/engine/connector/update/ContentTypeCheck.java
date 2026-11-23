@@ -39,11 +39,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.Connector;
@@ -51,10 +54,12 @@ import org.metricshub.engine.connector.model.ContentTypeFinding;
 import org.metricshub.engine.connector.model.ContentTypeFinding.Rule;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
+import org.metricshub.engine.connector.model.monitor.AbstractMonitorJob;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
+import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
@@ -81,11 +86,11 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#TABLE_FEEDS_TEXT}: a table read by a text compute or a <code>textUnion</code> member;</li>
  * <li>{@link Rule#TABLE_UNION_OF_TEXTS} (once per union) and {@link Rule#MIXED_UNION} (once per union, plus each text
  * member);</li>
- * <li>{@link Rule#STRING_LITERAL_ROWS}: a string literal in <code>tables</code>,
- * <code>leftTable</code> or <code>rightTable</code>;</li>
- * <li>{@link Rule#NOT_A_REFERENCE}: anything but a source reference in the <code>source</code> of a mapping, of a
- * tool result, of an <code>executeForEachEntryOf</code> or of an <code>internalDbQuery</code> table, or in the
- * <code>from</code> of a <code>copy</code>;</li>
+ * <li>{@link Rule#STRING_LITERAL_ROWS}: a string in <code>tables</code>, <code>leftTable</code> or
+ * <code>rightTable</code> that is not exactly one source reference;</li>
+ * <li>{@link Rule#NOT_A_REFERENCE}: anything but exactly one source reference in the <code>source</code> of a
+ * mapping, of a tool result, of an <code>executeForEachEntryOf</code> or of an <code>internalDbQuery</code> table, or
+ * in the <code>from</code> of a <code>copy</code>;</li>
  * <li>{@link Rule#TABLE_INTERPOLATED}: a table referenced in a field the engine interpolates: the fields a source or
  * a compute updates ({@link Source#update}, {@link Compute#update}, <code>authenticationToken</code> included) unless
  * the source reads its references as sources, and the mapping fields but its <code>source</code>;</li>
@@ -95,7 +100,16 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <code>parsingMode</code>, the removed <code>json2Table</code> <code>separator</code>, awk <code>input</code>, awk
  * source <code>inputFormat</code>, and the removed awk <code>keep</code>, <code>exclude</code>,
  * <code>separators</code>, <code>selectColumns</code> and awk source
- * <code>separators</code>.</li>
+ * <code>separators</code>;</li>
+ * <li>{@link Rule#TABLE_MAPPING_WITHOUT_SOURCE}: a mapping of the default type <code>table</code> without a
+ * <code>source</code>;</li>
+ * <li>{@link Rule#SOURCE_IN_SIMPLE_MAPPING}: a <code>type: simple</code> mapping with a <code>source</code>;</li>
+ * <li>{@link Rule#COLUMN_IN_SIMPLE_MAPPING}: a column (<code>$1</code>) in a value of a simple mapping, which gives
+ * exactly one monitor instance whose values are constants and references to text sources;</li>
+ * <li>{@link Rule#MIXED_MAPPING_TYPES}: a monitor job whose mappings (discovery, collect) do not all have the same
+ * type: a simple mapping makes the monitor type a singleton for the connector;</li>
+ * <li>{@link Rule#KEYS_WITH_SIMPLE_MAPPING}: <code>keys</code> written on a job with a simple mapping, whose one
+ * instance has no key attribute.</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -119,6 +133,12 @@ public class ContentTypeCheck {
 	private static final String EXISTING_SOURCE = "an existing source";
 	private static final String NONE = "none";
 	private static final String SCRIPT_SELECTS = "lines and columns selected by the script";
+
+	/**
+	 * A column anywhere in a value, <code>$0</code> included (a function argument, an awk expression), not escaped as
+	 * <code>$$</code>.
+	 */
+	private static final Pattern ANY_COLUMN_PATTERN = Pattern.compile("(?<!\\$)\\$\\d+");
 
 	private final String connectorId;
 	private final Map<String, Source> sources = new LinkedHashMap<>();
@@ -210,8 +230,10 @@ public class ContentTypeCheck {
 				if (job instanceof StandardMonitorJob standard) {
 					checkMapping("monitors." + name + ".discovery", standard.getDiscovery());
 					checkMapping("monitors." + name + ".collect", standard.getCollect());
+					checkMappingTypes("monitors." + name, standard, standard.getDiscovery(), standard.getCollect());
 				} else if (job instanceof SimpleMonitorJob simple) {
 					checkMapping("monitors." + name + ".simple", simple.getSimple());
+					checkMappingTypes("monitors." + name, simple, simple.getSimple());
 				}
 			});
 		}
@@ -349,7 +371,7 @@ public class ContentTypeCheck {
 		boolean hasTable = false;
 		for (int index = 0; index < tables.size(); index++) {
 			final Object member = tables.get(index);
-			if (member instanceof String reference && hasReference(reference)) {
+			if (member instanceof String reference && isReference(reference)) {
 				final ContentType type = typeOf(reference);
 				if (type == ContentType.TEXT) {
 					texts.put(index, reference.trim());
@@ -381,7 +403,7 @@ public class ContentTypeCheck {
 		if (table == null) {
 			return;
 		}
-		if (hasReference(table)) {
+		if (isReference(table)) {
 			checkTableRead(key, field, table);
 		} else {
 			add(key, field, Rule.STRING_LITERAL_ROWS, "list of rows", "string");
@@ -419,7 +441,7 @@ public class ContentTypeCheck {
 	 * holds it.
 	 */
 	private void checkReference(final String key, final String location, final String value) {
-		if (value != null && !hasReference(value)) {
+		if (value != null && !isReference(value)) {
 			add(key, location, Rule.NOT_A_REFERENCE, "a source reference", "a literal");
 		}
 	}
@@ -468,6 +490,35 @@ public class ContentTypeCheck {
 		});
 	}
 
+	/**
+	 * A simple mapping makes the monitor type a singleton for the connector: every mapping of the job has its type, and
+	 * the job writes no keys, since the one instance has no key attribute.
+	 *
+	 * @param location Where the job is, e.g. <code>monitors.cpu</code>
+	 * @param job      The job
+	 * @param tasks    Its tasks, any of them null
+	 */
+	private void checkMappingTypes(
+		final String location,
+		final AbstractMonitorJob job,
+		final AbstractMonitorTask... tasks
+	) {
+		final Set<Mapping.Type> mappingTypes = Stream.of(tasks)
+			.filter(task -> task != null && task.getMapping() != null)
+			.map(task -> task.getMapping().getType())
+			.collect(Collectors.toCollection(TreeSet::new));
+		if (mappingTypes.size() > 1) {
+			add(NONE, location, Rule.MIXED_MAPPING_TYPES, "one mapping type", mappingTypes.toString());
+		}
+		if (job.isSingleton() && job.getWrittenKeys() != null) {
+			add(NONE, location + ".keys", Rule.KEYS_WITH_SIMPLE_MAPPING, NONE, job.getWrittenKeys().toString());
+		}
+	}
+
+	/**
+	 * @param job  Where the task is, e.g. <code>monitors.cpu.discovery</code>
+	 * @param task The task
+	 */
 	private void checkMapping(final String job, final AbstractMonitorTask task) {
 		if (task == null || task.getMapping() == null) {
 			return;
@@ -475,10 +526,21 @@ public class ContentTypeCheck {
 		final String location = job + ".mapping";
 		// The finding does not name a literal source: it is a value of the connector
 		checkReference(NONE, location + ".source", task.getMapping().getSource());
-		final String mappingSource = hasReference(task.getMapping().getSource())
+		final String mappingSource = isReference(task.getMapping().getSource())
 			? task.getMapping().getSource().trim()
 			: NONE;
+		// A table mapping reads a source, one instance per row; a simple mapping reads none, exactly one instance
+		final boolean simple = task.getMapping().getType() == Mapping.Type.SIMPLE;
+		if (simple && task.getMapping().getSource() != null) {
+			add(NONE, location + ".source", Rule.SOURCE_IN_SIMPLE_MAPPING, NONE, "a source");
+		} else if (!simple && task.getMapping().getSource() == null) {
+			add(NONE, location, Rule.TABLE_MAPPING_WITHOUT_SOURCE, "a source", NONE);
+		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
+			// What the mapping reads as a column: $0 too, anywhere
+			if (simple && readsColumn(value)) {
+				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
+			}
 			for (final String reference : references(value)) {
 				final ContentType type = typeOf(reference);
 				if (type == null) {
@@ -501,6 +563,13 @@ public class ContentTypeCheck {
 	}
 
 	/**
+	 * @return whether the mapping reads the value as a column: <code>$1</code> or <code>$0</code> anywhere
+	 */
+	private static boolean readsColumn(final String value) {
+		return ANY_COLUMN_PATTERN.matcher(value).find();
+	}
+
+	/**
 	 * A tool returns the table of its result source when it declares columns, its text when it declares none and that
 	 * source ends in text.
 	 */
@@ -509,7 +578,7 @@ public class ContentTypeCheck {
 			return;
 		}
 		final String location = "tools." + name + ".result";
-		if (!hasReference(tool.getResult().source())) {
+		if (!isReference(tool.getResult().source())) {
 			checkReference(NONE, location + ".source", tool.getResult().source());
 			return;
 		}
@@ -614,8 +683,12 @@ public class ContentTypeCheck {
 		findings.add(new ContentTypeFinding(connectorId, sourceKey, location, rule, expected, actual));
 	}
 
-	private static boolean hasReference(final String value) {
-		return value != null && SOURCE_REF_PATTERN.matcher(value).find();
+	/**
+	 * Whether the whole value, trimmed, is exactly one <code>${source::...}</code> reference: a value that only holds
+	 * one among other text is a literal.
+	 */
+	private static boolean isReference(final String value) {
+		return value != null && SOURCE_REF_PATTERN.matcher(value.trim()).matches();
 	}
 
 	/**
