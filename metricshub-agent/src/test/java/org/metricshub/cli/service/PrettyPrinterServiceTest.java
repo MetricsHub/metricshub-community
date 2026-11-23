@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -341,7 +342,7 @@ class PrettyPrinterServiceTest {
 
 	@Test
 	void testPrintSingletonsOfTheSameType() throws IOException {
-		// Two connectors each map the singleton of the memory type, both writing id: memory; a child names that id
+		// Two connectors each map the singleton of the memory type, both writing id: memory; each has a child naming it
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Monitor host = Monitor.builder()
 			.type(KnownMonitorType.HOST.getKey())
@@ -350,37 +351,49 @@ class PrettyPrinterServiceTest {
 			.isEndpoint(true)
 			.build();
 		telemetryManager.addNewMonitor(host, KnownMonitorType.HOST.getKey(), HOST_ID_VALUE);
-		final Monitor singletonA = Monitor.builder()
-			.type("memory")
-			.id("A_memory")
-			.identifyingAttributeKeys(Set.of())
-			.attributes(Map.of(ID_ATTRIBUTE_KEY, "memory"))
-			.build();
-		telemetryManager.addNewMonitor(singletonA, "memory", "A_memory");
-		final Monitor singletonB = Monitor.builder()
-			.type("memory")
-			.id("B_memory")
-			.identifyingAttributeKeys(Set.of())
-			.attributes(Map.of(ID_ATTRIBUTE_KEY, "memory"))
-			.build();
-		telemetryManager.addNewMonitor(singletonB, "memory", "B_memory");
-		final Monitor child = Monitor.builder()
-			.type("disk")
-			.id("disk-1")
-			.attributes(
-				Map.of(ID_ATTRIBUTE_KEY, "disk-1", HW_PARENT_TYPE_ATTRIBUTE_KEY, "memory", HW_PARENT_ID_ATTRIBUTE_KEY, "memory")
-			)
-			.build();
-		telemetryManager.addNewMonitor(child, "disk", "disk-1");
+		for (final String connector : List.of("A", "B")) {
+			final Monitor singleton = Monitor.builder()
+				.type("memory")
+				.id(connector + "_memory")
+				.identifyingAttributeKeys(Set.of())
+				.attributes(Map.of(ID_ATTRIBUTE_KEY, "memory", "connector_id", connector))
+				.build();
+			telemetryManager.addNewMonitor(singleton, "memory", singleton.getId());
+			final Monitor child = Monitor.builder()
+				.type("disk")
+				.id("disk-" + connector)
+				.attributes(
+					Map.of(
+						ID_ATTRIBUTE_KEY,
+						"disk-" + connector,
+						HW_PARENT_TYPE_ATTRIBUTE_KEY,
+						"memory",
+						HW_PARENT_ID_ATTRIBUTE_KEY,
+						"memory",
+						"connector_id",
+						connector
+					)
+				)
+				.build();
+			telemetryManager.addNewMonitor(child, "disk", child.getId());
+		}
 
 		final StringBuilder builder = new StringBuilder();
 		final PrintWriter printWriter = new PrintWriter(new StringBuilderWriter(builder));
 		new PrettyPrinterService(telemetryManager, printWriter).print(null);
 		final String result = builder.toString();
 
-		// Both singletons are printed, and the child is printed under one of them
-		assertTrue(result.contains("    - memory: " + Ansi.ansi().fgCyan().a("A_memory").reset()), result);
-		assertTrue(result.contains("    - memory: " + Ansi.ansi().fgCyan().a("B_memory").reset()), result);
-		assertTrue(result.contains("\n        - disk: " + Ansi.ansi().fgCyan().a("disk-1").reset()), result);
+		// Both singletons are printed, each with the child of its own connector, and only that one, under it
+		final String a = "    - memory: " + Ansi.ansi().fgCyan().a("A_memory").reset();
+		final String b = "    - memory: " + Ansi.ansi().fgCyan().a("B_memory").reset();
+		final String diskA = "        - disk: " + Ansi.ansi().fgCyan().a("disk-A").reset();
+		final String diskB = "        - disk: " + Ansi.ansi().fgCyan().a("disk-B").reset();
+		final int indexA = result.indexOf(a);
+		final int indexB = result.indexOf(b);
+		assertTrue(indexA >= 0 && indexB >= 0, result);
+		final String subtreeA = indexA < indexB ? result.substring(indexA, indexB) : result.substring(indexA);
+		final String subtreeB = indexB < indexA ? result.substring(indexB, indexA) : result.substring(indexB);
+		assertTrue(subtreeA.contains(diskA) && !subtreeA.contains(diskB), result);
+		assertTrue(subtreeB.contains(diskB) && !subtreeB.contains(diskA), result);
 	}
 }

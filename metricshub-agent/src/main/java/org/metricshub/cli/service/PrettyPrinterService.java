@@ -501,7 +501,10 @@ public class PrettyPrinterService {
 					attributeId = monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID);
 				}
 				if (attributeId != null) {
-					monitorMap.put(String.format(MONITOR_ID_FORMAT, monitorInstance.getType(), attributeId), monitorChildren);
+					final String key = String.format(MONITOR_ID_FORMAT, monitorInstance.getType(), attributeId);
+					monitorMap.put(key, monitorChildren);
+					// Also by connector, so that a child finds the parent of its own connector first
+					monitorMap.put(key + "@" + monitorInstance.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID), monitorChildren);
 				}
 			}
 
@@ -552,7 +555,14 @@ public class PrettyPrinterService {
 			}
 
 			return parentId != null && parentType != null
-				? Optional.ofNullable(monitorChildrenMap.get(String.format(MONITOR_ID_FORMAT, parentType, parentId)))
+				? Optional.ofNullable(
+					monitorChildrenMap.getOrDefault(
+						String.format(MONITOR_ID_FORMAT, parentType, parentId) +
+							"@" +
+							monitorChildren.getMonitor().getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID),
+						monitorChildrenMap.get(String.format(MONITOR_ID_FORMAT, parentType, parentId))
+					)
+				)
 				: Optional.empty();
 		}
 
