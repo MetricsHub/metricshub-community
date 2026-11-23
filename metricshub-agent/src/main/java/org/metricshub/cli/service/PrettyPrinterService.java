@@ -29,6 +29,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPA
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -487,23 +488,25 @@ public class PrettyPrinterService {
 		 */
 		public static MonitorChildren build(final Monitor rootMonitor, final List<Monitor> monitors) {
 			final MonitorChildren root = new MonitorChildren(rootMonitor);
+			// Every monitor is printed; the map only finds a parent by the id its children name
+			final List<MonitorChildren> allChildren = new ArrayList<>();
 			final Map<String, MonitorChildren> monitorMap = new HashMap<>();
 
-			// Create MonitorChildren for each Monitor and put them in the map
 			for (final Monitor monitorInstance : monitors) {
 				final MonitorChildren monitorChildren = new MonitorChildren(monitorInstance);
+				allChildren.add(monitorChildren);
 				String attributeId = monitorInstance.formatIdentifyingAttributes();
 				if (attributeId.isEmpty()) {
-					// The singleton of a simple mapping has no key attribute: its id attribute links its children, else its internal id keeps it apart
-					attributeId = Optional.ofNullable(monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID))
-						.orElse(monitorInstance.getId());
+					// The singleton of a simple mapping has no key attribute: its id attribute, if any, links its children
+					attributeId = monitorInstance.getAttribute(MONITOR_ATTRIBUTE_ID);
 				}
-				final String monitorType = monitorInstance.getType();
-				monitorMap.put(String.format(MONITOR_ID_FORMAT, monitorType, attributeId), monitorChildren);
+				if (attributeId != null) {
+					monitorMap.put(String.format(MONITOR_ID_FORMAT, monitorInstance.getType(), attributeId), monitorChildren);
+				}
 			}
 
 			// Loop over the children and build the hierarchy
-			for (final MonitorChildren monitorChildren : monitorMap.values()) {
+			for (final MonitorChildren monitorChildren : allChildren) {
 				final Optional<MonitorChildren> maybeParent = lookupParent(monitorMap, monitorChildren);
 				maybeParent.ifPresentOrElse(parent -> parent.addOne(monitorChildren), () -> root.addOne(monitorChildren));
 			}

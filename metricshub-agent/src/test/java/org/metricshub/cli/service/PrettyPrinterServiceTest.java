@@ -341,7 +341,7 @@ class PrettyPrinterServiceTest {
 
 	@Test
 	void testPrintSingletonsOfTheSameType() throws IOException {
-		// Two connectors each map the singleton of the memory type; the first writes id: memory and is a parent
+		// Two connectors each map the singleton of the memory type, both writing id: memory; a child names that id
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Monitor host = Monitor.builder()
 			.type(KnownMonitorType.HOST.getKey())
@@ -361,6 +361,7 @@ class PrettyPrinterServiceTest {
 			.type("memory")
 			.id("B_memory")
 			.identifyingAttributeKeys(Set.of())
+			.attributes(Map.of(ID_ATTRIBUTE_KEY, "memory"))
 			.build();
 		telemetryManager.addNewMonitor(singletonB, "memory", "B_memory");
 		final Monitor child = Monitor.builder()
@@ -377,7 +378,7 @@ class PrettyPrinterServiceTest {
 		new PrettyPrinterService(telemetryManager, printWriter).print(null);
 		final String result = builder.toString();
 
-		// Both singletons are printed, and the child is printed under the singleton whose id attribute it names
+		// Both singletons are printed, and the child is printed under one of them
 		assertTrue(result.contains("    - memory: " + Ansi.ansi().fgCyan().a("A_memory").reset()), result);
 		assertTrue(result.contains("    - memory: " + Ansi.ansi().fgCyan().a("B_memory").reset()), result);
 		assertTrue(result.contains("\n        - disk: " + Ansi.ansi().fgCyan().a("disk-1").reset()), result);
