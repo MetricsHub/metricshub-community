@@ -409,11 +409,10 @@ class IpmiExtensionTest {
 			ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)
 		);
 
-		// A source that does not hold numbers is an error of the source
+		// A source that does not hold numbers is an error of the source, refused before any request
 		final IpmiRawSource bad = IpmiRawSource.builder().key("bad").netFn("x").command("1").build();
-		doThrow(new IllegalArgumentException("x")).when(ipmiRequestExecutorMock)
-			.executeIpmiRaw(HOST_NAME, configuration, bad);
 		assertEquals(SourceTable.empty(), ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager));
+		verify(ipmiRequestExecutorMock, never()).executeIpmiRaw(HOST_NAME, configuration, bad);
 	}
 
 	/**

@@ -28,6 +28,7 @@ import static org.springframework.util.Assert.notNull;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,6 +41,8 @@ import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.utils.RetryOperation;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.Body;
 import org.metricshub.extension.http.utils.Header;
@@ -61,6 +64,16 @@ public class HttpRequestExecutor {
 	private static final char[] CHAR_ARRAY_MASK = MASK.toCharArray();
 	private static final String HOSTNAME_CANNOT_BE_NULL = "hostname cannot be null";
 	private static final String PROTOCOL_CANNOT_BE_NULL = "protocol cannot be null";
+
+	/**
+	 * The {@code operation_type} of the HTTP and HTTPS requests in {@code metricshub.host.requests}.
+	 */
+	public static final String OPERATION_TYPE = HttpExtension.IDENTIFIER;
+
+	/**
+	 * The lowest HTTP status code (100 Continue). A lower status means that the answer was not HTTP.
+	 */
+	private static final int MIN_STATUS_CODE = 100;
 
 	/**
 	 * Executes the given HTTP request
@@ -248,7 +261,8 @@ public class HttpRequestExecutor {
 					path,
 					protocol,
 					fullUrl,
-					retriedResponse
+					retriedResponse,
+					telemetryManager.getRequestStats()
 				)
 			);
 
@@ -302,6 +316,8 @@ public class HttpRequestExecutor {
 	 * @param protocol               The protocol: http or https
 	 * @param fullUrl                The full HTTP URL. E.g. <pre>http://www.example.com:1080/api/v1/examples</pre>
 	 * @param retriedResponse        Receives the response of a request that is retried
+	 * @param requestStats           The request counters of the monitored resource, which receive the outcome of the
+	 *                               attempt
 	 * @return The response, <code>null</code> when the request got none
 	 */
 	private HttpResult doHttpRequest(
@@ -320,7 +336,8 @@ public class HttpRequestExecutor {
 		final String path,
 		final String protocol,
 		final String fullUrl,
-		final AtomicReference<HttpResult> retriedResponse
+		final AtomicReference<HttpResult> retriedResponse,
+		final RequestStats requestStats
 	) {
 		// The response of a previous attempt is not the response of this one
 		retriedResponse.set(null);
@@ -335,7 +352,8 @@ public class HttpRequestExecutor {
 				password,
 				headerContent,
 				bodyContent,
-				httpConfiguration.getTimeout().intValue()
+				httpConfiguration.getTimeout().intValue(),
+				requestStats
 			);
 
 			// Compute the response time
@@ -410,6 +428,7 @@ public class HttpRequestExecutor {
 	 * @param headerContent The {@link Map} of properties-values in the header.
 	 * @param bodyContent   The body as a plain text.
 	 * @param timeout       The timeout of the request.
+	 * @param requestStats  The request counters of the monitored resource, which receive the outcome of the attempt.
 	 * @return The {@link HttpResponse} returned by the server.
 	 * @throws IOException If a reading or writing operation fails.
 	 */
@@ -420,23 +439,51 @@ public class HttpRequestExecutor {
 		char[] password,
 		Map<String, String> headerContent,
 		String bodyContent,
-		int timeout
+		int timeout,
+		final RequestStats requestStats
 	) throws IOException {
-		return HttpClient.sendRequest(
-			url,
-			method,
-			null,
-			username,
-			password,
-			null,
-			0,
-			null,
-			null,
-			null,
-			headerContent,
-			bodyContent,
-			timeout,
-			null
-		);
+		final HttpResponse httpResponse;
+		try {
+			httpResponse = HttpClient.sendRequest(
+				url,
+				method,
+				null,
+				username,
+				password,
+				null,
+				0,
+				null,
+				null,
+				null,
+				headerContent,
+				bodyContent,
+				timeout,
+				null
+			);
+		} catch (MalformedURLException e) {
+			// The URL is invalid: nothing was sent
+			throw e;
+		} catch (IOException e) {
+			requestStats.record(OPERATION_TYPE, RequestOutcome.of(e));
+			throw e;
+		} catch (RuntimeException e) {
+			requestStats.record(OPERATION_TYPE, RequestOutcome.FAILED);
+			throw e;
+		}
+		requestStats.record(OPERATION_TYPE, outcomeOf(httpResponse.getStatusCode()));
+		return httpResponse;
+	}
+
+	/**
+	 * The outcome of a request the server answered: completed for an informational, successful or redirection status
+	 * (100 to 399), failed for an error status (400 and above) or an answer that is not HTTP (below 100, e.g. -1).
+	 *
+	 * @param statusCode The status of the response.
+	 * @return The outcome of the request.
+	 */
+	private static RequestOutcome outcomeOf(final int statusCode) {
+		return statusCode >= MIN_STATUS_CODE && statusCode < HTTP_BAD_REQUEST
+			? RequestOutcome.COMPLETED
+			: RequestOutcome.FAILED;
 	}
 }

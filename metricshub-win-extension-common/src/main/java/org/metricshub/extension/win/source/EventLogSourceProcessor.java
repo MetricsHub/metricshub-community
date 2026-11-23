@@ -176,7 +176,8 @@ public class EventLogSourceProcessor {
 				winConfiguration,
 				wqlQuery,
 				WMI_DEFAULT_NAMESPACE,
-				telemetryManager.getRecordOutputDirectory()
+				telemetryManager.getRecordOutputDirectory(),
+				telemetryManager.getRequestStats()
 			);
 
 			// Post process Event Logs

@@ -92,7 +92,7 @@ public class SnmpTableSourceProcessorTest {
 				snmpConfiguration,
 				"hostname",
 				true,
-				"hostname"
+				telemetryManager.getRequestStats()
 			);
 
 		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
@@ -121,7 +121,7 @@ public class SnmpTableSourceProcessorTest {
 				snmpConfiguration,
 				"hostname",
 				true,
-				"hostname"
+				telemetryManager.getRequestStats()
 			)
 		).thenReturn(expectedResult);
 

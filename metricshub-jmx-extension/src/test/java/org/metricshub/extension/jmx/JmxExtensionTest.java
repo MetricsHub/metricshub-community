@@ -11,7 +11,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -110,6 +112,24 @@ class JmxExtensionTest {
 		final Optional<Boolean> result = jmxExtension.checkProtocol(telemetryManager);
 		assertTrue(result.isPresent(), "Expected Optional<Boolean> with true when config is valid");
 		assertTrue(result.get(), "Expected true for valid JMX connection check");
+	}
+
+	@Test
+	void testCheckProtocolPassesTheResourceRequestStats() throws Exception {
+		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("jmx-host").port(1099).build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname("resource-host")
+					.configurations(Map.of(JmxConfiguration.class, jmxConfiguration))
+					.build()
+			)
+			.build();
+
+		when(jmxRequestExecutorMock.checkConnection(any(), any())).thenReturn(true);
+
+		assertEquals(Optional.of(true), jmxExtension.checkProtocol(telemetryManager));
+		verify(jmxRequestExecutorMock).checkConnection(same(jmxConfiguration), same(telemetryManager.getRequestStats()));
 	}
 
 	@Test

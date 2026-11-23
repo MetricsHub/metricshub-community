@@ -264,10 +264,12 @@ class WinRmRequestExecutorTest {
 			.timeout(30L)
 			.build();
 		// Building the client connects nothing: the native file operations can be opened and closed offline
-		try (WinFileOperations fileOperations = winRmRequestExecutor.openFileOperations("host", configuration).get()) {
+		try (
+			WinFileOperations fileOperations = winRmRequestExecutor.openFileOperations("host", configuration, null).get()
+		) {
 			assertTrue(fileOperations instanceof WinRmFileOperations);
 		}
 		// Any other Windows configuration falls back to the script-based file operations
-		assertTrue(winRmRequestExecutor.openFileOperations("host", mock(IWinConfiguration.class)).isEmpty());
+		assertTrue(winRmRequestExecutor.openFileOperations("host", mock(IWinConfiguration.class), null).isEmpty());
 	}
 }

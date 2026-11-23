@@ -269,7 +269,13 @@ class WinCommandLineCriterionProcessorTest {
 
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 		doReturn(new OsCommandResult(commandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
-			.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
+			.runOsCommand(
+				commandLineCriterion.getCommandLine(),
+				HOST_NAME,
+				wmiConfiguration,
+				Map.of(),
+				telemetryManager.getRequestStats()
+			);
 
 		final CriterionTestResult criterionTestResult = winCommandLineCriterionProcessor.process(
 			commandLineCriterion,
@@ -321,7 +327,13 @@ class WinCommandLineCriterionProcessorTest {
 
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 		doThrow(new NoCredentialProvidedException()).when(winCommandServiceMock)
-			.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
+			.runOsCommand(
+				commandLineCriterion.getCommandLine(),
+				HOST_NAME,
+				wmiConfiguration,
+				Map.of(),
+				telemetryManager.getRequestStats()
+			);
 
 		final CriterionTestResult criterionTestResult = winCommandLineCriterionProcessor.process(
 			commandLineCriterion,
@@ -368,7 +380,13 @@ class WinCommandLineCriterionProcessorTest {
 
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 		doThrow(new IOException("error")).when(winCommandServiceMock)
-			.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, wmiConfiguration, Map.of());
+			.runOsCommand(
+				commandLineCriterion.getCommandLine(),
+				HOST_NAME,
+				wmiConfiguration,
+				Map.of(),
+				telemetryManager.getRequestStats()
+			);
 
 		final CriterionTestResult criterionTestResult = winCommandLineCriterionProcessor.process(
 			commandLineCriterion,

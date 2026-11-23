@@ -98,6 +98,8 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 			}
 		}
 		collectHostObserved(observed ? UP : DOWN);
+		// Export the requests of the health checks now: the collect strategies do not run when no connector is detected
+		collectRequestMetrics();
 	}
 
 	/**

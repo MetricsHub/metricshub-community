@@ -39,6 +39,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -106,6 +107,14 @@ class JdbcExtensionTest {
 		initSql(JDBC_URL);
 		final Optional<Boolean> result = jdbcExtension.checkProtocol(telemetryManager);
 		assertTrue(result.get());
+		// Recorded in the resource, although the JDBC configuration overrides its hostname
+		assertEquals(
+			Map.of(
+				SqlRequestExecutor.OPERATION_TYPE,
+				Map.of(RequestOutcome.COMPLETED, 1L, RequestOutcome.TIMEOUT, 0L, RequestOutcome.FAILED, 0L)
+			),
+			telemetryManager.getRequestStats().snapshot()
+		);
 	}
 
 	@Test
@@ -113,6 +122,13 @@ class JdbcExtensionTest {
 		initSql("jdbc:h2:invalidUrl");
 		final Optional<Boolean> result = jdbcExtension.checkProtocol(telemetryManager);
 		assertFalse(result.get());
+		assertEquals(
+			Map.of(
+				SqlRequestExecutor.OPERATION_TYPE,
+				Map.of(RequestOutcome.COMPLETED, 0L, RequestOutcome.TIMEOUT, 0L, RequestOutcome.FAILED, 1L)
+			),
+			telemetryManager.getRequestStats().snapshot()
+		);
 	}
 
 	@Test
@@ -124,6 +140,7 @@ class JdbcExtensionTest {
 		configuration.setUrl(null);
 		final Optional<Boolean> result = jdbcExtension.checkProtocol(telemetryManager);
 		assertFalse(result.get());
+		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
 	}
 
 	@Test

@@ -44,6 +44,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolResult;
@@ -97,12 +98,13 @@ public class OsCommandExtension implements IProtocolExtension {
 	public static final String SSH_TEST_COMMAND = "echo test";
 
 	/**
-	 * Identifier reported for the SSH protocol health check
+	 * Identifier reported for the SSH protocol health check, and {@code operation_type} of the requests sent over SSH
+	 * (remote commands, SSH health check, SFTP file operations)
 	 */
 	public static final String SSH_IDENTIFIER = "ssh";
 
 	/**
-	 * Identifier reported for the OS Command protocol health check
+	 * Identifier reported for the OS Command protocol health check, and {@code operation_type} of the local commands
 	 */
 	public static final String OS_COMMAND_IDENTIFIER = "oscommand";
 
@@ -157,9 +159,11 @@ public class OsCommandExtension implements IProtocolExtension {
 
 		final long timeout = resolveTimeout(sshConfiguration);
 
+		final RequestStats requestStats = telemetryManager.getRequestStats();
+
 		// Execute Local test
 		if (telemetryManager.getHostProperties().isOsCommandExecutesLocally()) {
-			sshResult = localSshTest(hostname, timeout);
+			sshResult = localSshTest(hostname, timeout, requestStats);
 		}
 
 		if (telemetryManager.getHostProperties().isOsCommandExecutesRemotely()) {
@@ -168,7 +172,8 @@ public class OsCommandExtension implements IProtocolExtension {
 				sshResult,
 				sshConfiguration,
 				telemetryManager.getHostConfiguration().getHostType(),
-				timeout
+				timeout,
+				requestStats
 			);
 		}
 
@@ -288,7 +293,9 @@ public class OsCommandExtension implements IProtocolExtension {
 
 		log.info("Hostname {} - Checking OS Command protocol status. Running a local 'echo test' command.", hostname);
 
-		return Optional.of(UP.equals(localSshTest(hostname, resolveTimeout(osCommandConfiguration))));
+		return Optional.of(
+			UP.equals(localSshTest(hostname, resolveTimeout(osCommandConfiguration), telemetryManager.getRequestStats()))
+		);
 	}
 
 	/**
@@ -308,11 +315,17 @@ public class OsCommandExtension implements IProtocolExtension {
 	 *
 	 * @param hostname  The hostname on which we perform health check
 	 * @param timeout   The timeout, in seconds, granted to the test command
+	 * @param requestStats The request statistics of the checked resource, where the test command is recorded
 	 * @return The SSH health check result after performing the tests
 	 */
-	private Double localSshTest(String hostname, long timeout) {
+	private Double localSshTest(String hostname, long timeout, final RequestStats requestStats) {
 		try {
-			if (osCommandService.runLocalCommand(SSH_TEST_COMMAND, timeout, null) == null) {
+			if (
+				OsCommandService.recordLocalCommand(
+					requestStats,
+					() -> osCommandService.runLocalCommand(SSH_TEST_COMMAND, timeout, null)
+				) == null
+			) {
 				log.debug(
 					"Hostname {} - Checking SSH protocol status. Local OS command has not returned any results.",
 					hostname
@@ -339,6 +352,7 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * @param sshConfiguration   The SSH configuration retrieved from the telemetryManager
 	 * @param hostType           The type of the host
 	 * @param timeout            The timeout, in seconds, granted to the test command
+	 * @param requestStats       The request statistics of the checked resource, where the test command is recorded
 	 * @return The updated SSH status after performing the remote SSH test or the previous SSH status if the SSH test succeeds.
 	 */
 	private Double remoteSshTest(
@@ -346,12 +360,23 @@ public class OsCommandExtension implements IProtocolExtension {
 		final Double previousSshStatus,
 		final SshConfiguration sshConfiguration,
 		final DeviceKind hostType,
-		final long timeout
+		final long timeout,
+		final RequestStats requestStats
 	) {
 		try {
 			if (
-				osCommandService.runSshCommand(SSH_TEST_COMMAND, hostname, sshConfiguration, timeout, null, null, hostType)
-					== null
+				OsCommandService.recordSshCommand(
+					requestStats,
+					() -> osCommandService.runSshCommand(
+						SSH_TEST_COMMAND,
+						hostname,
+						sshConfiguration,
+						timeout,
+						null,
+						null,
+						hostType
+					)
+				) == null
 			) {
 				log.debug(
 					"Hostname {} - Checking SSH protocol status. Remote SSH command has not returned any results.",

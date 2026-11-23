@@ -102,7 +102,7 @@ public class JmxExtension implements IProtocolExtension {
 		log.info("Hostname {} - Performing {} protocol health check.", configuration.getHostname(), getIdentifier());
 
 		try {
-			return Optional.of(jmxRequestExecutor.checkConnection(configuration, telemetryManager.getHostname()));
+			return Optional.of(jmxRequestExecutor.checkConnection(configuration, telemetryManager.getRequestStats()));
 		} catch (Exception e) {
 			log.error("Hostname {} - JMX protocol check failed: {}", configuration.getHostname(), e.getMessage());
 			log.debug("Hostname {} - JMX protocol check failed.", configuration.getHostname(), e);

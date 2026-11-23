@@ -36,7 +36,11 @@ import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
+import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.extension.oscommand.OsCommandRequestExecutor;
+import org.metricshub.extension.oscommand.OsCommandService;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.ssh.SshClient;
 import org.metricshub.ssh.SshClient.FileEntry;
@@ -63,11 +67,65 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 
 	private final DeviceKind deviceKind;
 
+	/**
+	 * The request statistics of the monitored resource, where each SFTP request is recorded; {@code null} records
+	 * nothing.
+	 */
+	private final RequestStats requestStats;
+
 	// Files listed by resolve(), by absolute path: their size spares an SFTP stat in getFileSize()
 	private final Map<String, FileEntry> listedFiles = new HashMap<>();
 
 	/**
-	 * Establishes SSH connection to the remote host.
+	 * A request sent through the SFTP subsystem.
+	 *
+	 * @param <T> The type of the result.
+	 */
+	@FunctionalInterface
+	private interface SftpRequest<T> {
+		/**
+		 * Sends the request.
+		 *
+		 * @return The result of the request.
+		 * @throws IOException When the request fails.
+		 */
+		T send() throws IOException;
+	}
+
+	/**
+	 * Sends one SFTP request and records it as an {@value OsCommandExtension#SSH_IDENTIFIER} request: completed when it
+	 * returns, timeout or failed for an {@link IOException} (an SFTP error status included), according to its causes.
+	 *
+	 * @param <T>     The type of the result.
+	 * @param request The request.
+	 * @return The result of the request.
+	 * @throws IOException When the request fails.
+	 */
+	private <T> T send(final SftpRequest<T> request) throws IOException {
+		final T result;
+		try {
+			result = request.send();
+		} catch (IOException e) {
+			record(RequestOutcome.of(e));
+			throw e;
+		}
+		record(RequestOutcome.COMPLETED);
+		return result;
+	}
+
+	/**
+	 * Records the outcome of one SSH request attempt.
+	 *
+	 * @param outcome The terminal state of the attempt.
+	 */
+	private void record(final RequestOutcome outcome) {
+		OsCommandService.recordRequest(requestStats, OsCommandExtension.SSH_IDENTIFIER, outcome);
+	}
+
+	/**
+	 * Establishes SSH connection to the remote host. The connection and the authentication that follows it are one
+	 * request: a failed connection is recorded here, a connection that succeeds is recorded by
+	 * {@link #authenticateSshClient()}.
 	 *
 	 * @return true if connection succeeds, false otherwise
 	 */
@@ -76,6 +134,7 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 			sshClient.connect(sshConfiguration.getTimeout().intValue() * 1000, sshConfiguration.getPort());
 			return true;
 		} catch (IOException e) {
+			record(RequestOutcome.of(e));
 			final String hostname = sshConfiguration.getHostname();
 			log.info("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e.getMessage());
 			log.debug("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e);
@@ -85,7 +144,8 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 
 	/**
 	 * Authenticates the SSH client with the remote host using configured credentials.
-	 * Supports both password and private key authentication.
+	 * Supports both password and private key authentication. Records the outcome of the connection request, which
+	 * {@link #connectSshClient()} established.
 	 *
 	 * @return true if authentication succeeds, false otherwise
 	 */
@@ -101,8 +161,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 				sshConfiguration.getPassword(),
 				privateKey == null ? null : new File(privateKey)
 			);
+			record(RequestOutcome.COMPLETED);
 			return true;
 		} catch (Exception e) {
+			record(RequestOutcome.of(e));
 			log.info("Hostname {} - Authentication as {} has failed. Message: {}", hostname, username, e.getMessage());
 			log.debug("Hostname {} - Authentication as {} has failed. Exception: {}", hostname, username, e);
 			return false;
@@ -146,7 +208,8 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 
 		if (index == segments.size() - 1) {
 			final boolean literal = !FileHelper.containsWildcard(segment);
-			for (final FileEntry entry : sshClient.listFiles(directory, nameRegex(segment, false), false)) {
+			final String fileRegex = nameRegex(segment, false);
+			for (final FileEntry entry : send(() -> sshClient.listFiles(directory, fileRegex, false))) {
 				// A literal file name keeps its configured case, which a Windows listing may not report
 				final String path = fromSftpPath(literal ? join(directory, segment) : entry.path);
 				listedFiles.put(path, entry);
@@ -157,7 +220,7 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 
 		// A literal segment needs no listing: a missing directory fails when it is listed itself
 		final List<String> subdirectories = FileHelper.containsWildcard(segment)
-			? sshClient.listSubdirectories(directory, nameRegex(segment, true))
+			? send(() -> sshClient.listSubdirectories(directory, nameRegex(segment, true)))
 			: List.of(join(directory, segment));
 
 		for (final String subdirectory : subdirectories) {
@@ -258,7 +321,8 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 			return listed.size;
 		}
 		try {
-			return sshClient.fileSize(toSftpPath(path));
+			final String sftpPath = toSftpPath(path);
+			return send(() -> sshClient.fileSize(sftpPath));
 		} catch (Exception e) {
 			final String hostname = sshConfiguration.getHostname();
 			log.info("Hostname {} - Unable to get \"{}\" file size: {}", hostname, path, e.getMessage());
@@ -269,12 +333,14 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 
 	@Override
 	public String readFromOffset(final String path, final Long offset, final Integer length) throws IOException {
-		return sshClient.readFile(toSftpPath(path), offset, length);
+		final String sftpPath = toSftpPath(path);
+		return send(() -> sshClient.readFile(sftpPath, offset, length));
 	}
 
 	@Override
 	public String readFileContent(final String path) throws IOException {
-		return sshClient.readFile(toSftpPath(path), null, null);
+		final String sftpPath = toSftpPath(path);
+		return send(() -> sshClient.readFile(sftpPath, null, null));
 	}
 
 	@Override

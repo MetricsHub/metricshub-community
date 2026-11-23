@@ -16,6 +16,8 @@ class AbstractITJobTest {
 			new TestCase("metricshub.job.duration{}", true),
 			new TestCase("metricshub.job.duration{job.type=\"discovery\", monitor.type=\"connector\"}", true),
 			new TestCase("metricshub.job.success", false),
+			new TestCase("metricshub.host.requests{state=\"completed\", operation_type=\"snmp\"}", true),
+			new TestCase("metricshub.host.requests.total", false),
 			new TestCase("metricshub.system.cpu.usage", false)
 		);
 		// Execute test cases

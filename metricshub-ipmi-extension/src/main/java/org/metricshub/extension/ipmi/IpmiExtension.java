@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -53,6 +55,8 @@ import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolResult;
@@ -60,6 +64,7 @@ import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.engine.tool.ToolText;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelRead;
+import org.metricshub.ipmi.client.IpmiTimeoutException;
 import org.metricshub.ipmi.client.SelEntry;
 import org.metricshub.ipmi.core.coding.commands.chassis.PowerCommand;
 
@@ -142,7 +147,7 @@ public class IpmiExtension implements IProtocolExtension {
 
 		// One light request in a session: the check fails on a wrong password too
 		try {
-			ipmiResult = ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiConfiguration);
+			ipmiResult = send(telemetryManager, () -> ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiConfiguration));
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking IPMI protocol status. IPMI exception when performing a IPMI 'Get Chassis Status' query: ",
@@ -178,7 +183,10 @@ public class IpmiExtension implements IProtocolExtension {
 				return processSelSource(selSource, connectorId, hostname, ipmiConfiguration, telemetryManager);
 			}
 
-			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
+			final String result = send(
+				telemetryManager,
+				() -> ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration)
+			);
 
 			if (result != null) {
 				record(telemetryManager, IpmiRecorder.GET_SENSORS_REQUEST, null, result);
@@ -208,8 +216,14 @@ public class IpmiExtension implements IProtocolExtension {
 		final IpmiConfiguration ipmiConfiguration,
 		final TelemetryManager telemetryManager
 	) {
-		final String result = ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiConfiguration, source);
-		record(telemetryManager, IpmiRecorder.RAW_REQUEST, IpmiRequestExecutor.rawQuery(source), result);
+		// Decodes the request first: a source that does not hold valid numbers sends nothing and counts nothing
+		final String rawQuery = IpmiRequestExecutor.rawQuery(source);
+		final String result = send(
+			telemetryManager,
+			() -> ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiConfiguration, source),
+			IpmiExtension::rawOutcome
+		);
+		record(telemetryManager, IpmiRecorder.RAW_REQUEST, rawQuery, result);
 		return SourceTable.ofTable(List.of(IpmiResultConverter.rawRow(result)));
 	}
 
@@ -237,7 +251,10 @@ public class IpmiExtension implements IProtocolExtension {
 
 		if (cursor == null) {
 			// The first poll locates the end of the log without reading it, and reports no backlog
-			final SelCursor end = ipmiRequestExecutor.executeIpmiSelEnd(hostname, ipmiConfiguration);
+			final SelCursor end = send(
+				telemetryManager,
+				() -> ipmiRequestExecutor.executeIpmiSelEnd(hostname, ipmiConfiguration)
+			);
 			namespace.setSourceCursor(sourceKey, end);
 			log.info(
 				"Hostname {} - First IPMI SEL poll of source {}: cursor at record {}",
@@ -249,12 +266,9 @@ public class IpmiExtension implements IProtocolExtension {
 			return SourceTable.empty();
 		}
 
-		final SelRead read = ipmiRequestExecutor.executeIpmiSel(
-			hostname,
-			ipmiConfiguration,
-			cursor,
-			true,
-			source.getMaxEventsPerPoll()
+		final SelRead read = send(
+			telemetryManager,
+			() -> ipmiRequestExecutor.executeIpmiSel(hostname, ipmiConfiguration, cursor, true, source.getMaxEventsPerPoll())
 		);
 		final List<SelEntry> entries = read.entries();
 
@@ -309,6 +323,65 @@ public class IpmiExtension implements IProtocolExtension {
 		}
 	}
 
+	/**
+	 * Sends one request of the resource, completed when it returns: see {@link #send(TelemetryManager, Supplier, Function)}.
+	 *
+	 * @param <T>              The type of the result
+	 * @param telemetryManager The telemetry manager of the resource, which counts the request
+	 * @param request          The executor call: one IPMI session
+	 * @return the result of the request
+	 */
+	private static <T> T send(final TelemetryManager telemetryManager, final Supplier<T> request) {
+		return send(telemetryManager, request, result -> RequestOutcome.COMPLETED);
+	}
+
+	/**
+	 * Sends one request of the resource and counts its outcome in the request statistics of the resource, as soon as
+	 * the request returns or throws: before its result is recorded or converted, and before an error becomes an empty
+	 * result. A timeout of ipmi-java, or an interrupted wait (the engine cancelling the request on its deadline), is a
+	 * timeout; any other error, a malformed answer of the BMC included, is a failure. A thread that was already
+	 * interrupted (an expired deadline of its job) when the request began sends nothing and counts nothing.
+	 *
+	 * @param <T>              The type of the result
+	 * @param telemetryManager The telemetry manager of the resource, which counts the request
+	 * @param request          The executor call: one IPMI session
+	 * @param outcome          The outcome of a result
+	 * @return the result of the request
+	 */
+	private static <T> T send(
+		final TelemetryManager telemetryManager,
+		final Supplier<T> request,
+		final Function<T, RequestOutcome> outcome
+	) {
+		final RequestStats requestStats = telemetryManager.getRequestStats();
+		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		final T result;
+		try {
+			result = request.get();
+		} catch (IpmiTimeoutException e) {
+			requestStats.record(IDENTIFIER, RequestOutcome.TIMEOUT);
+			throw e;
+		} catch (RuntimeException e) {
+			final RequestOutcome errorOutcome = RequestOutcome.of(e);
+			if (!(interruptedBefore && errorOutcome == RequestOutcome.TIMEOUT)) {
+				requestStats.record(IDENTIFIER, errorOutcome);
+			}
+			throw e;
+		}
+		requestStats.record(IDENTIFIER, outcome.apply(result));
+		return result;
+	}
+
+	/**
+	 * @param result The result of a raw command: {@code completionCode;data}, see {@link IpmiResultConverter#rawRow(String)}
+	 * @return completed when the BMC answered with the completion code 00, failed on an error completion code
+	 */
+	private static RequestOutcome rawOutcome(final String result) {
+		return result != null && "00".equals(IpmiResultConverter.rawRow(result).get(0))
+			? RequestOutcome.COMPLETED
+			: RequestOutcome.FAILED;
+	}
+
 	@Override
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
@@ -334,7 +407,10 @@ public class IpmiExtension implements IProtocolExtension {
 		final String hostname = telemetryManager.getHostname(List.of(IpmiConfiguration.class));
 
 		try {
-			final String result = ipmiRequestExecutor.executeIpmiDetection(hostname, configuration);
+			final String result = send(
+				telemetryManager,
+				() -> ipmiRequestExecutor.executeIpmiDetection(hostname, configuration)
+			);
 			if (result == null) {
 				return CriterionTestResult.builder()
 					.message("Received <null> result after connecting to the IPMI BMC chip with the IPMI-over-LAN interface.")

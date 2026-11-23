@@ -146,7 +146,7 @@ class EventLogSourceProcessorTest {
 		String query = "SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull(), any()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
@@ -215,7 +215,7 @@ class EventLogSourceProcessorTest {
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull(), any()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
@@ -243,7 +243,7 @@ class EventLogSourceProcessorTest {
 		// ITERATION 3:
 		// A ClientException is thrown, the client returns null
 		// Cursors are set, they remain unchanged
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull(), any()))
 			.thenThrow(ClientException.class);
 		results = processor.process(source, telemetryManagerMock);
 		assertEquals(
@@ -330,7 +330,7 @@ class EventLogSourceProcessorTest {
 		String query = "SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull(), any()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
@@ -402,7 +402,7 @@ class EventLogSourceProcessorTest {
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull(), any()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 2:

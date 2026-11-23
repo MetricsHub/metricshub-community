@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import org.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.IWinConfiguration;
 
 /**
@@ -51,6 +52,7 @@ public class WinProcessCriterionProcessor {
 	 * @param connectorId           The identifier of the connector for which the criterion is being processed.
 	 * @param logMode               A boolean flag indicating whether the detection test should be executed in log mode (true) or not (false).
 	 * @param recordOutputDirectory Directory where WMI responses are recorded, or {@code null} to skip recording.
+	 * @param requestStats          Request statistics of the monitored resource, or {@code null} to count nothing.
 	 * @return A {@link CriterionTestResult} indicating the result of the detection test.
 	 */
 	public CriterionTestResult process(
@@ -58,7 +60,8 @@ public class WinProcessCriterionProcessor {
 		final IWinConfiguration localWinConfiguration,
 		final String connectorId,
 		final boolean logMode,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) {
 		final WmiCriterion criterion = WmiCriterion.builder()
 			.query("SELECT ProcessId,Name,ParentProcessId,CommandLine FROM Win32_Process")
@@ -72,7 +75,8 @@ public class WinProcessCriterionProcessor {
 			criterion,
 			connectorId,
 			logMode,
-			recordOutputDirectory
+			recordOutputDirectory,
+			requestStats
 		);
 	}
 }

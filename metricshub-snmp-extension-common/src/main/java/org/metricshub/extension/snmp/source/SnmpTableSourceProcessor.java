@@ -103,7 +103,7 @@ public class SnmpTableSourceProcessor {
 				snmpConfiguration,
 				hostname,
 				true,
-				telemetryManager.getHostname()
+				telemetryManager.getRequestStats()
 			);
 
 			return SourceTable.ofTable(result);

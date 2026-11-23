@@ -105,7 +105,7 @@ public class JmxSourceProcessor {
 					objectName,
 					attributes,
 					keyProperties,
-					telemetryManager.getHostname(),
+					telemetryManager.getRequestStats(),
 					telemetryManager.getRecordOutputDirectory()
 				)
 			);

@@ -51,6 +51,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProce
 import org.metricshub.engine.strategy.source.FileSourceProcessingResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.OsCommandHelper;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
@@ -348,8 +349,10 @@ public class FileSourceProcessor {
 			return null;
 		}
 
-		return winRequestExecutor.openFileOperations(hostname, winConfiguration)
-			.orElseGet(() -> createScriptFileOperations(hostname, winConfiguration));
+		// The requests are counted in the statistics of the monitored resource
+		final RequestStats requestStats = telemetryManager.getRequestStats();
+		return winRequestExecutor.openFileOperations(hostname, winConfiguration, requestStats)
+			.orElseGet(() -> createScriptFileOperations(hostname, winConfiguration, requestStats));
 	}
 
 	/**
@@ -359,9 +362,15 @@ public class FileSourceProcessor {
 	 *
 	 * @param hostname         the hostname (for logging and context)
 	 * @param winConfiguration the Win (WMI/WinRM) configuration
+	 * @param requestStats     the request statistics of the monitored resource, where each remote command is
+	 *                         counted, or {@code null} to count nothing
 	 * @return the script-based remote Windows file operations
 	 */
-	WinFileOperations createScriptFileOperations(final String hostname, final IWinConfiguration winConfiguration) {
+	WinFileOperations createScriptFileOperations(
+		final String hostname,
+		final IWinConfiguration winConfiguration,
+		final RequestStats requestStats
+	) {
 		return new WinFileOperations() {
 			@Override
 			public Set<String> resolve(final PathPattern pattern) throws ClientException {
@@ -369,7 +378,8 @@ public class FileSourceProcessor {
 					hostname,
 					winConfiguration,
 					buildResolveCommand(pattern),
-					new ArrayList<>()
+					new ArrayList<>(),
+					requestStats
 				);
 
 				// Split by line breaks, validate each line as absolute path, keep only valid paths
@@ -408,7 +418,8 @@ public class FileSourceProcessor {
 						hostname,
 						winConfiguration,
 						command,
-						List.of(tempScript.getAbsolutePath()) // ← Absolute local path as String
+						List.of(tempScript.getAbsolutePath()), // ← Absolute local path as String
+						requestStats
 					);
 
 					// Decode base64 result (trim in case PowerShell or transport added trailing newline/CR)
@@ -437,7 +448,8 @@ public class FileSourceProcessor {
 						hostname,
 						winConfiguration,
 						command,
-						new ArrayList<>() // No embedded files needed
+						new ArrayList<>(), // No embedded files needed
+						requestStats
 					);
 
 					// Parse the result as Long
@@ -477,7 +489,8 @@ public class FileSourceProcessor {
 						hostname,
 						winConfiguration,
 						command,
-						List.of(tempScript.getAbsolutePath()) // ← Absolute local path as String
+						List.of(tempScript.getAbsolutePath()), // ← Absolute local path as String
+						requestStats
 					);
 
 					// Decode base64 result (trim in case PowerShell or transport added trailing newline/CR)

@@ -7,10 +7,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.wmi.WmiConfiguration;
@@ -46,14 +48,18 @@ class EmulationWmiRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
+		final RequestStats requestStats = new RequestStats();
 		final List<List<String>> result = executor.executeWmi(
 			HOSTNAME,
 			buildWmiEmulationConfig(tempDir.toString()),
 			"SELECT Name FROM Win32_ComputerSystem",
 			"root\\cimv2",
-			null
+			null,
+			requestStats
 		);
 
+		// A replay sends nothing: nothing is counted
+		assertEquals(Map.of(), requestStats.snapshot());
 		assertEquals(1, result.size());
 		assertEquals("value1", result.get(0).get(0));
 		assertEquals("value2", result.get(0).get(1));
@@ -90,6 +96,7 @@ class EmulationWmiRequestExecutorTest {
 			config,
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 		final List<List<String>> result2 = executor.executeWmi(
@@ -97,6 +104,7 @@ class EmulationWmiRequestExecutorTest {
 			config,
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 		final List<List<String>> result3 = executor.executeWmi(
@@ -104,6 +112,7 @@ class EmulationWmiRequestExecutorTest {
 			config,
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 
@@ -132,6 +141,7 @@ class EmulationWmiRequestExecutorTest {
 			buildWmiEmulationConfig(tempDir.toString()),
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 
@@ -145,6 +155,7 @@ class EmulationWmiRequestExecutorTest {
 			buildWmiEmulationConfig("any"),
 			null,
 			"root\\cimv2",
+			null,
 			null
 		);
 
@@ -157,6 +168,7 @@ class EmulationWmiRequestExecutorTest {
 			HOSTNAME,
 			buildWmiEmulationConfig("any"),
 			"SELECT Name FROM Win32_Process",
+			null,
 			null,
 			null
 		);
@@ -171,6 +183,7 @@ class EmulationWmiRequestExecutorTest {
 			WmiConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 
@@ -184,6 +197,7 @@ class EmulationWmiRequestExecutorTest {
 			buildWmiEmulationConfig(tempDir.toString()),
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 
@@ -199,6 +213,7 @@ class EmulationWmiRequestExecutorTest {
 			buildWmiEmulationConfig(tempDir.toString()),
 			"SELECT Name FROM Win32_Process",
 			"root\\cimv2",
+			null,
 			null
 		);
 
@@ -225,6 +240,7 @@ class EmulationWmiRequestExecutorTest {
 			buildWmiEmulationConfig(tempDir.toString()),
 			"SELECT Name FROM Win32_Process",
 			"ROOT\\CIMV2",
+			null,
 			null
 		);
 

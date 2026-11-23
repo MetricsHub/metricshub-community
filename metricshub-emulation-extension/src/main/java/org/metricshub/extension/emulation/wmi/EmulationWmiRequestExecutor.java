@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
@@ -36,7 +37,8 @@ import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 
 /**
- * WMI request executor that replays query results from recorded emulation files.
+ * WMI request executor that replays query results from recorded emulation files. Nothing is sent, so no
+ * request is counted in the request statistics it receives.
  */
 @Slf4j
 public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
@@ -64,7 +66,8 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 		final IWinConfiguration winConfiguration,
 		final String query,
 		final String namespace,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) throws ClientException {
 		if (query == null || namespace == null) {
 			return List.of();
@@ -144,7 +147,8 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 		final String hostname,
 		final IWinConfiguration winConfiguration,
 		final String command,
-		final List<String> embeddedFiles
+		final List<String> embeddedFiles,
+		final RequestStats requestStats
 	) throws ClientException {
 		return "";
 	}

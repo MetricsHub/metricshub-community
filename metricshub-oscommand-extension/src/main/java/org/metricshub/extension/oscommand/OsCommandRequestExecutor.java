@@ -30,6 +30,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -154,7 +155,8 @@ public class OsCommandRequestExecutor {
 					commandResult.result
 				);
 				log.error(message);
-				throw new ClientException(message);
+				// ssh-java reports a timeout of the execution, its only failure, with success = false
+				throw new ClientException(message, new TimeoutException(commandResult.result));
 			}
 
 			String result = commandResult.result;
@@ -184,7 +186,8 @@ public class OsCommandRequestExecutor {
 				hostname
 			);
 			log.error("Hostname {} - {}. Exception message: {}.", hostname, message, e.getMessage());
-			throw new ClientException(message, (Exception) e.getCause());
+			// The cause of the SSH library wrapper is the root cause; the exception itself when it has none
+			throw new ClientException(message, e.getCause() instanceof Exception cause ? cause : e);
 		} finally {
 			release(sshClient, remoteFilePaths, hostname, username);
 		}

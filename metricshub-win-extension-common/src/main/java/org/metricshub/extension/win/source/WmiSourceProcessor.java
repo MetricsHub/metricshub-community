@@ -109,7 +109,8 @@ public class WmiSourceProcessor {
 				winConfiguration,
 				wmiSource.getQuery(),
 				namespace,
-				telemetryManager.getRecordOutputDirectory()
+				telemetryManager.getRecordOutputDirectory(),
+				telemetryManager.getRequestStats()
 			);
 
 			return SourceTable.ofTable(table);
