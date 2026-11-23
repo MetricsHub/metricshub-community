@@ -63,6 +63,7 @@ import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -266,7 +267,7 @@ public class CollectStrategy extends AbstractStrategy {
 				// The singleton of a simple mapping, by its internal id: never a stale keyed instance kept by removalDelay
 				final Monitor singleton = telemetryManager.findMonitorByTypeAndId(
 					monitorType,
-					currentConnector.getCompiledFilename() + "_" + monitorType
+					MonitorFactory.buildSingletonId(currentConnector.getCompiledFilename(), monitorType)
 				);
 				if (singleton != null) {
 					processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo);

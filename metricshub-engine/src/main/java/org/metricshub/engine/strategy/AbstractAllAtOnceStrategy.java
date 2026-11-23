@@ -548,7 +548,9 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			}
 
 			// Create or update the monitor
-			final Monitor monitor = monitorFactory.createOrUpdateMonitor();
+			final Monitor monitor = monitorJob.isSingleton()
+				? monitorFactory.createOrUpdateMonitor(MonitorFactory.buildSingletonId(connectorId, monitorType))
+				: monitorFactory.createOrUpdateMonitor();
 			mappedMonitors++;
 
 			final Map<String, String> contextAttributes = mappingProcessor.interpretContextMappingAttributes(monitor);

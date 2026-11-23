@@ -260,4 +260,11 @@ class SimpleMappingTest {
 			assertNull(metric(stale.get(type), "test.limit"));
 		}
 	}
+
+	@Test
+	void tableMappingWithEmptyKeysKeepsItsId() {
+		new SimpleStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
+
+		assertEquals(Set.of(CONNECTOR_ID + "_emptyKeys_"), monitors("emptyKeys").keySet());
+	}
 }

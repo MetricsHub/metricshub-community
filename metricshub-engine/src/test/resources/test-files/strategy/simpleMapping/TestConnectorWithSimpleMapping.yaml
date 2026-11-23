@@ -100,3 +100,16 @@ monitors:
           vendor: ${source::vendor}
         metrics:
           test.limit: $2
+  # A table mapping with keys: [] keeps the id of a keyed monitor whose keys are empty, not the singleton id
+  emptyKeys:
+    keys: []
+    simple:
+      sources:
+        table:
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1"
+      mapping:
+        source: ${source::table}
+        attributes:
+          id: $1
