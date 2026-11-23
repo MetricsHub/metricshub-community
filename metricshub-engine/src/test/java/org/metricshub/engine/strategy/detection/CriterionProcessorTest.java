@@ -368,7 +368,8 @@ class CriterionProcessorTest {
 
 			final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-			doReturn(expected).when(protocolExtensionMock).processCriterion(processCriterion, null, null, true);
+			doReturn(expected).when(protocolExtensionMock)
+				.processCriterion(processCriterion, MY_CONNECTOR_1_NAME, telemetryManagerMock, true);
 
 			final CriterionProcessor criterionProcessor = new CriterionProcessor(
 				clientsExecutorMock,

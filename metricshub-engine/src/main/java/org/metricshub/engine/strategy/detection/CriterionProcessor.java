@@ -258,6 +258,8 @@ public class CriterionProcessor {
 			extensionManager,
 			processCriterion,
 			hostname,
+			telemetryManager,
+			connectorId,
 			logMode
 		);
 
