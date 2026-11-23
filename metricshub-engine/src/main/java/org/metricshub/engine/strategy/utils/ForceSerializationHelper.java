@@ -72,13 +72,19 @@ public class ForceSerializationHelper {
 		final ReentrantLock forceSerializationLock = getForceSerializationLock(telemetryManager, connectorId);
 		final String hostname = telemetryManager.getHostname();
 
-		// Clear any pending interrupt to avoid an immediate InterruptedException from tryLock(),
-		// but remember it so we can restore the original state at the end of the call.
-		boolean interrupted = Thread.currentThread().isInterrupted();
-		if (interrupted) {
-			Thread.interrupted();
+		// The job deadline expired or the job was cancelled: send no more request and keep the interrupt
+		if (Thread.currentThread().isInterrupted()) {
+			log.warn(
+				"Hostname {} - Thread interrupted: skipping the force serialized {} {}. Connector: {}.",
+				hostname,
+				description,
+				objToProcess,
+				connectorId
+			);
+			return defaultValue;
 		}
 
+		boolean interrupted = false;
 		boolean isLockAcquired = false;
 		T result = defaultValue;
 		try {

@@ -54,6 +54,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
@@ -128,6 +129,35 @@ class AbstractStrategyTest {
 				)
 				.getValue()
 		);
+	}
+
+	@Test
+	void testInterruptedThreadWritesNoHostMetric() {
+		final Monitor hostMonitor = Monitor.builder().type(KnownMonitorType.HOST.getKey()).isEndpoint(true).build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(new HashMap<>(Map.of(HOST, Map.of(MONITOR_ID_ATTRIBUTE_VALUE, hostMonitor))))
+			.hostConfiguration(
+				HostConfiguration.builder().hostId(HOST_ID).hostname(HOST_NAME).enableSelfMonitoring(true).build()
+			)
+			.build();
+		final CollectStrategy collectStrategy = CollectStrategy.builder()
+			.telemetryManager(telemetryManager)
+			.strategyTime(STRATEGY_TIME)
+			.clientsExecutor(new ClientsExecutor())
+			.extensionManager(new ExtensionManager())
+			.build();
+
+		// An abandoned thread shares the host monitor with the next run: it writes nothing there
+		Thread.currentThread().interrupt();
+		try {
+			collectStrategy.setJobDurationMetric("collect", "enclosure", TEST_CONNECTOR_ID, 0L, 1000L);
+			collectStrategy.collectHostConfigured(HOST_NAME);
+			collectStrategy.collectHostObserved(1.0);
+
+			assertTrue(hostMonitor.getMetrics().isEmpty());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test
@@ -709,15 +739,16 @@ class AbstractStrategyTest {
 		doReturn(Set.of(SnmpTableSource.class)).when(extension).getSupportedSources();
 		final AtomicInteger requests = new AtomicInteger();
 		doAnswer(invocation -> {
-			// The job deadline expires during the first source
-			requests.incrementAndGet();
-			Thread.currentThread().interrupt();
+			// The job deadline expires during the second source, which still returns a table
+			if (requests.incrementAndGet() == 2) {
+				Thread.currentThread().interrupt();
+			}
 			return SourceTable.ofTable(SourceTable.csvToTable("a;1", ";"));
 		}).when(extension).processSource(any(), anyString(), any());
 
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
-		// The tables of the previous cycle must not survive for the sources that did not run
-		namespace.addSourceTable("${source::b}", SourceTable.ofTable(SourceTable.csvToTable("old;1", ";")));
+		// A table written by another run (the next run, when this thread is an abandoned one)
+		namespace.addSourceTable("${source::c}", SourceTable.ofTable(SourceTable.csvToTable("old;1", ";")));
 
 		final List<Source> sources = List.of("a", "b", "c")
 			.stream()
@@ -743,13 +774,64 @@ class AbstractStrategyTest {
 					.build()
 			);
 
-			assertEquals(1, requests.get());
+			assertEquals(2, requests.get());
 			assertFalse(allAnswered);
 			assertTrue(Thread.currentThread().isInterrupted());
 			assertEquals(List.of(List.of("a", "1")), namespace.getSourceTable("${source::a}").getTable());
-			assertTrue(namespace.getSourceTable("${source::b}").isEmpty());
-			assertTrue(namespace.getSourceTable("${source::c}").isEmpty());
-			assertEquals(Set.of("${source::b}", "${source::c}"), namespace.getUnansweredSourceKeys());
+			// The source interrupted while it ran may have been cut short: it did not answer, whatever it returned.
+			// The interrupted thread writes nothing more: the table of another run is left alone
+			assertNull(namespace.getSourceTable("${source::b}"));
+			assertEquals(List.of(List.of("old", "1")), namespace.getSourceTable("${source::c}").getTable());
+			assertTrue(namespace.getUnansweredSourceKeys().isEmpty());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptedLastComputeStoresNoTable() throws Exception {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(HttpSource.class)).when(extension).getSupportedSources();
+		doReturn(SourceTable.ofText("{\"a\":1}")).when(extension).processSource(any(), anyString(), any());
+
+		// The job deadline expires during the last (and only) compute of the source
+		final ClientsExecutor clientsExecutor = mock(ClientsExecutor.class);
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return List.of(List.of("x", "1"));
+		}).when(clientsExecutor).executeJson2Table(any(), any(), any());
+
+		final HttpSource source = HttpSource.builder()
+			.url("/x")
+			.key("${source::a}")
+			.computes(List.of(Json2Csv.builder().properties(List.of("a")).build()))
+			.build();
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutor)
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				List.of(source),
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("simple")
+					.monitorType("enclosure")
+					.build()
+			);
+
+			// The half computed table is not stored: the namespace may be the next run's
+			assertFalse(allAnswered);
+			assertNull(
+				telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID).getSourceTable("${source::a}")
+			);
+			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
 			Thread.interrupted();
 		}
@@ -800,6 +882,22 @@ class AbstractStrategyTest {
 			assertFalse(result.isSuccess());
 			assertEquals(2, result.getCriterionTestResults().size());
 			assertTrue(Thread.currentThread().isInterrupted());
+
+			// The only criterion reports a success, but the interrupt arrived while it was tested
+			Thread.interrupted();
+			connector.getConnectorIdentity()
+				.getDetection()
+				.setCriteria(List.of(SnmpGetCriterion.builder().oid("1.3.1").build()));
+			final ConnectorTestResult lastCriterionResult = new ConnectorSelection(
+				telemetryManager,
+				new ClientsExecutor(telemetryManager),
+				Set.of(TEST_CONNECTOR_ID),
+				ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build()
+			).runConnectorDetectionCriteria(connector, HOST_NAME);
+
+			assertEquals(2, requests.get());
+			assertFalse(lastCriterionResult.isSuccess());
+			assertEquals(2, lastCriterionResult.getCriterionTestResults().size());
 		} finally {
 			Thread.interrupted();
 		}

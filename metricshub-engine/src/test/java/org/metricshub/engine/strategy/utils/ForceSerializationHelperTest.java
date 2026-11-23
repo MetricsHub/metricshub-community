@@ -1,9 +1,10 @@
 package org.metricshub.engine.strategy.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.metricshub.engine.constants.Constants.EXPECTED_SNMP_TABLE_DATA;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -148,25 +149,30 @@ class ForceSerializationHelperTest {
 	}
 
 	@Test
-	void testForceSerializationRestoresInterruptFlagAfterClearing() {
+	void testForceSerializationSkippedWhenInterrupted() {
 		final SourceTable emptySourceTable = SourceTable.empty();
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Source snmpTableSource = SnmpTableSource.builder().oid("1.2.3.4").selectColumns(SELECT_COLUMNS).build();
 
 		telemetryManager.setHostConfiguration(HostConfiguration.builder().hostname(HOST_NAME).build());
 
+		// The job deadline expired: the request is not sent and the interrupt is kept
 		Thread.currentThread().interrupt();
-		final boolean wasInterruptedBefore = Thread.currentThread().isInterrupted();
+		try {
+			final SourceTable returned = ForceSerializationHelper.forceSerialization(
+				() -> fail("The executable must not run on an interrupted thread"),
+				telemetryManager,
+				CONNECTOR_ID,
+				snmpTableSource,
+				DESCRIPTION,
+				emptySourceTable
+			);
 
-		final SourceTable returned = ForceSerializationHelper.forceSerialization(() -> {
-			assertFalse(Thread.currentThread().isInterrupted());
-			return EXPECTED_SOURCE_TABLE;
-		}, telemetryManager, CONNECTOR_ID, snmpTableSource, DESCRIPTION, emptySourceTable);
-
-		assertEquals(EXPECTED_SOURCE_TABLE, returned);
-		assertTrue(wasInterruptedBefore);
-		assertTrue(Thread.currentThread().isInterrupted());
-		Thread.interrupted();
+			assertSame(emptySourceTable, returned);
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test

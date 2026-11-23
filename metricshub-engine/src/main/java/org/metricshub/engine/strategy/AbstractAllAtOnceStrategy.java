@@ -450,6 +450,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		final MonitorJob monitorJob,
 		final boolean isDiscovery
 	) {
+		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
+
 		final String connectorId = connector.getCompiledFilename();
 
 		final String source = mapping.getSource();

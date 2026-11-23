@@ -98,7 +98,7 @@ public class CommandLineCriterionProcessor {
 		} catch (NoCredentialProvidedException noCredentialProvidedException) {
 			return CriterionTestResult.error(commandLineCriterion, noCredentialProvidedException.getMessage());
 		} catch (Exception exception) {
-			// NOSONAR on interruption
+			OsCommandService.restoreInterrupt(exception);
 			return CriterionTestResult.error(commandLineCriterion, exception);
 		}
 	}

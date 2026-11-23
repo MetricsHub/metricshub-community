@@ -178,6 +178,12 @@ public abstract class AbstractStrategy implements IStrategy {
 				.build()
 				.run(() -> runSource(connectorId, attributes, source, previousSourceTable));
 
+			// Interrupted while it ran, the source may have been cut short (an executeForEachEntryOf stops between two
+			// entries): it did not answer, whatever it returned
+			if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+				return false;
+			}
+
 			// A null table (the source processor failed) or the retry sentinel: the source did not answer. A null returned
 			// by an extension arrives here as an empty table: the source is retried, then given up, when it had data before
 			final boolean sourceAnswered = sourceTable != null && sourceTable != failedSourceTable;
@@ -240,11 +246,6 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			// Loop over the computes to process each compute
 			for (int index = 0; index < computes.size(); index++) {
-				// A source whose computes were cut short is skipped as well: its table is half computed
-				if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
-					return false;
-				}
-
 				final Compute compute = computes.get(index);
 				computeProcessor.setIndex(index);
 
@@ -254,6 +255,11 @@ public abstract class AbstractStrategy implements IStrategy {
 
 				// process the compute
 				compute.accept(computeUpdaterProcessor);
+
+				// Interrupted during a compute, the last one included: the table is half computed and is not stored
+				if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+					return false;
+				}
 
 				// log the updated source table
 				logSourceTable(
@@ -276,29 +282,34 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * When the thread of the job is interrupted (its deadline expired or it was cancelled), the given sources are not
-	 * executed: each one gets an empty result and is reported unanswered, so that no mapping reads the table of a
-	 * previous cycle or of another monitor and no monitor is removed on their account.
+	 * Whether the thread running this strategy is interrupted: its deadline expired or it was cancelled. Such a thread
+	 * may be an abandoned one, still running while the next run of the same host fills the same telemetry, so it
+	 * sends no more request and writes nothing more.
+	 *
+	 * @return {@code true} if the current thread is interrupted
+	 */
+	protected static boolean isInterrupted() {
+		return Thread.currentThread().isInterrupted();
+	}
+
+	/**
+	 * Whether the thread of the job is interrupted (its deadline expired or it was cancelled), in which case the given
+	 * sources are skipped. An interrupted thread may be an abandoned one, still running while the next run of the same
+	 * host fills the same {@link ConnectorNamespace}: it writes nothing there, and its mapping is skipped too, so that
+	 * it never reads the tables it did not refresh.
 	 *
 	 * @param remainingSources The sources of the job not executed yet
 	 * @param connectorId      The connector identifier
 	 * @param hostname         The host name
 	 * @return {@code true} if the thread is interrupted and the remaining sources were skipped
 	 */
-	private boolean skipSourcesIfInterrupted(
+	private static boolean skipSourcesIfInterrupted(
 		final List<Source> remainingSources,
 		final String connectorId,
 		final String hostname
 	) {
 		if (!Thread.currentThread().isInterrupted()) {
 			return false;
-		}
-
-		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
-			.getConnectorNamespace(connectorId);
-		for (final Source source : remainingSources) {
-			connectorNamespace.addSourceTable(source.getKey(), emptyResult(source));
-			connectorNamespace.getUnansweredSourceKeys().add(source.getKey());
 		}
 
 		log.warn(
@@ -760,8 +771,8 @@ public abstract class AbstractStrategy implements IStrategy {
 	) {
 		// If the enableSelfMonitoring flag is set to true, or it's not configured at all,
 		// set the job duration metric on the monitor. Otherwise, don't set it.
-		// By default, self monitoring is enabled
-		if (telemetryManager.getHostConfiguration().isEnableSelfMonitoring()) {
+		// By default, self monitoring is enabled. An interrupted thread writes nothing (see isAbandoned)
+		if (telemetryManager.getHostConfiguration().isEnableSelfMonitoring() && !isInterrupted()) {
 			// Build the job duration metric key
 			final String jobDurationMetricKey = metricKeySupplier.get();
 			// Collect the job duration metric
@@ -833,6 +844,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param hostname The resource hostname.
 	 */
 	protected void collectHostConfigured(final String hostname) {
+		if (isInterrupted()) {
+			return;
+		}
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 		final MetricFactory metricFactory = new MetricFactory(
 			telemetryManager.getHostname(),
@@ -847,6 +861,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param observed Whether the host is observed or not.
 	 */
 	protected void collectHostObserved(final Double observed) {
+		if (isInterrupted()) {
+			return;
+		}
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 		final MetricFactory metricFactory = new MetricFactory(
 			telemetryManager.getHostname(),
@@ -862,7 +879,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param hostname The resource hostname.
 	 */
 	protected void collectRequestMetrics(final String hostname) {
-		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring()) {
+		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring() || isInterrupted()) {
 			return;
 		}
 		final Map<String, ThreadHelper.Stats> statsByOperation = ThreadHelper.getStats(hostname);

@@ -24,6 +24,7 @@ package org.metricshub.engine.strategy.collect;
 import java.util.List;
 import lombok.Builder;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -43,6 +44,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * responding or not.
  * </p>
  */
+@Slf4j
 public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 
 	/**
@@ -93,6 +95,11 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 
 		boolean observed = false;
 		for (final IProtocolExtension protocolExtension : protocolExtensions) {
+			// Interrupted (job timeout, reload): no more check, and a check cut short must not report the host down
+			if (isInterrupted()) {
+				log.warn("Hostname {} - Thread interrupted: skipping the protocol checks.", telemetryManager.getHostname());
+				return;
+			}
 			if (checkAndCollectProtocolMetrics(protocolExtension)) {
 				observed = true;
 			}
@@ -109,7 +116,7 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 	private boolean checkAndCollectProtocolMetrics(final IProtocolExtension protocolExtension) {
 		// Record the start time before launching protocol checks
 		final long startTime = System.currentTimeMillis();
-		return protocolExtension.checkProtocol(telemetryManager).map(isUp -> {
+		return protocolExtension.checkProtocol(telemetryManager).filter(isUp -> !isInterrupted()).map(isUp -> {
 			final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
 			final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 			final Long strategyTime = telemetryManager.getStrategyTime();

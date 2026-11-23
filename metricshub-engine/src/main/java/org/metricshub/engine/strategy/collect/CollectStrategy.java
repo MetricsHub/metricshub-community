@@ -373,7 +373,8 @@ public class CollectStrategy extends AbstractStrategy {
 		final Optional<Monitor> maybeMonitor,
 		final Set<String> attributeKeys
 	) {
-		if (mapping == null) {
+		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
+		if (mapping == null || Thread.currentThread().isInterrupted()) {
 			return;
 		}
 

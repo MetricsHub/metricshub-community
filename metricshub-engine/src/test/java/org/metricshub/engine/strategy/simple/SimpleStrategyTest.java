@@ -585,6 +585,13 @@ class SimpleStrategyTest {
 
 		final Monitor staleEnclosure = addStaleMonitor(telemetryManager, ENCLOSURE.getKey());
 		sourceTables.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
+		// A table this run did not refresh (written by another run): the mapping of the interrupted job must not read it
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
+			.addSourceTable(
+				SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()),
+				SourceTable.ofTable(SourceTable.csvToTable("other;1", ";"))
+			);
 
 		// The strategy thread is interrupted (abandoned run)
 		Thread.currentThread().interrupt();

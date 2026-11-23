@@ -168,6 +168,11 @@ public class ThreadHelper {
 	 */
 	private static <T> T doExecute(final Callable<T> callable, final long timeout, final StatsKey statsKey)
 		throws InterruptedException, ExecutionException, TimeoutException {
+		// An interrupted caller (job timeout, reload) starts no request: the task thread would send it even though
+		// the wait below fails at once. The interrupt is kept, as when the wait is interrupted.
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedException("The caller thread is interrupted: the task is not started.");
+		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
 			final Future<T> future = executor.submit(callable);

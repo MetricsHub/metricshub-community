@@ -1,12 +1,14 @@
 package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,6 +28,24 @@ class ThreadHelperTest {
 			Thread.sleep(10_000);
 			return "never";
 		}, 1));
+	}
+
+	@Test
+	void testInterruptedCallerStartsNoTask() {
+		final AtomicBoolean started = new AtomicBoolean();
+
+		// The job deadline expired: the request must not even be started, and the interrupt is kept
+		Thread.currentThread().interrupt();
+		try {
+			assertThrows(InterruptedException.class, () -> ThreadHelper.execute(() -> {
+				started.set(true);
+				return "sent";
+			}, 5));
+			assertFalse(started.get());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test

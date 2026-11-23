@@ -267,6 +267,22 @@ public class OsCommandService {
 	}
 
 	/**
+	 * Restores the interrupt of the current thread when the given exception, or one of its causes, is an
+	 * {@link InterruptedException}: the job deadline expired or the job was cancelled, and the engine stops the job
+	 * only if the thread is still interrupted. Throwing an {@link InterruptedException} clears the interrupt.
+	 *
+	 * @param exception The exception caught by a source or criterion processor
+	 */
+	static void restoreInterrupt(final Throwable exception) {
+		for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+			if (cause instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+				return;
+			}
+		}
+	}
+
+	/**
 	 * Run a controlled SSH command, checking if a permit can be obtained from the semaphore before running the command.
 	 *
 	 * @param <T>         The type of result expected from the executable.
@@ -295,8 +311,8 @@ public class OsCommandService {
 
 			throw new ControlledSshException(message);
 		} catch (InterruptedException e) {
-			// Clear interrupt status to avoid leaking it upstream unintentionally
-			Thread.interrupted();
+			// The job deadline expired or the job was cancelled: keep the interrupt so that the engine stops the job
+			Thread.currentThread().interrupt();
 			throw e;
 		} finally {
 			if (acquired) {

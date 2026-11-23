@@ -2,7 +2,6 @@ package org.metricshub.extension.oscommand;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1159,14 +1158,18 @@ class OsCommandHelperTest {
 	}
 
 	@Test
-	void testRunControlledSshCommandClearsInterruptFlag() {
+	void testRunControlledSshCommandKeepsInterruptFlag() {
+		// The job deadline expired: the engine stops the job only if the thread is still interrupted
 		Thread.currentThread().interrupt();
+		try {
+			assertThrows(
+				InterruptedException.class,
+				() -> new OsCommandService().runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
+			);
 
-		assertThrows(
-			InterruptedException.class,
-			() -> new OsCommandService().runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
-		);
-
-		assertFalse(Thread.currentThread().isInterrupted());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 }
