@@ -50,6 +50,7 @@ import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
@@ -783,6 +784,54 @@ class AbstractStrategyTest {
 			assertNull(namespace.getSourceTable("${source::b}"));
 			assertEquals(List.of(List.of("old", "1")), namespace.getSourceTable("${source::c}").getTable());
 			assertTrue(namespace.getUnansweredSourceKeys().isEmpty());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptedJobRollsBackIncrementalCursors() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		namespace.setSourceCursor("${source::sel}", "sel-10");
+
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(IpmiSelSource.class, SnmpTableSource.class)).when(extension).getSupportedSources();
+		// The SEL poll answers and moves its cursor, then the job deadline expires during the next source
+		doAnswer(invocation -> {
+			if (invocation.getArgument(0) instanceof IpmiSelSource) {
+				namespace.setSourceCursor("${source::sel}", "sel-20");
+				return SourceTable.ofTable(SourceTable.csvToTable("event;1", ";"));
+			}
+			Thread.currentThread().interrupt();
+			return SourceTable.empty();
+		}).when(extension).processSource(any(), anyString(), any());
+
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				List.of(
+					IpmiSelSource.builder().key("${source::sel}").build(),
+					SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::next}").build()
+				),
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("discovery")
+					.monitorType("enclosure")
+					.build()
+			);
+
+			// The job is not mapped: the next poll must return the SEL events again
+			assertFalse(allAnswered);
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
 		} finally {
 			Thread.interrupted();
 		}

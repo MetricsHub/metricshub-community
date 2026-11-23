@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,10 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -66,6 +70,7 @@ import org.metricshub.engine.strategy.source.compute.ComputeUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.ForceSerializationHelper;
 import org.metricshub.engine.strategy.utils.RetryOperation;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
+import org.metricshub.engine.telemetry.ConnectorNamespace.SourceCursors;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -149,10 +154,16 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		boolean allSourcesAnswered = true;
 
+		// The incremental sources this job polled: their cursors are rolled back if the job is cut short, because their
+		// entries are then never mapped
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
 		for (int sourceIndex = 0; sourceIndex < sources.size(); sourceIndex++) {
-			if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+			if (
+				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
+			) {
 				return false;
 			}
 
@@ -164,6 +175,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId);
 			final SourceTable previousSourceTable = connectorNamespace.getSourceTable(sourceKey);
+			final SourceCursors cursorsBefore = isIncremental(source) ? connectorNamespace.getSourceCursors(sourceKey) : null;
 
 			// Execute the source and retry the operation
 			// in case the source fails but the previous source table didn't fail.
@@ -178,9 +190,16 @@ public abstract class AbstractStrategy implements IStrategy {
 				.build()
 				.run(() -> runSource(connectorId, attributes, source, previousSourceTable));
 
+			if (cursorsBefore != null) {
+				final SourceCursors cursorsAfter = connectorNamespace.getSourceCursors(sourceKey);
+				cursorRollbacks.add(() -> connectorNamespace.rollBackSourceCursors(sourceKey, cursorsBefore, cursorsAfter));
+			}
+
 			// Interrupted while it ran, the source may have been cut short (an executeForEachEntryOf stops between two
 			// entries): it did not answer, whatever it returned
-			if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+			if (
+				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
+			) {
 				return false;
 			}
 
@@ -257,7 +276,9 @@ public abstract class AbstractStrategy implements IStrategy {
 				compute.accept(computeUpdaterProcessor);
 
 				// Interrupted during a compute, the last one included: the table is half computed and is not stored
-				if (skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), connectorId, hostname)) {
+				if (
+					skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
+				) {
 					return false;
 				}
 
@@ -282,6 +303,19 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
+	 * Whether the given source is incremental: an eventLog or ipmiSel source, or a file source in LOG mode.
+	 *
+	 * @param source The source to check
+	 * @return {@code true} if the source only returns the entries added since the previous poll
+	 */
+	protected static boolean isIncremental(final Source source) {
+		if (source instanceof FileSource fileSource) {
+			return fileSource.getMode() == FileSourceProcessingMode.LOG;
+		}
+		return source instanceof EventLogSource || source instanceof IpmiSelSource;
+	}
+
+	/**
 	 * Whether the thread running this strategy is interrupted: its deadline expired or it was cancelled. Such a thread
 	 * may be an abandoned one, still running while the next run of the same host fills the same telemetry, so it
 	 * sends no more request and writes nothing more.
@@ -296,21 +330,28 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * Whether the thread of the job is interrupted (its deadline expired or it was cancelled), in which case the given
 	 * sources are skipped. An interrupted thread may be an abandoned one, still running while the next run of the same
 	 * host fills the same {@link ConnectorNamespace}: it writes nothing there, and its mapping is skipped too, so that
-	 * it never reads the tables it did not refresh.
+	 * it never reads the tables it did not refresh. The cursors its incremental sources moved are rolled back, as their
+	 * entries are not mapped.
 	 *
 	 * @param remainingSources The sources of the job not executed yet
+	 * @param cursorRollbacks  The rollbacks of the cursors of the incremental sources the job polled
 	 * @param connectorId      The connector identifier
 	 * @param hostname         The host name
 	 * @return {@code true} if the thread is interrupted and the remaining sources were skipped
 	 */
 	private static boolean skipSourcesIfInterrupted(
 		final List<Source> remainingSources,
+		final List<Runnable> cursorRollbacks,
 		final String connectorId,
 		final String hostname
 	) {
 		if (!Thread.currentThread().isInterrupted()) {
 			return false;
 		}
+
+		// The job is not mapped: the next poll of its incremental sources must return their entries again. Only a cursor
+		// still where this poll left it is moved back
+		cursorRollbacks.forEach(Runnable::run);
 
 		log.warn(
 			"Hostname {} - The job was interrupted. Connector {} - Skipped sources: {}.",

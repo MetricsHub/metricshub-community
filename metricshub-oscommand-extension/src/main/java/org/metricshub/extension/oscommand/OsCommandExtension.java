@@ -320,6 +320,8 @@ public class OsCommandExtension implements IProtocolExtension {
 				return DOWN;
 			}
 		} catch (Exception e) {
+			// An interrupted check (job timeout, reload): keep the interrupt so that no other protocol is checked
+			OsCommandService.restoreInterrupt(e);
 			log.debug(
 				"Hostname {} - Checking SSH protocol status. SSH exception when performing a local OS command test: ",
 				hostname,
@@ -360,6 +362,8 @@ public class OsCommandExtension implements IProtocolExtension {
 				return DOWN;
 			}
 		} catch (Exception e) {
+			// An interrupted check (job timeout, reload): keep the interrupt so that no other protocol is checked
+			OsCommandService.restoreInterrupt(e);
 			log.debug(
 				"Hostname {} - Checking SSH protocol status. SSH exception when performing a remote SSH command test: ",
 				hostname,
