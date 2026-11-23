@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.CONNECTOR;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -236,5 +237,27 @@ class SimpleMappingTest {
 		assertEquals(1, monitors("mono").size());
 		assertEquals(1, monitors("multi").size());
 		assertNull(multi.getAttribute(MONITOR_ATTRIBUTE_ID));
+	}
+
+	@Test
+	void collectOfASimpleMappingReachesOnlyTheSingleton() {
+		new DiscoveryStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
+
+		// Instances of an older table mapping of the same connector, kept by a removalDelay
+		final Map<String, Monitor> stale = new HashMap<>();
+		for (final String type : List.of("mono", "multi")) {
+			final Monitor monitor = Monitor.builder().type(type).id(CONNECTOR_ID + "_" + type + "_old").build();
+			monitor.getAttributes().put(MONITOR_ATTRIBUTE_ID, "old");
+			monitor.getAttributes().put(MONITOR_ATTRIBUTE_CONNECTOR_ID, CONNECTOR_ID);
+			monitors(type).put(monitor.getId(), monitor);
+			stale.put(type, monitor);
+		}
+
+		new CollectStrategy(telemetryManager, STRATEGY_TIME, clientsExecutorMock, extensionManager).run();
+
+		for (final String type : List.of("mono", "multi")) {
+			assertEquals(42.0, metric(monitors(type).get(CONNECTOR_ID + "_" + type), "test.limit"));
+			assertNull(metric(stale.get(type), "test.limit"));
+		}
 	}
 }

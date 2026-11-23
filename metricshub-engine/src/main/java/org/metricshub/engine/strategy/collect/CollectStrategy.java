@@ -262,7 +262,17 @@ public class CollectStrategy extends AbstractStrategy {
 				.sources(collect.getSources(), collect.getExecutionOrder().stream().toList(), collect.getSourceDep(), jobInfo)
 				.build();
 
-			if (collect instanceof MultiInstanceCollect multiInstanceCollect) {
+			if (monitorJob.getValue().isSingleton()) {
+				// The singleton of a simple mapping, by its internal id: never a stale keyed instance kept by removalDelay
+				final Monitor singleton = telemetryManager.findMonitorByTypeAndId(
+					monitorType,
+					currentConnector.getCompiledFilename() + "_" + monitorType
+				);
+				if (singleton != null) {
+					processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo);
+					processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+				}
+			} else if (collect instanceof MultiInstanceCollect multiInstanceCollect) {
 				final Map<String, Monitor> monitors = telemetryManager.findMonitorsByType(monitorType);
 				if (monitors == null) {
 					return;
@@ -363,8 +373,7 @@ public class CollectStrategy extends AbstractStrategy {
 
 		final String mappingSource = mapping.getSource();
 
-		// A simple mapping gives one row without any cell, and the job's keys are empty, so a multiInstance collect
-		// finds the singleton of the connector without a key lookup
+		// A simple mapping gives one row without any cell, read for its singleton
 		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
 			mapping,
 			connectorId,
