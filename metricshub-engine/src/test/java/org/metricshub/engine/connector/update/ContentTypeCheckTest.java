@@ -897,6 +897,9 @@ class ContentTypeCheckTest {
 			          id: other
 			        metrics:
 			          other.count: rate($1)
+			          other.rate: rate($0)
+			          other.size: ${awk::$0 * 2}
+			          other.price: $$0
 			""");
 		assertEquals(
 			Set.of(
@@ -906,7 +909,9 @@ class ContentTypeCheckTest {
 				"COLUMN_IN_SIMPLE_MAPPING monitors.thing.simple.mapping.metrics.thing.limit",
 				"TABLE_INTERPOLATED monitors.thing.simple.mapping.attributes.vendor -> " + THING + "table}",
 				"COLUMN_IN_SIMPLE_MAPPING monitors.other.discovery.mapping.attributes.id",
-				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.count"
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.count",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.rate",
+				"COLUMN_IN_SIMPLE_MAPPING monitors.other.collect.mapping.metrics.other.size"
 			),
 			lines(findings)
 		);

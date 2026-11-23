@@ -21,8 +21,6 @@ package org.metricshub.engine.connector.update;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -46,6 +44,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -134,6 +133,12 @@ public class ContentTypeCheck {
 	private static final String EXISTING_SOURCE = "an existing source";
 	private static final String NONE = "none";
 	private static final String SCRIPT_SELECTS = "lines and columns selected by the script";
+
+	/**
+	 * A column anywhere in a value, <code>$0</code> included (a function argument, an awk expression), not escaped as
+	 * <code>$$</code>.
+	 */
+	private static final Pattern ANY_COLUMN_PATTERN = Pattern.compile("(?<!\\$)\\$\\d+");
 
 	private final String connectorId;
 	private final Map<String, Source> sources = new LinkedHashMap<>();
@@ -532,7 +537,7 @@ public class ContentTypeCheck {
 			add(NONE, location, Rule.TABLE_MAPPING_WITHOUT_SOURCE, "a source", NONE);
 		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
-			// What the mapping reads as a column: $0 too, when it is the whole value
+			// What the mapping reads as a column: $0 too, anywhere
 			if (simple && readsColumn(value)) {
 				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
 			}
@@ -558,11 +563,10 @@ public class ContentTypeCheck {
 	}
 
 	/**
-	 * @return whether the mapping reads the value as a column: <code>$1</code> anywhere, <code>$0</code> as the whole
-	 *         value
+	 * @return whether the mapping reads the value as a column: <code>$1</code> or <code>$0</code> anywhere
 	 */
 	private static boolean readsColumn(final String value) {
-		return COLUMN_REFERENCE_PATTERN.matcher(value).find() || COLUMN_PATTERN.matcher(value).matches();
+		return ANY_COLUMN_PATTERN.matcher(value).find();
 	}
 
 	/**
