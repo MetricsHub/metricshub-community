@@ -23,6 +23,7 @@ package org.metricshub.extension.oscommand.file;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -102,6 +103,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @throws IOException When the request fails.
 	 */
 	private <T> T send(final SftpRequest<T> request) throws IOException {
+		// A thread already interrupted (an expired deadline of its job) sends nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedIOException("Interrupted before the SFTP request was sent");
+		}
 		final T result;
 		try {
 			result = request.send();
@@ -130,6 +135,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @return true if connection succeeds, false otherwise
 	 */
 	public boolean connectSshClient() {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
 		try {
 			sshClient.connect(sshConfiguration.getTimeout().intValue() * 1000, sshConfiguration.getPort());
 			return true;

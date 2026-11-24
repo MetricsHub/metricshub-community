@@ -102,6 +102,10 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		final String recordOutputDirectory,
 		final RequestStats requestStats
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the WMI query was sent", new InterruptedException());
+		}
 		final String username = wmiConfig.getUsername();
 		char[] password = wmiConfig.getPassword();
 		// If the username is not provided, null will be used instead of the provided password.
@@ -201,6 +205,10 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("wmi.local_files") final List<String> localFiles,
 		final RequestStats requestStats
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) runs nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the WMI command was sent", new InterruptedException());
+		}
 		boolean answered = false;
 		try {
 			LoggingHelper.trace(

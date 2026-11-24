@@ -85,6 +85,10 @@ public class SqlRequestExecutor {
 		final TelemetryManager telemetryManager,
 		final JdbcDriverSelection driverSelection
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the SQL query was sent", new InterruptedException());
+		}
 		try {
 			final String url = String.valueOf(jdbcConfig.getUrl());
 

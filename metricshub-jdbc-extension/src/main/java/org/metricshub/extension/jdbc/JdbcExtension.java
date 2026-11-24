@@ -473,6 +473,10 @@ public class JdbcExtension implements IProtocolExtension {
 		if (password != null) {
 			props.setProperty("password", new String(password));
 		}
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
 		// One attempt: connect, isValid and close
 		final boolean isValid;
 		try (Connection connection = loaded.driver().connect(jdbcUrl, props)) {

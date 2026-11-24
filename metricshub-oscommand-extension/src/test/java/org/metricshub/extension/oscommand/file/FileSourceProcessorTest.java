@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -454,6 +455,40 @@ class FileSourceProcessorTest {
 
 		assertEquals("content", operations.readFileContent("/a.log"));
 		assertFalse(operations.connectSshClient());
+	}
+
+	@Test
+	void remoteFileOperations_connectOnAnInterruptedThreadConnectsNothing() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+
+		// An earlier deadline of the job interrupted the thread
+		Thread.currentThread().interrupt();
+		try {
+			assertFalse(operations.connectSshClient());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		verify(sshClient, never()).connect(anyInt(), anyInt());
+		assertTrue(requestStats.snapshot().isEmpty());
+	}
+
+	@Test
+	void remoteFileOperations_requestOnAnInterruptedThreadSendsNothing() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+
+		// An earlier deadline of the job interrupted the thread
+		Thread.currentThread().interrupt();
+		try {
+			assertThrows(InterruptedIOException.class, () -> operations.readFileContent("/a.log"));
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		verify(sshClient, never()).readFile(any(), any(), any());
+		assertTrue(requestStats.snapshot().isEmpty());
 	}
 
 	/**

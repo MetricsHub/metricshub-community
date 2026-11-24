@@ -68,6 +68,10 @@ public class PingRequestExecutor {
 		@SpanAttribute("ping.timeout") final int timeout,
 		final RequestStats requestStats
 	) throws UnknownHostException {
+		// A thread already interrupted (an expired deadline of its job) resolves and pings nothing, and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
 		final InetAddress pingAddress;
 		try {
 			pingAddress = resolve(hostname);

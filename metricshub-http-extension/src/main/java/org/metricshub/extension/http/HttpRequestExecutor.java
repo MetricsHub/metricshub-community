@@ -28,6 +28,7 @@ import static org.springframework.util.Assert.notNull;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.Map;
@@ -442,6 +443,11 @@ public class HttpRequestExecutor {
 		int timeout,
 		final RequestStats requestStats
 	) throws IOException {
+		// A thread already interrupted (an expired deadline of its job) sends nothing and counts nothing:
+		// HttpURLConnection connects and sends without looking at the interrupt
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedIOException("Interrupted before the HTTP request was sent");
+		}
 		final HttpResponse httpResponse;
 		try {
 			httpResponse = HttpClient.sendRequest(

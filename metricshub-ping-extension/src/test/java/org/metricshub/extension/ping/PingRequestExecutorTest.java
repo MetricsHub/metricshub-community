@@ -3,6 +3,7 @@ package org.metricshub.extension.ping;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -89,6 +90,21 @@ class PingRequestExecutorTest {
 		executor.elapsedMillis = TIMEOUT_MS + 20;
 		executor.ping(HOSTNAME, TIMEOUT_MS, stats);
 		assertEquals(counts(2, 1, 0), stats.snapshot());
+	}
+
+	@Test
+	void testPingOnAnInterruptedThreadCountsNothing() throws Exception {
+		executor.reachable = true;
+		// An earlier deadline of the job interrupted the thread: nothing is resolved nor pinged
+		Thread.currentThread().interrupt();
+		try {
+			assertFalse(executor.ping(HOSTNAME, TIMEOUT_MS, stats));
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+		assertNull(executor.resolvedHostname);
+		assertEquals(Map.of(), stats.snapshot());
 	}
 
 	@Test

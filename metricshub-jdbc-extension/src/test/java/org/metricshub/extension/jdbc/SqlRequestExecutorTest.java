@@ -1,12 +1,17 @@
 package org.metricshub.extension.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.SocketTimeoutException;
@@ -26,6 +31,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.jdbc.client.JdbcClient;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistry;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -310,6 +316,28 @@ class SqlRequestExecutorTest {
 	}
 
 	@Test
+	void testQueryOnAnInterruptedThreadCountsNothing() {
+		final TelemetryManager telemetryManager = newTelemetryManager();
+		final JdbcConfiguration configuration = newConfiguration(URL, "");
+		try (MockedStatic<JdbcClient> client = mockStatic(JdbcClient.class)) {
+			// An earlier deadline of the job interrupted the thread: nothing is sent
+			Thread.currentThread().interrupt();
+			try {
+				final ClientException e = assertThrows(
+					ClientException.class,
+					() -> executor.executeSql(PROTOCOL_HOSTNAME, configuration, SELECT_ALL, false, telemetryManager, H2_SELECTION)
+				);
+				assertInstanceOf(InterruptedException.class, e.getCause());
+				assertTrue(Thread.currentThread().isInterrupted());
+			} finally {
+				Thread.interrupted();
+			}
+			client.verify(() -> JdbcClient.execute(any(), any(), any(), any(), anyBoolean(), anyInt(), any()), never());
+		}
+		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
 	void testNullTelemetryManagerRecordsNothing() throws ClientException {
 		assertEquals(
 			List.of(List.of("1", "one"), List.of("2", "two")),
@@ -351,6 +379,24 @@ class SqlRequestExecutorTest {
 			}
 		}
 		assertEquals(counts(0, 2, 1), stats.snapshot());
+	}
+
+	@Test
+	void testHealthCheckOnAnInterruptedThreadCountsNothing() throws SQLException {
+		final RequestStats stats = new RequestStats();
+		final Driver driver = mock(Driver.class);
+		try (MockedStatic<JdbcDriverRegistryHolder> holder = mockDriver(driver)) {
+			// An earlier deadline of the job interrupted the thread: nothing is sent
+			Thread.currentThread().interrupt();
+			try {
+				assertEquals(false, JdbcExtension.isDatabaseAlive(URL, "sa", new char[0], 30, H2_SELECTION, stats));
+				assertTrue(Thread.currentThread().isInterrupted());
+			} finally {
+				Thread.interrupted();
+			}
+		}
+		verify(driver, never()).connect(anyString(), any());
+		assertEquals(Map.of(), stats.snapshot());
 	}
 
 	@Test

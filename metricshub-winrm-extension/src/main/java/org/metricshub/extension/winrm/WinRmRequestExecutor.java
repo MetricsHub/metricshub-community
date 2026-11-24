@@ -613,23 +613,24 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * Run one WinRM request in the calling thread, which waits for it, and count its outcome once it has
 	 * returned or thrown: completed when it returns, otherwise as classified by {@link #outcomeOf(Exception)}.
 	 * A {@link WqlSyntaxException} is not counted: winrm-java parses the WQL locally, before sending anything.
-	 * Neither is the timeout of a thread that was already interrupted when the request began.
+	 * A thread that is already interrupted (an expired deadline of its job) sends nothing and counts nothing.
 	 *
 	 * @param <T>          The type of the request's result
 	 * @param request      The request, a blocking winrm-java call
 	 * @param requestStats The request statistics of the monitored resource, or {@code null} to count nothing
 	 * @return The result of the request
+	 * @throws WinRMClientException caused by an {@link InterruptedException} when the thread is already interrupted
 	 */
 	static <T> T executeRecorded(final Supplier<T> request, final RequestStats requestStats) {
-		// A thread already interrupted (an expired deadline of its job) fails before sending anything
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		if (Thread.currentThread().isInterrupted()) {
+			throw new WinRMClientException("Interrupted before the WinRM request was sent", new InterruptedException());
+		}
 		final T result;
 		try {
 			result = request.get();
 		} catch (RuntimeException e) {
-			final RequestOutcome outcome = outcomeOf(e);
-			if (!(e instanceof WqlSyntaxException) && !(interruptedBefore && outcome == RequestOutcome.TIMEOUT)) {
-				IWinRequestExecutor.record(requestStats, WinRmExtension.IDENTIFIER, outcome);
+			if (!(e instanceof WqlSyntaxException)) {
+				IWinRequestExecutor.record(requestStats, WinRmExtension.IDENTIFIER, outcomeOf(e));
 			}
 			throw e;
 		}
