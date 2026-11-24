@@ -726,14 +726,20 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessExecuteForEachEntryParallelFailedEntry() {
-		// Two workers: a fails at once, b and c take 200 ms, d is queued until b ends
+		// Two workers: a fails once b runs, b and c take 200 ms, d is queued until b ends
 		final Set<String> requested = ConcurrentHashMap.newKeySet();
 		final AtomicBoolean bEnded = new AtomicBoolean();
+		final CountDownLatch bStarted = new CountDownLatch(1);
 		final Answer<SourceTable> answer = invocation -> {
 			final String entry = invocation.<HttpSource>getArgument(0).getPath();
 			requested.add(entry);
 			if ("a".equals(entry)) {
+				// Without this wait, a slow pool thread could see the failure before b sends its request
+				assertTrue(bStarted.await(5, TimeUnit.SECONDS));
 				return SourceTable.failed("Refused");
+			}
+			if ("b".equals(entry)) {
+				bStarted.countDown();
 			}
 			Thread.sleep(200);
 			bEnded.compareAndSet(false, "b".equals(entry));
