@@ -388,6 +388,54 @@ class JmxRequestExecutorTest {
 	}
 
 	@Test
+	void testFetchMBeanAttributeTimeoutIsKeptAfterALaterError() throws Exception {
+		final JmxConfiguration config = JmxConfiguration.builder().hostname("testhost").port(1099).timeout(30L).build();
+
+		final ObjectName objectName = new ObjectName("java.lang:type=Memory");
+		when(mBeanServerConnectionMock.queryNames(any(ObjectName.class), eq(null))).thenReturn(Set.of(objectName));
+		when(mBeanServerConnectionMock.getAttribute(objectName, "Slow")).thenThrow(
+			new IOException("Read failed", new SocketTimeoutException("Read timed out"))
+		);
+		when(mBeanServerConnectionMock.getAttribute(objectName, "Lost")).thenThrow(new IOException("Connection lost"));
+
+		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
+			config,
+			"java.lang:type=Memory",
+			List.of("Slow", "Lost"),
+			List.of(),
+			requestStats,
+			null
+		);
+
+		assertEquals(List.of(List.of("", "")), result);
+		assertCounts(0, 1, 0);
+	}
+
+	@Test
+	void testFetchMBeanAttributeTimeoutIsKeptWhenCloseFails() throws Exception {
+		final JmxConfiguration config = JmxConfiguration.builder().hostname("testhost").port(1099).timeout(30L).build();
+
+		final ObjectName objectName = new ObjectName("java.lang:type=Memory");
+		when(mBeanServerConnectionMock.queryNames(any(ObjectName.class), eq(null))).thenReturn(Set.of(objectName));
+		when(mBeanServerConnectionMock.getAttribute(objectName, "Slow")).thenThrow(
+			new IOException("Read failed", new SocketTimeoutException("Read timed out"))
+		);
+		doThrow(new IOException("Close failed")).when(jmxConnectorMock).close();
+
+		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
+			config,
+			"java.lang:type=Memory",
+			List.of("Slow"),
+			List.of(),
+			requestStats,
+			null
+		);
+
+		assertEquals(List.of(List.of("")), result);
+		assertCounts(0, 1, 0);
+	}
+
+	@Test
 	void testFetchMBeanMalformedPatternSendsNothing() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("testhost").port(1099).timeout(30L).build();
 

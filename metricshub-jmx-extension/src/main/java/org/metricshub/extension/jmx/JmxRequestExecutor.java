@@ -239,8 +239,8 @@ public class JmxRequestExecutor {
 							matchedObjectName,
 							e
 						);
-						// The server answered the other errors; a communication error fails the attempt
-						if (e instanceof IOException) {
+						// The server answered the other errors; a communication error fails the attempt, a timeout is kept
+						if (e instanceof IOException && outcome != RequestOutcome.TIMEOUT) {
 							outcome = RequestOutcome.of(e);
 						}
 					}
@@ -251,7 +251,8 @@ public class JmxRequestExecutor {
 			}
 		} catch (Exception e) {
 			log.debug("Hostname {} - Error connecting to JMX. {} → ", hostname, url, e);
-			return new JmxAttempt<>(results, outcomeOf(e));
+			// An error while closing does not hide the timeout of a read
+			return new JmxAttempt<>(results, outcome == RequestOutcome.TIMEOUT ? outcome : outcomeOf(e));
 		}
 		return new JmxAttempt<>(results, outcome);
 	}
