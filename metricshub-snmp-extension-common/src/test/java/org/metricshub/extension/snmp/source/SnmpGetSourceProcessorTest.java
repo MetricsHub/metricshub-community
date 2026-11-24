@@ -44,7 +44,7 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.ofText(null), result);
+		assertEquals(SourceTable.empty(), result);
 	}
 
 	// Test case for when snmpconfiguration is null."
@@ -55,7 +55,7 @@ class SnmpGetSourceProcessorTest {
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(null);
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.ofText(null), result);
+		assertEquals(SourceTable.empty(), result);
 	}
 
 	// Test case when the requestExecutor throws an exception.
@@ -69,7 +69,7 @@ class SnmpGetSourceProcessorTest {
 			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname");
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.ofText(null), result);
+		assertEquals(SourceTable.empty(), result);
 	}
 
 	//Test case when requestExecutor returns a valid result.
@@ -88,7 +88,7 @@ class SnmpGetSourceProcessorTest {
 		assertEquals(SourceTable.ofText("result"), result);
 	}
 
-	// The value is the text, whole: no split on ";" or on a line break. No value (null) is an empty text.
+	// The value is the text, whole: no split on ";" or on a line break. An empty value is an empty text; no value (null) is no row, as a failure.
 	@Test
 	void testProcess_ValueIsTheWholeText() throws Exception {
 		SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid("test_oid").build();
@@ -108,7 +108,7 @@ class SnmpGetSourceProcessorTest {
 			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
 		);
 		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
-		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceTable.empty(), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 	}
 
 	// output: table: one row of one cell holding the value, never split; an empty value is one empty cell; no value,

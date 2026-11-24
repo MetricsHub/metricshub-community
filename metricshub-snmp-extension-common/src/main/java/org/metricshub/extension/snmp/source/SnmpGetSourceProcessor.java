@@ -57,13 +57,13 @@ public class SnmpGetSourceProcessor {
 	 * Fetches the value of the OID of the provided {@link SnmpGetSource} from an SNMP device and returns it whole, a
 	 * <code>;</code> or a line break in the value does not split it: as a text, or with <code>output: table</code> as a
 	 * table of one row of one cell.
-	 * If any errors occur during the fetch, or if the provided configurations are invalid, an empty text is returned,
-	 * or an empty table (no row) with <code>output: table</code>.
+	 * If any errors occur during the fetch, or if the provided configurations are invalid, an empty table (no row) is
+	 * returned, whatever the output: the failure of every source, which a custom concatenation skips.
 	 *
 	 * @param snmpGetSource    The {@link SnmpGetSource} defining the SNMP OID.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} holding the value, or an empty text or table if processing fails.
+	 * @return a {@link SourceTable} holding the value, or an empty table if processing fails.
 	 */
 	public SourceTable process(
 		final SnmpGetSource snmpGetSource,
@@ -75,10 +75,8 @@ public class SnmpGetSourceProcessor {
 				"Hostname {} - SNMP Get Source cannot be null, the SNMP Get operation will return an empty result.",
 				telemetryManager.getHostname()
 			);
-			return SourceTable.ofText(null);
+			return SourceTable.empty();
 		}
-		final boolean table = snmpGetSource.getOutputContentType() == ContentType.TABLE;
-		final SourceTable noResult = table ? SourceTable.empty() : SourceTable.ofText(null);
 
 		// Find the configured protocol (Snmp or SnmpV3)
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
@@ -89,7 +87,7 @@ public class SnmpGetSourceProcessor {
 				telemetryManager.getHostname(),
 				snmpGetSource
 			);
-			return noResult;
+			return SourceTable.empty();
 		}
 
 		// Retrieve the hostname from the ISnmpConfiguration, otherwise from the telemetryManager
@@ -104,17 +102,14 @@ public class SnmpGetSourceProcessor {
 				telemetryManager.getHostname()
 			);
 
-			if (!table) {
-				// A null value is an empty text
-				return SourceTable.ofText(result);
-			}
-
 			if (result != null) {
-				return SourceTable.ofTable(
-					Stream.of(
-						Stream.of(result).collect(Collectors.toList()) // NOSONAR
-					).collect(Collectors.toList()) // NOSONAR
-				);
+				return snmpGetSource.getOutputContentType() != ContentType.TABLE
+					? SourceTable.ofText(result)
+					: SourceTable.ofTable(
+						Stream.of(
+							Stream.of(result).collect(Collectors.toList()) // NOSONAR
+						).collect(Collectors.toList()) // NOSONAR
+					);
 			}
 		} catch (Exception e) {
 			// NOSONAR on interruption
@@ -127,6 +122,6 @@ public class SnmpGetSourceProcessor {
 			);
 		}
 
-		return noResult;
+		return SourceTable.empty();
 	}
 }

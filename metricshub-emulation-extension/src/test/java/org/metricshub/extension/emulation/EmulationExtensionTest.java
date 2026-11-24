@@ -230,10 +230,10 @@ class EmulationExtensionTest {
 		);
 
 		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1").build();
-		// No emulation input directory → returns an empty text
+		// No emulation input directory → returns an empty table, the failure of every source
 		final SourceTable result = emulationExtension.processSource(snmpSource, "connector", tm);
 
-		assertEquals(SourceTable.ofText(null), result);
+		assertEquals(SourceTable.empty(), result);
 	}
 
 	@Test
