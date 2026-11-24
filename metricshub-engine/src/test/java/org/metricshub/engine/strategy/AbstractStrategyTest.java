@@ -17,16 +17,30 @@ import static org.metricshub.engine.constants.Constants.HOST_NAME;
 import static org.metricshub.engine.constants.Constants.MONITOR_ID_ATTRIBUTE_VALUE;
 import static org.metricshub.engine.constants.Constants.TEST_CONNECTOR_ID;
 import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMAT;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
@@ -36,24 +50,32 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.detection.ConnectorSelection;
 import org.metricshub.engine.strategy.detection.ConnectorTestResult;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
+import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.StateSetMetric;
 
@@ -116,6 +138,35 @@ class AbstractStrategyTest {
 				)
 				.getValue()
 		);
+	}
+
+	@Test
+	void testInterruptedThreadWritesNoHostMetric() {
+		final Monitor hostMonitor = Monitor.builder().type(KnownMonitorType.HOST.getKey()).isEndpoint(true).build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(new HashMap<>(Map.of(HOST, Map.of(MONITOR_ID_ATTRIBUTE_VALUE, hostMonitor))))
+			.hostConfiguration(
+				HostConfiguration.builder().hostId(HOST_ID).hostname(HOST_NAME).enableSelfMonitoring(true).build()
+			)
+			.build();
+		final CollectStrategy collectStrategy = CollectStrategy.builder()
+			.telemetryManager(telemetryManager)
+			.strategyTime(STRATEGY_TIME)
+			.clientsExecutor(new ClientsExecutor())
+			.extensionManager(new ExtensionManager())
+			.build();
+
+		// An abandoned thread shares the host monitor with the next run: it writes nothing there
+		Thread.currentThread().interrupt();
+		try {
+			collectStrategy.setJobDurationMetric("collect", "enclosure", TEST_CONNECTOR_ID, 0L, 1000L);
+			collectStrategy.collectHostConfigured(HOST_NAME);
+			collectStrategy.collectHostObserved(1.0);
+
+			assertTrue(hostMonitor.getMetrics().isEmpty());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test
@@ -388,6 +439,39 @@ class AbstractStrategyTest {
 	}
 
 	@Test
+	void testInterruptedValidationLeavesConnectorStatus() {
+		final Connector connector = Connector.builder()
+			.connectorIdentity(
+				ConnectorIdentity.builder()
+					.compiledFilename(TEST_CONNECTOR_ID)
+					.detection(
+						Detection.builder()
+							.appliesTo(Set.of(DeviceKind.LINUX))
+							.criteria(
+								List.of(DeviceTypeCriterion.builder().type("deviceType").keep(Set.of(DeviceKind.LINUX)).build())
+							)
+							.build()
+					)
+					.build()
+			)
+			.build();
+		final CollectStrategy strategy = newValidationStrategy(connector);
+		assertTrue(strategy.validateConnectorDetectionCriteria(connector, HOST_NAME, "collect"));
+		assertConnectorStatus(strategy.getTelemetryManager(), STATE_SET_METRIC_OK, true, 0);
+
+		// Interrupted validations (job timeout, reload) count no failure and never stop the connector's job
+		Thread.currentThread().interrupt();
+		try {
+			for (int run = 0; run < MAX_CONSECUTIVE_DETECTION_FAILURES; run++) {
+				assertTrue(strategy.validateConnectorDetectionCriteria(connector, HOST_NAME, "collect"));
+			}
+			assertConnectorStatus(strategy.getTelemetryManager(), STATE_SET_METRIC_OK, true, 0);
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
 	void testOneHealthCheckValidation() {
 		final Criterion detectionCriterion = DeviceTypeCriterion.builder()
 			.type("deviceType")
@@ -656,6 +740,319 @@ class AbstractStrategyTest {
 		assertFalse(AbstractStrategy.emptyResult(copy) == AbstractStrategy.emptyResult(copy));
 	}
 
+	@Test
+	void testInterruptedJobSkipsRemainingSources() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(SnmpTableSource.class)).when(extension).getSupportedSources();
+		final AtomicInteger requests = new AtomicInteger();
+		doAnswer(invocation -> {
+			// The job deadline expires during the second source, which still returns a table
+			if (requests.incrementAndGet() == 2) {
+				Thread.currentThread().interrupt();
+			}
+			return SourceTable.ofTable(SourceTable.csvToTable("a;1", ";"));
+		}).when(extension).processSource(any(), anyString(), any());
+
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		// A table written by another run (the next run, when this thread is an abandoned one)
+		namespace.addSourceTable("${source::c}", SourceTable.ofTable(SourceTable.csvToTable("old;1", ";")));
+
+		final List<Source> sources = List.of("a", "b", "c")
+			.stream()
+			.map(
+				key -> (Source) SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::" + key + "}").build()
+			)
+			.toList();
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				sources,
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("simple")
+					.monitorType("enclosure")
+					.build()
+			);
+
+			assertEquals(2, requests.get());
+			assertFalse(allAnswered);
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertEquals(List.of(List.of("a", "1")), namespace.getSourceTable("${source::a}").getTable());
+			// The source interrupted while it ran may have been cut short: it did not answer, whatever it returned.
+			// The interrupted thread writes nothing more: the table of another run is left alone
+			assertNull(namespace.getSourceTable("${source::b}"));
+			assertEquals(List.of(List.of("old", "1")), namespace.getSourceTable("${source::c}").getTable());
+			assertTrue(namespace.getUnansweredSourceKeys().isEmpty());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptedJobRollsBackIncrementalCursors() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		namespace.setSourceCursor("${source::sel}", "sel-10");
+
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(IpmiSelSource.class, SnmpTableSource.class)).when(extension).getSupportedSources();
+		// The SEL poll answers and moves its cursor, then the job deadline expires during the next source
+		doAnswer(invocation -> {
+			if (invocation.getArgument(0) instanceof IpmiSelSource) {
+				namespace.setSourceCursor("${source::sel}", "sel-20");
+				return SourceTable.ofTable(SourceTable.csvToTable("event;1", ";"));
+			}
+			Thread.currentThread().interrupt();
+			return SourceTable.empty();
+		}).when(extension).processSource(any(), anyString(), any());
+
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				List.of(
+					IpmiSelSource.builder().key("${source::sel}").build(),
+					SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::next}").build()
+				),
+				null,
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("discovery")
+					.monitorType("enclosure")
+					.build(),
+				cursorRollbacks
+			);
+
+			// The job is not mapped: the next poll must return the SEL events again
+			assertFalse(allAnswered);
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+			// The rollbacks already ran: the check before the mapping runs none again
+			assertTrue(cursorRollbacks.isEmpty());
+			assertTrue(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptAfterTheLastSourceCheckRollsBackAtTheMappingCheck() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final ConnectorNamespace namespace = spy(ConnectorNamespace.builder().build());
+		telemetryManager.getHostProperties().getConnectorNamespaces().put(TEST_CONNECTOR_ID, namespace);
+		namespace.setSourceCursor("${source::sel}", "sel-10");
+
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(IpmiSelSource.class)).when(extension).getSupportedSources();
+		doAnswer(invocation -> {
+			namespace.setSourceCursor("${source::sel}", "sel-20");
+			return SourceTable.ofTable(SourceTable.csvToTable("event;1", ";"));
+		}).when(extension).processSource(any(), anyString(), any());
+
+		// The job deadline expires while the table of the last source is stored: after the last check of the sources
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return invocation.callRealMethod();
+		}).when(namespace).addSourceTable(eq("${source::sel}"), any());
+
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				List.of(IpmiSelSource.builder().key("${source::sel}").build()),
+				null,
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("discovery")
+					.monitorType("enclosure")
+					.build(),
+				cursorRollbacks
+			);
+
+			// The sources ran to their end: their rollback is left to the caller
+			assertTrue(allAnswered);
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertEquals("sel-20", namespace.getSourceCursor("${source::sel}"));
+			assertEquals(1, cursorRollbacks.size());
+
+			// The check before the mapping skips it and rolls the cursor back in the same decision
+			assertTrue(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+			assertTrue(cursorRollbacks.isEmpty());
+
+			// A second check rolls back nothing more
+			assertTrue(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testMappingCheckWithoutInterruptKeepsTheCursors() {
+		final AtomicInteger rollbacks = new AtomicInteger();
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		cursorRollbacks.add(rollbacks::incrementAndGet);
+
+		assertFalse(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+		assertEquals(0, rollbacks.get());
+		assertEquals(1, cursorRollbacks.size());
+	}
+
+	@Test
+	void testInterruptedLastComputeStoresNoTable() throws Exception {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(HttpSource.class)).when(extension).getSupportedSources();
+		doReturn(SourceTable.ofText("{\"a\":1}")).when(extension).processSource(any(), anyString(), any());
+
+		// The job deadline expires during the last (and only) compute of the source
+		final ClientsExecutor clientsExecutor = mock(ClientsExecutor.class);
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return List.of(List.of("x", "1"));
+		}).when(clientsExecutor).executeJson2Table(any(), any(), any());
+
+		final HttpSource source = HttpSource.builder()
+			.url("/x")
+			.key("${source::a}")
+			.computes(List.of(Json2Csv.builder().properties(List.of("a")).build()))
+			.build();
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutor)
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				List.of(source),
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("simple")
+					.monitorType("enclosure")
+					.build()
+			);
+
+			// The half computed table is not stored: the namespace may be the next run's
+			assertFalse(allAnswered);
+			assertNull(
+				telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID).getSourceTable("${source::a}")
+			);
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptedDetectionSkipsRemainingCriteria() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(SnmpGetCriterion.class)).when(extension).getSupportedCriteria();
+		final AtomicInteger requests = new AtomicInteger();
+		doAnswer(invocation -> {
+			requests.incrementAndGet();
+			Thread.currentThread().interrupt();
+			return CriterionTestResult.success(invocation.getArgument(0), "ok");
+		}).when(extension).processCriterion(any(), anyString(), any(), anyBoolean());
+
+		final Connector connector = Connector.builder()
+			.connectorIdentity(
+				ConnectorIdentity.builder()
+					.compiledFilename(TEST_CONNECTOR_ID)
+					.detection(
+						Detection.builder()
+							.appliesTo(Set.of(DeviceKind.LINUX))
+							.criteria(
+								List.of(
+									SnmpGetCriterion.builder().oid("1.3.1").build(),
+									SnmpGetCriterion.builder().oid("1.3.2").build()
+								)
+							)
+							.build()
+					)
+					.build()
+			)
+			.build();
+
+		try {
+			final ConnectorTestResult result = new ConnectorSelection(
+				telemetryManager,
+				new ClientsExecutor(telemetryManager),
+				Set.of(TEST_CONNECTOR_ID),
+				ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build()
+			).runConnectorDetectionCriteria(connector, HOST_NAME);
+
+			assertEquals(1, requests.get());
+			// A detection cut short never matches
+			assertFalse(result.isSuccess());
+			assertEquals(2, result.getCriterionTestResults().size());
+			assertTrue(Thread.currentThread().isInterrupted());
+
+			// The only criterion reports a success, but the interrupt arrived while it was tested
+			Thread.interrupted();
+			connector.getConnectorIdentity()
+				.getDetection()
+				.setCriteria(List.of(SnmpGetCriterion.builder().oid("1.3.1").build()));
+			final ConnectorTestResult lastCriterionResult = new ConnectorSelection(
+				telemetryManager,
+				new ClientsExecutor(telemetryManager),
+				Set.of(TEST_CONNECTOR_ID),
+				ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build()
+			).runConnectorDetectionCriteria(connector, HOST_NAME);
+
+			assertEquals(2, requests.get());
+			assertFalse(lastCriterionResult.isSuccess());
+			assertEquals(2, lastCriterionResult.getCriterionTestResults().size());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	private TelemetryManager newInterruptibleTelemetryManager() {
+		return TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostname(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.sequential(true)
+					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
+					.build()
+			)
+			.build();
+	}
+
 	private void assertConnectorStatus(
 		final TelemetryManager telemetryManager,
 		final String expectedMetricValue,
@@ -673,5 +1070,53 @@ class AbstractStrategyTest {
 		assertEquals(expectedMetricValue, statusMetric.getValue());
 		assertEquals(expectedStatusOk, connectorNamespace.isStatusOk());
 		assertEquals(expectedConsecutiveFailures, connectorNamespace.getConsecutiveDetectionFailures());
+	}
+
+	@Test
+	void testCancelledToolRollsBackTheCursorsOfItsSources() {
+		final ConnectorStore connectorStore = new ConnectorStore(
+			Paths.get("src", "test", "resources", "test-files", "strategy", "tool")
+		);
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.connectorStore(connectorStore)
+			.hostConfiguration(
+				HostConfiguration.builder().hostId("host-01").hostname("host-01").hostType(DeviceKind.LINUX).build()
+			)
+			.build();
+		MonitorFactory.builder()
+			.telemetryManager(telemetryManager)
+			.discoveryTime(System.currentTimeMillis())
+			.keys(new HashSet<>(Set.of(MetricsHubConstants.HOST_NAME)))
+			.build()
+			.createEndpointHostMonitor();
+		final ToolStrategy strategy = spy(
+			ToolStrategy.builder()
+				.telemetryManager(telemetryManager)
+				.strategyTime(System.currentTimeMillis())
+				.clientsExecutor(new ClientsExecutor(telemetryManager))
+				.extensionManager(ExtensionManager.empty())
+				.connector(connectorStore.getStore().get("TestConnectorWithTool"))
+				.toolName("listThings")
+				.arguments(Map.of("owner", "me"))
+				.build()
+		);
+		final AtomicBoolean rolledBack = new AtomicBoolean();
+		// The tool polls an incremental source, then is cancelled once its sources passed their last check
+		doAnswer(invocation -> {
+			final Object answered = invocation.callRealMethod();
+			invocation.<List<Runnable>>getArgument(3).add(() -> rolledBack.set(true));
+			Thread.currentThread().interrupt();
+			return answered;
+		}).when(strategy).processSourcesAndComputes(any(), any(), any(), any());
+
+		try {
+			strategy.run();
+		} finally {
+			Thread.interrupted();
+		}
+
+		// Its rows are not returned: the next call must poll them again
+		assertTrue(strategy.getResult().isEmpty());
+		assertTrue(rolledBack.get());
 	}
 }

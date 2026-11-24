@@ -1,9 +1,11 @@
 package org.metricshub.extension.oscommand;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
@@ -27,6 +29,8 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * turned a blank line into a row holding one empty cell).
  */
 class CommandLineSourceProcessorTest {
+
+	static final String CONNECTOR_ID = "connector";
 
 	@Test
 	void textKeepsLinesAsIsAndTableIsTheCanonicalConversion() throws Exception {
@@ -56,6 +60,30 @@ class CommandLineSourceProcessorTest {
 	}
 
 	/**
+	 * The job deadline expires while the command runs: throwing the {@link InterruptedException} cleared the interrupt,
+	 * which the processor restores so that the engine stops the job instead of running its next commands.
+	 */
+	@Test
+	void interruptedCommandKeepsTheInterrupt() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		doThrow(new InterruptedException()).when(osCommandService)
+			.runOsCommand(any(), any(), any(), anyBoolean(), anyBoolean(), any());
+
+		try {
+			final SourceTable result = new CommandLineSourceProcessor(osCommandService).process(
+				CommandLineSource.builder().commandLine("cmd").build(),
+				CONNECTOR_ID,
+				newTelemetryManager()
+			);
+
+			assertTrue(result.isEmpty());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	/**
 	 * Runs a <code>commandLine</code> source on a host whose command prints the given output.
 	 *
 	 * @param output The output of the command
@@ -63,21 +91,27 @@ class CommandLineSourceProcessorTest {
 	 * @return the result of the source
 	 */
 	private static SourceTable process(final String output, final CommandLineSource source) throws Exception {
-		final String connectorId = "connector";
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		doReturn(new OsCommandResult(output, "cmd")).when(osCommandService)
+			.runOsCommand(any(), any(), any(), anyBoolean(), anyBoolean(), any());
+
+		return new CommandLineSourceProcessor(osCommandService).process(source, CONNECTOR_ID, newTelemetryManager());
+	}
+
+	/**
+	 * A telemetry manager for a Linux localhost holding a connector without embedded files.
+	 *
+	 * @return a new telemetry manager
+	 */
+	static TelemetryManager newTelemetryManager() {
 		final ConnectorStore connectorStore = new ConnectorStore();
-		connectorStore.addOne(connectorId, Connector.builder().embeddedFiles(Map.of()).build());
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
+		connectorStore.addOne(CONNECTOR_ID, Connector.builder().embeddedFiles(Map.of()).build());
+		return TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname("localhost").hostId("localhost").hostType(DeviceKind.LINUX).build()
 			)
 			.hostProperties(HostProperties.builder().build())
 			.connectorStore(connectorStore)
 			.build();
-
-		final OsCommandService osCommandService = mock(OsCommandService.class);
-		doReturn(new OsCommandResult(output, "cmd")).when(osCommandService)
-			.runOsCommand(any(), any(), any(), anyBoolean(), anyBoolean(), any());
-
-		return new CommandLineSourceProcessor(osCommandService).process(source, connectorId, telemetryManager);
 	}
 }

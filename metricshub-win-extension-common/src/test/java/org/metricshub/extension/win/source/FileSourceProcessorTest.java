@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -96,7 +97,13 @@ class FileSourceProcessorTest {
 
 		final String expectedCommand = buildResolveCommand(pattern);
 		when(
-			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), eq(expectedCommand), anyList())
+			mockWinRequestExecutor.executeWinRemoteCommand(
+				eq(HOSTNAME),
+				eq(wmiConfiguration),
+				eq(expectedCommand),
+				anyList(),
+				any()
+			)
 		).thenReturn(
 			"D:\\Autosys_waae\\autouser01\\out\\event_demon.PE2\r\nD:\\Autosys_waae\\autouser02\\out\\event_demon_XPE2\r\n"
 		);
@@ -109,7 +116,7 @@ class FileSourceProcessorTest {
 		final Set<String> resolved = processor.resolveRemoteFiles(
 			HOSTNAME,
 			fileSource.getPaths(),
-			processor.createScriptFileOperations(HOSTNAME, wmiConfiguration)
+			processor.createScriptFileOperations(HOSTNAME, wmiConfiguration, null)
 		);
 
 		assertEquals(
@@ -120,7 +127,7 @@ class FileSourceProcessorTest {
 			resolved
 		);
 		// The relative path is skipped before any command is run
-		verify(mockWinRequestExecutor, times(1)).executeWinRemoteCommand(anyString(), any(), anyString(), anyList());
+		verify(mockWinRequestExecutor, times(1)).executeWinRemoteCommand(anyString(), any(), anyString(), anyList(), any());
 	}
 
 	@Test
@@ -149,9 +156,8 @@ class FileSourceProcessorTest {
 		// The executor offers protocol-native file operations: they resolve and read, no remote command runs
 		final WinFileOperations nativeFileOperations = mock(WinFileOperations.class);
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(mockWinRequestExecutor.openFileOperations(HOSTNAME, wmiConfiguration)).thenReturn(
-			Optional.of(nativeFileOperations)
-		);
+		when(mockWinRequestExecutor.openFileOperations(HOSTNAME, wmiConfiguration, telemetryManager.getRequestStats()))
+			.thenReturn(Optional.of(nativeFileOperations));
 		when(nativeFileOperations.resolve(any(PathPattern.class))).thenReturn(Set.of(resolvedPath));
 		when(nativeFileOperations.readFileContent(resolvedPath)).thenReturn("content");
 
@@ -165,7 +171,7 @@ class FileSourceProcessorTest {
 		assertEquals(expectedMarkedLogCell(resolvedPath, "content"), result.getText());
 		// One instance serves the poll and is closed at its end
 		verify(nativeFileOperations).close();
-		verify(mockWinRequestExecutor, never()).executeWinRemoteCommand(any(), any(), any(), any());
+		verify(mockWinRequestExecutor, never()).executeWinRemoteCommand(any(), any(), any(), any(), any());
 	}
 
 	private final String WINDOWS_ABSOLUTE_PATH = "C:\\Program Files\\MetricsHub\\logs\\*.log";
@@ -236,8 +242,9 @@ class FileSourceProcessorTest {
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		final String initialContentBase64 = Base64.getEncoder().encodeToString(initialContent.getBytes());
 		final String newContentBase64 = Base64.getEncoder().encodeToString(newContent.getBytes());
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(resolvedPath, initialContentBase64);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList(), any())
+		).thenReturn(resolvedPath, initialContentBase64);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -252,13 +259,23 @@ class FileSourceProcessorTest {
 		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getText());
 
 		// Iteration 2: Second read with new content (mock again for next two calls)
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(resolvedPath, newContentBase64);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList(), any())
+		).thenReturn(resolvedPath, newContentBase64);
 
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
 		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getText());
+
+		// Each remote command of the script-based file operations is counted in the statistics of the resource
+		verify(mockWinRequestExecutor, times(4)).executeWinRemoteCommand(
+			eq(HOSTNAME),
+			eq(wmiConfiguration),
+			anyString(),
+			anyList(),
+			same(telemetryManager.getRequestStats())
+		);
 	}
 
 	@Test
@@ -293,14 +310,15 @@ class FileSourceProcessorTest {
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		// Call order: 1) path resolution, 2) getFileSize, 3) path resolution, 4) getFileSize, 5) readFromOffset
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(
-				resolvedPath,
-				String.valueOf(initialFileSize),
-				resolvedPath,
-				String.valueOf(newFileSize),
-				newContentBase64
-			);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList(), any())
+		).thenReturn(
+			resolvedPath,
+			String.valueOf(initialFileSize),
+			resolvedPath,
+			String.valueOf(newFileSize),
+			newContentBase64
+		);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -585,8 +603,9 @@ class FileSourceProcessorTest {
 			.build();
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenThrow(new ClientException("Remote command failed"));
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList(), any())
+		).thenThrow(new ClientException("Remote command failed"));
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -631,12 +650,13 @@ class FileSourceProcessorTest {
 		final String pathResolutionOutput = path1 + "\n" + path2;
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(
-				pathResolutionOutput,
-				Base64.getEncoder().encodeToString(content1.getBytes()),
-				Base64.getEncoder().encodeToString(content2.getBytes())
-			);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList(), any())
+		).thenReturn(
+			pathResolutionOutput,
+			Base64.getEncoder().encodeToString(content1.getBytes()),
+			Base64.getEncoder().encodeToString(content2.getBytes())
+		);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,

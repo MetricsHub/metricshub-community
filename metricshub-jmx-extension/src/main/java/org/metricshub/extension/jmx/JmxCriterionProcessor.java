@@ -114,7 +114,7 @@ public class JmxCriterionProcessor {
 				jmxCriterion.getObjectName(),
 				jmxCriterion.getAttributes(),
 				List.of(),
-				telemetryManager.getHostname(),
+				telemetryManager.getRequestStats(),
 				telemetryManager.getRecordOutputDirectory()
 			);
 

@@ -28,8 +28,11 @@ import static org.springframework.util.Assert.notNull;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -37,9 +40,12 @@ import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.utils.RetryOperation;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.Body;
 import org.metricshub.extension.http.utils.Header;
@@ -61,6 +67,16 @@ public class HttpRequestExecutor {
 	private static final char[] CHAR_ARRAY_MASK = MASK.toCharArray();
 	private static final String HOSTNAME_CANNOT_BE_NULL = "hostname cannot be null";
 	private static final String PROTOCOL_CANNOT_BE_NULL = "protocol cannot be null";
+
+	/**
+	 * The {@code operation_type} of the HTTP and HTTPS requests in {@code metricshub.host.requests}.
+	 */
+	public static final String OPERATION_TYPE = HttpExtension.IDENTIFIER;
+
+	/**
+	 * The lowest HTTP status code (100 Continue). A lower status means that the answer was not HTTP.
+	 */
+	private static final int MIN_STATUS_CODE = 100;
 
 	/**
 	 * Executes the given HTTP request
@@ -248,7 +264,8 @@ public class HttpRequestExecutor {
 					path,
 					protocol,
 					fullUrl,
-					retriedResponse
+					retriedResponse,
+					telemetryManager.getRequestStats()
 				)
 			);
 
@@ -302,6 +319,8 @@ public class HttpRequestExecutor {
 	 * @param protocol               The protocol: http or https
 	 * @param fullUrl                The full HTTP URL. E.g. <pre>http://www.example.com:1080/api/v1/examples</pre>
 	 * @param retriedResponse        Receives the response of a request that is retried
+	 * @param requestStats           The request counters of the monitored resource, which receive the outcome of the
+	 *                               attempt
 	 * @return The response, <code>null</code> when the request got none
 	 */
 	private HttpResult doHttpRequest(
@@ -320,7 +339,8 @@ public class HttpRequestExecutor {
 		final String path,
 		final String protocol,
 		final String fullUrl,
-		final AtomicReference<HttpResult> retriedResponse
+		final AtomicReference<HttpResult> retriedResponse,
+		final RequestStats requestStats
 	) {
 		// The response of a previous attempt is not the response of this one
 		retriedResponse.set(null);
@@ -335,7 +355,8 @@ public class HttpRequestExecutor {
 				password,
 				headerContent,
 				bodyContent,
-				httpConfiguration.getTimeout().intValue()
+				httpConfiguration.getTimeout().intValue(),
+				requestStats
 			);
 
 			// Compute the response time
@@ -386,7 +407,10 @@ public class HttpRequestExecutor {
 
 			return result;
 		} catch (IOException e) {
-			if (logMode) {
+			if (e instanceof InterruptedIOException && Thread.currentThread().isInterrupted()) {
+				// The job was cut short: an expected end, not an error
+				log.debug("Hostname {} - HTTP request {} {} interrupted. Returning null.", hostname, method, fullUrl);
+			} else if (logMode) {
 				log.error(
 					"Hostname {} - Error detected when running HTTP request {} {}: {}\nReturning null.",
 					hostname,
@@ -410,8 +434,10 @@ public class HttpRequestExecutor {
 	 * @param headerContent The {@link Map} of properties-values in the header.
 	 * @param bodyContent   The body as a plain text.
 	 * @param timeout       The timeout of the request.
+	 * @param requestStats  The request counters of the monitored resource, which receive the outcome of the attempt.
 	 * @return The {@link HttpResponse} returned by the server.
-	 * @throws IOException If a reading or writing operation fails.
+	 * @throws IOException If a reading or writing operation fails, an {@link InterruptedIOException} when the caller
+	 *                     is interrupted.
 	 */
 	private HttpResponse sendHttpRequest(
 		String url,
@@ -420,7 +446,102 @@ public class HttpRequestExecutor {
 		char[] password,
 		Map<String, String> headerContent,
 		String bodyContent,
-		int timeout
+		int timeout,
+		final RequestStats requestStats
+	) throws IOException {
+		// A thread already interrupted (an expired deadline of its job) sends nothing and counts nothing:
+		// HttpURLConnection connects and sends without looking at the interrupt
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedIOException("Interrupted before the HTTP request was sent");
+		}
+		final HttpResponse httpResponse;
+		try {
+			httpResponse = sendInterruptibly(url, method, username, password, headerContent, bodyContent, timeout);
+		} catch (MalformedURLException e) {
+			// The URL is invalid: nothing was sent
+			throw e;
+		} catch (IOException e) {
+			// An interrupt that came before the request started sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				requestStats.record(OPERATION_TYPE, RequestOutcome.of(e));
+			}
+			throw e;
+		} catch (RuntimeException e) {
+			requestStats.record(OPERATION_TYPE, RequestOutcome.FAILED);
+			throw e;
+		}
+		requestStats.record(OPERATION_TYPE, outcomeOf(httpResponse.getStatusCode()));
+		return httpResponse;
+	}
+
+	/**
+	 * Sends the request on its own thread, which the caller stops waiting for when it is interrupted: the request
+	 * may still run there, but its response is dropped.
+	 *
+	 * @param url           The full URL of the HTTP request.
+	 * @param method        The HTTP method (GET, POST, ...).
+	 * @param username      The username for the connection.
+	 * @param password      The password for the connection.
+	 * @param headerContent The {@link Map} of properties-values in the header.
+	 * @param bodyContent   The body as a plain text.
+	 * @param timeout       The timeout of the request.
+	 * @return The {@link HttpResponse} returned by the server.
+	 * @throws IOException If a reading or writing operation fails, an {@link InterruptedIOException} when the caller
+	 *                     is interrupted (its interrupt status is kept).
+	 */
+	private HttpResponse sendInterruptibly(
+		final String url,
+		final String method,
+		final String username,
+		final char[] password,
+		final Map<String, String> headerContent,
+		final String bodyContent,
+		final int timeout
+	) throws IOException {
+		try {
+			return ThreadHelper.executeInterruptibly(
+				() -> send(url, method, username, password, headerContent, bodyContent, timeout)
+			);
+		} catch (InterruptedException e) {
+			final InterruptedIOException interrupted = new InterruptedIOException("HTTP request interrupted");
+			interrupted.initCause(e);
+			throw interrupted;
+		} catch (ExecutionException e) {
+			final Throwable cause = e.getCause();
+			if (cause instanceof IOException ioException) {
+				throw ioException;
+			}
+			if (cause instanceof RuntimeException runtimeException) {
+				throw runtimeException;
+			}
+			if (cause instanceof Error error) {
+				throw error;
+			}
+			throw new IOException(cause);
+		}
+	}
+
+	/**
+	 * Sends the request with {@link HttpClient}. Test seam.
+	 *
+	 * @param url           The full URL of the HTTP request.
+	 * @param method        The HTTP method (GET, POST, ...).
+	 * @param username      The username for the connection.
+	 * @param password      The password for the connection.
+	 * @param headerContent The {@link Map} of properties-values in the header.
+	 * @param bodyContent   The body as a plain text.
+	 * @param timeout       The timeout of the request.
+	 * @return The {@link HttpResponse} returned by the server.
+	 * @throws IOException If a reading or writing operation fails.
+	 */
+	HttpResponse send(
+		final String url,
+		final String method,
+		final String username,
+		final char[] password,
+		final Map<String, String> headerContent,
+		final String bodyContent,
+		final int timeout
 	) throws IOException {
 		return HttpClient.sendRequest(
 			url,
@@ -438,5 +559,18 @@ public class HttpRequestExecutor {
 			timeout,
 			null
 		);
+	}
+
+	/**
+	 * The outcome of a request the server answered: completed for an informational, successful or redirection status
+	 * (100 to 399), failed for an error status (400 and above) or an answer that is not HTTP (below 100, e.g. -1).
+	 *
+	 * @param statusCode The status of the response.
+	 * @return The outcome of the request.
+	 */
+	private static RequestOutcome outcomeOf(final int statusCode) {
+		return statusCode >= MIN_STATUS_CODE && statusCode < HTTP_BAD_REQUEST
+			? RequestOutcome.COMPLETED
+			: RequestOutcome.FAILED;
 	}
 }

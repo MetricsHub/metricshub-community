@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -116,7 +118,15 @@ class AbstractSnmpExtensionTest {
 	void testCheckProtocolSuccess() throws Exception {
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
-		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("result");
+		when(
+			requestExecutor.executeSNMPGetNext(
+				anyString(),
+				any(),
+				anyString(),
+				anyBoolean(),
+				same(telemetryManager.getRequestStats())
+			)
+		).thenReturn("result");
 		final Optional<Boolean> result = extension.checkProtocol(telemetryManager);
 		assertTrue(result.isPresent());
 		assertTrue(result.get());
@@ -126,9 +136,15 @@ class AbstractSnmpExtensionTest {
 	void testCheckProtocolFailure() throws Exception {
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
-		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), any())).thenThrow(
-			new TimeoutException("timeout")
-		);
+		when(
+			requestExecutor.executeSNMPGetNext(
+				anyString(),
+				any(),
+				anyString(),
+				anyBoolean(),
+				same(telemetryManager.getRequestStats())
+			)
+		).thenThrow(new TimeoutException("timeout"));
 		final Optional<Boolean> result = extension.checkProtocol(telemetryManager);
 		assertTrue(result.isPresent());
 		assertFalse(result.get());
@@ -138,8 +154,16 @@ class AbstractSnmpExtensionTest {
 	void testProcessSourceSnmpTable() throws Exception {
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
 		final SnmpTableSource source = SnmpTableSource.builder().oid(TEST_OID).selectColumns("1,2").build();
-		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any()))
-			.thenReturn(List.of(List.of("a", "b")));
+		when(
+			requestExecutor.executeSNMPTable(
+				anyString(),
+				any(String[].class),
+				any(),
+				anyString(),
+				anyBoolean(),
+				same(telemetryManager.getRequestStats())
+			)
+		).thenReturn(List.of(List.of("a", "b")));
 		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
 		assertNotNull(result);
 	}
@@ -148,7 +172,15 @@ class AbstractSnmpExtensionTest {
 	void testProcessSourceSnmpGet() throws Exception {
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
 		final SnmpGetSource source = SnmpGetSource.builder().oid(TEST_OID).build();
-		when(requestExecutor.executeSNMPGet(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("value");
+		when(
+			requestExecutor.executeSNMPGet(
+				anyString(),
+				any(),
+				anyString(),
+				anyBoolean(),
+				same(telemetryManager.getRequestStats())
+			)
+		).thenReturn("value");
 		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
 		assertNotNull(result);
 	}
@@ -157,7 +189,15 @@ class AbstractSnmpExtensionTest {
 	void testProcessCriterionSnmpGet() throws Exception {
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
 		final SnmpGetCriterion criterion = SnmpGetCriterion.builder().oid(TEST_OID).build();
-		when(requestExecutor.executeSNMPGet(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("value");
+		when(
+			requestExecutor.executeSNMPGet(
+				anyString(),
+				any(),
+				anyString(),
+				anyBoolean(),
+				same(telemetryManager.getRequestStats())
+			)
+		).thenReturn("value");
 		final CriterionTestResult result = extension.processCriterion(criterion, "connector1", telemetryManager, true);
 		assertNotNull(result);
 	}
@@ -166,7 +206,15 @@ class AbstractSnmpExtensionTest {
 	void testProcessCriterionSnmpGetNext() throws Exception {
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
 		final SnmpGetNextCriterion criterion = SnmpGetNextCriterion.builder().oid(TEST_OID).build();
-		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("value");
+		when(
+			requestExecutor.executeSNMPGetNext(
+				anyString(),
+				any(),
+				anyString(),
+				anyBoolean(),
+				same(telemetryManager.getRequestStats())
+			)
+		).thenReturn("value");
 		final CriterionTestResult result = extension.processCriterion(criterion, "connector1", telemetryManager, true);
 		assertNotNull(result);
 	}
@@ -191,7 +239,7 @@ class AbstractSnmpExtensionTest {
 		final ObjectMapper mapper = new ObjectMapper();
 		final JsonNode queryNode = mapper.readTree("{\"action\": \"get\", \"oid\": \"1.3.6.1\"}");
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(requestExecutor.executeSNMPGet(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("result");
+		when(requestExecutor.executeSNMPGet(anyString(), any(), anyString(), anyBoolean(), isNull())).thenReturn("result");
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
 		assertEquals("result", result);
 	}
@@ -201,7 +249,9 @@ class AbstractSnmpExtensionTest {
 		final ObjectMapper mapper = new ObjectMapper();
 		final JsonNode queryNode = mapper.readTree("{\"action\": \"getnext\", \"oid\": \"1.3.6.1\"}");
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn("result");
+		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), isNull())).thenReturn(
+			"result"
+		);
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
 		assertEquals("result", result);
 	}
@@ -211,7 +261,7 @@ class AbstractSnmpExtensionTest {
 		final ObjectMapper mapper = new ObjectMapper();
 		final JsonNode queryNode = mapper.readTree("{\"action\": \"walk\", \"oid\": \"1.3.6.1\"}");
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(requestExecutor.executeSNMPWalk(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn(
+		when(requestExecutor.executeSNMPWalk(anyString(), any(), anyString(), anyBoolean(), isNull())).thenReturn(
 			"walk-result"
 		);
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
@@ -225,7 +275,7 @@ class AbstractSnmpExtensionTest {
 			"{\"action\": \"table\", \"oid\": \"1.3.6.1\", \"columns\": [\"1\", \"2\"]}"
 		);
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any()))
+		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), isNull()))
 			.thenReturn(List.of(List.of("a", "b")));
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
 		assertNotNull(result);

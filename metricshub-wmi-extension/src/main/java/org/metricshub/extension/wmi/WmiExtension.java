@@ -155,7 +155,8 @@ public class WmiExtension implements IProtocolExtension {
 				wmiConfiguration,
 				WMI_TEST_QUERY,
 				WMI_TEST_NAMESPACE,
-				telemetryManager.getRecordOutputDirectory()
+				telemetryManager.getRecordOutputDirectory(),
+				telemetryManager.getRequestStats()
 			);
 		} catch (Exception e) {
 			if (wmiRequestExecutor.isAcceptableException(e)) {
@@ -201,12 +202,14 @@ public class WmiExtension implements IProtocolExtension {
 				telemetryManager
 			);
 		} else if (criterion instanceof ProcessCriterion processCriterion) {
+			// The local WQL query is counted in the statistics of the resource whose detection runs it
 			return new WinProcessCriterionProcessor(wmiDetectionService).process(
 				processCriterion,
 				WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
 				connectorId,
 				logMode,
-				telemetryManager.getRecordOutputDirectory()
+				telemetryManager == null ? null : telemetryManager.getRecordOutputDirectory(),
+				telemetryManager == null ? null : telemetryManager.getRequestStats()
 			);
 		}
 
@@ -341,7 +344,7 @@ public class WmiExtension implements IProtocolExtension {
 				yield TextTableHelper.generateTextTable(table.columns(), table.rows());
 			}
 			case "command", "winremote" ->
-				wmiRequestExecutor.executeWinRemoteCommand(hostname, wmiConfiguration, query, null);
+				wmiRequestExecutor.executeWinRemoteCommand(hostname, wmiConfiguration, query, null, null);
 			default ->
 				throw new IllegalArgumentException(
 					String.format("Query type %s is not supported over WMI (supported: wql, command).", queryType)
@@ -389,6 +392,7 @@ public class WmiExtension implements IProtocolExtension {
 						hostname,
 						wmiConfiguration,
 						arguments.get("commandLine").asText(),
+						null,
 						null
 					)
 				);

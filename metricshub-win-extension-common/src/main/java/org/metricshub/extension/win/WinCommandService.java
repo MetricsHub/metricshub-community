@@ -40,6 +40,7 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.strategy.utils.OsCommandHelper;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
+import org.metricshub.engine.telemetry.RequestStats;
 
 /**
  * Provides a service for executing Windows commands through Windows Management Instrumentation (WMI).
@@ -85,6 +86,7 @@ public class WinCommandService {
 	 * @param hostname               The hostname of the remote device where the WMI or WinRm service is running. (mandatory)
 	 * @param configuration          Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
 	 * @param connectorEmbeddedFiles All the embedded files defined by the connector object. (mandatory)
+	 * @param requestStats           Request statistics of the monitored resource, or {@code null} to count nothing.
 	 *
 	 * @return The command execution return and the command with password masked (if present).
 	 * @throws IOException                   When an I/O error occurred on local command execution or embedded file creation.
@@ -95,7 +97,8 @@ public class WinCommandService {
 		@NonNull final String commandLine,
 		@NonNull final String hostname,
 		final IWinConfiguration configuration,
-		@NonNull Map<Integer, EmbeddedFile> connectorEmbeddedFiles
+		@NonNull Map<Integer, EmbeddedFile> connectorEmbeddedFiles,
+		final RequestStats requestStats
 	) throws IOException, ClientException, NoCredentialProvidedException {
 		final Optional<String> maybeUsername = getUsername(configuration);
 
@@ -161,7 +164,8 @@ public class WinCommandService {
 				hostname,
 				configuration,
 				command,
-				embeddedTempFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.toList()) // NOSONAR
+				embeddedTempFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.toList()), // NOSONAR
+				requestStats
 			);
 
 			return new OsCommandResult(commandResult, commandNoPassword);

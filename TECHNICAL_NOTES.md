@@ -6,6 +6,8 @@ Detailed behavior and configuration notes for MetricsHub Community.
 - [File log capture](#file-log-capture)
 - [File source over SSH](#file-source-over-ssh)
 - [OS Command and SSH health checks](#os-command-and-ssh-health-checks)
+- [Job timeout](#job-timeout)
+- [Protocol requests counter](#protocol-requests-counter)
 
 ## MCP Server
 
@@ -82,3 +84,50 @@ For a remote resource configured only with OS Command, the health check is skipp
 ### OS Command timeout
 
 The local OS Command health check uses the configured OS Command timeout, including an override supplied by the guided UI or MCP. If the configured timeout is absent or not positive, it defaults to 30 seconds.
+
+## Job timeout
+
+When a detection, discovery or collect exceeds `jobTimeout`:
+
+- No new request is sent to the resource until the next job. A request already in progress is abandoned at once and counts as `timeout`.
+- The metrics collected before the timeout are kept. The remaining sources and monitors are skipped for this cycle.
+- The session that the job opened on the resource is closed.
+- The log reports `operation timed out`, and the abandoned requests are counted as `timeout` in `metricshub.host.requests`.
+
+## Protocol requests counter
+
+`metricshub.host.requests` (self-monitoring) is a cumulative counter per resource, with `operation_type` and `state` attributes.
+
+### Operation types
+
+`http` (HTTP and HTTPS), `ipmi`, `jdbc`, `jmx`, `oscommand` (local commands), `ping`, `snmp` (v1, v2c and v3), `ssh` (remote commands and remote files over SFTP), `wbem`, `winrm` or `wmi`.
+
+### States
+
+| State | The request... |
+| --- | --- |
+| `completed` | was answered, including with an empty result (no matching process, empty table, no SNMP value at this OID) or with a command that exits with a non-zero code |
+| `timeout` | got no answer before the configured `timeout`, or was interrupted when its job ran out of time |
+| `failed` | could not be sent (unknown host, connection refused), was rejected (authentication), or was answered with an error: HTTP status 400 or above, WBEM, WMI or WinRM error, SQL error, IPMI completion code other than `00`, SFTP error |
+
+### Counting rules
+
+- **One count per request sent**: every retry is counted (HTTP retries, a new vCenter ticket after the previous one expired). Nothing is counted when no request is sent: a cached result (such as a valid vCenter ticket), a query or URL rejected before sending, a wait for an SSH connection slot, or a request not started because its job had already run out of time.
+- **Composite requests count once**: an SNMP `walk` or `table`, a JMX fetch (connection, query and attributes), a JDBC query (connection, query and results), a WMI query (connection and query) or an IPMI session (sensors, SEL). When the protocol library returns a partial result (for example, a sensor that could not be read), the request counts as `completed`.
+- **Health checks count**: a health-check request can be `failed` while the protocol is still reported up (for example, an HTTP `401` answer).
+- **One outcome per request**: a request that answers after its timeout is counted once, as `timeout`.
+- **Resource attribution**: requests are counted for the configured resource, even when the protocol configuration overrides the `hostname` or goes through a vCenter server.
+- **Counter lifecycle**: the counters start at `0` when MetricsHub starts, when the resource is added or its configuration changes, or when a global setting changes (the agent restarts internally). A protocol appears after its first request, then with its three states.
+- **Not counted**: requests sent by the CLI tools, the Web UI or the MCP tools, and emulated resources.
+
+### Protocol limits
+
+Some protocols do not tell every outcome apart:
+
+- **Ping**: an unreachable host and a host that does not answer both return no answer: the request counts as `timeout` when it took the whole timeout, as `failed` otherwise.
+- **SNMP v1 and v2c**: a wrong community or an unreachable agent gets no answer and counts as `timeout`.
+- **SNMP** `walk` and `table`: an agent that stops answering after the first request returns a partial result, which counts as `completed`.
+- **JDBC**: a health check whose connection validation times out counts as `failed`.
+- **IPMI**: a BMC that does not answer the session setup counts as `failed`.
+- **JMX** and **WBEM**: a TCP connection that times out at the operating system level counts as `failed`.
+- **WMI**: a WMI provider that times out while the results of a query are read counts as `failed`.

@@ -215,7 +215,7 @@ class WinServiceCriterionProcessorTest {
 			serviceCriterion.setName(SERVICE_NAME);
 
 			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";running")).when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
@@ -257,7 +257,7 @@ class WinServiceCriterionProcessorTest {
 			serviceCriterion.setName(SERVICE_NAME);
 
 			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";down")).when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
@@ -299,7 +299,7 @@ class WinServiceCriterionProcessorTest {
 			serviceCriterion.setName(SERVICE_NAME);
 
 			doReturn(CriterionTestResult.success(serviceCriterion, null)).when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
@@ -341,7 +341,7 @@ class WinServiceCriterionProcessorTest {
 			serviceCriterion.setName(SERVICE_NAME);
 
 			doReturn(CriterionTestResult.error(serviceCriterion, "error")).when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean(), any(), any());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,

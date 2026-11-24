@@ -75,7 +75,16 @@ public class HttpExtension implements IProtocolExtension, IHttpRequestExtension 
 	 * Creates a new instance of the {@link HttpExtension} implementation.
 	 */
 	public HttpExtension() {
-		httpRequestExecutor = new HttpRequestExecutor();
+		this(new HttpRequestExecutor());
+	}
+
+	/**
+	 * Creates the extension with the given request executor.
+	 *
+	 * @param httpRequestExecutor The executor that sends the HTTP requests.
+	 */
+	HttpExtension(final HttpRequestExecutor httpRequestExecutor) {
+		this.httpRequestExecutor = httpRequestExecutor;
 	}
 
 	@Override

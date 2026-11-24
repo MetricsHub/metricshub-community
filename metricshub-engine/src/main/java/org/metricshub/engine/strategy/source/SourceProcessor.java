@@ -38,6 +38,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
@@ -147,6 +148,10 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @return The response, <code>null</code> when the request got none or when no extension executes it.
 	 */
 	public HttpResult executeHttpRequest(final HttpSource httpSource) {
+		// The job deadline expired or the job was cancelled: send no more request (a Jawk script may loop on requests)
+		if (ThreadHelper.isCancelled()) {
+			return null;
+		}
 		return extensionManager.findSourceExtension(httpSource, telemetryManager)
 			.filter(IHttpRequestExtension.class::isInstance)
 			.map(IHttpRequestExtension.class::cast)
@@ -164,6 +169,11 @@ public class SourceProcessor implements ISourceProcessor {
 	 *         or an empty table if no extension can process the source.
 	 */
 	private SourceTable processSourceThroughExtension(Source source) {
+		// The job deadline expired or the job was cancelled: send no more request, whatever runs it (a source, an
+		// executeForEachEntryOf entry, a Jawk script)
+		if (ThreadHelper.isCancelled()) {
+			return SourceTable.empty();
+		}
 		return extensionManager.findSourceExtension(source, telemetryManager)
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
 			.orElseGet(SourceTable::empty);

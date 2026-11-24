@@ -102,7 +102,7 @@ public class SnmpGetCriterionProcessor {
 				snmpConfiguration,
 				hostname,
 				false,
-				telemetryManager.getHostname()
+				telemetryManager.getRequestStats()
 			);
 
 			final CriterionTestResult criterionTestResult = checkSNMPGetResult(

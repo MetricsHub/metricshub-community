@@ -3,6 +3,7 @@ package org.metricshub.engine.strategy.detection;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY;
@@ -275,6 +276,48 @@ class DetectionStrategyTest {
 				).run();
 			}
 			assertEquals(resolves, telemetryManager.getHostProperties().isLocalhost());
+		}
+	}
+
+	@Test
+	void testInterruptedDetectionLeavesConnectorMonitors() {
+		final Connector connector = new Connector();
+		final ConnectorIdentity identity = new ConnectorIdentity();
+		identity.setDisplayName(METRICS_HUB_CONFIGURED_CONNECTOR_NAME);
+		connector.setConnectorIdentity(identity);
+		final ConnectorStore connectorStore = new ConnectorStore();
+		connectorStore.setStore(Map.of(METRICS_HUB_CONFIGURED_CONNECTOR_ID, connector));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostType(DeviceKind.LINUX)
+					.hostname(LOCALHOST)
+					.configuredConnectorId(METRICS_HUB_CONFIGURED_CONNECTOR_ID)
+					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.build();
+
+		// An abandoned detection (job timeout, reload) writes no connector monitor and no connector status
+		Thread.currentThread().interrupt();
+		try {
+			new DetectionStrategy(
+				telemetryManager,
+				new Date().getTime(),
+				new ClientsExecutor(telemetryManager),
+				ExtensionManager.empty()
+			).run();
+
+			assertNull(
+				telemetryManager.findMonitorByTypeAndId(
+					KnownMonitorType.CONNECTOR.getKey(),
+					"connector_" + METRICS_HUB_CONFIGURED_CONNECTOR_ID
+				)
+			);
+		} finally {
+			Thread.interrupted();
 		}
 	}
 

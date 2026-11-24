@@ -126,7 +126,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 				configuration,
 				hostname,
 				true,
-				telemetryManager.getHostname()
+				telemetryManager.getRequestStats()
 			);
 		} catch (Exception e) {
 			log.debug(

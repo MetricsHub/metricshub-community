@@ -39,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 
@@ -129,6 +130,9 @@ public class WmiCriterionProcessor {
 		// Retrieve the record output directory
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
+		// The requests are counted in the statistics of the monitored resource
+		final RequestStats requestStats = telemetryManager.getRequestStats();
+
 		// If namespace is specified as "Automatic"
 		if (AUTOMATIC_NAMESPACE.equalsIgnoreCase(wmiCriterion.getNamespace())) {
 			final String cachedNamespace = telemetryManager.getHostProperties()
@@ -158,7 +162,8 @@ public class WmiCriterionProcessor {
 				cachedNamespaceCriterion,
 				connectorId,
 				logMode,
-				recordOutputDirectory
+				recordOutputDirectory,
+				requestStats
 			);
 		}
 
@@ -169,7 +174,8 @@ public class WmiCriterionProcessor {
 			wmiCriterion,
 			connectorId,
 			logMode,
-			recordOutputDirectory
+			recordOutputDirectory,
+			requestStats
 		);
 	}
 
@@ -184,6 +190,7 @@ public class WmiCriterionProcessor {
 	 * @param wmiCriterion           WMI detection properties (WQL, expected result, namespace must be "Automatic")
 	 * @param possibleNamespaces     The possible namespaces to execute the WQL on
 	 * @param recordOutputDirectory  Directory where WMI responses are recorded, or {@code null} to skip recording
+	 * @param requestStats           Request statistics of the monitored resource, or {@code null} to count nothing
 	 * @return A {@link NamespaceResult} wrapping the detected namespace
 	 * and the error message if the detection fails.
 	 */
@@ -192,7 +199,8 @@ public class WmiCriterionProcessor {
 		final IWinConfiguration configuration,
 		final WmiCriterion wmiCriterion,
 		final Set<String> possibleNamespaces,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) {
 		// Run the query on each namespace and check if the result match the criterion
 		final Map<String, CriterionTestResult> namespaces = new TreeMap<>();
@@ -210,7 +218,8 @@ public class WmiCriterionProcessor {
 				tentativeCriterion,
 				connectorId,
 				logMode,
-				recordOutputDirectory
+				recordOutputDirectory,
+				requestStats
 			);
 
 			// If the result matched then the namespace is selected
@@ -295,7 +304,8 @@ public class WmiCriterionProcessor {
 				final PossibleNamespacesResult possibleWmiNamespacesResult = findPossibleNamespaces(
 					hostname,
 					winConfiguration,
-					recordOutputDirectory
+					recordOutputDirectory,
+					telemetryManager.getRequestStats()
 				);
 
 				// If we can't detect the namespace then we must stop
@@ -315,7 +325,8 @@ public class WmiCriterionProcessor {
 			winConfiguration,
 			wqlCriterion,
 			Collections.unmodifiableSet(possibleWmiNamespaces),
-			recordOutputDirectory
+			recordOutputDirectory,
+			telemetryManager.getRequestStats()
 		);
 
 		// If that was successful, remember it in HostMonitoring, so we don't perform this
@@ -335,13 +346,15 @@ public class WmiCriterionProcessor {
 	 * @param hostname              The hostname of the device.
 	 * @param winConfiguration      Wmi configuration (credentials, timeout)
 	 * @param recordOutputDirectory Directory where WMI responses are recorded, or {@code null} to skip recording
+	 * @param requestStats          Request statistics of the monitored resource, or {@code null} to count nothing
 	 * @return A {@link PossibleNamespacesResult} wrapping the success state, the message in case of errors
 	 * and the possibleWmiNamespaces {@link Set}.
 	 */
 	public PossibleNamespacesResult findPossibleNamespaces(
 		final String hostname,
 		final IWinConfiguration winConfiguration,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) {
 		// If the user specified a namespace, we return it as if it was the only namespace available
 		// and for which we're going to test our connector
@@ -357,7 +370,7 @@ public class WmiCriterionProcessor {
 
 		try {
 			wmiDetectionService.getWinRequestExecutor()
-				.executeWmi(hostname, winConfiguration, NAMESPACE_WQL, ROOT_NAMESPACE, recordOutputDirectory)
+				.executeWmi(hostname, winConfiguration, NAMESPACE_WQL, ROOT_NAMESPACE, recordOutputDirectory, requestStats)
 				.stream()
 				.filter(row -> !row.isEmpty())
 				.map(row -> row.get(0))

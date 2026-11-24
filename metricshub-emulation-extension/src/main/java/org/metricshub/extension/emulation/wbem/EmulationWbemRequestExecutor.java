@@ -65,8 +65,7 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 		final WbemConfiguration wbemConfig,
 		final String query,
 		final String namespace,
-		final TelemetryManager telemetryManager,
-		final String resourceHostname
+		final TelemetryManager telemetryManager
 	) throws ClientException {
 		if (query == null || namespace == null || telemetryManager == null) {
 			return List.of();

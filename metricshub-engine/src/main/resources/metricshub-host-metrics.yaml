@@ -46,7 +46,7 @@ metrics:
     unit: s
 
   metricshub.host.requests:
-    description: Number of requests executed by the host, broken down by state (completed or timeout) and operation type.
+    description: Cumulative number of protocol requests sent to the resource, by terminal state (completed, timeout or failed) and operation type (the protocol).
     type: Counter
 
   metricshub.job.duration:

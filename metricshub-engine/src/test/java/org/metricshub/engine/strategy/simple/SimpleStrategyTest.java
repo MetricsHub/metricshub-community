@@ -21,6 +21,9 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,6 +57,7 @@ import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -81,6 +85,7 @@ class SimpleStrategyTest {
 	private static final String REMOVAL_CONNECTOR_ID = "TestConnectorWithRemoval";
 	private static final String SOURCE_KEY_FORMAT = "${source::monitors.%s.simple.sources.source(1)}";
 	private static final String PROCESS = "process";
+	private static final String EVENT_LOG = "event_log";
 	private static final String IDLE_ENTITY = "idle_entity";
 	private static final String COUNTER_METRIC = "test.counter";
 	private static final String RATE_FROM_METRIC = "__test.rate.rate_from";
@@ -581,10 +586,27 @@ class SimpleStrategyTest {
 	void testRunDoesNotRemoveMonitorsWhenInterrupted() {
 		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder());
 
-		// The strategy thread is interrupted (abandoned run): waiting for the jobs of the thread pool throws
+		final Monitor staleEnclosure = addStaleMonitor(telemetryManager, ENCLOSURE.getKey());
+		sourceTables.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
+		// A table this run did not refresh (written by another run): the mapping of the interrupted job must not read it
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
+			.addSourceTable(
+				SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()),
+				SourceTable.ofTable(SourceTable.csvToTable("other;1", ";"))
+			);
+
+		// The strategy thread is interrupted (abandoned run)
 		Thread.currentThread().interrupt();
 		try {
-			assertStaleEnclosureKept(telemetryManager);
+			collect(telemetryManager, strategyTime);
+
+			// No request, neither from the sequential jobs nor from the parallel ones: nothing is mapped or removed
+			verify(protocolExtensionMock, never()).processSource(any(), anyString(), any(TelemetryManager.class));
+			assertEquals(
+				Map.of(staleEnclosure.getId(), staleEnclosure),
+				telemetryManager.getMonitors().get(ENCLOSURE.getKey())
+			);
 		} finally {
 			Thread.interrupted();
 		}
@@ -612,6 +634,76 @@ class SimpleStrategyTest {
 		} finally {
 			Thread.interrupted();
 		}
+	}
+
+	@Test
+	void testInterruptBeforeTheMappingRollsBackTheCursor() {
+		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder().sequential(true));
+		final ConnectorNamespace namespace = spyEventLogPoll(telemetryManager);
+
+		// The job deadline expires while the event_log table is stored: after the last check of the job's sources
+		lenient().doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return invocation.callRealMethod();
+		}).when(namespace).addSourceTable(eq(SOURCE_KEY_FORMAT.formatted(EVENT_LOG)), any());
+
+		try {
+			collect(telemetryManager, strategyTime);
+
+			// Not mapped, and the next poll returns the same events again
+			assertNull(telemetryManager.getMonitors().get(EVENT_LOG));
+			assertEquals("event-10", namespace.getSourceCursor(SOURCE_KEY_FORMAT.formatted(EVENT_LOG)));
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testInterruptInsideTheMappingKeepsTheCursor() {
+		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder().sequential(true));
+		final ConnectorNamespace namespace = spyEventLogPoll(telemetryManager);
+
+		// The job deadline expires while the mapping reads the event_log table
+		lenient().doAnswer(invocation -> {
+			final Object sourceTable = invocation.callRealMethod();
+			if (sourceTable != null) {
+				Thread.currentThread().interrupt();
+			}
+			return sourceTable;
+		}).when(namespace).getSourceTable(SOURCE_KEY_FORMAT.formatted(EVENT_LOG));
+
+		try {
+			collect(telemetryManager, strategyTime);
+
+			// The mapping runs to its end: the events are mapped, and the cursor stays after them
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertNotNull(telemetryManager.getMonitors().get(EVENT_LOG).get("TestConnectorWithRemoval_event_log_e1"));
+			assertEquals("event-20", namespace.getSourceCursor(SOURCE_KEY_FORMAT.formatted(EVENT_LOG)));
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	/**
+	 * Replace the namespace of TestConnectorWithRemoval with a spy, and make the poll of the event_log job move its cursor
+	 * from <code>event-10</code> to <code>event-20</code> and return the event <code>e1</code>.
+	 *
+	 * @param telemetryManager The telemetry manager holding the TestConnectorWithRemoval connector
+	 * @return the spied namespace
+	 */
+	private ConnectorNamespace spyEventLogPoll(final TelemetryManager telemetryManager) {
+		final String sourceKey = SOURCE_KEY_FORMAT.formatted(EVENT_LOG);
+		final ConnectorNamespace namespace = spy(ConnectorNamespace.builder().build());
+		telemetryManager.getHostProperties().getConnectorNamespaces().put(REMOVAL_CONNECTOR_ID, namespace);
+		namespace.setSourceCursor(sourceKey, "event-10");
+
+		lenient().doAnswer(invocation -> {
+			namespace.setSourceCursor(sourceKey, "event-20");
+			return SourceTable.ofTable(SourceTable.csvToTable("e1;1", ";"));
+		})
+			.when(protocolExtensionMock)
+			.processSource(argThat(EventLogSource.class::isInstance), anyString(), any(TelemetryManager.class));
+		return namespace;
 	}
 
 	@Test

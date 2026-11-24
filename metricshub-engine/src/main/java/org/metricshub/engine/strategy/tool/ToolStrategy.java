@@ -22,6 +22,7 @@ package org.metricshub.engine.strategy.tool;
  */
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -122,18 +123,18 @@ public class ToolStrategy extends AbstractStrategy {
 		);
 
 		// The tool's sources may reference the connector's beforeAll sources, like a monitor job's: a session
-		// token fetched there is what a REST tool authenticates with
+		// token fetched there is what a REST tool authenticates with. A tool cancelled before it starts opens nothing.
+		final BeforeAllStrategy beforeAllStrategy = BeforeAllStrategy.builder()
+			.clientsExecutor(clientsExecutor)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.connector(connector)
+			.extensionManager(extensionManager)
+			.build();
 		try {
 			// Inside the cleanup scope: a beforeAll source that fails after an earlier one logged in must
 			// still be followed by the logout
-			BeforeAllStrategy.builder()
-				.clientsExecutor(clientsExecutor)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.connector(connector)
-				.extensionManager(extensionManager)
-				.build()
-				.run();
+			beforeAllStrategy.run();
 
 			final JobInfo jobInfo = JobInfo.builder()
 				.hostname(hostname)
@@ -148,21 +149,28 @@ public class ToolStrategy extends AbstractStrategy {
 
 			// The arguments ride on the attribute map: ${param::name} is replaced in sources and computes
 			// exactly where ${attribute::name} is
-			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo);
+			final List<Runnable> cursorRollbacks = new ArrayList<>();
+			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo, cursorRollbacks);
 
-			result = SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
-				.orElseGet(SourceTable::empty);
+			// A cancelled tool skipped its sources: the table found would be the one of an earlier call. Its incremental
+			// sources are polled again next time, since their entries are not returned
+			result = skipMappingIfInterrupted(cursorRollbacks, connectorId, hostname)
+				? SourceTable.empty()
+				: SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
+					.orElseGet(SourceTable::empty);
 		} finally {
 			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that
-			// counts them, whether or not its sources succeeded
-			AfterAllStrategy.builder()
-				.clientsExecutor(clientsExecutor)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.connector(connector)
-				.extensionManager(extensionManager)
-				.build()
-				.run();
+			// counts them, whether or not its sources succeeded or the tool was cancelled
+			if (beforeAllStrategy.isOpened() || !isInterrupted()) {
+				AfterAllStrategy.builder()
+					.clientsExecutor(clientsExecutor)
+					.strategyTime(strategyTime)
+					.telemetryManager(telemetryManager)
+					.connector(connector)
+					.extensionManager(extensionManager)
+					.build()
+					.run();
+			}
 		}
 	}
 }

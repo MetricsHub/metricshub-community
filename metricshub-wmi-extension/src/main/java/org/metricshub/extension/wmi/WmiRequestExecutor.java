@@ -21,23 +21,36 @@ package org.metricshub.extension.wmi;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.extension.wmi.WmiExtension.IDENTIFIER;
+
+import com.sun.jna.platform.win32.COM.COMException;
+import com.sun.jna.platform.win32.WinNT.HRESULT;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.NetworkHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.wmi.WmiHelper;
 import org.metricshub.wmi.WmiStringConverter;
+import org.metricshub.wmi.exceptions.WindowsRemoteException;
 import org.metricshub.wmi.exceptions.WmiComException;
+import org.metricshub.wmi.exceptions.WqlQuerySyntaxException;
 import org.metricshub.wmi.remotecommand.WinRemoteCommandExecutor;
 import org.metricshub.wmi.wbem.WmiWbemServices;
 
@@ -62,6 +75,17 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 	static final String WBEM_E_NOT_FOUND = "WBEM_E_NOT_FOUND";
 
 	/**
+	 * The HRESULTs of a COM call that timed out: WBEM_E_TIMED_OUT, WBEM_E_PROVIDER_TIMED_OUT, RPC_E_TIMEOUT and
+	 * HRESULT_FROM_WIN32(ERROR_TIMEOUT).
+	 */
+	private static final Set<Integer> TIMEOUT_HRESULTS = Set.of(0x80041069, 0x80041088, 0x8001011F, 0x800705B4);
+
+	/**
+	 * Maximum number of causes visited when classifying a failure, a guard against cause chains that loop.
+	 */
+	private static final int MAX_CAUSE_DEPTH = 32;
+
+	/**
 	 * Execute a WMI query
 	 *
 	 * @param hostname              The hostname of the device where the WMI service is running (<code>null</code> for localhost)
@@ -69,6 +93,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 	 * @param wbemQuery             The WQL to execute
 	 * @param namespace             The WBEM namespace where all the classes reside
 	 * @param recordOutputDirectory The directory for recording the query result, or {@code null} to skip recording.
+	 * @param requestStats          The request statistics of the monitored resource, where the outcome of the
+	 *                              query is counted, or {@code null} to count nothing.
 	 * @return A list of rows, where each row is represented as a list of strings.
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -79,8 +105,13 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("wmi.config") @NonNull final IWinConfiguration wmiConfig,
 		@SpanAttribute("wmi.query") @NonNull final String wbemQuery,
 		@SpanAttribute("wmi.namespace") @NonNull final String namespace,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the WMI query was sent", new InterruptedException());
+		}
 		final String username = wmiConfig.getUsername();
 		char[] password = wmiConfig.getPassword();
 		// If the username is not provided, null will be used instead of the provided password.
@@ -109,12 +140,20 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			)
 		);
 
-		// Go!
-		try (WmiWbemServices wbemServices = WmiWbemServices.getInstance(networkResource, username, password)) {
+		// Go! One attempt is the connection and the query: it is counted once, when the query has returned.
+		// The COM calls ignore interrupts: they run on a thread of their own, so an interrupted caller returns at once
+		final char[] queryPassword = password;
+		final long queryTimeout = wmiConfig.getTimeout() * 1000;
+		boolean answered = false;
+		try {
 			final long startTime = System.currentTimeMillis();
 
 			// Execute the WQL and get the result
-			final List<Map<String, Object>> result = wbemServices.executeWql(wbemQuery, wmiConfig.getTimeout() * 1000);
+			final List<Map<String, Object>> result = ThreadHelper.executeInterruptibly(
+				() -> query(networkResource, username, queryPassword, wbemQuery, queryTimeout)
+			);
+			answered = true;
+			IWinRequestExecutor.record(requestStats, IDENTIFIER, RequestOutcome.COMPLETED);
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -145,8 +184,59 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 
 			return resultTable;
 		} catch (Exception e) {
-			throw new ClientException("WMI query failed on " + hostname + ".", e);
+			final Exception failure = unwrap(e);
+			// An interrupt that came before the request started (the name resolution of the host included) sent nothing
+			if (!answered && !ThreadHelper.neverStarted(failure)) {
+				recordFailure(requestStats, failure);
+			}
+			throw new ClientException("WMI query failed on " + hostname + ".", failure);
 		}
+	}
+
+	/**
+	 * Connect to the WMI namespace and execute the WQL query. Runs on the thread of the request, so it writes no
+	 * engine state. COM is initialized on that thread by wmi-java, and the proxies are released before it returns.
+	 *
+	 * @param networkResource The namespace, prefixed with the host for a remote one
+	 * @param username        The username, or {@code null}
+	 * @param password        The password, or {@code null}
+	 * @param wbemQuery       The WQL to execute
+	 * @param timeout         The timeout of the query, in milliseconds
+	 * @return The rows of the result
+	 * @throws WmiComException         when the connection or the query fails
+	 * @throws TimeoutException        when the query times out
+	 * @throws WqlQuerySyntaxException when the WQL is invalid
+	 */
+	List<Map<String, Object>> query(
+		final String networkResource,
+		final String username,
+		final char[] password,
+		final String wbemQuery,
+		final long timeout
+	) throws WmiComException, TimeoutException, WqlQuerySyntaxException {
+		try (WmiWbemServices wbemServices = WmiWbemServices.getInstance(networkResource, username, password)) {
+			return wbemServices.executeWql(wbemQuery, timeout);
+		}
+	}
+
+	/**
+	 * Get the exception thrown by a request run by {@link ThreadHelper#executeInterruptibly}: the cause of an
+	 * {@link ExecutionException}, which is rethrown if it is an {@link Error}, or the exception itself.
+	 *
+	 * @param e The exception caught around the request
+	 * @return The exception thrown by the request
+	 */
+	static Exception unwrap(final Exception e) {
+		if (e instanceof ExecutionException executionException) {
+			final Throwable cause = executionException.getCause();
+			if (cause instanceof Error error) {
+				throw error;
+			}
+			if (cause instanceof Exception exception) {
+				return exception;
+			}
+		}
+		return e;
 	}
 
 	/**
@@ -159,6 +249,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 	 * @param password   The password.
 	 * @param timeout    Timeout in seconds
 	 * @param localFiles The local files list
+	 * @param requestStats The request statistics of the monitored resource, where the outcome of the command is
+	 *                     counted, or {@code null} to count nothing.
 	 * @return The output of the executed command.
 	 * @throws ClientException For any problem encountered.
 	 */
@@ -169,8 +261,14 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("wmi.username") final String username,
 		final char[] password,
 		@SpanAttribute("wmi.timeout") final int timeout,
-		@SpanAttribute("wmi.local_files") final List<String> localFiles
+		@SpanAttribute("wmi.local_files") final List<String> localFiles,
+		final RequestStats requestStats
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) runs nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the WMI command was sent", new InterruptedException());
+		}
+		boolean answered = false;
 		try {
 			LoggingHelper.trace(
 				() -> log.trace(
@@ -186,16 +284,12 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 
 			final long startTime = System.currentTimeMillis();
 
-			final WinRemoteCommandExecutor result = WinRemoteCommandExecutor.execute(
-				command,
-				hostname,
-				username,
-				password,
-				null,
-				timeout * 1000L,
-				localFiles,
-				true
+			// The COM calls ignore interrupts: they run on a thread of their own, so an interrupted caller returns at once
+			final WinRemoteCommandExecutor result = ThreadHelper.executeInterruptibly(
+				() -> executeRemoteCommand(command, hostname, username, password, timeout * 1000L, localFiles)
 			);
+			answered = true;
+			IWinRequestExecutor.record(requestStats, IDENTIFIER, RequestOutcome.COMPLETED);
 
 			String resultStdout = result.getStdout();
 
@@ -217,8 +311,84 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 
 			return resultStdout;
 		} catch (Exception e) {
-			throw new ClientException((Exception) e.getCause());
+			final Exception failure = unwrap(e);
+			// An interrupt that came before the request started (the name resolution of the host included) sent nothing
+			if (!answered && !ThreadHelper.neverStarted(failure)) {
+				recordFailure(requestStats, failure);
+			}
+			// The cause of the wmi-java wrapper, as before; the exception itself when it has none (a timeout, an interrupt)
+			throw new ClientException(failure.getCause() instanceof Exception cause ? cause : failure);
 		}
+	}
+
+	/**
+	 * Execute the command on the remote host through wmi-java. Runs on the thread of the request, so it writes no
+	 * engine state. COM is initialized on that thread by wmi-java.
+	 *
+	 * @param command    The command to execute
+	 * @param hostname   The host to connect to
+	 * @param username   The username
+	 * @param password   The password
+	 * @param timeout    The timeout of the command, in milliseconds
+	 * @param localFiles The local files to copy to the host
+	 * @return The executed command, with its output
+	 * @throws IOException             when the files cannot be copied or the output cannot be read
+	 * @throws TimeoutException        when the command times out
+	 * @throws WqlQuerySyntaxException when a WQL query of wmi-java is invalid
+	 * @throws WindowsRemoteException  when the command fails
+	 */
+	WinRemoteCommandExecutor executeRemoteCommand(
+		final String command,
+		final String hostname,
+		final String username,
+		final char[] password,
+		final long timeout,
+		final List<String> localFiles
+	) throws IOException, TimeoutException, WqlQuerySyntaxException, WindowsRemoteException {
+		return WinRemoteCommandExecutor.execute(command, hostname, username, password, null, timeout, localFiles, true);
+	}
+
+	/**
+	 * Count a request that failed, unless it failed on a local argument check before anything was sent.
+	 *
+	 * @param requestStats The request statistics of the monitored resource, or {@code null} to count nothing
+	 * @param e            The exception thrown by the request
+	 */
+	static void recordFailure(final RequestStats requestStats, final Exception e) {
+		// wmi-java checks its arguments (and rejects credentials on a local namespace) before any COM call
+		if (!(e instanceof IllegalArgumentException)) {
+			IWinRequestExecutor.record(requestStats, IDENTIFIER, outcomeOf(e));
+		}
+	}
+
+	/**
+	 * Classify the exception of a WMI request: a timeout when wmi-java reports one (a {@code TimeoutException}
+	 * on WBEM_S_TIMEDOUT), when the request is interrupted, or when a COM call failed with a timeout HRESULT;
+	 * a failure otherwise. The errors wmi-java reports with a message only, without the {@link COMException}
+	 * that carries the HRESULT, are failures.
+	 *
+	 * @param e The exception thrown by the request
+	 * @return {@link RequestOutcome#TIMEOUT} or {@link RequestOutcome#FAILED}
+	 */
+	static RequestOutcome outcomeOf(final Throwable e) {
+		Throwable current = e;
+		for (int depth = 0; current != null && depth < MAX_CAUSE_DEPTH; depth++) {
+			if (current instanceof COMException comException && isTimeout(comException.getHresult())) {
+				return RequestOutcome.TIMEOUT;
+			}
+			current = current.getCause();
+		}
+		return RequestOutcome.of(e);
+	}
+
+	/**
+	 * Whether the HRESULT of a failed COM call reports a timeout.
+	 *
+	 * @param hResult The HRESULT, possibly {@code null}
+	 * @return {@code true} for one of the {@link #TIMEOUT_HRESULTS}
+	 */
+	private static boolean isTimeout(final HRESULT hResult) {
+		return hResult != null && TIMEOUT_HRESULTS.contains(hResult.intValue());
 	}
 
 	/**
@@ -264,7 +434,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		if (t instanceof WmiComException) {
 			final String message = t.getMessage();
 			return IWinRequestExecutor.isAcceptableWmiComError(message);
-		} else if (t instanceof org.metricshub.wmi.exceptions.WqlQuerySyntaxException) {
+		} else if (t instanceof WqlQuerySyntaxException) {
 			return true;
 		}
 
@@ -277,7 +447,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		String hostname,
 		IWinConfiguration winConfiguration,
 		String command,
-		List<String> embeddedFiles
+		List<String> embeddedFiles,
+		RequestStats requestStats
 	) throws ClientException {
 		final String username = winConfiguration.getUsername();
 		char[] password = winConfiguration.getPassword();
@@ -293,7 +464,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			username,
 			password,
 			winConfiguration.getTimeout().intValue(),
-			embeddedFiles
+			embeddedFiles,
+			requestStats
 		);
 	}
 }

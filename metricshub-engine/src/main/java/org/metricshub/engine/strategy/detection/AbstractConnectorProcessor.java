@@ -134,21 +134,27 @@ public abstract class AbstractConnectorProcessor {
 		@NonNull Stream<Connector> connectors,
 		@NonNull String hostname
 	) {
-		final List<ConnectorTestResult> connectorTestResults = new ArrayList<>();
-		final List<ConnectorTestResult> connectorTestResultsSynchronized = Collections.synchronizedList(
-			connectorTestResults
-		);
+		final List<ConnectorTestResult> connectorTestResults = Collections.synchronizedList(new ArrayList<>());
+
+		// The new threads of a pool would not inherit the interrupt and would send the requests of an abandoned run
+		if (Thread.currentThread().isInterrupted()) {
+			log.warn("Hostname {} - Thread interrupted: skipping the detection of the connectors.", hostname);
+			return connectorTestResults;
+		}
 
 		final List<Connector> connectorList = connectors.collect(Collectors.toList());
 		final ExecutorService threadsPool = Executors.newFixedThreadPool(
 			Math.max(1, Math.min(MAX_THREADS_COUNT, connectorList.size()))
 		);
 
-		connectorList.forEach(
-			connector -> threadsPool.execute(
-				() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
-			)
-		);
+		connectorList.forEach(connector -> threadsPool.execute(() -> {
+			final ConnectorTestResult connectorTestResult = runConnectorDetectionCriteria(connector, hostname);
+			// Interrupted by the forced shutdown below, the detection was cut short: it would fail a connector that
+			// matches. Nothing waits for this thread any more, the results returned are the ones added before
+			if (!Thread.currentThread().isInterrupted()) {
+				connectorTestResults.add(connectorTestResult);
+			}
+		}));
 
 		// Two-phase shutdown: first graceful, then forced
 		threadsPool.shutdown();
@@ -172,7 +178,10 @@ public abstract class AbstractConnectorProcessor {
 			log.debug(HOSTNAME_EXCEPTION_MESSAGE, hostname, e);
 		}
 
-		return connectorTestResults;
+		// A copy: the threads still running after a forced shutdown must not change the list being read
+		synchronized (connectorTestResults) {
+			return new ArrayList<>(connectorTestResults);
+		}
 	}
 
 	/**
@@ -452,6 +461,10 @@ public abstract class AbstractConnectorProcessor {
 		final ConnectorTestResult connectorTestResult = ConnectorTestResult.builder().connector(connector).build();
 
 		for (final Criterion criterion : criteria) {
+			if (failIfInterrupted(connectorTestResult, criterion, hostname)) {
+				return connectorTestResult;
+			}
+
 			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector);
 			if (!criterionTestResult.isSuccess()) {
 				log.debug(
@@ -464,6 +477,38 @@ public abstract class AbstractConnectorProcessor {
 			connectorTestResult.getCriterionTestResults().add(criterionTestResult);
 		}
 
+		// The interrupt may arrive while the last criterion is tested, which may still report a success
+		if (connectorTestResult.isSuccess()) {
+			failIfInterrupted(connectorTestResult, criteria.getLast(), hostname);
+		}
+
 		return connectorTestResult;
+	}
+
+	/**
+	 * When the thread is interrupted (the job deadline expired or the job was cancelled), adds an error result for the
+	 * given criterion, so that a detection cut short never matches, and no more criterion is tested.
+	 *
+	 * @param connectorTestResult The result of the connector test
+	 * @param criterion           The criterion being or about to be tested
+	 * @param hostname            The host name
+	 * @return {@code true} if the thread is interrupted
+	 */
+	private static boolean failIfInterrupted(
+		final ConnectorTestResult connectorTestResult,
+		final Criterion criterion,
+		final String hostname
+	) {
+		if (!Thread.currentThread().isInterrupted()) {
+			return false;
+		}
+		log.warn(
+			"Hostname {} - Thread interrupted: the detection of connector {} is cut short.",
+			hostname,
+			connectorTestResult.getConnector().getCompiledFilename()
+		);
+		connectorTestResult.getCriterionTestResults()
+			.add(CriterionTestResult.error(criterion, "The detection was interrupted."));
+		return true;
 	}
 }

@@ -153,7 +153,8 @@ public class WinRmExtension implements IProtocolExtension {
 				winRmConfiguration,
 				WINRM_TEST_QUERY,
 				WINRM_TEST_NAMESPACE,
-				telemetryManager.getRecordOutputDirectory()
+				telemetryManager.getRecordOutputDirectory(),
+				telemetryManager.getRequestStats()
 			);
 		} catch (Exception e) {
 			if (winRmRequestExecutor.isAcceptableException(e)) {
@@ -340,7 +341,7 @@ public class WinRmExtension implements IProtocolExtension {
 			case "file" -> winRmRequestExecutor.readRemoteFile(hostname, winRmConfiguration, query);
 			case "ls" -> textTable(winRmRequestExecutor.listRemoteFiles(hostname, winRmConfiguration, query));
 			case "command", "winremote" ->
-				winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null);
+				winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null, null);
 			default ->
 				throw new IllegalArgumentException(
 					String.format("Query type %s is not supported over WinRM (supported: wql, command, file, ls).", queryType)
@@ -401,6 +402,7 @@ public class WinRmExtension implements IProtocolExtension {
 						hostname,
 						winRmConfiguration,
 						arguments.get("commandLine").asText(),
+						null,
 						null
 					)
 				);

@@ -64,9 +64,15 @@ class WinCommandServiceTest {
 			.build();
 		final String expectedToBeReturned = "value";
 		doReturn(expectedToBeReturned).when(winRequestExecutorMock)
-			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList());
+			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList(), null);
 
-		final OsCommandResult result = winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+		final OsCommandResult result = winCommandService.runOsCommand(
+			COMMAND_LINE,
+			HOST_NAME,
+			wmiConfiguration,
+			Map.of(),
+			null
+		);
 		assertEquals(new OsCommandResult(expectedToBeReturned, COMMAND_LINE), result);
 	}
 
@@ -76,7 +82,7 @@ class WinCommandServiceTest {
 		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder().password(PASSWORD).build();
 
 		assertThrows(NoCredentialProvidedException.class, () -> {
-			winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+			winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), null);
 		});
 	}
 
@@ -89,10 +95,10 @@ class WinCommandServiceTest {
 
 		// Mocking ClientException to be thrown by the executor
 		doThrow(new ClientException("Client error")).when(winRequestExecutorMock)
-			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList());
+			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList(), null);
 
 		assertThrows(ClientException.class, () -> {
-			winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+			winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), null);
 		});
 	}
 }

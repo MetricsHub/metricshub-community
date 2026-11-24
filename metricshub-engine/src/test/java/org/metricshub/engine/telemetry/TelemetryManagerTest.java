@@ -2,7 +2,9 @@ package org.metricshub.engine.telemetry;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.CONNECTOR;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.DISK_CONTROLLER;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
@@ -26,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.client.ClientsExecutor;
@@ -44,6 +47,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Multipl
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
+import org.metricshub.engine.strategy.IStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -71,6 +75,41 @@ class TelemetryManagerTest {
 	private IProtocolExtension protocolExtensionMock;
 
 	static Long strategyTime = new Date().getTime();
+
+	@Test
+	void testRunStartsNoStrategyWhenInterrupted() {
+		final AtomicBoolean ran = new AtomicBoolean();
+		final IStrategy strategy = new IStrategy() {
+			@Override
+			public void run() {
+				ran.set(true);
+			}
+
+			@Override
+			public long getStrategyTimeout() {
+				return 10;
+			}
+
+			@Override
+			public Long getStrategyTime() {
+				return strategyTime;
+			}
+		};
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostId(HOST_ID).hostname(HOST_NAME).build())
+			.build();
+
+		// Cancelled (a reload): the strategy would run on a new thread that does not inherit the interrupt
+		Thread.currentThread().interrupt();
+		try {
+			telemetryManager.run(strategy);
+
+			assertFalse(ran.get());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+	}
 
 	@Test
 	void testRun() throws Exception {

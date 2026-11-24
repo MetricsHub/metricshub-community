@@ -141,8 +141,7 @@ public class WbemSourceProcessor {
 				wbemConfiguration,
 				wbemSource.getQuery(),
 				namespace,
-				telemetryManager,
-				telemetryManager.getHostname()
+				telemetryManager
 			);
 
 			return SourceTable.ofTable(table);

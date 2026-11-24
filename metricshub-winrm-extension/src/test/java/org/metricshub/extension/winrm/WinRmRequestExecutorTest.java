@@ -10,6 +10,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -17,24 +19,32 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinFileOperations;
 import org.metricshub.winrm.AuthScheme;
+import org.metricshub.winrm.CommandResult;
 import org.metricshub.winrm.RemoteFileInfo;
 import org.metricshub.winrm.WinRMClient;
+import org.metricshub.winrm.exceptions.WinRMClientException;
 import org.metricshub.winrm.exceptions.WinRMFaultException;
 import org.metricshub.winrm.exceptions.WindowsRemoteException;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
 import org.metricshub.winrm.exceptions.WqlSyntaxException;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 import org.mockito.MockedStatic;
+import org.mockito.stubbing.Answer;
 
 class WinRmRequestExecutorTest {
 
@@ -264,10 +274,200 @@ class WinRmRequestExecutorTest {
 			.timeout(30L)
 			.build();
 		// Building the client connects nothing: the native file operations can be opened and closed offline
-		try (WinFileOperations fileOperations = winRmRequestExecutor.openFileOperations("host", configuration).get()) {
+		try (
+			WinFileOperations fileOperations = winRmRequestExecutor.openFileOperations("host", configuration, null).get()
+		) {
 			assertTrue(fileOperations instanceof WinRmFileOperations);
 		}
 		// Any other Windows configuration falls back to the script-based file operations
-		assertTrue(winRmRequestExecutor.openFileOperations("host", mock(IWinConfiguration.class)).isEmpty());
+		assertTrue(winRmRequestExecutor.openFileOperations("host", mock(IWinConfiguration.class), null).isEmpty());
+	}
+
+	/**
+	 * A client whose close, like the deletion of its shell, ignores interrupts: it blocks until released, for 3 seconds
+	 * at most, then counts down {@code closed}.
+	 */
+	private static WinRMClient clientWithBlockingClose(final CountDownLatch release, final CountDownLatch closed) {
+		final WinRMClient client = mock(WinRMClient.class, RETURNS_DEEP_STUBS);
+		doAnswer(invocation -> {
+			final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+			while (release.getCount() > 0 && System.nanoTime() < deadline) {
+				try {
+					release.await(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
+				} catch (InterruptedException e) {
+					// Ignored, like the shell deletion
+				}
+			}
+			closed.countDown();
+			return null;
+		}).when(client).close();
+		return client;
+	}
+
+	/**
+	 * Run the given request on the current thread, which is interrupted during the request, and check that it returns
+	 * at once without waiting for the close of its client, which still completes.
+	 */
+	private static <T> T assertReturnsAtOnce(
+		final Callable<T> request,
+		final CountDownLatch release,
+		final CountDownLatch closed
+	) throws Exception {
+		final long start = System.nanoTime();
+		try {
+			final T result = request.call();
+			final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+			assertTrue(elapsedMillis < 1000, "Returned after " + elapsedMillis + " ms");
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertEquals(1, closed.getCount());
+			return result;
+		} finally {
+			Thread.interrupted();
+			release.countDown();
+			assertTrue(closed.await(5, TimeUnit.SECONDS), "The client is closed");
+		}
+	}
+
+	/**
+	 * Answers like a request during which the deadline of the job expires: interrupts the current thread, then
+	 * returns the given result.
+	 */
+	private static Answer<Object> interruptingAndReturning(final Object result) {
+		return invocation -> {
+			Thread.currentThread().interrupt();
+			return result;
+		};
+	}
+
+	@Test
+	void testInterruptedCommandDoesNotWaitForTheShellDeletion() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		final CountDownLatch closed = new CountDownLatch(1);
+		final WinRMClient client = clientWithBlockingClose(release, closed);
+		final CommandResult result = mock(CommandResult.class);
+		when(result.stdout()).thenReturn("output");
+		when(client.command("cmd").execute()).thenAnswer(interruptingAndReturning(result));
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+			assertEquals(
+				"output",
+				assertReturnsAtOnce(
+					() -> WinRmRequestExecutor.executeRemoteWinRmCommand("host", configuration("pass"), "cmd", null, null),
+					release,
+					closed
+				)
+			);
+		}
+	}
+
+	@Test
+	void testInterruptedFileReadDoesNotWaitForTheShellDeletion() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		final CountDownLatch closed = new CountDownLatch(1);
+		final WinRMClient client = clientWithBlockingClose(release, closed);
+		when(client.file("C:\\hosts").readText(StandardCharsets.UTF_8)).thenAnswer(interruptingAndReturning("content"));
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+			assertEquals(
+				"content",
+				assertReturnsAtOnce(
+					() -> new WinRmRequestExecutor().readRemoteFile("host", configuration("pass"), "C:\\hosts"),
+					release,
+					closed
+				)
+			);
+		}
+	}
+
+	@Test
+	void testCommandFailureIsKeptWhenTheShellDeletionAlsoFails() {
+		final WinRMClient client = mock(WinRMClient.class, RETURNS_DEEP_STUBS);
+		final WinRMClientException failure = new WinRMClientException("access denied");
+		final IllegalStateException closeFailure = new IllegalStateException("connection reset");
+		when(client.command("cmd").execute()).thenThrow(failure);
+		doThrow(closeFailure).when(client).close();
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+			final ClientException exception = assertThrows(
+				ClientException.class,
+				() -> WinRmRequestExecutor.executeRemoteWinRmCommand("host", configuration("pass"), "cmd", null, null)
+			);
+			// The failure of the command is reported, the one of the close is attached to it
+			assertSame(failure, exception.getCause());
+			assertSame(closeFailure, failure.getSuppressed()[0]);
+		}
+	}
+
+	@Test
+	void testFileReadFailureIsKeptWhenTheShellDeletionAlsoFails() {
+		final WinRMClient client = mock(WinRMClient.class, RETURNS_DEEP_STUBS);
+		final WinRMClientException failure = new WinRMClientException("file not found");
+		final IllegalStateException closeFailure = new IllegalStateException("connection reset");
+		when(client.file("C:\\hosts").readText(StandardCharsets.UTF_8)).thenThrow(failure);
+		doThrow(closeFailure).when(client).close();
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+			final ClientException exception = assertThrows(
+				ClientException.class,
+				() -> new WinRmRequestExecutor().readRemoteFile("host", configuration("pass"), "C:\\hosts")
+			);
+			assertSame(failure, exception.getCause());
+			assertSame(closeFailure, failure.getSuppressed()[0]);
+		}
+	}
+
+	@Test
+	void testFileReadWrapsAClientCreationFailure() {
+		final WinRMClientException failure = new WinRMClientException("unsupported authentication");
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenThrow(failure);
+			final ClientException exception = assertThrows(
+				ClientException.class,
+				() -> new WinRmRequestExecutor().readRemoteFile("host", configuration("pass"), "C:\\hosts")
+			);
+			assertSame(failure, exception.getCause());
+		}
+	}
+
+	@Test
+	void testFileOperationsOfAnInterruptedCallerDoNotWaitForTheShellDeletion() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		final CountDownLatch closed = new CountDownLatch(1);
+		final WinRmFileOperations fileOperations = new WinRmFileOperations(
+			clientWithBlockingClose(release, closed),
+			"host",
+			null
+		);
+		assertReturnsAtOnce(() -> {
+			Thread.currentThread().interrupt();
+			fileOperations.close();
+			return null;
+		}, release, closed);
+	}
+
+	@Test
+	void testFileOperationsCloseWaitsForTheShellDeletion() {
+		final CountDownLatch release = new CountDownLatch(1);
+		final CountDownLatch closed = new CountDownLatch(1);
+		final WinRmFileOperations fileOperations = new WinRmFileOperations(
+			clientWithBlockingClose(release, closed),
+			"host",
+			null
+		);
+		Thread.startVirtualThread(() -> {
+			try {
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+			release.countDown();
+		});
+		fileOperations.close();
+		// A caller that is not interrupted returns once its client is closed, as before
+		assertEquals(0, closed.getCount());
 	}
 }

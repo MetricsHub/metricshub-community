@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -12,19 +13,26 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +45,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProce
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.ssh.SshClient;
 import org.metricshub.ssh.SshClient.FileEntry;
@@ -67,6 +78,8 @@ class FileSourceProcessorTest {
 	@Mock(strictness = Mock.Strictness.LENIENT)
 	private SshClient sshClient;
 
+	private final RequestStats requestStats = new RequestStats();
+
 	private static String expectedMarkedLogCell(final String path, final String rawContent) {
 		final StringBuilder logBlock = new StringBuilder();
 		FileHelper.appendLogBlock(logBlock, path, rawContent);
@@ -95,7 +108,21 @@ class FileSourceProcessorTest {
 	}
 
 	private RemoteFilesRequestExecutor remoteFileOperations(final DeviceKind deviceKind) {
-		return new RemoteFilesRequestExecutor(sshClient, sshConfiguration(), deviceKind);
+		return new RemoteFilesRequestExecutor(sshClient, sshConfiguration(), deviceKind, requestStats);
+	}
+
+	/**
+	 * @return the expected snapshot of the request statistics of SSH
+	 */
+	private static Map<String, Map<RequestOutcome, Long>> sshCounts(
+		final long completed,
+		final long timeout,
+		final long failed
+	) {
+		return Map.of(
+			OsCommandExtension.SSH_IDENTIFIER,
+			Map.of(RequestOutcome.COMPLETED, completed, RequestOutcome.TIMEOUT, timeout, RequestOutcome.FAILED, failed)
+		);
 	}
 
 	private Set<String> resolve(final DeviceKind deviceKind, final String... paths) {
@@ -332,6 +359,19 @@ class FileSourceProcessorTest {
 
 		assertEquals(Set.of("/opt/a.log"), resolve(DeviceKind.LINUX, "/missing/*.log", "relative/path.log", "/opt/*.log"));
 		verify(sshClient, times(2)).listFiles(anyString(), anyString(), eq(false));
+		// The invalid pattern sends nothing; the root that cannot be listed is a failed request
+		assertEquals(sshCounts(1, 0, 1), requestStats.snapshot());
+	}
+
+	@Test
+	void resolveRemoteFiles_recordsTheSubdirectoriesThatCannotBeListed() throws Exception {
+		when(sshClient.listSubdirectories(eq("/data"), anyString())).thenReturn(List.of("/data/a", "/data/b"));
+		when(sshClient.listFiles(eq("/data/a"), anyString(), eq(false))).thenThrow(new IOException("Permission denied"));
+		when(sshClient.listFiles(eq("/data/b"), anyString(), eq(false))).thenReturn(List.of(entry("/data/b/x.log")));
+
+		// The directory that cannot be listed is skipped, as before
+		assertEquals(Set.of("/data/b/x.log"), resolve(DeviceKind.LINUX, "/data/*/*.log"));
+		assertEquals(sshCounts(2, 0, 1), requestStats.snapshot());
 	}
 
 	@Test
@@ -389,6 +429,158 @@ class FileSourceProcessorTest {
 
 		operations.close();
 		verify(sshClient).close();
+
+		// One request per SFTP call: the listing, two stats (one failed), two reads; the cached size is no request
+		assertEquals(sshCounts(4, 0, 1), requestStats.snapshot());
+	}
+
+	@Test
+	void remoteFileOperations_recordTimeoutsAndKeepThrowing() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+		when(sshClient.readFile("/a.log", null, null)).thenThrow(new SocketTimeoutException("Read timed out"));
+		when(sshClient.fileSize("/b.log")).thenThrow(new SocketTimeoutException("Read timed out"));
+
+		assertThrows(SocketTimeoutException.class, () -> operations.readFileContent("/a.log"));
+		assertNull(operations.getFileSize("/b.log"));
+
+		assertEquals(sshCounts(0, 2, 0), requestStats.snapshot());
+	}
+
+	@Test
+	void remoteFileOperations_withoutRequestStatsRecordNothing() throws Exception {
+		final RemoteFilesRequestExecutor operations = new RemoteFilesRequestExecutor(
+			sshClient,
+			sshConfiguration(),
+			DeviceKind.LINUX,
+			null
+		);
+		when(sshClient.readFile("/a.log", null, null)).thenReturn("content");
+		doThrow(new IOException("refused")).when(sshClient).connect(anyInt(), anyInt());
+
+		assertEquals("content", operations.readFileContent("/a.log"));
+		assertFalse(operations.connectSshClient());
+	}
+
+	@Test
+	void remoteFileOperations_connectOnAnInterruptedThreadConnectsNothing() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+
+		// An earlier deadline of the job interrupted the thread
+		Thread.currentThread().interrupt();
+		try {
+			assertFalse(operations.connectSshClient());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		verify(sshClient, never()).connect(anyInt(), anyInt());
+		assertTrue(requestStats.snapshot().isEmpty());
+	}
+
+	@Test
+	void remoteFileOperations_requestOnAnInterruptedThreadSendsNothing() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+
+		// An earlier deadline of the job interrupted the thread
+		Thread.currentThread().interrupt();
+		try {
+			assertThrows(InterruptedIOException.class, () -> operations.readFileContent("/a.log"));
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		verify(sshClient, never()).readFile(any(), any(), any());
+		assertTrue(requestStats.snapshot().isEmpty());
+	}
+
+	/**
+	 * Waits for the latch and swallows the interrupts, like sshlib.
+	 */
+	private static void awaitUninterruptibly(final CountDownLatch latch) {
+		while (latch.getCount() > 0) {
+			try {
+				latch.await();
+			} catch (InterruptedException e) {
+				// Swallowed
+			}
+		}
+	}
+
+	@Test
+	void remoteFileOperations_interruptedLogModeReadReturnsAtOnceAndKeepsTheCursors() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+		final CountDownLatch reading = new CountDownLatch(1);
+		final CountDownLatch end = new CountDownLatch(1);
+		when(sshClient.fileSize(anyString())).thenReturn(20L);
+		when(sshClient.readFile("/a.log", 10L, 10)).thenAnswer(invocation -> {
+			reading.countDown();
+			awaitUninterruptibly(end);
+			return "late";
+		});
+		doAnswer(invocation -> {
+			awaitUninterruptibly(end);
+			return null;
+		}).when(sshClient).close();
+		final Map<String, Long> cursors = new HashMap<>(Map.of("/a.log", 10L, "/b.log", 10L));
+		final FileSource fileSource = FileSource.builder()
+			.maxSizePerPoll(1000L)
+			.key(SOURCE_KEY)
+			.mode(FileSourceProcessingMode.LOG)
+			.paths(Set.of("/a.log", "/b.log"))
+			.build();
+
+		// The engine interrupts the job when its deadline expires, while the first file is read
+		final Thread caller = Thread.currentThread();
+		final Thread deadline = new Thread(() -> {
+			try {
+				reading.await();
+				Thread.sleep(100);
+				caller.interrupt();
+				// A caller that stays blocked in the read must fail the test, not hang it
+				end.await(5, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				// Not reached
+			}
+			end.countDown();
+		});
+		deadline.start();
+		final long start = System.nanoTime();
+		try {
+			final List<List<String>> results = new FileSourceProcessor().processFilesInLogMode(
+				operations,
+				new LinkedHashSet<>(List.of("/a.log", "/b.log")),
+				cursors,
+				fileSource,
+				HOSTNAME
+			);
+			final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+			assertTrue(elapsedMillis < 1000, () -> "Returned after " + elapsedMillis + " ms");
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertTrue(results.isEmpty());
+			// The read cut short and the file after it keep their cursors
+			assertEquals(Map.of("/a.log", 10L, "/b.log", 10L), cursors);
+
+			// Any later request of the interrupted caller is refused
+			assertThrows(InterruptedIOException.class, () -> operations.readFileContent("/b.log"));
+
+			// The close waits behind the read: the interrupted caller does not
+			final long closing = System.nanoTime();
+			operations.close();
+			final long closeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - closing);
+			assertTrue(closeMillis < 1000, () -> "Closed after " + closeMillis + " ms");
+		} finally {
+			Thread.interrupted();
+			end.countDown();
+			deadline.join(TimeUnit.SECONDS.toMillis(10));
+		}
+
+		verify(sshClient, never()).fileSize("/b.log");
+		verify(sshClient, never()).readFile(eq("/b.log"), any(), any());
+		verify(sshClient, timeout(5000)).close();
+		// The size of a.log completed, its read cut short is one timeout, nothing was sent afterwards
+		assertEquals(sshCounts(1, 1, 0), requestStats.snapshot());
 	}
 
 	/**
@@ -407,9 +599,10 @@ class FileSourceProcessorTest {
 		protected RemoteFilesRequestExecutor createRemoteFilesRequestExecutor(
 			final String hostname,
 			final SshConfiguration sshConfiguration,
-			final DeviceKind deviceKind
+			final DeviceKind deviceKind,
+			final RequestStats requestStats
 		) {
-			return new RemoteFilesRequestExecutor(sshClient, sshConfiguration, deviceKind);
+			return new RemoteFilesRequestExecutor(sshClient, sshConfiguration, deviceKind, requestStats);
 		}
 	}
 
@@ -552,6 +745,9 @@ class FileSourceProcessorTest {
 
 		verify(sshClient, times(2)).close();
 		verifyNoCommandRun();
+
+		// Per poll: the connection (with its authentication), the listing and the read
+		assertEquals(sshCounts(6, 0, 0), telemetryManager.getRequestStats().snapshot());
 	}
 
 	@Test
@@ -596,6 +792,9 @@ class FileSourceProcessorTest {
 
 		verify(sshClient, never()).fileSize(anyString());
 		verifyNoCommandRun();
+
+		// Per poll: the connection and the listing; the second poll reads the new content. The sizes are cached.
+		assertEquals(sshCounts(5, 0, 0), telemetryManager.getRequestStats().snapshot());
 	}
 
 	@Test
@@ -606,15 +805,71 @@ class FileSourceProcessorTest {
 			.paths(Set.of(LINUX_ABSOLUTE_PATH))
 			.build();
 
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.LINUX);
 		final SourceTable result = new TestableFileSourceProcessor(sshClient).process(
 			fileSource,
 			CONNECTOR_ID,
-			remoteTelemetryManager(DeviceKind.LINUX)
+			telemetryManager
 		);
 
 		assertEquals(SourceTable.empty(), result);
 		verify(sshClient).close();
 		verify(sshClient, never()).listFiles(anyString(), any(), eq(false));
+		assertEquals(sshCounts(0, 0, 1), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testProcessRecordsAConnectionTimeoutOrFailure() throws Exception {
+		final FileSource fileSource = FileSource.builder()
+			.key(SOURCE_KEY)
+			.mode(FileSourceProcessingMode.FLAT)
+			.paths(Set.of(LINUX_ABSOLUTE_PATH))
+			.build();
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.LINUX);
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(sshClient);
+
+		doThrow(new SocketTimeoutException("The connect() operation on the socket timed out.")).when(sshClient)
+			.connect(anyInt(), anyInt());
+		assertEquals(SourceTable.empty(), processor.process(fileSource, CONNECTOR_ID, telemetryManager));
+
+		doThrow(new IOException("There was a problem while connecting to hostname:22")).when(sshClient)
+			.connect(anyInt(), anyInt());
+		assertEquals(SourceTable.empty(), processor.process(fileSource, CONNECTOR_ID, telemetryManager));
+
+		// No authentication follows a connection that failed
+		verify(sshClient, never()).authenticate(anyString(), any(char[].class));
+		assertEquals(sshCounts(0, 1, 1), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testProcessKeepsThePartialResultAndRecordsTheFailedRead() throws Exception {
+		final FileSource fileSource = FileSource.builder()
+			.maxSizePerPoll(100L * 1024 * 1024)
+			.key(SOURCE_KEY)
+			.mode(FileSourceProcessingMode.FLAT)
+			.paths(Set.of(LINUX_ABSOLUTE_PATH))
+			.build();
+		// The resource is monitored through another SSH hostname: requests are still those of the resource
+		final TelemetryManager telemetryManager = remoteTelemetryManager(DeviceKind.LINUX);
+		((SshConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(SshConfiguration.class))
+			.setHostname("ssh-host");
+
+		authenticate();
+		when(sshClient.listFiles(eq("/opt/metricshub/logs"), anyString(), eq(false))).thenReturn(
+			List.of(entry("/opt/metricshub/logs/ok.log"), entry("/opt/metricshub/logs/ko.log"))
+		);
+		when(sshClient.readFile("/opt/metricshub/logs/ok.log", null, null)).thenReturn("ok");
+		when(sshClient.readFile("/opt/metricshub/logs/ko.log", null, null)).thenThrow(new IOException("No such file"));
+
+		final SourceTable result = new TestableFileSourceProcessor(sshClient).process(
+			fileSource,
+			CONNECTOR_ID,
+			telemetryManager
+		);
+
+		assertEquals(expectedMarkedLogCell("/opt/metricshub/logs/ok.log", "ok"), result.getText());
+		// The connection, the listing and one read completed; the other read failed
+		assertEquals(sshCounts(3, 0, 1), telemetryManager.getRequestStats().snapshot());
 	}
 
 	@Test
@@ -659,6 +914,9 @@ class FileSourceProcessorTest {
 			assertNotNull(result2);
 			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getText());
 		}
+
+		// The local file system is not a request
+		assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
 	}
 
 	@Test

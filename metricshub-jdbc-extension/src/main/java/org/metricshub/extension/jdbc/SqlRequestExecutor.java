@@ -24,12 +24,19 @@ package org.metricshub.extension.jdbc;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.jdbc.client.JdbcClient;
+import org.metricshub.extension.jdbc.client.JdbcClient.RequestNotSentException;
 import org.metricshub.extension.jdbc.client.SqlResult;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 
@@ -38,6 +45,21 @@ import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
  */
 @Slf4j
 public class SqlRequestExecutor {
+
+	/**
+	 * The {@code operation_type} of the JDBC requests in {@code metricshub.host.requests}.
+	 */
+	public static final String OPERATION_TYPE = JdbcExtension.IDENTIFIER;
+
+	/**
+	 * The SQLState of PostgreSQL {@code query_canceled}, how pgjdbc reports the expiry of a query timeout.
+	 */
+	static final String QUERY_CANCELED_SQL_STATE = "57014";
+
+	/**
+	 * Maximum number of causes visited, a guard against cause chains that loop.
+	 */
+	private static final int MAX_CAUSE_DEPTH = 32;
 
 	/**
 	 * Execute an SQL query using the provided configuration and a per-call driver selection.
@@ -65,6 +87,10 @@ public class SqlRequestExecutor {
 		final TelemetryManager telemetryManager,
 		final JdbcDriverSelection driverSelection
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the SQL query was sent", new InterruptedException());
+		}
 		try {
 			final String url = String.valueOf(jdbcConfig.getUrl());
 
@@ -76,16 +102,28 @@ public class SqlRequestExecutor {
 				- Timeout: {}
 				""", hostname, jdbcConfig.getUsername(), sqlQuery, jdbcConfig.getTimeout());
 
-			// Execute the SQL query
-			final SqlResult sqlResult = JdbcClient.execute(
-				url,
-				jdbcConfig.getUsername(),
-				jdbcConfig.getPassword(),
-				sqlQuery,
-				showWarnings,
-				jdbcConfig.getTimeout().intValue(),
-				driverSelection
-			);
+			// Execute the SQL query: one attempt (connect, execute, fetch, close) for the monitored resource, if any
+			final RequestStats requestStats = telemetryManager == null ? null : telemetryManager.getRequestStats();
+			final String username = jdbcConfig.getUsername();
+			final char[] password = jdbcConfig.getPassword();
+			final int timeout = jdbcConfig.getTimeout().intValue();
+			final SqlResult sqlResult;
+			try {
+				sqlResult = ThreadHelper.executeInterruptibly(
+					() -> query(url, username, password, sqlQuery, showWarnings, timeout, driverSelection)
+				);
+			} catch (InterruptedException e) {
+				// An interrupt that came before the query started sent nothing
+				if (!ThreadHelper.neverStarted(e)) {
+					recordOutcome(requestStats, RequestOutcome.TIMEOUT);
+				}
+				throw new ClientException("SQL query interrupted on hostname " + hostname, e);
+			} catch (ExecutionException e) {
+				final SQLException cause = sqlCause(e);
+				recordFailure(requestStats, cause);
+				throw cause;
+			}
+			recordOutcome(requestStats, RequestOutcome.COMPLETED);
 
 			final List<List<String>> results = sqlResult.getResults();
 
@@ -110,5 +148,136 @@ public class SqlRequestExecutor {
 			log.debug("Hostname {} - SQL query failed. Stack trace:", hostname, e);
 			throw new ClientException("SQL query failed on hostname " + hostname, e);
 		}
+	}
+
+	/**
+	 * Executes the SQL query: one attempt (connect, execute, fetch, close). Runs on the thread of the request, so it
+	 * writes no engine state.
+	 *
+	 * @param url          The JDBC URL.
+	 * @param username     The database username.
+	 * @param password     The database password.
+	 * @param sqlQuery     The SQL query to execute.
+	 * @param showWarnings Whether to show SQL warnings.
+	 * @param timeout      The query timeout in seconds.
+	 * @param selection    The driver selection.
+	 * @return The result of the query.
+	 * @throws SQLException when the query fails
+	 */
+	SqlResult query(
+		final String url,
+		final String username,
+		final char[] password,
+		final String sqlQuery,
+		final boolean showWarnings,
+		final int timeout,
+		final JdbcDriverSelection selection
+	) throws SQLException {
+		return JdbcClient.execute(url, username, password, sqlQuery, showWarnings, timeout, selection);
+	}
+
+	/**
+	 * Gets the {@link SQLException} that made a request run by {@link ThreadHelper#executeInterruptibly} fail, or
+	 * throws its cause if it is unchecked.
+	 *
+	 * @param exception The exception thrown by {@link ThreadHelper#executeInterruptibly}.
+	 * @return The {@link SQLException} cause, or a new one wrapping any other checked cause.
+	 */
+	static SQLException sqlCause(final ExecutionException exception) {
+		final Throwable cause = exception.getCause();
+		if (cause instanceof SQLException sqlException) {
+			return sqlException;
+		}
+		if (cause instanceof RuntimeException runtimeException) {
+			throw runtimeException;
+		}
+		if (cause instanceof Error error) {
+			throw error;
+		}
+		return new SQLException(cause);
+	}
+
+	/**
+	 * Records the outcome of a request attempt, if there is a monitored resource.
+	 *
+	 * @param requestStats The request counters of the monitored resource, {@code null} when there is none.
+	 * @param outcome      The outcome of the attempt.
+	 */
+	static void recordOutcome(final RequestStats requestStats, final RequestOutcome outcome) {
+		if (requestStats != null) {
+			requestStats.record(OPERATION_TYPE, outcome);
+		}
+	}
+
+	/**
+	 * Records the outcome of a request attempt that threw, unless nothing was sent (see
+	 * {@link RequestNotSentException}).
+	 *
+	 * @param requestStats The request counters of the monitored resource, {@code null} when there is none.
+	 * @param exception    The exception thrown by the attempt.
+	 */
+	static void recordFailure(final RequestStats requestStats, final SQLException exception) {
+		if (!hasCause(exception, RequestNotSentException.class)) {
+			recordOutcome(requestStats, classify(exception));
+		}
+	}
+
+	/**
+	 * Classifies the exception of a request that was sent: {@link RequestOutcome#TIMEOUT} for a timeout or an
+	 * interruption ({@link RequestOutcome#of(Throwable)}) and for SQLState {@value #QUERY_CANCELED_SQL_STATE}, which
+	 * is how PostgreSQL reports the expiry of {@link java.sql.Statement#setQueryTimeout(int)} (a cancellation by an
+	 * administrator looks the same, but MetricsHub never cancels a query itself), {@link RequestOutcome#FAILED}
+	 * otherwise. Both the causes and the {@link SQLException#getNextException()} chain are searched.
+	 *
+	 * @param exception The exception thrown by the request.
+	 * @return {@link RequestOutcome#TIMEOUT} or {@link RequestOutcome#FAILED}.
+	 */
+	static RequestOutcome classify(final SQLException exception) {
+		// JDBC keeps the getNextException() chain apart from the causes, and a wrapper can hold either: walk both
+		final Deque<Throwable> pending = new ArrayDeque<>(List.of(exception));
+		for (int visited = 0; !pending.isEmpty() && visited < MAX_CAUSE_DEPTH; visited++) {
+			final Throwable current = pending.pop();
+			if (isTimeout(current)) {
+				return RequestOutcome.TIMEOUT;
+			}
+			if (current instanceof SQLException sqlException && sqlException.getNextException() != null) {
+				pending.push(sqlException.getNextException());
+			}
+			if (current.getCause() != null) {
+				pending.push(current.getCause());
+			}
+		}
+		return RequestOutcome.FAILED;
+	}
+
+	/**
+	 * Whether the given exception itself reports a timeout.
+	 *
+	 * @param exception The exception.
+	 * @return {@code true} for a timeout type or SQLState {@value #QUERY_CANCELED_SQL_STATE}.
+	 */
+	private static boolean isTimeout(final Throwable exception) {
+		if (exception instanceof SQLException sqlException && QUERY_CANCELED_SQL_STATE.equals(sqlException.getSQLState())) {
+			return true;
+		}
+		return RequestOutcome.of(exception) == RequestOutcome.TIMEOUT;
+	}
+
+	/**
+	 * Whether the given exception or one of its causes is of the given type.
+	 *
+	 * @param exception The exception.
+	 * @param type      The type to look for.
+	 * @return {@code true} when found.
+	 */
+	private static boolean hasCause(final Throwable exception, final Class<? extends Throwable> type) {
+		Throwable current = exception;
+		for (int depth = 0; current != null && depth < MAX_CAUSE_DEPTH; depth++) {
+			if (type.isInstance(current)) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
 	}
 }

@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 
 /**
@@ -196,5 +197,24 @@ class EmulationSnmpRequestExecutorTest {
 		// No OIDs loaded, GET should fail/return null
 		final String result = executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null);
 		assertNull(result);
+	}
+
+	// ---- Request counters ----
+
+	@Test
+	void testEmulatedRequestsRecordNothing(@TempDir Path tempDir) throws Exception {
+		writeWalkFile(tempDir, "device.walk", WALK_CONTENT);
+		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
+		final RequestStats requestStats = new RequestStats();
+
+		// An answered request and a failed one: no real request is sent, nothing is counted
+		assertEquals(
+			"Linux server 5.4.0",
+			executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, requestStats)
+		);
+		assertNull(executor.executeSNMPGet("1.3.6.1.99.99.99", SNMP_CONFIG, HOSTNAME, false, requestStats));
+		assertNotNull(executor.executeSNMPWalk("1.3.6.1.2.1.1", SNMP_CONFIG, HOSTNAME, false, requestStats));
+
+		assertTrue(requestStats.snapshot().isEmpty());
 	}
 }

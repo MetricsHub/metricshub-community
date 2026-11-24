@@ -30,6 +30,7 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.RetryableException;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 
 /**
  * The {@code RetryOperation} class provides a mechanism for retrying a function that may throw a {@link RetryableException}.
@@ -108,12 +109,16 @@ public class RetryOperation<T> {
 		int retryCounter = 0;
 		while (retryCounter < maxRetries) {
 			try {
-				// Clear any pending interrupt so the retry executes in a clean state (e.g. after an async timeout)
-				Thread.interrupted();
 				if (waitStrategy > 0) {
 					log.info("Hostname {} - {} retry will be performed after {} seconds.", hostname, description, waitStrategy);
 
 					pauseRetry();
+				}
+
+				// The job deadline expired or the job was cancelled: send no more request and keep the interrupt
+				if (ThreadHelper.isCancelled()) {
+					log.info("Hostname {} - {} will not be retried: the thread is interrupted.", hostname, description);
+					return defaultValue;
 				}
 
 				return function.get();

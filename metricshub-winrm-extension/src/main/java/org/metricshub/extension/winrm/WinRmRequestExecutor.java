@@ -36,6 +36,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
@@ -44,8 +45,11 @@ import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.tool.ToolTable;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
@@ -62,6 +66,7 @@ import org.metricshub.winrm.WqlResult;
 import org.metricshub.winrm.WqlRow;
 import org.metricshub.winrm.exceptions.WinRMClientException;
 import org.metricshub.winrm.exceptions.WinRMFaultException;
+import org.metricshub.winrm.exceptions.WinRMTimeoutException;
 import org.metricshub.winrm.exceptions.WindowsRemoteException;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
 import org.metricshub.winrm.exceptions.WqlSyntaxException;
@@ -87,6 +92,12 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * seconds after which HTTP.sys drops an idle connection anyway.
 	 */
 	static final Duration IDLE_TIMEOUT = Duration.ofSeconds(15);
+
+	/**
+	 * The WSMan fault code of an operation that timed out on the server (ERROR_WSMAN_OPERATION_TIMEDOUT,
+	 * 0x80338029): the fault winrm-java reports when a WQL enumeration exceeds its OperationTimeout.
+	 */
+	static final String FAULT_OPERATION_TIMEOUT = "2150858793";
 
 	/**
 	 * Idle clients per host and configuration, most recently used first. A client is a serial
@@ -302,6 +313,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * @param query                 The query to execute
 	 * @param namespace             The namespace on which to execute the query
 	 * @param recordOutputDirectory The directory for recording the query result, or {@code null} to skip recording.
+	 * @param requestStats          The request statistics of the monitored resource, where the outcome of the
+	 *                              query is counted, or {@code null} to count nothing.
 	 * @return The result of the query
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -312,7 +325,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("winrm.config") @NonNull final IWinConfiguration winConfiguration,
 		@SpanAttribute("winrm.query") @NonNull final String query,
 		@SpanAttribute("winrm.namespace") @NonNull final String namespace,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) throws ClientException {
 		if (!(winConfiguration instanceof WinRmConfiguration winRmConfiguration)) {
 			throw new ClientException("Invalid WinRmConfiguration on " + hostname);
@@ -349,7 +363,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 				if (!namespace.isBlank()) {
 					request.namespace(namespace);
 				}
-				return request.execute();
+				return executeRecorded(request::execute, requestStats);
 			});
 
 			final long responseTime = System.currentTimeMillis() - startTime;
@@ -423,10 +437,11 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		String hostname,
 		IWinConfiguration winConfiguration,
 		String command,
-		List<String> embeddedFiles
+		List<String> embeddedFiles,
+		RequestStats requestStats
 	) throws ClientException {
 		if (winConfiguration instanceof WinRmConfiguration winRmConfiguration) {
-			return executeRemoteWinRmCommand(hostname, winRmConfiguration, command, embeddedFiles);
+			return executeRemoteWinRmCommand(hostname, winRmConfiguration, command, embeddedFiles, requestStats);
 		}
 
 		throw new IllegalStateException("Windows commands can be executed only in WMI and WinRM protocols.");
@@ -440,6 +455,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout)
 	 * @param command            The command to execute
 	 * @param embeddedFiles      The local files referenced by the command, to copy to the host; may be null or empty
+	 * @param requestStats       The request statistics of the monitored resource, where the outcome of the command
+	 *                           is counted (completed whatever its exit code), or {@code null} to count nothing
 	 * @return The result of the query
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -448,7 +465,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("host.hostname") @NonNull final String hostname,
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
 		@SpanAttribute("winrm.command") @NonNull final String command,
-		@SpanAttribute("winrm.embedded_files") final List<String> embeddedFiles
+		@SpanAttribute("winrm.embedded_files") final List<String> embeddedFiles,
+		final RequestStats requestStats
 	) throws ClientException {
 		final String username = winRmConfiguration.getUsername();
 		final WinRMHttpProtocolEnum httpProtocol = TransportProtocols.HTTP.equals(winRmConfiguration.getProtocol())
@@ -477,12 +495,15 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			final long startTime = System.currentTimeMillis();
 
 			final CommandResult result;
-			try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
+			final WinRMClient client = newClient(hostname, winRmConfiguration);
+			// Deleting the shell is a request that ignores interrupts. A failure to close is suppressed by the failure of
+			// the command, as when the client itself was the resource
+			try (ThreadHelper.InterruptibleClose _ = () -> ThreadHelper.closeInterruptibly(client::close)) {
 				CommandRequest request = client.command(command);
 				if (embeddedFiles != null && !embeddedFiles.isEmpty()) {
 					request = request.upload(embeddedFiles.stream().map(Path::of).toArray(Path[]::new));
 				}
-				result = request.execute();
+				result = executeRecorded(request::execute, requestStats);
 			}
 
 			final long responseTime = System.currentTimeMillis() - startTime;
@@ -524,10 +545,11 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	@Override
 	public Optional<WinFileOperations> openFileOperations(
 		final String hostname,
-		final IWinConfiguration winConfiguration
+		final IWinConfiguration winConfiguration,
+		final RequestStats requestStats
 	) {
 		if (winConfiguration instanceof WinRmConfiguration winRmConfiguration) {
-			return Optional.of(new WinRmFileOperations(newClient(hostname, winRmConfiguration), hostname));
+			return Optional.of(new WinRmFileOperations(newClient(hostname, winRmConfiguration), hostname, requestStats));
 		}
 		return Optional.empty();
 	}
@@ -547,8 +569,13 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
 		@SpanAttribute("winrm.path") @NonNull final String path
 	) throws ClientException {
-		try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
-			return client.file(path).readText(StandardCharsets.UTF_8);
+		try {
+			final WinRMClient client = newClient(hostname, winRmConfiguration);
+			// Deleting the shell is a request that ignores interrupts. A failure to close is suppressed by the failure of
+			// the read, as when the client itself was the resource
+			try (ThreadHelper.InterruptibleClose _ = () -> ThreadHelper.closeInterruptibly(client::close)) {
+				return client.file(path).readText(StandardCharsets.UTF_8);
+			}
 		} catch (WinRMClientException e) {
 			log.error("Hostname {} - WinRM file read failed. Errors:\n{}\n", hostname, StringHelper.getStackMessages(e));
 			throw new ClientException(String.format("WinRM file read of %s failed on %s.", path, hostname), e);
@@ -577,7 +604,11 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			throw new ClientException(String.format("Invalid Windows file path pattern: %s", pathPattern));
 		}
 		try (
-			WinRmFileOperations fileOperations = new WinRmFileOperations(newClient(hostname, winRmConfiguration), hostname)
+			WinRmFileOperations fileOperations = new WinRmFileOperations(
+				newClient(hostname, winRmConfiguration),
+				hostname,
+				null
+			)
 		) {
 			final List<List<String>> rows = new ArrayList<>();
 			for (final RemoteFileInfo file : fileOperations.list(pattern)) {
@@ -585,5 +616,60 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			}
 			return new ToolTable(List.of("Path", "Size", "LastModified"), rows);
 		}
+	}
+
+	/**
+	 * Run one WinRM request in the calling thread, which waits for it, and count its outcome once it has
+	 * returned or thrown: completed when it returns, otherwise as classified by {@link #outcomeOf(Exception)}.
+	 * A {@link WqlSyntaxException} is not counted: winrm-java parses the WQL locally, before sending anything.
+	 * A thread that is already interrupted (an expired deadline of its job) sends nothing and counts nothing.
+	 *
+	 * @param <T>          The type of the request's result
+	 * @param request      The request, a blocking winrm-java call
+	 * @param requestStats The request statistics of the monitored resource, or {@code null} to count nothing
+	 * @return The result of the request
+	 * @throws WinRMClientException caused by an {@link InterruptedException} when the thread is already interrupted
+	 */
+	static <T> T executeRecorded(final Supplier<T> request, final RequestStats requestStats) {
+		if (Thread.currentThread().isInterrupted()) {
+			throw new WinRMClientException("Interrupted before the WinRM request was sent", new InterruptedException());
+		}
+		final T result;
+		try {
+			result = request.get();
+		} catch (RuntimeException e) {
+			if (!(e instanceof WqlSyntaxException)) {
+				IWinRequestExecutor.record(requestStats, WinRmExtension.IDENTIFIER, outcomeOf(e));
+			}
+			throw e;
+		}
+		IWinRequestExecutor.record(requestStats, WinRmExtension.IDENTIFIER, RequestOutcome.COMPLETED);
+		return result;
+	}
+
+	/**
+	 * Classify the exception of a WinRM request: a timeout when winrm-java reports its deadline expired
+	 * ({@link WinRMTimeoutException}), when the server reports its operation timed out (the
+	 * {@link #FAULT_OPERATION_TIMEOUT} fault), or when the request timed out or was interrupted; a failure
+	 * otherwise (authentication, other faults, connection errors, ...).
+	 *
+	 * @param e The exception thrown by the request
+	 * @return {@link RequestOutcome#TIMEOUT} or {@link RequestOutcome#FAILED}
+	 */
+	static RequestOutcome outcomeOf(final Exception e) {
+		if (e instanceof WinRMTimeoutException || isOperationTimeoutFault(e)) {
+			return RequestOutcome.TIMEOUT;
+		}
+		return RequestOutcome.of(e);
+	}
+
+	/**
+	 * Whether the exception is the WSMan fault of an operation that timed out on the server.
+	 *
+	 * @param e The exception thrown by the request
+	 * @return {@code true} for a {@link WinRMFaultException} with the {@link #FAULT_OPERATION_TIMEOUT} code
+	 */
+	private static boolean isOperationTimeoutFault(final Exception e) {
+		return e instanceof WinRMFaultException fault && FAULT_OPERATION_TIMEOUT.equals(fault.getFaultCode());
 	}
 }

@@ -32,6 +32,7 @@ import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.PslUtils;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 
@@ -63,6 +64,7 @@ public class WmiDetectionService {
 	 *                                (can be set to false when this method is used as part of namespace
 	 *                                detection, to avoid polluting logs with expected failures)
 	 * @param recordOutputDirectory  Directory where WMI responses are recorded, or {@code null} to skip recording
+	 * @param requestStats           Request statistics of the monitored resource, or {@code null} to count nothing
 	 * @return {@link CriterionTestResult} which indicates if the check has succeeded or not.
 	 */
 	public CriterionTestResult performDetectionTest(
@@ -71,7 +73,8 @@ public class WmiDetectionService {
 		@NonNull final WmiCriterion wmiCriterion,
 		@NonNull String connectorId,
 		final boolean logMode,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final RequestStats requestStats
 	) {
 		// Make the WBEM query
 		final List<List<String>> queryResult;
@@ -81,7 +84,8 @@ public class WmiDetectionService {
 				winConfiguration,
 				wmiCriterion.getQuery(),
 				wmiCriterion.getNamespace(),
-				recordOutputDirectory
+				recordOutputDirectory,
+				requestStats
 			);
 		} catch (Exception e) {
 			if (logMode) {

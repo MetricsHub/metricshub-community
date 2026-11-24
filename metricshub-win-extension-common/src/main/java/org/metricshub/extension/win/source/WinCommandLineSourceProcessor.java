@@ -83,7 +83,8 @@ public class WinCommandLineSourceProcessor {
 				commandLineSource.getCommandLine(),
 				hostname,
 				winConfiguration,
-				telemetryManager.getEmbeddedFiles(connectorId)
+				telemetryManager.getEmbeddedFiles(connectorId),
+				telemetryManager.getRequestStats()
 			);
 
 			// transform to lines

@@ -43,6 +43,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
@@ -70,6 +71,14 @@ public class TelemetryManager {
 	@Default
 	private HostProperties hostProperties = new HostProperties();
 
+	/**
+	 * The cumulative request counters of this resource, exported as {@code metricshub.host.requests}. Final and
+	 * initialized, so it is created with each instance and is neither a builder nor a constructor parameter.
+	 */
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final RequestStats requestStats = new RequestStats();
+
 	private HostConfiguration hostConfiguration;
 	private ConnectorStore connectorStore;
 	private Long strategyTime;
@@ -89,6 +98,16 @@ public class TelemetryManager {
 
 		for (IStrategy strategy : strategies) {
 			final String strategyType = strategy.getClass().getSimpleName();
+
+			// Cancelled (a reload): the next strategies would each run on a new thread that does not inherit the interrupt
+			if (Thread.currentThread().isInterrupted()) {
+				log.warn(
+					"Hostname {} - Thread interrupted: skipping the strategy {} and the next ones.",
+					hostname,
+					strategyType
+				);
+				return;
+			}
 
 			log.trace("Hostname {} - Calling strategy {}.", hostname, strategyType);
 			runStrategy(strategy);

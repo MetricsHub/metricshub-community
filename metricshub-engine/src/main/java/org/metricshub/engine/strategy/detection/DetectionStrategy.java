@@ -172,14 +172,19 @@ public class DetectionStrategy extends AbstractStrategy {
 			);
 		}
 
-		// Create monitors
-		createConnectorMonitors(connectorTestResults);
+		// A detection cut short proves nothing: the connector monitors and their status are left as they are
+		if (Thread.currentThread().isInterrupted()) {
+			log.warn("Hostname {} - Thread interrupted: the connector monitors are left unchanged.", hostname);
+		} else {
+			// Create monitors
+			createConnectorMonitors(connectorTestResults);
 
-		// Create configured connector monitor
-		createConfiguredConnectorMonitor(configuredConnectorId);
+			// Create configured connector monitor
+			createConfiguredConnectorMonitor(configuredConnectorId);
+		}
 
 		// Collect per-host request metrics (completed/timeout by operation type)
-		collectRequestMetrics(hostname);
+		collectRequestMetrics();
 	}
 
 	/**
