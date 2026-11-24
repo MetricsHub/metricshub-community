@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -231,6 +232,27 @@ class WmiRequestExecutorTest {
 	}
 
 	@Test
+	void testExecuteWmiOnAnInterruptedThreadCountsNothing() {
+		final RequestStats requestStats = new RequestStats();
+		try (MockedStatic<WmiWbemServices> statics = mockStatic(WmiWbemServices.class)) {
+			// An earlier deadline of the job interrupted the thread: nothing connects
+			Thread.currentThread().interrupt();
+			try {
+				final ClientException e = assertThrows(
+					ClientException.class,
+					() -> new WmiRequestExecutor().executeWmi(HOSTNAME, CONFIGURATION, QUERY, NAMESPACE, null, requestStats)
+				);
+				assertInstanceOf(InterruptedException.class, e.getCause());
+				assertTrue(Thread.currentThread().isInterrupted());
+			} finally {
+				Thread.interrupted();
+			}
+			statics.verify(() -> WmiWbemServices.getInstance(any(), any(), any()), never());
+		}
+		assertEquals(Map.of(), requestStats.snapshot());
+	}
+
+	@Test
 	void testExecuteWmiWithoutRequestStats() throws Exception {
 		assertEquals(
 			List.of(List.of("host")),
@@ -435,6 +457,30 @@ class WmiRequestExecutorTest {
 	void testExecuteWmiRemoteCommandCountsNothingOnLocalArgumentChecks() throws Exception {
 		final RequestStats requestStats = new RequestStats();
 		runCommandFailing(new IllegalArgumentException("timeout=0 must not be negative or zero."), requestStats);
+		assertEquals(Map.of(), requestStats.snapshot());
+	}
+
+	@Test
+	void testExecuteWmiRemoteCommandOnAnInterruptedThreadCountsNothing() {
+		final RequestStats requestStats = new RequestStats();
+		try (MockedStatic<WinRemoteCommandExecutor> statics = mockStatic(WinRemoteCommandExecutor.class)) {
+			// An earlier deadline of the job interrupted the thread: nothing runs
+			Thread.currentThread().interrupt();
+			try {
+				final ClientException e = assertThrows(
+					ClientException.class,
+					() -> new WmiRequestExecutor().executeWmiRemoteCommand(COMMAND, HOSTNAME, null, null, 30, null, requestStats)
+				);
+				assertInstanceOf(InterruptedException.class, e.getCause());
+				assertTrue(Thread.currentThread().isInterrupted());
+			} finally {
+				Thread.interrupted();
+			}
+			statics.verify(
+				() -> WinRemoteCommandExecutor.execute(any(), any(), any(), any(), any(), anyLong(), any(), anyBoolean()),
+				never()
+			);
+		}
 		assertEquals(Map.of(), requestStats.snapshot());
 	}
 

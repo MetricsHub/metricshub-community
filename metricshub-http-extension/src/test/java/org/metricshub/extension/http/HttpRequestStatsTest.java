@@ -232,6 +232,25 @@ class HttpRequestStatsTest {
 		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
 	}
 
+	@Test
+	void testRequestOnAnInterruptedThreadCountsNothing() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(200, "ok")), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
+
+		// The deadline of the job already expired: nothing is sent and nothing is counted
+		Thread.currentThread().interrupt();
+		try {
+			assertNull(executor.executeHttpRequest(request(httpConfiguration), true, telemetryManager));
+			verifySent(executor, 0);
+			assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
 	/**
 	 * Asserts the outcome of a request whose client throws the given {@link IOException}: the executor still gives
 	 * <code>null</code> and does not retry.

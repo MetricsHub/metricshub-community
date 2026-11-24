@@ -108,6 +108,10 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		final String recordOutputDirectory,
 		final RequestStats requestStats
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the WMI query was sent", new InterruptedException());
+		}
 		final String username = wmiConfig.getUsername();
 		char[] password = wmiConfig.getPassword();
 		// If the username is not provided, null will be used instead of the provided password.
@@ -140,8 +144,6 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		// The COM calls ignore interrupts: they run on a thread of their own, so an interrupted caller returns at once
 		final char[] queryPassword = password;
 		final long queryTimeout = wmiConfig.getTimeout() * 1000;
-		// A caller already interrupted (an expired deadline of its job) sends nothing
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		boolean answered = false;
 		try {
 			final long startTime = System.currentTimeMillis();
@@ -183,7 +185,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			return resultTable;
 		} catch (Exception e) {
 			final Exception failure = unwrap(e);
-			if (!answered && !interruptedBefore) {
+			if (!answered) {
 				recordFailure(requestStats, failure);
 			}
 			throw new ClientException("WMI query failed on " + hostname + ".", failure);
@@ -261,8 +263,10 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("wmi.local_files") final List<String> localFiles,
 		final RequestStats requestStats
 	) throws ClientException {
-		// A caller already interrupted (an expired deadline of its job) sends nothing
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A thread already interrupted (an expired deadline of its job) runs nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the WMI command was sent", new InterruptedException());
+		}
 		boolean answered = false;
 		try {
 			LoggingHelper.trace(
@@ -307,7 +311,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			return resultStdout;
 		} catch (Exception e) {
 			final Exception failure = unwrap(e);
-			if (!answered && !interruptedBefore) {
+			if (!answered) {
 				recordFailure(requestStats, failure);
 			}
 			// The cause of the wmi-java wrapper, as before; the exception itself when it has none (a timeout, an interrupt)

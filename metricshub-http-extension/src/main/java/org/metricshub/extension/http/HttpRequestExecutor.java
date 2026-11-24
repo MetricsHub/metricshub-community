@@ -449,8 +449,11 @@ public class HttpRequestExecutor {
 		int timeout,
 		final RequestStats requestStats
 	) throws IOException {
-		// A caller already interrupted sends nothing
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A thread already interrupted (an expired deadline of its job) sends nothing and counts nothing:
+		// HttpURLConnection connects and sends without looking at the interrupt
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedIOException("Interrupted before the HTTP request was sent");
+		}
 		final HttpResponse httpResponse;
 		try {
 			httpResponse = sendInterruptibly(url, method, username, password, headerContent, bodyContent, timeout);
@@ -458,10 +461,7 @@ public class HttpRequestExecutor {
 			// The URL is invalid: nothing was sent
 			throw e;
 		} catch (IOException e) {
-			final RequestOutcome outcome = RequestOutcome.of(e);
-			if (!(interruptedBefore && outcome == RequestOutcome.TIMEOUT)) {
-				requestStats.record(OPERATION_TYPE, outcome);
-			}
+			requestStats.record(OPERATION_TYPE, RequestOutcome.of(e));
 			throw e;
 		} catch (RuntimeException e) {
 			requestStats.record(OPERATION_TYPE, RequestOutcome.FAILED);

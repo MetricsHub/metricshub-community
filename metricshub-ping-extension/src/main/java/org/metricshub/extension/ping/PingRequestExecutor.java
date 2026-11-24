@@ -73,8 +73,10 @@ public class PingRequestExecutor {
 		@SpanAttribute("ping.timeout") final int timeout,
 		final RequestStats requestStats
 	) throws UnknownHostException {
-		// A caller already interrupted sends nothing
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A thread already interrupted (an expired deadline of its job) resolves and pings nothing, and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
 		final InetAddress pingAddress;
 		try {
 			pingAddress = interruptibly(() -> resolve(hostname));
@@ -83,9 +85,7 @@ public class PingRequestExecutor {
 			throw e;
 		} catch (IOException e) {
 			// Interrupted: the name resolution throws nothing else
-			if (!interruptedBefore) {
-				record(requestStats, RequestOutcome.of(e));
-			}
+			record(requestStats, RequestOutcome.of(e));
 			log.debug("Hostname {} - Ping interrupted.", hostname);
 			return false;
 		}

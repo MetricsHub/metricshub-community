@@ -106,15 +106,15 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @throws IOException When the request fails.
 	 */
 	private <T> T send(final SftpRequest<T> request) throws IOException {
-		// A caller already interrupted (an expired deadline of its job) sends nothing and records nothing
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A thread already interrupted (an expired deadline of its job) sends nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedIOException("Interrupted before the SFTP request was sent");
+		}
 		final T result;
 		try {
 			result = io(request::send);
 		} catch (IOException e) {
-			if (!interruptedBefore) {
-				record(RequestOutcome.of(e));
-			}
+			record(RequestOutcome.of(e));
 			throw e;
 		}
 		record(RequestOutcome.COMPLETED);
@@ -170,8 +170,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @return true if connection succeeds, false otherwise
 	 */
 	public boolean connectSshClient() {
-		// A caller already interrupted (an expired deadline of its job) connects nothing and records nothing
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
 		try {
 			io(() -> {
 				sshClient.connect(sshConfiguration.getTimeout().intValue() * 1000, sshConfiguration.getPort());
@@ -179,9 +181,7 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 			});
 			return true;
 		} catch (IOException e) {
-			if (!interruptedBefore) {
-				record(RequestOutcome.of(e));
-			}
+			record(RequestOutcome.of(e));
 			final String hostname = sshConfiguration.getHostname();
 			log.info("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e.getMessage());
 			log.debug("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e);

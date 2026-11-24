@@ -2,8 +2,11 @@ package org.metricshub.extension.winrm;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
@@ -21,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.FileHelper;
@@ -194,15 +198,20 @@ class WinRmRequestStatsTest {
 	@Test
 	void testRequestOnAnInterruptedThreadCountsNothing() {
 		final RequestStats requestStats = new RequestStats();
-		// An earlier deadline of the job interrupted the thread: the request fails on the interruption
+		final AtomicBoolean sent = new AtomicBoolean();
+		// An earlier deadline of the job interrupted the thread: nothing is sent
 		Thread.currentThread().interrupt();
 		try {
-			assertThrows(WinRMClientException.class, () -> WinRmRequestExecutor.executeRecorded(() -> {
-				throw new WinRMClientException("interrupted", new InterruptedException());
-			}, requestStats));
+			final WinRMClientException e = assertThrows(
+				WinRMClientException.class,
+				() -> WinRmRequestExecutor.executeRecorded(() -> sent.getAndSet(true), requestStats)
+			);
+			assertInstanceOf(InterruptedException.class, e.getCause());
+			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
 			Thread.interrupted();
 		}
+		assertFalse(sent.get());
 		assertEquals(Map.of(), requestStats.snapshot());
 	}
 

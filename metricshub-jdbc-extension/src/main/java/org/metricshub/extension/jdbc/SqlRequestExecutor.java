@@ -87,6 +87,10 @@ public class SqlRequestExecutor {
 		final TelemetryManager telemetryManager,
 		final JdbcDriverSelection driverSelection
 	) throws ClientException {
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			throw new ClientException("Interrupted before the SQL query was sent", new InterruptedException());
+		}
 		try {
 			final String url = String.valueOf(jdbcConfig.getUrl());
 
@@ -103,17 +107,13 @@ public class SqlRequestExecutor {
 			final String username = jdbcConfig.getUsername();
 			final char[] password = jdbcConfig.getPassword();
 			final int timeout = jdbcConfig.getTimeout().intValue();
-			final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 			final SqlResult sqlResult;
 			try {
 				sqlResult = ThreadHelper.executeInterruptibly(
 					() -> query(url, username, password, sqlQuery, showWarnings, timeout, driverSelection)
 				);
 			} catch (InterruptedException e) {
-				// A caller interrupted before the request started sent nothing
-				if (!interruptedBefore) {
-					recordOutcome(requestStats, RequestOutcome.TIMEOUT);
-				}
+				recordOutcome(requestStats, RequestOutcome.TIMEOUT);
 				throw new ClientException("SQL query interrupted on hostname " + hostname, e);
 			} catch (ExecutionException e) {
 				final SQLException cause = sqlCause(e);

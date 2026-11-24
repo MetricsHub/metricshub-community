@@ -474,8 +474,11 @@ public class JdbcExtension implements IProtocolExtension {
 		if (password != null) {
 			props.setProperty("password", new String(password));
 		}
+		// A thread already interrupted (an expired deadline of its job) connects to nothing and counts nothing
+		if (Thread.currentThread().isInterrupted()) {
+			return false;
+		}
 		// One attempt: connect, isValid and close, on the thread of the request
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		final Boolean isValid;
 		try {
 			isValid = ThreadHelper.executeInterruptibly(() -> {
@@ -485,10 +488,7 @@ public class JdbcExtension implements IProtocolExtension {
 				}
 			});
 		} catch (InterruptedException e) {
-			// A caller interrupted before the request started sent nothing
-			if (!interruptedBefore) {
-				SqlRequestExecutor.recordOutcome(requestStats, RequestOutcome.TIMEOUT);
-			}
+			SqlRequestExecutor.recordOutcome(requestStats, RequestOutcome.TIMEOUT);
 			return false;
 		} catch (ExecutionException e) {
 			SqlRequestExecutor.recordOutcome(requestStats, SqlRequestExecutor.classify(SqlRequestExecutor.sqlCause(e)));

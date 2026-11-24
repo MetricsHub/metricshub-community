@@ -99,6 +99,21 @@ class PingRequestExecutorTest {
 	}
 
 	@Test
+	void testPingOnAnInterruptedThreadCountsNothing() throws Exception {
+		executor.reachable = true;
+		// An earlier deadline of the job interrupted the thread: nothing is resolved nor pinged
+		Thread.currentThread().interrupt();
+		try {
+			assertFalse(executor.ping(HOSTNAME, TIMEOUT_MS, stats));
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+		assertNull(executor.resolvedHostname);
+		assertEquals(Map.of(), stats.snapshot());
+	}
+
+	@Test
 	void testClassifyNoAnswerTolerance() {
 		final long limit = TIMEOUT_MS - PingRequestExecutor.TIMEOUT_TOLERANCE_MS;
 		assertEquals(TIMEOUT, PingRequestExecutor.classifyNoAnswer(TimeUnit.MILLISECONDS.toNanos(limit), TIMEOUT_MS));
