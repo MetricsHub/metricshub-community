@@ -26,6 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
 import org.metricshub.snmp.client.ISnmpClient;
@@ -66,5 +68,16 @@ public class EmulationSnmpRequestExecutor extends AbstractSnmpRequestExecutor {
 		}
 
 		return new OfflineSnmpClient(snmpDir);
+	}
+
+	/**
+	 * Records nothing: an emulated request is read from files and sends no request.
+	 *
+	 * @param requestStats Ignored.
+	 * @param outcome      Ignored.
+	 */
+	@Override
+	protected void recordRequest(final RequestStats requestStats, final RequestOutcome outcome) {
+		// No request is sent in emulation
 	}
 }

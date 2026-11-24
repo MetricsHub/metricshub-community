@@ -136,7 +136,8 @@ public class JdbcClient {
 	 * @param password   The password; may be {@code null}.
 	 * @param selection  Pre-resolved driver selection; required (non-null).
 	 * @return The opened {@link Connection}.
-	 * @throws SQLException If the driver cannot be resolved or refuses the URL.
+	 * @throws RequestNotSentException If the driver cannot be resolved or refuses the URL: nothing was sent.
+	 * @throws SQLException            If the connection fails.
 	 */
 	private static Connection openConnection(
 		final String url,
@@ -148,7 +149,10 @@ public class JdbcClient {
 		try {
 			loaded = JdbcDriverRegistryHolder.get().resolve(selection.driverClass(), selection.explicitJarPath());
 		} catch (DriverResolutionException e) {
-			throw new SQLException("Failed to resolve JDBC driver " + selection.driverClass() + ": " + e.getMessage(), e);
+			throw new RequestNotSentException(
+				"Failed to resolve JDBC driver " + selection.driverClass() + ": " + e.getMessage(),
+				e
+			);
 		}
 
 		final Properties props = new Properties();
@@ -161,9 +165,30 @@ public class JdbcClient {
 
 		final Connection connection = loaded.driver().connect(url, props);
 		if (connection == null) {
-			throw new SQLException("Driver " + selection.driverClass() + " did not accept JDBC URL " + url);
+			// By the JDBC contract, a driver returns null without contacting any server for a URL that is not its own
+			throw new RequestNotSentException("Driver " + selection.driverClass() + " did not accept JDBC URL " + url, null);
 		}
 		return connection;
+	}
+
+	/**
+	 * Signals that a query failed before anything was sent to the database: the driver could not be resolved or
+	 * did not accept the URL. {@link #execute} wraps it, as any other {@link SQLException}, so it is found in the
+	 * cause chain.
+	 */
+	public static class RequestNotSentException extends SQLException {
+
+		private static final long serialVersionUID = 1L;
+
+		/**
+		 * Creates the exception.
+		 *
+		 * @param message The reason why nothing was sent.
+		 * @param cause   The cause, may be {@code null}.
+		 */
+		public RequestNotSentException(final String message, final Throwable cause) {
+			super(message, cause);
+		}
 	}
 
 	/**

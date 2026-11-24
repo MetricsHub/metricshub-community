@@ -1,5 +1,9 @@
 package org.metricshub.extension.snmp.it;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -18,7 +22,11 @@ import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
 import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
 import org.metricshub.engine.strategy.detection.DetectionStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
 import org.metricshub.extension.snmp.SnmpExtension;
@@ -104,5 +112,34 @@ class DellOpenManageIT {
 				new CollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager)
 			)
 			.verifyExpected("snmp/DellOpenManageIT/expected/expected.json");
+
+		verifyRequestMetrics();
+	}
+
+	/**
+	 * Verifies that the SNMP requests sent to the agent are counted in the request counters of the resource and
+	 * exported on its endpoint host monitor.
+	 */
+	private static void verifyRequestMetrics() {
+		final Map<RequestOutcome, Long> counters = telemetryManager.getRequestStats()
+			.snapshot()
+			.get(AbstractSnmpRequestExecutor.OPERATION_TYPE);
+		assertNotNull(counters);
+		assertTrue(counters.get(RequestOutcome.COMPLETED) > 0);
+
+		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+		assertNotNull(endpointHostMonitor);
+		for (final RequestOutcome outcome : RequestOutcome.values()) {
+			final NumberMetric metric = endpointHostMonitor.getMetric(
+				"metricshub.host.requests{state=\"%s\", operation_type=\"%s\"}".formatted(
+					outcome.getLabel(),
+					AbstractSnmpRequestExecutor.OPERATION_TYPE
+				),
+				NumberMetric.class
+			);
+			assertNotNull(metric, outcome.getLabel());
+			assertEquals("Counter", metric.getMetricType());
+			assertEquals(counters.get(outcome).doubleValue(), metric.getValue());
+		}
 	}
 }

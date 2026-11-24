@@ -125,7 +125,7 @@ class WinCommandLineSourceProcessorTest {
 			Available Physical Memory:8192 MB
 			""";
 		doReturn(new OsCommandResult(expectedCommandLineResult, COMMAND_LINE)).when(winCommandServiceMock)
-			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), telemetryManager.getRequestStats());
 
 		assertEquals(
 			SourceTable.ofText("16384 MB\n8192 MB"),
@@ -140,7 +140,8 @@ class WinCommandLineSourceProcessorTest {
 				"Total Physical Memory:16384 MB\r\nOther:1\r\nAvailable Physical Memory:8192 MB\r\n",
 				COMMAND_LINE
 			)
-		).when(winCommandServiceMock).runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+		).when(winCommandServiceMock)
+			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), telemetryManager.getRequestStats());
 
 		assertEquals(
 			"16384 MB;Total Physical Memory\n8192 MB;Available Physical Memory",
@@ -182,7 +183,7 @@ class WinCommandLineSourceProcessorTest {
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 
 		doThrow(new ClientException()).when(winCommandServiceMock)
-			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), telemetryManager.getRequestStats());
 
 		assertEquals(SourceTable.empty(), winCommandLineSourceProcessor.process(commandLineSource, telemetryManager));
 	}

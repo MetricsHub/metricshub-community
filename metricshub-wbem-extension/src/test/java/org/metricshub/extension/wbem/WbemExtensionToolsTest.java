@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -48,8 +47,7 @@ class WbemExtensionToolsTest {
 				eq(configuration),
 				eq("SELECT Name FROM EMC_StorageSystem"),
 				eq("root/emc"),
-				any(TelemetryManager.class),
-				isNull()
+				any(TelemetryManager.class)
 			)
 		).thenReturn(List.of(List.of("array1")));
 

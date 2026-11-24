@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
@@ -14,6 +16,7 @@ import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,13 +58,18 @@ class PingExtensionTest {
 	 * Creates a TelemetryManager instance with a Ping configuration.
 	 */
 	void initPing() {
+		initPing(PingConfiguration.builder().hostname(HOST_NAME).build());
+	}
+
+	/**
+	 * Creates a TelemetryManager instance with the given Ping configuration.
+	 */
+	void initPing(final PingConfiguration pingConfiguration) {
 		final Monitor hostMonitor = Monitor.builder().type(HOST.getKey()).isEndpoint(true).build();
 
 		final Map<String, Map<String, Monitor>> monitors = new HashMap<>(
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
-
-		final PingConfiguration pingConfiguration = PingConfiguration.builder().hostname(HOST_NAME).build();
 
 		final Connector connector = Connector.builder().build();
 
@@ -89,7 +97,7 @@ class PingExtensionTest {
 		initPing();
 
 		// Mock false protocol health check response
-		doReturn(false).when(pingRequestExecutorMock).ping(anyString(), anyInt());
+		doReturn(false).when(pingRequestExecutorMock).ping(anyString(), anyInt(), same(telemetryManager.getRequestStats()));
 
 		Optional<Boolean> result = pingExtension.checkProtocol(telemetryManager);
 
@@ -102,7 +110,7 @@ class PingExtensionTest {
 		initPing();
 
 		// Mock ICMP Ping protocol health check response
-		doReturn(true).when(pingRequestExecutorMock).ping(anyString(), anyInt());
+		doReturn(true).when(pingRequestExecutorMock).ping(anyString(), anyInt(), same(telemetryManager.getRequestStats()));
 
 		Optional<Boolean> result = pingExtension.checkProtocol(telemetryManager);
 
@@ -198,15 +206,65 @@ class PingExtensionTest {
 
 	@Test
 	void testExecuteQuery() throws Exception {
-		doReturn(Boolean.TRUE).when(pingRequestExecutorMock).ping(anyString(), anyInt());
+		doReturn(Boolean.TRUE).when(pingRequestExecutorMock).ping(anyString(), anyInt(), isNull());
 		PingConfiguration pingConfiguration = PingConfiguration.builder().hostname(HOST_NAME).timeout(5L).build();
 		assertTrue(Boolean.valueOf(pingExtension.executeQuery(pingConfiguration, null)));
 	}
 
 	@Test
 	void testExecuteQueryExecuteThrowsException() throws UnknownHostException {
-		doThrow(UnknownHostException.class).when(pingRequestExecutorMock).ping(anyString(), anyInt());
+		doThrow(UnknownHostException.class).when(pingRequestExecutorMock).ping(anyString(), anyInt(), isNull());
 		PingConfiguration pingConfiguration = PingConfiguration.builder().hostname(HOST_NAME).timeout(5L).build();
 		assertThrows(UnknownHostException.class, () -> pingExtension.executeQuery(pingConfiguration, null));
+	}
+
+	@Test
+	void testCheckProtocolRecordsCompleted() {
+		final FakePingRequestExecutor executor = new FakePingRequestExecutor();
+		executor.reachable = true;
+		initPing();
+		assertEquals(Optional.of(true), new PingExtension(executor).checkProtocol(telemetryManager));
+		assertEquals(PingRequestExecutorTest.counts(1, 0, 0), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testCheckProtocolRecordsTimeoutResultUnchanged() {
+		final FakePingRequestExecutor executor = new FakePingRequestExecutor();
+		executor.elapsedMillis = 5000;
+		initPing();
+		assertEquals(Optional.of(false), new PingExtension(executor).checkProtocol(telemetryManager));
+		assertEquals(PingRequestExecutorTest.counts(0, 1, 0), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testCheckProtocolUnresolvableRecordsFailedResultUnchanged() {
+		final FakePingRequestExecutor executor = new FakePingRequestExecutor();
+		executor.resolveError = new UnknownHostException(HOST_NAME);
+		initPing();
+		assertEquals(Optional.of(false), new PingExtension(executor).checkProtocol(telemetryManager));
+		assertEquals(PingRequestExecutorTest.counts(0, 0, 1), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testCheckProtocolHostnameOverrideCountsInResource() {
+		final FakePingRequestExecutor executor = new FakePingRequestExecutor();
+		executor.reachable = true;
+		initPing(PingConfiguration.builder().hostname("ping-override").build());
+		assertEquals(Optional.of(true), new PingExtension(executor).checkProtocol(telemetryManager));
+		assertEquals("ping-override", executor.resolvedHostname);
+		assertEquals(PingRequestExecutorTest.counts(1, 0, 0), telemetryManager.getRequestStats().snapshot());
+	}
+
+	@Test
+	void testExecuteQueryRecordsNothing() throws Exception {
+		final FakePingRequestExecutor executor = new FakePingRequestExecutor();
+		final PingExtension extension = new PingExtension(executor);
+		final PingConfiguration pingConfiguration = PingConfiguration.builder().hostname(HOST_NAME).timeout(5L).build();
+
+		executor.pingError = new IOException("network error");
+		assertEquals("false", extension.executeQuery(pingConfiguration, null));
+
+		executor.resolveError = new UnknownHostException(HOST_NAME);
+		assertThrows(UnknownHostException.class, () -> extension.executeQuery(pingConfiguration, null));
 	}
 }

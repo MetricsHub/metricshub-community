@@ -57,7 +57,16 @@ public class PingExtension implements IProtocolExtension {
 	private PingRequestExecutor pingRequestExecutor;
 
 	public PingExtension() {
-		pingRequestExecutor = new PingRequestExecutor();
+		this(new PingRequestExecutor());
+	}
+
+	/**
+	 * Creates the extension with the given request executor.
+	 *
+	 * @param pingRequestExecutor The executor that sends the ping requests.
+	 */
+	PingExtension(final PingRequestExecutor pingRequestExecutor) {
+		this.pingRequestExecutor = pingRequestExecutor;
 	}
 
 	@Override
@@ -103,7 +112,11 @@ public class PingExtension implements IProtocolExtension {
 
 		// Execute a Ping request
 		try {
-			pingResult = pingRequestExecutor.ping(hostname, (int) pingConfiguration.getTimeout().longValue() * 1000);
+			pingResult = pingRequestExecutor.ping(
+				hostname,
+				(int) pingConfiguration.getTimeout().longValue() * 1000,
+				telemetryManager.getRequestStats()
+			);
 		} catch (Exception e) {
 			log.debug("Hostname {} - Checking Ping protocol status. Exception when performing a Ping request: ", hostname, e);
 		}
@@ -166,8 +179,13 @@ public class PingExtension implements IProtocolExtension {
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
 		final PingConfiguration pingConfiguration = (PingConfiguration) configuration;
+		// No monitored resource here (CLI, MCP tool): the request is not counted
 		return String.valueOf(
-			pingRequestExecutor.ping(pingConfiguration.getHostname(), (int) pingConfiguration.getTimeout().longValue() * 1000)
+			pingRequestExecutor.ping(
+				pingConfiguration.getHostname(),
+				(int) pingConfiguration.getTimeout().longValue() * 1000,
+				null
+			)
 		);
 	}
 }

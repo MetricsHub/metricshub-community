@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.jmx.JmxConfiguration;
@@ -18,6 +19,9 @@ class EmulationJmxRequestExecutorTest {
 
 	@TempDir
 	Path tempDir;
+
+	// Emulation never sends a request, so it never records an outcome
+	private final RequestStats requestStats = new RequestStats();
 
 	private EmulationJmxRequestExecutor createExecutor() {
 		return new EmulationJmxRequestExecutor(new EmulationRoundRobinManager(), new EmulationImageCacheManager());
@@ -55,13 +59,14 @@ class EmulationJmxRequestExecutorTest {
 			"java.lang:type=Memory",
 			List.of("HeapMemoryUsage"),
 			List.of(),
-			"host1",
+			requestStats,
 			null
 		);
 
 		assertNotNull(result);
 		assertEquals(1, result.size());
 		assertEquals(List.of("val1", "val2"), result.get(0));
+		assertTrue(requestStats.snapshot().isEmpty());
 	}
 
 	@Test
@@ -88,7 +93,7 @@ class EmulationJmxRequestExecutorTest {
 			"com.example:type=Ex,scope=*",
 			List.of("Attr1"),
 			List.of("scope"),
-			"host2",
+			requestStats,
 			null
 		);
 
@@ -119,7 +124,7 @@ class EmulationJmxRequestExecutorTest {
 			"nonexistent:type=Missing",
 			List.of("Attr1"),
 			List.of(),
-			"host",
+			requestStats,
 			null
 		);
 
@@ -152,11 +157,26 @@ class EmulationJmxRequestExecutorTest {
 		);
 
 		final EmulationJmxRequestExecutor executor = createExecutor();
-		final List<List<String>> result1 = executor.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
-		final List<List<String>> result2 = executor.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
+		final List<List<String>> result1 = executor.fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			requestStats,
+			null
+		);
+		final List<List<String>> result2 = executor.fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			requestStats,
+			null
+		);
 
 		assertEquals("first", result1.get(0).get(0));
 		assertEquals("second", result2.get(0).get(0));
+		assertTrue(requestStats.snapshot().isEmpty());
 	}
 
 	@Test
@@ -165,7 +185,14 @@ class EmulationJmxRequestExecutorTest {
 			JmxConfiguration.builder().hostname("host").build(),
 			tempDir.toString()
 		);
-		final List<List<String>> result = createExecutor().fetchMBean(config, null, List.of("A"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			null,
+			List.of("A"),
+			List.of(),
+			requestStats,
+			null
+		);
 		assertTrue(result.isEmpty());
 	}
 
@@ -177,7 +204,7 @@ class EmulationJmxRequestExecutorTest {
 			"obj:type=T",
 			List.of("A"),
 			List.of(),
-			"host",
+			requestStats,
 			null
 		);
 		assertTrue(result.isEmpty());
@@ -191,7 +218,7 @@ class EmulationJmxRequestExecutorTest {
 			"obj:type=T",
 			List.of("A"),
 			List.of(),
-			"host",
+			requestStats,
 			null
 		);
 		assertTrue(result.isEmpty());
@@ -208,7 +235,7 @@ class EmulationJmxRequestExecutorTest {
 			"obj:type=T",
 			List.of("A"),
 			List.of(),
-			"host",
+			requestStats,
 			null
 		);
 		assertTrue(result.isEmpty());
@@ -236,7 +263,7 @@ class EmulationJmxRequestExecutorTest {
 			"obj:type=T",
 			List.of("A"),
 			List.of(),
-			"host",
+			requestStats,
 			null
 		);
 		assertTrue(result.isEmpty());
@@ -264,7 +291,7 @@ class EmulationJmxRequestExecutorTest {
 			"obj:type=T",
 			List.of("A"),
 			List.of(),
-			"host",
+			requestStats,
 			null
 		);
 		assertTrue(result.isEmpty());
@@ -272,7 +299,8 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testCheckConnectionReturnsTrue() throws Exception {
-		assertTrue(createExecutor().checkConnection(null, null));
+		assertTrue(createExecutor().checkConnection(null, requestStats));
+		assertTrue(requestStats.snapshot().isEmpty());
 	}
 
 	@Test

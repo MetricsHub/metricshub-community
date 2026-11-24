@@ -99,7 +99,14 @@ class WmiSourceProcessorTest {
 		);
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 		doReturn(expected).when(winRequestExecutorMock)
-			.executeWmi(HOST_NAME, wmiConfiguration, WMI_QUERY, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
+			.executeWmi(
+				HOST_NAME,
+				wmiConfiguration,
+				WMI_QUERY,
+				MetricsHubConstants.WMI_DEFAULT_NAMESPACE,
+				null,
+				telemetryManager.getRequestStats()
+			);
 
 		assertEquals(SourceTable.ofTable(expected), wmiSourceProcessor.process(wmiSource, telemetryManager));
 	}
@@ -123,7 +130,14 @@ class WmiSourceProcessorTest {
 			.build();
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 		doThrow(new ClientException()).when(winRequestExecutorMock)
-			.executeWmi(HOST_NAME, wmiConfiguration, WMI_QUERY, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
+			.executeWmi(
+				HOST_NAME,
+				wmiConfiguration,
+				WMI_QUERY,
+				MetricsHubConstants.WMI_DEFAULT_NAMESPACE,
+				null,
+				telemetryManager.getRequestStats()
+			);
 		assertEquals(SourceTable.empty(), wmiSourceProcessor.process(wmiSource, telemetryManager));
 	}
 

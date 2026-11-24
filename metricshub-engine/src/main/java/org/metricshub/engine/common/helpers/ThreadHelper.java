@@ -21,10 +21,7 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,12 +30,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,49 +46,14 @@ import lombok.extern.slf4j.Slf4j;
  * connector thread pools), so no shared pool or admission control is needed here.
  * </p>
  * <p>
- * Per-(hostname, operationType) counters track completed and timed-out requests
- * for observability. Strategies read these counters and record them as metrics
- * on the host monitor when self-monitoring is enabled.
+ * This helper does not count requests: the caller records the outcome of the request in the
+ * {@link org.metricshub.engine.telemetry.RequestStats} of its resource, after this method returned or threw,
+ * so that a task that completes after its timeout cannot record a second outcome.
  * </p>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Slf4j
 public class ThreadHelper {
-
-	/**
-	 * Key for per-host, per-operation statistics.
-	 */
-	record StatsKey(String hostname, String operationType) {}
-
-	/**
-	 * Mutable counters for a single (hostname, operationType) pair.
-	 */
-	static class AtomicStats {
-
-		final AtomicLong completed = new AtomicLong(0);
-		final AtomicLong timeout = new AtomicLong(0);
-
-		Stats snapshot() {
-			return Stats.builder().completed(completed.get()).timeout(timeout.get()).build();
-		}
-	}
-
-	/**
-	 * Per-(hostname, operationType) statistics map.
-	 */
-	private static final ConcurrentHashMap<StatsKey, AtomicStats> STATS_MAP = new ConcurrentHashMap<>();
-
-	/**
-	 * Immutable execution statistics snapshot.
-	 */
-	@Getter
-	@Builder
-	@AllArgsConstructor
-	public static class Stats {
-
-		private final long completed;
-		private final long timeout;
-	}
 
 	/**
 	 * Custom thread factory that names threads for easier debugging and diagnostics.
@@ -114,79 +71,31 @@ public class ThreadHelper {
 	}
 
 	/**
-	 * Executes a {@link Callable} task with a specified timeout using a dedicated
-	 * single-thread executor. This overload does <strong>not</strong> record any
-	 * statistics.
+	 * Executes a {@link Callable} task with a specified timeout using a dedicated single-thread executor. On timeout
+	 * or interruption, the task is cancelled (its thread is interrupted).
 	 *
 	 * @param <T>      the type of the result returned by the {@code callable}
 	 * @param callable the task to be executed
 	 * @param timeout  the maximum time to wait for the task to complete, in seconds
 	 * @return the result of the executed task
-	 * @throws InterruptedException if the current thread was interrupted while waiting
+	 * @throws InterruptedException if the current thread was interrupted before the task started (the task is never
+	 *                              submitted) or while waiting; its interrupt status is kept
 	 * @throws ExecutionException   if the computation threw an exception
 	 * @throws TimeoutException     if the wait timed out
 	 */
 	public static <T> T execute(final Callable<T> callable, final long timeout) throws InterruptedException,
 		ExecutionException, TimeoutException {
-		return doExecute(callable, timeout, null);
-	}
-
-	/**
-	 * Executes a {@link Callable} task with a specified timeout using a dedicated
-	 * single-thread executor and records per-(hostname, operationType) statistics.
-	 *
-	 * @param <T>           the type of the result returned by the {@code callable}
-	 * @param callable      the task to be executed
-	 * @param timeout       the maximum time to wait for the task to complete, in seconds
-	 * @param hostname      the hostname associated with this request
-	 * @param operationType the operation type (e.g. "snmp", "jmx", "wbem", "json2csv")
-	 * @return the result of the executed task
-	 * @throws InterruptedException if the current thread was interrupted while waiting
-	 * @throws ExecutionException   if the computation threw an exception
-	 * @throws TimeoutException     if the wait timed out
-	 */
-	public static <T> T execute(
-		final Callable<T> callable,
-		final long timeout,
-		final String hostname,
-		final String operationType
-	) throws InterruptedException, ExecutionException, TimeoutException {
-		return doExecute(callable, timeout, new StatsKey(hostname, operationType));
-	}
-
-	/**
-	 * Internal execution method shared by both overloads.
-	 *
-	 * @param <T>      the type of the result returned by the {@code callable}
-	 * @param callable the task to be executed
-	 * @param timeout  the maximum time to wait for the task to complete, in seconds
-	 * @param statsKey if non-null, the key under which to record statistics
-	 * @return the result of the executed task
-	 * @throws InterruptedException if the current thread was interrupted while waiting
-	 * @throws ExecutionException   if the computation threw an exception
-	 * @throws TimeoutException     if the wait timed out
-	 */
-	private static <T> T doExecute(final Callable<T> callable, final long timeout, final StatsKey statsKey)
-		throws InterruptedException, ExecutionException, TimeoutException {
-		// An interrupted caller (job timeout, reload) starts no request: the task thread would send it even though
-		// the wait below fails at once. The interrupt is kept, as when the wait is interrupted.
+		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for
 		if (Thread.currentThread().isInterrupted()) {
-			throw new InterruptedException("The caller thread is interrupted: the task is not started.");
+			throw new InterruptedException("Interrupted before the task started");
 		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
 			final Future<T> future = executor.submit(callable);
 			try {
-				final T result = future.get(timeout, TimeUnit.SECONDS);
-				if (statsKey != null) {
-					getOrCreateStats(statsKey).completed.incrementAndGet();
-				}
-				return result;
+				return future.get(timeout, TimeUnit.SECONDS);
 			} catch (TimeoutException e) {
 				future.cancel(true);
-				if (statsKey != null) {
-					getOrCreateStats(statsKey).timeout.incrementAndGet();
-				}
 				log.debug("Task timed out after {} seconds and was cancelled.", timeout);
 				throw e;
 			} catch (InterruptedException e) {
@@ -200,40 +109,15 @@ public class ThreadHelper {
 	}
 
 	/**
-	 * Returns or creates the {@link AtomicStats} for the given key.
+	 * Formerly cleared the request counters of a hostname. The counters now belong to the
+	 * {@link org.metricshub.engine.telemetry.TelemetryManager} of each resource and start from zero with it, so
+	 * there is nothing to clear.
 	 *
-	 * @param key the (hostname, operationType) key
-	 * @return the mutable counter holder
+	 * @param hostname ignored
+	 * @deprecated The request counters are held by {@code TelemetryManager.getRequestStats()}.
 	 */
-	private static AtomicStats getOrCreateStats(final StatsKey key) {
-		return STATS_MAP.computeIfAbsent(key, _ -> new AtomicStats());
-	}
-
-	/**
-	 * Returns a snapshot of the execution statistics for a given hostname,
-	 * grouped by operation type.
-	 *
-	 * @param hostname the hostname to look up
-	 * @return an unmodifiable map of operationType to {@link Stats} snapshot;
-	 *         empty if no statistics exist for the hostname
-	 */
-	public static Map<String, Stats> getStats(final String hostname) {
-		return Collections.unmodifiableMap(
-			STATS_MAP.entrySet()
-				.stream()
-				.filter(entry -> entry.getKey().hostname().equals(hostname))
-				.collect(Collectors.toMap(entry -> entry.getKey().operationType(), entry -> entry.getValue().snapshot()))
-		);
-	}
-
-	/**
-	 * Clears the execution statistics of a given hostname, so that its request counters start again from zero. The
-	 * statistics are kept for the life of the JVM otherwise, for instance across the replays of a test harness that
-	 * reuses the JVM for several hosts of the same name.
-	 *
-	 * @param hostname the hostname whose statistics are cleared
-	 */
+	@Deprecated(forRemoval = true)
 	public static void clearStats(final String hostname) {
-		STATS_MAP.keySet().removeIf(key -> key.hostname().equals(hostname));
+		// Nothing to clear: the counters belong to each TelemetryManager
 	}
 }

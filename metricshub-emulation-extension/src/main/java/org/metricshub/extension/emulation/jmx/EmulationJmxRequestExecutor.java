@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
@@ -65,10 +66,11 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 		final String objectNamePattern,
 		final Iterable<String> attributes,
 		final Collection<String> keyProperties,
-		final String resourceHostname,
+		final RequestStats requestStats,
 		final String recordOutputDirectory
 	) throws Exception {
-		final String hostname = jmxConfiguration != null ? jmxConfiguration.getHostname() : resourceHostname;
+		// The emulation configuration provider sets the configuration hostname to the resource hostname
+		final String hostname = jmxConfiguration != null ? jmxConfiguration.getHostname() : null;
 
 		if (objectNamePattern == null) {
 			return List.of();
@@ -152,7 +154,7 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 	}
 
 	@Override
-	public boolean checkConnection(final JmxConfiguration configuration, final String resourceHostname) {
+	public boolean checkConnection(final JmxConfiguration configuration, final RequestStats requestStats) {
 		return true;
 	}
 

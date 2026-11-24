@@ -51,7 +51,7 @@ class WinRmExtensionToolsTest {
 		final String query = "SELECT Name, State FROM Win32_Service";
 		// The names of the columns come from the interface's default method: run it, the mock only serves the rows
 		when(winRmRequestExecutorMock.executeWqlQuery("host", configuration, query, "root\\default")).thenCallRealMethod();
-		when(winRmRequestExecutorMock.executeWmi("host", configuration, query, "root\\default", null)).thenReturn(
+		when(winRmRequestExecutorMock.executeWmi("host", configuration, query, "root\\default", null, null)).thenReturn(
 			List.of(List.of("Spooler", "Running"))
 		);
 
@@ -94,7 +94,9 @@ class WinRmExtensionToolsTest {
 	@Test
 	void testExecuteToolRunCommand() throws Exception {
 		final WinRmConfiguration configuration = configuration();
-		when(winRmRequestExecutorMock.executeWinRemoteCommand("host", configuration, "hostname", null)).thenReturn("WIN01");
+		when(winRmRequestExecutorMock.executeWinRemoteCommand("host", configuration, "hostname", null, null)).thenReturn(
+			"WIN01"
+		);
 
 		assertEquals(
 			new ToolText("WIN01"),

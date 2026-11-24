@@ -71,18 +71,20 @@ class EmulationWbemRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
+		final TelemetryManager telemetryManager = buildTelemetryManager(tempDir.toString());
 		final List<List<String>> result = executor.executeWbem(
 			HOSTNAME,
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			buildTelemetryManager(tempDir.toString()),
-			null
+			telemetryManager
 		);
 
 		assertEquals(1, result.size());
 		assertEquals("value1", result.get(0).get(0));
 		assertEquals("value2", result.get(0).get(1));
+		// Emulation sends no request: nothing is counted
+		assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
 	}
 
 	@Test
@@ -117,24 +119,21 @@ class EmulationWbemRequestExecutorTest {
 			wbemConfig,
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			telemetryManager,
-			null
+			telemetryManager
 		);
 		final List<List<String>> result2 = executor.executeWbem(
 			HOSTNAME,
 			wbemConfig,
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			telemetryManager,
-			null
+			telemetryManager
 		);
 		final List<List<String>> result3 = executor.executeWbem(
 			HOSTNAME,
 			wbemConfig,
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			telemetryManager,
-			null
+			telemetryManager
 		);
 
 		assertEquals("first", result1.get(0).get(0));
@@ -162,8 +161,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			buildTelemetryManager(tempDir.toString()),
-			null
+			buildTelemetryManager(tempDir.toString())
 		);
 
 		assertTrue(result.isEmpty());
@@ -176,8 +174,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			null,
 			"root/emc",
-			buildTelemetryManager("any"),
-			null
+			buildTelemetryManager("any")
 		);
 
 		assertTrue(result.isEmpty());
@@ -190,8 +187,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			null,
-			buildTelemetryManager("any"),
-			null
+			buildTelemetryManager("any")
 		);
 
 		assertTrue(result.isEmpty());
@@ -204,7 +200,6 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			null,
 			null
 		);
 
@@ -224,8 +219,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			buildTelemetryManager(tempDir.toString()),
-			null
+			buildTelemetryManager(tempDir.toString())
 		);
 
 		assertTrue(result.isEmpty());
@@ -240,8 +234,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			buildTelemetryManager(tempDir.toString()),
-			null
+			buildTelemetryManager(tempDir.toString())
 		);
 
 		assertTrue(result.isEmpty());
@@ -262,8 +255,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			buildTelemetryManager(tempDir.toString()),
-			null
+			buildTelemetryManager(tempDir.toString())
 		);
 
 		assertTrue(result.isEmpty());
@@ -284,8 +276,7 @@ class EmulationWbemRequestExecutorTest {
 			WbemConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT Name FROM CIM_ManagedElement",
 			"root/emc",
-			buildTelemetryManager(tempDir.toString()),
-			null
+			buildTelemetryManager(tempDir.toString())
 		);
 
 		assertTrue(result.isEmpty());

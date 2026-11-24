@@ -576,6 +576,6 @@ public class CollectStrategy extends AbstractStrategy {
 		collectHostConfigured(hostname);
 
 		// Collect per-host request metrics (completed/timeout by operation type)
-		collectRequestMetrics(hostname);
+		collectRequestMetrics();
 	}
 }

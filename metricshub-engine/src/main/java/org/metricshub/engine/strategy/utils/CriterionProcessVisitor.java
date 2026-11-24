@@ -33,6 +33,7 @@ import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Visitor class for handling local operating system details related to process criteria.
@@ -51,6 +52,16 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 	@NonNull
 	private final String hostname;
 
+	/**
+	 * The resource whose detection runs this criterion: the local WMI query is counted in its request statistics.
+	 */
+	private final TelemetryManager telemetryManager;
+
+	/**
+	 * The connector whose detection runs this criterion.
+	 */
+	private final String connectorId;
+
 	private final boolean logMode;
 
 	@Getter
@@ -62,7 +73,7 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 			throw new IllegalStateException("The ExtensionManager cannot be null for Local Windows Process criterion check.");
 		}
 		extensionManger.findExtensionByType("wmi")
-			.map(extension -> extension.processCriterion(processCriterion, null, null, logMode))
+			.map(extension -> extension.processCriterion(processCriterion, connectorId, telemetryManager, logMode))
 			.ifPresent(result -> criterionTestResult = result);
 	}
 

@@ -43,6 +43,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
@@ -69,6 +70,14 @@ public class TelemetryManager {
 
 	@Default
 	private HostProperties hostProperties = new HostProperties();
+
+	/**
+	 * The cumulative request counters of this resource, exported as {@code metricshub.host.requests}. Final and
+	 * initialized, so it is created with each instance and is neither a builder nor a constructor parameter.
+	 */
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final RequestStats requestStats = new RequestStats();
 
 	private HostConfiguration hostConfiguration;
 	private ConnectorStore connectorStore;

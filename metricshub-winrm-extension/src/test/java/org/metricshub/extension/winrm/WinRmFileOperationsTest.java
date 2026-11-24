@@ -94,7 +94,7 @@ class WinRmFileOperationsTest {
 	@Test
 	void testCloseClosesTheClient() {
 		final WinRMClient client = mock(WinRMClient.class);
-		new WinRmFileOperations(client, "host").close();
+		new WinRmFileOperations(client, "host", null).close();
 		verify(client).close();
 	}
 }

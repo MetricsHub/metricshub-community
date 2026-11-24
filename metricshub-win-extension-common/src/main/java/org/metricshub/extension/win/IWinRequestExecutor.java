@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.tool.ToolTable;
 
 /**
@@ -55,6 +57,8 @@ public interface IWinRequestExecutor {
 	 * @param query                 The WQL to execute.
 	 * @param namespace             The WMI namespace where all the classes reside.
 	 * @param recordOutputDirectory The directory for recording the query result, or {@code null} to skip recording.
+	 * @param requestStats          The request statistics of the monitored resource, where the outcome of the
+	 *                              request is counted, or {@code null} to count nothing.
 	 * @return A list of rows, where each row is represented as a list of strings.
 	 * @throws ClientException when anything goes wrong (details in cause).
 	 */
@@ -63,7 +67,8 @@ public interface IWinRequestExecutor {
 		@NonNull IWinConfiguration winConfiguration,
 		@NonNull String query,
 		String namespace,
-		String recordOutputDirectory
+		String recordOutputDirectory,
+		RequestStats requestStats
 	) throws ClientException;
 
 	/**
@@ -84,6 +89,8 @@ public interface IWinRequestExecutor {
 	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
 	 * @param command          Windows remote command to execute.
 	 * @param embeddedFiles    The list of embedded files used in the wql remote command query.
+	 * @param requestStats     The request statistics of the monitored resource, where the outcome of the
+	 *                         command is counted, or {@code null} to count nothing.
 	 * @return A {@link String} value resulting from the execution of the query.
 	 * @throws ClientException when anything wrong happens.
 	 */
@@ -91,12 +98,14 @@ public interface IWinRequestExecutor {
 		String hostname,
 		IWinConfiguration winConfiguration,
 		String command,
-		List<String> embeddedFiles
+		List<String> embeddedFiles,
+		RequestStats requestStats
 	) throws ClientException;
 
 	/**
 	 * Execute a WQL query and name the columns of its result, for the CLI and the MCP tools:
 	 * the columns are the properties the query selects, or no name when it selects {@code *}.
+	 * No monitored resource is involved, so the request is not counted.
 	 *
 	 * @param hostname         The hostname of the device where the WMI service is running.
 	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
@@ -113,25 +122,41 @@ public interface IWinRequestExecutor {
 	) throws ClientException {
 		return ToolTable.ofQuery(
 			query,
-			executeWmi(hostname, winConfiguration, query, namespace == null ? WMI_DEFAULT_NAMESPACE : namespace, null)
+			executeWmi(hostname, winConfiguration, query, namespace == null ? WMI_DEFAULT_NAMESPACE : namespace, null, null)
 		);
 	}
 
 	/**
 	 * Open protocol-native access to the files of a remote Windows host, for a file source poll.
 	 * The default has none: the file source then reads files by running PowerShell scripts as
-	 * remote commands through {@link #executeWinRemoteCommand(String, IWinConfiguration, String, List)}.
+	 * remote commands through {@link #executeWinRemoteCommand(String, IWinConfiguration, String, List, RequestStats)}.
 	 *
 	 * @param hostname         The hostname of the device.
 	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
+	 * @param requestStats     The request statistics of the monitored resource, where the outcome of each
+	 *                         file operation is counted, or {@code null} to count nothing.
 	 * @return The file operations, to be closed by the caller once the poll is over, or empty when
 	 *         this protocol has no native file access.
 	 */
 	default Optional<WinFileOperations> openFileOperations(
 		final String hostname,
-		final IWinConfiguration winConfiguration
+		final IWinConfiguration winConfiguration,
+		final RequestStats requestStats
 	) {
 		return Optional.empty();
+	}
+
+	/**
+	 * Count the outcome of one request attempt, when there is a monitored resource to count it for.
+	 *
+	 * @param requestStats The request statistics of the monitored resource, or {@code null} to count nothing.
+	 * @param protocol     The protocol label, exported as the {@code operation_type} attribute.
+	 * @param outcome      The terminal state of the attempt.
+	 */
+	static void record(final RequestStats requestStats, final String protocol, final RequestOutcome outcome) {
+		if (requestStats != null) {
+			requestStats.record(protocol, outcome);
+		}
 	}
 
 	/**

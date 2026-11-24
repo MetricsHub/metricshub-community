@@ -95,7 +95,7 @@ public class SnmpGetSourceProcessor {
 				snmpConfiguration,
 				hostname,
 				true,
-				telemetryManager.getHostname()
+				telemetryManager.getRequestStats()
 			);
 
 			if (result != null) {

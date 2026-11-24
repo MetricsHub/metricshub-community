@@ -26,6 +26,7 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.mockito.Mock;
@@ -226,6 +227,79 @@ class ProtocolHealthCheckStrategyTest {
 		assertEquals(
 			ProtocolHealthCheckStrategy.UP,
 			telemetryManager.getEndpointHostMonitor().getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue()
+		);
+	}
+
+	/**
+	 * Runs one health check cycle where the protocol check sends one completed and one failed request, the failed
+	 * one being accepted by the health check policy (the host is reported up).
+	 */
+	private void runCycleRecordingRequests(final TelemetryManager telemetryManager, final long strategyTime) {
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(protocolExtensionMock))
+			.build();
+		doReturn(true).when(protocolExtensionMock)
+			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
+		doReturn("wbem").when(protocolExtensionMock).getIdentifier(any(TelemetryManager.class));
+		doAnswer(invocation -> {
+			final TelemetryManager manager = invocation.getArgument(0);
+			manager.getRequestStats().record("wbem", RequestOutcome.COMPLETED);
+			manager.getRequestStats().record("wbem", RequestOutcome.FAILED);
+			return Optional.of(true);
+		}).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
+		telemetryManager.setStrategyTime(strategyTime);
+		new ProtocolHealthCheckStrategy(telemetryManager, strategyTime, clientsExecutorMock, extensionManager).run();
+	}
+
+	private static NumberMetric requestMetric(final TelemetryManager telemetryManager, final String state) {
+		return telemetryManager.getEndpointHostMonitor()
+			.getMetric(
+				"metricshub.host.requests{state=\"%s\", operation_type=\"wbem\"}".formatted(state),
+				NumberMetric.class
+			);
+	}
+
+	@Test
+	void testRequestMetricsAreCumulativeAcrossCycles() {
+		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
+
+		runCycleRecordingRequests(telemetryManager, CURRENT_TIME_MILLIS);
+		assertEquals(1.0, requestMetric(telemetryManager, "completed").getValue());
+		assertEquals(1.0, requestMetric(telemetryManager, "failed").getValue());
+		assertEquals(0.0, requestMetric(telemetryManager, "timeout").getValue());
+		assertEquals(
+			Map.of("state", "failed", "operation_type", "wbem"),
+			requestMetric(telemetryManager, "failed").getAttributes()
+		);
+		assertEquals("Counter", requestMetric(telemetryManager, "completed").getMetricType());
+		// The health check policy is unchanged: a failed request does not make the host down
+		assertEquals(
+			ProtocolHealthCheckStrategy.UP,
+			telemetryManager.getEndpointHostMonitor().getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue()
+		);
+
+		runCycleRecordingRequests(telemetryManager, CURRENT_TIME_MILLIS + 60_000);
+		assertEquals(2.0, requestMetric(telemetryManager, "completed").getValue());
+		assertEquals(2.0, requestMetric(telemetryManager, "failed").getValue());
+		assertEquals(0.0, requestMetric(telemetryManager, "timeout").getValue());
+		assertEquals(CURRENT_TIME_MILLIS + 60_000, requestMetric(telemetryManager, "completed").getCollectTime());
+	}
+
+	@Test
+	void testRequestMetricsAreNotCollectedWithoutSelfMonitoring() {
+		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
+		telemetryManager.getHostConfiguration().setEnableSelfMonitoring(false);
+
+		runCycleRecordingRequests(telemetryManager, CURRENT_TIME_MILLIS);
+
+		// The requests are counted, but not collected
+		assertEquals(1L, telemetryManager.getRequestStats().snapshot().get("wbem").get(RequestOutcome.FAILED));
+		assertTrue(
+			telemetryManager.getEndpointHostMonitor()
+				.getMetrics()
+				.keySet()
+				.stream()
+				.noneMatch(name -> name.startsWith("metricshub.host.requests"))
 		);
 	}
 }

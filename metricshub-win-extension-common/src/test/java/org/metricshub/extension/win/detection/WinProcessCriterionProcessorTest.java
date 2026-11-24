@@ -12,6 +12,7 @@ import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WmiTestConfiguration;
 import org.mockito.InjectMocks;
@@ -31,6 +32,8 @@ class WinProcessCriterionProcessorTest {
 	void testProcess() {
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine("MBM[5-9]\\.exe");
+		// The local query is counted in the statistics of the resource whose detection runs it
+		final RequestStats requestStats = new RequestStats();
 
 		doReturn(CriterionTestResult.success(processCriterion, "success")).when(wmiDetectionServiceMock)
 			.performDetectionTest(
@@ -39,7 +42,8 @@ class WinProcessCriterionProcessorTest {
 				any(WmiCriterion.class),
 				any(String.class),
 				eq(true),
-				isNull()
+				isNull(),
+				eq(requestStats)
 			);
 
 		assertTrue(
@@ -48,7 +52,8 @@ class WinProcessCriterionProcessorTest {
 				WmiTestConfiguration.builder().build(),
 				"testConnector",
 				true,
-				null
+				null,
+				requestStats
 			).isSuccess()
 		);
 	}

@@ -110,7 +110,8 @@ public class WinServiceCriterionProcessor {
 			serviceWmiCriterion,
 			connectorId,
 			logMode,
-			telemetryManager.getRecordOutputDirectory()
+			telemetryManager.getRecordOutputDirectory(),
+			telemetryManager.getRequestStats()
 		);
 		if (!wmiTestResult.isSuccess()) {
 			return wmiTestResult;

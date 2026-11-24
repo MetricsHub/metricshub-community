@@ -113,7 +113,8 @@ public class WinCommandLineCriterionProcessor {
 				commandLineCriterion.getCommandLine(),
 				hostname,
 				configurationRetriever.apply(telemetryManager),
-				telemetryManager.getEmbeddedFiles(connectorId)
+				telemetryManager.getEmbeddedFiles(connectorId),
+				telemetryManager.getRequestStats()
 			);
 
 			final CommandLineCriterion osCommandNoPassword = CommandLineCriterion.builder()

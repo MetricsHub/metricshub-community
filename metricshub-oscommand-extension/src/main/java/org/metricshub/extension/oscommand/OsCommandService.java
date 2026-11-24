@@ -65,6 +65,8 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.strategy.utils.SudoInformation;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.SshSemaphoreFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -128,8 +130,12 @@ public class OsCommandService {
 
 		try {
 			return future.get(timeout, TimeUnit.SECONDS);
+		} catch (final InterruptedException exception) {
+			destroy(process);
+			throw exception;
 		} catch (final TimeoutException exception) {
 			future.cancel(true);
+			destroy(process);
 
 			throw new TimeoutException(
 				String.format(
@@ -145,6 +151,129 @@ public class OsCommandService {
 			return null;
 		} finally {
 			executor.shutdownNow();
+		}
+	}
+
+	/**
+	 * Forcibly destroys a local command process and its descendants (the commands started by the shell), so that
+	 * neither the process nor the thread reading its output outlives a timeout or an interruption.
+	 *
+	 * @param process The process to destroy.
+	 */
+	private static void destroy(final Process process) {
+		process.descendants().forEach(ProcessHandle::destroyForcibly);
+		process.destroyForcibly();
+	}
+
+	/**
+	 * A call of {@link #runLocalCommand(String, long, String)}.
+	 */
+	@FunctionalInterface
+	public interface LocalCommandCall {
+		/**
+		 * Runs the local command.
+		 *
+		 * @return The output of the command, {@code null} when its execution failed.
+		 * @throws InterruptedException When the thread is interrupted during execution.
+		 * @throws IOException          When the process cannot be started or its output cannot be read.
+		 * @throws TimeoutException     When the command execution times out.
+		 */
+		String run() throws InterruptedException, IOException, TimeoutException;
+	}
+
+	/**
+	 * A call of {@link #runSshCommand(String, String, SshConfiguration, long, List, String, DeviceKind)}.
+	 */
+	@FunctionalInterface
+	public interface SshCommandCall {
+		/**
+		 * Runs the SSH command.
+		 *
+		 * @return The output of the command.
+		 * @throws ClientException        When the SSH request fails.
+		 * @throws InterruptedException   When the wait for an SSH permit is interrupted.
+		 * @throws ControlledSshException When no SSH permit could be obtained.
+		 */
+		String run() throws ClientException, InterruptedException, ControlledSshException;
+	}
+
+	/**
+	 * Runs a local command and records its outcome as an {@value OsCommandExtension#OS_COMMAND_IDENTIFIER} request:
+	 * completed when it returns an output, whatever the exit code; failed when it returns {@code null} (an execution
+	 * failure) or cannot start; timeout when it times out or is interrupted while it runs. A runtime exception (invalid
+	 * argument) is thrown before the process starts and records nothing. A thread already interrupted (an expired
+	 * deadline of its job) starts nothing and records nothing: an {@link InterruptedException} is thrown, the interrupt
+	 * status is kept.
+	 *
+	 * @param requestStats The request statistics of the monitored resource, {@code null} to record nothing.
+	 * @param call         The call of the local command.
+	 * @return The result of the call.
+	 * @throws InterruptedException When the thread is interrupted during execution.
+	 * @throws IOException          When the process cannot be started or its output cannot be read.
+	 * @throws TimeoutException     When the command execution times out.
+	 */
+	public static String recordLocalCommand(final RequestStats requestStats, final LocalCommandCall call)
+		throws InterruptedException, IOException, TimeoutException {
+		// A caller already interrupted (an expired deadline of its job) must not start a process it will not wait for
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedException("Interrupted before the command started");
+		}
+		final String result;
+		try {
+			result = call.run();
+		} catch (final InterruptedException | IOException | TimeoutException e) {
+			recordRequest(requestStats, OsCommandExtension.OS_COMMAND_IDENTIFIER, RequestOutcome.of(e));
+			throw e;
+		}
+		recordRequest(
+			requestStats,
+			OsCommandExtension.OS_COMMAND_IDENTIFIER,
+			result != null ? RequestOutcome.COMPLETED : RequestOutcome.FAILED
+		);
+		return result;
+	}
+
+	/**
+	 * Runs an SSH command and records its outcome as an {@value OsCommandExtension#SSH_IDENTIFIER} request: completed
+	 * when it returns, whatever the exit status (command data); timeout or failed for a {@link ClientException},
+	 * according to its causes. The wait for an SSH permit ({@link ControlledSshException},
+	 * {@link InterruptedException}) sends nothing and records nothing.
+	 *
+	 * @param requestStats The request statistics of the monitored resource, {@code null} to record nothing.
+	 * @param call         The call of the SSH command.
+	 * @return The result of the call.
+	 * @throws ClientException        When the SSH request fails.
+	 * @throws InterruptedException   When the wait for an SSH permit is interrupted.
+	 * @throws ControlledSshException When no SSH permit could be obtained.
+	 */
+	public static String recordSshCommand(final RequestStats requestStats, final SshCommandCall call)
+		throws ClientException, InterruptedException, ControlledSshException {
+		final String result;
+		try {
+			result = call.run();
+		} catch (final ClientException e) {
+			recordRequest(requestStats, OsCommandExtension.SSH_IDENTIFIER, RequestOutcome.of(e));
+			throw e;
+		}
+		recordRequest(requestStats, OsCommandExtension.SSH_IDENTIFIER, RequestOutcome.COMPLETED);
+		return result;
+	}
+
+	/**
+	 * Records the outcome of one request attempt, unless there is no monitored resource.
+	 *
+	 * @param requestStats  The request statistics of the monitored resource, {@code null} to record nothing.
+	 * @param operationType The protocol label: {@value OsCommandExtension#SSH_IDENTIFIER} or
+	 *                      {@value OsCommandExtension#OS_COMMAND_IDENTIFIER}.
+	 * @param outcome       The terminal state of the attempt.
+	 */
+	public static void recordRequest(
+		final RequestStats requestStats,
+		final String operationType,
+		final RequestOutcome outcome
+	) {
+		if (requestStats != null) {
+			requestStats.record(operationType, outcome);
 		}
 	}
 
@@ -527,19 +656,26 @@ public class OsCommandService {
 			final String commandResult;
 
 			// Case local execution or command intended for a remote host but executed locally
+			final RequestStats requestStats = telemetryManager.getRequestStats();
 			if (isLocalhost || isExecuteLocally) {
-				final String localCommandResult = runLocalCommand(command, timeout, commandNoPassword);
+				final String localCommandResult = recordLocalCommand(
+					requestStats,
+					() -> runLocalCommand(command, timeout, commandNoPassword)
+				);
 				commandResult = localCommandResult != null ? localCommandResult : EMPTY;
 			} else {
 				// Case others (Linux) Remote
-				commandResult = runSshCommand(
-					command,
-					hostname,
-					(SshConfiguration) sshConfiguration,
-					timeout,
-					new ArrayList<>(embeddedTempFiles.values()),
-					commandNoPassword,
-					telemetryManager.getHostConfiguration().getHostType()
+				commandResult = recordSshCommand(
+					requestStats,
+					() -> runSshCommand(
+						command,
+						hostname,
+						(SshConfiguration) sshConfiguration,
+						timeout,
+						new ArrayList<>(embeddedTempFiles.values()),
+						commandNoPassword,
+						telemetryManager.getHostConfiguration().getHostType()
+					)
 				);
 			}
 

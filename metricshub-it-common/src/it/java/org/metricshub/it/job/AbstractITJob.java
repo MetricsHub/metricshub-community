@@ -44,9 +44,19 @@ public abstract class AbstractITJob implements ITJob {
 	);
 
 	/**
+	 * Pattern to match request counters, which are ignored in comparisons: they count the protocol requests really
+	 * sent, and an emulated resource replays recorded responses without sending any.
+	 */
+	private static final Pattern HOST_REQUESTS_PATTERN = Pattern.compile("^metricshub\\.host\\.requests(\\{.*\\})?$");
+
+	/**
 	 * List of metric patterns to skip during comparison.
 	 */
-	private static final List<Pattern> SKIP_METRIC_PATTERNS = List.of(JOB_DURATION_PATTERN, HOST_RESPONSE_TIME_PATTERN);
+	private static final List<Pattern> SKIP_METRIC_PATTERNS = List.of(
+		JOB_DURATION_PATTERN,
+		HOST_RESPONSE_TIME_PATTERN,
+		HOST_REQUESTS_PATTERN
+	);
 
 	/**
 	 * Assert that expected and actual are equal.

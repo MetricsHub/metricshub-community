@@ -41,6 +41,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
 import org.metricshub.engine.strategy.source.FileSourceProcessingResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.ssh.SshClient;
@@ -324,7 +325,8 @@ public class FileSourceProcessor {
 		final RemoteFilesRequestExecutor requestExecutor = createRemoteFilesRequestExecutor(
 			hostname,
 			sshConfiguration,
-			telemetryManager.getHostConfiguration().getHostType()
+			telemetryManager.getHostConfiguration().getHostType(),
+			telemetryManager.getRequestStats()
 		);
 
 		// Attempt to connect to the remote host
@@ -351,14 +353,16 @@ public class FileSourceProcessor {
 	 * @param hostname The hostname for SSH connection
 	 * @param sshConfiguration The SSH configuration containing connection parameters
 	 * @param deviceKind The device kind of the remote host, which determines the form of its paths
+	 * @param requestStats The request statistics of the monitored resource, where the SFTP requests are recorded
 	 * @return A RemoteFilesRequestExecutor instance configured with SSH client and configuration
 	 */
 	protected RemoteFilesRequestExecutor createRemoteFilesRequestExecutor(
 		final String hostname,
 		final SshConfiguration sshConfiguration,
-		final DeviceKind deviceKind
+		final DeviceKind deviceKind,
+		final RequestStats requestStats
 	) {
-		return new RemoteFilesRequestExecutor(new SshClient(hostname), sshConfiguration, deviceKind);
+		return new RemoteFilesRequestExecutor(new SshClient(hostname), sshConfiguration, deviceKind, requestStats);
 	}
 
 	/**

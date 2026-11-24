@@ -301,8 +301,7 @@ public class WbemCriterionProcessor {
 					configuration,
 					interopQuery.getWql(),
 					interopQuery.getNamespace(),
-					telemetryManager,
-					telemetryManager.getHostname()
+					telemetryManager
 				)
 					.stream()
 					.filter(row -> !row.isEmpty())
@@ -378,8 +377,7 @@ public class WbemCriterionProcessor {
 				configuration,
 				criterion.getQuery(),
 				criterion.getNamespace(),
-				telemetryManager,
-				telemetryManager.getHostname()
+				telemetryManager
 			);
 		} catch (ClientException e) {
 			if (logMode) {

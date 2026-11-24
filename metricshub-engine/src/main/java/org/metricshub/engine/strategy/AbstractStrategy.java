@@ -43,7 +43,6 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
-import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.common.ContentType;
@@ -73,6 +72,7 @@ import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.ConnectorNamespace.SourceCursors;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -99,6 +99,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	@NonNull
 	protected ExtensionManager extensionManager;
 
+	private static final String REQUESTS_METRIC_FORMAT = "metricshub.host.requests{state=\"%s\", operation_type=\"%s\"}";
 	private static final String COMPUTE = "compute";
 	private static final String SOURCE = "source";
 
@@ -914,17 +915,16 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Collects per-host request metrics (completed and timeout counts, broken down
-	 * by operation type) on the endpoint host monitor, if self-monitoring is enabled.
-	 *
-	 * @param hostname The resource hostname.
+	 * Collects the request counters of the resource ({@code metricshub.host.requests}, by state and operation
+	 * type) on the endpoint host monitor, if self-monitoring is enabled. The three states are collected for every
+	 * operation type that recorded at least one request.
 	 */
-	protected void collectRequestMetrics(final String hostname) {
+	protected void collectRequestMetrics() {
 		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring() || isInterrupted()) {
 			return;
 		}
-		final Map<String, ThreadHelper.Stats> statsByOperation = ThreadHelper.getStats(hostname);
-		if (statsByOperation.isEmpty()) {
+		final Map<String, Map<RequestOutcome, Long>> countersByOperation = telemetryManager.getRequestStats().snapshot();
+		if (countersByOperation.isEmpty()) {
 			return;
 		}
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
@@ -935,21 +935,15 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager.getHostname(),
 			telemetryManager.getConnectorStore()
 		);
-		for (final Map.Entry<String, ThreadHelper.Stats> entry : statsByOperation.entrySet()) {
-			final String operationType = entry.getKey();
-			final ThreadHelper.Stats stats = entry.getValue();
-			metricFactory.collectNumberMetric(
-				endpointHostMonitor,
-				String.format("metricshub.host.requests{state=\"completed\", operation_type=\"%s\"}", operationType),
-				(double) stats.getCompleted(),
-				strategyTime
-			);
-			metricFactory.collectNumberMetric(
-				endpointHostMonitor,
-				String.format("metricshub.host.requests{state=\"timeout\", operation_type=\"%s\"}", operationType),
-				(double) stats.getTimeout(),
-				strategyTime
-			);
-		}
+		countersByOperation.forEach(
+			(operationType, counters) -> counters.forEach(
+				(outcome, count) -> metricFactory.collectNumberMetric(
+					endpointHostMonitor,
+					REQUESTS_METRIC_FORMAT.formatted(outcome.getLabel(), operationType),
+					count.doubleValue(),
+					strategyTime
+				)
+			)
+		);
 	}
 }

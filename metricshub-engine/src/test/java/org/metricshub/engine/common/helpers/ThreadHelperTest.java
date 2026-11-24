@@ -2,13 +2,12 @@ package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -31,21 +30,33 @@ class ThreadHelperTest {
 	}
 
 	@Test
-	void testInterruptedCallerStartsNoTask() {
-		final AtomicBoolean started = new AtomicBoolean();
-
-		// The job deadline expired: the request must not even be started, and the interrupt is kept
+	void testInterruptedCallerStartsNothing() throws Exception {
+		final int workerBefore = workerNumber();
+		final CountDownLatch started = new CountDownLatch(1);
 		Thread.currentThread().interrupt();
 		try {
 			assertThrows(InterruptedException.class, () -> ThreadHelper.execute(() -> {
-				started.set(true);
-				return "sent";
+				started.countDown();
+				return "never";
 			}, 5));
-			assertFalse(started.get());
 			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
 			Thread.interrupted();
 		}
+		assertFalse(started.await(500, TimeUnit.MILLISECONDS));
+		// No worker thread was created for the interrupted call
+		assertEquals(workerBefore + 1, workerNumber());
+	}
+
+	/**
+	 * Runs a task and returns the number of its worker thread, which each new worker increments.
+	 *
+	 * @return the number in the name of the worker thread
+	 * @throws Exception never
+	 */
+	private static int workerNumber() throws Exception {
+		final String name = ThreadHelper.execute(() -> Thread.currentThread().getName(), 5);
+		return Integer.parseInt(name.substring("metricshub-worker-".length()));
 	}
 
 	@Test
@@ -55,73 +66,5 @@ class ThreadHelperTest {
 			threadName.startsWith("metricshub-worker-"),
 			"Worker threads should be named with metricshub-worker- prefix, but was: " + threadName
 		);
-	}
-
-	@Test
-	void testStatsCompletedIncrement() throws Exception {
-		final String hostname = "host-completed-test";
-		final Map<String, ThreadHelper.Stats> before = ThreadHelper.getStats(hostname);
-		final long completedBefore = before.containsKey("snmp") ? before.get("snmp").getCompleted() : 0;
-
-		ThreadHelper.execute(() -> "done", 5, hostname, "snmp");
-
-		final Map<String, ThreadHelper.Stats> after = ThreadHelper.getStats(hostname);
-		assertNotNull(after.get("snmp"));
-		assertTrue(
-			after.get("snmp").getCompleted() > completedBefore,
-			"Completed count should increment after successful execution"
-		);
-	}
-
-	@Test
-	void testStatsTimeoutIncrement() {
-		final String hostname = "host-timeout-test";
-		final Map<String, ThreadHelper.Stats> before = ThreadHelper.getStats(hostname);
-		final long timeoutBefore = before.containsKey("jmx") ? before.get("jmx").getTimeout() : 0;
-
-		assertThrows(TimeoutException.class, () -> ThreadHelper.execute(() -> {
-			Thread.sleep(10_000);
-			return "never";
-		}, 1, hostname, "jmx"));
-
-		final Map<String, ThreadHelper.Stats> after = ThreadHelper.getStats(hostname);
-		assertNotNull(after.get("jmx"));
-		assertTrue(after.get("jmx").getTimeout() > timeoutBefore, "Timeout count should increment after a timeout");
-	}
-
-	@Test
-	void testSimpleOverloadDoesNotRecordStats() throws Exception {
-		final String hostname = "host-simple-no-stats";
-		ThreadHelper.execute(() -> "no-tracking", 5);
-		final Map<String, ThreadHelper.Stats> stats = ThreadHelper.getStats(hostname);
-		assertTrue(stats.isEmpty(), "Simple execute overload should not record any stats");
-	}
-
-	@Test
-	void testGetStatsPerOperation() throws Exception {
-		final String hostname = "host-per-op-test";
-		ThreadHelper.execute(() -> "a", 5, hostname, "snmp");
-		ThreadHelper.execute(() -> "b", 5, hostname, "wbem");
-		ThreadHelper.execute(() -> "c", 5, hostname, "snmp");
-
-		final Map<String, ThreadHelper.Stats> stats = ThreadHelper.getStats(hostname);
-		assertEquals(2, stats.size(), "Should have stats for 2 operation types");
-		assertEquals(2, stats.get("snmp").getCompleted());
-		assertEquals(1, stats.get("wbem").getCompleted());
-		assertEquals(0, stats.get("snmp").getTimeout());
-	}
-
-	@Test
-	void testClearStats() throws Exception {
-		ThreadHelper.execute(() -> "done", 5, "host-cleared", "snmp");
-		ThreadHelper.execute(() -> "done", 5, "host-kept", "snmp");
-
-		ThreadHelper.clearStats("host-cleared");
-
-		// Only the given host starts again from zero
-		assertTrue(ThreadHelper.getStats("host-cleared").isEmpty());
-		assertEquals(1, ThreadHelper.getStats("host-kept").get("snmp").getCompleted());
-		ThreadHelper.execute(() -> "done", 5, "host-cleared", "snmp");
-		assertEquals(1, ThreadHelper.getStats("host-cleared").get("snmp").getCompleted());
 	}
 }

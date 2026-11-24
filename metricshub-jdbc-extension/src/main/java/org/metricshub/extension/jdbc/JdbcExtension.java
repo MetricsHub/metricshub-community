@@ -54,6 +54,8 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolResult;
@@ -132,7 +134,14 @@ public class JdbcExtension implements IProtocolExtension {
 		final JdbcDriverSelection selection = resolveHealthCheckSelection(jdbcConfiguration, telemetryManager);
 
 		// Check database availability using Connection.isValid()
-		boolean isAlive = isDatabaseAlive(jdbcUrl, username, password, timeout, selection);
+		boolean isAlive = isDatabaseAlive(
+			jdbcUrl,
+			username,
+			password,
+			timeout,
+			selection,
+			telemetryManager.getRequestStats()
+		);
 
 		if (!isAlive) {
 			log.warn("Hostname {} - Database health check failed", hostname);
@@ -413,6 +422,8 @@ public class JdbcExtension implements IProtocolExtension {
 	 * @param timeout   The timeout duration in seconds
 	 * @param selection Pre-resolved driver selection; may be {@code null} to fall back to URL
 	 *                  inference.
+	 * @param requestStats The request counters of the monitored resource, which receive the outcome of the
+	 *                     attempt; {@code null} to record nothing.
 	 * @return true if the database is reachable, false otherwise
 	 */
 	static boolean isDatabaseAlive(
@@ -420,7 +431,8 @@ public class JdbcExtension implements IProtocolExtension {
 		final String username,
 		final char[] password,
 		final long timeout,
-		final JdbcDriverSelection selection
+		final JdbcDriverSelection selection,
+		final RequestStats requestStats
 	) {
 		final JdbcDriverSelection effective;
 		if (selection != null) {
@@ -461,11 +473,21 @@ public class JdbcExtension implements IProtocolExtension {
 		if (password != null) {
 			props.setProperty("password", new String(password));
 		}
+		// One attempt: connect, isValid and close
+		final boolean isValid;
 		try (Connection connection = loaded.driver().connect(jdbcUrl, props)) {
-			return connection != null && connection.isValid((int) timeout);
-		} catch (SQLException _) {
+			if (connection == null) {
+				// The driver did not accept the URL: nothing was sent
+				return false;
+			}
+			isValid = connection.isValid((int) timeout);
+		} catch (SQLException e) {
+			SqlRequestExecutor.recordOutcome(requestStats, SqlRequestExecutor.classify(e));
 			return false;
 		}
+		// isValid returns false on a failed validation and on a timeout alike: counted as failed
+		SqlRequestExecutor.recordOutcome(requestStats, isValid ? RequestOutcome.COMPLETED : RequestOutcome.FAILED);
+		return isValid;
 	}
 
 	/**

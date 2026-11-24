@@ -31,7 +31,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
+import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.WinFileOperations;
+import org.metricshub.winrm.RemoteDirectoryListing;
+import org.metricshub.winrm.RemoteFile;
 import org.metricshub.winrm.RemoteFileInfo;
 import org.metricshub.winrm.WinRMClient;
 import org.metricshub.winrm.exceptions.WinRMClientException;
@@ -40,7 +43,8 @@ import org.metricshub.winrm.exceptions.WinRMClientException;
  * Remote file access through winrm-java's {@link WinRMClient#file(String)}: sizes, byte ranges and
  * whole files are read natively through the WinRM channel (raw bytes, host-side seek), and path
  * patterns are resolved with a host-side directory listing. Every operation runs on the client's
- * single authenticated connection; {@link #close()} releases it.
+ * single authenticated connection; {@link #close()} releases it. Each operation is one request,
+ * counted in the request statistics given at construction.
  */
 @Slf4j
 public class WinRmFileOperations implements WinFileOperations {
@@ -49,20 +53,29 @@ public class WinRmFileOperations implements WinFileOperations {
 	private final String hostname;
 
 	/**
+	 * The request statistics of the monitored resource, or {@code null} to count nothing.
+	 */
+	private final RequestStats requestStats;
+
+	/**
 	 * Wrap a client. The client is owned by this instance and closed with it.
 	 *
-	 * @param client   the client to read through
-	 * @param hostname the hostname, for logging
+	 * @param client       the client to read through
+	 * @param hostname     the hostname, for logging
+	 * @param requestStats the request statistics of the monitored resource, where each operation is
+	 *                     counted, or {@code null} to count nothing
 	 */
-	WinRmFileOperations(final WinRMClient client, final String hostname) {
+	WinRmFileOperations(final WinRMClient client, final String hostname, final RequestStats requestStats) {
 		this.client = client;
 		this.hostname = hostname;
+		this.requestStats = requestStats;
 	}
 
 	@Override
 	public Long getFileSize(final String path) {
 		try {
-			return client.file(path).info().map(RemoteFileInfo::size).orElse(null);
+			final RemoteFile file = client.file(path);
+			return WinRmRequestExecutor.executeRecorded(file::info, requestStats).map(RemoteFileInfo::size).orElse(null);
 		} catch (WinRMClientException e) {
 			log.info("Hostname {} - Unable to get \"{}\" file size: {}", hostname, path, e.getMessage());
 			log.debug("Hostname {} - An error has occurred when reading the file size of {}: {}", hostname, path, e);
@@ -73,7 +86,8 @@ public class WinRmFileOperations implements WinFileOperations {
 	@Override
 	public String readFromOffset(final String path, final Long offset, final Integer length) throws IOException {
 		try {
-			return new String(client.file(path).offset(offset).length(length).readBytes(), StandardCharsets.UTF_8);
+			final RemoteFile file = client.file(path).offset(offset).length(length);
+			return new String(WinRmRequestExecutor.executeRecorded(file::readBytes, requestStats), StandardCharsets.UTF_8);
 		} catch (WinRMClientException e) {
 			throw new IOException(String.format("Failed to read %s from offset %d on %s", path, offset, hostname), e);
 		}
@@ -82,7 +96,8 @@ public class WinRmFileOperations implements WinFileOperations {
 	@Override
 	public String readFileContent(final String path) {
 		try {
-			return client.file(path).readText(StandardCharsets.UTF_8);
+			final RemoteFile file = client.file(path);
+			return WinRmRequestExecutor.executeRecorded(() -> file.readText(StandardCharsets.UTF_8), requestStats);
 		} catch (WinRMClientException e) {
 			log.info("Hostname {} - Unable to get {} file content: {}", hostname, path, e.getMessage());
 			log.debug("Hostname {} - An error has occurred when reading the content of {}: {}", hostname, path, e);
@@ -109,12 +124,12 @@ public class WinRmFileOperations implements WinFileOperations {
 		final String rootPrefix = rootPrefix(pattern);
 		final List<Pattern> globs = pattern.segments().stream().map(WinRmFileOperations::globToRegex).toList();
 		try {
-			return client.file(pattern.root())
+			final RemoteDirectoryListing listing = client.file(pattern.root())
 				.list()
 				.maxDepth(globs.size())
 				.filesOnly()
-				.glob(pattern.filename())
-				.execute()
+				.glob(pattern.filename());
+			return WinRmRequestExecutor.executeRecorded(listing::execute, requestStats)
 				.entries()
 				.stream()
 				.filter(entry -> matches(rootPrefix, globs, entry.path()))
