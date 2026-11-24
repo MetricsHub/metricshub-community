@@ -4,9 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.SocketTimeoutException;
@@ -18,6 +25,9 @@ import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -26,6 +36,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.jdbc.client.SqlResult;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistry;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -43,10 +54,11 @@ class SqlRequestExecutorTest {
 	private static final String URL = "jdbc:h2:mem:sqlRequestExecutorTest;DB_CLOSE_DELAY=-1";
 	private static final String SELECT_ALL = "SELECT id, name FROM items ORDER BY id";
 	private static final JdbcDriverSelection H2_SELECTION = new JdbcDriverSelection("org.h2.Driver", null);
+	private static final long BLOCK_MILLIS = 3000;
 
 	private static Connection keepAlive;
 
-	private final SqlRequestExecutor executor = new SqlRequestExecutor();
+	private final SqlRequestExecutor executor = spy(new SqlRequestExecutor());
 
 	@BeforeAll
 	static void createDatabase() throws SQLException {
@@ -158,19 +170,40 @@ class SqlRequestExecutorTest {
 	}
 
 	/**
-	 * Executes a query with a driver whose connect throws the given exception.
+	 * Executes a query whose request throws the given exception.
 	 *
-	 * @param exception The exception thrown by the driver.
+	 * @param exception The exception thrown by the request.
 	 * @return The request counters of the resource.
-	 * @throws SQLException never (mock stubbing)
+	 * @throws SQLException never (spy stubbing)
 	 */
-	private Map<String, Map<RequestOutcome, Long>> countsWhenConnectThrows(final SQLException exception)
+	private Map<String, Map<RequestOutcome, Long>> countsWhenRequestThrows(final SQLException exception)
 		throws SQLException {
-		final Driver driver = mock(Driver.class);
-		when(driver.connect(anyString(), any())).thenThrow(exception);
-		try (MockedStatic<JdbcDriverRegistryHolder> holder = mockDriver(driver)) {
-			return countsAfter(URL, "", SELECT_ALL, H2_SELECTION);
+		doThrow(exception).when(executor).query(any(), any(), any(), any(), anyBoolean(), anyInt(), any());
+		return countsAfter(URL, "", SELECT_ALL, H2_SELECTION);
+	}
+
+	/**
+	 * Blocks for {@value #BLOCK_MILLIS} ms whatever the interrupts, like a driver stuck in a socket read.
+	 *
+	 * @param <T>    The type of the result.
+	 * @param result The result.
+	 * @return The result.
+	 */
+	private static <T> T blockIgnoringInterrupts(final T result) {
+		final long end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(BLOCK_MILLIS);
+		while (System.nanoTime() < end) {
+			Thread.interrupted();
+			LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
 		}
+		return result;
+	}
+
+	/**
+	 * Interrupts the current thread 200 ms from now.
+	 */
+	private static void interruptIn200Millis() {
+		final Thread caller = Thread.currentThread();
+		CompletableFuture.delayedExecutor(200, TimeUnit.MILLISECONDS).execute(caller::interrupt);
 	}
 
 	/**
@@ -237,14 +270,14 @@ class SqlRequestExecutorTest {
 
 	@Test
 	void testSqlTimeoutExceptionIsTimeout() throws SQLException {
-		assertEquals(counts(0, 1, 0), countsWhenConnectThrows(new SQLTimeoutException("Query timed out")));
+		assertEquals(counts(0, 1, 0), countsWhenRequestThrows(new SQLTimeoutException("Query timed out")));
 	}
 
 	@Test
 	void testSocketTimeoutCauseIsTimeout() throws SQLException {
 		assertEquals(
 			counts(0, 1, 0),
-			countsWhenConnectThrows(new SQLException("Communications link failure", "08S01", new SocketTimeoutException()))
+			countsWhenRequestThrows(new SQLException("Communications link failure", "08S01", new SocketTimeoutException()))
 		);
 	}
 
@@ -252,7 +285,7 @@ class SqlRequestExecutorTest {
 	void testPostgresQueryCanceledIsTimeout() throws SQLException {
 		assertEquals(
 			counts(0, 1, 0),
-			countsWhenConnectThrows(new SQLException("canceling statement due to user request", "57014"))
+			countsWhenRequestThrows(new SQLException("canceling statement due to user request", "57014"))
 		);
 	}
 
@@ -260,11 +293,11 @@ class SqlRequestExecutorTest {
 	void testTimeoutInTheNextExceptionChainIsTimeout() throws SQLException {
 		final SQLException timeoutInNext = new SQLException("Batch failed", "08006");
 		timeoutInNext.setNextException(new SQLTimeoutException("Query timed out"));
-		assertEquals(counts(0, 1, 0), countsWhenConnectThrows(timeoutInNext));
+		assertEquals(counts(0, 1, 0), countsWhenRequestThrows(timeoutInNext));
 
 		final SQLException canceledInNext = new SQLException("Batch failed", "08006");
 		canceledInNext.setNextException(new SQLException("canceling statement due to user request", "57014"));
-		assertEquals(counts(0, 1, 0), countsWhenConnectThrows(canceledInNext));
+		assertEquals(counts(0, 1, 0), countsWhenRequestThrows(canceledInNext));
 	}
 
 	@Test
@@ -272,12 +305,52 @@ class SqlRequestExecutorTest {
 		final SQLException first = new SQLException("Connection refused", "08001");
 		final SQLException second = new SQLException("Connection refused", "08001", first);
 		first.initCause(second);
-		assertEquals(counts(0, 0, 1), countsWhenConnectThrows(first));
+		assertEquals(counts(0, 0, 1), countsWhenRequestThrows(first));
 	}
 
 	@Test
 	void testConnectionRefusedIsFailed() throws SQLException {
-		assertEquals(counts(0, 0, 1), countsWhenConnectThrows(new SQLException("Connection refused", "08001")));
+		assertEquals(counts(0, 0, 1), countsWhenRequestThrows(new SQLException("Connection refused", "08001")));
+	}
+
+	@Test
+	void testInterruptedQueryIsOneTimeout() throws SQLException {
+		doAnswer(invocation -> blockIgnoringInterrupts(new SqlResult())).when(executor)
+			.query(any(), any(), any(), any(), anyBoolean(), anyInt(), any());
+		final TelemetryManager telemetryManager = spy(newTelemetryManager());
+		final JdbcConfiguration configuration = newConfiguration(URL, "");
+
+		final long start = System.nanoTime();
+		interruptIn200Millis();
+		final ClientException exception = assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(PROTOCOL_HOSTNAME, configuration, SELECT_ALL, false, telemetryManager, H2_SELECTION)
+		);
+		final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+		final boolean interrupted = Thread.interrupted();
+
+		assertTrue(elapsedMillis < 1000, "Returned after " + elapsedMillis + " ms");
+		assertTrue(interrupted, "The interrupt status is kept");
+		assertEquals("SQL query interrupted on hostname " + PROTOCOL_HOSTNAME, exception.getMessage());
+		assertEquals(counts(0, 1, 0), telemetryManager.getRequestStats().snapshot());
+		// Nothing is recorded
+		verify(telemetryManager, never()).getRecordOutputDirectory();
+	}
+
+	@Test
+	void testInterruptedBeforeTheQuerySendsAndRecordsNothing() throws SQLException {
+		final TelemetryManager telemetryManager = newTelemetryManager();
+		final JdbcConfiguration configuration = newConfiguration(URL, "");
+
+		Thread.currentThread().interrupt();
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(PROTOCOL_HOSTNAME, configuration, SELECT_ALL, false, telemetryManager, H2_SELECTION)
+		);
+		assertTrue(Thread.interrupted(), "The interrupt status is kept");
+
+		verify(executor, never()).query(any(), any(), any(), any(), anyBoolean(), anyInt(), any());
+		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
 	}
 
 	@Test
@@ -359,6 +432,48 @@ class SqlRequestExecutorTest {
 		assertTrue(JdbcExtension.isDatabaseAlive(URL, "sa", new char[0], 30, H2_SELECTION, stats));
 		assertEquals(false, JdbcExtension.isDatabaseAlive(URL, "sa", "wrong".toCharArray(), 30, H2_SELECTION, stats));
 		assertEquals(counts(1, 0, 1), stats.snapshot());
+	}
+
+	@Test
+	void testInterruptedHealthCheckIsOneTimeout() throws SQLException {
+		final Connection connection = mock(Connection.class);
+		when(connection.isValid(30)).thenReturn(true);
+		final Driver driver = mock(Driver.class);
+		when(driver.connect(anyString(), any())).thenAnswer(invocation -> blockIgnoringInterrupts(connection));
+		final RequestStats stats = new RequestStats();
+
+		final boolean alive;
+		final long elapsedMillis;
+		final boolean interrupted;
+		try (MockedStatic<JdbcDriverRegistryHolder> holder = mockDriver(driver)) {
+			final long start = System.nanoTime();
+			interruptIn200Millis();
+			alive = JdbcExtension.isDatabaseAlive(URL, "sa", new char[0], 30, H2_SELECTION, stats);
+			elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+			interrupted = Thread.interrupted();
+		}
+
+		assertEquals(false, alive);
+		assertTrue(elapsedMillis < 1000, "Returned after " + elapsedMillis + " ms");
+		assertTrue(interrupted, "The interrupt status is kept");
+		assertEquals(counts(0, 1, 0), stats.snapshot());
+	}
+
+	@Test
+	void testHealthCheckInterruptedBeforeSendsAndRecordsNothing() throws SQLException {
+		final Driver driver = mock(Driver.class);
+		final RequestStats stats = new RequestStats();
+
+		final boolean alive;
+		try (MockedStatic<JdbcDriverRegistryHolder> holder = mockDriver(driver)) {
+			Thread.currentThread().interrupt();
+			alive = JdbcExtension.isDatabaseAlive(URL, "sa", new char[0], 30, H2_SELECTION, stats);
+		}
+		assertTrue(Thread.interrupted(), "The interrupt status is kept");
+
+		assertEquals(false, alive);
+		verify(driver, never()).connect(anyString(), any());
+		assertEquals(Map.of(), stats.snapshot());
 	}
 
 	@Test

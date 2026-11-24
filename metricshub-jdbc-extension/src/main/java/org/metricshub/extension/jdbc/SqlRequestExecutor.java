@@ -27,9 +27,11 @@ import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -98,20 +100,25 @@ public class SqlRequestExecutor {
 
 			// Execute the SQL query: one attempt (connect, execute, fetch, close) for the monitored resource, if any
 			final RequestStats requestStats = telemetryManager == null ? null : telemetryManager.getRequestStats();
+			final String username = jdbcConfig.getUsername();
+			final char[] password = jdbcConfig.getPassword();
+			final int timeout = jdbcConfig.getTimeout().intValue();
+			final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 			final SqlResult sqlResult;
 			try {
-				sqlResult = JdbcClient.execute(
-					url,
-					jdbcConfig.getUsername(),
-					jdbcConfig.getPassword(),
-					sqlQuery,
-					showWarnings,
-					jdbcConfig.getTimeout().intValue(),
-					driverSelection
+				sqlResult = ThreadHelper.executeInterruptibly(
+					() -> query(url, username, password, sqlQuery, showWarnings, timeout, driverSelection)
 				);
-			} catch (SQLException e) {
-				recordFailure(requestStats, e);
-				throw e;
+			} catch (InterruptedException e) {
+				// A caller interrupted before the request started sent nothing
+				if (!interruptedBefore) {
+					recordOutcome(requestStats, RequestOutcome.TIMEOUT);
+				}
+				throw new ClientException("SQL query interrupted on hostname " + hostname, e);
+			} catch (ExecutionException e) {
+				final SQLException cause = sqlCause(e);
+				recordFailure(requestStats, cause);
+				throw cause;
 			}
 			recordOutcome(requestStats, RequestOutcome.COMPLETED);
 
@@ -138,6 +145,53 @@ public class SqlRequestExecutor {
 			log.debug("Hostname {} - SQL query failed. Stack trace:", hostname, e);
 			throw new ClientException("SQL query failed on hostname " + hostname, e);
 		}
+	}
+
+	/**
+	 * Executes the SQL query: one attempt (connect, execute, fetch, close). Runs on the thread of the request, so it
+	 * writes no engine state.
+	 *
+	 * @param url          The JDBC URL.
+	 * @param username     The database username.
+	 * @param password     The database password.
+	 * @param sqlQuery     The SQL query to execute.
+	 * @param showWarnings Whether to show SQL warnings.
+	 * @param timeout      The query timeout in seconds.
+	 * @param selection    The driver selection.
+	 * @return The result of the query.
+	 * @throws SQLException when the query fails
+	 */
+	SqlResult query(
+		final String url,
+		final String username,
+		final char[] password,
+		final String sqlQuery,
+		final boolean showWarnings,
+		final int timeout,
+		final JdbcDriverSelection selection
+	) throws SQLException {
+		return JdbcClient.execute(url, username, password, sqlQuery, showWarnings, timeout, selection);
+	}
+
+	/**
+	 * Gets the {@link SQLException} that made a request run by {@link ThreadHelper#executeInterruptibly} fail, or
+	 * throws its cause if it is unchecked.
+	 *
+	 * @param exception The exception thrown by {@link ThreadHelper#executeInterruptibly}.
+	 * @return The {@link SQLException} cause, or a new one wrapping any other checked cause.
+	 */
+	static SQLException sqlCause(final ExecutionException exception) {
+		final Throwable cause = exception.getCause();
+		if (cause instanceof SQLException sqlException) {
+			return sqlException;
+		}
+		if (cause instanceof RuntimeException runtimeException) {
+			throw runtimeException;
+		}
+		if (cause instanceof Error error) {
+			throw error;
+		}
+		return new SQLException(cause);
 	}
 
 	/**

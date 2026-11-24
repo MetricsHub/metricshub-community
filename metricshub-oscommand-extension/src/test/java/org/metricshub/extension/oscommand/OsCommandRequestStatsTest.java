@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -26,12 +27,20 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +52,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
+import org.metricshub.engine.telemetry.SshSemaphoreFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.ssh.SshClient;
 import org.mockito.MockedStatic;
@@ -298,6 +308,16 @@ class OsCommandRequestStatsTest {
 	}
 
 	/**
+	 * @return an OsCommandService that runs the SSH command on the calling thread, where the static stubs apply
+	 */
+	private static OsCommandService onTheCallingThread() throws Exception {
+		final OsCommandService osCommandService = spy(new OsCommandService());
+		doAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get()).when(osCommandService)
+			.runControlledSshCommand(any(), anyString(), anyInt());
+		return osCommandService;
+	}
+
+	/**
 	 * Runs an SSH command through runOsCommand with the given SSH client, the rest of the code path being real.
 	 */
 	private static String runRemotely(final TelemetryManager telemetryManager, final SshClient sshClient)
@@ -306,7 +326,7 @@ class OsCommandRequestStatsTest {
 			MockedStatic<OsCommandRequestExecutor> executor = mockStatic(OsCommandRequestExecutor.class, CALLS_REAL_METHODS)
 		) {
 			executor.when(() -> OsCommandRequestExecutor.createSshClientInstance(anyString())).thenReturn(sshClient);
-			return new OsCommandService().runOsCommand(COMMAND, telemetryManager, 5L, false, false, Map.of()).getResult();
+			return onTheCallingThread().runOsCommand(COMMAND, telemetryManager, 5L, false, false, Map.of()).getResult();
 		}
 	}
 
@@ -439,7 +459,7 @@ class OsCommandRequestStatsTest {
 		) {
 			// Only the SSH hostname gets a client
 			executor.when(() -> OsCommandRequestExecutor.createSshClientInstance(SSH_HOSTNAME)).thenReturn(sshClient);
-			new OsCommandService().runOsCommand(COMMAND, telemetryManager, 5L, false, false, Map.of());
+			onTheCallingThread().runOsCommand(COMMAND, telemetryManager, 5L, false, false, Map.of());
 		}
 
 		assertEquals(counts(SSH_IDENTIFIER, 1, 0, 0), telemetryManager.getRequestStats().snapshot());
@@ -462,13 +482,100 @@ class OsCommandRequestStatsTest {
 	@Test
 	void testSshPermitWaitInterruptedRecordsNothing() throws Exception {
 		final TelemetryManager telemetryManager = remoteTelemetryManager(null);
-		final SshClient sshClient = sshClient(executed("test", 0));
 
-		// The semaphore wait throws at once on an interrupted thread: nothing is sent
+		// An interrupted thread starts nothing: nothing is sent
 		Thread.currentThread().interrupt();
-		assertThrows(InterruptedException.class, () -> runRemotely(telemetryManager, sshClient));
+		assertThrows(
+			InterruptedException.class,
+			() -> new OsCommandService().runOsCommand(COMMAND, telemetryManager, 5L, false, false, Map.of())
+		);
 
 		assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
+	}
+
+	@Test
+	void testSshCommandInterruptedWhileItRunsIsOneTimeout() throws Exception {
+		final RequestStats requestStats = new RequestStats();
+		final String hostname = InetAddress.getLoopbackAddress().getHostAddress();
+		final Semaphore permits = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
+		final CountDownLatch accepted = new CountDownLatch(1);
+		try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+			// An SSH server that accepts the connection and never answers: sshlib waits for its identification
+			final List<Socket> connections = new CopyOnWriteArrayList<>();
+			final Thread acceptor = new Thread(() -> {
+				try {
+					connections.add(server.accept());
+					accepted.countDown();
+				} catch (IOException e) {
+					// The server is closed
+				}
+			});
+			acceptor.start();
+			final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
+				.hostname(hostname)
+				.port(server.getLocalPort())
+				.username(USERNAME)
+				.password("pwd".toCharArray())
+				.timeout(30L)
+				.build();
+
+			// The engine interrupts the job when its deadline expires, while the command waits for the server
+			final Thread caller = Thread.currentThread();
+			final CountDownLatch returned = new CountDownLatch(1);
+			final Thread deadline = new Thread(() -> {
+				try {
+					accepted.await();
+					Thread.sleep(100);
+					caller.interrupt();
+					// Then the server goes away, at the latest after 3 seconds: a caller blocked fails the test
+					returned.await(3, TimeUnit.SECONDS);
+					for (final Socket connection : connections) {
+						connection.close();
+					}
+				} catch (InterruptedException | IOException e) {
+					// Not reached
+				}
+			});
+			deadline.start();
+			final long start = System.nanoTime();
+			try {
+				final ClientException exception = assertThrows(
+					ClientException.class,
+					() -> OsCommandService.recordSshCommand(
+						requestStats,
+						() -> new OsCommandService().runSshCommand(
+							COMMAND,
+							hostname,
+							sshConfiguration,
+							30L,
+							null,
+							COMMAND,
+							DeviceKind.LINUX
+						)
+					)
+				);
+				final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+				assertTrue(elapsedMillis < 1000, () -> "Returned after " + elapsedMillis + " ms");
+				assertTrue(Thread.currentThread().isInterrupted());
+				assertInstanceOf(InterruptedException.class, exception.getCause());
+			} finally {
+				Thread.interrupted();
+				returned.countDown();
+				deadline.join(TimeUnit.SECONDS.toMillis(10));
+				acceptor.join(TimeUnit.SECONDS.toMillis(10));
+			}
+
+			// Cut short while it was sent: one timeout
+			assertEquals(counts(SSH_IDENTIFIER, 0, 1, 0), requestStats.snapshot());
+
+			// The server went away: the command ends on its thread, releases its permit and records nothing more
+			final long giveUp = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+			while (permits.availablePermits() < 8 && System.nanoTime() < giveUp) {
+				Thread.sleep(10);
+			}
+			assertEquals(8, permits.availablePermits());
+			assertEquals(counts(SSH_IDENTIFIER, 0, 1, 0), requestStats.snapshot());
+		}
 	}
 
 	/**

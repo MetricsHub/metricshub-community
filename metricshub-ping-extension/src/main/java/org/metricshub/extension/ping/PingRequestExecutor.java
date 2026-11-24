@@ -24,10 +24,14 @@ package org.metricshub.extension.ping;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 
@@ -59,7 +63,8 @@ public class PingRequestExecutor {
 	 * @param hostname     The name of the host that will be tested. It must be a valid hostname or IP address.
 	 * @param timeout      The timeout in milliseconds for the ping request.
 	 * @param requestStats The request statistics of the monitored resource, or {@code null} to record nothing.
-	 * @return true if the host is reachable within the specified timeout; false otherwise.
+	 * @return true if the host is reachable within the specified timeout; false otherwise, or when the caller is
+	 *         interrupted (its interrupt status is kept).
 	 * @throws UnknownHostException if the host cannot be determined from the given hostname.
 	 */
 	@WithSpan("Ping")
@@ -68,24 +73,69 @@ public class PingRequestExecutor {
 		@SpanAttribute("ping.timeout") final int timeout,
 		final RequestStats requestStats
 	) throws UnknownHostException {
+		// A caller already interrupted sends nothing
+		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		final InetAddress pingAddress;
 		try {
-			pingAddress = resolve(hostname);
+			pingAddress = interruptibly(() -> resolve(hostname));
 		} catch (UnknownHostException e) {
 			record(requestStats, RequestOutcome.FAILED);
 			throw e;
+		} catch (IOException e) {
+			// Interrupted: the name resolution throws nothing else
+			if (!interruptedBefore) {
+				record(requestStats, RequestOutcome.of(e));
+			}
+			log.debug("Hostname {} - Ping interrupted.", hostname);
+			return false;
 		}
 
 		final long start = nanoTime();
 		try {
-			final boolean reachable = isReachable(pingAddress, timeout);
+			final boolean reachable = interruptibly(() -> isReachable(pingAddress, timeout));
 			record(requestStats, reachable ? RequestOutcome.COMPLETED : classifyNoAnswer(nanoTime() - start, timeout));
 			return reachable;
 		} catch (IOException e) {
-			// A SocketTimeoutException or another InterruptedIOException is a timeout
+			// A SocketTimeoutException or another InterruptedIOException (the caller was interrupted) is a timeout
 			record(requestStats, RequestOutcome.of(e));
-			log.error("Hostname {}. A network error occurred: %s", hostname, e);
+			if (e instanceof InterruptedIOException && Thread.currentThread().isInterrupted()) {
+				log.debug("Hostname {} - Ping interrupted.", hostname);
+			} else {
+				log.error("Hostname {}. A network error occurred: %s", hostname, e);
+			}
 			return false;
+		}
+	}
+
+	/**
+	 * Runs a probe on its own thread, which the caller stops waiting for when it is interrupted: the probe may still
+	 * run there, but its result is dropped.
+	 *
+	 * @param <T>   The type of the result of the probe.
+	 * @param probe The name resolution or the reachability test.
+	 * @return The result of the probe.
+	 * @throws IOException The exception of the probe, an {@link InterruptedIOException} when the caller is interrupted
+	 *                     (its interrupt status is kept).
+	 */
+	private static <T> T interruptibly(final Callable<T> probe) throws IOException {
+		try {
+			return ThreadHelper.executeInterruptibly(probe);
+		} catch (InterruptedException e) {
+			final InterruptedIOException interrupted = new InterruptedIOException("Ping interrupted");
+			interrupted.initCause(e);
+			throw interrupted;
+		} catch (ExecutionException e) {
+			final Throwable cause = e.getCause();
+			if (cause instanceof IOException ioException) {
+				throw ioException;
+			}
+			if (cause instanceof RuntimeException runtimeException) {
+				throw runtimeException;
+			}
+			if (cause instanceof Error error) {
+				throw error;
+			}
+			throw new IOException(cause);
 		}
 	}
 

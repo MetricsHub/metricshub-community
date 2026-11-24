@@ -22,6 +22,8 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.spy;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,14 +32,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -46,6 +52,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.IStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -270,5 +277,99 @@ class CollectStrategyTest {
 				"Test on host.name FAILED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
+	}
+
+	@Test
+	void testInterruptedMonitorOfAMonoInstanceCollectIsRolledBack() {
+		final String connectorId = "TestConnectorWithEventLog";
+		final String sourceKey = "${source::monitors.event_log.collect.sources.source(1)}";
+		final Monitor connectorMonitor = Monitor.builder().type(KnownMonitorType.CONNECTOR.getKey()).build();
+		connectorMonitor.addAttribute(ID, connectorId);
+		final Monitor hostMonitor = Monitor.builder().type(KnownMonitorType.HOST.getKey()).isEndpoint(true).build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(
+				new HashMap<>(
+					Map.of(
+						HOST,
+						Map.of(MONITOR_ID_ATTRIBUTE_VALUE, hostMonitor),
+						CONNECTOR,
+						new HashMap<>(
+							Map.of(
+								String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), connectorId),
+								connectorMonitor
+							)
+						)
+					)
+				)
+			)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostname(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.sequential(true)
+					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
+					.build()
+			)
+			.connectorStore(
+				new ConnectorStore(Paths.get("src", "test", "resources", "test-files", "strategy", "collectEventLog"))
+			)
+			.build();
+		final List<Monitor> monitors = Stream.of("m1", "m2")
+			.map(
+				id -> MonitorFactory.builder()
+					.monitorType("event_log")
+					.telemetryManager(telemetryManager)
+					.connectorId(connectorId)
+					.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, id)))
+					.discoveryTime(strategyTime - 30 * 60 * 1000)
+					.keys(DEFAULT_KEYS)
+					.build()
+					.createOrUpdateMonitor()
+			)
+			.toList();
+
+		final ConnectorNamespace namespace = spy(ConnectorNamespace.builder().build());
+		telemetryManager.getHostProperties().getConnectorNamespaces().put(connectorId, namespace);
+		namespace.setSourceCursor(sourceKey, 10);
+
+		// Each monitor polls the eventLog source again, which moves the cursor by 10
+		lenient().doReturn(true).when(protocolExtensionMock).isValidConfiguration(any());
+		lenient().doReturn(Set.of(EventLogSource.class)).when(protocolExtensionMock).getSupportedSources();
+		lenient().doAnswer(invocation -> {
+			namespace.setSourceCursor(sourceKey, (Integer) namespace.getSourceCursor(sourceKey) + 10);
+			return SourceTable.ofTable(SourceTable.csvToTable("event;polled", ";"));
+		}).when(protocolExtensionMock).processSource(any(), anyString(), any(TelemetryManager.class));
+
+		// The job deadline expires while the table of the second monitor is stored: after the last check of its sources
+		final AtomicInteger polls = new AtomicInteger();
+		lenient().doAnswer(invocation -> {
+			if (polls.incrementAndGet() == 2) {
+				Thread.currentThread().interrupt();
+			}
+			return invocation.callRealMethod();
+		}).when(namespace).addSourceTable(eq(sourceKey), any());
+
+		try {
+			CollectStrategy.builder()
+				.clientsExecutor(clientsExecutorMock)
+				.strategyTime(strategyTime)
+				.telemetryManager(telemetryManager)
+				.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(protocolExtensionMock)).build())
+				.build()
+				.run();
+
+			// The first monitor is collected and keeps its poll, the second one is not and its poll is rolled back
+			assertEquals(2, polls.get());
+			assertEquals(
+				1,
+				monitors.stream()
+					.filter(monitor -> "polled".equals(monitor.getLegacyTextParameters().get(STATUS_INFORMATION)))
+					.count()
+			);
+			assertEquals(20, namespace.getSourceCursor(sourceKey));
+		} finally {
+			Thread.interrupted();
+		}
 	}
 }

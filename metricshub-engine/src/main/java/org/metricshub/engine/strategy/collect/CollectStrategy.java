@@ -26,8 +26,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREA
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,7 +57,6 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
@@ -110,8 +109,15 @@ public class CollectStrategy extends AbstractStrategy {
 	 * This method collects the monitors and their metrics
 	 * @param currentConnector Connector instance
 	 * @param hostname The host name
+	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
+	 * @param pendingPools Where to defer the end of this connector when its monitor jobs outlive the thread timeout
 	 */
-	private void collect(final Connector currentConnector, final String hostname) {
+	private void collect(
+		final Connector currentConnector,
+		final String hostname,
+		final long runStartTime,
+		final List<PendingPool> pendingPools
+	) {
 		// Check whether the strategy job name matches at least one of the monitor jobs names of the current connector
 		final boolean connectorHasExpectedJobTypes = hasExpectedJobTypes(currentConnector, JOB_NAME);
 		// If the connector doesn't define any monitor job of type collect, log a message then exit the current collect operation
@@ -140,6 +146,8 @@ public class CollectStrategy extends AbstractStrategy {
 			.extensionManager(extensionManager)
 			.build();
 
+		// A run interrupted before its beforeAll opens no session and has none to close
+		final boolean opened = !isInterrupted();
 		beforeAllStrategy.run();
 
 		// Sort the connector monitor jobs according to the priority map
@@ -203,13 +211,16 @@ public class CollectStrategy extends AbstractStrategy {
 
 			try {
 				// Blocks until all tasks have completed execution after a shutdown request
-				if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+				if (!threadsPool.awaitTermination(getThreadTimeout(), TimeUnit.SECONDS)) {
 					log.warn(
-						"Hostname {} - Collect thread pool did not terminate within {} seconds. Forcing shutdown.",
+						"Hostname {} - Collect thread pool did not terminate within {} seconds. Waiting for it after the other connectors.",
 						hostname,
-						THREAD_TIMEOUT
+						getThreadTimeout()
 					);
-					threadsPool.shutdownNow();
+					// The afterAll, which may close the session of the jobs, waits for the pool
+					watchPool(threadsPool, runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout()));
+					pendingPools.add(new PendingPool(threadsPool, currentConnector, opened));
+					return;
 				}
 			} catch (Exception e) {
 				threadsPool.shutdownNow();
@@ -219,17 +230,17 @@ public class CollectStrategy extends AbstractStrategy {
 				log.debug("Hostname {} - Waiting for threads' termination aborted with an error.", hostname, e);
 			}
 		}
-		// Run AfterAllStrategy that executes afterAll sources
-		final AfterAllStrategy afterAllStrategy = AfterAllStrategy.builder()
-			.clientsExecutor(clientsExecutor)
-			.strategyTime(strategyTime)
-			.telemetryManager(telemetryManager)
-			.connector(currentConnector)
-			.extensionManager(extensionManager)
-			.build();
-
-		afterAllStrategy.run();
+		runAfterAll(currentConnector, opened, runStartTime);
 	}
+
+	/**
+	 * The monitor jobs of a connector still running at the thread timeout, and what the end of the connector needs.
+	 *
+	 * @param pool      The thread pool of the jobs, shut down
+	 * @param connector The connector
+	 * @param opened    Whether this run entered the beforeAll of the connector on a thread not interrupted
+	 */
+	private record PendingPool(ExecutorService pool, Connector connector, boolean opened) {}
 
 	/**
 	 * This method processes a monitor job
@@ -277,8 +288,11 @@ public class CollectStrategy extends AbstractStrategy {
 					MonitorFactory.buildSingletonId(currentConnector.getCompiledFilename(), monitorType)
 				);
 				if (singleton != null) {
-					processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo);
-					processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+					final List<Runnable> cursorRollbacks = new ArrayList<>();
+					processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo, cursorRollbacks);
+					if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+						processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+					}
 				}
 			} else if (collect instanceof MultiInstanceCollect multiInstanceCollect) {
 				final Map<String, Monitor> monitors = telemetryManager.findMonitorsByType(monitorType);
@@ -287,11 +301,14 @@ public class CollectStrategy extends AbstractStrategy {
 				}
 
 				// Create the sources and the computes for a connector
-				processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+				final List<Runnable> cursorRollbacks = new ArrayList<>();
+				processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
 
-				// Retrieve monitor job keys
-				final Set<String> monitorJobKeys = monitorJob.getValue().getKeys();
-				processMonitors(monitorType, multiInstanceCollect.getMapping(), currentConnector, hostname, monitorJobKeys);
+				if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+					// Retrieve monitor job keys
+					final Set<String> monitorJobKeys = monitorJob.getValue().getKeys();
+					processMonitors(monitorType, multiInstanceCollect.getMapping(), currentConnector, hostname, monitorJobKeys);
+				}
 			} else {
 				// Get monitors by type and connectorId (connector id attribute)
 				final Map<String, Monitor> sameTypeMonitors = telemetryManager.findMonitorsByType(monitorType);
@@ -304,8 +321,12 @@ public class CollectStrategy extends AbstractStrategy {
 								.equals(monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID))
 						)
 						.forEach(monitor -> {
-							processSourcesAndComputes(orderedSources.getSources(), monitor.getAttributes(), jobInfo);
-							processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor);
+							// One list per monitor: each monitor polls the sources again
+							final List<Runnable> cursorRollbacks = new ArrayList<>();
+							processSourcesAndComputes(orderedSources.getSources(), monitor.getAttributes(), jobInfo, cursorRollbacks);
+							if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+								processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor);
+							}
 						});
 				}
 			}
@@ -373,8 +394,7 @@ public class CollectStrategy extends AbstractStrategy {
 		final Optional<Monitor> maybeMonitor,
 		final Set<String> attributeKeys
 	) {
-		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
-		if (mapping == null || Thread.currentThread().isInterrupted()) {
+		if (mapping == null) {
 			return;
 		}
 
@@ -537,6 +557,9 @@ public class CollectStrategy extends AbstractStrategy {
 	 */
 	@Override
 	public void run() {
+		// Capture the start of this strategy run, used to bound the wait for the monitor jobs and the afterAll
+		final long runStartTime = System.nanoTime();
+
 		// Get the host name from telemetry manager
 		final String hostname = telemetryManager.getHostname();
 
@@ -570,7 +593,15 @@ public class CollectStrategy extends AbstractStrategy {
 			.toList();
 
 		// Collect each connector
-		sortedConnectors.forEach(connector -> collect(connector, hostname));
+		final List<PendingPool> pendingPools = new ArrayList<>();
+		sortedConnectors.forEach(connector -> collect(connector, hostname, runStartTime, pendingPools));
+
+		// The jobs that outlived the thread timeout may still complete until the strategy deadline
+		final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
+		pendingPools.forEach(pending -> {
+			joinPool(pending.pool(), deadline, hostname);
+			runAfterAll(pending.connector(), pending.opened(), runStartTime);
+		});
 
 		// Collect the metricshub.host.configured metric
 		collectHostConfigured(hostname);

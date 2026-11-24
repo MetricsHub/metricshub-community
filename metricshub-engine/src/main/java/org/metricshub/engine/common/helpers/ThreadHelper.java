@@ -21,6 +21,7 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -30,6 +31,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,6 +108,177 @@ public class ThreadHelper {
 		} finally {
 			executor.shutdownNow();
 		}
+	}
+
+	/**
+	 * Where {@link #executeInterruptibly(Callable)} and {@link #closeInterruptibly(Runnable)} put, on the current
+	 * thread, the request they gave up on because their caller was interrupted. Null when nobody tracks them.
+	 */
+	private static final ThreadLocal<Collection<ExecutorService>> ABANDONED = new ThreadLocal<>();
+
+	/**
+	 * Runs a blocking request on a dedicated daemon thread and waits for it without any timeout: the request ends when
+	 * the call returns or throws, with its own protocol timeouts, or when the caller is interrupted. In that last case
+	 * the request may still be running on its thread, but its result is dropped and nothing more is sent by the caller.
+	 * Used for the library calls that ignore {@link Thread#interrupt()}.
+	 *
+	 * @param <T>     the type of the result of the request
+	 * @param request the request, which must not write any engine state
+	 * @return the result of the request
+	 * @throws InterruptedException if the caller was interrupted before the request started (the request is never
+	 *                              submitted) or while waiting; its interrupt status is kept
+	 * @throws ExecutionException   if the request threw an exception, its cause
+	 */
+	public static <T> T executeInterruptibly(final Callable<T> request) throws InterruptedException, ExecutionException {
+		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for
+		if (Thread.currentThread().isInterrupted()) {
+			throw new InterruptedException("Interrupted before the request started");
+		}
+		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
+		try {
+			final Future<T> future = executor.submit(request);
+			try {
+				return future.get();
+			} catch (InterruptedException e) {
+				future.cancel(true);
+				abandon(executor);
+				Thread.currentThread().interrupt();
+				throw e;
+			}
+		} finally {
+			executor.shutdownNow();
+		}
+	}
+
+	/**
+	 * Runs the given body with the given sink receiving, as an {@link ExecutorService} that terminates when the request
+	 * ends, every request that {@link #executeInterruptibly(Callable)} or {@link #closeInterruptibly(Runnable)} gives
+	 * up on in the current thread. The previous sink is restored afterwards, so calls can be nested.
+	 *
+	 * @param <T>  the type of the result of the body
+	 * @param sink the collection receiving the abandoned requests
+	 * @param body the body to run
+	 * @return the result of the body
+	 */
+	public static <T> T trackingAbandonedRequests(final Collection<ExecutorService> sink, final Supplier<T> body) {
+		final Collection<ExecutorService> previous = ABANDONED.get();
+		ABANDONED.set(sink);
+		try {
+			return body.get();
+		} finally {
+			if (previous == null) {
+				ABANDONED.remove();
+			} else {
+				ABANDONED.set(previous);
+			}
+		}
+	}
+
+	/**
+	 * Adds the given request to the sink of the current thread, if any.
+	 *
+	 * @param request the request given up on
+	 */
+	private static void abandon(final ExecutorService request) {
+		final Collection<ExecutorService> sink = ABANDONED.get();
+		if (sink != null) {
+			sink.add(request);
+		}
+	}
+
+	/**
+	 * Runs the given task on a child thread that starts with a clear interrupt status, and waits for it. Once the caller
+	 * is interrupted (before the call or while waiting), the task gets {@code graceSeconds} more to complete, then it is
+	 * interrupted and waited for at most one more second. The caller's interrupt status is restored before returning.
+	 *
+	 * @param task         the task to run
+	 * @param graceSeconds how long the task may still run after the caller was interrupted, in seconds
+	 */
+	public static void shelter(final Runnable task, final long graceSeconds) {
+		// Clears and remembers the interrupt: a caller interrupted at entry already uses its grace
+		boolean interrupted = Thread.interrupted();
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(graceSeconds);
+		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
+		try {
+			final Future<?> future = executor.submit(task);
+			while (true) {
+				try {
+					if (interrupted) {
+						future.get(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
+					} else {
+						future.get();
+					}
+					return;
+				} catch (InterruptedException e) {
+					// Future.get cleared the interrupt status, so the next wait does not throw at once
+					if (!interrupted) {
+						interrupted = true;
+						deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(graceSeconds);
+					}
+				} catch (TimeoutException e) {
+					log.debug("Sheltered task still running {} seconds after the interrupt: cancelling it.", graceSeconds);
+					future.cancel(true);
+					executor.shutdownNow();
+					awaitQuietly(executor);
+					return;
+				} catch (ExecutionException e) {
+					throw unchecked(e);
+				}
+			}
+		} finally {
+			executor.shutdownNow();
+			if (interrupted) {
+				Thread.currentThread().interrupt();
+			}
+		}
+	}
+
+	/**
+	 * Waits at most one second for the given cancelled executor to terminate.
+	 *
+	 * @param executor the executor
+	 */
+	private static void awaitQuietly(final ExecutorService executor) {
+		try {
+			executor.awaitTermination(1, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			// The caller is already interrupted: its status is restored by shelter
+			log.debug("Interrupted while waiting for a cancelled sheltered task.");
+		}
+	}
+
+	/**
+	 * Runs a close that may send a request and ignore {@link Thread#interrupt()} on a virtual thread, and waits for it.
+	 * An interrupted caller returns at once, with its interrupt status kept, and the close completes in the background.
+	 *
+	 * @param close the close
+	 */
+	public static void closeInterruptibly(final Runnable close) {
+		final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+		final Future<?> future = executor.submit(close);
+		executor.shutdown();
+		try {
+			future.get();
+		} catch (InterruptedException e) {
+			abandon(executor);
+			Thread.currentThread().interrupt();
+		} catch (ExecutionException e) {
+			throw unchecked(e);
+		}
+	}
+
+	/**
+	 * Gets the unchecked cause of the given exception thrown by a {@link Runnable}, or throws it if it is an error.
+	 *
+	 * @param e the exception
+	 * @return the runtime exception to throw
+	 */
+	private static RuntimeException unchecked(final ExecutionException e) {
+		final Throwable cause = e.getCause();
+		if (cause instanceof Error error) {
+			throw error;
+		}
+		return cause instanceof RuntimeException runtimeException ? runtimeException : new IllegalStateException(cause);
 	}
 
 	/**

@@ -134,10 +134,7 @@ public abstract class AbstractConnectorProcessor {
 		@NonNull Stream<Connector> connectors,
 		@NonNull String hostname
 	) {
-		final List<ConnectorTestResult> connectorTestResults = new ArrayList<>();
-		final List<ConnectorTestResult> connectorTestResultsSynchronized = Collections.synchronizedList(
-			connectorTestResults
-		);
+		final List<ConnectorTestResult> connectorTestResults = Collections.synchronizedList(new ArrayList<>());
 
 		// The new threads of a pool would not inherit the interrupt and would send the requests of an abandoned run
 		if (Thread.currentThread().isInterrupted()) {
@@ -150,11 +147,14 @@ public abstract class AbstractConnectorProcessor {
 			Math.max(1, Math.min(MAX_THREADS_COUNT, connectorList.size()))
 		);
 
-		connectorList.forEach(
-			connector -> threadsPool.execute(
-				() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
-			)
-		);
+		connectorList.forEach(connector -> threadsPool.execute(() -> {
+			final ConnectorTestResult connectorTestResult = runConnectorDetectionCriteria(connector, hostname);
+			// Interrupted by the forced shutdown below, the detection was cut short: it would fail a connector that
+			// matches. Nothing waits for this thread any more, the results returned are the ones added before
+			if (!Thread.currentThread().isInterrupted()) {
+				connectorTestResults.add(connectorTestResult);
+			}
+		}));
 
 		// Two-phase shutdown: first graceful, then forced
 		threadsPool.shutdown();
@@ -178,7 +178,10 @@ public abstract class AbstractConnectorProcessor {
 			log.debug(HOSTNAME_EXCEPTION_MESSAGE, hostname, e);
 		}
 
-		return connectorTestResults;
+		// A copy: the threads still running after a forced shutdown must not change the list being read
+		synchronized (connectorTestResults) {
+			return new ArrayList<>(connectorTestResults);
+		}
 	}
 
 	/**

@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -658,13 +659,17 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 				if (pool != null) {
 					pendingRows.add(row);
-					pendingResults.add(pool.submit(() -> {
-						try {
-							return coordinator.isInterrupted() ? SourceTable.empty() : copy.accept(sourceProcessor);
-						} finally {
+					final FutureTask<SourceTable> pendingResult = new FutureTask<>(
+						() -> coordinator.isInterrupted() ? SourceTable.empty() : copy.accept(sourceProcessor)
+					) {
+						@Override
+						protected void done() {
+							// Once the task is done, never before: the coordinator then sees it done when it wakes up
 							LockSupport.unpark(coordinator);
 						}
-					}));
+					};
+					pendingResults.add(pendingResult);
+					pool.execute(pendingResult);
 					continue;
 				}
 

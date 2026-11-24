@@ -49,6 +49,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import lombok.NoArgsConstructor;
@@ -59,6 +60,7 @@ import org.metricshub.engine.common.exception.ControlledSshException;
 import org.metricshub.engine.common.exception.NoCredentialProvidedException;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -357,8 +359,9 @@ public class OsCommandService {
 	 * @param localFiles        List of local files required for the remote execution.
 	 * @param noPasswordCommand The command with password masked (if present).
 	 * @return The result of the SSH command execution.
-	 * @throws ClientException          When an error occurs during Client execution.
-	 * @throws InterruptedException    When the thread is interrupted during execution.
+	 * @throws ClientException          When an error occurs during Client execution, an interrupt of the running
+	 *                                  command included.
+	 * @throws InterruptedException    When the thread is interrupted before the command started.
 	 * @throws ControlledSshException   When there's an issue with controlled SSH execution.
 	 */
 	public String runSshCommand(
@@ -371,8 +374,11 @@ public class OsCommandService {
 		final DeviceKind hostType
 	) throws ClientException, InterruptedException, ControlledSshException {
 		isTrue(timeout > 0, NEGATIVE_TIMEOUT);
+		// Set once the permit is obtained: an interrupt that follows cuts short a request that was sent
+		final AtomicBoolean sent = new AtomicBoolean();
 		try {
 			return runControlledSshCommand(() -> {
+				sent.set(true);
 				try {
 					return OsCommandRequestExecutor.runRemoteSshCommand(
 						hostname,
@@ -392,6 +398,12 @@ public class OsCommandService {
 			}, hostname, DEFAULT_LOCK_TIMEOUT);
 		} catch (final ClientRuntimeException e) {
 			throw (ClientException) e.getCause();
+		} catch (final InterruptedException e) {
+			if (sent.get()) {
+				// The request was cut short (a timeout), not the wait for a permit; the interrupt status is kept
+				throw new ClientException(String.format("Hostname %s - SSH command interrupted.", hostname), e);
+			}
+			throw e;
 		}
 	}
 
@@ -419,34 +431,43 @@ public class OsCommandService {
 	 * @param hostname    The hostname of the remote machine.
 	 * @param timeout     The timeout for obtaining a semaphore permit in seconds.
 	 * @return The result of the executable.
-	 * @throws InterruptedException    When the thread is interrupted during execution.
+	 * @throws InterruptedException    When the thread is interrupted before or during execution: the caller returns at
+	 *                                 once, its interrupt status kept.
 	 * @throws ControlledSshException   When there's an issue with controlled SSH execution.
 	 */
 	<T> T runControlledSshCommand(Supplier<T> executable, String hostname, int timeout) throws InterruptedException,
 		ControlledSshException {
 		final Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
 
-		boolean acquired = false;
+		// The permit is taken and released by the thread doing the SSH I/O, which sshlib keeps on an interrupt: an
+		// interrupted caller returns at once, the session ends on its own and holds its permit until then
 		try {
-			acquired = semaphore.tryAcquire(timeout, TimeUnit.SECONDS);
-			if (acquired) {
-				return executable.get();
-			}
-
-			final String message = String.format(
-				"Failed to run SSH command on %s. Timed out trying to get ssh semaphore permit.",
-				hostname
-			);
-
-			throw new ControlledSshException(message);
+			return ThreadHelper.executeInterruptibly(() -> {
+				if (!semaphore.tryAcquire(timeout, TimeUnit.SECONDS)) {
+					throw new ControlledSshException(
+						String.format("Failed to run SSH command on %s. Timed out trying to get ssh semaphore permit.", hostname)
+					);
+				}
+				try {
+					return executable.get();
+				} finally {
+					semaphore.release();
+				}
+			});
 		} catch (InterruptedException e) {
 			// The job deadline expired or the job was cancelled: keep the interrupt so that the engine stops the job
 			Thread.currentThread().interrupt();
 			throw e;
-		} finally {
-			if (acquired) {
-				semaphore.release();
+		} catch (ExecutionException e) {
+			final Throwable cause = e.getCause();
+			if (cause instanceof ControlledSshException controlledSshException) {
+				throw controlledSshException;
 			}
+			if (cause instanceof Error error) {
+				throw error;
+			}
+			// A RuntimeException (ClientRuntimeException), the only other exception of a Supplier
+			throw (RuntimeException) cause;
 		}
 	}
 

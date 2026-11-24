@@ -26,9 +26,9 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREA
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -69,7 +69,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
@@ -110,8 +109,14 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param currentConnector The current connector
 	 * @param hostname		   The host name
 	 * @param runStartTime     The {@link System#nanoTime()} at which this strategy run started, used to check the strategy timeout
+	 * @param pendingPools     Where to defer the end of this connector when its monitor jobs outlive the thread timeout
 	 */
-	private void process(final Connector currentConnector, final String hostname, final long runStartTime) {
+	private void process(
+		final Connector currentConnector,
+		final String hostname,
+		final long runStartTime,
+		final List<PendingPool> pendingPools
+	) {
 		// Check whether the strategy job name matches at least one of the monitor jobs names of the current connector
 		final boolean connectorHasExpectedJobTypes = hasExpectedJobTypes(currentConnector, getJobName());
 		// If the connector doesn't define any monitor job that matches the given strategy job name, log a message then exit the current discovery or simple operation
@@ -140,6 +145,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.extensionManager(extensionManager)
 			.build();
 
+		// A run interrupted before its beforeAll opens no session and has none to close
+		final boolean opened = !isInterrupted();
 		beforeAllStrategy.run();
 
 		// Sort the connector monitor jobs according to the priority map
@@ -215,14 +222,16 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 			try {
 				// Blocks until all tasks have completed execution after a shutdown request
-				if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+				if (!threadsPool.awaitTermination(getThreadTimeout(), TimeUnit.SECONDS)) {
 					log.warn(
-						"Hostname {} - Thread pool did not terminate within {} seconds. Forcing shutdown.",
+						"Hostname {} - Thread pool did not terminate within {} seconds. Waiting for it after the other connectors.",
 						hostname,
-						THREAD_TIMEOUT
+						getThreadTimeout()
 					);
-					poolAbandoned = true;
-					threadsPool.shutdownNow();
+					// The monitor removal and the afterAll (which may close the session of the jobs) wait for the pool
+					watchPool(threadsPool, runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout()));
+					pendingPools.add(new PendingPool(threadsPool, currentConnector, trustedTypes, opened));
+					return;
 				}
 			} catch (Exception e) {
 				poolAbandoned = true;
@@ -234,22 +243,45 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			}
 		}
 
+		endConnector(currentConnector, hostname, runStartTime, trustedTypes, poolAbandoned, opened);
+	}
+
+	/**
+	 * Ends the processing of a connector once its monitor jobs are done or abandoned: removes the monitors its trusted
+	 * jobs did not rediscover, then runs its afterAll sources.
+	 *
+	 * @param connector     The connector
+	 * @param hostname      The host name
+	 * @param runStartTime  The {@link System#nanoTime()} at which this strategy run started
+	 * @param trustedTypes  The monitor types whose job ran a trusted pass
+	 * @param poolAbandoned Whether jobs of the connector were abandoned
+	 * @param opened        Whether this run entered the beforeAll of the connector on a thread not interrupted
+	 */
+	private void endConnector(
+		final Connector connector,
+		final String hostname,
+		final long runStartTime,
+		final Set<String> trustedTypes,
+		final boolean poolAbandoned,
+		final boolean opened
+	) {
 		// An abandoned run (thread pool or strategy timeout) must not remove monitors: its jobs may have been cut short
 		if (!poolAbandoned && isWithinStrategyTimeout(runStartTime)) {
-			removeMonitorsNotRediscovered(currentConnector, trustedTypes, hostname);
+			removeMonitorsNotRediscovered(connector, trustedTypes, hostname);
 		}
 
-		// Run AfterAllStrategy that executes afterAll sources
-		final AfterAllStrategy afterAllStrategy = AfterAllStrategy.builder()
-			.clientsExecutor(clientsExecutor)
-			.strategyTime(strategyTime)
-			.telemetryManager(telemetryManager)
-			.connector(currentConnector)
-			.extensionManager(extensionManager)
-			.build();
-
-		afterAllStrategy.run();
+		runAfterAll(connector, opened, runStartTime);
 	}
+
+	/**
+	 * The monitor jobs of a connector still running at the thread timeout, and what the end of the connector needs.
+	 *
+	 * @param pool         The thread pool of the jobs, shut down
+	 * @param connector    The connector
+	 * @param trustedTypes The monitor types whose job ran a trusted pass, filled by the jobs
+	 * @param opened       Whether this run entered the beforeAll of the connector on a thread not interrupted
+	 */
+	private record PendingPool(ExecutorService pool, Connector connector, Set<String> trustedTypes, boolean opened) {}
 
 	/**
 	 * This method processes a monitor job
@@ -300,7 +332,13 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.build();
 
 		// Create the sources and the computes for a connector
-		final boolean sourcesAnswered = processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		final boolean sourcesAnswered = processSourcesAndComputes(
+			orderedSources.getSources(),
+			null,
+			jobInfo,
+			cursorRollbacks
+		);
 
 		// Create the monitors
 		final Mapping mapping = monitorTask.getMapping();
@@ -310,14 +348,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		final boolean mapped = processSameTypeMonitors(
-			currentConnector,
-			mapping,
-			monitorType,
-			hostname,
-			monitorJob,
-			isDiscovery
-		);
+		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
+		final boolean mapped = !skipMappingIfInterrupted(
+			cursorRollbacks,
+			currentConnector.getCompiledFilename(),
+			hostname
+		) && processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
@@ -433,11 +469,6 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		final MonitorJob monitorJob,
 		final boolean isDiscovery
 	) {
-		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
-		if (Thread.currentThread().isInterrupted()) {
-			return false;
-		}
-
 		final String connectorId = connector.getCompiledFilename();
 
 		final String source = mapping.getSource();
@@ -646,7 +677,21 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.collect(Collectors.toList()); //NOSONAR
 
 		// Process each connector
-		sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime));
+		final List<PendingPool> pendingPools = new ArrayList<>();
+		sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime, pendingPools));
+
+		// The jobs that outlived the thread timeout may still complete until the strategy deadline
+		final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
+		pendingPools.forEach(
+			pending -> endConnector(
+				pending.connector(),
+				hostname,
+				runStartTime,
+				pending.trustedTypes(),
+				!joinPool(pending.pool(), deadline, hostname),
+				pending.opened()
+			)
+		);
 
 		// Collect the metricshub.host.configured metric
 		collectHostConfigured(hostname);

@@ -122,7 +122,8 @@ public class ToolStrategy extends AbstractStrategy {
 		);
 
 		// The tool's sources may reference the connector's beforeAll sources, like a monitor job's: a session
-		// token fetched there is what a REST tool authenticates with
+		// token fetched there is what a REST tool authenticates with. A tool cancelled before it starts opens nothing.
+		final boolean opened = !isInterrupted();
 		try {
 			// Inside the cleanup scope: a beforeAll source that fails after an earlier one logged in must
 			// still be followed by the logout
@@ -150,19 +151,24 @@ public class ToolStrategy extends AbstractStrategy {
 			// exactly where ${attribute::name} is
 			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo);
 
-			result = SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
-				.orElseGet(SourceTable::empty);
+			// A cancelled tool skipped its sources: the table found would be the one of an earlier call
+			result = isInterrupted()
+				? SourceTable.empty()
+				: SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
+					.orElseGet(SourceTable::empty);
 		} finally {
 			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that
-			// counts them, whether or not its sources succeeded
-			AfterAllStrategy.builder()
-				.clientsExecutor(clientsExecutor)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.connector(connector)
-				.extensionManager(extensionManager)
-				.build()
-				.run();
+			// counts them, whether or not its sources succeeded or the tool was cancelled
+			if (opened || !isInterrupted()) {
+				AfterAllStrategy.builder()
+					.clientsExecutor(clientsExecutor)
+					.strategyTime(strategyTime)
+					.telemetryManager(telemetryManager)
+					.connector(connector)
+					.extensionManager(extensionManager)
+					.build()
+					.run();
+			}
 		}
 	}
 }

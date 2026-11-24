@@ -31,6 +31,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -51,6 +52,16 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public abstract class SurroundingStrategy extends AbstractStrategy {
+
+	/**
+	 * How long a beforeAll may still run once the strategy thread is interrupted, in seconds.
+	 */
+	static final long BEFORE_ALL_GRACE_SECONDS = 5;
+
+	/**
+	 * How long an afterAll may still run once the strategy thread is interrupted, in seconds.
+	 */
+	static final long AFTER_ALL_GRACE_SECONDS = 2;
 
 	protected Connector connector;
 
@@ -103,25 +114,41 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 			return;
 		}
 
-		// Construct job information including job name, connector identifier, hostname and monitor type.
-		final JobInfo jobInfo = JobInfo.builder()
-			.hostname(hostname)
-			.connectorId(connectorId)
-			.jobName(jobName)
-			.monitorType("none")
-			.build();
+		final boolean beforeAll = this instanceof BeforeAllStrategy;
 
-		// Build and order sources based on dependencies.
-		final OrderedSources orderedSources = OrderedSources.builder()
-			.sources(sources, new ArrayList<>(), getSourceDependencies(), jobInfo)
-			.build();
+		// A run already cut short opens nothing (the shelter below clears the interrupt)
+		if (beforeAll && isInterrupted()) {
+			log.warn(
+				"Hostname {} - Thread interrupted: skipping the beforeAll sources of connector {}.",
+				hostname,
+				connectorId
+			);
+			return;
+		}
 
-		// Process the ordered sources along with computes, based on the constructed job information.
-		processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+		// On a child thread that ignores the interrupt for a grace period: a login answered within it keeps its token,
+		// and the logout of a job cut short is still sent (see AbstractStrategy.CLEANUP_WINDOW_SECONDS)
+		ThreadHelper.shelter(() -> {
+			// Construct job information including job name, connector identifier, hostname and monitor type.
+			final JobInfo jobInfo = JobInfo.builder()
+				.hostname(hostname)
+				.connectorId(connectorId)
+				.jobName(jobName)
+				.monitorType("none")
+				.build();
 
-		final long jobEndTime = System.currentTimeMillis();
-		// Set the job duration metric in the host monitor
-		setJobDurationMetric(jobName, connectorId, jobStartTime, jobEndTime);
+			// Build and order sources based on dependencies.
+			final OrderedSources orderedSources = OrderedSources.builder()
+				.sources(sources, new ArrayList<>(), getSourceDependencies(), jobInfo)
+				.build();
+
+			// Process the ordered sources along with computes, based on the constructed job information.
+			processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+
+			final long jobEndTime = System.currentTimeMillis();
+			// Set the job duration metric in the host monitor
+			setJobDurationMetric(jobName, connectorId, jobStartTime, jobEndTime);
+		}, beforeAll ? BEFORE_ALL_GRACE_SECONDS : AFTER_ALL_GRACE_SECONDS);
 	}
 
 	/**

@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.WinFileOperations;
 import org.metricshub.winrm.RemoteDirectoryListing;
@@ -197,6 +198,7 @@ public class WinRmFileOperations implements WinFileOperations {
 
 	@Override
 	public void close() {
-		client.close();
+		// Deleting the shell is a request that ignores interrupts
+		ThreadHelper.closeInterruptibly(client::close);
 	}
 }

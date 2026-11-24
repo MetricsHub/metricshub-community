@@ -3,6 +3,7 @@ package org.metricshub.extension.ping;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -11,11 +12,17 @@ import static org.metricshub.engine.telemetry.RequestOutcome.FAILED;
 import static org.metricshub.engine.telemetry.RequestOutcome.TIMEOUT;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 
@@ -110,5 +117,112 @@ class PingRequestExecutorTest {
 		assertDoesNotThrow(() -> executor.ping(HOSTNAME, TIMEOUT_MS, null));
 		executor.resolveError = new UnknownHostException(HOSTNAME);
 		assertThrows(UnknownHostException.class, () -> executor.ping(HOSTNAME, TIMEOUT_MS, null));
+	}
+
+	/**
+	 * Blocks until released, ignoring interrupts like a blocking library call.
+	 *
+	 * @param release The latch that ends the wait.
+	 */
+	private static void blockIgnoringInterrupts(final CountDownLatch release) {
+		while (release.getCount() > 0) {
+			try {
+				release.await();
+			} catch (InterruptedException e) {
+				// Ignored, like isReachable and the name resolution do
+			}
+		}
+	}
+
+	/**
+	 * Pings with the given executor, whose probe blocks until released, and interrupts the caller after 200 ms. The
+	 * probe is released after 3 s at the latest, so that a caller that waits for it still ends.
+	 *
+	 * @param blocked The executor whose probe blocks.
+	 * @param release Releases the probe.
+	 */
+	private void assertInterruptedPingReturnsAtOnce(final PingRequestExecutor blocked, final CountDownLatch release)
+		throws Exception {
+		final Thread caller = Thread.currentThread();
+		final Thread interrupter = Thread.ofVirtual().start(() -> {
+			try {
+				Thread.sleep(200);
+				caller.interrupt();
+				Thread.sleep(3000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} finally {
+				release.countDown();
+			}
+		});
+		final List<ExecutorService> abandoned = new ArrayList<>();
+		final long start = System.nanoTime();
+		final boolean result;
+		final long elapsedMillis;
+		final boolean interrupted;
+		try {
+			result = ThreadHelper.trackingAbandonedRequests(abandoned, () -> {
+				try {
+					return blocked.ping(HOSTNAME, TIMEOUT_MS, stats);
+				} catch (UnknownHostException e) {
+					throw new IllegalStateException(e);
+				}
+			});
+		} finally {
+			elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+			interrupted = Thread.interrupted();
+			release.countDown();
+			interrupter.interrupt();
+			interrupter.join();
+		}
+
+		assertFalse(result);
+		assertTrue(interrupted, "The interrupt status is kept");
+		assertTrue(elapsedMillis < 1200, "Returned after " + elapsedMillis + " ms");
+		assertEquals(counts(0, 1, 0), stats.snapshot());
+
+		// The probe left behind ends and records nothing
+		assertEquals(1, abandoned.size());
+		assertTrue(abandoned.get(0).awaitTermination(5, TimeUnit.SECONDS));
+		assertEquals(counts(0, 1, 0), stats.snapshot());
+	}
+
+	@Test
+	void testInterruptedReachabilityTestIsOneTimeout() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		assertInterruptedPingReturnsAtOnce(new FakePingRequestExecutor() {
+			@Override
+			boolean isReachable(final InetAddress address, final int timeout) {
+				blockIgnoringInterrupts(release);
+				return true;
+			}
+		}, release);
+	}
+
+	@Test
+	void testInterruptedResolutionIsOneTimeout() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		assertInterruptedPingReturnsAtOnce(new FakePingRequestExecutor() {
+			@Override
+			InetAddress resolve(final String hostname) {
+				blockIgnoringInterrupts(release);
+				return InetAddress.getLoopbackAddress();
+			}
+		}, release);
+	}
+
+	@Test
+	void testInterruptedCallerSendsNothing() throws Exception {
+		executor.reachable = true;
+		Thread.currentThread().interrupt();
+		final boolean result;
+		try {
+			result = executor.ping(HOSTNAME, TIMEOUT_MS, stats);
+		} finally {
+			assertTrue(Thread.interrupted(), "The interrupt status is kept");
+		}
+		assertFalse(result);
+		assertNull(executor.resolvedHostname, "Nothing is resolved");
+		assertEquals(Map.of(), stats.snapshot());
 	}
 }

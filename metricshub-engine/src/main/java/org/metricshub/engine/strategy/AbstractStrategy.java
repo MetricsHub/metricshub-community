@@ -26,18 +26,26 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPU
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
@@ -66,6 +74,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeUpdaterProcessor;
+import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.utils.ForceSerializationHelper;
 import org.metricshub.engine.strategy.utils.RetryOperation;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
@@ -114,6 +123,36 @@ public abstract class AbstractStrategy implements IStrategy {
 	public static final String CONNECTOR_ID_FORMAT = "%s_%s";
 
 	/**
+	 * How long after the strategy timeout an interrupted run may still start the afterAll of a connector whose
+	 * beforeAll it entered, in seconds. The budget, from the interrupt I and {@link ContextExecutor}'s 10 s
+	 * SHUTDOWN_GRACE_PERIOD_SECONDS, after which it abandons the strategy thread:
+	 * <ul>
+	 * <li>at the strategy timeout (I = run start + timeout), an afterAll starts before I+4 s and gets its 2 s grace
+	 * plus 1 s for its cancel: it ends by I+7 s;</li>
+	 * <li>on an earlier cancel (reload), a beforeAll cut short gets its 5 s grace plus 1 s, then the afterAll 2 s plus
+	 * 1 s: the run ends by I+9 s.</li>
+	 * </ul>
+	 * Only one afterAll of an interrupted run gets this grace, although the afterAll of several connectors may be
+	 * deferred until their monitor jobs end. So the logout always reads this run's token, before the next run of the
+	 * host can open another session. A login answered after its grace, or a session whose logout is skipped, leaks a
+	 * session, which expires on the device.
+	 */
+	protected static final long CLEANUP_WINDOW_SECONDS = 4;
+
+	/**
+	 * How often a deferred thread pool checks the strategy thread and the strategy deadline, in milliseconds.
+	 */
+	private static final long POOL_WATCH_MILLIS = 100;
+
+	/**
+	 * Whether an afterAll of this interrupted run already used the cleanup grace, see {@link #CLEANUP_WINDOW_SECONDS}.
+	 */
+	@Getter(AccessLevel.NONE)
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final AtomicBoolean cleanupGraceUsed = new AtomicBoolean();
+
+	/**
 	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
 	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
 	 *
@@ -139,6 +178,27 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Map<String, String> attributes,
 		final JobInfo jobInfo
 	) {
+		return processSourcesAndComputes(sources, attributes, jobInfo, new ArrayList<>());
+	}
+
+	/**
+	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
+	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
+	 *
+	 * @param sources         The {@link List} of {@link Source} instances we wish to execute
+	 * @param attributes      Key-value pairs of the monitor's attributes used in the mono instance processing
+	 * @param jobInfo         Information about the job such as hostname, monitorType, job name and connectorName.
+	 * @param cursorRollbacks The caller's list, to which the rollback of the cursors of each incremental source polled
+	 *                        is added: the caller runs them when it skips the mapping, see
+	 *                        {@link #skipMappingIfInterrupted(List, String, String)}
+	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
+	 */
+	protected boolean processSourcesAndComputes(
+		final List<Source> sources,
+		final Map<String, String> attributes,
+		final JobInfo jobInfo,
+		final List<Runnable> cursorRollbacks
+	) {
 		final String connectorId = jobInfo.getConnectorId();
 		final String monitorType = jobInfo.getMonitorType();
 		final String hostname = jobInfo.getHostname();
@@ -154,10 +214,6 @@ public abstract class AbstractStrategy implements IStrategy {
 		}
 
 		boolean allSourcesAnswered = true;
-
-		// The incremental sources this job polled: their cursors are rolled back if the job is cut short, because their
-		// entries are then never mapped
-		final List<Runnable> cursorRollbacks = new ArrayList<>();
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
@@ -176,6 +232,8 @@ public abstract class AbstractStrategy implements IStrategy {
 			final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId);
 			final SourceTable previousSourceTable = connectorNamespace.getSourceTable(sourceKey);
+			// The poll begins before its cursors are read: a late rollback of an older poll then leaves them alone
+			final long poll = isIncremental(source) ? connectorNamespace.beginPoll(sourceKey) : 0L;
 			final SourceCursors cursorsBefore = isIncremental(source) ? connectorNamespace.getSourceCursors(sourceKey) : null;
 
 			// Execute the source and retry the operation
@@ -193,7 +251,9 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			if (cursorsBefore != null) {
 				final SourceCursors cursorsAfter = connectorNamespace.getSourceCursors(sourceKey);
-				cursorRollbacks.add(() -> connectorNamespace.rollBackSourceCursors(sourceKey, cursorsBefore, cursorsAfter));
+				cursorRollbacks.add(
+					() -> connectorNamespace.rollBackSourceCursors(sourceKey, poll, cursorsBefore, cursorsAfter)
+				);
 			}
 
 			// Interrupted while it ran, the source may have been cut short (an executeForEachEntryOf stops between two
@@ -328,11 +388,108 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
+	 * Whether this run is still within its timeout plus {@link #CLEANUP_WINDOW_SECONDS}, whatever the interrupt status.
+	 *
+	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
+	 * @return {@code true} if an interrupted run may still start an afterAll
+	 */
+	protected boolean isWithinCleanupWindow(final long runStartTime) {
+		return System.nanoTime() - runStartTime < TimeUnit.SECONDS.toNanos(getStrategyTimeout() + CLEANUP_WINDOW_SECONDS);
+	}
+
+	/**
+	 * Runs the afterAll sources of the given connector, unless the run is interrupted and either it never entered the
+	 * beforeAll of this connector, the cleanup window is over or another afterAll of this run already used it: a
+	 * session this run opened is closed, never one of the next run.
+	 *
+	 * @param connector    The connector
+	 * @param opened       Whether this run entered the beforeAll of the connector on a thread not interrupted
+	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
+	 */
+	protected void runAfterAll(final Connector connector, final boolean opened, final long runStartTime) {
+		if (isInterrupted() && !(opened && isWithinCleanupWindow(runStartTime) && !cleanupGraceUsed.getAndSet(true))) {
+			log.debug(
+				"Hostname {} - Thread interrupted: skipping the afterAll sources of connector {}.",
+				telemetryManager.getHostname(),
+				connector.getCompiledFilename()
+			);
+			return;
+		}
+		AfterAllStrategy.builder()
+			.clientsExecutor(clientsExecutor)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.connector(connector)
+			.extensionManager(extensionManager)
+			.build()
+			.run();
+	}
+
+	/**
+	 * How long a connector waits for its parallel monitor jobs before the strategy goes on with the next connector, in
+	 * seconds.
+	 *
+	 * @return {@code THREAD_TIMEOUT}
+	 */
+	protected long getThreadTimeout() {
+		return THREAD_TIMEOUT;
+	}
+
+	/**
+	 * Interrupts the monitor jobs of a connector that outlived {@link #getThreadTimeout()} once the strategy thread (the
+	 * current one) is interrupted or the strategy deadline passes, even while that thread is busy with the next
+	 * connectors or abandoned. A sheltered beforeAll or afterAll holds the interrupt of the strategy thread until it
+	 * returns: the jobs are interrupted then.
+	 *
+	 * @param pool     The thread pool of the monitor jobs, already shut down
+	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
+	 */
+	protected static void watchPool(final ExecutorService pool, final long deadline) {
+		final Thread strategyThread = Thread.currentThread();
+		Thread.ofVirtual().start(() -> {
+			try {
+				while (!pool.awaitTermination(POOL_WATCH_MILLIS, TimeUnit.MILLISECONDS)) {
+					if (strategyThread.isInterrupted() || System.nanoTime() - deadline >= 0) {
+						pool.shutdownNow();
+						return;
+					}
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		});
+	}
+
+	/**
+	 * Waits for the monitor jobs of a connector that outlived {@link #getThreadTimeout()}, until the deadline of the
+	 * strategy. Jobs still running at the deadline, or when the strategy thread is interrupted, are interrupted and
+	 * abandoned.
+	 *
+	 * @param pool     The thread pool of the monitor jobs, already shut down
+	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
+	 * @param hostname The host name
+	 * @return {@code true} if every job completed
+	 */
+	protected static boolean joinPool(final ExecutorService pool, final long deadline, final String hostname) {
+		try {
+			if (pool.awaitTermination(deadline - System.nanoTime(), TimeUnit.NANOSECONDS)) {
+				return true;
+			}
+			log.warn("Hostname {} - Thread pool did not terminate within the strategy timeout. Forcing shutdown.", hostname);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			log.debug("Hostname {} - Waiting for threads' termination aborted by an interrupt.", hostname);
+		}
+		pool.shutdownNow();
+		return false;
+	}
+
+	/**
 	 * Whether the thread of the job is interrupted (its deadline expired or it was cancelled), in which case the given
 	 * sources are skipped. An interrupted thread may be an abandoned one, still running while the next run of the same
-	 * host fills the same {@link ConnectorNamespace}: it writes nothing there, and its mapping is skipped too, so that
-	 * it never reads the tables it did not refresh. The cursors its incremental sources moved are rolled back, as their
-	 * entries are not mapped.
+	 * host fills the same {@link ConnectorNamespace}: it writes nothing there, and its caller skips the mapping too, so
+	 * that it never reads the tables it did not refresh. The cursors its incremental sources moved are rolled back, as
+	 * their entries are not mapped.
 	 *
 	 * @param remainingSources The sources of the job not executed yet
 	 * @param cursorRollbacks  The rollbacks of the cursors of the incremental sources the job polled
@@ -350,9 +507,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			return false;
 		}
 
-		// The job is not mapped: the next poll of its incremental sources must return their entries again. Only a cursor
-		// still where this poll left it is moved back
-		cursorRollbacks.forEach(Runnable::run);
+		rollBackCursors(cursorRollbacks);
 
 		log.warn(
 			"Hostname {} - The job was interrupted. Connector {} - Skipped sources: {}.",
@@ -361,6 +516,44 @@ public abstract class AbstractStrategy implements IStrategy {
 			remainingSources.stream().map(Source::getKey).toList()
 		);
 		return true;
+	}
+
+	/**
+	 * The only check of the interrupt between the sources of a job and its mapping, made by the caller right before the
+	 * mapping: an interrupted job is not mapped and the cursors its incremental sources moved are rolled back, in the
+	 * same decision. A mapping that passed this check runs to its end, on the thread of the job, and the cursors stay.
+	 *
+	 * @param cursorRollbacks The rollbacks of the cursors of the incremental sources the job polled, filled by
+	 *                        {@link #processSourcesAndComputes(List, Map, JobInfo, List)}
+	 * @param connectorId     The connector identifier
+	 * @param hostname        The host name
+	 * @return {@code true} if the thread is interrupted and the mapping must be skipped
+	 */
+	protected static boolean skipMappingIfInterrupted(
+		final List<Runnable> cursorRollbacks,
+		final String connectorId,
+		final String hostname
+	) {
+		if (!isInterrupted()) {
+			return false;
+		}
+
+		rollBackCursors(cursorRollbacks);
+
+		log.warn("Hostname {} - The job was interrupted. Connector {} - Skipped mapping.", hostname, connectorId);
+		return true;
+	}
+
+	/**
+	 * Run then clear the given cursor rollbacks of a job that is not mapped: the next poll of its incremental sources
+	 * must return their entries again. Only a cursor still where this poll left it is moved back, and a second call
+	 * does nothing.
+	 *
+	 * @param cursorRollbacks The rollbacks of the cursors of the incremental sources the job polled
+	 */
+	private static void rollBackCursors(final List<Runnable> cursorRollbacks) {
+		cursorRollbacks.forEach(Runnable::run);
+		cursorRollbacks.clear();
 	}
 
 	/**

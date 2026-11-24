@@ -20,10 +20,13 @@ import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMA
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -815,26 +818,105 @@ class AbstractStrategyTest {
 			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
 			.build();
 
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
 		try {
 			final boolean allAnswered = strategy.processSourcesAndComputes(
 				List.of(
 					IpmiSelSource.builder().key("${source::sel}").build(),
 					SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::next}").build()
 				),
+				null,
 				JobInfo.builder()
 					.hostname(HOST_NAME)
 					.connectorId(TEST_CONNECTOR_ID)
 					.jobName("discovery")
 					.monitorType("enclosure")
-					.build()
+					.build(),
+				cursorRollbacks
 			);
 
 			// The job is not mapped: the next poll must return the SEL events again
 			assertFalse(allAnswered);
 			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+			// The rollbacks already ran: the check before the mapping runs none again
+			assertTrue(cursorRollbacks.isEmpty());
+			assertTrue(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
 		} finally {
 			Thread.interrupted();
 		}
+	}
+
+	@Test
+	void testInterruptAfterTheLastSourceCheckRollsBackAtTheMappingCheck() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final ConnectorNamespace namespace = spy(ConnectorNamespace.builder().build());
+		telemetryManager.getHostProperties().getConnectorNamespaces().put(TEST_CONNECTOR_ID, namespace);
+		namespace.setSourceCursor("${source::sel}", "sel-10");
+
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(IpmiSelSource.class)).when(extension).getSupportedSources();
+		doAnswer(invocation -> {
+			namespace.setSourceCursor("${source::sel}", "sel-20");
+			return SourceTable.ofTable(SourceTable.csvToTable("event;1", ";"));
+		}).when(extension).processSource(any(), anyString(), any());
+
+		// The job deadline expires while the table of the last source is stored: after the last check of the sources
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return invocation.callRealMethod();
+		}).when(namespace).addSourceTable(eq("${source::sel}"), any());
+
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		try {
+			final boolean allAnswered = strategy.processSourcesAndComputes(
+				List.of(IpmiSelSource.builder().key("${source::sel}").build()),
+				null,
+				JobInfo.builder()
+					.hostname(HOST_NAME)
+					.connectorId(TEST_CONNECTOR_ID)
+					.jobName("discovery")
+					.monitorType("enclosure")
+					.build(),
+				cursorRollbacks
+			);
+
+			// The sources ran to their end: their rollback is left to the caller
+			assertTrue(allAnswered);
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertEquals("sel-20", namespace.getSourceCursor("${source::sel}"));
+			assertEquals(1, cursorRollbacks.size());
+
+			// The check before the mapping skips it and rolls the cursor back in the same decision
+			assertTrue(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+			assertTrue(cursorRollbacks.isEmpty());
+
+			// A second check rolls back nothing more
+			assertTrue(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void testMappingCheckWithoutInterruptKeepsTheCursors() {
+		final AtomicInteger rollbacks = new AtomicInteger();
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		cursorRollbacks.add(rollbacks::incrementAndGet);
+
+		assertFalse(AbstractStrategy.skipMappingIfInterrupted(cursorRollbacks, TEST_CONNECTOR_ID, HOST_NAME));
+		assertEquals(0, rollbacks.get());
+		assertEquals(1, cursorRollbacks.size());
 	}
 
 	@Test

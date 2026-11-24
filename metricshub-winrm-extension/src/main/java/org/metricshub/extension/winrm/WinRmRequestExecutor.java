@@ -45,6 +45,7 @@ import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.telemetry.RequestOutcome;
@@ -494,12 +495,16 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			final long startTime = System.currentTimeMillis();
 
 			final CommandResult result;
-			try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
+			final WinRMClient client = newClient(hostname, winRmConfiguration);
+			try {
 				CommandRequest request = client.command(command);
 				if (embeddedFiles != null && !embeddedFiles.isEmpty()) {
 					request = request.upload(embeddedFiles.stream().map(Path::of).toArray(Path[]::new));
 				}
 				result = executeRecorded(request::execute, requestStats);
+			} finally {
+				// Deleting the shell is a request that ignores interrupts
+				ThreadHelper.closeInterruptibly(client::close);
 			}
 
 			final long responseTime = System.currentTimeMillis() - startTime;
@@ -565,8 +570,14 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
 		@SpanAttribute("winrm.path") @NonNull final String path
 	) throws ClientException {
-		try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
-			return client.file(path).readText(StandardCharsets.UTF_8);
+		try {
+			final WinRMClient client = newClient(hostname, winRmConfiguration);
+			try {
+				return client.file(path).readText(StandardCharsets.UTF_8);
+			} finally {
+				// Deleting the shell is a request that ignores interrupts
+				ThreadHelper.closeInterruptibly(client::close);
+			}
 		} catch (WinRMClientException e) {
 			log.error("Hostname {} - WinRM file read failed. Errors:\n{}\n", hostname, StringHelper.getStackMessages(e));
 			throw new ClientException(String.format("WinRM file read of %s failed on %s.", path, hostname), e);

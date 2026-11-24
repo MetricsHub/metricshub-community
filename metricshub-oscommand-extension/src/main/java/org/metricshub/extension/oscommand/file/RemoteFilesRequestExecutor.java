@@ -23,17 +23,21 @@ package org.metricshub.extension.oscommand.file;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.telemetry.RequestOutcome;
@@ -102,15 +106,51 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @throws IOException When the request fails.
 	 */
 	private <T> T send(final SftpRequest<T> request) throws IOException {
+		// A caller already interrupted (an expired deadline of its job) sends nothing and records nothing
+		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		final T result;
 		try {
-			result = request.send();
+			result = io(request::send);
 		} catch (IOException e) {
-			record(RequestOutcome.of(e));
+			if (!interruptedBefore) {
+				record(RequestOutcome.of(e));
+			}
 			throw e;
 		}
 		record(RequestOutcome.COMPLETED);
 		return result;
+	}
+
+	/**
+	 * Runs a call of ssh-java, which keeps waiting on an interrupt, on its own thread: an interrupted caller returns at
+	 * once and the call ends on its own, its result dropped. A caller already interrupted calls nothing.
+	 *
+	 * @param <T>  The type of the result.
+	 * @param call The call.
+	 * @return The result of the call.
+	 * @throws IOException When the call fails, or an {@link InterruptedIOException} when the caller is interrupted, its
+	 *                     interrupt status kept.
+	 */
+	private static <T> T io(final Callable<T> call) throws IOException {
+		try {
+			return ThreadHelper.executeInterruptibly(call);
+		} catch (InterruptedException e) {
+			final InterruptedIOException interrupted = new InterruptedIOException(e.getMessage());
+			interrupted.initCause(e);
+			throw interrupted;
+		} catch (ExecutionException e) {
+			final Throwable cause = e.getCause();
+			if (cause instanceof IOException ioException) {
+				throw ioException;
+			}
+			if (cause instanceof RuntimeException runtimeException) {
+				throw runtimeException;
+			}
+			if (cause instanceof Error error) {
+				throw error;
+			}
+			throw new IOException(cause.getMessage(), cause);
+		}
 	}
 
 	/**
@@ -130,11 +170,18 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 	 * @return true if connection succeeds, false otherwise
 	 */
 	public boolean connectSshClient() {
+		// A caller already interrupted (an expired deadline of its job) connects nothing and records nothing
+		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		try {
-			sshClient.connect(sshConfiguration.getTimeout().intValue() * 1000, sshConfiguration.getPort());
+			io(() -> {
+				sshClient.connect(sshConfiguration.getTimeout().intValue() * 1000, sshConfiguration.getPort());
+				return null;
+			});
 			return true;
 		} catch (IOException e) {
-			record(RequestOutcome.of(e));
+			if (!interruptedBefore) {
+				record(RequestOutcome.of(e));
+			}
 			final String hostname = sshConfiguration.getHostname();
 			log.info("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e.getMessage());
 			log.debug("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e);
@@ -154,13 +201,16 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 		final String hostname = sshConfiguration.getHostname();
 		final String username = sshConfiguration.getUsername();
 		try {
-			OsCommandRequestExecutor.authenticateSsh(
-				sshClient,
-				sshConfiguration.getHostname(),
-				username,
-				sshConfiguration.getPassword(),
-				privateKey == null ? null : new File(privateKey)
-			);
+			io(() -> {
+				OsCommandRequestExecutor.authenticateSsh(
+					sshClient,
+					sshConfiguration.getHostname(),
+					username,
+					sshConfiguration.getPassword(),
+					privateKey == null ? null : new File(privateKey)
+				);
+				return null;
+			});
 			record(RequestOutcome.COMPLETED);
 			return true;
 		} catch (Exception e) {
@@ -343,8 +393,12 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 		return send(() -> sshClient.readFile(sftpPath, null, null));
 	}
 
+	/**
+	 * Closes the connection off the caller: ssh-java closes it under the monitor that a call cut short may still
+	 * hold, so an interrupted caller returns at once and the close completes in the background.
+	 */
 	@Override
 	public void close() {
-		sshClient.close();
+		ThreadHelper.closeInterruptibly(sshClient::close);
 	}
 }

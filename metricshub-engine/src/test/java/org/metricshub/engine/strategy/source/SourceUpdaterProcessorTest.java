@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
@@ -557,6 +558,54 @@ class SourceUpdaterProcessorTest {
 	private static void awaitUninterruptibly(final CountDownLatch latch) {
 		while (latch.getCount() > 0) {
 			LockSupport.parkNanos(1_000_000);
+		}
+	}
+
+	/**
+	 * The entry the coordinator waits for ends last, while every core is busy: its pool thread may be descheduled
+	 * between waking the coordinator up and marking its task done. The coordinator must still see it done.
+	 */
+	@Test
+	void testProcessExecuteForEachEntryParallelWaitedEntryEndingLastWakesTheCoordinator() throws InterruptedException {
+		final AtomicBoolean stop = new AtomicBoolean();
+		final List<Thread> busyThreads = new ArrayList<>();
+		for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
+			busyThreads.add(Thread.ofPlatform().daemon().start(() -> {
+				while (!stop.get()) {
+					Thread.onSpinWait();
+				}
+			}));
+		}
+		try {
+			for (int run = 0; run < 200; run++) {
+				final SourceTable[] result = new SourceTable[1];
+				final Thread coordinator = Thread.ofPlatform()
+					.daemon()
+					.start(
+						() -> result[0] = runForEachEntry(
+							ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).build(),
+							false,
+							false,
+							invocation -> {
+								final String entry = invocation.<HttpSource>getArgument(0).getPath();
+								if ("a".equals(entry)) {
+									LockSupport.parkNanos(200_000);
+								}
+								return SourceTable.ofText(entry);
+							}
+						)
+					);
+				coordinator.join(5_000);
+				final boolean stuck = coordinator.isAlive();
+				coordinator.interrupt();
+				assertFalse(stuck, "Coordinator still waiting at run " + run);
+				assertEquals(SourceTable.ofText("a\nb\nc\nd"), result[0]);
+			}
+		} finally {
+			stop.set(true);
+			for (final Thread busyThread : busyThreads) {
+				busyThread.join();
+			}
 		}
 	}
 
