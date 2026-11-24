@@ -76,7 +76,19 @@
 			<filtered>true</filtered>
 			<excludes>
 				<exclude>**/*.ico</exclude>
+				<exclude>**/*.bmp</exclude>
 			</excludes>
+		</fileSet>
+
+		<!-- Setup wizard bitmaps (binary, never filtered) -->
+		<fileSet>
+			<directory>src/main/resources/windows/jpackage</directory>
+			<outputDirectory>/jpackage</outputDirectory>
+			<fileMode>0644</fileMode>
+			<filtered>false</filtered>
+			<includes>
+				<include>**/*.bmp</include>
+			</includes>
 		</fileSet>
 
 		<fileSet>

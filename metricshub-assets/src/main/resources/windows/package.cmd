@@ -123,6 +123,9 @@ echo.
 REM -----------------------------------------------------------------------------
 REM installable (built from the app-image above)
 REM -----------------------------------------------------------------------------
+REM main.wxs reads the setup wizard bitmaps from the resource dir (--resource-dir override
+REM in jpackage-installer.txt, relative to the current directory), which jpackage does not copy.
+set "METRICSHUB_WIX_RESOURCES=%CD%\override"
 echo Running jpackage for installable...
 "%JPACKAGE_BIN%" --verbose ^
  --app-image "%DEST_DIR%\MetricsHub" ^

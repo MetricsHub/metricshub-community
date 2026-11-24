@@ -110,6 +110,11 @@
 
     <UIRef Id="JpUI"/>
 
+    <!-- MetricsHub branding of the setup wizard. jpackage does not copy extra resource-dir files,
+         so package.cmd passes the absolute path of the resource dir in METRICSHUB_WIX_RESOURCES. -->
+    <WixVariable Id="WixUIDialogBmp" Value="$(env.METRICSHUB_WIX_RESOURCES)\wizard-dialog.bmp"/>
+    <WixVariable Id="WixUIBannerBmp" Value="$(env.METRICSHUB_WIX_RESOURCES)\wizard-banner.bmp"/>
+
     <InstallExecuteSequence>
       <Custom Action="JpSetARPINSTALLLOCATION" After="CostFinalize">Not Installed</Custom>
       <Custom Action="JpSetARPCOMMENTS" After="CostFinalize">Not Installed</Custom>
