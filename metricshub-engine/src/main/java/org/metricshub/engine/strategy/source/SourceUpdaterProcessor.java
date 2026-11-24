@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
@@ -618,6 +619,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final ExecutorService pool = poolSize > 1 ? Executors.newFixedThreadPool(poolSize) : null;
 		final List<List<String>> pendingRows = new ArrayList<>();
 		final List<Future<SourceTable>> pendingResults = new ArrayList<>();
+		// The pool threads do not inherit the interrupt of this thread: a queued entry checks it before its request, and
+		// wakes this thread up when it ends
+		final Thread coordinator = Thread.currentThread();
 
 		try {
 			for (List<String> row : table) {
@@ -654,7 +658,13 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 				if (pool != null) {
 					pendingRows.add(row);
-					pendingResults.add(pool.submit(() -> copy.accept(sourceProcessor)));
+					pendingResults.add(pool.submit(() -> {
+						try {
+							return coordinator.isInterrupted() ? SourceTable.empty() : copy.accept(sourceProcessor);
+						} finally {
+							LockSupport.unpark(coordinator);
+						}
+					}));
 					continue;
 				}
 
@@ -674,14 +684,27 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 			// Concatenate the parallel results in the original row order, as the sequential run does
 			for (int i = 0; i < pendingResults.size(); i++) {
-				concatEntryResult(source, result, pendingRows.get(i), pendingResults.get(i).get());
+				final Future<SourceTable> pendingResult = pendingResults.get(i);
+				// park, unlike Future.get, never clears the interrupt that the queued entries check
+				while (!coordinator.isInterrupted() && !pendingResult.isDone()) {
+					LockSupport.park(this);
+				}
+				if (coordinator.isInterrupted()) {
+					log.warn(
+						"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
+						hostname
+					);
+					return SourceTable.empty();
+				}
+				concatEntryResult(source, result, pendingRows.get(i), pendingResult.get());
 			}
 		} catch (InterruptedException e) {
+			// Future.get of a completed task does not wait
+			Thread.currentThread().interrupt();
 			log.error(
 				"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
 				hostname
 			);
-			Thread.currentThread().interrupt();
 			return SourceTable.empty();
 		} catch (ExecutionException e) {
 			// Source.accept throws no checked exception: rethrow what the sequential run would have thrown

@@ -1,6 +1,7 @@
 package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
@@ -455,6 +458,105 @@ class SourceUpdaterProcessorTest {
 			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
 			Thread.interrupted();
+		}
+	}
+
+	/**
+	 * A queued entry of the parallel pool sends no request once the coordinator is interrupted, even before the
+	 * coordinator notices the interrupt and shuts the pool down.
+	 */
+	@Test
+	void testProcessExecuteForEachEntryParallelQueuedEntryStopsWhenInterrupted() throws InterruptedException {
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
+			)
+			.hostProperties(HostProperties.builder().build())
+			.build();
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
+			.addSourceTable(
+				ENCLOSURE_COLLECT_SOURCE_1,
+				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
+			);
+		final HttpSource httpSource = HttpSource.builder()
+			.url(URL)
+			.path("$1${attribute::gate}")
+			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(2).build())
+			.build();
+
+		// The coordinator submits a, b and c (c is queued: both pool threads are busy), then is held in the preparation
+		// of d, so that it cannot shut the pool down while c is taken by a pool thread
+		final AtomicInteger preparedEntries = new AtomicInteger();
+		final CountDownLatch coordinatorHeld = new CountDownLatch(1);
+		final CountDownLatch releaseCoordinator = new CountDownLatch(1);
+		final Map<String, String> attributes = new HashMap<>() {
+			@Override
+			public String get(final Object key) {
+				if (preparedEntries.incrementAndGet() == 4) {
+					coordinatorHeld.countDown();
+					awaitUninterruptibly(releaseCoordinator);
+				}
+				return "";
+			}
+		};
+
+		final CountDownLatch firstTwoRunning = new CountDownLatch(2);
+		final CountDownLatch releaseA = new CountDownLatch(1);
+		final CountDownLatch releaseB = new CountDownLatch(1);
+		final CountDownLatch queuedEntrySent = new CountDownLatch(1);
+		final List<String> sent = Collections.synchronizedList(new ArrayList<>());
+		doAnswer(invocation -> {
+			final String entry = invocation.<HttpSource>getArgument(0).getPath();
+			sent.add(entry);
+			if ("a".equals(entry) || "b".equals(entry)) {
+				firstTwoRunning.countDown();
+				awaitUninterruptibly("a".equals(entry) ? releaseA : releaseB);
+			} else {
+				queuedEntrySent.countDown();
+			}
+			return SourceTable.ofText(entry);
+		}).when(sourceProcessor).process(any(HttpSource.class));
+
+		final SourceTable[] result = new SourceTable[1];
+		final Thread coordinator = new Thread(
+			() -> result[0] = new SourceUpdaterProcessor(
+				sourceProcessor,
+				telemetryManager,
+				MY_CONNECTOR_1_NAME,
+				attributes,
+				extensionManager
+			).process(httpSource)
+		);
+		coordinator.start();
+		try {
+			assertTrue(firstTwoRunning.await(10, TimeUnit.SECONDS));
+			assertTrue(coordinatorHeld.await(10, TimeUnit.SECONDS));
+			// The job deadline expires, then a pool thread becomes free and takes the queued entry c
+			coordinator.interrupt();
+			releaseA.countDown();
+			assertFalse(queuedEntrySent.await(1, TimeUnit.SECONDS));
+		} finally {
+			releaseCoordinator.countDown();
+			releaseB.countDown();
+			coordinator.join(10_000);
+		}
+
+		synchronized (sent) {
+			assertEquals(List.of("a", "b"), sent.stream().sorted().toList());
+		}
+		assertTrue(result[0].isEmpty());
+	}
+
+	/**
+	 * Waits for the latch without ever clearing the interrupt of the current thread, as a thread blocked in a request
+	 * that ignores interrupts does: other threads keep seeing it interrupted.
+	 *
+	 * @param latch The latch to wait for
+	 */
+	private static void awaitUninterruptibly(final CountDownLatch latch) {
+		while (latch.getCount() > 0) {
+			LockSupport.parkNanos(1_000_000);
 		}
 	}
 
