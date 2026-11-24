@@ -496,15 +496,14 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 
 			final CommandResult result;
 			final WinRMClient client = newClient(hostname, winRmConfiguration);
-			try {
+			// Deleting the shell is a request that ignores interrupts. A failure to close is suppressed by the failure of
+			// the command, as when the client itself was the resource
+			try (ThreadHelper.InterruptibleClose _ = () -> ThreadHelper.closeInterruptibly(client::close)) {
 				CommandRequest request = client.command(command);
 				if (embeddedFiles != null && !embeddedFiles.isEmpty()) {
 					request = request.upload(embeddedFiles.stream().map(Path::of).toArray(Path[]::new));
 				}
 				result = executeRecorded(request::execute, requestStats);
-			} finally {
-				// Deleting the shell is a request that ignores interrupts
-				ThreadHelper.closeInterruptibly(client::close);
 			}
 
 			final long responseTime = System.currentTimeMillis() - startTime;
@@ -572,11 +571,10 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	) throws ClientException {
 		try {
 			final WinRMClient client = newClient(hostname, winRmConfiguration);
-			try {
+			// Deleting the shell is a request that ignores interrupts. A failure to close is suppressed by the failure of
+			// the read, as when the client itself was the resource
+			try (ThreadHelper.InterruptibleClose _ = () -> ThreadHelper.closeInterruptibly(client::close)) {
 				return client.file(path).readText(StandardCharsets.UTF_8);
-			} finally {
-				// Deleting the shell is a request that ignores interrupts
-				ThreadHelper.closeInterruptibly(client::close);
 			}
 		} catch (WinRMClientException e) {
 			log.error("Hostname {} - WinRM file read failed. Errors:\n{}\n", hostname, StringHelper.getStackMessages(e));

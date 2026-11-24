@@ -3,7 +3,7 @@ connector:
   platforms: Test platform
   reliesOn: SomeWebService
   version: 1.0
-  information: Test connector that logs in before its monitor jobs and closes its session with two afterAll sources
+  information: Test connector that opens its session with two beforeAll sources and closes its session with two afterAll sources
   detection:
     connectionTypes:
       - remote
@@ -17,6 +17,10 @@ beforeAll:
   login:
     type: snmpTable
     oid: 1.1
+    selectColumns: "ID"
+  profile:
+    type: snmpTable
+    oid: 1.6
     selectColumns: "ID"
 afterAll:
   logout:

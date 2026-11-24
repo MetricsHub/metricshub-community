@@ -28,6 +28,7 @@ import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
@@ -64,6 +65,14 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 	static final long AFTER_ALL_GRACE_SECONDS = 2;
 
 	protected Connector connector;
+
+	/**
+	 * Whether the last {@link #run()} may have opened a session the afterAll must close: it started the sources, or had
+	 * none and ran on a thread not interrupted. Read by the strategy that runs the beforeAll.
+	 */
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private volatile boolean opened;
 
 	/**
 	 * Constructs a {@code SurroundingStrategy} with the necessary components for handling
@@ -104,7 +113,10 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 		// Fetch surrounding sources for the connector.
 		final Map<String, Source> sources = getSurroundingSources();
 
+		// Nothing sent on a thread already interrupted, or until the sources start
+		opened = false;
 		if (sources == null || sources.isEmpty()) {
+			opened = !isInterrupted();
 			log.debug(
 				"Hostname {} - Attempted to process {} sources, but none are available for connector {}.",
 				hostname,
@@ -127,8 +139,12 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 		}
 
 		// On a child thread that ignores the interrupt for a grace period: a login answered within it keeps its token,
-		// and the logout of a job cut short is still sent (see AbstractStrategy.CLEANUP_WINDOW_SECONDS)
+		// and the logout of a job cut short is still sent (see AbstractStrategy.CLEANUP_WINDOW_SECONDS). A beforeAll whose
+		// caller is interrupted only ends the source it is in, while an afterAll runs all its sources
 		ThreadHelper.shelter(() -> {
+			// The first source starts whatever happens next: it may open a session
+			opened = true;
+
 			// Construct job information including job name, connector identifier, hostname and monitor type.
 			final JobInfo jobInfo = JobInfo.builder()
 				.hostname(hostname)
@@ -148,7 +164,7 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 			final long jobEndTime = System.currentTimeMillis();
 			// Set the job duration metric in the host monitor
 			setJobDurationMetric(jobName, connectorId, jobStartTime, jobEndTime);
-		}, beforeAll ? BEFORE_ALL_GRACE_SECONDS : AFTER_ALL_GRACE_SECONDS);
+		}, beforeAll ? BEFORE_ALL_GRACE_SECONDS : AFTER_ALL_GRACE_SECONDS, beforeAll);
 	}
 
 	/**

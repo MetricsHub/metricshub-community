@@ -189,21 +189,37 @@ public class ThreadHelper {
 	}
 
 	/**
-	 * What {@link #shelter(Runnable, long)} runs on the current thread once it sees the interrupt, which it keeps
+	 * What {@link #shelter(Runnable, long, boolean)} runs on the current thread once it sees the interrupt, which it keeps
 	 * cleared until its task ends. Null when nothing must be told.
 	 */
 	private static final ThreadLocal<Runnable> ON_INTERRUPT = new ThreadLocal<>();
 
 	/**
-	 * Set on the thread of a sheltered task once {@link #shelter(Runnable, long)} gave up on it, see
+	 * Set on the thread of a sheltered task once {@link #shelter(Runnable, long, boolean)} gave up on it, see
 	 * {@link #isCancelled()}.
 	 */
 	private static final ThreadLocal<AtomicBoolean> CANCELLED = new ThreadLocal<>();
 
 	/**
-	 * Runs the given body with the given hook run by {@link #shelter(Runnable, long)} as soon as it sees the interrupt of
-	 * the current thread, since it clears that interrupt while its task runs: whoever watches the interrupt status of
-	 * this thread would miss it. The previous hook is restored afterwards.
+	 * Set on the thread of a sheltered task, when asked, once {@link #shelter(Runnable, long, boolean)} sees the
+	 * interrupt of its caller, see {@link #isStopping()}.
+	 */
+	private static final ThreadLocal<AtomicBoolean> STOPPING = new ThreadLocal<>();
+
+	/**
+	 * A close for a try-with-resources statement, which throws no checked exception, see
+	 * {@link #closeInterruptibly(Runnable)}.
+	 */
+	@FunctionalInterface
+	public interface InterruptibleClose extends AutoCloseable {
+		@Override
+		void close();
+	}
+
+	/**
+	 * Runs the given body with the given hook run by {@link #shelter(Runnable, long, boolean)} as soon as it sees the
+	 * interrupt of the current thread, since it clears that interrupt while its task runs: whoever watches the interrupt
+	 * status of this thread would miss it. The previous hook is restored afterwards.
 	 *
 	 * @param hook what to do when a shelter sees the interrupt, on the current thread
 	 * @param body the body to run
@@ -223,14 +239,26 @@ public class ThreadHelper {
 	}
 
 	/**
-	 * Whether the current thread is interrupted, or runs a sheltered task that {@link #shelter(Runnable, long)} gave up
-	 * on: unlike the interrupt status, that never clears, even when a library swallows the interrupt.
+	 * Whether the current thread is interrupted, or runs a sheltered task that {@link #shelter(Runnable, long, boolean)}
+	 * gave up on: unlike the interrupt status, that never clears, even when a library swallows the interrupt.
 	 *
 	 * @return {@code true} if the work of the current thread is cancelled
 	 */
 	public static boolean isCancelled() {
 		final AtomicBoolean cancelled = CANCELLED.get();
 		return Thread.currentThread().isInterrupted() || cancelled != null && cancelled.get();
+	}
+
+	/**
+	 * Whether the current thread must start no new step of its work: it is cancelled (see {@link #isCancelled()}), or it
+	 * runs a sheltered task whose caller was interrupted and which may only end the step it is in, see
+	 * {@link #shelter(Runnable, long, boolean)}.
+	 *
+	 * @return {@code true} if the current thread must start no new step
+	 */
+	public static boolean isStopping() {
+		final AtomicBoolean stopping = STOPPING.get();
+		return isCancelled() || stopping != null && stopping.get();
 	}
 
 	/**
@@ -262,12 +290,16 @@ public class ThreadHelper {
 	 * interrupt status is restored before returning, and its {@link #onInterrupt(Runnable, Runnable)} hook is run as
 	 * soon as the interrupt is seen.
 	 *
-	 * @param task         the task to run
-	 * @param graceSeconds how long the task may still run after the caller was interrupted, in seconds
+	 * @param task             the task to run
+	 * @param graceSeconds     how long the task may still run after the caller was interrupted, in seconds
+	 * @param stopBetweenSteps whether the task, once its caller is interrupted, only ends the step it is in, see
+	 *                         {@link #isStopping()}: an opening (a login) ends, while a cleanup (a logout) runs all its
+	 *                         steps
 	 */
-	public static void shelter(final Runnable task, final long graceSeconds) {
+	public static void shelter(final Runnable task, final long graceSeconds, final boolean stopBetweenSteps) {
 		// Clears and remembers the interrupt: a caller interrupted at entry already uses its grace
 		boolean interrupted = Thread.interrupted();
+		final AtomicBoolean stopping = new AtomicBoolean(interrupted && stopBetweenSteps);
 		if (interrupted) {
 			notifyInterrupt();
 		}
@@ -277,6 +309,7 @@ public class ThreadHelper {
 		try {
 			final Future<?> future = executor.submit(() -> {
 				CANCELLED.set(cancelled);
+				STOPPING.set(stopping);
 				task.run();
 			});
 			while (true) {
@@ -292,6 +325,7 @@ public class ThreadHelper {
 					if (!interrupted) {
 						interrupted = true;
 						deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(graceSeconds);
+						stopping.set(stopBetweenSteps);
 						notifyInterrupt();
 					}
 				} catch (TimeoutException e) {

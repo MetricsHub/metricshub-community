@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -377,6 +378,45 @@ class WinRmRequestExecutorTest {
 					closed
 				)
 			);
+		}
+	}
+
+	@Test
+	void testCommandFailureIsKeptWhenTheShellDeletionAlsoFails() {
+		final WinRMClient client = mock(WinRMClient.class, RETURNS_DEEP_STUBS);
+		final WinRMClientException failure = new WinRMClientException("access denied");
+		final IllegalStateException closeFailure = new IllegalStateException("connection reset");
+		when(client.command("cmd").execute()).thenThrow(failure);
+		doThrow(closeFailure).when(client).close();
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+			final ClientException exception = assertThrows(
+				ClientException.class,
+				() -> WinRmRequestExecutor.executeRemoteWinRmCommand("host", configuration("pass"), "cmd", null, null)
+			);
+			// The failure of the command is reported, the one of the close is attached to it
+			assertSame(failure, exception.getCause());
+			assertSame(closeFailure, failure.getSuppressed()[0]);
+		}
+	}
+
+	@Test
+	void testFileReadFailureIsKeptWhenTheShellDeletionAlsoFails() {
+		final WinRMClient client = mock(WinRMClient.class, RETURNS_DEEP_STUBS);
+		final WinRMClientException failure = new WinRMClientException("file not found");
+		final IllegalStateException closeFailure = new IllegalStateException("connection reset");
+		when(client.file("C:\\hosts").readText(StandardCharsets.UTF_8)).thenThrow(failure);
+		doThrow(closeFailure).when(client).close();
+
+		try (MockedStatic<WinRmRequestExecutor> statics = mockStatic(WinRmRequestExecutor.class, CALLS_REAL_METHODS)) {
+			statics.when(() -> WinRmRequestExecutor.newClient(eq("host"), any())).thenReturn(client);
+			final ClientException exception = assertThrows(
+				ClientException.class,
+				() -> new WinRmRequestExecutor().readRemoteFile("host", configuration("pass"), "C:\\hosts")
+			);
+			assertSame(failure, exception.getCause());
+			assertSame(closeFailure, failure.getSuppressed()[0]);
 		}
 	}
 

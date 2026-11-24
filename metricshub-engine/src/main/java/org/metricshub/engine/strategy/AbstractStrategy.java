@@ -219,9 +219,10 @@ public abstract class AbstractStrategy implements IStrategy {
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
 		for (int sourceIndex = 0; sourceIndex < sources.size(); sourceIndex++) {
-			if (
-				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
-			) {
+			// The first source always starts, unless the thread is interrupted: a sheltered beforeAll that started may open
+			// a session. Then a beforeAll whose caller is interrupted starts no other source
+			final boolean stop = sourceIndex > 0 ? ThreadHelper.isStopping() : isInterrupted();
+			if (stop && skipSources(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)) {
 				return false;
 			}
 
@@ -400,12 +401,12 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Runs the afterAll sources of the given connector, unless the run is interrupted and either it never entered the
-	 * beforeAll of this connector, the cleanup window is over or another afterAll of this run already used it: a
-	 * session this run opened is closed, never one of the next run.
+	 * Runs the afterAll sources of the given connector, unless the run is interrupted and either the beforeAll of this
+	 * connector opened nothing, the cleanup window is over or another afterAll of this run already used it: a session
+	 * this run opened is closed, never one of the next run.
 	 *
 	 * @param connector    The connector
-	 * @param opened       Whether this run entered the beforeAll of the connector on a thread not interrupted
+	 * @param opened       Whether the beforeAll of the connector may have opened a session
 	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
 	 */
 	protected void runAfterAll(final Connector connector, final boolean opened, final long runStartTime) {
@@ -511,10 +512,25 @@ public abstract class AbstractStrategy implements IStrategy {
 		final String connectorId,
 		final String hostname
 	) {
-		if (!isInterrupted()) {
-			return false;
-		}
+		return isInterrupted() && skipSources(remainingSources, cursorRollbacks, connectorId, hostname);
+	}
 
+	/**
+	 * Skips the given sources of a job cut short, and rolls back the cursors its incremental sources moved, see
+	 * {@link #skipSourcesIfInterrupted(List, List, String, String)}.
+	 *
+	 * @param remainingSources The sources of the job not executed yet
+	 * @param cursorRollbacks  The rollbacks of the cursors of the incremental sources the job polled
+	 * @param connectorId      The connector identifier
+	 * @param hostname         The host name
+	 * @return {@code true}
+	 */
+	private static boolean skipSources(
+		final List<Source> remainingSources,
+		final List<Runnable> cursorRollbacks,
+		final String connectorId,
+		final String hostname
+	) {
 		rollBackCursors(cursorRollbacks);
 
 		log.warn(

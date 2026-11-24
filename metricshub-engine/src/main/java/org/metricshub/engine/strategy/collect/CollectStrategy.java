@@ -147,9 +147,9 @@ public class CollectStrategy extends AbstractStrategy {
 			.extensionManager(extensionManager)
 			.build();
 
-		// A run interrupted before its beforeAll opens no session and has none to close
-		final boolean opened = !isInterrupted();
 		beforeAllStrategy.run();
+		// A beforeAll skipped by an interrupt opened no session: there is none to close
+		final boolean opened = beforeAllStrategy.isOpened();
 
 		// Sort the connector monitor jobs according to the priority map
 		final Map<String, MonitorJob> connectorMonitorJobs = currentConnector.getMonitors()
@@ -239,7 +239,7 @@ public class CollectStrategy extends AbstractStrategy {
 	 *
 	 * @param pool      The thread pool of the jobs, shut down
 	 * @param connector The connector
-	 * @param opened    Whether this run entered the beforeAll of the connector on a thread not interrupted
+	 * @param opened    Whether the beforeAll of the connector may have opened a session
 	 */
 	private record PendingPool(ExecutorService pool, Connector connector, boolean opened) {}
 

@@ -97,7 +97,7 @@ class RetryOperationTest {
 					})
 			);
 			done.countDown();
-		}, 1);
+		}, 1, false);
 		Thread.interrupted();
 		givenUp.countDown();
 

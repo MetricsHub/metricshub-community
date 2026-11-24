@@ -124,18 +124,17 @@ public class ToolStrategy extends AbstractStrategy {
 
 		// The tool's sources may reference the connector's beforeAll sources, like a monitor job's: a session
 		// token fetched there is what a REST tool authenticates with. A tool cancelled before it starts opens nothing.
-		final boolean opened = !isInterrupted();
+		final BeforeAllStrategy beforeAllStrategy = BeforeAllStrategy.builder()
+			.clientsExecutor(clientsExecutor)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.connector(connector)
+			.extensionManager(extensionManager)
+			.build();
 		try {
 			// Inside the cleanup scope: a beforeAll source that fails after an earlier one logged in must
 			// still be followed by the logout
-			BeforeAllStrategy.builder()
-				.clientsExecutor(clientsExecutor)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.connector(connector)
-				.extensionManager(extensionManager)
-				.build()
-				.run();
+			beforeAllStrategy.run();
 
 			final JobInfo jobInfo = JobInfo.builder()
 				.hostname(hostname)
@@ -162,7 +161,7 @@ public class ToolStrategy extends AbstractStrategy {
 		} finally {
 			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that
 			// counts them, whether or not its sources succeeded or the tool was cancelled
-			if (opened || !isInterrupted()) {
+			if (beforeAllStrategy.isOpened() || !isInterrupted()) {
 				AfterAllStrategy.builder()
 					.clientsExecutor(clientsExecutor)
 					.strategyTime(strategyTime)

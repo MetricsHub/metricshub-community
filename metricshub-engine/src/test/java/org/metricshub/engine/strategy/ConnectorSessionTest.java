@@ -50,6 +50,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -427,6 +428,87 @@ class ConnectorSessionTest {
 		}
 
 		assertEquals(1, logouts.get());
+	}
+
+	private BeforeAllStrategy beforeAll(final TelemetryManager telemetryManager, final String connectorId) {
+		return BeforeAllStrategy.builder()
+			.telemetryManager(telemetryManager)
+			.strategyTime(System.currentTimeMillis())
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.connector(telemetryManager.getConnectorStore().getStore().get(connectorId))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+	}
+
+	@Test
+	void testBeforeAllCancelledDuringASourceEndsItAndStartsNoOther() {
+		final Thread strategyThread = Thread.currentThread();
+		final AtomicInteger beforeAllRequests = new AtomicInteger();
+		final AtomicReference<String> firstSource = new AtomicReference<>();
+		final AtomicBoolean stoppingSeen = new AtomicBoolean();
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			if (key.startsWith("${source::beforeAll.") && beforeAllRequests.getAndIncrement() == 0) {
+				firstSource.set(key);
+				// The cancel of a reload while the first source runs, which answers within the grace
+				strategyThread.interrupt();
+				final long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+				while (!ThreadHelper.isStopping() && System.nanoTime() - end < 0) {
+					Thread.onSpinWait();
+				}
+				stoppingSeen.set(ThreadHelper.isStopping());
+			}
+			return table("token");
+		}, C);
+		final BeforeAllStrategy beforeAllStrategy = beforeAll(telemetryManager, C);
+
+		try {
+			beforeAllStrategy.run();
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		// The source that ran keeps its answer, for the logout, and no other source starts
+		assertTrue(stoppingSeen.get());
+		assertEquals(1, beforeAllRequests.get());
+		assertTrue(beforeAllStrategy.isOpened());
+		assertNotNull(telemetryManager.getHostProperties().getConnectorNamespace(C).getSourceTable(firstSource.get()));
+	}
+
+	@Test
+	void testBeforeAllTellsWhetherItMayHaveOpenedASession() {
+		final AtomicInteger requests = new AtomicInteger();
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			requests.incrementAndGet();
+			return table("token");
+		}, A);
+		final Connector withoutBeforeAll = Connector.builder()
+			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("WithoutBeforeAll").build())
+			.build();
+		telemetryManager.getConnectorStore().getStore().put("WithoutBeforeAll", withoutBeforeAll);
+
+		// Skipped by an interrupt: nothing sent, nothing to close
+		final BeforeAllStrategy skipped = beforeAll(telemetryManager, A);
+		final BeforeAllStrategy noSourceInterrupted = beforeAll(telemetryManager, "WithoutBeforeAll");
+		Thread.currentThread().interrupt();
+		try {
+			skipped.run();
+			noSourceInterrupted.run();
+		} finally {
+			Thread.interrupted();
+		}
+		assertEquals(0, requests.get());
+		assertFalse(skipped.isOpened());
+		assertFalse(noSourceInterrupted.isOpened());
+
+		// Started: its session must be closed. A connector without beforeAll keeps its afterAll as before
+		final BeforeAllStrategy started = beforeAll(telemetryManager, A);
+		final BeforeAllStrategy noSource = beforeAll(telemetryManager, "WithoutBeforeAll");
+		started.run();
+		noSource.run();
+		assertEquals(1, requests.get());
+		assertTrue(started.isOpened());
+		assertTrue(noSource.isOpened());
 	}
 
 	@Test

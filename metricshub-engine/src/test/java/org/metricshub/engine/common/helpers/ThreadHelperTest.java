@@ -229,7 +229,7 @@ class ThreadHelperTest {
 		ThreadHelper.shelter(() -> {
 			taskInterrupted.set(Thread.currentThread().isInterrupted());
 			done.set(true);
-		}, 2);
+		}, 2, false);
 		assertTrue(Thread.currentThread().isInterrupted());
 		assertFalse(taskInterrupted.get());
 		assertTrue(done.get());
@@ -246,7 +246,7 @@ class ThreadHelperTest {
 			} catch (InterruptedException e) {
 				cancelled.countDown();
 			}
-		}, 1);
+		}, 1, false);
 		final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 		assertTrue(Thread.currentThread().isInterrupted());
 		assertTrue(elapsedMillis >= 900 && elapsedMillis < 2500, "Took " + elapsedMillis + " ms");
@@ -264,7 +264,7 @@ class ThreadHelperTest {
 			} catch (InterruptedException e) {
 				cancelled.countDown();
 			}
-		}, 1);
+		}, 1, false);
 		final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 		assertTrue(Thread.currentThread().isInterrupted());
 		// 200 ms before the interrupt, then 1 s of grace, then at most 1 s for the cancelled task
@@ -277,11 +277,11 @@ class ThreadHelperTest {
 		final IllegalArgumentException runtime = new IllegalArgumentException("runtime");
 		assertEquals(runtime, assertThrows(IllegalArgumentException.class, () -> ThreadHelper.shelter(() -> {
 			throw runtime;
-		}, 1)));
+		}, 1, false)));
 		final AssertionError error = new AssertionError("error");
 		assertEquals(error, assertThrows(AssertionError.class, () -> ThreadHelper.shelter(() -> {
 			throw error;
-		}, 1)));
+		}, 1, false)));
 	}
 
 	@Test
@@ -293,7 +293,7 @@ class ThreadHelperTest {
 		ThreadHelper.onInterrupt(() -> {
 			hookRan.set(true);
 			hookRanBeforeTheTask.set(!taskRan.get());
-		}, () -> ThreadHelper.shelter(() -> taskRan.set(true), 1));
+		}, () -> ThreadHelper.shelter(() -> taskRan.set(true), 1, false));
 		assertTrue(Thread.currentThread().isInterrupted());
 		assertTrue(hookRan.get());
 		assertTrue(hookRanBeforeTheTask.get());
@@ -311,7 +311,7 @@ class ThreadHelperTest {
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
-		}, 10));
+		}, 10, false));
 		assertTrue(Thread.currentThread().isInterrupted());
 		assertTrue(hookRanWhileTheTaskRuns.get());
 	}
@@ -319,11 +319,11 @@ class ThreadHelperTest {
 	@Test
 	void testShelterWithoutInterruptRunsNoHookAndLeavesNoHook() {
 		final AtomicBoolean hookRan = new AtomicBoolean();
-		ThreadHelper.onInterrupt(() -> hookRan.set(true), () -> ThreadHelper.shelter(() -> {}, 1));
+		ThreadHelper.onInterrupt(() -> hookRan.set(true), () -> ThreadHelper.shelter(() -> {}, 1, false));
 		assertFalse(hookRan.get());
 		// Outside its scope the hook is gone
 		Thread.currentThread().interrupt();
-		ThreadHelper.shelter(() -> {}, 1);
+		ThreadHelper.shelter(() -> {}, 1, false);
 		assertFalse(hookRan.get());
 	}
 
@@ -341,7 +341,7 @@ class ThreadHelperTest {
 			Thread.interrupted();
 			cancelledAfterwards.set(ThreadHelper.isCancelled());
 			checked.countDown();
-		}, 1);
+		}, 1, false);
 		// shelter gave up on the task and restored the interrupt of the caller, which the token never reaches
 		assertTrue(Thread.interrupted());
 		assertFalse(ThreadHelper.isCancelled());
