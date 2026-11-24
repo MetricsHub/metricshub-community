@@ -1,6 +1,7 @@
 package org.metricshub.extension.emulation.wbem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,6 +21,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.wbem.WbemConfiguration;
 
 /**
@@ -55,6 +57,13 @@ class EmulationWbemRequestExecutorTest {
 					.build()
 			)
 			.build();
+	}
+
+	@Test
+	void testIsAcceptableExceptionAcceptsAMissingRecording() {
+		assertTrue(executor.isAcceptableException(new NoRecordedResponseException("No recorded WBEM response.")));
+		assertTrue(executor.isAcceptableException(new ClientException("Failed", new NoRecordedResponseException("None"))));
+		assertFalse(executor.isAcceptableException(new ClientException("Timeout")));
 	}
 
 	@Test

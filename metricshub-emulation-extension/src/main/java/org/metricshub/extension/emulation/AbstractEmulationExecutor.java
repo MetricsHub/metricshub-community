@@ -169,13 +169,13 @@ public class AbstractEmulationExecutor {
 	 * @param reason     why the recording cannot be read, {@code null} when no entry matches the request
 	 * @return the exception to throw
 	 */
-	private static <C> ClientException noResponse(
+	private static <C> NoRecordedResponseException noResponse(
 		final ReplayOperations<?, ?, C, ?> operations,
 		final C context,
 		final String reason
 	) {
 		final String request = operations.describeRequest(context);
-		return new ClientException(
+		return new NoRecordedResponseException(
 			reason == null
 				? "No recorded %s response for %s.".formatted(operations.protocolName(), request)
 				: "Cannot replay the %s response for %s: %s.".formatted(operations.protocolName(), request, reason)

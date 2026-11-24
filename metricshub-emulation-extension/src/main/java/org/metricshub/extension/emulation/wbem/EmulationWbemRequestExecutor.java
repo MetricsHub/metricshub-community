@@ -34,6 +34,7 @@ import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.wbem.WbemConfiguration;
 import org.metricshub.extension.wbem.WbemRequestExecutor;
 
@@ -125,6 +126,14 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 				}
 			}
 		);
+	}
+
+	/**
+	 * A request without a recorded response failed on the host as an acceptable error does: detection goes on.
+	 */
+	@Override
+	public boolean isAcceptableException(final Throwable t) {
+		return t instanceof NoRecordedResponseException || super.isAcceptableException(t);
 	}
 
 	/**

@@ -424,6 +424,70 @@ class EmulationExtensionTest {
 	}
 
 	@Test
+	void testProcessCriterionWbemAutomaticNamespaceSkipsUnrecordedRequests(@TempDir Path tempDir) throws IOException {
+		// Only the requests that answered are recorded: the other interop queries and the query on root/aaa failed
+		Files.writeString(tempDir.resolve("image.yaml"), """
+			image:
+			  - request:
+			      wql: SELECT Name from CIM_Namespace
+			      namespace: root/PG_Interop
+			    response: namespaces.csv
+			  - request:
+			      wql: SELECT Name FROM EMC_StorageSystem
+			      namespace: root/emc
+			    response: system.csv
+			""", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("namespaces.csv"), "aaa;\nemc;\n", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("system.csv"), "VNX;\n", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
+		);
+		final WbemCriterion criterion = WbemCriterion.builder()
+			.query("SELECT Name FROM EMC_StorageSystem")
+			.namespace("Automatic")
+			.build();
+
+		assertTrue(emulationExtension.processCriterion(criterion, "connector", tm, false).isSuccess());
+		assertEquals("root/emc", tm.getHostProperties().getConnectorNamespace("connector").getAutomaticWbemNamespace());
+	}
+
+	@Test
+	void testProcessCriterionWmiAutomaticNamespaceSkipsUnrecordedRequests(@TempDir Path tempDir) throws IOException {
+		// The query on root/aaa failed: it is not recorded
+		Files.writeString(tempDir.resolve("image.yaml"), """
+			image:
+			  - request:
+			      wql: SELECT Name FROM __NAMESPACE
+			      namespace: root
+			    response: namespaces.csv
+			  - request:
+			      wql: SELECT Name FROM HP_Chassis
+			      namespace: root/hp
+			    response: chassis.csv
+			""", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("namespaces.csv"), "aaa;\nhp;\n", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("chassis.csv"), "Chassis;\n", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration.builder()
+					.hostname(HOSTNAME)
+					.wmi(new WmiEmulationConfig(WmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+		final WmiCriterion criterion = WmiCriterion.builder()
+			.query("SELECT Name FROM HP_Chassis")
+			.namespace("Automatic")
+			.build();
+
+		assertTrue(emulationExtension.processCriterion(criterion, "connector", tm, false).isSuccess());
+		assertEquals("root/hp", tm.getHostProperties().getConnectorNamespace("connector").getAutomaticWmiNamespace());
+	}
+
+	@Test
 	void testProcessCriterionSnmpGetCriterion(@TempDir Path tempDir) throws IOException {
 		Files.writeString(
 			tempDir.resolve("device.walk"),

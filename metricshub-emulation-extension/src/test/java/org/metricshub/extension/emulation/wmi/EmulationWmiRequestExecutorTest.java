@@ -1,6 +1,7 @@
 package org.metricshub.extension.emulation.wmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +17,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.wmi.WmiConfiguration;
 
 /**
@@ -32,6 +34,14 @@ class EmulationWmiRequestExecutorTest {
 
 	private WmiEmulationConfig buildWmiEmulationConfig(final String emulationInputDir) {
 		return new WmiEmulationConfig(WmiConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir);
+	}
+
+	@Test
+	void testIsAcceptableExceptionAcceptsOnlyAMissingRecording() {
+		assertTrue(executor.isAcceptableException(new NoRecordedResponseException("No recorded WMI response.")));
+		assertTrue(executor.isAcceptableException(new ClientException("Failed", new NoRecordedResponseException("None"))));
+		assertFalse(executor.isAcceptableException(new ClientException("Timeout")));
+		assertFalse(executor.isAcceptableException(null));
 	}
 
 	@Test
