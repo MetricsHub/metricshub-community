@@ -316,7 +316,7 @@ class HttpRequestExecutorTest {
 		httpResponse.setStatusCode(200);
 		httpResponse.appendBody("body");
 		httpResponse.appendHeader("key", "value");
-		doThrow(new IOException()).when(executor)
+		doThrow(new IOException("Connection refused")).when(executor)
 			.send("https://hostname:443/", method, username, password, headerContent, bodyContent, timeout);
 
 		final String hostname = "hostname";
@@ -346,8 +346,11 @@ class HttpRequestExecutorTest {
 			.build();
 		final String result = executor.executeHttp(request, true, telemetryManager);
 		assertNull(result);
-		// No response: an http source fails
-		assertEquals(SourceTable.failed("No response."), executor.executeHttpSource(request, true, telemetryManager));
+		// No response: an http source fails, and says why
+		assertEquals(
+			SourceTable.failed("No response: IOException: Connection refused"),
+			executor.executeHttpSource(request, true, telemetryManager)
+		);
 	}
 
 	@ParameterizedTest

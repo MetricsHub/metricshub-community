@@ -457,7 +457,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	 * @param embeddedFiles      The local files referenced by the command, to copy to the host; may be null or empty
 	 * @param requestStats       The request statistics of the monitored resource, where the outcome of the command
 	 *                           is counted (completed whatever its exit code), or {@code null} to count nothing
-	 * @return The result of the query
+	 * @return The standard output of the command, whatever its exit code, as over WMI and SSH
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
 	@WithSpan("Remote Command WinRM")
@@ -508,9 +508,14 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
-			// If the command returns an error
+			// A non-zero exit code is an answer
 			if (result.exitCode() != 0) {
-				throw new ClientException(String.format("WinRM remote command failed on %s: %s", hostname, result.stderr()));
+				log.debug(
+					"Hostname {} - WinRM remote command exited with the code {}. Standard error:\n{}",
+					hostname,
+					result.exitCode(),
+					result.stderr()
+				);
 			}
 
 			final String resultStdout = result.stdout();

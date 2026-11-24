@@ -506,6 +506,16 @@ class HttpExtensionTest {
 				telemetryManager
 			)
 		);
+
+		// A source that gives a path instead of a URL is named by its path
+		assertEquals(
+			SourceTable.failed("HTTP GET /redfish/v1/Systems: The server answered with the status 401."),
+			httpExtension.processSource(
+				HttpSource.builder().path("/redfish/v1/Systems").method(HttpMethod.GET).build(),
+				CONNECTOR_ID,
+				telemetryManager
+			)
+		);
 	}
 
 	@Test

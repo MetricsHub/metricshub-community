@@ -278,6 +278,31 @@ public class TelemetryManager {
 	}
 
 	/**
+	 * Keeps the monitors of the given type and connector as (re)discovered at the given time: what a job stopped by a
+	 * failed source does, since it cannot tell whether they are still there.
+	 *
+	 * @param monitorType   The type of the monitors
+	 * @param connectorId   The identifier of the connector that produced the monitors
+	 * @param discoveryTime The new discovery time of the monitors
+	 */
+	public void keepMonitorsDiscoveredAt(
+		@NonNull final String monitorType,
+		@NonNull final String connectorId,
+		final long discoveryTime
+	) {
+		synchronized (monitors) {
+			monitors.getOrDefault(monitorType, Map.of())
+				.values()
+				.stream()
+				.filter(
+					monitor -> !monitor.isEndpoint() &&
+						connectorId.equals(monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID))
+				)
+				.forEach(monitor -> monitor.setDiscoveryTime(discoveryTime));
+		}
+	}
+
+	/**
 	 * Return the root host monitor instance
 	 *
 	 * @return {@link Monitor} object representing the root instance

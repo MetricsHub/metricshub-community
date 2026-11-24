@@ -346,8 +346,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		// A job stopped by a failed source keeps its monitors. An interrupted job did not refresh its sources: its mapping
-		// would read the tables of another run
+		// A job stopped by a failed source keeps its monitors, as rediscovered: the hardware post discovery would report
+		// them missing. An interrupted job did not refresh its sources: its mapping would read the tables of another run
+		if (failure != null) {
+			telemetryManager.keepMonitorsDiscoveredAt(monitorType, currentConnector.getCompiledFilename(), strategyTime);
+		}
 		final boolean mapped = failure == null &&
 			!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname) &&
 			processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);

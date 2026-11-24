@@ -59,8 +59,13 @@ public class JmxRequestExecutor {
 	 * @param <T>     the type of the result
 	 * @param value   the result returned to the caller
 	 * @param outcome the outcome of the attempt, or {@code null} when nothing was sent
+	 * @param error   the exception the caller receives when the request got no answer, {@code null} otherwise
 	 */
-	private record JmxAttempt<T>(T value, RequestOutcome outcome) {}
+	private record JmxAttempt<T>(T value, RequestOutcome outcome, Exception error) {
+		private JmxAttempt(final T value, final RequestOutcome outcome) {
+			this(value, outcome, null);
+		}
+	}
 
 	/**
 	 * Fetches information about JMX beans matching the specified object name pattern and attributes.<br>
@@ -73,7 +78,8 @@ public class JmxRequestExecutor {
 	 * @param requestStats          the request counters of the monitored resource, or {@code null} to record nothing
 	 * @param recordOutputDirectory the output directory for recording (nullable; when set, the exchange is recorded)
 	 * @return a list of lists, where each inner list contains the values of the key attributes followed by the requested attributes
-	 * @throws Exception if an error occurs while connecting to the JMX server or fetching attributes
+	 * @throws Exception if the object name pattern is invalid (nothing is sent), or if an error occurs while connecting
+	 *                   to the JMX server or querying the MBeans (nothing is recorded)
 	 */
 	@WithSpan("JMX Fetch MBean")
 	public List<List<String>> fetchMBean(
@@ -85,18 +91,12 @@ public class JmxRequestExecutor {
 		final String recordOutputDirectory
 	) throws Exception {
 		final long timeout = jmxConfiguration.getTimeout();
-		final ObjectName objectName = parseObjectName(jmxConfiguration.getHostname(), objectNamePattern);
-		final List<List<String>> result;
-		if (objectName == null) {
-			// Nothing is sent for an invalid pattern
-			result = new ArrayList<>();
-		} else {
-			result = executeAndRecord(
-				() -> runJmxRequest(jmxConfiguration, objectName, attributes, keyProperties),
-				timeout,
-				requestStats
-			);
-		}
+		final ObjectName objectName = parseObjectName(objectNamePattern);
+		final List<List<String>> result = executeAndRecord(
+			() -> runJmxRequest(jmxConfiguration, objectName, attributes, keyProperties),
+			timeout,
+			requestStats
+		);
 
 		// Record the JMX exchange if recording is enabled
 		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
@@ -115,20 +115,18 @@ public class JmxRequestExecutor {
 	/**
 	 * Parses the object name pattern locally, before anything is sent.
 	 *
-	 * @param hostname          the hostname of the JMX server, for the logs
 	 * @param objectNamePattern the pattern for matching MBean object names
-	 * @return the {@link ObjectName}, or {@code null} when the pattern is missing or malformed
+	 * @return the {@link ObjectName}
+	 * @throws IllegalArgumentException when the pattern is missing or malformed
 	 */
-	private static ObjectName parseObjectName(final String hostname, final String objectNamePattern) {
+	private static ObjectName parseObjectName(final String objectNamePattern) {
 		if (objectNamePattern == null) {
-			log.debug("Hostname {} - No JMX object name pattern.", hostname);
-			return null;
+			throw new IllegalArgumentException("No JMX object name pattern.");
 		}
 		try {
 			return new ObjectName(objectNamePattern);
 		} catch (MalformedObjectNameException e) {
-			log.debug("Hostname {} - Invalid JMX object name pattern {}. → ", hostname, objectNamePattern, e);
-			return null;
+			throw new IllegalArgumentException("Invalid JMX object name pattern " + objectNamePattern, e);
 		}
 	}
 
@@ -141,7 +139,8 @@ public class JmxRequestExecutor {
 	 * @param timeout      the timeout of the attempt, in seconds
 	 * @param requestStats the request counters of the monitored resource, or {@code null} to record nothing
 	 * @return the result of the attempt
-	 * @throws Exception the {@link ThreadHelper} exception when the attempt timed out, was interrupted or crashed
+	 * @throws Exception the {@link ThreadHelper} exception when the attempt timed out, was interrupted or crashed, or
+	 *                   the error of an attempt that got no answer
 	 */
 	private static <T> T executeAndRecord(
 		final Callable<JmxAttempt<T>> request,
@@ -160,6 +159,9 @@ public class JmxRequestExecutor {
 			throw e;
 		}
 		record(requestStats, attempt.outcome());
+		if (attempt.error() != null) {
+			throw attempt.error();
+		}
 		return attempt.value();
 	}
 
@@ -206,6 +208,7 @@ public class JmxRequestExecutor {
 	) {
 		final List<List<String>> results = new ArrayList<>();
 		RequestOutcome outcome = RequestOutcome.COMPLETED;
+		boolean answered = false;
 
 		final String hostname = jmxConfiguration.getHostname();
 
@@ -215,6 +218,7 @@ public class JmxRequestExecutor {
 			final var mBeanServerConnection = jmxConnector.getMBeanServerConnection();
 
 			final Set<ObjectName> matches = mBeanServerConnection.queryNames(objectName, null);
+			answered = true;
 
 			for (ObjectName matchedObjectName : matches) {
 				final List<String> keyPropertyValues = keyProperties.stream()
@@ -249,8 +253,9 @@ public class JmxRequestExecutor {
 			}
 		} catch (Exception e) {
 			log.debug("Hostname {} - Error connecting to JMX. {} → ", hostname, url, e);
-			// An error while closing does not hide the timeout of a read
-			return new JmxAttempt<>(results, outcome == RequestOutcome.TIMEOUT ? outcome : outcomeOf(e));
+			// An error while closing does not hide the timeout of a read, nor drop the rows read. An error while connecting
+			// or querying the MBeans is the error of the request
+			return new JmxAttempt<>(results, outcome == RequestOutcome.TIMEOUT ? outcome : outcomeOf(e), answered ? null : e);
 		}
 		return new JmxAttempt<>(results, outcome);
 	}

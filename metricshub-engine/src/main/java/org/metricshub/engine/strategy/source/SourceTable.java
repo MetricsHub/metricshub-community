@@ -34,7 +34,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.ToString;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
@@ -84,6 +86,15 @@ public class SourceTable {
 	 * Non-null only when the source failed: what failed and why. The value of a failed source is an empty table.
 	 */
 	private String error;
+
+	/**
+	 * The run (strategy time) of the job that the failure stopped, set when the failure is stored: only a failure of
+	 * the current run makes the sources reading it fail.
+	 */
+	@Getter
+	@Setter
+	@EqualsAndHashCode.Exclude
+	private Long failedRun;
 
 	private SourceTable() {}
 

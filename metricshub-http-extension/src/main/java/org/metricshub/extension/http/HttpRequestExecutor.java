@@ -94,7 +94,10 @@ public class HttpRequestExecutor {
 		final TelemetryManager telemetryManager
 	) {
 		final ResultContent resultContent = httpRequest.getResultContent();
-		return toText(execute(httpRequest, logMode, telemetryManager, resultContent), resultContent);
+		return toText(
+			execute(httpRequest, logMode, telemetryManager, resultContent, new AtomicReference<>()),
+			resultContent
+		);
 	}
 
 	/**
@@ -113,7 +116,7 @@ public class HttpRequestExecutor {
 		final TelemetryManager telemetryManager
 	) {
 		// Recorded whole, with its status
-		return execute(httpRequest, logMode, telemetryManager, ResultContent.ALL_WITH_STATUS);
+		return execute(httpRequest, logMode, telemetryManager, ResultContent.ALL_WITH_STATUS, new AtomicReference<>());
 	}
 
 	/**
@@ -133,9 +136,11 @@ public class HttpRequestExecutor {
 		final TelemetryManager telemetryManager
 	) {
 		final ResultContent resultContent = httpRequest.getResultContent();
-		final HttpResult response = execute(httpRequest, logMode, telemetryManager, resultContent);
+		final AtomicReference<IOException> error = new AtomicReference<>();
+		final HttpResult response = execute(httpRequest, logMode, telemetryManager, resultContent, error);
 		if (response == null) {
-			return SourceTable.failed("No response.");
+			// Why: a refused connection, a timeout, an unknown host, a TLS error
+			return error.get() != null ? SourceTable.failed("No response", error.get()) : SourceTable.failed("No response.");
 		}
 		if (isRefused(response, resultContent)) {
 			return SourceTable.failed("The server answered with the status " + response.statusCode() + ".");
@@ -176,13 +181,15 @@ public class HttpRequestExecutor {
 	 * @param logMode          Whether or not logging is enabled.
 	 * @param telemetryManager The telemetry manager providing access to host configuration.
 	 * @param resultContent    The part of the response that is recorded.
+	 * @param error            Receives the exception of a request that got no response.
 	 * @return The response, <code>null</code> when the request got none.
 	 */
 	private HttpResult execute(
 		final HttpRequest httpRequest,
 		final boolean logMode,
 		final TelemetryManager telemetryManager,
-		final ResultContent resultContent
+		final ResultContent resultContent,
+		final AtomicReference<IOException> error
 	) {
 		final HttpConfiguration httpConfiguration = httpRequest.getHttpConfiguration();
 		notNull(httpConfiguration, PROTOCOL_CANNOT_BE_NULL);
@@ -302,6 +309,7 @@ public class HttpRequestExecutor {
 					protocol,
 					fullUrl,
 					retriedResponse,
+					error,
 					telemetryManager.getRequestStats()
 				)
 			);
@@ -362,6 +370,7 @@ public class HttpRequestExecutor {
 	 * @param protocol               The protocol: http or https
 	 * @param fullUrl                The full HTTP URL. E.g. <pre>http://www.example.com:1080/api/v1/examples</pre>
 	 * @param retriedResponse        Receives the response of a request that is retried
+	 * @param error                  Receives the exception of an attempt that got no response
 	 * @param requestStats           The request counters of the monitored resource, which receive the outcome of the
 	 *                               attempt
 	 * @return The response, <code>null</code> when the request got none
@@ -383,10 +392,12 @@ public class HttpRequestExecutor {
 		final String protocol,
 		final String fullUrl,
 		final AtomicReference<HttpResult> retriedResponse,
+		final AtomicReference<IOException> error,
 		final RequestStats requestStats
 	) {
 		// The response of a previous attempt is not the response of this one
 		retriedResponse.set(null);
+		error.set(null);
 		try {
 			final long startTime = System.currentTimeMillis();
 
@@ -450,6 +461,7 @@ public class HttpRequestExecutor {
 
 			return result;
 		} catch (IOException e) {
+			error.set(e);
 			if (e instanceof InterruptedIOException && Thread.currentThread().isInterrupted()) {
 				// The job was cut short: an expected end, not an error
 				log.debug("Hostname {} - HTTP request {} {} interrupted. Returning null.", hostname, method, fullUrl);

@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -306,8 +307,9 @@ public abstract class AbstractStrategy implements IStrategy {
 						sources.subList(sourceIndex + 1, sources.size()).stream().map(Source::getKey).toList(),
 						sourceTable.getError()
 					);
-					// Stored, so that the sources reading it fail as well. The entries of the incremental sources polled are
-					// not mapped: they come again at the next poll
+					// Stored, so that the sources reading it during this run fail as well. The entries of the incremental
+					// sources polled are not mapped: they come again at the next poll
+					sourceTable.setFailedRun(strategyTime);
 					connectorNamespace.addSourceTable(sourceKey, sourceTable);
 					rollBackCursors(cursorRollbacks);
 					return sourceTable.getError();
@@ -322,7 +324,13 @@ public abstract class AbstractStrategy implements IStrategy {
 				);
 				sourceTable = emptyResult(source);
 			} else {
-				connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
+				// A source that gave data before and still gives nothing after its retry did not answer either: the jobs
+				// reading it do not remove monitors
+				if (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable)) {
+					connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
+				} else {
+					connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
+				}
 				if (sourceTable.isEmpty()) {
 					log.warn(
 						"Hostname {} - Received empty source table for Source key {} - Connector {} - Monitor {}.",
@@ -412,18 +420,20 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	/**
 	 * The failure of a source that reads a failed source: a <code>copy</code>, a <code>tableJoin</code>, a
-	 * <code>tableUnion</code> or any <code>${source::...}</code> reference.
+	 * <code>tableUnion</code> or any <code>${source::...}</code> reference. Only a failure of this run counts: the table
+	 * of a source that failed in an earlier run is read as empty, so that two sources reading each other across runs
+	 * (a collect source and an afterAll source) do not keep failing once one of them failed.
 	 *
 	 * @param source             The source
 	 * @param connectorNamespace The namespace holding the tables of the sources
-	 * @return a failed source table, null when no source it reads failed
+	 * @return a failed source table, null when no source it reads failed during this run
 	 */
-	private static SourceTable failureOfReferences(final Source source, final ConnectorNamespace connectorNamespace) {
+	private SourceTable failureOfReferences(final Source source, final ConnectorNamespace connectorNamespace) {
 		for (final String reference : source.getReferences()) {
 			final Matcher matcher = SOURCE_REF_PATTERN.matcher(reference);
 			while (matcher.find()) {
 				final SourceTable table = connectorNamespace.getSourceTable(matcher.group());
-				if (table != null && table.isFailed()) {
+				if (table != null && table.isFailed() && Objects.equals(table.getFailedRun(), strategyTime)) {
 					return SourceTable.failed("%s failed: %s".formatted(matcher.group(), table.getError()));
 				}
 			}

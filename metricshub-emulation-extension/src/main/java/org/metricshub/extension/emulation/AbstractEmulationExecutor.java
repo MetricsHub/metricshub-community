@@ -93,14 +93,14 @@ public class AbstractEmulationExecutor {
 	) throws ClientException {
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - {} emulation input directory is not configured.", hostname, operations.protocolName());
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, "the emulation input directory is not configured");
 		}
 
 		final Path protocolDir = Path.of(emulationInputDirectory);
 		final Path indexFile = protocolDir.resolve(EMULATION_IMAGE_YAML);
 		if (!Files.isRegularFile(indexFile)) {
 			log.warn("Hostname {} - {} emulation index file not found: {}", hostname, operations.protocolName(), indexFile);
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, "index file not found: " + indexFile);
 		}
 
 		final I emulationImage;
@@ -115,7 +115,7 @@ public class AbstractEmulationExecutor {
 				e.getMessage()
 			);
 			log.debug("Hostname {} - {} emulation index parse error:", hostname, operations.protocolName(), e);
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, "index parse error: " + e.getMessage());
 		}
 
 		final List<E> entries = operations.extractEntries(emulationImage);
@@ -127,7 +127,7 @@ public class AbstractEmulationExecutor {
 				operations.protocolName(),
 				operations.describeRequest(context)
 			);
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, null);
 		}
 
 		final int index = roundRobinManager.nextIndex(
@@ -138,12 +138,12 @@ public class AbstractEmulationExecutor {
 		final String responseFileName = operations.extractResponseFileName(matchingEntries.get(index));
 		if (responseFileName == null || responseFileName.isBlank()) {
 			log.warn("Hostname {} - Matched {} emulation entry has no response file.", hostname, operations.protocolName());
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, "the matched entry has no response file");
 		}
 
 		final Path responseFile = EmulationPathHelper.resolveSecurely(protocolDir, responseFileName);
 		if (responseFile == null) {
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, "invalid response file " + responseFileName);
 		}
 		try {
 			final String content = readResponseFile(responseFile);
@@ -157,20 +157,28 @@ public class AbstractEmulationExecutor {
 				e.getMessage()
 			);
 			log.debug("Hostname {} - {} emulation response read error:", hostname, operations.protocolName(), e);
-			throw noResponse(operations, context);
+			throw noResponse(operations, context, "response file read error: " + e.getMessage());
 		}
 	}
 
 	/**
-	 * The failure of a request that has no recorded response.
+	 * The failure of a request whose recorded response cannot be replayed.
 	 *
 	 * @param operations protocol-specific operations
 	 * @param context    request context
+	 * @param reason     why the recording cannot be read, {@code null} when no entry matches the request
 	 * @return the exception to throw
 	 */
-	private static <C> ClientException noResponse(final ReplayOperations<?, ?, C, ?> operations, final C context) {
+	private static <C> ClientException noResponse(
+		final ReplayOperations<?, ?, C, ?> operations,
+		final C context,
+		final String reason
+	) {
+		final String request = operations.describeRequest(context);
 		return new ClientException(
-			"No recorded %s response for %s.".formatted(operations.protocolName(), operations.describeRequest(context))
+			reason == null
+				? "No recorded %s response for %s.".formatted(operations.protocolName(), request)
+				: "Cannot replay the %s response for %s: %s.".formatted(operations.protocolName(), request, reason)
 		);
 	}
 

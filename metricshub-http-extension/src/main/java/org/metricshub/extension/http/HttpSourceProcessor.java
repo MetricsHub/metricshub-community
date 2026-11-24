@@ -96,7 +96,7 @@ public class HttpSourceProcessor {
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
-		final String request = String.format("HTTP %s %s", httpSource.getMethod(), httpSource.getUrl());
+		final String request = describe(httpSource);
 		final SourceTable result = execute(
 			httpSource,
 			connectorId,
@@ -183,14 +183,23 @@ public class HttpSourceProcessor {
 					.build()
 			);
 		} catch (Exception e) {
-			LoggingHelper.logSourceError(
-				connectorId,
-				httpSource.getKey(),
-				String.format("HTTP %s %s", httpSource.getMethod(), httpSource.getUrl()),
-				hostname,
-				e
-			);
+			LoggingHelper.logSourceError(connectorId, httpSource.getKey(), describe(httpSource), hostname, e);
 			return onError.apply(e);
 		}
+	}
+
+	/**
+	 * Names the request of the given source for the logs and the error of the source: its method and its URL, or its
+	 * path, which most connectors give instead.
+	 *
+	 * @param httpSource The {@link HttpSource} defining HTTP request.
+	 * @return e.g. <code>HTTP GET /redfish/v1/Systems</code>
+	 */
+	private static String describe(final HttpSource httpSource) {
+		return String.format(
+			"HTTP %s %s",
+			httpSource.getMethod(),
+			httpSource.getUrl() != null ? httpSource.getUrl() : httpSource.getPath()
+		);
 	}
 }

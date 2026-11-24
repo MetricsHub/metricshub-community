@@ -137,7 +137,7 @@ class EmulationWmiRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
-		assertThrows(
+		final ClientException e = assertThrows(
 			ClientException.class,
 			() -> executor.executeWmi(
 				HOSTNAME,
@@ -148,6 +148,7 @@ class EmulationWmiRequestExecutorTest {
 				null
 			)
 		);
+		assertTrue(e.getMessage().startsWith("No recorded WMI response for "), e.getMessage());
 
 	}
 
@@ -181,7 +182,7 @@ class EmulationWmiRequestExecutorTest {
 
 	@Test
 	void testExecuteWmiFailsWhenDirectoryNotConfigured() throws ClientException {
-		assertThrows(
+		final ClientException e = assertThrows(
 			ClientException.class,
 			() -> executor.executeWmi(
 				HOSTNAME,
@@ -192,12 +193,13 @@ class EmulationWmiRequestExecutorTest {
 				null
 			)
 		);
+		assertTrue(e.getMessage().endsWith(": the emulation input directory is not configured."), e.getMessage());
 
 	}
 
 	@Test
 	void testExecuteWmiFailsWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
-		assertThrows(
+		final ClientException e = assertThrows(
 			ClientException.class,
 			() -> executor.executeWmi(
 				HOSTNAME,
@@ -208,6 +210,7 @@ class EmulationWmiRequestExecutorTest {
 				null
 			)
 		);
+		assertTrue(e.getMessage().contains(": index file not found: "), e.getMessage());
 
 	}
 
@@ -215,7 +218,7 @@ class EmulationWmiRequestExecutorTest {
 	void testExecuteWmiFailsWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), "invalid: yaml: [[[", StandardCharsets.UTF_8);
 
-		assertThrows(
+		final ClientException e = assertThrows(
 			ClientException.class,
 			() -> executor.executeWmi(
 				HOSTNAME,
@@ -226,6 +229,7 @@ class EmulationWmiRequestExecutorTest {
 				null
 			)
 		);
+		assertTrue(e.getMessage().contains(": index parse error: "), e.getMessage());
 
 	}
 

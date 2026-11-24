@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongFunction;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
@@ -1144,7 +1145,9 @@ class AbstractStrategyTest {
 	void testSourceReadingAFailedSourceFails() {
 		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
-		namespace.addSourceTable("${source::a}", SourceTable.failed("SNMP Table: 1.3: timeout"));
+		final SourceTable failed = SourceTable.failed("SNMP Table: 1.3: timeout");
+		failed.setFailedRun(STRATEGY_TIME);
+		namespace.addSourceTable("${source::a}", failed);
 		final CopySource copy = CopySource.builder().from("${source::a}").key("${source::b}").build();
 		copy.setReferences(Set.of("${source::a}"));
 		final SimpleStrategy strategy = SimpleStrategy.builder()
@@ -1164,6 +1167,43 @@ class AbstractStrategyTest {
 		copy.setContinueOnFailure(true);
 		assertNull(strategy.processSourcesAndComputes(List.of(copy), SIMPLE_JOB));
 		assertEquals(SourceTable.empty(), namespace.getSourceTable("${source::b}"));
+	}
+
+	@Test
+	void testFailureOfAnEarlierRunDoesNotPropagate() {
+		// A collect source and an afterAll source that read each other across runs
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(HttpSource.class)).when(extension).getSupportedSources();
+		doReturn(SourceTable.failed("HTTP GET /x: status 500"), SourceTable.ofText("x")).when(extension)
+			.processSource(any(HttpSource.class), anyString(), any());
+		final HttpSource collect = HttpSource.builder().url("/x?since=${source::y}").key("${source::x}").build();
+		collect.setReferences(Set.of("/x?since=${source::y}"));
+		final CopySource afterAll = CopySource.builder().from("${source::x}").key("${source::y}").build();
+		afterAll.setReferences(Set.of("${source::x}"));
+		final LongFunction<SimpleStrategy> run = time -> SimpleStrategy.builder()
+			.strategyTime(time)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+
+		// The collect source fails, and the afterAll source that reads it during the same run fails as well
+		final SimpleStrategy firstRun = run.apply(STRATEGY_TIME);
+		assertEquals("HTTP GET /x: status 500", firstRun.processSourcesAndComputes(List.of(collect), SIMPLE_JOB));
+		assertEquals(
+			"${source::x} failed: HTTP GET /x: status 500",
+			firstRun.processSourcesAndComputes(List.of(afterAll), SIMPLE_JOB)
+		);
+
+		// The next run sends the request of the collect source again: the failure of the afterAll source is the one of
+		// an earlier run
+		final SimpleStrategy nextRun = run.apply(STRATEGY_TIME + 1);
+		assertNull(nextRun.processSourcesAndComputes(List.of(collect), SIMPLE_JOB));
+		assertNull(nextRun.processSourcesAndComputes(List.of(afterAll), SIMPLE_JOB));
+		assertEquals(SourceTable.ofText("x"), namespace.getSourceTable("${source::y}"));
 	}
 
 	private TelemetryManager newInterruptibleTelemetryManager() {

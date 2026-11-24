@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
@@ -626,6 +627,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		// request, and wakes this thread up when it ends
 		final Thread coordinator = Thread.currentThread();
 		final BooleanSupplier cancelled = ThreadHelper.cancellation();
+		// The failure of a parallel entry: the queued entries send no request, the running ones are awaited
+		final AtomicReference<SourceTable> failure = new AtomicReference<>();
 
 		try {
 			for (List<String> row : table) {
@@ -663,7 +666,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				if (pool != null) {
 					pendingRows.add(row);
 					final FutureTask<SourceTable> pendingResult = new FutureTask<>(
-						() -> cancelled.getAsBoolean() ? SourceTable.empty() : copy.accept(sourceProcessor)
+						() -> cancelled.getAsBoolean() || failure.get() != null ? SourceTable.empty() : copy.accept(sourceProcessor)
 					) {
 						@Override
 						protected void done() {
@@ -676,9 +679,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					continue;
 				}
 
-				final SourceTable failure = concatEntryResult(source, result, row, copy.accept(sourceProcessor));
-				if (failure != null) {
-					return failure;
+				failure.set(concatEntryResult(source, result, row, copy.accept(sourceProcessor)));
+				if (failure.get() != null) {
+					return failure.get();
 				}
 				if (sleep != null && sleep != 0) {
 					try {
@@ -707,10 +710,14 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					);
 					return SourceTable.empty();
 				}
-				final SourceTable failure = concatEntryResult(source, result, pendingRows.get(i), pendingResult.get());
-				if (failure != null) {
-					return failure;
+				// After a failed entry, the entries still running end before the source fails: the afterAll may close the
+				// session they use
+				if (failure.get() == null) {
+					failure.set(concatEntryResult(source, result, pendingRows.get(i), pendingResult.get()));
 				}
+			}
+			if (failure.get() != null) {
+				return failure.get();
 			}
 		} catch (InterruptedException e) {
 			// Future.get of a completed task does not wait

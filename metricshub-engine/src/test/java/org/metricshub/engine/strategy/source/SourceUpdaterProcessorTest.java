@@ -41,6 +41,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -328,6 +330,26 @@ class SourceUpdaterProcessorTest {
 		final boolean forceSerialization,
 		final Answer<SourceTable> answer
 	) {
+		return runForEachEntry(executeForEachEntryOf, sequentialHost, forceSerialization, false, answer);
+	}
+
+	/**
+	 * Run an HTTP source with {@code path: $1} for each of the 4 entries "a", "b", "c" and "d".
+	 *
+	 * @param executeForEachEntryOf The executeForEachEntryOf definition (its source is overridden)
+	 * @param sequentialHost        Whether the host is configured as sequential
+	 * @param forceSerialization    Whether the source forces serialization
+	 * @param continueOnFailure     Whether the source continues on failure
+	 * @param answer                Answer returning the result of each entry
+	 * @return The concatenated result
+	 */
+	private SourceTable runForEachEntry(
+		final ExecuteForEachEntryOf executeForEachEntryOf,
+		final boolean sequentialHost,
+		final boolean forceSerialization,
+		final boolean continueOnFailure,
+		final Answer<SourceTable> answer
+	) {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder()
@@ -351,6 +373,7 @@ class SourceUpdaterProcessorTest {
 			.url(URL)
 			.path("$1")
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.executeForEachEntryOf(executeForEachEntryOf)
 			.build();
 
@@ -699,6 +722,41 @@ class SourceUpdaterProcessorTest {
 			})
 		);
 		assertEquals("boom", thrown.getMessage());
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryParallelFailedEntry() {
+		// Two workers: a fails at once, b and c take 200 ms, d is queued until b ends
+		final Set<String> requested = ConcurrentHashMap.newKeySet();
+		final AtomicBoolean bEnded = new AtomicBoolean();
+		final Answer<SourceTable> answer = invocation -> {
+			final String entry = invocation.<HttpSource>getArgument(0).getPath();
+			requested.add(entry);
+			if ("a".equals(entry)) {
+				return SourceTable.failed("Refused");
+			}
+			Thread.sleep(200);
+			bEnded.compareAndSet(false, "b".equals(entry));
+			return SourceTable.ofText("result-" + entry);
+		};
+		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
+			.source(ENCLOSURE_COLLECT_SOURCE_1)
+			.maxParallel(2)
+			.build();
+
+		// The source fails once the entries still running have ended: the queued entries send no request
+		assertEquals(
+			SourceTable.failed("Entry [a]: Refused"),
+			runForEachEntry(executeForEachEntryOf, false, false, false, answer)
+		);
+		assertTrue(bEnded.get());
+		assertFalse(requested.contains("d"));
+
+		// With continueOnFailure, the failed entry is skipped
+		assertEquals(
+			SourceTable.ofText("result-b\nresult-c\nresult-d"),
+			runForEachEntry(executeForEachEntryOf, false, false, true, answer)
+		);
 	}
 
 	@Test
