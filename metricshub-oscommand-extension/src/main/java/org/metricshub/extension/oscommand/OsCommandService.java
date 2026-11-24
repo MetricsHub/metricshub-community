@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,7 +50,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import lombok.NoArgsConstructor;
@@ -61,6 +61,7 @@ import org.metricshub.engine.common.exception.NoCredentialProvidedException;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper.StartGate;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -374,11 +375,14 @@ public class OsCommandService {
 		final DeviceKind hostType
 	) throws ClientException, InterruptedException, ControlledSshException {
 		isTrue(timeout > 0, NEGATIVE_TIMEOUT);
-		// Set once the permit is obtained: an interrupt that follows cuts short a request that was sent
-		final AtomicBoolean sent = new AtomicBoolean();
+		// Started once the permit is obtained: an interrupt that follows cuts short a request that was sent, one that
+		// wins the race sends nothing
+		final StartGate sent = new StartGate();
 		try {
 			return runControlledSshCommand(() -> {
-				sent.set(true);
+				if (!sent.start()) {
+					throw new CancellationException("Interrupted before the SSH command was sent");
+				}
 				try {
 					return OsCommandRequestExecutor.runRemoteSshCommand(
 						hostname,
@@ -399,7 +403,7 @@ public class OsCommandService {
 		} catch (final ClientRuntimeException e) {
 			throw (ClientException) e.getCause();
 		} catch (final InterruptedException e) {
-			if (sent.get()) {
+			if (!sent.abandon()) {
 				// The request was cut short (a timeout), not the wait for a permit; the interrupt status is kept
 				throw new ClientException(String.format("Hostname %s - SSH command interrupted.", hostname), e);
 			}

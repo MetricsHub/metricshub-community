@@ -172,7 +172,7 @@ public class ClientsExecutor {
 			return null;
 		};
 
-		String result = ThreadHelper.execute(jflatToCSV, JSON_2_CSV_TIMEOUT);
+		String result = ThreadHelper.executeLocally(jflatToCSV, JSON_2_CSV_TIMEOUT);
 
 		LoggingHelper.trace(
 			() -> log.trace(

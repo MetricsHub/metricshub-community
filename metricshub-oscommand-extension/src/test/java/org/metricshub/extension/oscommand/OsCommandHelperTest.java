@@ -3,6 +3,7 @@ package org.metricshub.extension.oscommand;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -36,11 +37,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -515,6 +518,47 @@ class OsCommandHelperTest {
 				RESULT,
 				osCommandService.runSshCommand(CMD, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 			);
+		}
+	}
+
+	@Test
+	void testRunSshCommandPermitObtainedAfterTheInterruptSendsNothing() throws Exception {
+		final SshConfiguration sshConfiguration = mock(SshConfiguration.class);
+		final OsCommandService osCommandService = spy(new OsCommandService());
+		// The caller is interrupted, then the worker obtains its permit: the race lost by the worker
+		final AtomicReference<Supplier<?>> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			worker.set(invocation.getArgument(0));
+			throw new InterruptedException();
+		}).when(osCommandService).runControlledSshCommand(any(), anyString(), anyInt());
+
+		try (final MockedStatic<OsCommandRequestExecutor> requestExecutor = mockStatic(OsCommandRequestExecutor.class)) {
+			// A bare InterruptedException: nothing was sent, so nothing is counted
+			assertThrows(
+				InterruptedException.class,
+				() -> osCommandService.runSshCommand(CMD, HOST, sshConfiguration, 1000, null, null, DeviceKind.LINUX)
+			);
+			assertThrows(CancellationException.class, () -> worker.get().get());
+			requestExecutor.verifyNoInteractions();
+		}
+	}
+
+	@Test
+	void testRunSshCommandInterruptedOnceSentIsCutShort() throws Exception {
+		final SshConfiguration sshConfiguration = mock(SshConfiguration.class);
+		final OsCommandService osCommandService = spy(new OsCommandService());
+		// The worker sends the command, then the caller is interrupted: a request cut short
+		doAnswer(invocation -> {
+			((Supplier<?>) invocation.getArgument(0)).get();
+			throw new InterruptedException();
+		}).when(osCommandService).runControlledSshCommand(any(), anyString(), anyInt());
+
+		try (final MockedStatic<OsCommandRequestExecutor> requestExecutor = mockStatic(OsCommandRequestExecutor.class)) {
+			final ClientException exception = assertThrows(
+				ClientException.class,
+				() -> osCommandService.runSshCommand(CMD, HOST, sshConfiguration, 1000, null, null, DeviceKind.LINUX)
+			);
+			assertInstanceOf(InterruptedException.class, exception.getCause());
 		}
 	}
 

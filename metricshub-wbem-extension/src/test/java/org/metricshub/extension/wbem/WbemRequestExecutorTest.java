@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper.NotStartedException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
@@ -308,11 +309,24 @@ class WbemRequestExecutorTest {
 
 			// ThreadHelper fails the vCenter ticket request before sending
 			final TelemetryManager telemetryManager = buildTelemetryManager();
-			executeVCenterTicketFailure(telemetryManager, stubbing -> stubbing.thenThrow(new InterruptedException()));
+			executeVCenterTicketFailure(
+				telemetryManager,
+				stubbing -> stubbing.thenThrow(new NotStartedException("Interrupted before the task started"))
+			);
 			assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
 		} finally {
 			Thread.interrupted();
 		}
+	}
+
+	@Test
+	void testVCenterTicketTimedOutBeforeItStartedCountsNothing() {
+		// The worker never got to the ticket request before the timeout: nothing was sent
+		final TimeoutException notStarted = new TimeoutException();
+		notStarted.initCause(new NotStartedException("Timed out before the task started"));
+		final TelemetryManager telemetryManager = buildTelemetryManager();
+		executeVCenterTicketFailure(telemetryManager, stubbing -> stubbing.thenThrow(notStarted));
+		assertTrue(telemetryManager.getRequestStats().snapshot().isEmpty());
 	}
 
 	@Test
@@ -415,6 +429,7 @@ class WbemRequestExecutorTest {
 			MockedStatic<ThreadHelper> threadHelperMock = mockStatic(ThreadHelper.class)
 		) {
 			ticketStubbing.accept(threadHelperMock.when(() -> ThreadHelper.execute(any(), anyLong())));
+			threadHelperMock.when(() -> ThreadHelper.neverStarted(any())).thenCallRealMethod();
 			final ClientException thrown = assertThrows(
 				ClientException.class,
 				() -> wbemRequestExecutor.executeWbem(

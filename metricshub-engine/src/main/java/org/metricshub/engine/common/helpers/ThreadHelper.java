@@ -76,36 +76,78 @@ public class ThreadHelper {
 
 	/**
 	 * Executes a {@link Callable} task with a specified timeout using a dedicated single-thread executor. On timeout
-	 * or interruption, the task is cancelled (its thread is interrupted).
+	 * or interruption, the task is cancelled (its thread is interrupted) and, if it started, given up on (see
+	 * {@link #trackingAbandonedRequests(Collection, Supplier)}).
 	 *
 	 * @param <T>      the type of the result returned by the {@code callable}
 	 * @param callable the task to be executed
 	 * @param timeout  the maximum time to wait for the task to complete, in seconds
 	 * @return the result of the executed task
-	 * @throws InterruptedException if the current thread was interrupted before the task started (the task is never
-	 *                              submitted) or while waiting; its interrupt status is kept
+	 * @throws InterruptedException if the current thread was interrupted before the task started (a
+	 *                              {@link NotStartedException}) or while waiting; its interrupt status is kept
 	 * @throws ExecutionException   if the computation threw an exception
-	 * @throws TimeoutException     if the wait timed out
+	 * @throws TimeoutException     if the wait timed out, caused by a {@link NotStartedException} when the task never
+	 *                              started
 	 */
 	public static <T> T execute(final Callable<T> callable, final long timeout) throws InterruptedException,
 		ExecutionException, TimeoutException {
+		return execute(callable, timeout, true);
+	}
+
+	/**
+	 * {@link #execute(Callable, long)} for a local computation, which never talks to a device: given up on, it is not
+	 * tracked by {@link #trackingAbandonedRequests(Collection, Supplier)}, so it never holds back the next request.
+	 *
+	 * @param <T>         the type of the result of the computation
+	 * @param computation the computation
+	 * @param timeout     the maximum time to wait for the computation to complete, in seconds
+	 * @return the result of the computation
+	 * @throws InterruptedException see {@link #execute(Callable, long)}
+	 * @throws ExecutionException   see {@link #execute(Callable, long)}
+	 * @throws TimeoutException     see {@link #execute(Callable, long)}
+	 */
+	public static <T> T executeLocally(final Callable<T> computation, final long timeout) throws InterruptedException,
+		ExecutionException, TimeoutException {
+		return execute(computation, timeout, false);
+	}
+
+	/**
+	 * See {@link #execute(Callable, long)}.
+	 *
+	 * @param <T>      the type of the result returned by the {@code callable}
+	 * @param callable the task to be executed
+	 * @param timeout  the maximum time to wait for the task to complete, in seconds
+	 * @param tracked  whether a task given up on is tracked, see {@link #trackingAbandonedRequests(Collection, Supplier)}
+	 * @return the result of the executed task
+	 * @throws InterruptedException see {@link #execute(Callable, long)}
+	 * @throws ExecutionException   see {@link #execute(Callable, long)}
+	 * @throws TimeoutException     see {@link #execute(Callable, long)}
+	 */
+	private static <T> T execute(final Callable<T> callable, final long timeout, final boolean tracked)
+		throws InterruptedException, ExecutionException, TimeoutException {
 		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for
 		if (isCancelled()) {
 			throw new NotStartedException("Interrupted before the task started");
 		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
-			final Future<T> future = executor.submit(callable);
+			final StartGate gate = new StartGate();
+			final Future<T> future = executor.submit(gate.guard(callable));
 			try {
 				return future.get(timeout, TimeUnit.SECONDS);
 			} catch (TimeoutException e) {
 				future.cancel(true);
 				log.debug("Task timed out after {} seconds and was cancelled.", timeout);
+				if (gate.abandon()) {
+					// The worker never got to the task (a timeout of 0, a loaded host): nothing was sent
+					e.initCause(new NotStartedException("Timed out before the task started"));
+				} else if (tracked) {
+					// A task that ignores the interrupt may still be running on the device
+					abandon(executor);
+				}
 				throw e;
 			} catch (InterruptedException e) {
-				future.cancel(true);
-				Thread.currentThread().interrupt();
-				throw e;
+				throw cancel(future, gate, tracked ? executor : null, e);
 			}
 		} finally {
 			executor.shutdownNow();
@@ -113,8 +155,80 @@ public class ThreadHelper {
 	}
 
 	/**
+	 * Cancels the task of an interrupted caller: an {@link InterruptedException} as is when the task started, which is
+	 * given up on (see {@link #trackingAbandonedRequests(Collection, Supplier)}), a {@link NotStartedException} when it
+	 * never will. The interrupt status of the caller is restored.
+	 *
+	 * @param future    the task
+	 * @param gate      the gate of the task
+	 * @param executor  the executor running the task, {@code null} when a task given up on is not tracked
+	 * @param exception the interrupt of the caller
+	 * @return the exception to throw
+	 */
+	private static InterruptedException cancel(
+		final Future<?> future,
+		final StartGate gate,
+		final ExecutorService executor,
+		final InterruptedException exception
+	) {
+		future.cancel(true);
+		Thread.currentThread().interrupt();
+		if (gate.abandon()) {
+			return new NotStartedException("Interrupted before the task started");
+		}
+		if (executor != null) {
+			abandon(executor);
+		}
+		return exception;
+	}
+
+	/**
+	 * Settles, once, the race between a request that starts on another thread and its caller that gives up on it: either
+	 * {@link #start()} or {@link #abandon()} wins. A request whose caller won sends nothing, and its caller counts
+	 * nothing.
+	 */
+	public static final class StartGate {
+
+		private static final int PENDING = 0;
+		private static final int STARTED = 1;
+		private static final int ABANDONED = 2;
+
+		private final AtomicInteger state = new AtomicInteger(PENDING);
+
+		/**
+		 * Called by the request right before it sends anything.
+		 *
+		 * @return {@code true} if the request may go on, {@code false} if its caller already gave up on it
+		 */
+		public boolean start() {
+			return state.compareAndSet(PENDING, STARTED);
+		}
+
+		/**
+		 * Called by the caller that gives up on the request.
+		 *
+		 * @return {@code true} if the request never started and never will, {@code false} if it started
+		 */
+		public boolean abandon() {
+			return state.compareAndSet(PENDING, ABANDONED) || state.get() == ABANDONED;
+		}
+
+		/**
+		 * The given task, run only if its caller did not give up on it before it started.
+		 *
+		 * @param <T>  the type of the result of the task
+		 * @param task the task
+		 * @return the guarded task, which returns {@code null} without running the task once given up on
+		 */
+		<T> Callable<T> guard(final Callable<T> task) {
+			return () -> start() ? task.call() : null;
+		}
+	}
+
+	/**
 	 * The {@link InterruptedException} of {@link #execute(Callable, long)} and {@link #executeInterruptibly(Callable)}
-	 * when their caller is already cancelled: the request never started, so nothing was sent and nothing is counted.
+	 * when their caller is cancelled before the request started, or the cause of the {@link TimeoutException} of
+	 * {@link #execute(Callable, long)} when its task never started: nothing was sent and nothing is counted.
 	 */
 	public static final class NotStartedException extends InterruptedException {
 
@@ -125,7 +239,7 @@ public class ThreadHelper {
 		 *
 		 * @param message the message
 		 */
-		NotStartedException(final String message) {
+		public NotStartedException(final String message) {
 			super(message);
 		}
 	}
@@ -147,8 +261,9 @@ public class ThreadHelper {
 	}
 
 	/**
-	 * Where {@link #executeInterruptibly(Callable)} and {@link #closeInterruptibly(Runnable)} put, on the current
-	 * thread, the request they gave up on because their caller was interrupted. Null when nobody tracks them.
+	 * Where {@link #execute(Callable, long)}, {@link #executeInterruptibly(Callable)} and
+	 * {@link #closeInterruptibly(Runnable)} put, on the current thread, the request they gave up on because their caller
+	 * was interrupted or the request timed out. Null when nobody tracks them.
 	 */
 	private static final ThreadLocal<Collection<ExecutorService>> ABANDONED = new ThreadLocal<>();
 
@@ -161,8 +276,8 @@ public class ThreadHelper {
 	 * @param <T>     the type of the result of the request
 	 * @param request the request, which must not write any engine state
 	 * @return the result of the request
-	 * @throws InterruptedException if the caller was interrupted before the request started (the request is never
-	 *                              submitted) or while waiting; its interrupt status is kept
+	 * @throws InterruptedException if the caller was interrupted before the request started (a
+	 *                              {@link NotStartedException}) or while waiting; its interrupt status is kept
 	 * @throws ExecutionException   if the request threw an exception, its cause
 	 */
 	public static <T> T executeInterruptibly(final Callable<T> request) throws InterruptedException, ExecutionException {
@@ -172,14 +287,12 @@ public class ThreadHelper {
 		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
-			final Future<T> future = executor.submit(request);
+			final StartGate gate = new StartGate();
+			final Future<T> future = executor.submit(gate.guard(request));
 			try {
 				return future.get();
 			} catch (InterruptedException e) {
-				future.cancel(true);
-				abandon(executor);
-				Thread.currentThread().interrupt();
-				throw e;
+				throw cancel(future, gate, executor, e);
 			}
 		} finally {
 			executor.shutdownNow();
@@ -188,8 +301,8 @@ public class ThreadHelper {
 
 	/**
 	 * Runs the given body with the given sink receiving, as an {@link ExecutorService} that terminates when the request
-	 * ends, every request that {@link #executeInterruptibly(Callable)} or {@link #closeInterruptibly(Runnable)} gives
-	 * up on in the current thread. The previous sink is restored afterwards, so calls can be nested.
+	 * ends, every request that {@link #execute(Callable, long)}, {@link #executeInterruptibly(Callable)} or
+	 * {@link #closeInterruptibly(Runnable)} gives up on in the current thread. The previous sink is restored afterwards, so calls can be nested.
 	 *
 	 * @param <T>  the type of the result of the body
 	 * @param sink the collection receiving the abandoned requests

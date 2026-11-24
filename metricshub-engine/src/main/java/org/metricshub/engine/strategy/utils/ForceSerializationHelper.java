@@ -156,7 +156,7 @@ public class ForceSerializationHelper {
 				result = ThreadHelper.trackingAbandonedRequests(requestsInFlight, executable);
 			} else if (isLockAcquired) {
 				log.error(
-					"Hostname {} - A request of a job cut short is still running on the device: could not process {} {}. Connector: {}.",
+					"Hostname {} - A previous request (timed out or cut short) is still running on the device: could not process {} {}. Connector: {}.",
 					hostname,
 					description,
 					objToProcess,

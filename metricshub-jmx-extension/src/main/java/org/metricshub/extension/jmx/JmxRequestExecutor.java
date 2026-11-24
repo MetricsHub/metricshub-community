@@ -148,16 +148,14 @@ public class JmxRequestExecutor {
 		final long timeout,
 		final RequestStats requestStats
 	) throws Exception {
-		// A thread already interrupted (an expired deadline of its job) fails before sending anything
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		final JmxAttempt<T> attempt;
 		try {
 			attempt = ThreadHelper.execute(request, timeout);
 		} catch (Exception e) {
-			// TimeoutException and InterruptedException count as timeout, an ExecutionException as failed
-			final RequestOutcome outcome = RequestOutcome.of(e);
-			if (!(interruptedBefore && outcome == RequestOutcome.TIMEOUT)) {
-				record(requestStats, outcome);
+			// TimeoutException and InterruptedException count as timeout, an ExecutionException as failed, and a request
+			// cancelled before it started (an expired deadline of its job) sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				record(requestStats, RequestOutcome.of(e));
 			}
 			throw e;
 		}

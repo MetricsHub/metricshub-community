@@ -239,7 +239,6 @@ public class WbemRequestExecutor {
 		final long timeout,
 		final RequestStats requestStats
 	) throws InterruptedException, ExecutionException, TimeoutException {
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
 		final String ticket;
 		try {
 			ticket = ThreadHelper.execute(
@@ -248,7 +247,7 @@ public class WbemRequestExecutor {
 			);
 		} catch (Exception e) {
 			if (!(e instanceof ExecutionException && e.getCause() instanceof MalformedURLException)) {
-				recordError(requestStats, e, interruptedBefore);
+				recordError(requestStats, e);
 			}
 			throw e;
 		}
@@ -269,17 +268,15 @@ public class WbemRequestExecutor {
 	}
 
 	/**
-	 * Records the outcome of a WBEM request attempt that threw, except the interruption of a thread that was already
-	 * interrupted (an expired deadline of its job) when the attempt began: nothing was sent.
+	 * Records the outcome of a WBEM request attempt that threw, except a request cancelled before it started (an
+	 * expired deadline of its job): nothing was sent.
 	 *
-	 * @param requestStats      The request statistics of the resource, or {@code null} to record nothing.
-	 * @param e                 The exception thrown by the attempt.
-	 * @param interruptedBefore Whether the calling thread was interrupted when the attempt began.
+	 * @param requestStats The request statistics of the resource, or {@code null} to record nothing.
+	 * @param e            The exception thrown by the attempt.
 	 */
-	private static void recordError(final RequestStats requestStats, final Exception e, final boolean interruptedBefore) {
-		final RequestOutcome outcome = RequestOutcome.of(e);
-		if (!(interruptedBefore && outcome == RequestOutcome.TIMEOUT)) {
-			record(requestStats, outcome);
+	private static void recordError(final RequestStats requestStats, final Exception e) {
+		if (!ThreadHelper.neverStarted(e)) {
+			record(requestStats, RequestOutcome.of(e));
 		}
 	}
 

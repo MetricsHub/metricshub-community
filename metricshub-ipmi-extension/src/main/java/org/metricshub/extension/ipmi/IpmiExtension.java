@@ -359,6 +359,8 @@ public class IpmiExtension implements IProtocolExtension {
 		final RequestStats requestStats = telemetryManager.getRequestStats();
 		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for:
 		// ipmi-java submits the request to its worker before it waits
+		// ponytail: an interrupt that comes after this check but before the ipmi-java worker starts the request counts a
+		// timeout for a request never sent; only ipmi-java knows (a start gate there, like ThreadHelper.StartGate)
 		if (Thread.currentThread().isInterrupted()) {
 			throw new IpmiClientException("Interrupted before the IPMI request started", new InterruptedException());
 		}

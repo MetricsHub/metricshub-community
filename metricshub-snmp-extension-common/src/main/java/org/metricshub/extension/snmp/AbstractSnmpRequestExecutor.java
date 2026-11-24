@@ -277,9 +277,6 @@ public abstract class AbstractSnmpRequestExecutor {
 		// Hands the client over from the worker to this thread: whoever comes second frees it
 		final AtomicReference<Object> clientRef = new AtomicReference<>();
 
-		// A thread already interrupted (an expired deadline of its job) fails before sending anything
-		final boolean interruptedBefore = Thread.currentThread().isInterrupted();
-
 		final Callable<T> callable = () -> {
 			final ISnmpClient snmpClient = createSnmpClient(protocol, hostname);
 			if (!clientRef.compareAndSet(null, snmpClient)) {
@@ -312,7 +309,8 @@ public abstract class AbstractSnmpRequestExecutor {
 			recordRequest(requestStats, RequestOutcome.COMPLETED);
 			return result;
 		} catch (TimeoutException | InterruptedException e) {
-			if (!interruptedBefore) {
+			// A request cancelled before it started (an expired deadline of its job) sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
 				recordRequest(requestStats, RequestOutcome.TIMEOUT);
 			}
 			throw e;

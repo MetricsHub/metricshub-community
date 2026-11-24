@@ -2,6 +2,7 @@ package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import org.metricshub.engine.common.helpers.ThreadHelper.StartGate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -199,9 +201,10 @@ class ThreadHelperTest {
 	}
 
 	@Test
-	void testExecuteNeverTracksTheRequest() {
+	void testExecuteTracksTheRequestOfAnInterruptedCaller() throws Exception {
 		final CountDownLatch release = new CountDownLatch(1);
 		final List<ExecutorService> sink = new CopyOnWriteArrayList<>();
+		final AtomicBoolean started = new AtomicBoolean(true);
 		try {
 			interruptMeAfter(100);
 			ThreadHelper.trackingAbandonedRequests(sink, () -> {
@@ -210,15 +213,91 @@ class ThreadHelperTest {
 						awaitSwallowingInterrupts(release);
 						return "late";
 					}, 30);
+				} catch (InterruptedException e) {
+					started.set(!ThreadHelper.neverStarted(e));
+					return null;
+				} catch (ExecutionException | TimeoutException e) {
+					return null;
+				}
+			});
+			assertTrue(started.get());
+			assertEquals(1, sink.size());
+			assertFalse(sink.get(0).isTerminated(), "The request is still running");
+		} finally {
+			Thread.interrupted();
+			release.countDown();
+		}
+		assertTrue(sink.get(0).awaitTermination(5, TimeUnit.SECONDS), "Terminates when the request ends");
+	}
+
+	@Test
+	void testExecuteTracksTheRequestThatTimedOut() throws Exception {
+		final CountDownLatch release = new CountDownLatch(1);
+		final List<ExecutorService> sink = new CopyOnWriteArrayList<>();
+		final AtomicBoolean timedOut = new AtomicBoolean();
+		try {
+			ThreadHelper.trackingAbandonedRequests(sink, () -> {
+				try {
+					return ThreadHelper.execute(() -> {
+						awaitSwallowingInterrupts(release);
+						return "late";
+					}, 1);
+				} catch (TimeoutException e) {
+					timedOut.set(true);
+					return null;
+				} catch (InterruptedException | ExecutionException e) {
+					return null;
+				}
+			});
+			assertTrue(timedOut.get());
+			assertEquals(1, sink.size());
+			assertFalse(sink.get(0).isTerminated(), "The request is still running");
+		} finally {
+			release.countDown();
+		}
+		assertTrue(sink.get(0).awaitTermination(5, TimeUnit.SECONDS), "Terminates when the request ends");
+	}
+
+	@Test
+	void testExecuteLocallyNeverTracksTheComputation() {
+		final CountDownLatch release = new CountDownLatch(1);
+		final List<ExecutorService> sink = new CopyOnWriteArrayList<>();
+		try {
+			ThreadHelper.trackingAbandonedRequests(sink, () -> {
+				try {
+					return ThreadHelper.executeLocally(() -> {
+						awaitSwallowingInterrupts(release);
+						return "late";
+					}, 1);
 				} catch (InterruptedException | ExecutionException | TimeoutException e) {
 					return null;
 				}
 			});
 			assertTrue(sink.isEmpty());
 		} finally {
-			Thread.interrupted();
 			release.countDown();
 		}
+	}
+
+	@Test
+	void testStartGateSettlesTheRaceOnce() throws Exception {
+		// The request starts first: the caller cuts short a request that was sent
+		final StartGate sent = new StartGate();
+		assertTrue(sent.start());
+		assertFalse(sent.abandon());
+		assertFalse(sent.start());
+
+		// The caller gives up first: the request never runs, whenever its thread gets to it
+		final StartGate abandoned = new StartGate();
+		assertTrue(abandoned.abandon());
+		assertTrue(abandoned.abandon());
+		assertFalse(abandoned.start());
+		final AtomicBoolean ran = new AtomicBoolean();
+		assertNull(abandoned.guard(() -> {
+			ran.set(true);
+			return "sent";
+		}).call());
+		assertFalse(ran.get());
 	}
 
 	@Test
