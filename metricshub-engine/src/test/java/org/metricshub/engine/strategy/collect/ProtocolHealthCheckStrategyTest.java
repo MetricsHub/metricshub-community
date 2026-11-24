@@ -3,13 +3,15 @@ package org.metricshub.engine.strategy.collect;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.engine.constants.Constants.HOSTNAME;
 import static org.metricshub.engine.strategy.AbstractStrategy.HOST_OBSERVED_METRIC_NAME;
 import static org.mockito.ArgumentMatchers.any;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.List;
@@ -118,6 +120,37 @@ class ProtocolHealthCheckStrategyTest {
 			ProtocolHealthCheckStrategy.UP,
 			telemetryManager.getEndpointHostMonitor().getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue()
 		);
+	}
+
+	@Test
+	void testInterruptedCheckReportsNothing() {
+		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(protocolExtensionMock, additionalProtocolExtensionMock))
+			.build();
+		final TestConfiguration configuration = (TestConfiguration) telemetryManager.getHostConfiguration()
+			.getConfigurations()
+			.get(TestConfiguration.class);
+		doReturn(true).when(protocolExtensionMock).isValidConfiguration(configuration);
+		doReturn(true).when(additionalProtocolExtensionMock).isValidConfiguration(configuration);
+
+		// The job deadline expires during the first check, which then reports the host as not up
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return Optional.of(false);
+		}).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
+
+		try {
+			new ProtocolHealthCheckStrategy(telemetryManager, CURRENT_TIME_MILLIS, clientsExecutorMock, extensionManager)
+				.run();
+
+			// No more check, and a check cut short reports neither the protocol nor the host down
+			verify(additionalProtocolExtensionMock, never()).checkProtocol(any(TelemetryManager.class));
+			assertTrue(telemetryManager.getEndpointHostMonitor().getMetrics().isEmpty());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test

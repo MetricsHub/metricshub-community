@@ -28,18 +28,19 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
@@ -477,16 +478,26 @@ public class JdbcExtension implements IProtocolExtension {
 		if (Thread.currentThread().isInterrupted()) {
 			return false;
 		}
-		// One attempt: connect, isValid and close
-		final boolean isValid;
-		try (Connection connection = loaded.driver().connect(jdbcUrl, props)) {
-			if (connection == null) {
-				// The driver did not accept the URL: nothing was sent
-				return false;
+		// One attempt: connect, isValid and close, on the thread of the request
+		final Boolean isValid;
+		try {
+			isValid = ThreadHelper.executeInterruptibly(() -> {
+				try (Connection connection = loaded.driver().connect(jdbcUrl, props)) {
+					// null: the driver did not accept the URL, nothing was sent
+					return connection == null ? null : connection.isValid((int) timeout);
+				}
+			});
+		} catch (InterruptedException e) {
+			// An interrupt that came before the check started sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				SqlRequestExecutor.recordOutcome(requestStats, RequestOutcome.TIMEOUT);
 			}
-			isValid = connection.isValid((int) timeout);
-		} catch (SQLException e) {
-			SqlRequestExecutor.recordOutcome(requestStats, SqlRequestExecutor.classify(e));
+			return false;
+		} catch (ExecutionException e) {
+			SqlRequestExecutor.recordOutcome(requestStats, SqlRequestExecutor.classify(SqlRequestExecutor.sqlCause(e)));
+			return false;
+		}
+		if (isValid == null) {
 			return false;
 		}
 		// isValid returns false on a failed validation and on a timeout alike: counted as failed

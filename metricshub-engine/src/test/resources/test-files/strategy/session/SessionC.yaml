@@ -1,0 +1,59 @@
+connector:
+  displayName: SessionC
+  platforms: Test platform
+  reliesOn: SomeWebService
+  version: 1.0
+  information: Test connector that opens its session with two beforeAll sources and closes its session with two afterAll sources
+  detection:
+    connectionTypes:
+      - remote
+      - local
+    appliesTo:
+      - Linux
+    criteria:
+      - type: deviceType
+        keep: [ linux ]
+beforeAll:
+  login:
+    type: snmpTable
+    oid: 1.1
+    selectColumns: "ID"
+  profile:
+    type: snmpTable
+    oid: 1.6
+    selectColumns: "ID"
+afterAll:
+  logout:
+    type: snmpTable
+    oid: 1.2
+    selectColumns: "ID"
+  audit:
+    type: snmpTable
+    oid: 1.5
+    selectColumns: "ID"
+monitors:
+  fan:
+    discovery:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3
+          selectColumns: "ID"
+      mapping:
+        source: "${source::monitors.fan.discovery.sources.source(1)}"
+        attributes:
+          id: $1
+    collect:
+      type: multiInstance
+      keys: [ id ]
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.4
+          selectColumns: "ID,1"
+      mapping:
+        source: "${source::monitors.fan.collect.sources.source(1)}"
+        attributes:
+          id: $1
+        metrics:
+          hw.fan.speed: $2

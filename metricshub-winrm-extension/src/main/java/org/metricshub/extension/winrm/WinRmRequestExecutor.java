@@ -45,6 +45,7 @@ import org.metricshub.engine.common.helpers.FileHelper.PathPattern;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.telemetry.RequestOutcome;
@@ -494,7 +495,10 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			final long startTime = System.currentTimeMillis();
 
 			final CommandResult result;
-			try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
+			final WinRMClient client = newClient(hostname, winRmConfiguration);
+			// Deleting the shell is a request that ignores interrupts. A failure to close is suppressed by the failure of
+			// the command, as when the client itself was the resource
+			try (ThreadHelper.InterruptibleClose _ = () -> ThreadHelper.closeInterruptibly(client::close)) {
 				CommandRequest request = client.command(command);
 				if (embeddedFiles != null && !embeddedFiles.isEmpty()) {
 					request = request.upload(embeddedFiles.stream().map(Path::of).toArray(Path[]::new));
@@ -565,8 +569,13 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("winrm.config") @NonNull final WinRmConfiguration winRmConfiguration,
 		@SpanAttribute("winrm.path") @NonNull final String path
 	) throws ClientException {
-		try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
-			return client.file(path).readText(StandardCharsets.UTF_8);
+		try {
+			final WinRMClient client = newClient(hostname, winRmConfiguration);
+			// Deleting the shell is a request that ignores interrupts. A failure to close is suppressed by the failure of
+			// the read, as when the client itself was the resource
+			try (ThreadHelper.InterruptibleClose _ = () -> ThreadHelper.closeInterruptibly(client::close)) {
+				return client.file(path).readText(StandardCharsets.UTF_8);
+			}
 		} catch (WinRMClientException e) {
 			log.error("Hostname {} - WinRM file read failed. Errors:\n{}\n", hostname, StringHelper.getStackMessages(e));
 			throw new ClientException(String.format("WinRM file read of %s failed on %s.", path, hostname), e);

@@ -9,8 +9,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.startsWith;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -32,10 +35,8 @@ import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
-import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
-import org.mockito.MockedStatic;
-import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.stubbing.Stubber;
 
 /**
  * Each HTTP request attempt sent for a resource counts one outcome in the request counters of its
@@ -46,58 +47,25 @@ class HttpRequestStatsTest {
 	private static final String RESOURCE_HOSTNAME = "resource-host";
 
 	/**
-	 * Stubs any call to {@link HttpClient#sendRequest}.
+	 * Stubs any call to {@link HttpRequestExecutor#send} of the given spy.
 	 *
-	 * @param httpClientMock The static mock of {@link HttpClient}
-	 * @return The stubbing
+	 * @param stubber  The answer
+	 * @param executor The spied executor
+	 * @throws IOException never, the stubbed call sends nothing
 	 */
-	private static OngoingStubbing<HttpResponse> whenSend(final MockedStatic<HttpClient> httpClientMock) {
-		return httpClientMock.when(
-			() -> HttpClient.sendRequest(
-				anyString(),
-				anyString(),
-				any(),
-				any(),
-				any(),
-				any(),
-				anyInt(),
-				any(),
-				any(),
-				any(),
-				any(),
-				any(),
-				anyInt(),
-				any()
-			)
-		);
+	private static void stubSend(final Stubber stubber, final HttpRequestExecutor executor) throws IOException {
+		stubber.when(executor).send(anyString(), anyString(), any(), any(), any(), any(), anyInt());
 	}
 
 	/**
-	 * Verifies how many times {@link HttpClient#sendRequest} was called.
+	 * Verifies how many times {@link HttpRequestExecutor#send} was called.
 	 *
-	 * @param httpClientMock The static mock of {@link HttpClient}
-	 * @param count          The expected number of calls
+	 * @param executor The spied executor
+	 * @param count    The expected number of calls
+	 * @throws IOException never, the verification sends nothing
 	 */
-	private static void verifySent(final MockedStatic<HttpClient> httpClientMock, final int count) {
-		httpClientMock.verify(
-			() -> HttpClient.sendRequest(
-				anyString(),
-				anyString(),
-				any(),
-				any(),
-				any(),
-				any(),
-				anyInt(),
-				any(),
-				any(),
-				any(),
-				any(),
-				any(),
-				anyInt(),
-				any()
-			),
-			times(count)
-		);
+	private static void verifySent(final HttpRequestExecutor executor, final int count) throws IOException {
+		verify(executor, times(count)).send(anyString(), anyString(), any(), any(), any(), any(), anyInt());
 	}
 
 	/**
@@ -189,109 +157,97 @@ class HttpRequestStatsTest {
 			"401, , 0, 1",
 			"404, error, 0, 1" }
 	)
-	void testStatusOutcome(final int statusCode, final String body, final long completed, final long failed) {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(statusCode, body));
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
+	void testStatusOutcome(final int statusCode, final String body, final long completed, final long failed)
+		throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(statusCode, body)), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
 
-			final HttpResult result = new HttpRequestExecutor().executeHttpRequest(
-				request(httpConfiguration),
-				true,
-				telemetryManager
-			);
+		final HttpResult result = executor.executeHttpRequest(request(httpConfiguration), true, telemetryManager);
 
-			// The response is returned unchanged
-			assertEquals(statusCode, result.statusCode());
-			assertEquals(body == null ? "" : body, result.body());
-			verifySent(httpClientMock, 1);
-			assertCounts(telemetryManager, completed, 0, failed);
-		}
+		// The response is returned unchanged
+		assertEquals(statusCode, result.statusCode());
+		assertEquals(body == null ? "" : body, result.body());
+		verifySent(executor, 1);
+		assertCounts(telemetryManager, completed, 0, failed);
 	}
 
 	@Test
-	void testRetriedErrorCountsEachAttempt() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(500, "first")).thenReturn(response(500, "second"));
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
+	void testRetriedErrorCountsEachAttempt() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(500, "first"), response(500, "second")), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
 
-			final HttpResult result = new HttpRequestExecutor().executeHttpRequest(
-				request(httpConfiguration),
-				true,
-				telemetryManager
-			);
+		final HttpResult result = executor.executeHttpRequest(request(httpConfiguration), true, telemetryManager);
 
-			// The retry still happens and the last error is the response
-			assertEquals(500, result.statusCode());
-			assertEquals("second", result.body());
-			verifySent(httpClientMock, 2);
-			assertCounts(telemetryManager, 0, 0, 2);
-		}
+		// The retry still happens and the last error is the response
+		assertEquals(500, result.statusCode());
+		assertEquals("second", result.body());
+		verifySent(executor, 2);
+		assertCounts(telemetryManager, 0, 0, 2);
 	}
 
 	@Test
-	void testRetriedThenAnsweredCountsBoth() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(503, "busy")).thenReturn(response(200, "ok"));
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
+	void testRetriedThenAnsweredCountsBoth() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(503, "busy"), response(200, "ok")), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
 
-			assertEquals("ok", new HttpRequestExecutor().executeHttp(request(httpConfiguration), true, telemetryManager));
-			verifySent(httpClientMock, 2);
-			assertCounts(telemetryManager, 1, 0, 1);
-		}
+		assertEquals("ok", executor.executeHttp(request(httpConfiguration), true, telemetryManager));
+		verifySent(executor, 2);
+		assertCounts(telemetryManager, 1, 0, 1);
 	}
 
 	@Test
-	void testSocketTimeoutCountsTimeout() {
+	void testSocketTimeoutCountsTimeout() throws IOException {
 		assertIOExceptionOutcome(new SocketTimeoutException("Read timed out"), 0, 1, 0);
 	}
 
 	@Test
-	void testWrappedSocketTimeoutCountsTimeout() {
+	void testWrappedSocketTimeoutCountsTimeout() throws IOException {
 		assertIOExceptionOutcome(new IOException("wrapped", new SocketTimeoutException("Connect timed out")), 0, 1, 0);
 	}
 
 	@Test
-	void testConnectExceptionCountsFailed() {
+	void testConnectExceptionCountsFailed() throws IOException {
 		assertIOExceptionOutcome(new ConnectException("Connection refused"), 0, 0, 1);
 	}
 
 	@Test
-	void testUnknownHostCountsFailed() {
+	void testUnknownHostCountsFailed() throws IOException {
 		assertIOExceptionOutcome(new UnknownHostException(RESOURCE_HOSTNAME), 0, 0, 1);
 	}
 
 	@Test
-	void testMalformedUrlCountsNothing() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenThrow(new MalformedURLException("no protocol"));
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
+	void testMalformedUrlCountsNothing() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doThrow(new MalformedURLException("no protocol")), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
 
-			assertNull(new HttpRequestExecutor().executeHttp(request(httpConfiguration), true, telemetryManager));
-			assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
-		}
+		assertNull(executor.executeHttp(request(httpConfiguration), true, telemetryManager));
+		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
 	}
 
 	@Test
-	void testRequestOnAnInterruptedThreadCountsNothing() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(200, "ok"));
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
+	void testRequestOnAnInterruptedThreadCountsNothing() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(200, "ok")), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
 
-			// The deadline of the job already expired: nothing is sent and nothing is counted
-			Thread.currentThread().interrupt();
-			try {
-				assertNull(new HttpRequestExecutor().executeHttpRequest(request(httpConfiguration), true, telemetryManager));
-				verifySent(httpClientMock, 0);
-				assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
-				assertTrue(Thread.currentThread().isInterrupted());
-			} finally {
-				Thread.interrupted();
-			}
+		// The deadline of the job already expired: nothing is sent and nothing is counted
+		Thread.currentThread().interrupt();
+		try {
+			assertNull(executor.executeHttpRequest(request(httpConfiguration), true, telemetryManager));
+			verifySent(executor, 0);
+			assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
 		}
 	}
 
@@ -309,91 +265,68 @@ class HttpRequestStatsTest {
 		final long completed,
 		final long timeout,
 		final long failed
-	) {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenThrow(exception);
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
+	) throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doThrow(exception), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
 
-			assertNull(new HttpRequestExecutor().executeHttp(request(httpConfiguration), true, telemetryManager));
-			verifySent(httpClientMock, 1);
-			assertCounts(telemetryManager, completed, timeout, failed);
-		}
+		assertNull(executor.executeHttp(request(httpConfiguration), true, telemetryManager));
+		verifySent(executor, 1);
+		assertCounts(telemetryManager, completed, timeout, failed);
 	}
 
 	@Test
-	void testRuntimeExceptionCountsFailedAndPropagates() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			final IllegalArgumentException exception = new IllegalArgumentException("bad charset");
-			whenSend(httpClientMock).thenThrow(exception);
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
-			final HttpRequestExecutor executor = new HttpRequestExecutor();
-			final HttpRequest request = request(httpConfiguration);
+	void testRuntimeExceptionCountsFailedAndPropagates() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		final IllegalArgumentException exception = new IllegalArgumentException("bad charset");
+		stubSend(doThrow(exception), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
+		final HttpRequest request = request(httpConfiguration);
 
-			assertSame(
-				exception,
-				assertThrows(IllegalArgumentException.class, () -> executor.executeHttp(request, true, telemetryManager))
-			);
-			assertCounts(telemetryManager, 0, 0, 1);
-		}
+		assertSame(
+			exception,
+			assertThrows(IllegalArgumentException.class, () -> executor.executeHttp(request, true, telemetryManager))
+		);
+		assertCounts(telemetryManager, 0, 0, 1);
 	}
 
 	@Test
-	void testHealthCheckErrorStatusIsUpAndCountsFailed() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(401, "unauthorized"));
-			final TelemetryManager telemetryManager = resource(HttpConfiguration.builder().build());
+	void testHealthCheckErrorStatusIsUpAndCountsFailed() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(401, "unauthorized")), executor);
+		final TelemetryManager telemetryManager = resource(HttpConfiguration.builder().build());
 
-			assertEquals(Optional.of(true), new HttpExtension().checkProtocol(telemetryManager));
-			assertCounts(telemetryManager, 0, 0, 1);
-		}
+		assertEquals(Optional.of(true), new HttpExtension(executor).checkProtocol(telemetryManager));
+		assertCounts(telemetryManager, 0, 0, 1);
 	}
 
 	@Test
-	void testHostnameOverrideCountsOnResource() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(200, "ok"));
-			final TelemetryManager telemetryManager = resource(HttpConfiguration.builder().hostname("other-host").build());
+	void testHostnameOverrideCountsOnResource() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(200, "ok")), executor);
+		final TelemetryManager telemetryManager = resource(HttpConfiguration.builder().hostname("other-host").build());
 
-			assertEquals(Optional.of(true), new HttpExtension().checkProtocol(telemetryManager));
+		assertEquals(Optional.of(true), new HttpExtension(executor).checkProtocol(telemetryManager));
 
-			// The request goes to the configured hostname, and counts on the resource
-			httpClientMock.verify(
-				() -> HttpClient.sendRequest(
-					startsWith("https://other-host:"),
-					anyString(),
-					any(),
-					any(),
-					any(),
-					any(),
-					anyInt(),
-					any(),
-					any(),
-					any(),
-					any(),
-					any(),
-					anyInt(),
-					any()
-				)
-			);
-			assertCounts(telemetryManager, 1, 0, 0);
-		}
+		// The request goes to the configured hostname, and counts on the resource
+		verify(executor).send(startsWith("https://other-host:"), anyString(), any(), any(), any(), any(), anyInt());
+		assertCounts(telemetryManager, 1, 0, 0);
 	}
 
 	@Test
-	void testExecuteQueryDoesNotCountOnResource() {
-		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
-			whenSend(httpClientMock).thenReturn(response(200, "ok"));
-			final HttpConfiguration httpConfiguration = HttpConfiguration.builder().hostname(RESOURCE_HOSTNAME).build();
-			final TelemetryManager telemetryManager = resource(httpConfiguration);
-			final ObjectNode query = JsonNodeFactory.instance.objectNode();
-			query.set("method", new TextNode("GET"));
-			query.set("path", new TextNode("/"));
+	void testExecuteQueryDoesNotCountOnResource() throws IOException {
+		final HttpRequestExecutor executor = spy(new HttpRequestExecutor());
+		stubSend(doReturn(response(200, "ok")), executor);
+		final HttpConfiguration httpConfiguration = HttpConfiguration.builder().hostname(RESOURCE_HOSTNAME).build();
+		final TelemetryManager telemetryManager = resource(httpConfiguration);
+		final ObjectNode query = JsonNodeFactory.instance.objectNode();
+		query.set("method", new TextNode("GET"));
+		query.set("path", new TextNode("/"));
 
-			assertTrue(new HttpExtension().executeQuery(httpConfiguration, query).contains("ok"));
-			verifySent(httpClientMock, 1);
-			assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
-		}
+		assertTrue(new HttpExtension(executor).executeQuery(httpConfiguration, query).contains("ok"));
+		verifySent(executor, 1);
+		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
 	}
 }

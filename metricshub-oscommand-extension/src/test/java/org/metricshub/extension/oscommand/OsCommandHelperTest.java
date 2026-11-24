@@ -5,16 +5,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WINDOWS_NEW_LINE;
 import static org.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -33,9 +36,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +51,8 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.exception.ClientRuntimeException;
 import org.metricshub.engine.common.exception.ControlledSshException;
 import org.metricshub.engine.common.exception.NoCredentialProvidedException;
 import org.metricshub.engine.common.helpers.StringHelper;
@@ -454,7 +463,10 @@ class OsCommandHelperTest {
 	void testRunSshCommand() throws Exception {
 		final SshConfiguration sshConfiguration = mock(SshConfiguration.class);
 		final int timeout = 1000;
-		final OsCommandService osCommandService = new OsCommandService();
+		final OsCommandService osCommandService = spy(new OsCommandService());
+		// The static stub below is thread-local: run the command on this thread, not on the thread of the SSH I/O
+		doAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get()).when(osCommandService)
+			.runControlledSshCommand(any(), anyString(), anyInt());
 
 		assertThrows(
 			IllegalArgumentException.class,
@@ -1159,14 +1171,138 @@ class OsCommandHelperTest {
 	}
 
 	@Test
-	void testRunControlledSshCommandClearsInterruptFlag() {
+	void testRunControlledSshCommandKeepsInterruptFlag() {
+		final AtomicBoolean ran = new AtomicBoolean();
+		// The job deadline expired: the engine stops the job only if the thread is still interrupted
 		Thread.currentThread().interrupt();
+		try {
+			assertThrows(
+				InterruptedException.class,
+				() -> new OsCommandService().runControlledSshCommand(() -> ran.getAndSet(true), HOSTNAME, 30)
+			);
 
-		assertThrows(
-			InterruptedException.class,
-			() -> new OsCommandService().runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+		// Nothing starts on an interrupted thread
+		assertFalse(ran.get());
+	}
+
+	/**
+	 * Interrupts the given thread once {@code ready} is counted down and {@code delayMillis} more have passed.
+	 */
+	private static Thread interruptLater(final Thread thread, final CountDownLatch ready, final long delayMillis) {
+		final Thread interrupter = new Thread(() -> {
+			try {
+				ready.await();
+				Thread.sleep(delayMillis);
+				thread.interrupt();
+			} catch (InterruptedException e) {
+				// Not reached
+			}
+		});
+		interrupter.start();
+		return interrupter;
+	}
+
+	@Test
+	void testRunControlledSshCommandInterruptedWhileTheCommandRunsReturnsAtOnce() throws Exception {
+		final String hostname = "interrupted-while-the-command-runs";
+		final Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
+		final CountDownLatch started = new CountDownLatch(1);
+		final CountDownLatch end = new CountDownLatch(1);
+		// Like sshlib: the command swallows the interrupt and runs to its end, at most 5 seconds so that a caller that
+		// stays blocked in it fails the test instead of hanging it
+		final Supplier<String> command = () -> {
+			started.countDown();
+			final long giveUp = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+			while (end.getCount() > 0 && System.nanoTime() < giveUp) {
+				try {
+					end.await(10, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {
+					// Swallowed
+				}
+			}
+			return "late";
+		};
+
+		final Thread interrupter = interruptLater(Thread.currentThread(), started, 100);
+		final long start = System.nanoTime();
+		try {
+			assertThrows(
+				InterruptedException.class,
+				() -> new OsCommandService().runControlledSshCommand(command, hostname, 30)
+			);
+			final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+			assertTrue(elapsedMillis < 1000, () -> "Returned after " + elapsedMillis + " ms");
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+			interrupter.join(TimeUnit.SECONDS.toMillis(10));
+		}
+
+		try {
+			// The command still runs on its own thread and holds its permit
+			assertEquals(7, semaphore.availablePermits());
+		} finally {
+			end.countDown();
+		}
+
+		// The permit is released once, when the command ends
+		final long giveUp = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+		while (semaphore.availablePermits() == 7 && System.nanoTime() < giveUp) {
+			Thread.sleep(10);
+		}
+		Thread.sleep(100);
+		assertEquals(8, semaphore.availablePermits());
+	}
+
+	@Test
+	void testRunControlledSshCommandInterruptedWaitingForAPermitConsumesNone() throws Exception {
+		final String hostname = "interrupted-waiting-for-a-permit";
+		final Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
+		semaphore.acquire(8);
+		final AtomicBoolean ran = new AtomicBoolean();
+
+		final Thread interrupter = interruptLater(Thread.currentThread(), new CountDownLatch(0), 200);
+		try {
+			assertThrows(
+				InterruptedException.class,
+				() -> new OsCommandService().runControlledSshCommand(() -> ran.getAndSet(true), hostname, 30)
+			);
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+			interrupter.join(TimeUnit.SECONDS.toMillis(10));
+			semaphore.release(8);
+		}
+
+		// The wait was cancelled: a freed permit is not taken, the command never runs
+		Thread.sleep(200);
+		assertEquals(8, semaphore.availablePermits());
+		assertFalse(ran.get());
+	}
+
+	@Test
+	void testRunControlledSshCommandRethrowsTheExceptionsOfTheCommand() {
+		final String hostname = "rethrows-the-exceptions-of-the-command";
+		final OsCommandService osCommandService = new OsCommandService();
+
+		final ClientRuntimeException clientRuntimeException = new ClientRuntimeException(new ClientException("failed"));
+		assertSame(
+			clientRuntimeException,
+			assertThrows(ClientRuntimeException.class, () -> osCommandService.runControlledSshCommand(() -> {
+				throw clientRuntimeException;
+			}, hostname, 30))
 		);
 
-		assertFalse(Thread.currentThread().isInterrupted());
+		final StackOverflowError error = new StackOverflowError();
+		assertSame(error, assertThrows(StackOverflowError.class, () -> osCommandService.runControlledSshCommand(() -> {
+			throw error;
+		}, hostname, 30)));
+
+		// The permit is released after a failure too
+		assertEquals(8, SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname).availablePermits());
 	}
 }

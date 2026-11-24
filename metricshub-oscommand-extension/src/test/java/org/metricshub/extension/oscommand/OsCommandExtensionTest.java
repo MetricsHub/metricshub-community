@@ -318,6 +318,27 @@ class OsCommandExtensionTest {
 	}
 
 	@Test
+	void testInterruptedSshHealthCheckKeepsTheInterrupt() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+		final TelemetryManager telemetryManager = createTelemetryManagerWithSshConfig();
+		telemetryManager.getHostProperties().setMustCheckSshStatus(true);
+		telemetryManager.getHostProperties().setOsCommandExecutesLocally(true);
+
+		// The job deadline expires during the local test: throwing the InterruptedException cleared the interrupt
+		doThrow(new InterruptedException()).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
+
+		try {
+			osCommandExtension.checkProtocol(telemetryManager);
+
+			// Kept, so that the engine checks no other protocol and reports nothing
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
 	void testCheckSshUpHealthRemotely() throws Exception {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);

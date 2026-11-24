@@ -4,12 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.withSettings;
 
 import java.util.List;
 import java.util.Map;
@@ -22,8 +23,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.wmi.exceptions.WmiComException;
-import org.metricshub.wmi.wbem.WmiWbemServices;
-import org.mockito.MockedStatic;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedConstruction.MockInitializer;
 
 /**
  * The WMI requests of a monitored resource are counted in the request statistics of its {@link TelemetryManager}.
@@ -79,22 +80,27 @@ class WmiExtensionRequestStatsTest {
 	}
 
 	/**
-	 * WMI services whose queries return no row.
+	 * Make the {@link WmiRequestExecutor} of the extensions created until closed a spy, whose WMI connection and query
+	 * (run on a thread of their own, out of reach of a static mock) answer no row unless stubbed otherwise.
 	 */
-	private static WmiWbemServices emptyServices() throws Exception {
-		final WmiWbemServices services = mock(WmiWbemServices.class);
-		when(services.executeWql(anyString(), anyLong())).thenReturn(List.of());
-		return services;
+	private static MockedConstruction<WmiRequestExecutor> executors(final MockInitializer<WmiRequestExecutor> stubbing) {
+		return mockConstruction(
+			WmiRequestExecutor.class,
+			withSettings().defaultAnswer(CALLS_REAL_METHODS),
+			(executor, context) -> {
+				doReturn(List.of()).when(executor).query(any(), any(), any(), any(), anyLong());
+				stubbing.prepare(executor, context);
+			}
+		);
 	}
 
 	@Test
 	void testCheckProtocolCountsAnAcceptedErrorAsFailedOnTheResource() {
 		final TelemetryManager telemetryManager = newTelemetryManager();
-		try (MockedStatic<WmiWbemServices> statics = mockStatic(WmiWbemServices.class)) {
-			// The request goes to the protocol hostname...
-			statics.when(() -> WmiWbemServices.getInstance(contains(PROTOCOL_HOSTNAME), any(), any()))
-				.thenThrow(new WmiComException("WBEM_E_INVALID_NAMESPACE (0x8004100E)"));
-
+		try (MockedConstruction<WmiRequestExecutor> executors = executors((executor, context) ->
+		// The request goes to the protocol hostname...
+		doThrow(new WmiComException("WBEM_E_INVALID_NAMESPACE (0x8004100E)")).when(executor)
+			.query(contains(PROTOCOL_HOSTNAME), any(), any(), any(), anyLong()))) {
 			// ... which the health check still considers up
 			assertEquals(Optional.of(true), new WmiExtension().checkProtocol(telemetryManager));
 		}
@@ -103,22 +109,18 @@ class WmiExtensionRequestStatsTest {
 	}
 
 	@Test
-	void testCheckProtocolCountsCompleted() throws Exception {
+	void testCheckProtocolCountsCompleted() {
 		final TelemetryManager telemetryManager = newTelemetryManager();
-		final WmiWbemServices services = emptyServices();
-		try (MockedStatic<WmiWbemServices> statics = mockStatic(WmiWbemServices.class)) {
-			statics.when(() -> WmiWbemServices.getInstance(any(), any(), any())).thenReturn(services);
+		try (MockedConstruction<WmiRequestExecutor> executors = executors((executor, context) -> {})) {
 			assertEquals(Optional.of(true), new WmiExtension().checkProtocol(telemetryManager));
 		}
 		assertEquals(List.of(1L, 0L, 0L), wmiCounts(telemetryManager));
 	}
 
 	@Test
-	void testEventLogSourceIsCountedAsWmi() throws Exception {
+	void testEventLogSourceIsCountedAsWmi() {
 		final TelemetryManager telemetryManager = newTelemetryManager();
-		final WmiWbemServices services = emptyServices();
-		try (MockedStatic<WmiWbemServices> statics = mockStatic(WmiWbemServices.class)) {
-			statics.when(() -> WmiWbemServices.getInstance(any(), any(), any())).thenReturn(services);
+		try (MockedConstruction<WmiRequestExecutor> executors = executors((executor, context) -> {})) {
 			new WmiExtension().processSource(
 				EventLogSource.builder().key("eventLog").logName("System").build(),
 				CONNECTOR_ID,
@@ -132,14 +134,15 @@ class WmiExtensionRequestStatsTest {
 	}
 
 	@Test
-	void testLocalProcessCriterionIsCountedOnTheResource() throws Exception {
+	void testLocalProcessCriterionIsCountedOnTheResource() {
 		final TelemetryManager telemetryManager = newTelemetryManager();
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine("MBM");
-		final WmiWbemServices services = emptyServices();
-		try (MockedStatic<WmiWbemServices> statics = mockStatic(WmiWbemServices.class)) {
+		try (MockedConstruction<WmiRequestExecutor> executors = executors((executor, context) -> {
 			// A local query: the local namespace, without credentials
-			statics.when(() -> WmiWbemServices.getInstance(any(), isNull(), isNull())).thenReturn(services);
+			doThrow(new WmiComException("credentials sent")).when(executor).query(any(), any(), any(), any(), anyLong());
+			doReturn(List.of()).when(executor).query(any(), isNull(), isNull(), any(), anyLong());
+		})) {
 			assertFalse(
 				new WmiExtension().processCriterion(processCriterion, CONNECTOR_ID, telemetryManager, false).isSuccess()
 			);

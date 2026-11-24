@@ -99,6 +99,16 @@ public class TelemetryManager {
 		for (IStrategy strategy : strategies) {
 			final String strategyType = strategy.getClass().getSimpleName();
 
+			// Cancelled (a reload): the next strategies would each run on a new thread that does not inherit the interrupt
+			if (Thread.currentThread().isInterrupted()) {
+				log.warn(
+					"Hostname {} - Thread interrupted: skipping the strategy {} and the next ones.",
+					hostname,
+					strategyType
+				);
+				return;
+			}
+
 			log.trace("Hostname {} - Calling strategy {}.", hostname, strategyType);
 			runStrategy(strategy);
 			log.info("Hostname {} - End of strategy {}.", hostname, strategyType);

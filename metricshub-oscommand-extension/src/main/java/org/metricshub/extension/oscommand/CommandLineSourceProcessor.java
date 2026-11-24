@@ -98,6 +98,7 @@ public class CommandLineSourceProcessor {
 
 			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
+			OsCommandService.restoreInterrupt(e);
 			LoggingHelper.logSourceError(
 				connectorId,
 				commandLineSource.getKey(),

@@ -26,9 +26,9 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREA
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -57,6 +57,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -65,15 +66,10 @@ import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
-import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
-import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
-import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceTable;
-import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
@@ -114,8 +110,14 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param currentConnector The current connector
 	 * @param hostname		   The host name
 	 * @param runStartTime     The {@link System#nanoTime()} at which this strategy run started, used to check the strategy timeout
+	 * @param pendingPools     Where to defer the end of this connector when its monitor jobs outlive the thread timeout
 	 */
-	private void process(final Connector currentConnector, final String hostname, final long runStartTime) {
+	private void process(
+		final Connector currentConnector,
+		final String hostname,
+		final long runStartTime,
+		final List<PendingPool> pendingPools
+	) {
 		// Check whether the strategy job name matches at least one of the monitor jobs names of the current connector
 		final boolean connectorHasExpectedJobTypes = hasExpectedJobTypes(currentConnector, getJobName());
 		// If the connector doesn't define any monitor job that matches the given strategy job name, log a message then exit the current discovery or simple operation
@@ -145,6 +147,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.build();
 
 		beforeAllStrategy.run();
+		// A beforeAll skipped by an interrupt opened no session: there is none to close
+		final boolean opened = beforeAllStrategy.isOpened();
 
 		// Sort the connector monitor jobs according to the priority map
 		final Map<String, MonitorJob> connectorMonitorJobs = currentConnector.getMonitors()
@@ -197,6 +201,14 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// If monitor jobs execution is set to "sequential", execute monitor jobs one by one
 		if (isSequential) {
 			otherMonitorJobs.entrySet().forEach(runJob);
+		} else if (Thread.currentThread().isInterrupted()) {
+			// The new threads of a pool would not inherit the interrupt and would send the requests of an abandoned run
+			poolAbandoned = true;
+			log.warn(
+				"Hostname {} - Thread interrupted: skipping the parallel monitor jobs. Connector: {}.",
+				hostname,
+				currentConnector.getCompiledFilename()
+			);
 		} else {
 			// Execute monitor jobs in parallel
 			// Create a thread pool with a fixed number of threads
@@ -211,41 +223,68 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 			try {
 				// Blocks until all tasks have completed execution after a shutdown request
-				if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+				if (!threadsPool.awaitTermination(getThreadTimeout(), TimeUnit.SECONDS)) {
 					log.warn(
-						"Hostname {} - Thread pool did not terminate within {} seconds. Forcing shutdown.",
+						"Hostname {} - Thread pool did not terminate within {} seconds. Waiting for it after the other connectors.",
 						hostname,
-						THREAD_TIMEOUT
+						getThreadTimeout()
 					);
-					poolAbandoned = true;
-					threadsPool.shutdownNow();
+					// The monitor removal and the afterAll (which may close the session of the jobs) wait for the pool
+					watchPool(threadsPool, runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout()));
+					pendingPools.add(new PendingPool(threadsPool, currentConnector, trustedTypes, opened));
+					return;
 				}
 			} catch (Exception e) {
 				poolAbandoned = true;
-				threadsPool.shutdownNow();
+				cutPool(threadsPool);
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
 				}
 				log.debug("Hostname {} - Waiting for threads' termination aborted with an error.", hostname, e);
+				// The afterAll may close the session the jobs still use
+				awaitPoolStop(threadsPool, hostname);
 			}
 		}
 
+		endConnector(currentConnector, hostname, runStartTime, trustedTypes, poolAbandoned, opened);
+	}
+
+	/**
+	 * Ends the processing of a connector once its monitor jobs are done or abandoned: removes the monitors its trusted
+	 * jobs did not rediscover, then runs its afterAll sources.
+	 *
+	 * @param connector     The connector
+	 * @param hostname      The host name
+	 * @param runStartTime  The {@link System#nanoTime()} at which this strategy run started
+	 * @param trustedTypes  The monitor types whose job ran a trusted pass
+	 * @param poolAbandoned Whether jobs of the connector were abandoned
+	 * @param opened        Whether the beforeAll of the connector may have opened a session
+	 */
+	private void endConnector(
+		final Connector connector,
+		final String hostname,
+		final long runStartTime,
+		final Set<String> trustedTypes,
+		final boolean poolAbandoned,
+		final boolean opened
+	) {
 		// An abandoned run (thread pool or strategy timeout) must not remove monitors: its jobs may have been cut short
 		if (!poolAbandoned && isWithinStrategyTimeout(runStartTime)) {
-			removeMonitorsNotRediscovered(currentConnector, trustedTypes, hostname);
+			removeMonitorsNotRediscovered(connector, trustedTypes, hostname);
 		}
 
-		// Run AfterAllStrategy that executes afterAll sources
-		final AfterAllStrategy afterAllStrategy = AfterAllStrategy.builder()
-			.clientsExecutor(clientsExecutor)
-			.strategyTime(strategyTime)
-			.telemetryManager(telemetryManager)
-			.connector(currentConnector)
-			.extensionManager(extensionManager)
-			.build();
-
-		afterAllStrategy.run();
+		runAfterAll(connector, opened, runStartTime);
 	}
+
+	/**
+	 * The monitor jobs of a connector still running at the thread timeout, and what the end of the connector needs.
+	 *
+	 * @param pool         The thread pool of the jobs, shut down
+	 * @param connector    The connector
+	 * @param trustedTypes The monitor types whose job ran a trusted pass, filled by the jobs
+	 * @param opened       Whether the beforeAll of the connector may have opened a session
+	 */
+	private record PendingPool(ExecutorService pool, Connector connector, Set<String> trustedTypes, boolean opened) {}
 
 	/**
 	 * This method processes a monitor job
@@ -296,7 +335,13 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.build();
 
 		// Create the sources and the computes for a connector
-		final boolean sourcesAnswered = processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+		final List<Runnable> cursorRollbacks = new ArrayList<>();
+		final boolean sourcesAnswered = processSourcesAndComputes(
+			orderedSources.getSources(),
+			null,
+			jobInfo,
+			cursorRollbacks
+		);
 
 		// Create the monitors
 		final Mapping mapping = monitorTask.getMapping();
@@ -306,14 +351,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		final boolean mapped = processSameTypeMonitors(
-			currentConnector,
-			mapping,
-			monitorType,
-			hostname,
-			monitorJob,
-			isDiscovery
-		);
+		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
+		final boolean mapped = !skipMappingIfInterrupted(
+			cursorRollbacks,
+			currentConnector.getCompiledFilename(),
+			hostname
+		) && processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
@@ -359,19 +402,6 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			source.getReferences().forEach(reference -> addReferencedSources(reference, sourcesByKey, pending));
 		}
 		return false;
-	}
-
-	/**
-	 * Whether the given source is incremental: an eventLog or ipmiSel source, or a file source in LOG mode.
-	 *
-	 * @param source The source to check
-	 * @return {@code true} if the source only returns the entries added since the previous poll
-	 */
-	private static boolean isIncremental(final Source source) {
-		if (source instanceof FileSource fileSource) {
-			return fileSource.getMode() == FileSourceProcessingMode.LOG;
-		}
-		return source instanceof EventLogSource || source instanceof IpmiSelSource;
 	}
 
 	/**
@@ -650,7 +680,30 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.collect(Collectors.toList()); //NOSONAR
 
 		// Process each connector
-		sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime));
+		final List<PendingPool> pendingPools = new ArrayList<>();
+		// A sheltered beforeAll or afterAll clears the interrupt that watchPool looks for: it cuts the deferred jobs first
+		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> cutPool(pending.pool())), () -> {
+			try {
+				sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime, pendingPools));
+			} finally {
+				// The jobs that outlived the thread timeout may still complete until the strategy deadline, even when a
+				// later connector failed
+				joinPools(
+					pendingPools,
+					PendingPool::pool,
+					(pending, completed) -> endConnector(
+						pending.connector(),
+						hostname,
+						runStartTime,
+						pending.trustedTypes(),
+						!completed,
+						pending.opened()
+					),
+					runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout()),
+					hostname
+				);
+			}
+		});
 
 		// Collect the metricshub.host.configured metric
 		collectHostConfigured(hostname);
@@ -662,8 +715,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	/**
 	 * Whether this strategy run is still within its timeout. {@link ContextExecutor} interrupts and abandons a strategy
 	 * thread after {@link #getStrategyTimeout()} seconds. An abandoned thread must not remove monitors: its jobs may have
-	 * been cut short and it would race with the next run of the same jobs. RetryOperation clears the
-	 * interrupt flag before it retries, hence the elapsed time, measured with {@link System#nanoTime()} like the timeout
+	 * been cut short and it would race with the next run of the same jobs. Code that swallows an
+	 * interrupt may clear the flag, hence the elapsed time, measured with {@link System#nanoTime()} like the timeout
 	 * of {@link ContextExecutor} so that a clock step does not change it.
 	 *
 	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started

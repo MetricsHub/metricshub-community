@@ -13,10 +13,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,6 +31,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -489,6 +493,94 @@ class FileSourceProcessorTest {
 
 		verify(sshClient, never()).readFile(any(), any(), any());
 		assertTrue(requestStats.snapshot().isEmpty());
+	}
+
+	/**
+	 * Waits for the latch and swallows the interrupts, like sshlib.
+	 */
+	private static void awaitUninterruptibly(final CountDownLatch latch) {
+		while (latch.getCount() > 0) {
+			try {
+				latch.await();
+			} catch (InterruptedException e) {
+				// Swallowed
+			}
+		}
+	}
+
+	@Test
+	void remoteFileOperations_interruptedLogModeReadReturnsAtOnceAndKeepsTheCursors() throws Exception {
+		final RemoteFilesRequestExecutor operations = remoteFileOperations(DeviceKind.LINUX);
+		final CountDownLatch reading = new CountDownLatch(1);
+		final CountDownLatch end = new CountDownLatch(1);
+		when(sshClient.fileSize(anyString())).thenReturn(20L);
+		when(sshClient.readFile("/a.log", 10L, 10)).thenAnswer(invocation -> {
+			reading.countDown();
+			awaitUninterruptibly(end);
+			return "late";
+		});
+		doAnswer(invocation -> {
+			awaitUninterruptibly(end);
+			return null;
+		}).when(sshClient).close();
+		final Map<String, Long> cursors = new HashMap<>(Map.of("/a.log", 10L, "/b.log", 10L));
+		final FileSource fileSource = FileSource.builder()
+			.maxSizePerPoll(1000L)
+			.key(SOURCE_KEY)
+			.mode(FileSourceProcessingMode.LOG)
+			.paths(Set.of("/a.log", "/b.log"))
+			.build();
+
+		// The engine interrupts the job when its deadline expires, while the first file is read
+		final Thread caller = Thread.currentThread();
+		final Thread deadline = new Thread(() -> {
+			try {
+				reading.await();
+				Thread.sleep(100);
+				caller.interrupt();
+				// A caller that stays blocked in the read must fail the test, not hang it
+				end.await(5, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				// Not reached
+			}
+			end.countDown();
+		});
+		deadline.start();
+		final long start = System.nanoTime();
+		try {
+			final List<List<String>> results = new FileSourceProcessor().processFilesInLogMode(
+				operations,
+				new LinkedHashSet<>(List.of("/a.log", "/b.log")),
+				cursors,
+				fileSource,
+				HOSTNAME
+			);
+			final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+			assertTrue(elapsedMillis < 1000, () -> "Returned after " + elapsedMillis + " ms");
+			assertTrue(Thread.currentThread().isInterrupted());
+			assertTrue(results.isEmpty());
+			// The read cut short and the file after it keep their cursors
+			assertEquals(Map.of("/a.log", 10L, "/b.log", 10L), cursors);
+
+			// Any later request of the interrupted caller is refused
+			assertThrows(InterruptedIOException.class, () -> operations.readFileContent("/b.log"));
+
+			// The close waits behind the read: the interrupted caller does not
+			final long closing = System.nanoTime();
+			operations.close();
+			final long closeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - closing);
+			assertTrue(closeMillis < 1000, () -> "Closed after " + closeMillis + " ms");
+		} finally {
+			Thread.interrupted();
+			end.countDown();
+			deadline.join(TimeUnit.SECONDS.toMillis(10));
+		}
+
+		verify(sshClient, never()).fileSize("/b.log");
+		verify(sshClient, never()).readFile(eq("/b.log"), any(), any());
+		verify(sshClient, timeout(5000)).close();
+		// The size of a.log completed, its read cut short is one timeout, nothing was sent afterwards
+		assertEquals(sshCounts(1, 1, 0), requestStats.snapshot());
 	}
 
 	/**

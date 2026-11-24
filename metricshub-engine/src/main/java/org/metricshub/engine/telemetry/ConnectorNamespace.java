@@ -22,15 +22,20 @@ package org.metricshub.engine.telemetry;
  */
 
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
@@ -75,6 +80,23 @@ public class ConnectorNamespace {
 
 	@Default
 	private ReentrantLock forceSerializationLock = new ReentrantLock(true);
+
+	/**
+	 * The force serialized requests of a job cut short that may still be talking to the device: each one terminates
+	 * when its request ends. The next force serialized request waits for them.
+	 */
+	@Default
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private Queue<ExecutorService> serializedRequestsInFlight = new ConcurrentLinkedQueue<>();
+
+	/**
+	 * The number of the last poll of each incremental source, by source key: a rollback applies only to the last poll.
+	 */
+	@Default
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private Map<String, Long> sourcePolls = new ConcurrentHashMap<>();
 
 	/**
 	 * Tracks the number of consecutive detection re-validation failures.
@@ -171,5 +193,84 @@ public class ConnectorNamespace {
 	 */
 	public void setSourceCursor(@NonNull String sourceKey, @NonNull Object cursor) {
 		sourceCursors.put(sourceKey, cursor);
+	}
+
+	/**
+	 * The cursors of an incremental source at one point in time: its event log cursor, its file cursors and the
+	 * cursor its extension owns.
+	 *
+	 * @param eventLog The event log cursor, null if none
+	 * @param files    A copy of the file cursors, by file
+	 * @param source   The cursor the extension owns, null if none
+	 */
+	public record SourceCursors(Integer eventLog, Map<String, Long> files, Object source) {}
+
+	/**
+	 * Gets a snapshot of the cursors of the specified incremental source.
+	 *
+	 * @param sourceKey the source key
+	 * @return the cursors as they are now
+	 */
+	public SourceCursors getSourceCursors(@NonNull String sourceKey) {
+		return new SourceCursors(
+			eventLogSourceCursors.get(sourceKey),
+			Map.copyOf(getFileSourceCursors(sourceKey)),
+			sourceCursors.get(sourceKey)
+		);
+	}
+
+	/**
+	 * Begins a poll of the specified incremental source, before its cursors are read.
+	 *
+	 * @param sourceKey the source key
+	 * @return the number of this poll, to pass to {@link #rollBackSourceCursors}
+	 */
+	public synchronized long beginPoll(@NonNull String sourceKey) {
+		return sourcePolls.merge(sourceKey, 1L, Long::sum);
+	}
+
+	/**
+	 * Rolls back a poll of the specified incremental source whose entries were not mapped, so that the next poll
+	 * returns them again: each cursor the poll moved goes back to where it was. Nothing is rolled back once a newer
+	 * poll of the source began, and a cursor that changed since the poll (moved by another run) is left as it is.
+	 *
+	 * @param sourceKey the source key
+	 * @param poll      the number of the poll, returned by {@link #beginPoll}
+	 * @param before    the cursors before the poll
+	 * @param after     the cursors right after the poll
+	 */
+	public synchronized void rollBackSourceCursors(
+		@NonNull String sourceKey,
+		final long poll,
+		@NonNull SourceCursors before,
+		@NonNull SourceCursors after
+	) {
+		if (!Long.valueOf(poll).equals(sourcePolls.get(sourceKey))) {
+			return;
+		}
+		rollBack(eventLogSourceCursors, sourceKey, before.eventLog(), after.eventLog());
+		rollBack(sourceCursors, sourceKey, before.source(), after.source());
+		final Map<String, Long> files = getFileSourceCursors(sourceKey);
+		after.files().forEach((file, cursor) -> rollBack(files, file, before.files().get(file), cursor));
+	}
+
+	/**
+	 * Puts the given key of the given concurrent map back to its value before a poll, atomically and only if it still
+	 * holds the value the poll left.
+	 *
+	 * @param map    the concurrent map of cursors
+	 * @param key    the key
+	 * @param before the value before the poll, null if absent
+	 * @param after  the value the poll left, null if absent
+	 */
+	private static <K, V> void rollBack(final Map<K, V> map, final K key, final V before, final V after) {
+		if (after == null || after.equals(before)) {
+			return;
+		}
+		if (before == null) {
+			map.remove(key, after);
+		} else {
+			map.replace(key, after, before);
+		}
 	}
 }

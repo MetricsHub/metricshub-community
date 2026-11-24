@@ -26,22 +26,36 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPU
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.common.ContentType;
@@ -49,7 +63,10 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -62,9 +79,11 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeUpdaterProcessor;
+import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.utils.ForceSerializationHelper;
 import org.metricshub.engine.strategy.utils.RetryOperation;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
+import org.metricshub.engine.telemetry.ConnectorNamespace.SourceCursors;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.RequestOutcome;
@@ -109,6 +128,53 @@ public abstract class AbstractStrategy implements IStrategy {
 	public static final String CONNECTOR_ID_FORMAT = "%s_%s";
 
 	/**
+	 * How long after the strategy timeout an interrupted run may still start the afterAll of a connector whose
+	 * beforeAll it entered, in milliseconds: the 5 s grace of a beforeAll cut short plus 1 s for its cancel, plus 0.5 s
+	 * for the sources and computes that follow a login answered at the end of its grace, so that such a login is followed
+	 * by its logout. The budget, from the interrupt I and {@link ContextExecutor}'s 10 s SHUTDOWN_GRACE_PERIOD_SECONDS,
+	 * after which it abandons the strategy thread:
+	 * <ul>
+	 * <li>a beforeAll cut short ends by I+6 s, and the monitor jobs cut short get {@link #POOL_STOP_SECONDS} to stop,
+	 * by I+1 s: an afterAll starts by I+6.5 s;</li>
+	 * <li>that afterAll gets its 2 s grace plus 1 s for its cancel: the run ends by I+9.5 s, whether I is the strategy
+	 * timeout or an earlier cancel (reload).</li>
+	 * </ul>
+	 * Only one afterAll of an interrupted run gets this grace, although the afterAll of several connectors may be
+	 * deferred until their monitor jobs end. So the logout always reads this run's token, before the next run of the
+	 * host can open another session. A login answered after its grace, or a session whose logout is skipped, leaks a
+	 * session, which expires on the device.
+	 */
+	protected static final long CLEANUP_WINDOW_MILLIS = 6500;
+
+	/**
+	 * How long the monitor jobs of thread pools cut short may take to stop before the afterAll of their connector, in
+	 * seconds, counted once per run from the first cut: the afterAll may close the session they use.
+	 */
+	static final long POOL_STOP_SECONDS = 1;
+
+	/**
+	 * How often a deferred thread pool checks the strategy thread and the strategy deadline, in milliseconds.
+	 */
+	private static final long POOL_WATCH_MILLIS = 100;
+
+	/**
+	 * Whether an afterAll of this interrupted run already used the cleanup grace, see {@link #CLEANUP_WINDOW_MILLIS}.
+	 */
+	@Getter(AccessLevel.NONE)
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final AtomicBoolean cleanupGraceUsed = new AtomicBoolean();
+
+	/**
+	 * The {@link System#nanoTime()} until which the thread pools of this run cut short may stop, 0 until the first cut,
+	 * see {@link #POOL_STOP_SECONDS}.
+	 */
+	@Getter(AccessLevel.NONE)
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final AtomicLong poolStopDeadline = new AtomicLong();
+
+	/**
 	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
 	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
 	 *
@@ -134,6 +200,27 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Map<String, String> attributes,
 		final JobInfo jobInfo
 	) {
+		return processSourcesAndComputes(sources, attributes, jobInfo, new ArrayList<>());
+	}
+
+	/**
+	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
+	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
+	 *
+	 * @param sources         The {@link List} of {@link Source} instances we wish to execute
+	 * @param attributes      Key-value pairs of the monitor's attributes used in the mono instance processing
+	 * @param jobInfo         Information about the job such as hostname, monitorType, job name and connectorName.
+	 * @param cursorRollbacks The caller's list, to which the rollback of the cursors of each incremental source polled
+	 *                        is added: the caller runs them when it skips the mapping, see
+	 *                        {@link #skipMappingIfInterrupted(List, String, String)}
+	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
+	 */
+	protected boolean processSourcesAndComputes(
+		final List<Source> sources,
+		final Map<String, String> attributes,
+		final JobInfo jobInfo,
+		final List<Runnable> cursorRollbacks
+	) {
 		final String connectorId = jobInfo.getConnectorId();
 		final String monitorType = jobInfo.getMonitorType();
 		final String hostname = jobInfo.getHostname();
@@ -152,7 +239,15 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
-		for (final Source source : sources) {
+		for (int sourceIndex = 0; sourceIndex < sources.size(); sourceIndex++) {
+			// The first source always starts, unless the thread is interrupted: a sheltered beforeAll that started may open
+			// a session. Then a beforeAll whose caller is interrupted starts no other source
+			final boolean stop = sourceIndex > 0 ? ThreadHelper.isStopping() : isInterrupted();
+			if (stop && skipSources(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)) {
+				return false;
+			}
+
+			final Source source = sources.get(sourceIndex);
 			final String sourceKey = source.getKey();
 
 			logBeginOperation(SOURCE, source, sourceKey, connectorId, hostname);
@@ -160,6 +255,9 @@ public abstract class AbstractStrategy implements IStrategy {
 			final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId);
 			final SourceTable previousSourceTable = connectorNamespace.getSourceTable(sourceKey);
+			// The poll begins before its cursors are read: a late rollback of an older poll then leaves them alone
+			final long poll = isIncremental(source) ? connectorNamespace.beginPoll(sourceKey) : 0L;
+			final SourceCursors cursorsBefore = isIncremental(source) ? connectorNamespace.getSourceCursors(sourceKey) : null;
 
 			// Execute the source and retry the operation
 			// in case the source fails but the previous source table didn't fail.
@@ -173,6 +271,21 @@ public abstract class AbstractStrategy implements IStrategy {
 				.withHostname(hostname)
 				.build()
 				.run(() -> runSource(connectorId, attributes, source, previousSourceTable));
+
+			if (cursorsBefore != null) {
+				final SourceCursors cursorsAfter = connectorNamespace.getSourceCursors(sourceKey);
+				cursorRollbacks.add(
+					() -> connectorNamespace.rollBackSourceCursors(sourceKey, poll, cursorsBefore, cursorsAfter)
+				);
+			}
+
+			// Interrupted while it ran, the source may have been cut short (an executeForEachEntryOf stops between two
+			// entries): it did not answer, whatever it returned
+			if (
+				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
+			) {
+				return false;
+			}
 
 			// A null table (the source processor failed) or the retry sentinel: the source did not answer. A null returned
 			// by an extension arrives here as an empty table: the source is retried, then given up, when it had data before
@@ -246,6 +359,13 @@ public abstract class AbstractStrategy implements IStrategy {
 				// process the compute
 				compute.accept(computeUpdaterProcessor);
 
+				// Interrupted during a compute, the last one included: the table is half computed and is not stored
+				if (
+					skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
+				) {
+					return false;
+				}
+
 				// log the updated source table
 				logSourceTable(
 					DEFAULT_SOURCE_TABLE_LOGGING_PROXY,
@@ -264,6 +384,316 @@ public abstract class AbstractStrategy implements IStrategy {
 		}
 
 		return allSourcesAnswered;
+	}
+
+	/**
+	 * Whether the given source is incremental: an eventLog or ipmiSel source, or a file source in LOG mode.
+	 *
+	 * @param source The source to check
+	 * @return {@code true} if the source only returns the entries added since the previous poll
+	 */
+	protected static boolean isIncremental(final Source source) {
+		if (source instanceof FileSource fileSource) {
+			return fileSource.getMode() == FileSourceProcessingMode.LOG;
+		}
+		return source instanceof EventLogSource || source instanceof IpmiSelSource;
+	}
+
+	/**
+	 * Whether the thread running this strategy is interrupted: its deadline expired or it was cancelled. Such a thread
+	 * may be an abandoned one, still running while the next run of the same host fills the same telemetry, so it
+	 * sends no more request and writes nothing more. A sheltered beforeAll or afterAll given up on stays cancelled, even
+	 * if a library swallowed its interrupt, see {@link ThreadHelper#isCancelled()}.
+	 *
+	 * @return {@code true} if the current thread is interrupted or its sheltered task was given up on
+	 */
+	protected static boolean isInterrupted() {
+		return ThreadHelper.isCancelled();
+	}
+
+	/**
+	 * Whether this run is still within its timeout plus {@link #CLEANUP_WINDOW_MILLIS}, whatever the interrupt status.
+	 *
+	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
+	 * @return {@code true} if an interrupted run may still start an afterAll
+	 */
+	protected boolean isWithinCleanupWindow(final long runStartTime) {
+		return (System.nanoTime() - runStartTime < TimeUnit.SECONDS.toNanos(getStrategyTimeout()) +
+			TimeUnit.MILLISECONDS.toNanos(CLEANUP_WINDOW_MILLIS));
+	}
+
+	/**
+	 * Runs the afterAll sources of the given connector, unless the run is interrupted and either the beforeAll of this
+	 * connector opened nothing, the cleanup window is over or another afterAll of this run already used it: a session
+	 * this run opened is closed, never one of the next run.
+	 *
+	 * @param connector    The connector
+	 * @param opened       Whether the beforeAll of the connector may have opened a session
+	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
+	 */
+	protected void runAfterAll(final Connector connector, final boolean opened, final long runStartTime) {
+		// A connector without afterAll sources closes nothing: it must not use the cleanup grace of a connector that does
+		final Map<String, Source> afterAll = connector.getAfterAll();
+		if (afterAll == null || afterAll.isEmpty()) {
+			return;
+		}
+		if (isInterrupted() && !(opened && isWithinCleanupWindow(runStartTime) && !cleanupGraceUsed.getAndSet(true))) {
+			log.debug(
+				"Hostname {} - Thread interrupted: skipping the afterAll sources of connector {}.",
+				telemetryManager.getHostname(),
+				connector.getCompiledFilename()
+			);
+			return;
+		}
+		AfterAllStrategy.builder()
+			.clientsExecutor(clientsExecutor)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.connector(connector)
+			.extensionManager(extensionManager)
+			.build()
+			.run();
+	}
+
+	/**
+	 * How long a connector waits for its parallel monitor jobs before the strategy goes on with the next connector, in
+	 * seconds.
+	 *
+	 * @return {@code THREAD_TIMEOUT}
+	 */
+	protected long getThreadTimeout() {
+		return THREAD_TIMEOUT;
+	}
+
+	/**
+	 * Interrupts the monitor jobs of a connector that outlived {@link #getThreadTimeout()} once the strategy thread (the
+	 * current one) is interrupted or the strategy deadline passes, even while that thread is busy with the next
+	 * connectors or abandoned. A sheltered beforeAll or afterAll clears the interrupt of the strategy thread while it
+	 * runs: the strategy cuts its deferred pools itself when that shelter sees the interrupt, see
+	 * {@link ThreadHelper#onInterrupt(Runnable, Runnable)}.
+	 *
+	 * @param pool     The thread pool of the monitor jobs, already shut down
+	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
+	 */
+	protected void watchPool(final ExecutorService pool, final long deadline) {
+		final Thread strategyThread = Thread.currentThread();
+		Thread.ofVirtual().start(() -> {
+			try {
+				while (!pool.awaitTermination(POOL_WATCH_MILLIS, TimeUnit.MILLISECONDS)) {
+					if (strategyThread.isInterrupted() || System.nanoTime() - deadline >= 0) {
+						cutPool(pool);
+						return;
+					}
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		});
+	}
+
+	/**
+	 * Interrupts the monitor jobs of a thread pool (shutdownNow), and starts the {@link #POOL_STOP_SECONDS} of this run
+	 * if it is the first cut.
+	 *
+	 * @param pool The thread pool of the monitor jobs
+	 */
+	protected void cutPool(final ExecutorService pool) {
+		poolStopDeadline.compareAndSet(0, System.nanoTime() + TimeUnit.SECONDS.toNanos(POOL_STOP_SECONDS));
+		pool.shutdownNow();
+	}
+
+	/**
+	 * Waits for the monitor jobs of the connectors that outlived {@link #getThreadTimeout()}, until the deadline of the
+	 * strategy, and ends each connector as soon as its own jobs are done: a connector whose jobs complete in time never
+	 * waits for another one, nor loses its afterAll to it. The jobs still running at the deadline, or once the strategy
+	 * thread is interrupted, are cut, and their connectors are ended once the jobs stopped (see
+	 * {@link #awaitPoolStop(ExecutorService, String)}). A connector whose end throws does not prevent the end of the next
+	 * ones: the first exception is thrown afterwards.
+	 *
+	 * @param <P>      The type of the record of a connector whose jobs outlived the thread timeout
+	 * @param pending  The records, in the order the connectors were processed
+	 * @param poolOf   The thread pool of the monitor jobs of a record
+	 * @param end      Ends the connector of a record, told whether all its jobs completed
+	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
+	 * @param hostname The host name
+	 */
+	protected <P> void joinPools(
+		final List<P> pending,
+		final Function<P, ExecutorService> poolOf,
+		final BiConsumer<P, Boolean> end,
+		final long deadline,
+		final String hostname
+	) {
+		final List<P> running = new ArrayList<>(pending);
+		final List<RuntimeException> failures = new ArrayList<>();
+		while (!running.isEmpty()) {
+			final Iterator<P> iterator = running.iterator();
+			while (iterator.hasNext()) {
+				final P next = iterator.next();
+				if (poolOf.apply(next).isTerminated()) {
+					iterator.remove();
+					endPending(end, next, true, failures);
+				}
+			}
+			if (running.isEmpty() || isInterrupted() || System.nanoTime() - deadline >= 0) {
+				break;
+			}
+			try {
+				poolOf.apply(running.get(0))
+					.awaitTermination(
+						Math.min(TimeUnit.MILLISECONDS.toNanos(POOL_WATCH_MILLIS), deadline - System.nanoTime()),
+						TimeUnit.NANOSECONDS
+					);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		if (!running.isEmpty()) {
+			log.warn("Hostname {} - Thread pool did not terminate within the strategy timeout. Forcing shutdown.", hostname);
+			// Cut them all at once, so that they stop together
+			running.forEach(next -> cutPool(poolOf.apply(next)));
+			running.forEach(next -> {
+				awaitPoolStop(poolOf.apply(next), hostname);
+				endPending(end, next, false, failures);
+			});
+		}
+
+		if (!failures.isEmpty()) {
+			final RuntimeException first = failures.get(0);
+			failures.subList(1, failures.size()).forEach(first::addSuppressed);
+			throw first;
+		}
+	}
+
+	/**
+	 * Ends the connector of the given record, and keeps the exception it throws for later.
+	 *
+	 * @param <P>       The type of the record
+	 * @param end       Ends the connector of a record, told whether all its jobs completed
+	 * @param pending   The record
+	 * @param completed Whether all the jobs of the connector completed
+	 * @param failures  Where to keep the exception
+	 */
+	private static <P> void endPending(
+		final BiConsumer<P, Boolean> end,
+		final P pending,
+		final boolean completed,
+		final List<RuntimeException> failures
+	) {
+		try {
+			end.accept(pending, completed);
+		} catch (RuntimeException e) {
+			failures.add(e);
+		}
+	}
+
+	/**
+	 * Waits for the monitor jobs of a thread pool cut short (see {@link #cutPool(ExecutorService)}) to stop, within
+	 * {@link #POOL_STOP_SECONDS} for the whole run, so that the afterAll of their connector does not close the session they still use. A job that
+	 * ignores its interrupt longer is left to end on its own, and the afterAll runs anyway: a session left open would
+	 * leak. A request it sent on a thread of its own (see ThreadHelper#executeInterruptibly) ends with its protocol
+	 * timeout.
+	 *
+	 * @param pool     The thread pool of the monitor jobs, cut short
+	 * @param hostname The host name
+	 */
+	protected void awaitPoolStop(final ExecutorService pool, final String hostname) {
+		poolStopDeadline.compareAndSet(0, System.nanoTime() + TimeUnit.SECONDS.toNanos(POOL_STOP_SECONDS));
+		if (!ThreadHelper.awaitTermination(pool, poolStopDeadline.get() - System.nanoTime())) {
+			log.warn(
+				"Hostname {} - Monitor jobs cut short still running after {} second: the afterAll of their connector runs anyway.",
+				hostname,
+				POOL_STOP_SECONDS
+			);
+		}
+	}
+
+	/**
+	 * Whether the thread of the job is interrupted (its deadline expired or it was cancelled), in which case the given
+	 * sources are skipped. An interrupted thread may be an abandoned one, still running while the next run of the same
+	 * host fills the same {@link ConnectorNamespace}: it writes nothing there, and its caller skips the mapping too, so
+	 * that it never reads the tables it did not refresh. The cursors its incremental sources moved are rolled back, as
+	 * their entries are not mapped.
+	 *
+	 * @param remainingSources The sources of the job not executed yet
+	 * @param cursorRollbacks  The rollbacks of the cursors of the incremental sources the job polled
+	 * @param connectorId      The connector identifier
+	 * @param hostname         The host name
+	 * @return {@code true} if the thread is interrupted and the remaining sources were skipped
+	 */
+	private static boolean skipSourcesIfInterrupted(
+		final List<Source> remainingSources,
+		final List<Runnable> cursorRollbacks,
+		final String connectorId,
+		final String hostname
+	) {
+		return isInterrupted() && skipSources(remainingSources, cursorRollbacks, connectorId, hostname);
+	}
+
+	/**
+	 * Skips the given sources of a job cut short, and rolls back the cursors its incremental sources moved, see
+	 * {@link #skipSourcesIfInterrupted(List, List, String, String)}.
+	 *
+	 * @param remainingSources The sources of the job not executed yet
+	 * @param cursorRollbacks  The rollbacks of the cursors of the incremental sources the job polled
+	 * @param connectorId      The connector identifier
+	 * @param hostname         The host name
+	 * @return {@code true}
+	 */
+	private static boolean skipSources(
+		final List<Source> remainingSources,
+		final List<Runnable> cursorRollbacks,
+		final String connectorId,
+		final String hostname
+	) {
+		rollBackCursors(cursorRollbacks);
+
+		log.warn(
+			"Hostname {} - The job was interrupted. Connector {} - Skipped sources: {}.",
+			hostname,
+			connectorId,
+			remainingSources.stream().map(Source::getKey).toList()
+		);
+		return true;
+	}
+
+	/**
+	 * The only check of the interrupt between the sources of a job and its mapping, made by the caller right before the
+	 * mapping: an interrupted job is not mapped and the cursors its incremental sources moved are rolled back, in the
+	 * same decision. A mapping that passed this check runs to its end, on the thread of the job, and the cursors stay.
+	 *
+	 * @param cursorRollbacks The rollbacks of the cursors of the incremental sources the job polled, filled by
+	 *                        {@link #processSourcesAndComputes(List, Map, JobInfo, List)}
+	 * @param connectorId     The connector identifier
+	 * @param hostname        The host name
+	 * @return {@code true} if the thread is interrupted and the mapping must be skipped
+	 */
+	protected static boolean skipMappingIfInterrupted(
+		final List<Runnable> cursorRollbacks,
+		final String connectorId,
+		final String hostname
+	) {
+		if (!isInterrupted()) {
+			return false;
+		}
+
+		rollBackCursors(cursorRollbacks);
+
+		log.warn("Hostname {} - The job was interrupted. Connector {} - Skipped mapping.", hostname, connectorId);
+		return true;
+	}
+
+	/**
+	 * Run then clear the given cursor rollbacks of a job that is not mapped: the next poll of its incremental sources
+	 * must return their entries again. Only a cursor still where this poll left it is moved back, and a second call
+	 * does nothing.
+	 *
+	 * @param cursorRollbacks The rollbacks of the cursors of the incremental sources the job polled
+	 */
+	private static void rollBackCursors(final List<Runnable> cursorRollbacks) {
+		cursorRollbacks.forEach(Runnable::run);
+		cursorRollbacks.clear();
 	}
 
 	/**
@@ -524,6 +954,18 @@ public abstract class AbstractStrategy implements IStrategy {
 			jobEndTime
 		);
 
+		// A validation cut short by an interrupt (job timeout, reload) proves nothing: the connector status and its
+		// failure counter are left as they are, and the job, whose sources are skipped, carries on
+		if (Thread.currentThread().isInterrupted()) {
+			log.warn(
+				"Hostname {} - {} validation of connector {} interrupted. The connector status is left unchanged.",
+				hostname,
+				validationType,
+				connectorId
+			);
+			return true;
+		}
+
 		final Monitor monitor = telemetryManager.findMonitorByTypeAndId(
 			KnownMonitorType.CONNECTOR.getKey(),
 			String.format(CONNECTOR_ID_FORMAT, KnownMonitorType.CONNECTOR.getKey(), connectorId)
@@ -704,8 +1146,8 @@ public abstract class AbstractStrategy implements IStrategy {
 	) {
 		// If the enableSelfMonitoring flag is set to true, or it's not configured at all,
 		// set the job duration metric on the monitor. Otherwise, don't set it.
-		// By default, self monitoring is enabled
-		if (telemetryManager.getHostConfiguration().isEnableSelfMonitoring()) {
+		// By default, self monitoring is enabled. An interrupted thread writes nothing (see isAbandoned)
+		if (telemetryManager.getHostConfiguration().isEnableSelfMonitoring() && !isInterrupted()) {
 			// Build the job duration metric key
 			final String jobDurationMetricKey = metricKeySupplier.get();
 			// Collect the job duration metric
@@ -777,6 +1219,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param hostname The resource hostname.
 	 */
 	protected void collectHostConfigured(final String hostname) {
+		if (isInterrupted()) {
+			return;
+		}
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 		final MetricFactory metricFactory = new MetricFactory(
 			telemetryManager.getHostname(),
@@ -791,6 +1236,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param observed Whether the host is observed or not.
 	 */
 	protected void collectHostObserved(final Double observed) {
+		if (isInterrupted()) {
+			return;
+		}
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 		final MetricFactory metricFactory = new MetricFactory(
 			telemetryManager.getHostname(),
@@ -805,7 +1253,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * operation type that recorded at least one request.
 	 */
 	protected void collectRequestMetrics() {
-		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring()) {
+		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring() || isInterrupted()) {
 			return;
 		}
 		final Map<String, Map<RequestOutcome, Long>> countersByOperation = telemetryManager.getRequestStats().snapshot();

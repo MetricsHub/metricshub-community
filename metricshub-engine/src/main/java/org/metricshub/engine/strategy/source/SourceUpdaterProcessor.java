@@ -36,6 +36,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
@@ -46,6 +49,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.EscapeType;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
@@ -618,9 +622,22 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final ExecutorService pool = poolSize > 1 ? Executors.newFixedThreadPool(poolSize) : null;
 		final List<List<String>> pendingRows = new ArrayList<>();
 		final List<Future<SourceTable>> pendingResults = new ArrayList<>();
+		// The pool threads do not inherit the interrupt of this thread: a queued entry checks its cancellation before its
+		// request, and wakes this thread up when it ends
+		final Thread coordinator = Thread.currentThread();
+		final BooleanSupplier cancelled = ThreadHelper.cancellation();
 
 		try {
 			for (List<String> row : table) {
+				// The job deadline expired or the job was cancelled: send no more request
+				if (cancelled.getAsBoolean()) {
+					log.warn(
+						"Hostname {} - Thread interrupted: skipping the remaining 'execute for each entry' requests.",
+						hostname
+					);
+					return SourceTable.empty();
+				}
+
 				if (row == null) {
 					continue;
 				}
@@ -645,7 +662,17 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 				if (pool != null) {
 					pendingRows.add(row);
-					pendingResults.add(pool.submit(() -> copy.accept(sourceProcessor)));
+					final FutureTask<SourceTable> pendingResult = new FutureTask<>(
+						() -> cancelled.getAsBoolean() ? SourceTable.empty() : copy.accept(sourceProcessor)
+					) {
+						@Override
+						protected void done() {
+							// Once the task is done, never before: the coordinator then sees it done when it wakes up
+							LockSupport.unpark(coordinator);
+						}
+					};
+					pendingResults.add(pendingResult);
+					pool.execute(pendingResult);
 					continue;
 				}
 
@@ -665,14 +692,27 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 			// Concatenate the parallel results in the original row order, as the sequential run does
 			for (int i = 0; i < pendingResults.size(); i++) {
-				concatEntryResult(source, result, pendingRows.get(i), pendingResults.get(i).get());
+				final Future<SourceTable> pendingResult = pendingResults.get(i);
+				// park, unlike Future.get, never clears the interrupt that the queued entries check
+				while (!cancelled.getAsBoolean() && !pendingResult.isDone()) {
+					LockSupport.park(this);
+				}
+				if (cancelled.getAsBoolean()) {
+					log.warn(
+						"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
+						hostname
+					);
+					return SourceTable.empty();
+				}
+				concatEntryResult(source, result, pendingRows.get(i), pendingResult.get());
 			}
 		} catch (InterruptedException e) {
+			// Future.get of a completed task does not wait
+			Thread.currentThread().interrupt();
 			log.error(
 				"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
 				hostname
 			);
-			Thread.currentThread().interrupt();
 			return SourceTable.empty();
 		} catch (ExecutionException e) {
 			// Source.accept throws no checked exception: rethrow what the sequential run would have thrown

@@ -3,6 +3,10 @@ package org.metricshub.engine.strategy.tool;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,6 +23,7 @@ import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -69,6 +74,30 @@ class ToolStrategyTest {
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getSourceTable("${source::afterAll.logout}");
 		assertEquals(List.of(List.of("bye")), logout.getTable());
+	}
+
+	@Test
+	void testCancelledToolLogsOutAndReturnsNothing() {
+		final ToolStrategy strategy = newStrategy("withSession", Map.of());
+		final TelemetryManager telemetryManager = strategy.getTelemetryManager();
+		final ConnectorNamespace namespace = spy(ConnectorNamespace.builder().build());
+		telemetryManager.getHostProperties().getConnectorNamespaces().put(CONNECTOR_ID, namespace);
+		// The tool is cancelled while its source table is stored
+		doAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			return invocation.callRealMethod();
+		}).when(namespace).addSourceTable(eq("${source::tools.withSession.sources.authenticated}"), any());
+
+		try {
+			strategy.run();
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
+
+		// No table of a cut-short run, and the session opened in beforeAll is closed
+		assertTrue(strategy.getResult().isEmpty());
+		assertEquals(List.of(List.of("bye")), namespace.getSourceTable("${source::afterAll.logout}").getTable());
 	}
 
 	@Test

@@ -1,6 +1,7 @@
 package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.constants.Constants.AUTOMATIC;
 import static org.metricshub.engine.constants.Constants.ECS1_01;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -149,6 +151,33 @@ class SourceProcessorTest {
 		final SourceTable actual = sourceProcessor.process(source);
 
 		assertEquals(expected, actual);
+	}
+
+	@Test
+	void testInterruptedThreadSendsNoRequest() {
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
+			.hostname(ECS1_01)
+			.hostId(ECS1_01)
+			.hostType(DeviceKind.LINUX)
+			.configurations(Collections.singletonMap(TestConfiguration.class, TestConfiguration.builder().build()))
+			.build();
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
+			.telemetryManager(TelemetryManager.builder().hostConfiguration(hostConfiguration).build())
+			.clientsExecutor(clientsExecutorMock)
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(protocolExtensionMock)).build())
+			.connectorId(CONNECTOR_ID)
+			.build();
+		final HttpSource source = HttpSource.builder().url(URL).method(HttpMethod.GET).build();
+
+		// The job deadline expired: no source, executeForEachEntryOf entry or Jawk request reaches an extension
+		Thread.currentThread().interrupt();
+		try {
+			assertTrue(sourceProcessor.process(source).isEmpty());
+			assertNull(sourceProcessor.executeHttpRequest(source));
+			verifyNoInteractions(protocolExtensionMock);
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	@Test
