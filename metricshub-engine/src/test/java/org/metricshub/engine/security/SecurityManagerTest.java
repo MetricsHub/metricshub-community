@@ -28,8 +28,11 @@ import java.util.List;
 import java.util.Map;
 
 import java.io.File;
+import java.io.FileInputStream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 class SecurityManagerTest {
@@ -120,6 +123,28 @@ class SecurityManagerTest {
 				);
 			}
 		}
+	}
+
+	@Test
+	@EnabledOnOs(OS.WINDOWS)
+	void moveDurablyShouldWaitForAFileHeldOpenByAnotherHandle(@TempDir final Path directory) throws Exception {
+		final Path source = Files.writeString(directory.resolve("new"), "new");
+		final Path target = Files.writeString(directory.resolve("old"), "old");
+		// java.io opens without FILE_SHARE_DELETE, as an antivirus scanning the file may: Windows denies the move
+		final FileInputStream holder = new FileInputStream(target.toFile());
+		final ExecutorService executor = Executors.newSingleThreadExecutor();
+		try {
+			executor.submit(() -> {
+				Thread.sleep(300);
+				holder.close();
+				return null;
+			});
+			SecurityManager.moveDurably(source, target);
+		} finally {
+			executor.shutdown();
+			holder.close();
+		}
+		assertEquals("new", Files.readString(target));
 	}
 
 	@Test
