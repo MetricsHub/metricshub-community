@@ -311,6 +311,15 @@ public abstract class AbstractStrategy implements IStrategy {
 					// sources polled are not mapped: they come again at the next poll
 					sourceTable.setFailedRun(strategyTime);
 					connectorNamespace.addSourceTable(sourceKey, sourceTable);
+					// The skipped sources fail as well: another job reading one of them must not map its table of a former run
+					for (Source skipped : sources.subList(sourceIndex + 1, sources.size())) {
+						final SourceTable notRun = SourceTable.failed(
+							"Not executed: source %s failed: %s".formatted(sourceKey, sourceTable.getError())
+						);
+						notRun.setFailedRun(strategyTime);
+						connectorNamespace.addSourceTable(skipped.getKey(), notRun);
+						connectorNamespace.getUnansweredSourceKeys().add(skipped.getKey());
+					}
 					rollBackCursors(cursorRollbacks);
 					return sourceTable.getError();
 				}

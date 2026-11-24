@@ -765,6 +765,32 @@ class SourceUpdaterProcessorTest {
 	}
 
 	@Test
+	void testProcessExecuteForEachEntryParallelLaterEntryFailsFirst() {
+		// Two workers: b fails at once while a still runs, so c and d are queued after the failure
+		final Set<String> requested = ConcurrentHashMap.newKeySet();
+		final Answer<SourceTable> answer = invocation -> {
+			final String entry = invocation.<HttpSource>getArgument(0).getPath();
+			requested.add(entry);
+			if ("b".equals(entry)) {
+				return SourceTable.failed("Refused");
+			}
+			Thread.sleep(300);
+			return SourceTable.ofText("result-" + entry);
+		};
+		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
+			.source(ENCLOSURE_COLLECT_SOURCE_1)
+			.maxParallel(2)
+			.build();
+
+		// The failure stops the queued entries at once, not when the coordinator reaches b after a
+		assertEquals(
+			SourceTable.failed("Entry [b]: Refused"),
+			runForEachEntry(executeForEachEntryOf, false, false, false, answer)
+		);
+		assertEquals(Set.of("a", "b"), requested);
+	}
+
+	@Test
 	void testProcessSNMPGetSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
 		final HostConfiguration hostConfiguration = HostConfiguration.builder()

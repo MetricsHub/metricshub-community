@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
@@ -57,6 +58,11 @@ import org.springframework.ai.tool.ToolCallback;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConnectorToolCallbacks {
+
+	/**
+	 * The properties of a protocol configuration that hold a credential, as {@link IConfiguration#getProperty} names them.
+	 */
+	private static final List<String> SECRET_PROPERTIES = List.of("password", "privacypassword", "community");
 
 	private static final String OTHER_DECLARATION_ERROR = "Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
 
@@ -209,9 +215,9 @@ public final class ConnectorToolCallbacks {
 			.build();
 		strategy.run();
 
-		// A failed source stopped the tool: the assistant gets what failed and why
+		// A failed source stopped the tool: the assistant gets what failed and why, never a credential of the host
 		if (strategy.getResult().isFailed()) {
-			return new ToolText(strategy.getResult().getError());
+			return new ToolText(withoutSecrets(strategy.getResult().getError(), telemetryManager));
 		}
 		if (tool.isTextResult()) {
 			return new ToolText(strategy.getResult().asText());
@@ -247,6 +253,33 @@ public final class ConnectorToolCallbacks {
 			// Variables that make the declaration invalid
 			return false;
 		}
+	}
+
+	/**
+	 * The error of a failed source without the credentials of the host: the request it quotes may hold one, through a
+	 * <code>${protocol::ssh.password}</code> reference for example.
+	 *
+	 * @param error            The error of the failed source
+	 * @param telemetryManager The host's telemetry manager
+	 * @return the error, each password or community of the host's configurations replaced with <code>********</code>
+	 */
+	static String withoutSecrets(final String error, final TelemetryManager telemetryManager) {
+		String result = error;
+		for (IConfiguration configuration : telemetryManager.getHostConfiguration().getConfigurations().values()) {
+			for (String property : SECRET_PROPERTIES) {
+				String secret;
+				try {
+					secret = configuration == null ? null : configuration.getProperty(property);
+				} catch (RuntimeException e) {
+					// String.valueOf of a null char[]: no such secret
+					secret = null;
+				}
+				if (secret != null && !secret.isEmpty()) {
+					result = result.replace(secret, "********");
+				}
+			}
+		}
+		return result;
 	}
 
 	private static ConnectorTool toolOf(

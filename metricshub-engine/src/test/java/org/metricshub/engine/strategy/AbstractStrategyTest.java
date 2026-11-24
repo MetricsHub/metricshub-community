@@ -1107,8 +1107,11 @@ class AbstractStrategyTest {
 		// The failure is stored, for the sources that read it
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
 		assertEquals(SourceTable.failed("HTTP GET /x: status 401"), namespace.getSourceTable("${source::a}"));
-		assertNull(namespace.getSourceTable("${source::b}"));
-		assertEquals(Set.of("${source::a}"), namespace.getUnansweredSourceKeys());
+		// The skipped source fails too: another job reading it must not get its table of a former run
+		final SourceTable skipped = namespace.getSourceTable("${source::b}");
+		assertEquals(SourceTable.failed("Not executed: source ${source::a} failed: HTTP GET /x: status 401"), skipped);
+		assertEquals(STRATEGY_TIME, skipped.getFailedRun());
+		assertEquals(Set.of("${source::a}", "${source::b}"), namespace.getUnansweredSourceKeys());
 	}
 
 	@Test

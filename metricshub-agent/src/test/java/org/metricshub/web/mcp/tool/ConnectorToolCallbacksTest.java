@@ -18,6 +18,7 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -145,6 +146,29 @@ class ConnectorToolCallbacksTest {
 		assertEquals(
 			List.of(List.of("alpha")),
 			MAPPER.convertValue(response(defaultResult, HOSTNAME).get("rows"), List.class)
+		);
+	}
+
+	@Test
+	void testErrorWithoutSecrets() {
+		final IConfiguration configuration = mock(IConfiguration.class);
+		when(configuration.getProperty("password")).thenReturn("s3cr3t");
+		// String.valueOf of a null char[]
+		when(configuration.getProperty("community")).thenThrow(new NullPointerException());
+		final TelemetryManager host = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOSTNAME)
+					.hostname(HOSTNAME)
+					.hostType(DeviceKind.LINUX)
+					.configurations(Map.of(configuration.getClass(), configuration))
+					.build()
+			)
+			.build();
+
+		assertEquals(
+			"OS command: curl -u admin:******** /x: Connection refused",
+			ConnectorToolCallbacks.withoutSecrets("OS command: curl -u admin:s3cr3t /x: Connection refused", host)
 		);
 	}
 
