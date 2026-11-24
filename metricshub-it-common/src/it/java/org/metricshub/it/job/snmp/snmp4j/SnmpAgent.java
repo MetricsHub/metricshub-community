@@ -5,10 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -18,7 +16,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import org.metricshub.it.job.ITJobUtils;
-import org.snmp4j.CommandResponder;
 import org.snmp4j.MessageDispatcher;
 import org.snmp4j.MessageDispatcherImpl;
 import org.snmp4j.agent.AgentConfigManager;
@@ -38,11 +35,9 @@ import org.snmp4j.agent.request.RequestStatus;
 import org.snmp4j.cfg.EngineBootsCounterFile;
 import org.snmp4j.mp.MPv3;
 import org.snmp4j.security.SecurityProtocols;
-import org.snmp4j.smi.Address;
 import org.snmp4j.smi.Counter32;
 import org.snmp4j.smi.Counter64;
 import org.snmp4j.smi.Gauge32;
-import org.snmp4j.smi.GenericAddress;
 import org.snmp4j.smi.Integer32;
 import org.snmp4j.smi.IpAddress;
 import org.snmp4j.smi.Null;
@@ -50,9 +45,10 @@ import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.Opaque;
 import org.snmp4j.smi.TimeTicks;
+import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
-import org.snmp4j.transport.TransportMappings;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
 import org.snmp4j.util.ThreadPool;
 
 public class SnmpAgent implements VariableProvider {
@@ -129,12 +125,11 @@ public class SnmpAgent implements VariableProvider {
 		// Create a new messageDispatcher
 		final MessageDispatcher messageDispatcher = new MessageDispatcherImpl();
 
-		// Listen via UPD layer on the available port
-		// Unix-based systems declare ports < 1024 as "privileged" unfortunately unix machines like Jenkins will reject 161...
-		try (ServerSocket serverSocket = new ServerSocket(0)) {
-			port = serverSocket.getLocalPort();
-			addListenAddresses(messageDispatcher, List.of("udp:0.0.0.0/" + port));
-		}
+		// Listen via UDP on port 0, the system picks a free UDP port (ports < 1024 are privileged on Unix).
+		// The constructor binds the socket and listen() reuses it, so the port read here is the one served.
+		final DefaultUdpTransportMapping transport = new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/0"));
+		messageDispatcher.addTransportMapping(transport);
+		port = transport.getListenAddress().getPort();
 
 		threadPool = ThreadPool.create("snmp4JAgent", 3);
 
@@ -182,21 +177,6 @@ public class SnmpAgent implements VariableProvider {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Add the list of listen addresses to the {@link MessageDispatcher} instance
-	 *
-	 * @param md        The MessageDispatcher interface defining common services that process incoming SNMP messages and dispatch them to
-	 *                  interested {@link CommandResponder} instances.
-	 * @param addresses Listener address e.g. udp:0.0.0.0/161
-	 */
-	protected void addListenAddresses(final MessageDispatcher md, final List<String> addresses) {
-		for (String addressString : addresses) {
-			Address address = GenericAddress.parse(addressString);
-
-			md.addTransportMapping(TransportMappings.getInstance().createTransportMapping(address));
-		}
 	}
 
 	/**
