@@ -32,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.NetworkHelper;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.wmi.exceptions.WmiComException;
@@ -283,6 +284,30 @@ class WmiRequestExecutorTest {
 		);
 		assertSame(exception, e.getCause());
 		assertTrue(executor.isAcceptableException(e));
+	}
+
+	@Test
+	void testInterruptBeforeTheQueryStartedCountsNothing() throws Exception {
+		final RequestStats requestStats = new RequestStats();
+		final WmiRequestExecutor executor = executorReturning(List.of(Map.of("Name", "host")));
+		try (MockedStatic<NetworkHelper> network = mockStatic(NetworkHelper.class)) {
+			// The interrupt lands after the check of executeWmi, while the name of the host is resolved
+			network.when(() -> NetworkHelper.isLocalhost(HOSTNAME)).thenAnswer(invocation -> {
+				Thread.currentThread().interrupt();
+				return true;
+			});
+			try {
+				assertThrows(
+					ClientException.class,
+					() -> executor.executeWmi(HOSTNAME, CONFIGURATION, QUERY, NAMESPACE, null, requestStats)
+				);
+			} finally {
+				Thread.interrupted();
+			}
+		}
+		// Nothing was sent: nothing is counted
+		verify(executor, never()).query(any(), any(), any(), any(), anyLong());
+		assertEquals(Map.of(), requestStats.snapshot());
 	}
 
 	@Test

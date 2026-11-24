@@ -21,10 +21,16 @@ package org.metricshub.engine.strategy.surrounding;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
+
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -38,6 +44,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -67,8 +75,10 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 	protected Connector connector;
 
 	/**
-	 * Whether the last {@link #run()} may have opened a session the afterAll must close: it started the sources, or had
-	 * none and ran on a thread not interrupted. Read by the strategy that runs the beforeAll.
+	 * Whether the last {@link #run()} of the beforeAll gave this run a session the afterAll must close: it stored every
+	 * beforeAll table the afterAll references (at least one beforeAll table when the afterAll references none), or it had
+	 * no sources and ran on a thread not interrupted. A beforeAll cut short before its login answered leaves the table
+	 * of an earlier run: the afterAll would send that run's token. Read by the strategy that runs the beforeAll.
 	 */
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
@@ -138,33 +148,74 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 			return;
 		}
 
+		// The tables of an earlier run: a table this run stores is a new instance
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(connectorId);
+		final Map<String, SourceTable> earlierTables = new HashMap<>();
+		sources.values().forEach(source -> earlierTables.put(source.getKey(), namespace.getSourceTable(source.getKey())));
+
 		// On a child thread that ignores the interrupt for a grace period: a login answered within it keeps its token,
-		// and the logout of a job cut short is still sent (see AbstractStrategy.CLEANUP_WINDOW_SECONDS). A beforeAll whose
+		// and the logout of a job cut short is still sent (see AbstractStrategy.CLEANUP_WINDOW_MILLIS). A beforeAll whose
 		// caller is interrupted only ends the source it is in, while an afterAll runs all its sources
-		ThreadHelper.shelter(() -> {
-			// The first source starts whatever happens next: it may open a session
-			opened = true;
+		try {
+			ThreadHelper.shelter(() -> {
+				// Construct job information including job name, connector identifier, hostname and monitor type.
+				final JobInfo jobInfo = JobInfo.builder()
+					.hostname(hostname)
+					.connectorId(connectorId)
+					.jobName(jobName)
+					.monitorType("none")
+					.build();
 
-			// Construct job information including job name, connector identifier, hostname and monitor type.
-			final JobInfo jobInfo = JobInfo.builder()
-				.hostname(hostname)
-				.connectorId(connectorId)
-				.jobName(jobName)
-				.monitorType("none")
-				.build();
+				// Build and order sources based on dependencies.
+				final OrderedSources orderedSources = OrderedSources.builder()
+					.sources(sources, new ArrayList<>(), getSourceDependencies(), jobInfo)
+					.build();
 
-			// Build and order sources based on dependencies.
-			final OrderedSources orderedSources = OrderedSources.builder()
-				.sources(sources, new ArrayList<>(), getSourceDependencies(), jobInfo)
-				.build();
+				// Process the ordered sources along with computes, based on the constructed job information.
+				processSourcesAndComputes(orderedSources.getSources(), jobInfo);
 
-			// Process the ordered sources along with computes, based on the constructed job information.
-			processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+				final long jobEndTime = System.currentTimeMillis();
+				// Set the job duration metric in the host monitor
+				setJobDurationMetric(jobName, connectorId, jobStartTime, jobEndTime);
+			}, beforeAll ? BEFORE_ALL_GRACE_SECONDS : AFTER_ALL_GRACE_SECONDS, beforeAll);
+		} finally {
+			// Even when a source throws: a login stored before it still needs its logout
+			if (beforeAll) {
+				opened = storedWhatTheAfterAllNeeds(namespace, earlierTables);
+			}
+		}
+	}
 
-			final long jobEndTime = System.currentTimeMillis();
-			// Set the job duration metric in the host monitor
-			setJobDurationMetric(jobName, connectorId, jobStartTime, jobEndTime);
-		}, beforeAll ? BEFORE_ALL_GRACE_SECONDS : AFTER_ALL_GRACE_SECONDS, beforeAll);
+	/**
+	 * Whether this run stored every beforeAll table that the afterAll sources reference, or at least one beforeAll table
+	 * when they reference none.
+	 *
+	 * @param namespace     The connector namespace
+	 * @param earlierTables The tables of the beforeAll sources before this run, by source key
+	 * @return {@code true} if the afterAll reads tables of this run only
+	 */
+	private boolean storedWhatTheAfterAllNeeds(
+		final ConnectorNamespace namespace,
+		final Map<String, SourceTable> earlierTables
+	) {
+		final Set<String> stored = earlierTables.entrySet().stream().filter(entry -> {
+			final SourceTable table = namespace.getSourceTable(entry.getKey());
+			return table != null && table != entry.getValue();
+		}).map(Map.Entry::getKey).collect(Collectors.toSet());
+
+		final Set<String> needed = new HashSet<>();
+		final Map<String, Source> afterAll = connector.getAfterAll();
+		if (afterAll != null) {
+			afterAll.values().forEach(source -> source.getReferences().forEach(reference -> {
+				final Matcher matcher = SOURCE_REF_PATTERN.matcher(reference);
+				while (matcher.find()) {
+					if (earlierTables.containsKey(matcher.group())) {
+						needed.add(matcher.group());
+					}
+				}
+			}));
+		}
+		return needed.isEmpty() ? !stored.isEmpty() : stored.containsAll(needed);
 	}
 
 	/**

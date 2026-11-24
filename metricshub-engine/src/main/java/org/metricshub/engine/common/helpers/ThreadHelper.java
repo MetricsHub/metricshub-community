@@ -91,7 +91,7 @@ public class ThreadHelper {
 		ExecutionException, TimeoutException {
 		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for
 		if (isCancelled()) {
-			throw new InterruptedException("Interrupted before the task started");
+			throw new NotStartedException("Interrupted before the task started");
 		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
@@ -110,6 +110,40 @@ public class ThreadHelper {
 		} finally {
 			executor.shutdownNow();
 		}
+	}
+
+	/**
+	 * The {@link InterruptedException} of {@link #execute(Callable, long)} and {@link #executeInterruptibly(Callable)}
+	 * when their caller is already cancelled: the request never started, so nothing was sent and nothing is counted.
+	 */
+	public static final class NotStartedException extends InterruptedException {
+
+		private static final long serialVersionUID = 1L;
+
+		/**
+		 * Creates the exception of a request that never started.
+		 *
+		 * @param message the message
+		 */
+		NotStartedException(final String message) {
+			super(message);
+		}
+	}
+
+	/**
+	 * Whether the given exception, or one of its causes, tells that a request never started: nothing was sent, so its
+	 * outcome is not counted.
+	 *
+	 * @param throwable the exception
+	 * @return {@code true} if the request never started
+	 */
+	public static boolean neverStarted(final Throwable throwable) {
+		for (Throwable cause = throwable; cause != null; cause = cause.getCause()) {
+			if (cause instanceof NotStartedException) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -134,7 +168,7 @@ public class ThreadHelper {
 	public static <T> T executeInterruptibly(final Callable<T> request) throws InterruptedException, ExecutionException {
 		// A caller already interrupted (an expired deadline of its job) must not start a request it will not wait for
 		if (isCancelled()) {
-			throw new InterruptedException("Interrupted before the request started");
+			throw new NotStartedException("Interrupted before the request started");
 		}
 		final ExecutorService executor = Executors.newSingleThreadExecutor(new MetricsHubThreadFactory());
 		try {
@@ -271,6 +305,39 @@ public class ThreadHelper {
 		final Thread thread = Thread.currentThread();
 		final AtomicBoolean cancelled = CANCELLED.get();
 		return () -> thread.isInterrupted() || cancelled != null && cancelled.get();
+	}
+
+	/**
+	 * Waits at most the given time for the given pool to terminate, even on an interrupted thread: the interrupt status is
+	 * cleared while it waits, so the {@link #onInterrupt(Runnable, Runnable)} hook is run first, then restored.
+	 *
+	 * @param pool         the pool, shut down
+	 * @param timeoutNanos the longest wait, in nanoseconds
+	 * @return {@code true} if the pool terminated
+	 */
+	public static boolean awaitTermination(final ExecutorService pool, final long timeoutNanos) {
+		final long end = System.nanoTime() + timeoutNanos;
+		boolean interrupted = Thread.interrupted();
+		if (interrupted) {
+			notifyInterrupt();
+		}
+		try {
+			while (true) {
+				try {
+					return pool.awaitTermination(end - System.nanoTime(), TimeUnit.NANOSECONDS);
+				} catch (InterruptedException e) {
+					// awaitTermination cleared the interrupt status, so the next wait does not throw at once
+					if (!interrupted) {
+						interrupted = true;
+						notifyInterrupt();
+					}
+				}
+			}
+		} finally {
+			if (interrupted) {
+				Thread.currentThread().interrupt();
+			}
+		}
 	}
 
 	/**

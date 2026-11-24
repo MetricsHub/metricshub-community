@@ -461,7 +461,10 @@ public class HttpRequestExecutor {
 			// The URL is invalid: nothing was sent
 			throw e;
 		} catch (IOException e) {
-			requestStats.record(OPERATION_TYPE, RequestOutcome.of(e));
+			// An interrupt that came before the request started sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				requestStats.record(OPERATION_TYPE, RequestOutcome.of(e));
+			}
 			throw e;
 		} catch (RuntimeException e) {
 			requestStats.record(OPERATION_TYPE, RequestOutcome.FAILED);

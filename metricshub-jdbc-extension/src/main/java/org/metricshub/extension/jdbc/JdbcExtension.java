@@ -488,7 +488,10 @@ public class JdbcExtension implements IProtocolExtension {
 				}
 			});
 		} catch (InterruptedException e) {
-			SqlRequestExecutor.recordOutcome(requestStats, RequestOutcome.TIMEOUT);
+			// An interrupt that came before the check started sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				SqlRequestExecutor.recordOutcome(requestStats, RequestOutcome.TIMEOUT);
+			}
 			return false;
 		} catch (ExecutionException e) {
 			SqlRequestExecutor.recordOutcome(requestStats, SqlRequestExecutor.classify(SqlRequestExecutor.sqlCause(e)));

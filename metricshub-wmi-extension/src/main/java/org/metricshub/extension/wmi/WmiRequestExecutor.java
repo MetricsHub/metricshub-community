@@ -185,7 +185,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			return resultTable;
 		} catch (Exception e) {
 			final Exception failure = unwrap(e);
-			if (!answered) {
+			// An interrupt that came before the request started (the name resolution of the host included) sent nothing
+			if (!answered && !ThreadHelper.neverStarted(failure)) {
 				recordFailure(requestStats, failure);
 			}
 			throw new ClientException("WMI query failed on " + hostname + ".", failure);
@@ -311,7 +312,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			return resultStdout;
 		} catch (Exception e) {
 			final Exception failure = unwrap(e);
-			if (!answered) {
+			// An interrupt that came before the request started (the name resolution of the host included) sent nothing
+			if (!answered && !ThreadHelper.neverStarted(failure)) {
 				recordFailure(requestStats, failure);
 			}
 			// The cause of the wmi-java wrapper, as before; the exception itself when it has none (a timeout, an interrupt)

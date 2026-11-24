@@ -30,12 +30,16 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TI
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -125,20 +129,28 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	/**
 	 * How long after the strategy timeout an interrupted run may still start the afterAll of a connector whose
-	 * beforeAll it entered, in seconds. The budget, from the interrupt I and {@link ContextExecutor}'s 10 s
-	 * SHUTDOWN_GRACE_PERIOD_SECONDS, after which it abandons the strategy thread:
+	 * beforeAll it entered, in milliseconds: the 5 s grace of a beforeAll cut short plus 1 s for its cancel, plus 0.5 s
+	 * for the sources and computes that follow a login answered at the end of its grace, so that such a login is followed
+	 * by its logout. The budget, from the interrupt I and {@link ContextExecutor}'s 10 s SHUTDOWN_GRACE_PERIOD_SECONDS,
+	 * after which it abandons the strategy thread:
 	 * <ul>
-	 * <li>at the strategy timeout (I = run start + timeout), an afterAll starts before I+4 s and gets its 2 s grace
-	 * plus 1 s for its cancel: it ends by I+7 s;</li>
-	 * <li>on an earlier cancel (reload), a beforeAll cut short gets its 5 s grace plus 1 s, then the afterAll 2 s plus
-	 * 1 s: the run ends by I+9 s.</li>
+	 * <li>a beforeAll cut short ends by I+6 s, and the monitor jobs cut short get {@link #POOL_STOP_SECONDS} to stop,
+	 * by I+1 s: an afterAll starts by I+6.5 s;</li>
+	 * <li>that afterAll gets its 2 s grace plus 1 s for its cancel: the run ends by I+9.5 s, whether I is the strategy
+	 * timeout or an earlier cancel (reload).</li>
 	 * </ul>
 	 * Only one afterAll of an interrupted run gets this grace, although the afterAll of several connectors may be
 	 * deferred until their monitor jobs end. So the logout always reads this run's token, before the next run of the
 	 * host can open another session. A login answered after its grace, or a session whose logout is skipped, leaks a
 	 * session, which expires on the device.
 	 */
-	protected static final long CLEANUP_WINDOW_SECONDS = 4;
+	protected static final long CLEANUP_WINDOW_MILLIS = 6500;
+
+	/**
+	 * How long the monitor jobs of thread pools cut short may take to stop before the afterAll of their connector, in
+	 * seconds, counted once per run from the first cut: the afterAll may close the session they use.
+	 */
+	static final long POOL_STOP_SECONDS = 1;
 
 	/**
 	 * How often a deferred thread pool checks the strategy thread and the strategy deadline, in milliseconds.
@@ -146,12 +158,21 @@ public abstract class AbstractStrategy implements IStrategy {
 	private static final long POOL_WATCH_MILLIS = 100;
 
 	/**
-	 * Whether an afterAll of this interrupted run already used the cleanup grace, see {@link #CLEANUP_WINDOW_SECONDS}.
+	 * Whether an afterAll of this interrupted run already used the cleanup grace, see {@link #CLEANUP_WINDOW_MILLIS}.
 	 */
 	@Getter(AccessLevel.NONE)
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
 	private final AtomicBoolean cleanupGraceUsed = new AtomicBoolean();
+
+	/**
+	 * The {@link System#nanoTime()} until which the thread pools of this run cut short may stop, 0 until the first cut,
+	 * see {@link #POOL_STOP_SECONDS}.
+	 */
+	@Getter(AccessLevel.NONE)
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final AtomicLong poolStopDeadline = new AtomicLong();
 
 	/**
 	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
@@ -391,13 +412,14 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Whether this run is still within its timeout plus {@link #CLEANUP_WINDOW_SECONDS}, whatever the interrupt status.
+	 * Whether this run is still within its timeout plus {@link #CLEANUP_WINDOW_MILLIS}, whatever the interrupt status.
 	 *
 	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
 	 * @return {@code true} if an interrupted run may still start an afterAll
 	 */
 	protected boolean isWithinCleanupWindow(final long runStartTime) {
-		return System.nanoTime() - runStartTime < TimeUnit.SECONDS.toNanos(getStrategyTimeout() + CLEANUP_WINDOW_SECONDS);
+		return (System.nanoTime() - runStartTime < TimeUnit.SECONDS.toNanos(getStrategyTimeout()) +
+			TimeUnit.MILLISECONDS.toNanos(CLEANUP_WINDOW_MILLIS));
 	}
 
 	/**
@@ -453,13 +475,13 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param pool     The thread pool of the monitor jobs, already shut down
 	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
 	 */
-	protected static void watchPool(final ExecutorService pool, final long deadline) {
+	protected void watchPool(final ExecutorService pool, final long deadline) {
 		final Thread strategyThread = Thread.currentThread();
 		Thread.ofVirtual().start(() -> {
 			try {
 				while (!pool.awaitTermination(POOL_WATCH_MILLIS, TimeUnit.MILLISECONDS)) {
 					if (strategyThread.isInterrupted() || System.nanoTime() - deadline >= 0) {
-						pool.shutdownNow();
+						cutPool(pool);
 						return;
 					}
 				}
@@ -470,27 +492,121 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Waits for the monitor jobs of a connector that outlived {@link #getThreadTimeout()}, until the deadline of the
-	 * strategy. Jobs still running at the deadline, or when the strategy thread is interrupted, are interrupted and
-	 * abandoned.
+	 * Interrupts the monitor jobs of a thread pool (shutdownNow), and starts the {@link #POOL_STOP_SECONDS} of this run
+	 * if it is the first cut.
 	 *
-	 * @param pool     The thread pool of the monitor jobs, already shut down
+	 * @param pool The thread pool of the monitor jobs
+	 */
+	protected void cutPool(final ExecutorService pool) {
+		poolStopDeadline.compareAndSet(0, System.nanoTime() + TimeUnit.SECONDS.toNanos(POOL_STOP_SECONDS));
+		pool.shutdownNow();
+	}
+
+	/**
+	 * Waits for the monitor jobs of the connectors that outlived {@link #getThreadTimeout()}, until the deadline of the
+	 * strategy, and ends each connector as soon as its own jobs are done: a connector whose jobs complete in time never
+	 * waits for another one, nor loses its afterAll to it. The jobs still running at the deadline, or once the strategy
+	 * thread is interrupted, are cut, and their connectors are ended once the jobs stopped (see
+	 * {@link #awaitPoolStop(ExecutorService, String)}). A connector whose end throws does not prevent the end of the next
+	 * ones: the first exception is thrown afterwards.
+	 *
+	 * @param <P>      The type of the record of a connector whose jobs outlived the thread timeout
+	 * @param pending  The records, in the order the connectors were processed
+	 * @param poolOf   The thread pool of the monitor jobs of a record
+	 * @param end      Ends the connector of a record, told whether all its jobs completed
 	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
 	 * @param hostname The host name
-	 * @return {@code true} if every job completed
 	 */
-	protected static boolean joinPool(final ExecutorService pool, final long deadline, final String hostname) {
-		try {
-			if (pool.awaitTermination(deadline - System.nanoTime(), TimeUnit.NANOSECONDS)) {
-				return true;
+	protected <P> void joinPools(
+		final List<P> pending,
+		final Function<P, ExecutorService> poolOf,
+		final BiConsumer<P, Boolean> end,
+		final long deadline,
+		final String hostname
+	) {
+		final List<P> running = new ArrayList<>(pending);
+		final List<RuntimeException> failures = new ArrayList<>();
+		while (!running.isEmpty()) {
+			final Iterator<P> iterator = running.iterator();
+			while (iterator.hasNext()) {
+				final P next = iterator.next();
+				if (poolOf.apply(next).isTerminated()) {
+					iterator.remove();
+					endPending(end, next, true, failures);
+				}
 			}
-			log.warn("Hostname {} - Thread pool did not terminate within the strategy timeout. Forcing shutdown.", hostname);
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			log.debug("Hostname {} - Waiting for threads' termination aborted by an interrupt.", hostname);
+			if (running.isEmpty() || isInterrupted() || System.nanoTime() - deadline >= 0) {
+				break;
+			}
+			try {
+				poolOf.apply(running.get(0))
+					.awaitTermination(
+						Math.min(TimeUnit.MILLISECONDS.toNanos(POOL_WATCH_MILLIS), deadline - System.nanoTime()),
+						TimeUnit.NANOSECONDS
+					);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
 		}
-		pool.shutdownNow();
-		return false;
+
+		if (!running.isEmpty()) {
+			log.warn("Hostname {} - Thread pool did not terminate within the strategy timeout. Forcing shutdown.", hostname);
+			// Cut them all at once, so that they stop together
+			running.forEach(next -> cutPool(poolOf.apply(next)));
+			running.forEach(next -> {
+				awaitPoolStop(poolOf.apply(next), hostname);
+				endPending(end, next, false, failures);
+			});
+		}
+
+		if (!failures.isEmpty()) {
+			final RuntimeException first = failures.get(0);
+			failures.subList(1, failures.size()).forEach(first::addSuppressed);
+			throw first;
+		}
+	}
+
+	/**
+	 * Ends the connector of the given record, and keeps the exception it throws for later.
+	 *
+	 * @param <P>       The type of the record
+	 * @param end       Ends the connector of a record, told whether all its jobs completed
+	 * @param pending   The record
+	 * @param completed Whether all the jobs of the connector completed
+	 * @param failures  Where to keep the exception
+	 */
+	private static <P> void endPending(
+		final BiConsumer<P, Boolean> end,
+		final P pending,
+		final boolean completed,
+		final List<RuntimeException> failures
+	) {
+		try {
+			end.accept(pending, completed);
+		} catch (RuntimeException e) {
+			failures.add(e);
+		}
+	}
+
+	/**
+	 * Waits for the monitor jobs of a thread pool cut short (see {@link #cutPool(ExecutorService)}) to stop, within
+	 * {@link #POOL_STOP_SECONDS} for the whole run, so that the afterAll of their connector does not close the session they still use. A job that
+	 * ignores its interrupt longer is left to end on its own, and the afterAll runs anyway: a session left open would
+	 * leak. A request it sent on a thread of its own (see ThreadHelper#executeInterruptibly) ends with its protocol
+	 * timeout.
+	 *
+	 * @param pool     The thread pool of the monitor jobs, cut short
+	 * @param hostname The host name
+	 */
+	protected void awaitPoolStop(final ExecutorService pool, final String hostname) {
+		poolStopDeadline.compareAndSet(0, System.nanoTime() + TimeUnit.SECONDS.toNanos(POOL_STOP_SECONDS));
+		if (!ThreadHelper.awaitTermination(pool, poolStopDeadline.get() - System.nanoTime())) {
+			log.warn(
+				"Hostname {} - Monitor jobs cut short still running after {} second: the afterAll of their connector runs anyway.",
+				hostname,
+				POOL_STOP_SECONDS
+			);
+		}
 	}
 
 	/**

@@ -227,6 +227,27 @@ class PingRequestExecutorTest {
 	}
 
 	@Test
+	void testProbeThatNeverStartedAfterTheResolutionIsOneTimeout() throws Exception {
+		// The interrupt lands after the name resolution, before the probe starts
+		final FakePingRequestExecutor interruptedAfterTheResolution = new FakePingRequestExecutor() {
+			@Override
+			long nanoTime() {
+				Thread.currentThread().interrupt();
+				return super.nanoTime();
+			}
+		};
+		interruptedAfterTheResolution.reachable = true;
+		final boolean result;
+		try {
+			result = interruptedAfterTheResolution.ping(HOSTNAME, TIMEOUT_MS, stats);
+		} finally {
+			Thread.interrupted();
+		}
+		assertFalse(result);
+		assertEquals(counts(0, 1, 0), stats.snapshot());
+	}
+
+	@Test
 	void testInterruptedCallerSendsNothing() throws Exception {
 		executor.reachable = true;
 		Thread.currentThread().interrupt();

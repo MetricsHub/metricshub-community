@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
@@ -27,10 +28,13 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -67,6 +71,8 @@ class ConnectorSessionTest {
 	private static final String A = "SessionA";
 	private static final String B = "SessionB";
 	private static final String C = "SessionC";
+	private static final String D = "SessionD";
+	private static final String NONCE = "${source::beforeAll.nonce}";
 	private static final String LOGIN = "${source::beforeAll.login}";
 	private static final String LOGOUT = "${source::afterAll.logout}";
 	private static final String FAN_DISCOVERY = "${source::monitors.fan.discovery.sources.source(1)}";
@@ -358,7 +364,8 @@ class ConnectorSessionTest {
 		final DiscoveryStrategy strategy = discovery(telemetryManager);
 		final long now = System.nanoTime();
 		final long pastTheWindow = now -
-			TimeUnit.SECONDS.toNanos(LONG_TIMEOUT + AbstractStrategy.CLEANUP_WINDOW_SECONDS + 1);
+			TimeUnit.SECONDS.toNanos(LONG_TIMEOUT + 1) -
+			TimeUnit.MILLISECONDS.toNanos(AbstractStrategy.CLEANUP_WINDOW_MILLIS);
 
 		Thread.currentThread().interrupt();
 		try {
@@ -376,6 +383,107 @@ class ConnectorSessionTest {
 		// Not interrupted: the afterAll always runs
 		strategy.runAfterAll(telemetryManager.getConnectorStore().getStore().get(A), false, pastTheWindow);
 		assertEquals(2, logouts.get());
+	}
+
+	@Test
+	void testLoginAnsweredLateInItsGraceIsStillLoggedOut() {
+		final AtomicInteger logouts = new AtomicInteger();
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			if (LOGOUT.equals(key)) {
+				logouts.incrementAndGet();
+			}
+			return table("x");
+		}, A);
+		final DiscoveryStrategy strategy = discovery(telemetryManager);
+		// The deadline cut a login, answered 4.5 s later, within the 5 s grace of the beforeAll
+		final long runStartTime = System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(LONG_TIMEOUT * 1000 + 4500);
+
+		Thread.currentThread().interrupt();
+		try {
+			strategy.runAfterAll(telemetryManager.getConnectorStore().getStore().get(A), true, runStartTime);
+		} finally {
+			Thread.interrupted();
+		}
+
+		assertEquals(1, logouts.get());
+	}
+
+	@Test
+	void testLogoutWaitsForTheJobsOfACancelledPool() {
+		assertLogoutAfterTheCutJobsStop(false, false);
+	}
+
+	@Test
+	void testCollectLogoutWaitsForTheJobsOfACancelledPool() {
+		assertLogoutAfterTheCutJobsStop(true, false);
+	}
+
+	@Test
+	void testLogoutWaitsForTheJobsOfADeferredPoolCutAtTheDeadline() {
+		assertLogoutAfterTheCutJobsStop(false, true);
+	}
+
+	@Test
+	void testCollectLogoutWaitsForTheJobsOfADeferredPoolCutAtTheDeadline() {
+		assertLogoutAfterTheCutJobsStop(true, true);
+	}
+
+	/**
+	 * The monitor job of connector A ignores its interrupt for 300 ms once its pool is cut: when a reload cancels the run
+	 * while the strategy waits for the pool, or, for a pool deferred past the thread timeout, at the strategy deadline.
+	 * The logout of A, which closes the session the job uses, must come after the job stopped.
+	 *
+	 * @param collect  Whether to run the collect strategy rather than the discovery
+	 * @param deferred Whether the pool is deferred and cut at the strategy deadline rather than cancelled
+	 */
+	private void assertLogoutAfterTheCutJobsStop(final boolean collect, final boolean deferred) {
+		final Thread strategyThread = Thread.currentThread();
+		final AtomicLong jobEnd = new AtomicLong();
+		final AtomicInteger logouts = new AtomicInteger();
+		final AtomicBoolean jobStoppedAtLogout = new AtomicBoolean();
+		final String job = collect ? FAN_COLLECT : FAN_DISCOVERY;
+		final TelemetryManager telemetryManager = newTelemetryManager(
+			false,
+			deferred ? 3 : LONG_TIMEOUT,
+			(connectorId, key) -> {
+				if (job.equals(key)) {
+					if (deferred) {
+						// Until the strategy deadline cuts the pool
+						final long cut = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+						while (!Thread.currentThread().isInterrupted() && System.nanoTime() - cut < 0) {
+							Thread.onSpinWait();
+						}
+					} else {
+						strategyThread.interrupt();
+					}
+					// A job that ignores its interrupt for a while, then ends
+					final long end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(300);
+					while (System.nanoTime() - end < 0) {
+						Thread.onSpinWait();
+					}
+					jobEnd.set(System.nanoTime());
+					return table("fan-1;7");
+				}
+				if (LOGOUT.equals(key)) {
+					logouts.incrementAndGet();
+					jobStoppedAtLogout.set(jobEnd.get() != 0);
+				}
+				return table("token");
+			},
+			A
+		);
+		createFan(telemetryManager, A, "fan-1");
+		final AbstractStrategy strategy = spy(collect ? collect(telemetryManager) : discovery(telemetryManager));
+		doReturn(1L).when(strategy).getThreadTimeout();
+
+		try {
+			strategy.run();
+		} finally {
+			Thread.interrupted();
+		}
+
+		assertEquals(1, logouts.get(), "The logout is sent");
+		assertTrue(jobStoppedAtLogout.get(), "The logout comes after the job stopped");
 	}
 
 	@Test
@@ -476,6 +584,22 @@ class ConnectorSessionTest {
 	}
 
 	@Test
+	void testBeforeAllThatThrowsAfterItsLoginStillNeedsItsLogout() {
+		final IllegalStateException failure = new IllegalStateException("profile parser bug");
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			if ("${source::beforeAll.profile}".equals(key)) {
+				throw failure;
+			}
+			return table("token");
+		}, C);
+		final BeforeAllStrategy beforeAllStrategy = beforeAll(telemetryManager, C);
+
+		// The login answers, then the next source throws: a tool runs its afterAll in a finally
+		assertSame(failure, assertThrows(IllegalStateException.class, beforeAllStrategy::run));
+		assertTrue(beforeAllStrategy.isOpened());
+	}
+
+	@Test
 	void testBeforeAllTellsWhetherItMayHaveOpenedASession() {
 		final AtomicInteger requests = new AtomicInteger();
 		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
@@ -509,6 +633,235 @@ class ConnectorSessionTest {
 		assertEquals(1, requests.get());
 		assertTrue(started.isOpened());
 		assertTrue(noSource.isOpened());
+	}
+
+	/**
+	 * Runs the beforeAll of connector D (a nonce, then a login that uses it) with the given answer of its sources, on a
+	 * namespace that holds the login token of an earlier run, then the afterAll of an interrupted run in its cleanup
+	 * window. Returns the tokens the logout sent.
+	 *
+	 * @param answer The answer of the beforeAll sources, which may interrupt the strategy thread
+	 * @return The tokens sent by the logout, empty when no logout is sent
+	 */
+	private List<String> logoutTokensAfterTheBeforeAll(final Device answer) {
+		final List<String> logoutTokens = Collections.synchronizedList(new ArrayList<>());
+		final AtomicReference<TelemetryManager> holder = new AtomicReference<>();
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			if (LOGOUT.equals(key)) {
+				final ConnectorNamespace namespace = holder.get().getHostProperties().getConnectorNamespace(connectorId);
+				logoutTokens.add(String.valueOf(namespace.getSourceTable(LOGIN).getTable()));
+				return table("bye");
+			}
+			return answer.answer(connectorId, key);
+		}, D);
+		holder.set(telemetryManager);
+		// The logout sends the token of the login, as the reference of an HTTP header would
+		telemetryManager.getConnectorStore().getStore().get(D).getAfterAll().get("logout").setReferences(Set.of(LOGIN));
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(D)
+			.addSourceTable(LOGIN, table("token-of-an-earlier-run"));
+		final BeforeAllStrategy beforeAllStrategy = beforeAll(telemetryManager, D);
+		final long runStartTime = System.nanoTime();
+
+		try {
+			beforeAllStrategy.run();
+			discovery(telemetryManager).runAfterAll(
+				telemetryManager.getConnectorStore().getStore().get(D),
+				beforeAllStrategy.isOpened(),
+				runStartTime
+			);
+		} finally {
+			Thread.interrupted();
+		}
+		return logoutTokens;
+	}
+
+	/**
+	 * The answer of a beforeAll source that interrupts the strategy thread, then waits for the shelter to see it.
+	 *
+	 * @param strategyThread The strategy thread
+	 * @return the token
+	 */
+	private static SourceTable interruptAndAnswer(final Thread strategyThread) {
+		strategyThread.interrupt();
+		final long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+		while (!ThreadHelper.isStopping() && System.nanoTime() - end < 0) {
+			Thread.onSpinWait();
+		}
+		return table("token-of-this-run");
+	}
+
+	@Test
+	void testBeforeAllCutBeforeItsLoginSendsNoLogoutWithAnEarlierToken() {
+		final Thread strategyThread = Thread.currentThread();
+		final AtomicInteger logins = new AtomicInteger();
+		// The cancel arrives during the nonce: the login is not sent
+		final List<String> logoutTokens = logoutTokensAfterTheBeforeAll((connectorId, key) -> {
+			if (LOGIN.equals(key)) {
+				logins.incrementAndGet();
+			}
+			return NONCE.equals(key) ? interruptAndAnswer(strategyThread) : table("token-of-this-run");
+		});
+
+		assertEquals(0, logins.get());
+		assertEquals(List.of(), logoutTokens);
+	}
+
+	@Test
+	void testLoginAnsweredWithinItsGraceIsLoggedOutWithItsToken() {
+		final Thread strategyThread = Thread.currentThread();
+		// The cancel arrives during the login, which answers within its grace
+		final List<String> logoutTokens = logoutTokensAfterTheBeforeAll(
+			(connectorId, key) -> LOGIN.equals(key) ? interruptAndAnswer(strategyThread) : table("nonce")
+		);
+
+		assertEquals(List.of("[[token-of-this-run]]"), logoutTokens);
+	}
+
+	@Test
+	void testLoginCutAtTheEndOfItsGraceSendsNoLogoutWithAnEarlierToken() {
+		final Thread strategyThread = Thread.currentThread();
+		final CountDownLatch never = new CountDownLatch(1);
+		// The cancel arrives during the login, which never answers: the shelter gives up on it after its grace
+		final List<String> logoutTokens;
+		try {
+			logoutTokens = logoutTokensAfterTheBeforeAll((connectorId, key) -> {
+				if (LOGIN.equals(key)) {
+					strategyThread.interrupt();
+					return request(() -> {
+						never.await();
+						return table("token-of-this-run");
+					});
+				}
+				return table("nonce");
+			});
+		} finally {
+			never.countDown();
+		}
+
+		assertEquals(List.of(), logoutTokens);
+	}
+
+	@Test
+	void testDeferredConnectorStillEndsWhenALaterConnectorFails() {
+		final CountDownLatch release = new CountDownLatch(1);
+		final AtomicInteger logouts = new AtomicInteger();
+		final TelemetryManager telemetryManager = newTelemetryManager(false, LONG_TIMEOUT, (connectorId, key) -> {
+			if (FAN_DISCOVERY.equals(key) && A.equals(connectorId)) {
+				awaitIgnoringInterrupts(release);
+				return table("fan-1");
+			}
+			if (LOGOUT.equals(key) && A.equals(connectorId)) {
+				logouts.incrementAndGet();
+			}
+			return table("token");
+		}, A, B);
+		final DiscoveryStrategy strategy = spy(discovery(telemetryManager));
+		doReturn(1L).when(strategy).getThreadTimeout();
+		final IllegalStateException failure = new IllegalStateException("connector B failed");
+		doAnswer(invocation -> {
+			if (B.equals(invocation.<Connector>getArgument(0).getCompiledFilename())) {
+				// The jobs of A, deferred past the thread timeout, end a little later
+				Thread.ofVirtual().start(() -> {
+					try {
+						Thread.sleep(300);
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+					release.countDown();
+				});
+				throw failure;
+			}
+			return invocation.callRealMethod();
+		}).when(strategy).validateConnectorDetectionCriteria(any(), anyString(), anyString());
+
+		try {
+			assertSame(failure, assertThrows(IllegalStateException.class, strategy::run));
+		} finally {
+			release.countDown();
+		}
+
+		// A ends as without the failure of B: its jobs are waited for and its session is closed
+		assertEquals(1, logouts.get());
+		assertEquals(Set.of("fan-1"), fanIds(telemetryManager));
+	}
+
+	@Test
+	void testDeferredConnectorWhoseJobsEndInTimeIsNotHeldBackByAnEarlierOne() throws InterruptedException {
+		final CountDownLatch never = new CountDownLatch(1);
+		final Map<String, AtomicInteger> logouts = Map.of(A, new AtomicInteger(), B, new AtomicInteger());
+		final TelemetryManager telemetryManager = newTelemetryManager(false, 4, (connectorId, key) -> {
+			if (FAN_DISCOVERY.equals(key)) {
+				if (A.equals(connectorId)) {
+					// The jobs of A never end before the deadline
+					return request(() -> {
+						never.await();
+						return table("fan-1");
+					});
+				}
+				// The jobs of B end shortly after the thread timeout
+				final long end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1500);
+				while (System.nanoTime() - end < 0) {
+					Thread.onSpinWait();
+				}
+				return table("fan-2");
+			}
+			if (LOGOUT.equals(key)) {
+				logouts.get(connectorId).incrementAndGet();
+			}
+			return table("token");
+		}, A, B);
+		final DiscoveryStrategy strategy = spy(discovery(telemetryManager));
+		doReturn(1L).when(strategy).getThreadTimeout();
+		// ContextExecutor interrupts the strategy thread at its timeout
+		final Thread strategyThread = Thread.currentThread();
+		final Thread timeout = Thread.ofVirtual().start(() -> {
+			try {
+				Thread.sleep(4000);
+			} catch (InterruptedException e) {
+				return;
+			}
+			strategyThread.interrupt();
+		});
+
+		try {
+			strategy.run();
+		} finally {
+			timeout.join();
+			Thread.interrupted();
+			never.countDown();
+		}
+
+		// B logged out once its jobs ended, before the timeout: the cleanup grace of the interrupted run is left to A
+		assertEquals(1, logouts.get(B).get());
+		assertEquals(1, logouts.get(A).get());
+	}
+
+	@Test
+	void testPoolStopBudgetStartsWhenThePoolIsCut() throws InterruptedException {
+		final TelemetryManager telemetryManager = newTelemetryManager(
+			true,
+			LONG_TIMEOUT,
+			(connectorId, key) -> table("x"),
+			A
+		);
+		final DiscoveryStrategy strategy = discovery(telemetryManager);
+		final CountDownLatch release = new CountDownLatch(1);
+		final ExecutorService pool = Executors.newSingleThreadExecutor();
+		// A job that ignores its interrupt
+		pool.execute(() -> awaitIgnoringInterrupts(release));
+		pool.shutdown();
+
+		try {
+			strategy.cutPool(pool);
+			// The budget was spent while the strategy was busy elsewhere
+			Thread.sleep(TimeUnit.SECONDS.toMillis(AbstractStrategy.POOL_STOP_SECONDS) + 200);
+			final long start = System.nanoTime();
+			strategy.awaitPoolStop(pool, "host-1");
+			assertTrue(System.nanoTime() - start < TimeUnit.MILLISECONDS.toNanos(500), "No new wait after the budget");
+		} finally {
+			release.countDown();
+		}
 	}
 
 	@Test

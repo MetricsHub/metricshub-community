@@ -84,8 +84,10 @@ public class PingRequestExecutor {
 			record(requestStats, RequestOutcome.FAILED);
 			throw e;
 		} catch (IOException e) {
-			// Interrupted: the name resolution throws nothing else
-			record(requestStats, RequestOutcome.of(e));
+			// Interrupted: the name resolution throws nothing else. Nothing is counted if it never started
+			if (!ThreadHelper.neverStarted(e)) {
+				record(requestStats, RequestOutcome.of(e));
+			}
 			log.debug("Hostname {} - Ping interrupted.", hostname);
 			return false;
 		}
@@ -96,7 +98,8 @@ public class PingRequestExecutor {
 			record(requestStats, reachable ? RequestOutcome.COMPLETED : classifyNoAnswer(nanoTime() - start, timeout));
 			return reachable;
 		} catch (IOException e) {
-			// A SocketTimeoutException or another InterruptedIOException (the caller was interrupted) is a timeout
+			// A SocketTimeoutException or another InterruptedIOException (the caller was interrupted) is a timeout: the
+			// attempt started with the name resolution, even if the probe itself never started
 			record(requestStats, RequestOutcome.of(e));
 			if (e instanceof InterruptedIOException && Thread.currentThread().isInterrupted()) {
 				log.debug("Hostname {} - Ping interrupted.", hostname);

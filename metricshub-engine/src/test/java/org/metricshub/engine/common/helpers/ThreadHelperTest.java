@@ -222,6 +222,31 @@ class ThreadHelperTest {
 	}
 
 	@Test
+	void testRequestOfACancelledCallerNeverStarts() throws Exception {
+		Thread.currentThread().interrupt();
+		final InterruptedException notStarted = assertThrows(
+			InterruptedException.class,
+			() -> ThreadHelper.executeInterruptibly(() -> "sent")
+		);
+		assertTrue(ThreadHelper.neverStarted(notStarted));
+		assertTrue(ThreadHelper.neverStarted(new IOException("wrapped", notStarted)));
+		Thread.interrupted();
+
+		// A request interrupted while it runs did start
+		final CountDownLatch release = new CountDownLatch(1);
+		interruptMeAfter(100);
+		final InterruptedException started = assertThrows(
+			InterruptedException.class,
+			() -> ThreadHelper.executeInterruptibly(() -> {
+				awaitSwallowingInterrupts(release);
+				return "sent";
+			})
+		);
+		release.countDown();
+		assertFalse(ThreadHelper.neverStarted(started));
+	}
+
+	@Test
 	void testShelterInterruptedCallerRunsTheTaskWithAClearFlag() {
 		final AtomicBoolean taskInterrupted = new AtomicBoolean(true);
 		final AtomicBoolean done = new AtomicBoolean();

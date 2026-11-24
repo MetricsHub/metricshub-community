@@ -114,7 +114,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 		try {
 			result = io(request::send);
 		} catch (IOException e) {
-			record(RequestOutcome.of(e));
+			// An interrupt that came before the request started sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				record(RequestOutcome.of(e));
+			}
 			throw e;
 		}
 		record(RequestOutcome.COMPLETED);
@@ -181,7 +184,10 @@ public class RemoteFilesRequestExecutor implements FileOperations {
 			});
 			return true;
 		} catch (IOException e) {
-			record(RequestOutcome.of(e));
+			// An interrupt that came before the connection started sent nothing
+			if (!ThreadHelper.neverStarted(e)) {
+				record(RequestOutcome.of(e));
+			}
 			final String hostname = sshConfiguration.getHostname();
 			log.info("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e.getMessage());
 			log.debug("Hostname {} - An error has occurred when connecting SSH client: {}", hostname, e);

@@ -113,7 +113,10 @@ public class SqlRequestExecutor {
 					() -> query(url, username, password, sqlQuery, showWarnings, timeout, driverSelection)
 				);
 			} catch (InterruptedException e) {
-				recordOutcome(requestStats, RequestOutcome.TIMEOUT);
+				// An interrupt that came before the query started sent nothing
+				if (!ThreadHelper.neverStarted(e)) {
+					recordOutcome(requestStats, RequestOutcome.TIMEOUT);
+				}
 				throw new ClientException("SQL query interrupted on hostname " + hostname, e);
 			} catch (ExecutionException e) {
 				final SQLException cause = sqlCause(e);

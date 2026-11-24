@@ -224,11 +224,13 @@ public class CollectStrategy extends AbstractStrategy {
 					return;
 				}
 			} catch (Exception e) {
-				threadsPool.shutdownNow();
+				cutPool(threadsPool);
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
 				}
 				log.debug("Hostname {} - Waiting for threads' termination aborted with an error.", hostname, e);
+				// The afterAll may close the session the jobs still use
+				awaitPoolStop(threadsPool, hostname);
 			}
 		}
 		runAfterAll(currentConnector, opened, runStartTime);
@@ -596,15 +598,20 @@ public class CollectStrategy extends AbstractStrategy {
 		// Collect each connector
 		final List<PendingPool> pendingPools = new ArrayList<>();
 		// A sheltered beforeAll or afterAll clears the interrupt that watchPool looks for: it cuts the deferred jobs first
-		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> pending.pool().shutdownNow()), () -> {
-			sortedConnectors.forEach(connector -> collect(connector, hostname, runStartTime, pendingPools));
-
-			// The jobs that outlived the thread timeout may still complete until the strategy deadline
-			final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
-			pendingPools.forEach(pending -> {
-				joinPool(pending.pool(), deadline, hostname);
-				runAfterAll(pending.connector(), pending.opened(), runStartTime);
-			});
+		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> cutPool(pending.pool())), () -> {
+			try {
+				sortedConnectors.forEach(connector -> collect(connector, hostname, runStartTime, pendingPools));
+			} finally {
+				// The jobs that outlived the thread timeout may still complete until the strategy deadline, even when a
+				// later connector failed
+				joinPools(
+					pendingPools,
+					PendingPool::pool,
+					(pending, completed) -> runAfterAll(pending.connector(), pending.opened(), runStartTime),
+					runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout()),
+					hostname
+				);
+			}
 		});
 
 		// Collect the metricshub.host.configured metric

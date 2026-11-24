@@ -236,11 +236,13 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				}
 			} catch (Exception e) {
 				poolAbandoned = true;
-				threadsPool.shutdownNow();
+				cutPool(threadsPool);
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
 				}
 				log.debug("Hostname {} - Waiting for threads' termination aborted with an error.", hostname, e);
+				// The afterAll may close the session the jobs still use
+				awaitPoolStop(threadsPool, hostname);
 			}
 		}
 
@@ -680,21 +682,27 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// Process each connector
 		final List<PendingPool> pendingPools = new ArrayList<>();
 		// A sheltered beforeAll or afterAll clears the interrupt that watchPool looks for: it cuts the deferred jobs first
-		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> pending.pool().shutdownNow()), () -> {
-			sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime, pendingPools));
-
-			// The jobs that outlived the thread timeout may still complete until the strategy deadline
-			final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
-			pendingPools.forEach(
-				pending -> endConnector(
-					pending.connector(),
-					hostname,
-					runStartTime,
-					pending.trustedTypes(),
-					!joinPool(pending.pool(), deadline, hostname),
-					pending.opened()
-				)
-			);
+		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> cutPool(pending.pool())), () -> {
+			try {
+				sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime, pendingPools));
+			} finally {
+				// The jobs that outlived the thread timeout may still complete until the strategy deadline, even when a
+				// later connector failed
+				joinPools(
+					pendingPools,
+					PendingPool::pool,
+					(pending, completed) -> endConnector(
+						pending.connector(),
+						hostname,
+						runStartTime,
+						pending.trustedTypes(),
+						!completed,
+						pending.opened()
+					),
+					runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout()),
+					hostname
+				);
+			}
 		});
 
 		// Collect the metricshub.host.configured metric
