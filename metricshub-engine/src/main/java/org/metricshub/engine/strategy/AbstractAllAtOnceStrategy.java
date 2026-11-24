@@ -57,6 +57,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -678,20 +679,23 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 		// Process each connector
 		final List<PendingPool> pendingPools = new ArrayList<>();
-		sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime, pendingPools));
+		// A sheltered beforeAll or afterAll clears the interrupt that watchPool looks for: it cuts the deferred jobs first
+		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> pending.pool().shutdownNow()), () -> {
+			sortedConnectors.forEach(connector -> process(connector, hostname, runStartTime, pendingPools));
 
-		// The jobs that outlived the thread timeout may still complete until the strategy deadline
-		final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
-		pendingPools.forEach(
-			pending -> endConnector(
-				pending.connector(),
-				hostname,
-				runStartTime,
-				pending.trustedTypes(),
-				!joinPool(pending.pool(), deadline, hostname),
-				pending.opened()
-			)
-		);
+			// The jobs that outlived the thread timeout may still complete until the strategy deadline
+			final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
+			pendingPools.forEach(
+				pending -> endConnector(
+					pending.connector(),
+					hostname,
+					runStartTime,
+					pending.trustedTypes(),
+					!joinPool(pending.pool(), deadline, hostname),
+					pending.opened()
+				)
+			);
+		});
 
 		// Collect the metricshub.host.configured metric
 		collectHostConfigured(hostname);

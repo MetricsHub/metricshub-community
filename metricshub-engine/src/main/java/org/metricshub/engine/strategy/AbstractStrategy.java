@@ -51,6 +51,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.common.ContentType;
@@ -379,12 +380,13 @@ public abstract class AbstractStrategy implements IStrategy {
 	/**
 	 * Whether the thread running this strategy is interrupted: its deadline expired or it was cancelled. Such a thread
 	 * may be an abandoned one, still running while the next run of the same host fills the same telemetry, so it
-	 * sends no more request and writes nothing more.
+	 * sends no more request and writes nothing more. A sheltered beforeAll or afterAll given up on stays cancelled, even
+	 * if a library swallowed its interrupt, see {@link ThreadHelper#isCancelled()}.
 	 *
-	 * @return {@code true} if the current thread is interrupted
+	 * @return {@code true} if the current thread is interrupted or its sheltered task was given up on
 	 */
 	protected static boolean isInterrupted() {
-		return Thread.currentThread().isInterrupted();
+		return ThreadHelper.isCancelled();
 	}
 
 	/**
@@ -407,6 +409,11 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param runStartTime The {@link System#nanoTime()} at which this strategy run started
 	 */
 	protected void runAfterAll(final Connector connector, final boolean opened, final long runStartTime) {
+		// A connector without afterAll sources closes nothing: it must not use the cleanup grace of a connector that does
+		final Map<String, Source> afterAll = connector.getAfterAll();
+		if (afterAll == null || afterAll.isEmpty()) {
+			return;
+		}
 		if (isInterrupted() && !(opened && isWithinCleanupWindow(runStartTime) && !cleanupGraceUsed.getAndSet(true))) {
 			log.debug(
 				"Hostname {} - Thread interrupted: skipping the afterAll sources of connector {}.",
@@ -438,8 +445,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	/**
 	 * Interrupts the monitor jobs of a connector that outlived {@link #getThreadTimeout()} once the strategy thread (the
 	 * current one) is interrupted or the strategy deadline passes, even while that thread is busy with the next
-	 * connectors or abandoned. A sheltered beforeAll or afterAll holds the interrupt of the strategy thread until it
-	 * returns: the jobs are interrupted then.
+	 * connectors or abandoned. A sheltered beforeAll or afterAll clears the interrupt of the strategy thread while it
+	 * runs: the strategy cuts its deferred pools itself when that shelter sees the interrupt, see
+	 * {@link ThreadHelper#onInterrupt(Runnable, Runnable)}.
 	 *
 	 * @param pool     The thread pool of the monitor jobs, already shut down
 	 * @param deadline The {@link System#nanoTime()} of the strategy deadline
@@ -503,7 +511,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		final String connectorId,
 		final String hostname
 	) {
-		if (!Thread.currentThread().isInterrupted()) {
+		if (!isInterrupted()) {
 			return false;
 		}
 

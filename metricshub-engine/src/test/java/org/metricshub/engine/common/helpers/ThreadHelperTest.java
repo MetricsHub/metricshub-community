@@ -285,6 +285,74 @@ class ThreadHelperTest {
 	}
 
 	@Test
+	void testShelterInterruptedAtEntryRunsTheHookBeforeTheTask() {
+		final AtomicBoolean hookRan = new AtomicBoolean();
+		final AtomicBoolean hookRanBeforeTheTask = new AtomicBoolean();
+		final AtomicBoolean taskRan = new AtomicBoolean();
+		Thread.currentThread().interrupt();
+		ThreadHelper.onInterrupt(() -> {
+			hookRan.set(true);
+			hookRanBeforeTheTask.set(!taskRan.get());
+		}, () -> ThreadHelper.shelter(() -> taskRan.set(true), 1));
+		assertTrue(Thread.currentThread().isInterrupted());
+		assertTrue(hookRan.get());
+		assertTrue(hookRanBeforeTheTask.get());
+	}
+
+	@Test
+	void testShelterRunsTheInterruptHookAsSoonAsItSeesTheInterrupt() {
+		final CountDownLatch hookRan = new CountDownLatch(1);
+		final AtomicBoolean hookRanWhileTheTaskRuns = new AtomicBoolean();
+		interruptMeAfter(200);
+		ThreadHelper.onInterrupt(hookRan::countDown, () -> ThreadHelper.shelter(() -> {
+			// The task outlives the interrupt: the hook must not wait for it
+			try {
+				hookRanWhileTheTaskRuns.set(hookRan.await(5, TimeUnit.SECONDS));
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}, 10));
+		assertTrue(Thread.currentThread().isInterrupted());
+		assertTrue(hookRanWhileTheTaskRuns.get());
+	}
+
+	@Test
+	void testShelterWithoutInterruptRunsNoHookAndLeavesNoHook() {
+		final AtomicBoolean hookRan = new AtomicBoolean();
+		ThreadHelper.onInterrupt(() -> hookRan.set(true), () -> ThreadHelper.shelter(() -> {}, 1));
+		assertFalse(hookRan.get());
+		// Outside its scope the hook is gone
+		Thread.currentThread().interrupt();
+		ThreadHelper.shelter(() -> {}, 1);
+		assertFalse(hookRan.get());
+	}
+
+	@Test
+	void testShelteredTaskGivenUpOnStaysCancelledWhenItsInterruptIsSwallowed() throws InterruptedException {
+		final CountDownLatch givenUp = new CountDownLatch(1);
+		final CountDownLatch checked = new CountDownLatch(1);
+		final AtomicBoolean cancelledDuringTheGrace = new AtomicBoolean(true);
+		final AtomicBoolean cancelledAfterwards = new AtomicBoolean();
+		Thread.currentThread().interrupt();
+		ThreadHelper.shelter(() -> {
+			cancelledDuringTheGrace.set(ThreadHelper.isCancelled());
+			// A library that swallows every interrupt, the cancel of the shelter included
+			awaitSwallowingInterrupts(givenUp);
+			Thread.interrupted();
+			cancelledAfterwards.set(ThreadHelper.isCancelled());
+			checked.countDown();
+		}, 1);
+		// shelter gave up on the task and restored the interrupt of the caller, which the token never reaches
+		assertTrue(Thread.interrupted());
+		assertFalse(ThreadHelper.isCancelled());
+		// The task now resumes with a clear interrupt status
+		givenUp.countDown();
+		assertTrue(checked.await(5, TimeUnit.SECONDS));
+		assertFalse(cancelledDuringTheGrace.get());
+		assertTrue(cancelledAfterwards.get());
+	}
+
+	@Test
 	void testCloseInterruptiblyInterruptedCallerReturnsAtOnceAndTracksTheClose() throws Exception {
 		final CountDownLatch release = new CountDownLatch(1);
 		final CountDownLatch closed = new CountDownLatch(1);

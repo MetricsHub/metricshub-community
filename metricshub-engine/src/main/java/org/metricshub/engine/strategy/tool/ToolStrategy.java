@@ -22,6 +22,7 @@ package org.metricshub.engine.strategy.tool;
  */
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -149,10 +150,12 @@ public class ToolStrategy extends AbstractStrategy {
 
 			// The arguments ride on the attribute map: ${param::name} is replaced in sources and computes
 			// exactly where ${attribute::name} is
-			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo);
+			final List<Runnable> cursorRollbacks = new ArrayList<>();
+			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo, cursorRollbacks);
 
-			// A cancelled tool skipped its sources: the table found would be the one of an earlier call
-			result = isInterrupted()
+			// A cancelled tool skipped its sources: the table found would be the one of an earlier call. Its incremental
+			// sources are polled again next time, since their entries are not returned
+			result = skipMappingIfInterrupted(cursorRollbacks, connectorId, hostname)
 				? SourceTable.empty()
 				: SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
 					.orElseGet(SourceTable::empty);

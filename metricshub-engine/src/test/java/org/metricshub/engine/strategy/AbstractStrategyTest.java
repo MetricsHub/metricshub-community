@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,11 +34,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
@@ -69,8 +72,10 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
+import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.StateSetMetric;
 
@@ -1065,5 +1070,53 @@ class AbstractStrategyTest {
 		assertEquals(expectedMetricValue, statusMetric.getValue());
 		assertEquals(expectedStatusOk, connectorNamespace.isStatusOk());
 		assertEquals(expectedConsecutiveFailures, connectorNamespace.getConsecutiveDetectionFailures());
+	}
+
+	@Test
+	void testCancelledToolRollsBackTheCursorsOfItsSources() {
+		final ConnectorStore connectorStore = new ConnectorStore(
+			Paths.get("src", "test", "resources", "test-files", "strategy", "tool")
+		);
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.connectorStore(connectorStore)
+			.hostConfiguration(
+				HostConfiguration.builder().hostId("host-01").hostname("host-01").hostType(DeviceKind.LINUX).build()
+			)
+			.build();
+		MonitorFactory.builder()
+			.telemetryManager(telemetryManager)
+			.discoveryTime(System.currentTimeMillis())
+			.keys(new HashSet<>(Set.of(MetricsHubConstants.HOST_NAME)))
+			.build()
+			.createEndpointHostMonitor();
+		final ToolStrategy strategy = spy(
+			ToolStrategy.builder()
+				.telemetryManager(telemetryManager)
+				.strategyTime(System.currentTimeMillis())
+				.clientsExecutor(new ClientsExecutor(telemetryManager))
+				.extensionManager(ExtensionManager.empty())
+				.connector(connectorStore.getStore().get("TestConnectorWithTool"))
+				.toolName("listThings")
+				.arguments(Map.of("owner", "me"))
+				.build()
+		);
+		final AtomicBoolean rolledBack = new AtomicBoolean();
+		// The tool polls an incremental source, then is cancelled once its sources passed their last check
+		doAnswer(invocation -> {
+			final Object answered = invocation.callRealMethod();
+			invocation.<List<Runnable>>getArgument(3).add(() -> rolledBack.set(true));
+			Thread.currentThread().interrupt();
+			return answered;
+		}).when(strategy).processSourcesAndComputes(any(), any(), any(), any());
+
+		try {
+			strategy.run();
+		} finally {
+			Thread.interrupted();
+		}
+
+		// Its rows are not returned: the next call must poll them again
+		assertTrue(strategy.getResult().isEmpty());
+		assertTrue(rolledBack.get());
 	}
 }

@@ -47,6 +47,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
@@ -594,13 +595,16 @@ public class CollectStrategy extends AbstractStrategy {
 
 		// Collect each connector
 		final List<PendingPool> pendingPools = new ArrayList<>();
-		sortedConnectors.forEach(connector -> collect(connector, hostname, runStartTime, pendingPools));
+		// A sheltered beforeAll or afterAll clears the interrupt that watchPool looks for: it cuts the deferred jobs first
+		ThreadHelper.onInterrupt(() -> pendingPools.forEach(pending -> pending.pool().shutdownNow()), () -> {
+			sortedConnectors.forEach(connector -> collect(connector, hostname, runStartTime, pendingPools));
 
-		// The jobs that outlived the thread timeout may still complete until the strategy deadline
-		final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
-		pendingPools.forEach(pending -> {
-			joinPool(pending.pool(), deadline, hostname);
-			runAfterAll(pending.connector(), pending.opened(), runStartTime);
+			// The jobs that outlived the thread timeout may still complete until the strategy deadline
+			final long deadline = runStartTime + TimeUnit.SECONDS.toNanos(getStrategyTimeout());
+			pendingPools.forEach(pending -> {
+				joinPool(pending.pool(), deadline, hostname);
+				runAfterAll(pending.connector(), pending.opened(), runStartTime);
+			});
 		});
 
 		// Collect the metricshub.host.configured metric

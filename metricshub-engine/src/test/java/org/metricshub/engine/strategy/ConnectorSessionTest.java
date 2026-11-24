@@ -41,6 +41,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -49,6 +50,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -63,6 +65,7 @@ class ConnectorSessionTest {
 	private static final Path CONNECTORS = Paths.get("src", "test", "resources", "test-files", "strategy", "session");
 	private static final String A = "SessionA";
 	private static final String B = "SessionB";
+	private static final String C = "SessionC";
 	private static final String LOGIN = "${source::beforeAll.login}";
 	private static final String LOGOUT = "${source::afterAll.logout}";
 	private static final String FAN_DISCOVERY = "${source::monitors.fan.discovery.sources.source(1)}";
@@ -397,6 +400,129 @@ class ConnectorSessionTest {
 
 		// Each graced afterAll may last 3 s: one only, so that the run ends before ContextExecutor abandons it
 		assertEquals(1, logouts.get());
+	}
+
+	@Test
+	void testConnectorWithoutAfterAllLeavesTheCleanupGraceToTheNextOne() {
+		final AtomicInteger logouts = new AtomicInteger();
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			if (LOGOUT.equals(key)) {
+				logouts.incrementAndGet();
+			}
+			return table("x");
+		}, A);
+		final DiscoveryStrategy strategy = discovery(telemetryManager);
+		final long now = System.nanoTime();
+		final Connector withoutAfterAll = Connector.builder()
+			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("WithoutAfterAll").build())
+			.build();
+
+		// A cancelled run ends a connector that closes nothing, then the one whose session it opened
+		Thread.currentThread().interrupt();
+		try {
+			strategy.runAfterAll(withoutAfterAll, true, now);
+			strategy.runAfterAll(telemetryManager.getConnectorStore().getStore().get(A), true, now);
+		} finally {
+			Thread.interrupted();
+		}
+
+		assertEquals(1, logouts.get());
+	}
+
+	@Test
+	void testAfterAllGivenUpOnSendsNothingMoreWhenItsInterruptIsSwallowed() throws InterruptedException {
+		final CountDownLatch givenUp = new CountDownLatch(1);
+		final AtomicInteger afterAllRequests = new AtomicInteger();
+		final AtomicReference<Thread> afterAllThread = new AtomicReference<>();
+		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
+			if (key.startsWith("${source::afterAll.") && afterAllRequests.getAndIncrement() == 0) {
+				afterAllThread.set(Thread.currentThread());
+				// A request that swallows every interrupt, the cancel of the shelter included
+				awaitIgnoringInterrupts(givenUp);
+				Thread.interrupted();
+			}
+			return table("x");
+		}, C);
+		final DiscoveryStrategy strategy = discovery(telemetryManager);
+
+		// The afterAll of a cancelled run outlives its grace: the shelter gives up on it
+		Thread.currentThread().interrupt();
+		try {
+			strategy.runAfterAll(telemetryManager.getConnectorStore().getStore().get(C), true, System.nanoTime());
+		} finally {
+			Thread.interrupted();
+		}
+		givenUp.countDown();
+		afterAllThread.get().join(5000);
+
+		// It resumes with a clear interrupt status, yet sends no other afterAll source and stores nothing
+		assertFalse(afterAllThread.get().isAlive());
+		assertEquals(1, afterAllRequests.get());
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(C);
+		assertNull(namespace.getSourceTable(LOGOUT));
+		assertNull(namespace.getSourceTable("${source::afterAll.audit}"));
+	}
+
+	@Test
+	void testDeferredPoolIsCutWhenAShelteredBeforeAllSeesTheCancel() {
+		assertDeferredPoolCutDuringTheBeforeAllOfTheNextConnector(false);
+	}
+
+	@Test
+	void testDeferredCollectPoolIsCutWhenAShelteredBeforeAllSeesTheCancel() {
+		assertDeferredPoolCutDuringTheBeforeAllOfTheNextConnector(true);
+	}
+
+	/**
+	 * The monitor job of connector A outlives the thread timeout, then the run is cancelled while the strategy thread
+	 * waits for the sheltered beforeAll of connector B, which clears its interrupt. The job of A must be interrupted
+	 * without waiting for that beforeAll to end.
+	 *
+	 * @param collect Whether to run the collect strategy rather than the discovery
+	 */
+	private void assertDeferredPoolCutDuringTheBeforeAllOfTheNextConnector(final boolean collect) {
+		final CountDownLatch never = new CountDownLatch(1);
+		final CountDownLatch jobCut = new CountDownLatch(1);
+		final AtomicBoolean cutDuringTheLogin = new AtomicBoolean();
+		final Thread strategyThread = Thread.currentThread();
+		final String job = collect ? FAN_COLLECT : FAN_DISCOVERY;
+		final TelemetryManager telemetryManager = newTelemetryManager(false, LONG_TIMEOUT, (connectorId, key) -> {
+			if (job.equals(key) && A.equals(connectorId)) {
+				final SourceTable answer = request(() -> {
+					never.await();
+					return table("fan-1;7");
+				});
+				jobCut.countDown();
+				return answer;
+			}
+			if (LOGIN.equals(key) && B.equals(connectorId)) {
+				// The cancel of a reload, while the login of B runs on its sheltered thread
+				strategyThread.interrupt();
+				boolean cut = false;
+				final long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+				while (!cut && System.nanoTime() - end < 0) {
+					try {
+						cut = jobCut.await(end - System.nanoTime(), TimeUnit.NANOSECONDS);
+					} catch (InterruptedException e) {
+						// A login that ignores interrupts
+					}
+				}
+				cutDuringTheLogin.set(cut);
+			}
+			return table("token");
+		}, A, B);
+		createFan(telemetryManager, A, "fan-1");
+		final AbstractStrategy strategy = spy(collect ? collect(telemetryManager) : discovery(telemetryManager));
+		doReturn(1L).when(strategy).getThreadTimeout();
+
+		try {
+			strategy.run();
+		} finally {
+			Thread.interrupted();
+			never.countDown();
+		}
+
+		assertTrue(cutDuringTheLogin.get());
 	}
 
 	@Test

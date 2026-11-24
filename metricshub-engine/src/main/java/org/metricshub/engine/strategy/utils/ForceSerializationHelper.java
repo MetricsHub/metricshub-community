@@ -114,7 +114,7 @@ public class ForceSerializationHelper {
 		final String hostname = telemetryManager.getHostname();
 
 		// The job deadline expired or the job was cancelled: send no more request and keep the interrupt
-		if (Thread.currentThread().isInterrupted()) {
+		if (ThreadHelper.isCancelled()) {
 			log.warn(
 				"Hostname {} - Thread interrupted: skipping the force serialized {} {}. Connector: {}.",
 				hostname,
