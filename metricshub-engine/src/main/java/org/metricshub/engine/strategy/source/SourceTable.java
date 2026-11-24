@@ -96,6 +96,15 @@ public class SourceTable {
 	@EqualsAndHashCode.Exclude
 	private Long failedRun;
 
+	/**
+	 * Set when an <code>executeForEachEntryOf</code> that continues on failure skipped a failed entry: a missing row
+	 * then does not mean a missing entity.
+	 */
+	@Getter
+	@Setter
+	@EqualsAndHashCode.Exclude
+	private boolean partial;
+
 	private SourceTable() {}
 
 	/**

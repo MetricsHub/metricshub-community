@@ -818,6 +818,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				source.getKey(),
 				error
 			);
+			currentResult.setPartial(true);
 			return null;
 		}
 

@@ -758,11 +758,10 @@ class SourceUpdaterProcessorTest {
 		assertTrue(bEnded.get());
 		assertFalse(requested.contains("d"));
 
-		// With continueOnFailure, the failed entry is skipped
-		assertEquals(
-			SourceTable.ofText("result-b\nresult-c\nresult-d"),
-			runForEachEntry(executeForEachEntryOf, false, false, true, answer)
-		);
+		// With continueOnFailure, the failed entry is skipped, and the result says it is partial
+		final SourceTable partial = runForEachEntry(executeForEachEntryOf, false, false, true, answer);
+		assertEquals(SourceTable.ofText("result-b\nresult-c\nresult-d"), partial);
+		assertTrue(partial.isPartial());
 	}
 
 	@Test

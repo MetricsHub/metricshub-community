@@ -324,9 +324,9 @@ public abstract class AbstractStrategy implements IStrategy {
 				);
 				sourceTable = emptyResult(source);
 			} else {
-				// A source that gave data before and still gives nothing after its retry did not answer either: the jobs
-				// reading it do not remove monitors
-				if (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable)) {
+				// A source that gave data before and still gives nothing after its retry did not answer either, nor did one
+				// that skipped a failed entry: the jobs reading it do not remove monitors
+				if (sourceTable.isPartial() || (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable))) {
 					connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
 				} else {
 					connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);

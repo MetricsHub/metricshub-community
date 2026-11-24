@@ -1142,6 +1142,32 @@ class AbstractStrategyTest {
 	}
 
 	@Test
+	void testSourceThatSkippedAFailedEntryIsUnanswered() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		final SimpleStrategy strategy = newFailingHttpStrategy(
+			telemetryManager,
+			extension,
+			new ClientsExecutor(telemetryManager)
+		);
+		final SourceTable partial = SourceTable.ofTable(SourceTable.csvToTable("b;1", ";"));
+		partial.setPartial(true);
+		doReturn(partial).when(extension).processSource(any(SnmpTableSource.class), anyString(), any());
+
+		assertNull(
+			strategy.processSourcesAndComputes(
+				List.of(SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::b}").build()),
+				SIMPLE_JOB
+			)
+		);
+
+		// Its rows are kept, but a missing row does not remove a monitor
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		assertEquals(List.of(List.of("b", "1")), namespace.getSourceTable("${source::b}").getTable());
+		assertEquals(Set.of("${source::b}"), namespace.getUnansweredSourceKeys());
+	}
+
+	@Test
 	void testSourceReadingAFailedSourceFails() {
 		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
