@@ -1,6 +1,7 @@
 package org.metricshub.extension.jmx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -95,7 +96,7 @@ class JmxSourceProcessorTest {
 		final SourceTable resultTable = processor.process(source, telemetryManager);
 
 		assertNotNull(resultTable, "SourceTable should not be null even if exception occurs");
-		assertEquals(SourceTable.empty(), resultTable, "Expected an empty table if fetchBeanInfo fails");
+		assertTrue((resultTable).isFailed(), "Expected an empty table if fetchBeanInfo fails");
 	}
 
 	/**

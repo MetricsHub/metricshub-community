@@ -1,6 +1,7 @@
 package org.metricshub.extension.snmp.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -54,12 +55,23 @@ class SnmpGetSourceProcessorTest {
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(null);
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceTable.failed("SNMP Get: SNMP is not configured on the host."), result);
+	}
+
+	// An OID without a value is an answer: an empty table
+	@Test
+	void testProcess_WhenOidHasNoValue_ReturnsEmptySourceTable() throws Exception {
+		SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid("test_oid").build();
+		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
+		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
+		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
+
+		assertEquals(SourceTable.empty(), snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager));
 	}
 
 	// Test case when the requestExecutor throws an exception.
 	@Test
-	void testProcess_WhenRequestExecutorThrowsException_ReturnsEmptySourceTable() throws Exception {
+	void testProcess_WhenRequestExecutorThrowsException_ReturnsFailure() throws Exception {
 		SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid("test_oid").build();
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
@@ -68,7 +80,7 @@ class SnmpGetSourceProcessorTest {
 			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, telemetryManager.getRequestStats());
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceTable.failed("SNMP Get: test_oid: InterruptedException: Test exception"), result);
 	}
 
 	//Test case when requestExecutor returns a valid result.

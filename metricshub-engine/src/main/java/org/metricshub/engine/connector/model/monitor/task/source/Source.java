@@ -101,6 +101,12 @@ public abstract class Source implements Serializable {
 	protected boolean forceSerialization;
 
 	/**
+	 * Whether the job goes on when the source fails, with the empty result of the source's type. By default, a failure
+	 * interrupts the job (its computes, its next sources and its mapping) or the tool, which returns the error.
+	 */
+	protected boolean continueOnFailure;
+
+	/**
 	 * A key associated with the source, this key is automatically set during the pre processing phase of the connector.
 	 * See {@link SourceKeyProcessor}
 	 */
@@ -120,12 +126,14 @@ public abstract class Source implements Serializable {
 		String type,
 		List<Compute> computes,
 		boolean forceSerialization,
+		boolean continueOnFailure,
 		String key,
 		ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		this.type = type;
 		this.computes = computes == null ? new ArrayList<>() : computes;
 		this.forceSerialization = forceSerialization;
+		this.continueOnFailure = continueOnFailure;
 		this.key = key;
 		this.executeForEachEntryOf = executeForEachEntryOf;
 		this.references = new HashSet<>();
@@ -199,6 +207,7 @@ public abstract class Source implements Serializable {
 		stringJoiner.add(new StringBuilder("- ").append(key).append(".type=").append(this.getClass().getSimpleName()));
 
 		addNonNull(stringJoiner, "- forceSerialization=", isForceSerialization());
+		addNonNull(stringJoiner, "- continueOnFailure=", isContinueOnFailure());
 		// A small trick here because the executeForEachEntryOf.toString value is already
 		// formatted that's why we don't need a prefix for the string value of the nested executeForEachEntryOf
 		addNonNull(stringJoiner, EMPTY, executeForEachEntryOf != null ? executeForEachEntryOf.toString() : null);

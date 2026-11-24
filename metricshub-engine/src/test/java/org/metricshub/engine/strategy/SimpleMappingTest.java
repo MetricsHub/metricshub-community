@@ -58,7 +58,7 @@ class SimpleMappingTest {
 	private ClientsExecutor clientsExecutorMock;
 
 	/**
-	 * The texts the mocked command lines return. Any other command line fails: it returns an empty table.
+	 * The texts the mocked command lines return. Any other command line fails.
 	 */
 	private final Map<String, String> texts = new HashMap<>(Map.of("vendor", "Acme\n", "limit", "42"));
 
@@ -75,7 +75,7 @@ class SimpleMappingTest {
 		lenient().doAnswer(invocation -> {
 			if (invocation.getArgument(0) instanceof CommandLineSource commandLine) {
 				final String text = texts.get(commandLine.getCommandLine());
-				return text == null ? SourceTable.empty() : SourceTable.ofText(text);
+				return text == null ? SourceTable.failed("No such command") : SourceTable.ofText(text);
 			}
 			return SourceTable.ofTable(SourceTable.csvToTable("row-1;10\nrow-2;20", ";"));
 		}).when(protocolExtensionMock).processSource(any(), anyString(), any(TelemetryManager.class));
@@ -177,7 +177,7 @@ class SimpleMappingTest {
 		final Set<String> unanswered = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
 			.getUnansweredSourceKeys();
-		assertEquals(Set.of(), unanswered);
+		assertEquals(Set.of("${source::monitors.settings.simple.sources.failed}"), unanswered);
 		final Monitor settings = monitors("settings").values().iterator().next();
 		assertEquals("Acme", settings.getAttribute("vendor"));
 		assertEquals(42.0, metric(settings, "test.limit"));

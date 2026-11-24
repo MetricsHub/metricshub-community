@@ -1,6 +1,7 @@
 package org.metricshub.extension.emulation.wmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -136,16 +137,18 @@ class EmulationWmiRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			buildWmiEmulationConfig(tempDir.toString()),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				buildWmiEmulationConfig(tempDir.toString()),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -177,47 +180,53 @@ class EmulationWmiRequestExecutorTest {
 	}
 
 	@Test
-	void testExecuteWmiReturnsEmptyWhenDirectoryNotConfigured() throws ClientException {
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			WmiConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+	void testExecuteWmiFailsWhenDirectoryNotConfigured() throws ClientException {
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				WmiConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWmiReturnsEmptyWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			buildWmiEmulationConfig(tempDir.toString()),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+	void testExecuteWmiFailsWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				buildWmiEmulationConfig(tempDir.toString()),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWmiReturnsEmptyWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWmiFailsWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), "invalid: yaml: [[[", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			buildWmiEmulationConfig(tempDir.toString()),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				buildWmiEmulationConfig(tempDir.toString()),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test

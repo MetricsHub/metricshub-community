@@ -43,6 +43,7 @@ import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.RetryOperation;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
@@ -116,6 +117,44 @@ public class HttpRequestExecutor {
 	}
 
 	/**
+	 * Executes the request of an <code>http</code> source: the text of the part of the response its result content
+	 * names, or a failure when no response came or when the server answered with an error status (400 and above),
+	 * except for who asks for the status.
+	 *
+	 * @param httpRequest      The {@link HttpRequest} values.
+	 * @param logMode          Whether or not logging is enabled.
+	 * @param telemetryManager The telemetry manager providing access to host configuration.
+	 * @return The text, or a failure.
+	 */
+	@WithSpan("HTTP")
+	public SourceTable executeHttpSource(
+		@SpanAttribute("http.config") @NonNull HttpRequest httpRequest,
+		final boolean logMode,
+		final TelemetryManager telemetryManager
+	) {
+		final ResultContent resultContent = httpRequest.getResultContent();
+		final HttpResult response = execute(httpRequest, logMode, telemetryManager, resultContent);
+		if (response == null) {
+			return SourceTable.failed("No response.");
+		}
+		if (isRefused(response, resultContent)) {
+			return SourceTable.failed("The server answered with the status " + response.statusCode() + ".");
+		}
+		return SourceTable.ofText(response.toText(resultContent));
+	}
+
+	/**
+	 * Whether the server refused the request (400 and above) and the caller does not ask for the status.
+	 *
+	 * @param response      The response
+	 * @param resultContent Which part of the response to return
+	 * @return {@code true} for an error answer
+	 */
+	private static boolean isRefused(final HttpResult response, final ResultContent resultContent) {
+		return response.statusCode() >= HTTP_BAD_REQUEST && resultContent != ResultContent.ALL_WITH_STATUS;
+	}
+
+	/**
 	 * The text an HTTP request gives: the part of the response its result content names. The response to a refused
 	 * request (400 and above) is an empty text, except for who asks for the status.
 	 *
@@ -127,9 +166,7 @@ public class HttpRequestExecutor {
 		if (response == null) {
 			return null;
 		}
-		return response.statusCode() >= HTTP_BAD_REQUEST && resultContent != ResultContent.ALL_WITH_STATUS
-			? EMPTY
-			: response.toText(resultContent);
+		return isRefused(response, resultContent) ? EMPTY : response.toText(resultContent);
 	}
 
 	/**
@@ -273,9 +310,15 @@ public class HttpRequestExecutor {
 		final HttpResult response = retried != null ? retried : retriedResponse.get();
 		final String result = toText(response, resultContent);
 
-		// Record the HTTP exchange if recording is enabled
+		// Record the HTTP exchange if recording is enabled. A refused request is not recorded: its replay finds no
+		// response, and fails as the request did
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank() && result != null) {
+		if (
+			recordOutputDirectory != null &&
+				!recordOutputDirectory.isBlank() &&
+				result != null &&
+				!isRefused(response, resultContent)
+		) {
 			// Resolve body and headers using default credentials so that recorded values
 			// match what the emulation extension will compute during playback
 			final String defaultAuthToken = MacrosUpdater.update(

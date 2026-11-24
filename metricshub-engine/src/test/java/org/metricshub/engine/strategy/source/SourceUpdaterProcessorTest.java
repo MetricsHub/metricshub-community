@@ -229,22 +229,36 @@ class SourceUpdaterProcessorTest {
 		final String expectedResult = "concatStart:{expectedVal1}concatEnd;concatStart:{expectedVal2}concatEnd;";
 		assertEquals(expectedResult, result.getText());
 
-		// An empty or failed entry adds nothing; a table entry is read as its text
+		// A failed entry makes the source fail; an empty entry is an answer, wrapped; a table entry is read as its text
 		final SourceTable threeRows = SourceTable.ofTable(
 			Arrays.asList(Arrays.asList("1"), Arrays.asList("2"), Arrays.asList("3"))
 		);
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(ENCLOSURE_COLLECT_SOURCE_1, threeRows);
-		doReturn(SourceTable.ofText("a"), SourceTable.empty(), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
-			sourceProcessor
-		).process(any(HttpSource.class));
-		final SourceTable custom = new SourceUpdaterProcessor(
+		doReturn(SourceTable.ofText("a"), SourceTable.failed("Refused"), SourceTable.ofTable(List.of(List.of("b", "c"))))
+			.when(sourceProcessor)
+			.process(any(HttpSource.class));
+		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
 			Map.of(),
 			extensionManager
-		).process(httpSource);
-		assertEquals(SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{b;c;}concatEnd;"), custom);
+		);
+		assertEquals(SourceTable.failed("Entry [2]: Refused"), updater.process(httpSource));
+
+		// With continueOnFailure, a failed entry is skipped
+		httpSource.setContinueOnFailure(true);
+		doReturn(SourceTable.ofText("a"), SourceTable.failed("Refused"), SourceTable.ofText("")).when(sourceProcessor)
+			.process(any(HttpSource.class));
+		assertEquals(SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;"), updater.process(httpSource));
+		httpSource.setContinueOnFailure(false);
+		doReturn(SourceTable.ofText("a"), SourceTable.ofText(""), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
+			sourceProcessor
+		).process(any(HttpSource.class));
+		assertEquals(
+			SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;concatStart:{b;c;}concatEnd;"),
+			updater.process(httpSource)
+		);
 
 		// LIST keeps the text type of an http source: a table entry is converted, never dropped
 		httpSource.setExecuteForEachEntryOf(

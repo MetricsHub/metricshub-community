@@ -83,12 +83,14 @@ public abstract class AbstractSnmpRequestExecutor {
 	/**
 	 * Messages of the plain {@link Exception} thrown by {@code SnmpClient} for an SNMPv2 noSuchObject,
 	 * noSuchInstance or endOfMibView value (Westhawk's {@code AsnObject.getRespTypeString()}): the agent answered
-	 * that there is no value.
+	 * that there is no value. {@code (no-such-oid)} is what {@code OfflineSnmpClient} throws for an OID the recorded
+	 * walk has no value for.
 	 */
 	private static final Set<String> NO_SUCH_VALUE_TYPES = Set.of(
 		"SNMP_VAR_NOSUCHOBJECT",
 		"SNMP_VAR_NOSUCHINSTANCE",
-		"SNMP_VAR_ENDOFMIBVIEW"
+		"SNMP_VAR_ENDOFMIBVIEW",
+		"(no-such-oid)"
 	);
 
 	/**
@@ -260,7 +262,8 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param requestStats The request counters of the monitored resource, or {@code null} to record nothing.
 	 * @param requestName The request name used in warning/debug logs (e.g. {@code GET}, {@code TABLE}).
 	 * @param oid The SNMP Object Identifier (OID) for the request.
-	 * @return The result of the SNMP request, which can be a single value, a table, or {@code null} if an error occurs.
+	 * @return The result of the SNMP request, which can be a single value, a table, or {@code null} when the OID has
+	 *         no value.
 	 * @throws InterruptedException If the thread executing this method is interrupted.
 	 * @throws ExecutionException  If an exception occurs during the execution of the SNMP request.
 	 * @throws TimeoutException    If the SNMP request times out.
@@ -323,8 +326,11 @@ public abstract class AbstractSnmpRequestExecutor {
 				}
 				throw e;
 			}
-			recordRequest(requestStats, classify(cause));
-			if (cause instanceof Exception) {
+			final RequestOutcome outcome = classify(cause);
+			recordRequest(requestStats, outcome);
+			// An OID without a value (noSuchName, noSuchObject, noSuchInstance, endOfMibView) is an answer: null. The
+			// agent's errors are thrown
+			if (cause instanceof Exception && outcome == RequestOutcome.COMPLETED) {
 				return null;
 			}
 			throw e;

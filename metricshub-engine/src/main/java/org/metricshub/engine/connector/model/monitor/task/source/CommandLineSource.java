@@ -119,6 +119,7 @@ public class CommandLineSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
+	 * @param continueOnFailure   whether a failure of the source lets its job go on
 	 * @param commandLine          The command line to execute.
 	 * @param timeout              The timeout for executing the command.
 	 * @param executeLocally       Flag indicating whether to execute the command locally.
@@ -137,6 +138,7 @@ public class CommandLineSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "commandLine", required = true) @NonNull String commandLine,
 		@JsonProperty("timeout") Long timeout,
 		@JsonProperty("executeLocally") Boolean executeLocally,
@@ -149,7 +151,7 @@ public class CommandLineSource extends Source {
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.commandLine = commandLine;
 		this.timeout = timeout;
 		this.executeLocally = executeLocally != null && executeLocally;
@@ -171,6 +173,7 @@ public class CommandLineSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.commandLine(commandLine)

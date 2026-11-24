@@ -24,6 +24,7 @@ package org.metricshub.engine.strategy;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
@@ -38,9 +39,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -180,9 +183,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 *
 	 * @param sources The {@link List} of {@link Source} instances we wish to execute
 	 * @param jobInfo Information about the job such as hostname, monitorType, job name and connectorName.
-	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
+	 * @return the error of the failed source that stopped the job, null when the job goes on to its mapping
 	 */
-	protected boolean processSourcesAndComputes(final List<Source> sources, final JobInfo jobInfo) {
+	protected String processSourcesAndComputes(final List<Source> sources, final JobInfo jobInfo) {
 		return processSourcesAndComputes(sources, null, jobInfo);
 	}
 
@@ -193,9 +196,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param sources    The {@link List} of {@link Source} instances we wish to execute
 	 * @param attributes Key-value pairs of the monitor's attributes used in the mono instance processing
 	 * @param jobInfo    Information about the job such as hostname, monitorType, job name and connectorName.
-	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
+	 * @return the error of the failed source that stopped the job, null when the job goes on to its mapping
 	 */
-	protected boolean processSourcesAndComputes(
+	protected String processSourcesAndComputes(
 		final List<Source> sources,
 		final Map<String, String> attributes,
 		final JobInfo jobInfo
@@ -213,9 +216,11 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param cursorRollbacks The caller's list, to which the rollback of the cursors of each incremental source polled
 	 *                        is added: the caller runs them when it skips the mapping, see
 	 *                        {@link #skipMappingIfInterrupted(List, String, String)}
-	 * @return {@code true} when every source answered, {@code false} when a source exhausted its retry
+	 * @return the error of the failed source that stopped the job (see {@link Source#isContinueOnFailure()}), null
+	 *         when the job goes on to its mapping, unless it is interrupted (see
+	 *         {@link #skipMappingIfInterrupted(List, String, String)})
 	 */
-	protected boolean processSourcesAndComputes(
+	protected String processSourcesAndComputes(
 		final List<Source> sources,
 		final Map<String, String> attributes,
 		final JobInfo jobInfo,
@@ -232,10 +237,8 @@ public abstract class AbstractStrategy implements IStrategy {
 				connectorId,
 				monitorType
 			);
-			return true;
+			return null;
 		}
-
-		boolean allSourcesAnswered = true;
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
 		// process the source
@@ -244,7 +247,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			// a session. Then a beforeAll whose caller is interrupted starts no other source
 			final boolean stop = sourceIndex > 0 ? ThreadHelper.isStopping() : isInterrupted();
 			if (stop && skipSources(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)) {
-				return false;
+				return null;
 			}
 
 			final Source source = sources.get(sourceIndex);
@@ -259,18 +262,21 @@ public abstract class AbstractStrategy implements IStrategy {
 			final long poll = isIncremental(source) ? connectorNamespace.beginPoll(sourceKey) : 0L;
 			final SourceCursors cursorsBefore = isIncremental(source) ? connectorNamespace.getSourceCursors(sourceKey) : null;
 
-			// Execute the source and retry the operation
-			// in case the source fails but the previous source table didn't fail.
-			// The default value is a per-source sentinel: getting this very instance back means the retry was exhausted.
-			final SourceTable failedSourceTable = SourceTable.empty();
-			SourceTable sourceTable = RetryOperation.<SourceTable>builder()
-				.withDefaultValue(failedSourceTable)
-				.withMaxRetries(1)
-				.withWaitStrategy(telemetryManager.getHostConfiguration().getRetryDelay())
-				.withDescription(String.format("%s [%s]", SOURCE, sourceKey))
-				.withHostname(hostname)
-				.build()
-				.run(() -> runSource(connectorId, attributes, source, previousSourceTable));
+			// A source that reads a failed source fails as well. Otherwise, execute the source and retry it once when it
+			// fails or gives nothing while it gave data before: the last attempt is the result
+			final AtomicReference<SourceTable> lastResult = new AtomicReference<>(
+				failureOfReferences(source, connectorNamespace)
+			);
+			if (lastResult.get() == null) {
+				RetryOperation.<SourceTable>builder()
+					.withMaxRetries(1)
+					.withWaitStrategy(telemetryManager.getHostConfiguration().getRetryDelay())
+					.withDescription(String.format("%s [%s]", SOURCE, sourceKey))
+					.withHostname(hostname)
+					.build()
+					.run(() -> runSource(connectorId, attributes, source, previousSourceTable, lastResult));
+			}
+			SourceTable sourceTable = lastResult.get();
 
 			if (cursorsBefore != null) {
 				final SourceCursors cursorsAfter = connectorNamespace.getSourceCursors(sourceKey);
@@ -284,31 +290,49 @@ public abstract class AbstractStrategy implements IStrategy {
 			if (
 				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
 			) {
-				return false;
+				return null;
 			}
 
-			// A null table (the source processor failed) or the retry sentinel: the source did not answer. A null returned
-			// by an extension arrives here as an empty table: the source is retried, then given up, when it had data before
-			final boolean sourceAnswered = sourceTable != null && sourceTable != failedSourceTable;
-			allSourcesAnswered &= sourceAnswered;
-			// Remembered for the jobs that read this source through a reference
-			if (sourceAnswered) {
-				connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
-			} else {
+			if (sourceTable.isFailed()) {
+				// Remembered for the jobs that read this source through a reference: a missing row is not a missing entity
 				connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
-			}
-
-			final boolean isNullSourceTable = sourceTable == null;
-			if (isNullSourceTable || sourceTable.isEmpty()) {
-				log.warn(
-					"Hostname {} - Received {} source table for Source key {} - Connector {} - Monitor {}. The source table is set to empty.",
+				if (!source.isContinueOnFailure()) {
+					log.error(
+						"Hostname {} - Source {} failed - Connector {} - Monitor {}. Skipped its computes, the sources {} and the mapping: {}",
+						hostname,
+						sourceKey,
+						connectorId,
+						monitorType,
+						sources.subList(sourceIndex + 1, sources.size()).stream().map(Source::getKey).toList(),
+						sourceTable.getError()
+					);
+					// Stored, so that the sources reading it fail as well. The entries of the incremental sources polled are
+					// not mapped: they come again at the next poll
+					connectorNamespace.addSourceTable(sourceKey, sourceTable);
+					rollBackCursors(cursorRollbacks);
+					return sourceTable.getError();
+				}
+				log.error(
+					"Hostname {} - Source {} failed - Connector {} - Monitor {}. Continuing with an empty result: {}",
 					hostname,
-					isNullSourceTable ? "null" : "empty",
 					sourceKey,
 					connectorId,
-					monitorType
+					monitorType,
+					sourceTable.getError()
 				);
 				sourceTable = emptyResult(source);
+			} else {
+				connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
+				if (sourceTable.isEmpty()) {
+					log.warn(
+						"Hostname {} - Received empty source table for Source key {} - Connector {} - Monitor {}.",
+						hostname,
+						sourceKey,
+						connectorId,
+						monitorType
+					);
+					sourceTable = emptyResult(source);
+				}
 			}
 
 			// log the source table
@@ -363,7 +387,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				if (
 					skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
 				) {
-					return false;
+					return null;
 				}
 
 				// log the updated source table
@@ -383,7 +407,28 @@ public abstract class AbstractStrategy implements IStrategy {
 				.addSourceTable(sourceKey, computeProcessor.getSourceTable());
 		}
 
-		return allSourcesAnswered;
+		return null;
+	}
+
+	/**
+	 * The failure of a source that reads a failed source: a <code>copy</code>, a <code>tableJoin</code>, a
+	 * <code>tableUnion</code> or any <code>${source::...}</code> reference.
+	 *
+	 * @param source             The source
+	 * @param connectorNamespace The namespace holding the tables of the sources
+	 * @return a failed source table, null when no source it reads failed
+	 */
+	private static SourceTable failureOfReferences(final Source source, final ConnectorNamespace connectorNamespace) {
+		for (final String reference : source.getReferences()) {
+			final Matcher matcher = SOURCE_REF_PATTERN.matcher(reference);
+			while (matcher.find()) {
+				final SourceTable table = connectorNamespace.getSourceTable(matcher.group());
+				if (table != null && table.isFailed()) {
+					return SourceTable.failed("%s failed: %s".formatted(matcher.group(), table.getError()));
+				}
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -697,9 +742,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * The fresh empty result of a source, typed by its static type whatever failed (an extension, the retry, an
-	 * internal source): an empty text for a text source, so that an awk still runs its BEGIN and END blocks, else an
-	 * empty table. A <code>copy</code> has the type of the chain it copies, set when the connector loads.
+	 * The fresh empty result of a source, typed by its static type: what a source that failed with
+	 * <code>continueOnFailure</code> gives, an empty text for a text source, so that an awk still runs its BEGIN and END
+	 * blocks, else an empty table. A <code>copy</code> has the type of the chain it copies, set when the connector loads.
 	 *
 	 * @param source The source
 	 * @return a new empty text or empty table
@@ -728,13 +773,15 @@ public abstract class AbstractStrategy implements IStrategy {
 	 *                            in the mono instance processing
 	 * @param source              The source we want to run
 	 * @param previousSourceTable The source result produced in the past
+	 * @param lastResult          Receives the result, also when a retry is asked
 	 * @return new {@link SourceTable} instance
 	 */
 	private SourceTable runSource(
 		final String connectorId,
 		final Map<String, String> attributes,
 		final Source source,
-		final SourceTable previousSourceTable
+		final SourceTable previousSourceTable,
+		final AtomicReference<SourceTable> lastResult
 	) {
 		final ISourceProcessor sourceProcessor = SourceProcessor.builder()
 			.connectorId(connectorId)
@@ -756,23 +803,25 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		// Process the source to get a source table
 
-		final SourceTable sourceTable;
-
-		if (source.isForceSerialization()) {
-			sourceTable = ForceSerializationHelper.forceSerialization(
+		final SourceTable result = source.isForceSerialization()
+			? ForceSerializationHelper.forceSerialization(
 				executable,
 				telemetryManager,
 				connectorId,
 				source,
 				SOURCE,
-				SourceTable.empty()
-			);
-		} else {
-			sourceTable = executable.get();
-		}
+				SourceTable.failed(
+					"Not executed: the force serialization lock is not available or an earlier request still runs on the device."
+				)
+			)
+			: executable.get();
+		final SourceTable sourceTable = result != null
+			? result
+			: SourceTable.failed("The source processor gave no result.");
+		lastResult.set(sourceTable);
 
-		// A retry must be attempted if this source has already produced results in the past
-		if (!isNullOrEmptySourceTable(previousSourceTable) && isNullOrEmptySourceTable(sourceTable)) {
+		// A retry must be attempted if this source has already produced results in the past (a failure is empty)
+		if (!isNullOrEmptySourceTable(previousSourceTable) && sourceTable.isEmpty()) {
 			throw new RetryableException();
 		}
 

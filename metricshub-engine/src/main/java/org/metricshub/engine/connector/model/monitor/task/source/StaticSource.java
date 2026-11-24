@@ -69,6 +69,7 @@ public class StaticSource extends Source {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param value                 the static value associated with the source: a {@link List} of cells (one row), or
 	 *                              a {@link List} of rows, each a {@link List} of cells
 	 * @param key                   the key associated with the source
@@ -80,13 +81,14 @@ public class StaticSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "value", required = true) @JsonDeserialize(
 			using = StaticValueDeserializer.class
 		) @NonNull List<?> value,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super("static", computes, forceSerialization, key, executeForEachEntryOf);
+		super("static", computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		// A list of cells is one row
 		final List<?> rows = value.isEmpty() || value.get(0) instanceof List ? value : List.of(value);
 		this.value = new ArrayList<>();
@@ -105,6 +107,7 @@ public class StaticSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.value(value)

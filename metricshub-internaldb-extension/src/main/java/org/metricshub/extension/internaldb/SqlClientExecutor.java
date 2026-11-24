@@ -113,8 +113,9 @@ public class SqlClientExecutor {
 	 * @param sqlTables The tables to execute the query on.
 	 * @param query     The query to execute.
 	 * @return          The result of the query.
+	 * @throws SQLException When the database cannot be created or the query fails.
 	 */
-	public List<List<String>> executeQuery(final List<SqlTable> sqlTables, final String query) {
+	public List<List<String>> executeQuery(final List<SqlTable> sqlTables, final String query) throws SQLException {
 		if (sqlTables == null) {
 			log.error("Malformed Internal DB Query Source, no SQL Table is provided.");
 			return new ArrayList<>();
@@ -126,8 +127,7 @@ public class SqlClientExecutor {
 		}
 
 		if (H2_DRIVER == null) {
-			log.error("The bundled H2 driver is not available; cannot run the Internal DB Query.");
-			return new ArrayList<>();
+			throw new SQLException("The bundled H2 driver is not available.");
 		}
 
 		final String hostId = telemetryManager.getHostConfiguration().getHostId();
@@ -143,10 +143,6 @@ public class SqlClientExecutor {
 			}
 
 			return executeQuery(query, connection);
-		} catch (Exception exception) {
-			log.error("Error when creating the database for the Internal DB Query: {}", exception.getMessage());
-			log.debug("Exception: ", exception);
-			return new ArrayList<>();
 		}
 	}
 
@@ -157,8 +153,9 @@ public class SqlClientExecutor {
 	 * @param query      The query to execute.
 	 * @param connection The connection to the database.
 	 * @return The result of the query.
+	 * @throws SQLException When the query fails.
 	 */
-	private List<List<String>> executeQuery(final String query, final Connection connection) {
+	private List<List<String>> executeQuery(final String query, final Connection connection) throws SQLException {
 		final List<List<String>> result = new ArrayList<>();
 
 		try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
@@ -179,9 +176,6 @@ public class SqlClientExecutor {
 				}
 				result.add(row);
 			}
-		} catch (SQLException exception) {
-			log.error("Error when executing Internal DB Query {}: {}", query, exception.getMessage());
-			log.debug("SQL Exception: ", exception);
 		}
 
 		return result;

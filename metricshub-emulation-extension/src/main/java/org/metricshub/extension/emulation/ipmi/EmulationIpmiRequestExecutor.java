@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
@@ -155,56 +156,60 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 			return null;
 		}
 
-		return executorHelper.replayFromImage(
-			hostname,
-			emulationInputDirectory,
-			IpmiEmulationImage.class,
-			new IpmiContext(requestType, query),
-			new AbstractEmulationExecutor.ReplayOperations<IpmiEmulationImage, IpmiEmulationEntry, IpmiContext, String>() {
-				@Override
-				public String protocolName() {
-					return "IPMI";
-				}
+		try {
+			return executorHelper.replayFromImage(
+				hostname,
+				emulationInputDirectory,
+				IpmiEmulationImage.class,
+				new IpmiContext(requestType, query),
+				new AbstractEmulationExecutor.ReplayOperations<IpmiEmulationImage, IpmiEmulationEntry, IpmiContext, String>() {
+					@Override
+					public String protocolName() {
+						return "IPMI";
+					}
 
-				@Override
-				public String describeRequest(final IpmiContext context) {
-					return "request '" + context.requestType() + "'" + (context.query() == null ? "" : " " + context.query());
-				}
+					@Override
+					public String describeRequest(final IpmiContext context) {
+						return "request '" + context.requestType() + "'" + (context.query() == null ? "" : " " + context.query());
+					}
 
-				@Override
-				public List<IpmiEmulationEntry> extractEntries(final IpmiEmulationImage image) {
-					return image != null ? image.getImage() : Collections.emptyList();
-				}
+					@Override
+					public List<IpmiEmulationEntry> extractEntries(final IpmiEmulationImage image) {
+						return image != null ? image.getImage() : Collections.emptyList();
+					}
 
-				@Override
-				public List<IpmiEmulationEntry> findMatchingEntries(
-					final List<IpmiEmulationEntry> entries,
-					final IpmiContext context
-				) {
-					return EmulationIpmiRequestExecutor.this.findMatchingEntries(entries, context.requestType(), context.query());
-				}
+					@Override
+					public List<IpmiEmulationEntry> findMatchingEntries(
+						final List<IpmiEmulationEntry> entries,
+						final IpmiContext context
+					) {
+						return EmulationIpmiRequestExecutor.this.findMatchingEntries(
+							entries,
+							context.requestType(),
+							context.query()
+						);
+					}
 
-				@Override
-				public String buildRequestKey(final IpmiContext context) {
-					return context.query() == null ? context.requestType() : context.requestType() + " " + context.query();
-				}
+					@Override
+					public String buildRequestKey(final IpmiContext context) {
+						return context.query() == null ? context.requestType() : context.requestType() + " " + context.query();
+					}
 
-				@Override
-				public String extractResponseFileName(final IpmiEmulationEntry entry) {
-					return entry.getResponse();
-				}
+					@Override
+					public String extractResponseFileName(final IpmiEmulationEntry entry) {
+						return entry.getResponse();
+					}
 
-				@Override
-				public String mapResponse(final String content) {
-					return content;
+					@Override
+					public String mapResponse(final String content) {
+						return content;
+					}
 				}
-
-				@Override
-				public String emptyResult() {
-					return null;
-				}
-			}
-		);
+			);
+		} catch (ClientException e) {
+			// No response recorded: the request failed
+			return null;
+		}
 	}
 
 	/**

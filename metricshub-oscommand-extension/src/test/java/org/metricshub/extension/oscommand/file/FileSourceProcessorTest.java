@@ -812,7 +812,7 @@ class FileSourceProcessorTest {
 			telemetryManager
 		);
 
-		assertEquals(SourceTable.empty(), result);
+		assertTrue((result).isFailed());
 		verify(sshClient).close();
 		verify(sshClient, never()).listFiles(anyString(), any(), eq(false));
 		assertEquals(sshCounts(0, 0, 1), telemetryManager.getRequestStats().snapshot());
@@ -830,11 +830,11 @@ class FileSourceProcessorTest {
 
 		doThrow(new SocketTimeoutException("The connect() operation on the socket timed out.")).when(sshClient)
 			.connect(anyInt(), anyInt());
-		assertEquals(SourceTable.empty(), processor.process(fileSource, CONNECTOR_ID, telemetryManager));
+		assertTrue((processor.process(fileSource, CONNECTOR_ID, telemetryManager)).isFailed());
 
 		doThrow(new IOException("There was a problem while connecting to hostname:22")).when(sshClient)
 			.connect(anyInt(), anyInt());
-		assertEquals(SourceTable.empty(), processor.process(fileSource, CONNECTOR_ID, telemetryManager));
+		assertTrue((processor.process(fileSource, CONNECTOR_ID, telemetryManager)).isFailed());
 
 		// No authentication follows a connection that failed
 		verify(sshClient, never()).authenticate(anyString(), any(char[].class));

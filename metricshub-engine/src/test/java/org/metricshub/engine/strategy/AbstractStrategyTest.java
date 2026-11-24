@@ -24,7 +24,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -61,6 +64,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -773,7 +777,7 @@ class AbstractStrategyTest {
 			.build();
 
 		try {
-			final boolean allAnswered = strategy.processSourcesAndComputes(
+			final String failure = strategy.processSourcesAndComputes(
 				sources,
 				JobInfo.builder()
 					.hostname(HOST_NAME)
@@ -784,7 +788,7 @@ class AbstractStrategyTest {
 			);
 
 			assertEquals(2, requests.get());
-			assertFalse(allAnswered);
+			assertNull(failure);
 			assertTrue(Thread.currentThread().isInterrupted());
 			assertEquals(List.of(List.of("a", "1")), namespace.getSourceTable("${source::a}").getTable());
 			// The source interrupted while it ran may have been cut short: it did not answer, whatever it returned.
@@ -825,7 +829,7 @@ class AbstractStrategyTest {
 
 		final List<Runnable> cursorRollbacks = new ArrayList<>();
 		try {
-			final boolean allAnswered = strategy.processSourcesAndComputes(
+			final String failure = strategy.processSourcesAndComputes(
 				List.of(
 					IpmiSelSource.builder().key("${source::sel}").build(),
 					SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::next}").build()
@@ -841,7 +845,7 @@ class AbstractStrategyTest {
 			);
 
 			// The job is not mapped: the next poll must return the SEL events again
-			assertFalse(allAnswered);
+			assertNull(failure);
 			assertEquals("sel-10", namespace.getSourceCursor("${source::sel}"));
 			// The rollbacks already ran: the check before the mapping runs none again
 			assertTrue(cursorRollbacks.isEmpty());
@@ -882,7 +886,7 @@ class AbstractStrategyTest {
 
 		final List<Runnable> cursorRollbacks = new ArrayList<>();
 		try {
-			final boolean allAnswered = strategy.processSourcesAndComputes(
+			final String failure = strategy.processSourcesAndComputes(
 				List.of(IpmiSelSource.builder().key("${source::sel}").build()),
 				null,
 				JobInfo.builder()
@@ -895,7 +899,7 @@ class AbstractStrategyTest {
 			);
 
 			// The sources ran to their end: their rollback is left to the caller
-			assertTrue(allAnswered);
+			assertNull(failure);
 			assertTrue(Thread.currentThread().isInterrupted());
 			assertEquals("sel-20", namespace.getSourceCursor("${source::sel}"));
 			assertEquals(1, cursorRollbacks.size());
@@ -952,7 +956,7 @@ class AbstractStrategyTest {
 			.build();
 
 		try {
-			final boolean allAnswered = strategy.processSourcesAndComputes(
+			final String failure = strategy.processSourcesAndComputes(
 				List.of(source),
 				JobInfo.builder()
 					.hostname(HOST_NAME)
@@ -963,7 +967,7 @@ class AbstractStrategyTest {
 			);
 
 			// The half computed table is not stored: the namespace may be the next run's
-			assertFalse(allAnswered);
+			assertNull(failure);
 			assertNull(
 				telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID).getSourceTable("${source::a}")
 			);
@@ -1037,6 +1041,129 @@ class AbstractStrategyTest {
 		} finally {
 			Thread.interrupted();
 		}
+	}
+
+	/**
+	 * A strategy whose extension fails every HTTP source and answers every SNMP table source with one row.
+	 *
+	 * @param telemetryManager The telemetry manager
+	 * @param extension        The mocked extension, configured here
+	 * @param clientsExecutor  The clients executor
+	 * @return the strategy
+	 */
+	private static SimpleStrategy newFailingHttpStrategy(
+		final TelemetryManager telemetryManager,
+		final IProtocolExtension extension,
+		final ClientsExecutor clientsExecutor
+	) {
+		doReturn(true).when(extension).isValidConfiguration(any());
+		doReturn(Set.of(HttpSource.class, SnmpTableSource.class)).when(extension).getSupportedSources();
+		doReturn(SourceTable.failed("HTTP GET /x: status 401")).when(extension)
+			.processSource(any(HttpSource.class), anyString(), any());
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("b;1", ";"))).when(extension)
+			.processSource(any(SnmpTableSource.class), anyString(), any());
+		return SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutor)
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+	}
+
+	private static final JobInfo SIMPLE_JOB = JobInfo.builder()
+		.hostname(HOST_NAME)
+		.connectorId(TEST_CONNECTOR_ID)
+		.jobName("simple")
+		.monitorType("enclosure")
+		.build();
+
+	@Test
+	void testFailedSourceStopsTheJob() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		final ClientsExecutor clientsExecutor = mock(ClientsExecutor.class);
+		final SimpleStrategy strategy = newFailingHttpStrategy(telemetryManager, extension, clientsExecutor);
+		final HttpSource failing = HttpSource.builder()
+			.url("/x")
+			.key("${source::a}")
+			.computes(List.of(Json2Csv.builder().properties(List.of("a")).build()))
+			.build();
+		final AtomicBoolean rolledBack = new AtomicBoolean();
+		final List<Runnable> cursorRollbacks = new ArrayList<>(List.of(() -> rolledBack.set(true)));
+
+		final String failure = strategy.processSourcesAndComputes(
+			List.of(failing, SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::b}").build()),
+			null,
+			SIMPLE_JOB,
+			cursorRollbacks
+		);
+
+		// The error is returned, the computes and the next source are skipped, the polled cursors are rolled back
+		assertEquals("HTTP GET /x: status 401", failure);
+		verifyNoInteractions(clientsExecutor);
+		verify(extension, never()).processSource(any(SnmpTableSource.class), anyString(), any());
+		assertTrue(rolledBack.get());
+		// The failure is stored, for the sources that read it
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		assertEquals(SourceTable.failed("HTTP GET /x: status 401"), namespace.getSourceTable("${source::a}"));
+		assertNull(namespace.getSourceTable("${source::b}"));
+		assertEquals(Set.of("${source::a}"), namespace.getUnansweredSourceKeys());
+	}
+
+	@Test
+	void testFailedSourceContinuesOnFailureWithTheEmptyResultOfItsType() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		final SimpleStrategy strategy = newFailingHttpStrategy(
+			telemetryManager,
+			extension,
+			new ClientsExecutor(telemetryManager)
+		);
+		final HttpSource failing = HttpSource.builder()
+			.url("/x")
+			.key("${source::a}")
+			.continueOnFailure(true)
+			.computes(List.of(Append.builder().value("default").build()))
+			.build();
+
+		final String failure = strategy.processSourcesAndComputes(
+			List.of(failing, SnmpTableSource.builder().oid("1.3").selectColumns("1").key("${source::b}").build()),
+			SIMPLE_JOB
+		);
+
+		// Today's behavior: the computes run on an empty text, the job goes on
+		assertNull(failure);
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		assertEquals(SourceTable.ofText("default"), namespace.getSourceTable("${source::a}"));
+		assertEquals(List.of(List.of("b", "1")), namespace.getSourceTable("${source::b}").getTable());
+		// Not reliable for the removal of the monitors
+		assertEquals(Set.of("${source::a}"), namespace.getUnansweredSourceKeys());
+	}
+
+	@Test
+	void testSourceReadingAFailedSourceFails() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		namespace.addSourceTable("${source::a}", SourceTable.failed("SNMP Table: 1.3: timeout"));
+		final CopySource copy = CopySource.builder().from("${source::a}").key("${source::b}").build();
+		copy.setReferences(Set.of("${source::a}"));
+		final SimpleStrategy strategy = SimpleStrategy.builder()
+			.strategyTime(STRATEGY_TIME)
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.extensionManager(ExtensionManager.empty())
+			.build();
+
+		assertEquals(
+			"${source::a} failed: SNMP Table: 1.3: timeout",
+			strategy.processSourcesAndComputes(List.of(copy), SIMPLE_JOB)
+		);
+		assertTrue(namespace.getSourceTable("${source::b}").isFailed());
+
+		// The same with continueOnFailure: the copy gives an empty table, the source that failed is not run again
+		copy.setContinueOnFailure(true);
+		assertNull(strategy.processSourcesAndComputes(List.of(copy), SIMPLE_JOB));
+		assertEquals(SourceTable.empty(), namespace.getSourceTable("${source::b}"));
 	}
 
 	private TelemetryManager newInterruptibleTelemetryManager() {

@@ -1,6 +1,7 @@
 package org.metricshub.extension.win.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
@@ -69,7 +70,7 @@ class WmiSourceProcessorTest {
 			)
 			.build();
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
-		assertEquals(SourceTable.empty(), wmiSourceProcessor.process(wmiSource, telemetryManager));
+		assertTrue((wmiSourceProcessor.process(wmiSource, telemetryManager)).isFailed());
 	}
 
 	@Test
@@ -138,7 +139,7 @@ class WmiSourceProcessorTest {
 				null,
 				telemetryManager.getRequestStats()
 			);
-		assertEquals(SourceTable.empty(), wmiSourceProcessor.process(wmiSource, telemetryManager));
+		assertTrue((wmiSourceProcessor.process(wmiSource, telemetryManager)).isFailed());
 	}
 
 	@Test
@@ -158,7 +159,7 @@ class WmiSourceProcessorTest {
 			)
 			.build();
 
-		assertEquals(SourceTable.empty(), wmiSourceProcessor.process((WmiSource) null, telemetryManager));
+		assertTrue((wmiSourceProcessor.process((WmiSource) null, telemetryManager)).isFailed());
 	}
 
 	@Test
@@ -176,6 +177,6 @@ class WmiSourceProcessorTest {
 			.build();
 
 		doReturn(null).when(configurationRetrieverMock).apply(telemetryManager);
-		assertEquals(SourceTable.empty(), wmiSourceProcessor.process(wmiSource, telemetryManager));
+		assertTrue((wmiSourceProcessor.process(wmiSource, telemetryManager)).isFailed());
 	}
 }

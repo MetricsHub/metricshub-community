@@ -18,19 +18,23 @@ monitors:
         type: simple
         metrics:
           test.count: 1
-  # Simple job: one instance, its values are constants and texts, its id a plain attribute read from a text
+  # Simple job: one instance, its values are constants and texts, its id a plain attribute read from a text. A source
+  # that fails gives an empty text
   settings:
     simple:
       sources:
         vendor:
           type: commandLine
           commandLine: vendor
+          continueOnFailure: true
         limit:
           type: commandLine
           commandLine: limit
+          continueOnFailure: true
         failed:
           type: commandLine
           commandLine: failed
+          continueOnFailure: true
       mapping:
         type: simple
         attributes:

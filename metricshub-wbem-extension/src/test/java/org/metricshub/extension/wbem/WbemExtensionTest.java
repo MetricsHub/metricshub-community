@@ -718,8 +718,7 @@ class WbemExtensionTest {
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.empty();
-		assertEquals(expected, actual);
+		assertTrue((actual).isFailed());
 	}
 
 	@Test
@@ -734,7 +733,7 @@ class WbemExtensionTest {
 			doReturn(null).when(wbemRequestExecutorSpy)
 				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
 			final SourceTable actual = wbemExtension.processSource(
-				WbemSource.builder().query(WBEM_TEST_QUERY).build(),
+				WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 				CONNECTOR_ID,
 				telemetryManager
 			);
@@ -747,7 +746,7 @@ class WbemExtensionTest {
 			doReturn(Collections.emptyList()).when(wbemRequestExecutorSpy)
 				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
 			final SourceTable actual = wbemExtension.processSource(
-				WbemSource.builder().query(WBEM_TEST_QUERY).build(),
+				WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 				CONNECTOR_ID,
 				telemetryManager
 			);
@@ -763,13 +762,12 @@ class WbemExtensionTest {
 
 		telemetryManager.getHostConfiguration().setConfigurations(Map.of());
 
-		assertEquals(
-			SourceTable.empty(),
-			wbemExtension.processSource(
+		assertTrue(
+			(wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_NAMESPACE).build(),
 				CONNECTOR_ID,
 				telemetryManager
-			)
+			)).isFailed()
 		);
 	}
 

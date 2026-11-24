@@ -68,6 +68,7 @@ public class SnmpTableSource extends SnmpSource {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param oid                   the SNMP OID to retrieve data
 	 * @param selectColumns         the columns to select from the SNMP table
 	 * @param key                   the key associated with the source
@@ -79,12 +80,13 @@ public class SnmpTableSource extends SnmpSource {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "oid", required = true) String oid,
 		@JsonProperty(value = "selectColumns", required = true) @NonNull String selectColumns,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, oid, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, oid, key, executeForEachEntryOf);
 		this.selectColumns = selectColumns;
 	}
 
@@ -98,6 +100,7 @@ public class SnmpTableSource extends SnmpSource {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.oid(oid)

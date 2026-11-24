@@ -98,9 +98,15 @@ class SimpleStrategyTest {
 	private SimpleStrategy simpleStrategy;
 
 	/**
-	 * The CSV tables returned by the mocked protocol extension, by source key. The other sources return an empty table.
+	 * The CSV tables returned by the mocked protocol extension, by source key, {@link #FAILED} for a source that fails.
+	 * The other sources return an empty table.
 	 */
 	private final Map<String, String> sourceTables = new HashMap<>();
+
+	/**
+	 * The value of {@link #sourceTables} for a source that fails.
+	 */
+	private static final String FAILED = "<failed>";
 
 	@Test
 	void testRun() throws Exception {
@@ -523,8 +529,8 @@ class SimpleStrategyTest {
 		// The incremental file source of beforeAll, read by before_all_log and before_all_log_copy
 		sourceTables.put("${source::beforeAll.logLines}", "new;1");
 
-		// null_source's source(2) answered during the previous run: now the extension returns null, which arrives as an
-		// empty table, so the source is retried then given up
+		// null_source's source(2) answered during the previous run: now the extension returns null, a failure, so the
+		// source is retried then given up
 		final String nullSourceKey = "${source::monitors.null_source.simple.sources.source(2)}";
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
@@ -537,14 +543,16 @@ class SimpleStrategyTest {
 				any(TelemetryManager.class)
 			);
 
-		// The union of beforeAll read by before_all_union: partA has a row, partB answered during the previous run and is now
-		// empty, so it is retried then given up
+		// The union of beforeAll read by before_all_union: partA has a row, partB answered during the previous run and now
+		// fails, so it is retried then given up
 		sourceTables.put("${source::beforeAll.partA}", "new;1");
+		sourceTables.put("${source::beforeAll.partB}", FAILED);
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable("${source::beforeAll.partB}", SourceTable.ofTable(SourceTable.csvToTable("previous;1", ";")));
 
-		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up
+		// failed_source's source(2) answered during the previous run: now it fails, it is retried then given up
+		sourceTables.put("${source::monitors.failed_source.simple.sources.source(2)}", FAILED);
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
 			.addSourceTable(
@@ -773,11 +781,10 @@ class SimpleStrategyTest {
 		lenient().doReturn(Set.of(SnmpTableSource.class, EventLogSource.class, FileSource.class))
 			.when(protocolExtensionMock)
 			.getSupportedSources();
-		lenient().doAnswer(
-			invocation -> SourceTable.ofTable(
-				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), ";")
-			)
-		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
+		lenient().doAnswer(invocation -> {
+			final String csv = sourceTables.get(invocation.<Source>getArgument(0).getKey());
+			return FAILED.equals(csv) ? SourceTable.failed("Failed") : SourceTable.ofTable(SourceTable.csvToTable(csv, ";"));
+		}).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		return TelemetryManager.builder()
 			.monitors(

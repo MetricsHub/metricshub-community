@@ -74,6 +74,7 @@ public class SqlSource extends Source {
 	 * @param type                 The type of the source (should be "sql").
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
+	 * @param continueOnFailure   whether a failure of the source lets its job go on
 	 * @param query                The SQL query to execute.
 	 * @param key                  The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
@@ -85,11 +86,12 @@ public class SqlSource extends Source {
 		@JsonProperty("databse") String database,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "query", required = true) @NonNull String query,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.query = query;
 		this.database = database;
 	}
@@ -100,6 +102,7 @@ public class SqlSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.database(database)

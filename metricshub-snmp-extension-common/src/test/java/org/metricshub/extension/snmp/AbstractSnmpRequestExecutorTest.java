@@ -177,19 +177,28 @@ class AbstractSnmpRequestExecutorTest {
 			Arguments.of(new EncodingException("Context can no longer be used"), RequestOutcome.FAILED),
 			Arguments.of(new NullPointerException(), RequestOutcome.FAILED),
 			// Same message as a no-such value, but not the plain Exception of SnmpClient
-			Arguments.of(new IOException("SNMP_VAR_NOSUCHOBJECT"), RequestOutcome.FAILED)
+			Arguments.of(new IOException("SNMP_VAR_NOSUCHOBJECT"), RequestOutcome.FAILED),
+			// The OfflineSnmpClient of the emulation, for an OID without a value in the recorded walk
+			Arguments.of(new Exception("(no-such-oid)"), RequestOutcome.COMPLETED)
 		);
 	}
 
 	@ParameterizedTest
 	@MethodSource("operationErrors")
-	void testOperationErrorIsClassifiedAndSwallowed(final Exception error, final RequestOutcome expected)
-		throws Exception {
+	void testOperationErrorIsClassified(final Exception error, final RequestOutcome expected) throws Exception {
 		when(client.get(OID)).thenThrow(error);
 		final TestSnmpRequestExecutor executor = new TestSnmpRequestExecutor(() -> client);
 
-		// The error is still turned into null, as before
-		assertNull(executor.executeSNMPGet(OID, configuration, HOSTNAME, true, requestStats));
+		// No value is an answer, null; the other errors are thrown
+		if (expected == RequestOutcome.COMPLETED) {
+			assertNull(executor.executeSNMPGet(OID, configuration, HOSTNAME, true, requestStats));
+		} else {
+			final ExecutionException thrown = assertThrows(
+				ExecutionException.class,
+				() -> executor.executeSNMPGet(OID, configuration, HOSTNAME, true, requestStats)
+			);
+			assertSame(error, thrown.getCause());
+		}
 
 		assertCounts(
 			requestStats,
@@ -384,7 +393,10 @@ class AbstractSnmpRequestExecutorTest {
 		final TestSnmpRequestExecutor executor = new TestSnmpRequestExecutor(() -> client);
 
 		assertEquals("value", executor.executeSNMPGet(OID, configuration, HOSTNAME, false, null));
-		assertNull(executor.executeSNMPGetNext(OID, configuration, HOSTNAME, false, null));
+		assertThrows(
+			ExecutionException.class,
+			() -> executor.executeSNMPGetNext(OID, configuration, HOSTNAME, false, null)
+		);
 
 		final TestSnmpRequestExecutor failingExecutor = new TestSnmpRequestExecutor(() -> {
 			throw new UnknownHostException("unknown");

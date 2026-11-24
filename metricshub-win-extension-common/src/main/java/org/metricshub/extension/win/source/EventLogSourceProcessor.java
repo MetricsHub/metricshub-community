@@ -122,14 +122,14 @@ public class EventLogSourceProcessor {
 	 *
 	 * @param eventLogSource the event log source definition
 	 * @param telemetryManager the telemetry manager providing host configuration and connector namespace
-	 * @return a {@link SourceTable} containing the event log results, or an empty table on error
+	 * @return a {@link SourceTable} containing the event log results, or a failure
 	 */
 	public SourceTable process(final EventLogSource eventLogSource, final TelemetryManager telemetryManager) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (eventLogSource == null) {
-			log.warn("Hostname {} - Malformed EventLog source {}. Returning an empty table.", hostname, eventLogSource);
-			return SourceTable.empty();
+			log.warn("Hostname {} - Malformed EventLog source {}.", hostname, eventLogSource);
+			return SourceTable.failed("Malformed EventLog source.");
 		}
 
 		// Find the configured protocol (WinRM or WMI)
@@ -137,11 +137,11 @@ public class EventLogSourceProcessor {
 
 		if (winConfiguration == null) {
 			log.debug(
-				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Returning an empty table for EventLog source {}.",
+				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Cannot process EventLog source {}.",
 				hostname,
 				eventLogSource.getKey()
 			);
-			return SourceTable.empty();
+			return SourceTable.failed("EventLog: neither WMI nor WinRM is configured on the host.");
 		}
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
@@ -160,11 +160,11 @@ public class EventLogSourceProcessor {
 
 		if (wqlQuery == null || wqlQuery.isBlank()) {
 			log.error(
-				"Hostname {} - Failed to build WQL query for EventLog source {}. Returning an empty table.",
+				"Hostname {} - Failed to build WQL query for EventLog source {}.",
 				resolvedHostname,
 				eventLogSource.getKey()
 			);
-			return SourceTable.empty();
+			return SourceTable.failed("EventLog: the WQL query cannot be built.");
 		}
 
 		log.info("Executing WMI query on {}: \n{}", hostname, wqlQuery);
@@ -217,7 +217,7 @@ public class EventLogSourceProcessor {
 				e
 			);
 
-			return SourceTable.empty();
+			return SourceTable.failed("EventLog query " + wqlQuery, e);
 		}
 	}
 

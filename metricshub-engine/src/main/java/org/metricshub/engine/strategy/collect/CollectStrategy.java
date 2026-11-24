@@ -292,8 +292,12 @@ public class CollectStrategy extends AbstractStrategy {
 				);
 				if (singleton != null) {
 					final List<Runnable> cursorRollbacks = new ArrayList<>();
-					processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo, cursorRollbacks);
-					if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+					// A failed source stops the job: the metrics are left unset for this cycle
+					if (
+						processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo, cursorRollbacks)
+							== null &&
+							!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)
+					) {
 						processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
 					}
 				}
@@ -305,9 +309,10 @@ public class CollectStrategy extends AbstractStrategy {
 
 				// Create the sources and the computes for a connector
 				final List<Runnable> cursorRollbacks = new ArrayList<>();
-				processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
-
-				if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+				if (
+					processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks) == null &&
+						!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)
+				) {
 					// Retrieve monitor job keys
 					final Set<String> monitorJobKeys = monitorJob.getValue().getKeys();
 					processMonitors(monitorType, multiInstanceCollect.getMapping(), currentConnector, hostname, monitorJobKeys);
@@ -326,8 +331,15 @@ public class CollectStrategy extends AbstractStrategy {
 						.forEach(monitor -> {
 							// One list per monitor: each monitor polls the sources again
 							final List<Runnable> cursorRollbacks = new ArrayList<>();
-							processSourcesAndComputes(orderedSources.getSources(), monitor.getAttributes(), jobInfo, cursorRollbacks);
-							if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+							if (
+								processSourcesAndComputes(
+									orderedSources.getSources(),
+									monitor.getAttributes(),
+									jobInfo,
+									cursorRollbacks
+								) == null &&
+									!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)
+							) {
 								processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor);
 							}
 						});

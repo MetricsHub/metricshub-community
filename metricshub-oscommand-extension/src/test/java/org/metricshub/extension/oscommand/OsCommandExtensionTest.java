@@ -587,17 +587,15 @@ class OsCommandExtensionTest {
 			IllegalArgumentException.class,
 			() -> osCommandExtension.processSource((CommandLineSource) null, MY_CONNECTOR_1_NAME, telemetryManager)
 		);
-		assertEquals(
-			SourceTable.empty(),
-			osCommandExtension.processSource(new CommandLineSource(), MY_CONNECTOR_1_NAME, telemetryManager)
+		assertTrue(
+			(osCommandExtension.processSource(new CommandLineSource(), MY_CONNECTOR_1_NAME, telemetryManager)).isFailed()
 		);
-		assertEquals(
-			SourceTable.empty(),
-			osCommandExtension.processSource(
+		assertTrue(
+			(osCommandExtension.processSource(
 				CommandLineSource.builder().commandLine("").build(),
 				MY_CONNECTOR_1_NAME,
 				telemetryManager
-			)
+			)).isFailed()
 		);
 
 		final String commandLine = "/usr/sbin/ioscan -kFC ext_bus";
@@ -622,10 +620,7 @@ class OsCommandExtensionTest {
 				eq(Map.of())
 			);
 
-		assertEquals(
-			SourceTable.empty(),
-			osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
-		);
+		assertTrue((osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)).isFailed());
 
 		doThrow(IOException.class).when(osCommandService)
 			.runOsCommand(
@@ -637,10 +632,7 @@ class OsCommandExtensionTest {
 				eq(Map.of())
 			);
 
-		assertEquals(
-			SourceTable.empty(),
-			osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
-		);
+		assertTrue((osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)).isFailed());
 
 		final String result = "xxxxxx\n" + "xxxxxx\n" + "0:1:ext_bus:3:4:5:6:7:8\n" + "xxxxxx\n" + "xxxxxx\n";
 		final OsCommandResult commandResult = new OsCommandResult(result, commandLine);

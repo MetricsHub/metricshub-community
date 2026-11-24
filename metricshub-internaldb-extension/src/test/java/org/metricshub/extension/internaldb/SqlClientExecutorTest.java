@@ -22,7 +22,9 @@ package org.metricshub.extension.internaldb;
  */
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -66,7 +68,7 @@ class SqlClientExecutorTest {
 	private static final String TIMESTAMP = "2025-01-30 14:30:00";
 
 	@Test
-	void testSqlQuery() {
+	void testSqlQuery() throws Exception {
 		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("localhost")
 			.hostId("localhost")
@@ -122,7 +124,8 @@ class SqlClientExecutorTest {
 
 		final List<SqlTable> sqlTables = Arrays.asList(sqlTable1, sqlTable2);
 
-		assertEquals(new ArrayList<>(), sqlClientExecutor.executeQuery(sqlTables, "SQL QUERY;"));
+		// An invalid query fails
+		assertThrows(SQLException.class, () -> sqlClientExecutor.executeQuery(sqlTables, "SQL QUERY;"));
 
 		// SqlSource well formed
 		SqlColumn sqlColumn1Table1 = SqlColumn.builder().name("COL1_1").number(1).type("VARCHAR(255)").build();
@@ -304,7 +307,7 @@ class SqlClientExecutorTest {
 	}
 
 	@Test
-	void testSqlQueryWithDatesAndTimes() {
+	void testSqlQueryWithDatesAndTimes() throws Exception {
 		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("localhost")
 			.hostId("localhost")
@@ -418,33 +421,33 @@ class SqlClientExecutorTest {
 	}
 
 	@Test
-	void testCreateTableQueryRejectsInvalidDefinitions() {
+	void testCreateTableQueryRejectsInvalidDefinitions() throws Exception {
 		final SqlClientExecutor executor = executorWithSource(List.of(List.of(LOWERCASE_A)));
 		final SqlColumn valid = column("COL1", 1, "VARCHAR(255)");
 		final String query = "SELECT COL1 FROM T1;";
 
-		// Invalid aliases: blank, embedded space, quote, semicolon.
+		// Invalid aliases: blank, embedded space, quote, semicolon. The table is not created: the query fails
 		for (final String alias : new String[] { " ", "T 1", "T\"1", "T1;" }) {
-			assertEquals(new ArrayList<>(), executor.executeQuery(List.of(table(alias, TAB1_REF, valid)), query));
+			assertThrows(SQLException.class, () -> executor.executeQuery(List.of(table(alias, TAB1_REF, valid)), query));
 		}
 
 		// Invalid column name (blank), invalid type (blank) and invalid number (< 1).
-		assertEquals(
-			new ArrayList<>(),
-			executor.executeQuery(List.of(table("T1", TAB1_REF, column(" ", 1, "VARCHAR(255)"))), query)
+		assertThrows(
+			SQLException.class,
+			() -> executor.executeQuery(List.of(table("T1", TAB1_REF, column(" ", 1, "VARCHAR(255)"))), query)
 		);
-		assertEquals(
-			new ArrayList<>(),
-			executor.executeQuery(List.of(table("T1", TAB1_REF, column("COL1", 1, " "))), query)
+		assertThrows(
+			SQLException.class,
+			() -> executor.executeQuery(List.of(table("T1", TAB1_REF, column("COL1", 1, " "))), query)
 		);
-		assertEquals(
-			new ArrayList<>(),
-			executor.executeQuery(List.of(table("T1", TAB1_REF, column("COL1", 0, "VARCHAR(255)"))), query)
+		assertThrows(
+			SQLException.class,
+			() -> executor.executeQuery(List.of(table("T1", TAB1_REF, column("COL1", 0, "VARCHAR(255)"))), query)
 		);
 	}
 
 	@Test
-	void testInsertSkipsMissingOrEmptySourceAndBadValues() {
+	void testInsertSkipsMissingOrEmptySourceAndBadValues() throws Exception {
 		final SqlTable sqlTable = table("T1", TAB1_REF, column("COL1", 1, "VARCHAR(255)"));
 		final String query = "SELECT COL1 FROM T1;";
 
@@ -473,7 +476,7 @@ class SqlClientExecutorTest {
 	}
 
 	@Test
-	void testLargeSourceTableTriggersIntermediateBatches() {
+	void testLargeSourceTableTriggersIntermediateBatches() throws Exception {
 		// 1000 rows hit the periodic batch execution boundary (batchSize = 1000).
 		final List<List<String>> rows = new ArrayList<>();
 		for (int i = 0; i < 1000; i++) {

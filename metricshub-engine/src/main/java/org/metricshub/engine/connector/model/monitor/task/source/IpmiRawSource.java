@@ -67,6 +67,7 @@ public class IpmiRawSource extends Source {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    ignored: the IPMI sources are always serialized
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param netFn                 the network function of the request, an even number from 0x00 to 0x3E
 	 * @param command               the command byte
 	 * @param data                  the request bytes, separated with spaces; may be {@code null}
@@ -79,13 +80,14 @@ public class IpmiRawSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "netFn", required = true) String netFn,
 		@JsonProperty(value = "command", required = true) String command,
 		@JsonProperty("data") String data,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.netFn = netFn;
 		this.command = command;
 		this.data = data;
@@ -105,6 +107,7 @@ public class IpmiRawSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.netFn(netFn)

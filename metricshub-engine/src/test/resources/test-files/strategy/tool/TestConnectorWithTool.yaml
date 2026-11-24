@@ -55,6 +55,17 @@ tools:
           value: -used
     result:
       source: ${source::authenticated}
+  failing:
+    description: Runs a command that no extension executes, then reads its output.
+    sources:
+      command:
+        type: commandLine
+        commandLine: ls
+      output:
+        type: copy
+        from: ${source::command}
+    result:
+      source: ${source::output}
 beforeAll:
   session:
     type: static

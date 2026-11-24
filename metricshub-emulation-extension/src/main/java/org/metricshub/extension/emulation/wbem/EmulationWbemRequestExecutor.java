@@ -80,11 +80,6 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			? emulationConfiguration.getWbem().getDirectory()
 			: null;
 
-		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
-			log.warn("Hostname {} - WBEM emulation input directory is not configured.", hostname);
-			return List.of();
-		}
-
 		return executorHelper.replayFromImage(
 			hostname,
 			emulationInputDirectory,
@@ -127,11 +122,6 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 				@Override
 				public List<List<String>> mapResponse(final String content) {
 					return SourceTable.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
-				}
-
-				@Override
-				public List<List<String>> emptyResult() {
-					return List.of();
 				}
 			}
 		);

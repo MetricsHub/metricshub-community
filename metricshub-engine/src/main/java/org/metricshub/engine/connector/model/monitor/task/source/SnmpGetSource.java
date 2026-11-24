@@ -50,6 +50,7 @@ public class SnmpGetSource extends SnmpSource {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param oid                   the SNMP OID to retrieve data
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
@@ -60,11 +61,12 @@ public class SnmpGetSource extends SnmpSource {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "oid", required = true) String oid,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, oid, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, oid, key, executeForEachEntryOf);
 	}
 
 	/**
@@ -77,6 +79,7 @@ public class SnmpGetSource extends SnmpSource {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.oid(oid)

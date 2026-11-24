@@ -61,8 +61,8 @@ public class WinCommandLineSourceProcessor {
 	 *
 	 * @param commandLineSource The command line source configuration containing the command, filtering, and selection settings.
 	 * @param telemetryManager  Provides host configurations necessary for command execution.
-	 * @return A {@link SourceTable} containing the processed and formatted output of the command line.
-	 *         Returns an empty table if an error occurs or if the command line is invalid.
+	 * @return A {@link SourceTable} containing the processed and formatted output of the command line, whatever its
+	 *         exit code. A failure if the command cannot run or if the command line is invalid.
 	 */
 	public SourceTable process(final CommandLineSource commandLineSource, final TelemetryManager telemetryManager) {
 		// Retrieve the IWinConfiguration (WMI or WinRm)
@@ -75,9 +75,10 @@ public class WinCommandLineSourceProcessor {
 
 		if (commandLineSource == null || commandLineSource.getCommandLine().isEmpty()) {
 			log.error("Hostname {} - Malformed OS command source.", hostname);
-			return SourceTable.empty();
+			return SourceTable.failed("Malformed OS command source: no command line.");
 		}
 
+		final String request = String.format("OS command: %s", commandLineSource.getCommandLine());
 		try {
 			final OsCommandResult osCommandResult = winCommandService.runOsCommand(
 				commandLineSource.getCommandLine(),
@@ -106,15 +107,9 @@ public class WinCommandLineSourceProcessor {
 
 			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
-			LoggingHelper.logSourceError(
-				connectorId,
-				commandLineSource.getKey(),
-				String.format("OS command: %s.", commandLineSource.getCommandLine()),
-				hostname,
-				e
-			);
+			LoggingHelper.logSourceError(connectorId, commandLineSource.getKey(), request, hostname, e);
 
-			return SourceTable.empty();
+			return SourceTable.failed(request, e);
 		}
 	}
 }

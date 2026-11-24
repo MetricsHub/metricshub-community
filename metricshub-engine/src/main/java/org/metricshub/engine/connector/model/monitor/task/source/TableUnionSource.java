@@ -70,6 +70,7 @@ public class TableUnionSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
+	 * @param continueOnFailure   whether a failure of the source lets its job go on
 	 * @param tables               List of tables to be included in the union operation: source references or table
 	 *                             literals (lists of rows).
 	 * @param key                  The key associated with the source.
@@ -81,11 +82,12 @@ public class TableUnionSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "tables", required = true) @NonNull List<Object> tables,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.tables = tables;
 	}
 
@@ -95,6 +97,7 @@ public class TableUnionSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.tables(tables != null ? new ArrayList<>(tables) : null)

@@ -60,6 +60,16 @@ class CommandLineSourceProcessorTest {
 	}
 
 	/**
+	 * A command that prints nothing is an answer, whatever its exit code; a command that did not run fails.
+	 */
+	@Test
+	void emptyOutputIsAnAnswerAndNoOutputAFailure() throws Exception {
+		final CommandLineSource source = CommandLineSource.builder().commandLine("cmd").build();
+		assertEquals(SourceTable.ofText(""), process("", source));
+		assertEquals(SourceTable.failed("OS command: cmd: the command did not run."), process(null, source));
+	}
+
+	/**
 	 * The job deadline expires while the command runs: throwing the {@link InterruptedException} cleared the interrupt,
 	 * which the processor restores so that the engine stops the job instead of running its next commands.
 	 */
@@ -76,7 +86,7 @@ class CommandLineSourceProcessorTest {
 				newTelemetryManager()
 			);
 
-			assertTrue(result.isEmpty());
+			assertTrue(result.isFailed());
 			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
 			Thread.interrupted();

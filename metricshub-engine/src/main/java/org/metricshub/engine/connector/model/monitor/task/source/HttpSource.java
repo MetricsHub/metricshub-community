@@ -96,6 +96,7 @@ public class HttpSource extends Source {
 	 * @param type The type of the source.
 	 * @param computes List of computations to be applied to the source.
 	 * @param forceSerialization Flag indicating whether to force serialization.
+	 * @param continueOnFailure whether a failure of the source lets its job go on
 	 * @param method The HTTP method for the request.
 	 * @param url The URL for the HTTP request.
 	 * @param path The Path for the HTTP request.
@@ -111,6 +112,7 @@ public class HttpSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty("method") HttpMethod method,
 		@JsonProperty("url") String url,
 		@JsonProperty("path") String path,
@@ -121,7 +123,7 @@ public class HttpSource extends Source {
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.method = method;
 		this.url = url;
 		this.path = path;
@@ -136,6 +138,7 @@ public class HttpSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.method(method)

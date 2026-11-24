@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
 
 /**
  * Template base class for emulation executors that replay responses from {@code image.yaml}.
@@ -78,7 +79,10 @@ public class AbstractEmulationExecutor {
 	 * @param emulationInputDirectory protocol emulation input directory
 	 * @param imageClass image class to parse
 	 * @param context protocol request context
-	 * @return replayed result, or protocol-specific empty result on failure
+	 * @param operations protocol-specific operations
+	 * @return replayed result
+	 * @throws ClientException when no response is recorded for the request: the recorder records only the requests
+	 *                         that answered, so the replay fails as the request did
 	 */
 	public <I, E, C, R> R replayFromImage(
 		final String hostname,
@@ -86,17 +90,17 @@ public class AbstractEmulationExecutor {
 		final Class<I> imageClass,
 		final C context,
 		final ReplayOperations<I, E, C, R> operations
-	) {
+	) throws ClientException {
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - {} emulation input directory is not configured.", hostname, operations.protocolName());
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
 
 		final Path protocolDir = Path.of(emulationInputDirectory);
 		final Path indexFile = protocolDir.resolve(EMULATION_IMAGE_YAML);
 		if (!Files.isRegularFile(indexFile)) {
 			log.warn("Hostname {} - {} emulation index file not found: {}", hostname, operations.protocolName(), indexFile);
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
 
 		final I emulationImage;
@@ -111,7 +115,7 @@ public class AbstractEmulationExecutor {
 				e.getMessage()
 			);
 			log.debug("Hostname {} - {} emulation index parse error:", hostname, operations.protocolName(), e);
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
 
 		final List<E> entries = operations.extractEntries(emulationImage);
@@ -123,7 +127,7 @@ public class AbstractEmulationExecutor {
 				operations.protocolName(),
 				operations.describeRequest(context)
 			);
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
 
 		final int index = roundRobinManager.nextIndex(
@@ -134,12 +138,12 @@ public class AbstractEmulationExecutor {
 		final String responseFileName = operations.extractResponseFileName(matchingEntries.get(index));
 		if (responseFileName == null || responseFileName.isBlank()) {
 			log.warn("Hostname {} - Matched {} emulation entry has no response file.", hostname, operations.protocolName());
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
 
 		final Path responseFile = EmulationPathHelper.resolveSecurely(protocolDir, responseFileName);
 		if (responseFile == null) {
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
 		try {
 			final String content = readResponseFile(responseFile);
@@ -153,8 +157,21 @@ public class AbstractEmulationExecutor {
 				e.getMessage()
 			);
 			log.debug("Hostname {} - {} emulation response read error:", hostname, operations.protocolName(), e);
-			return operations.emptyResult();
+			throw noResponse(operations, context);
 		}
+	}
+
+	/**
+	 * The failure of a request that has no recorded response.
+	 *
+	 * @param operations protocol-specific operations
+	 * @param context    request context
+	 * @return the exception to throw
+	 */
+	private static <C> ClientException noResponse(final ReplayOperations<?, ?, C, ?> operations, final C context) {
+		return new ClientException(
+			"No recorded %s response for %s.".formatted(operations.protocolName(), operations.describeRequest(context))
+		);
 	}
 
 	/**
@@ -221,12 +238,5 @@ public class AbstractEmulationExecutor {
 		 * @throws Exception if mapping fails due to invalid content format or other issues
 		 */
 		R mapResponse(String content) throws Exception;
-
-		/**
-		 * Provides an empty result for the protocol, used when emulation fails or no matching entry is found.
-		 *
-		 * @return protocol-specific empty result
-		 */
-		R emptyResult();
 	}
 }

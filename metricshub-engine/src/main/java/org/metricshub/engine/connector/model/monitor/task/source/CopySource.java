@@ -78,6 +78,7 @@ public class CopySource extends Source {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param from                  the source from which data is copied
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
@@ -88,11 +89,12 @@ public class CopySource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "from", required = true) @NonNull String from,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.from = from;
 	}
 
@@ -101,6 +103,7 @@ public class CopySource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.from(from)

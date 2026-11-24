@@ -1,6 +1,7 @@
 package org.metricshub.extension.win.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
@@ -69,7 +70,7 @@ class WinCommandLineSourceProcessorTest {
 			.build();
 
 		// Command line null
-		assertEquals(SourceTable.empty(), winCommandLineSourceProcessor.process(null, telemetryManager));
+		assertTrue((winCommandLineSourceProcessor.process(null, telemetryManager)).isFailed());
 
 		// Command line empty
 		final String commandLine = "";
@@ -84,7 +85,7 @@ class WinCommandLineSourceProcessorTest {
 		commandLineSource.setSelectColumns(selectColumns);
 		commandLineSource.setExecuteLocally(false);
 
-		assertEquals(SourceTable.empty(), winCommandLineSourceProcessor.process(commandLineSource, telemetryManager));
+		assertTrue((winCommandLineSourceProcessor.process(commandLineSource, telemetryManager)).isFailed());
 	}
 
 	@Test
@@ -185,6 +186,6 @@ class WinCommandLineSourceProcessorTest {
 		doThrow(new ClientException()).when(winCommandServiceMock)
 			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), telemetryManager.getRequestStats());
 
-		assertEquals(SourceTable.empty(), winCommandLineSourceProcessor.process(commandLineSource, telemetryManager));
+		assertTrue((winCommandLineSourceProcessor.process(commandLineSource, telemetryManager)).isFailed());
 	}
 }

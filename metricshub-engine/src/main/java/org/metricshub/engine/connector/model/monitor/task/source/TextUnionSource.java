@@ -70,6 +70,7 @@ public class TextUnionSource extends Source {
 	 * @param type                  The type of the source.
 	 * @param computes              List of computations to be applied to the source.
 	 * @param forceSerialization    Flag indicating whether to force serialization.
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param texts                 The references of the text sources to concatenate.
 	 * @param key                   The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
@@ -80,11 +81,12 @@ public class TextUnionSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "texts", required = true) @NonNull List<String> texts,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.texts = texts;
 	}
 
@@ -94,6 +96,7 @@ public class TextUnionSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.texts(new ArrayList<>(texts))

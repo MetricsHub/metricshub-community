@@ -80,7 +80,55 @@ public class SourceTable {
 	 */
 	private List<List<String>> table;
 
+	/**
+	 * Non-null only when the source failed: what failed and why. The value of a failed source is an empty table.
+	 */
+	private String error;
+
 	private SourceTable() {}
+
+	/**
+	 * The result of a source that failed: its request was not executed (an exception, a timeout, no configuration or
+	 * no extension for its protocol), its protocol answered with an error, or it reads a source that failed. An
+	 * answer, even an empty one, is never a failure.
+	 *
+	 * @param error What failed and why
+	 * @return a new empty table holding the error
+	 */
+	public static SourceTable failed(@NonNull final String error) {
+		final SourceTable sourceTable = empty();
+		sourceTable.error = error;
+		return sourceTable;
+	}
+
+	/**
+	 * The result of a source whose request threw an exception, see {@link #failed(String)}.
+	 *
+	 * @param request   The request that failed, e.g. <code>HTTP GET /api</code>
+	 * @param throwable The exception
+	 * @return a new empty table holding the request and the messages of the exception and its causes
+	 */
+	public static SourceTable failed(final String request, final Throwable throwable) {
+		return failed(request + ": " + StringHelper.getStackMessages(throwable).strip());
+	}
+
+	/**
+	 * The error of a failed source.
+	 *
+	 * @return what failed and why, null when the source answered
+	 */
+	public String getError() {
+		return error;
+	}
+
+	/**
+	 * Whether the source failed, see {@link #failed(String)}.
+	 *
+	 * @return {@code true} if this source table holds an error
+	 */
+	public boolean isFailed() {
+		return error != null;
+	}
 
 	/**
 	 * A source table holding a text.
@@ -107,7 +155,7 @@ public class SourceTable {
 	}
 
 	/**
-	 * Creates an empty table. A new instance on every call: the strategies compare it by identity.
+	 * Creates an empty table, a new instance on every call.
 	 *
 	 * @return a new empty {@code SourceTable} whose content type is {@link ContentType#TABLE}
 	 */

@@ -113,8 +113,8 @@ public class SqlSourceProcessor {
 
 	/**
 	 * Processes a SQL source by executing its associated SQL query using the configuration and hostname retrieved
-	 * from a given {@link TelemetryManager}. Handles errors, logs warnings or errors, and returns an empty table
-	 * in case of failure.
+	 * from a given {@link TelemetryManager}. Handles errors, logs warnings or errors, and fails
+	 * in case of an SQL error or when the query cannot run.
 	 *
 	 * @param sqlSource        The SQL source containing the query to be executed.
 	 * @param telemetryManager The telemetry manager providing host configuration and credentials for the SQL query.
@@ -125,13 +125,12 @@ public class SqlSourceProcessor {
 
 		if (jdbcConfiguration == null) {
 			log.debug(
-				"Hostname {} - The SQL database credentials are not configured. " +
-					"Returning an empty table for SQL source {}. ",
+				"Hostname {} - The SQL database credentials are not configured. Cannot process SQL source {}. ",
 				telemetryManager.getHostname(),
 				sqlSource.getKey()
 			);
 
-			return SourceTable.empty();
+			return SourceTable.failed("SQL Query: JDBC is not configured on the host.");
 		}
 
 		final String hostname = jdbcConfiguration.getHostname();
@@ -155,14 +154,9 @@ public class SqlSourceProcessor {
 
 			return SourceTable.ofTable(results);
 		} catch (Exception e) {
-			LoggingHelper.logSourceError(
-				connectorId,
-				sqlSource.getKey(),
-				String.format("SQL Query: %s", sqlSource.getQuery()),
-				hostname,
-				e
-			);
-			return SourceTable.empty();
+			final String request = String.format("SQL Query: %s", sqlSource.getQuery());
+			LoggingHelper.logSourceError(connectorId, sqlSource.getKey(), request, hostname, e);
+			return SourceTable.failed(request, e);
 		}
 	}
 }

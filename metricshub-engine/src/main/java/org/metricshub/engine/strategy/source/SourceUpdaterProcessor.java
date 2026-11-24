@@ -334,7 +334,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	private SourceTable runExecuteForEachEntryOf(final Source copy) {
 		final SourceTable result = processExecuteForEachEntryOf(copy, copy.getExecuteForEachEntryOf());
 
-		if (result != null && isEntryConcatMethodJsonArrayOrExtended(copy)) {
+		if (result != null && !result.isFailed() && isEntryConcatMethodJsonArrayOrExtended(copy)) {
 			result.setText(String.format("[%s]", result.getText()));
 		}
 
@@ -676,7 +676,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					continue;
 				}
 
-				concatEntryResult(source, result, row, copy.accept(sourceProcessor));
+				final SourceTable failure = concatEntryResult(source, result, row, copy.accept(sourceProcessor));
+				if (failure != null) {
+					return failure;
+				}
 				if (sleep != null && sleep != 0) {
 					try {
 						Thread.sleep(sleep);
@@ -704,7 +707,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					);
 					return SourceTable.empty();
 				}
-				concatEntryResult(source, result, pendingRows.get(i), pendingResult.get());
+				final SourceTable failure = concatEntryResult(source, result, pendingRows.get(i), pendingResult.get());
+				if (failure != null) {
+					return failure;
+				}
 			}
 		} catch (InterruptedException e) {
 			// Future.get of a completed task does not wait
@@ -779,19 +785,35 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Based on the EntryConcatMethod, concatenate the <em>sourceTableToConcat</em> in the <em>result</em> source table
+	 * Based on the EntryConcatMethod, concatenate the <em>sourceTableToConcat</em> in the <em>result</em> source table.
+	 * A failed entry makes the source fail, unless the source continues on failure: then the entry is skipped.
 	 *
 	 * @param source               The source used to get the entry concat start/end
 	 * @param currentResult        The current result we wish to update
 	 * @param row                  The row to concatenate in case we have the JSON_ARRAY_EXTENDED concatenation method
 	 * @param sourceTableToConcat  The current source table result
+	 * @return the failure of the source when the entry failed, null otherwise
 	 */
-	private void concatEntryResult(
+	private SourceTable concatEntryResult(
 		final Source source,
 		final SourceTable currentResult,
 		final List<String> row,
 		final SourceTable sourceTableToConcat
 	) {
+		if (sourceTableToConcat.isFailed()) {
+			final String error = "Entry %s: %s".formatted(row, sourceTableToConcat.getError());
+			if (!source.isContinueOnFailure()) {
+				return SourceTable.failed(error);
+			}
+			log.error(
+				"Hostname {} - Source {} skips a failed entry. {}",
+				telemetryManager.getHostname(),
+				source.getKey(),
+				error
+			);
+			return null;
+		}
+
 		final IEntryConcatMethod iEntryConcatMethod = source.getEntryConcatMethod();
 
 		if (iEntryConcatMethod == null || iEntryConcatMethod == EntryConcatMethod.LIST) {
@@ -805,15 +827,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				final List<List<String>> rows = currentResult.getTable();
 				sourceTableToConcat.asTable().stream().filter(line -> line != null && !line.isEmpty()).forEach(rows::add);
 			}
-			return;
+			return null;
 		}
 
-		// The text concatenations read each entry as a text (a table is serialized) and skip a failed entry: an empty
-		// table, what a processor returns on a failure (an empty text is an answer, which the custom method wraps)
-		if (sourceTableToConcat.getContentType() == ContentType.TABLE && sourceTableToConcat.isEmpty()) {
-			return;
-		}
-
+		// The text concatenations read each entry as a text (a table is serialized): an empty answer is wrapped by the
+		// custom method
 		if (iEntryConcatMethod instanceof CustomConcatMethod customConcatMethod) {
 			appendCustomEntryResult(customConcatMethod, currentResult, row, sourceTableToConcat.asText());
 		} else if (iEntryConcatMethod == EntryConcatMethod.JSON_ARRAY) {
@@ -821,6 +839,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		} else {
 			appendExtendedJsonToArray(currentResult, row, sourceTableToConcat);
 		}
+		return null;
 	}
 
 	/**

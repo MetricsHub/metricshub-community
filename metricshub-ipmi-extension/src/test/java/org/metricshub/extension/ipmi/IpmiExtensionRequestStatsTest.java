@@ -232,10 +232,7 @@ class IpmiExtensionRequestStatsTest {
 		doThrow(new IpmiClientException("No common cipher suite")).when(ipmiRequestExecutor)
 			.executeIpmiGetSensors(HOST_NAME, configuration);
 
-		assertEquals(
-			SourceTable.empty(),
-			ipmiExtension.processSource(IpmiSource.builder().build(), CONNECTOR_ID, telemetryManager)
-		);
+		assertTrue((ipmiExtension.processSource(IpmiSource.builder().build(), CONNECTOR_ID, telemetryManager)).isFailed());
 		assertCounts(0, 0, 1);
 	}
 
@@ -264,7 +261,7 @@ class IpmiExtensionRequestStatsTest {
 		// The real executor refuses the source before creating any client
 		final IpmiRawSource bad = IpmiRawSource.builder().key("bad").netFn("x").command("1").build();
 
-		assertEquals(SourceTable.empty(), ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager));
+		assertTrue((ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager)).isFailed());
 		assertEquals(Map.of(), telemetryManager.getRequestStats().snapshot());
 	}
 
@@ -283,7 +280,7 @@ class IpmiExtensionRequestStatsTest {
 		// Next poll fails: the cursor stays
 		doThrow(new IpmiTimeoutException("No reply")).when(ipmiRequestExecutor)
 			.executeIpmiSel(HOST_NAME, configuration, end, true, 1);
-		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
+		assertTrue((ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)).isFailed());
 		assertSame(end, namespace.getSourceCursor("sel"));
 		assertCounts(1, 1, 0);
 
@@ -300,7 +297,7 @@ class IpmiExtensionRequestStatsTest {
 			.executeIpmiSelEnd(HOST_NAME, configuration);
 
 		final IpmiSelSource source = IpmiSelSource.builder().key("sel").build();
-		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
+		assertTrue((ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)).isFailed());
 		assertNull(telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID).getSourceCursor("sel"));
 		assertCounts(0, 0, 1);
 	}

@@ -110,17 +110,17 @@ public class WbemSourceProcessor {
 			: telemetryManager.getHostname();
 
 		if (wbemSource == null) {
-			log.error("Hostname {} - Malformed WBEM Source {}. Returning an empty table.", hostname, wbemSource);
-			return SourceTable.empty();
+			log.error("Hostname {} - Malformed WBEM Source {}.", hostname, wbemSource);
+			return SourceTable.failed("Malformed WBEM source.");
 		}
 
 		if (wbemConfiguration == null) {
 			log.debug(
-				"Hostname {} - The WBEM credentials are not configured. Returning an empty table for WBEM source {}.",
+				"Hostname {} - The WBEM credentials are not configured. Cannot process WBEM source {}.",
 				hostname,
 				wbemSource.getKey()
 			);
-			return SourceTable.empty();
+			return SourceTable.failed("WBEM: WBEM is not configured on the host.");
 		}
 
 		// Get the namespace, the default one is : root/cimv2
@@ -129,11 +129,11 @@ public class WbemSourceProcessor {
 		try {
 			if (hostname == null) {
 				log.error("Hostname {} - No hostname indicated, the URL cannot be built.", hostname);
-				return SourceTable.empty();
+				return SourceTable.failed("WBEM: no hostname, the URL cannot be built.");
 			}
 			if (wbemConfiguration.getPort() == null || wbemConfiguration.getPort() == 0) {
 				log.error("Hostname {} - No port indicated to connect to the host", hostname);
-				return SourceTable.empty();
+				return SourceTable.failed("WBEM: no port to connect to the host.");
 			}
 
 			final List<List<String>> table = wbemRequestExecutor.executeWbem(
@@ -160,7 +160,7 @@ public class WbemSourceProcessor {
 				e
 			);
 
-			return SourceTable.empty();
+			return SourceTable.failed(String.format("WBEM query %s in namespace %s", wbemSource.getQuery(), namespace), e);
 		}
 	}
 }

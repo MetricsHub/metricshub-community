@@ -116,6 +116,7 @@ public class TableJoinSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
+	 * @param continueOnFailure   whether a failure of the source lets its job go on
 	 * @param leftTable            The left table to join: a {@link String} (a source reference) or a {@link List}
 	 *                             of rows, each a {@link List} of cells.
 	 * @param rightTable           The right table to join, in the same forms as the left table.
@@ -132,6 +133,7 @@ public class TableJoinSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "leftTable", required = true) @JsonDeserialize(
 			using = TableLiteralDeserializer.class
 		) Object leftTable,
@@ -145,7 +147,7 @@ public class TableJoinSource extends Source {
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		if (leftTable instanceof List<?> rows) {
 			this.leftTableRows = copyRows(rows);
 		} else {
@@ -169,6 +171,7 @@ public class TableJoinSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.leftTable(leftTableRows != null ? leftTableRows : leftTable)

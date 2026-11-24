@@ -81,6 +81,7 @@ public class InternalDbQuerySource extends Source {
 	 * @param type                  The type of the source.
 	 * @param computes              List of computations to be applied to the source.
 	 * @param forceSerialization    Flag indicating whether to force serialization.
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param key                   The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 * @param tables                The list of tables to be used in the SQL query.
@@ -92,12 +93,13 @@ public class InternalDbQuerySource extends Source {
 		@JsonProperty(value = "type") String type,
 		@JsonProperty(value = "computes") List<Compute> computes,
 		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "key") String key,
 		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf,
 		@JsonProperty(value = "tables", required = true) @NonNull List<SqlTable> tables,
 		@JsonProperty(value = "query", required = true) @NonNull String query
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.tables = tables;
 		this.query = query;
 	}
@@ -108,6 +110,7 @@ public class InternalDbQuerySource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.tables(

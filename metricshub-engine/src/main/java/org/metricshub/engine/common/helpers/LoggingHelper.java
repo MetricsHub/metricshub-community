@@ -56,7 +56,7 @@ public class LoggingHelper {
 		if (log.isErrorEnabled()) {
 			log.error(
 				"Hostname {} - Source [{}] was unsuccessful due to an exception." +
-					" Context [{}]. Connector: [{}]. Returning an empty table. Errors:\n{}\n",
+					" Context [{}]. Connector: [{}]. Errors:\n{}\n",
 				hostname,
 				sourceKey,
 				context,
@@ -68,7 +68,7 @@ public class LoggingHelper {
 		if (log.isDebugEnabled()) {
 			log.debug(
 				String.format(
-					"Hostname %s - Source [%s] was unsuccessful due to an exception. Context [%s]. Connector: [%s]. Returning an empty table. Stack trace:",
+					"Hostname %s - Source [%s] was unsuccessful due to an exception. Context [%s]. Connector: [%s]. Stack trace:",
 					hostname,
 					sourceKey,
 					context,

@@ -83,13 +83,14 @@ public class JmxSource extends Source {
 		@JsonProperty(value = "type") String type,
 		@JsonProperty(value = "computes") List<Compute> computes,
 		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "objectName") @NonNull String objectName,
 		@JsonProperty(value = "attributes") List<String> attributes,
 		@JsonProperty(value = "keyProperties") List<String> keyProperties,
 		@JsonProperty(value = "key") String key,
 		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.objectName = objectName;
 		this.attributes = (attributes != null) ? attributes : new ArrayList<>();
 		this.keyProperties = (keyProperties != null) ? keyProperties : new ArrayList<>();
@@ -112,6 +113,7 @@ public class JmxSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(computesCopy)
 			.objectName(objectName)
 			.attributes(attributesCopy)

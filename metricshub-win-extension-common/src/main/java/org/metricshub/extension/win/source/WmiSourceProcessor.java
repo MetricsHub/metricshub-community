@@ -64,16 +64,12 @@ public class WmiSourceProcessor {
 	 * @param wmiSource        The WMI source containing the query to be executed.
 	 * @param telemetryManager The telemetry manager providing host configuration used to get
 	 *                         the {@link IWinConfiguration} implementation.
-	 * @return A {@link SourceTable} containing the results of the executed query or an empty table in case of an error.
+	 * @return A {@link SourceTable} containing the results of the executed query or a failure.
 	 */
 	public SourceTable process(final WmiSource wmiSource, final TelemetryManager telemetryManager) {
 		if (wmiSource == null) {
-			log.warn(
-				"Hostname {} - Malformed WMI source {}. Returning an empty table.",
-				telemetryManager.getHostname(),
-				wmiSource
-			);
-			return SourceTable.empty();
+			log.warn("Hostname {} - Malformed WMI source {}.", telemetryManager.getHostname(), wmiSource);
+			return SourceTable.failed("Malformed WMI source.");
 		}
 
 		// Find the configured protocol (WinRM or WMI)
@@ -81,11 +77,11 @@ public class WmiSourceProcessor {
 
 		if (winConfiguration == null) {
 			log.debug(
-				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Returning an empty table for WMI source {}.",
+				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Cannot process WMI source {}.",
 				telemetryManager.getHostname(),
 				wmiSource.getKey()
 			);
-			return SourceTable.empty();
+			return SourceTable.failed("WMI: neither WMI nor WinRM is configured on the host.");
 		}
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
@@ -96,11 +92,11 @@ public class WmiSourceProcessor {
 
 		if (namespace == null) {
 			log.error(
-				"Hostname {} - Failed to retrieve the WMI namespace to run the WMI source {}. Returning an empty table.",
+				"Hostname {} - Failed to retrieve the WMI namespace to run the WMI source {}.",
 				hostname,
 				wmiSource.getKey()
 			);
-			return SourceTable.empty();
+			return SourceTable.failed("WMI query %s: no WMI namespace.".formatted(wmiSource.getQuery()));
 		}
 
 		try {
@@ -129,7 +125,7 @@ public class WmiSourceProcessor {
 				e
 			);
 
-			return SourceTable.empty();
+			return SourceTable.failed("WMI query %s in namespace %s".formatted(wmiSource.getQuery(), namespace), e);
 		}
 	}
 

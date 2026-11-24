@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
@@ -58,13 +59,14 @@ public class EmulationOsCommandRequestExecutor {
 	 * @param hostname hostname used for logging
 	 * @param emulationConfiguration emulation configuration of the host
 	 * @param commandLine command line to replay
-	 * @return emulated command output, or empty string when no replay is available
+	 * @return emulated command output
+	 * @throws ClientException when no output is recorded for the command
 	 */
 	public String execute(
 		final String hostname,
 		final EmulationConfiguration emulationConfiguration,
 		final String commandLine
-	) {
+	) throws ClientException {
 		final String emulationInputDirectory = resolveEmulationInputDirectory(emulationConfiguration);
 		return executorHelper.replayFromImage(
 			hostname,
@@ -108,11 +110,6 @@ public class EmulationOsCommandRequestExecutor {
 				@Override
 				public String mapResponse(final String content) {
 					return content;
-				}
-
-				@Override
-				public String emptyResult() {
-					return "";
 				}
 			}
 		);

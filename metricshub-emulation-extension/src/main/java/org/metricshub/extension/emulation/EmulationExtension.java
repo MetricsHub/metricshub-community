@@ -129,6 +129,11 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 	public static final String IDENTIFIER = "emulation";
 
 	/**
+	 * The error of an IPMI source without a recorded response: the request failed when it was recorded.
+	 */
+	private static final String NO_RECORDED_IPMI_RESPONSE = "IPMI-over-LAN: no recorded response.";
+
+	/**
 	 * Protocols that can be emulated by this extension.
 	 */
 	protected static final Set<String> EMULATED_PROTOCOLS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -459,7 +464,7 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			if (result != null) {
 				return SourceTable.ofTable(List.of(IpmiResultConverter.rawRow(result)));
 			}
-			return SourceTable.empty();
+			return SourceTable.failed(NO_RECORDED_IPMI_RESPONSE);
 		} else if (source instanceof IpmiSelSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -468,7 +473,7 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			if (result != null) {
 				return SourceTable.ofTable(SourceTable.csvToTable(result, AbstractRecorder.CSV_SEPARATOR));
 			}
-			return SourceTable.empty();
+			return SourceTable.failed(NO_RECORDED_IPMI_RESPONSE);
 		} else if (source instanceof IpmiSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -477,7 +482,7 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			if (result != null) {
 				return SourceTable.ofText(result);
 			}
-			return SourceTable.empty();
+			return SourceTable.failed(NO_RECORDED_IPMI_RESPONSE);
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = getSnmpRequestExecutor(telemetryManager);
@@ -496,7 +501,7 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			);
 		}
 
-		return SourceTable.empty();
+		return SourceTable.failed("The emulation extension does not replay the " + source.getClass().getSimpleName() + ".");
 	}
 
 	@Override

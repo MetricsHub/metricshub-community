@@ -51,7 +51,8 @@ public class CommandLineSourceProcessor {
 	 * @param commandLineSource The command line source configuration containing the command, filtering, and selection settings.
 	 * @param connectorId       Identifier for the connector instance processing this source.
 	 * @param telemetryManager  Provides access to system and host configurations necessary for command execution.
-	 * @return A {@link SourceTable} containing the processed and formatted output of the OS command. Returns an empty table if an error occurs or if the command line is invalid.
+	 * @return A {@link SourceTable} containing the processed and formatted output of the OS command, whatever its exit
+	 *         code. A failure if the command cannot run or if the command line is invalid.
 	 */
 	public SourceTable process(
 		final CommandLineSource commandLineSource,
@@ -66,9 +67,10 @@ public class CommandLineSourceProcessor {
 				commandLineSource.getCommandLine().isEmpty()
 		) {
 			log.error("Hostname {} - Malformed OS command source.", hostname);
-			return SourceTable.empty();
+			return SourceTable.failed("Malformed OS command source: no command line.");
 		}
 
+		final String request = String.format("OS command: %s", commandLineSource.getCommandLine());
 		try {
 			final OsCommandResult osCommandResult = osCommandService.runOsCommand(
 				commandLineSource.getCommandLine(),
@@ -78,6 +80,9 @@ public class CommandLineSourceProcessor {
 				telemetryManager.getHostProperties().isLocalhost(),
 				telemetryManager.getEmbeddedFiles(connectorId)
 			);
+			if (osCommandResult.getResult() == null) {
+				return SourceTable.failed(request + ": the command did not run.");
+			}
 
 			// transform to lines
 			final List<String> resultLines = SourceTable.lineToList(osCommandResult.getResult(), NEW_LINE);
@@ -99,15 +104,9 @@ public class CommandLineSourceProcessor {
 			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
 			OsCommandService.restoreInterrupt(e);
-			LoggingHelper.logSourceError(
-				connectorId,
-				commandLineSource.getKey(),
-				String.format("OS command: %s.", commandLineSource.getCommandLine()),
-				hostname,
-				e
-			);
+			LoggingHelper.logSourceError(connectorId, commandLineSource.getKey(), request, hostname, e);
 
-			return SourceTable.empty();
+			return SourceTable.failed(request, e);
 		}
 	}
 }

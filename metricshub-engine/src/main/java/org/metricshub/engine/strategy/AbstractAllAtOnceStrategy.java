@@ -292,8 +292,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param currentConnector The connector defining the monitor job
 	 * @param hostname         The host name of the monitored resource
 	 * @param monitorJobEntry  The monitor type and its monitor job
-	 * @return {@code true} when the job ran a trusted pass: every source answered, at least one monitor was mapped and the
-	 *         job reads no unreliable source
+	 * @return {@code true} when the job ran a trusted pass: at least one monitor was mapped and the job reads no
+	 *         unreliable source (a source that failed included)
 	 */
 	private boolean processMonitorJob(
 		final Connector currentConnector,
@@ -336,12 +336,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 		// Create the sources and the computes for a connector
 		final List<Runnable> cursorRollbacks = new ArrayList<>();
-		final boolean sourcesAnswered = processSourcesAndComputes(
-			orderedSources.getSources(),
-			null,
-			jobInfo,
-			cursorRollbacks
-		);
+		final String failure = processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
 
 		// Create the monitors
 		final Mapping mapping = monitorTask.getMapping();
@@ -351,12 +346,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
-		final boolean mapped = !skipMappingIfInterrupted(
-			cursorRollbacks,
-			currentConnector.getCompiledFilename(),
-			hostname
-		) && processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
+		// A job stopped by a failed source keeps its monitors. An interrupted job did not refresh its sources: its mapping
+		// would read the tables of another run
+		final boolean mapped = failure == null &&
+			!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname) &&
+			processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
@@ -364,7 +358,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		final Set<String> unansweredSourceKeys = telemetryManager.getHostProperties()
 			.getConnectorNamespace(currentConnector.getCompiledFilename())
 			.getUnansweredSourceKeys();
-		return sourcesAnswered && mapped && !hasUnreliableSource(currentConnector, monitorTask, unansweredSourceKeys);
+		return mapped && !hasUnreliableSource(currentConnector, monitorTask, unansweredSourceKeys);
 	}
 
 	/**

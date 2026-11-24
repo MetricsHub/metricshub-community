@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.extension.HttpResult;
@@ -82,27 +83,31 @@ public class HttpSourceProcessor {
 
 	/**
 	 * Fetches data using HTTP based on the provided {@link HttpSource} connector's directive,
-	 * put data into a raw table format, and returns it.
-	 * If any errors occur during the fetch or processing, or if the provided configurations are invalid,
-	 * an empty {@link SourceTable} is returned.
+	 * and returns it as a text.
+	 * If the request fails, the server answers with an error status, or HTTP is not configured, the source fails.
 	 *
 	 * @param httpSource       The {@link HttpSource} defining HTTP request.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and HTTP credentials.
-	 * @return a {@link SourceTable} containing the fetched HTTP raw data, or an empty table if processing fails.
+	 * @return a {@link SourceTable} containing the fetched HTTP raw data, or a failure.
 	 */
 	public SourceTable process(
 		final HttpSource httpSource,
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
-		final String result = execute(
+		final String request = String.format("HTTP %s %s", httpSource.getMethod(), httpSource.getUrl());
+		final SourceTable result = execute(
 			httpSource,
 			connectorId,
 			telemetryManager,
-			request -> httpRequestExecutor.executeHttp(request, true, telemetryManager)
+			httpRequest -> httpRequestExecutor.executeHttpSource(httpRequest, true, telemetryManager),
+			error -> SourceTable.failed(StringHelper.getStackMessages(error).strip())
 		);
-		return result != null && !result.isEmpty() ? SourceTable.ofText(result) : SourceTable.empty();
+		if (result == null) {
+			return SourceTable.failed(request + ": HTTP is not configured on the host.");
+		}
+		return result.isFailed() ? SourceTable.failed(request + ": " + result.getError()) : result;
 	}
 
 	/**
@@ -123,7 +128,8 @@ public class HttpSourceProcessor {
 			httpSource,
 			connectorId,
 			telemetryManager,
-			request -> httpRequestExecutor.executeHttpRequest(request, true, telemetryManager)
+			request -> httpRequestExecutor.executeHttpRequest(request, true, telemetryManager),
+			error -> null
 		);
 	}
 
@@ -135,19 +141,21 @@ public class HttpSourceProcessor {
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and HTTP credentials.
 	 * @param executor         Executes the request.
-	 * @return What the executor gives, <code>null</code> when HTTP is not configured or when the request fails.
+	 * @param onError          What the request gives when it throws an exception, which is logged.
+	 * @return What the executor gives, <code>null</code> when HTTP is not configured.
 	 */
 	private <T> T execute(
 		final HttpSource httpSource,
 		final String connectorId,
 		final TelemetryManager telemetryManager,
-		final Function<HttpRequest, T> executor
+		final Function<HttpRequest, T> executor,
+		final Function<Exception, T> onError
 	) {
 		final HttpConfiguration httpConfiguration = httpConfigurationProvider.apply(telemetryManager);
 
 		if (httpConfiguration == null) {
 			log.debug(
-				"Hostname {} - The HTTP credentials are not configured. Returning an empty table for HttpSource {}.",
+				"Hostname {} - The HTTP credentials are not configured. Cannot process HttpSource {}.",
 				telemetryManager.getHostname(),
 				httpSource
 			);
@@ -182,8 +190,7 @@ public class HttpSourceProcessor {
 				hostname,
 				e
 			);
+			return onError.apply(e);
 		}
-
-		return null;
 	}
 }

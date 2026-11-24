@@ -54,13 +54,13 @@ public class SnmpGetSourceProcessor {
 	/**
 	 * Fetches data from an SNMP device based on the provided {@link SnmpGetSource} connector's directive,
 	 * parses the data into a structured table format, and returns it.
-	 * If any errors occur during the fetch or processing, or if the provided configurations are invalid,
-	 * an empty {@link SourceTable} is returned.
+	 * An OID without a value gives an empty table. If the request fails, the agent answers with an error, or SNMP is
+	 * not configured, the source fails.
 	 *
 	 * @param snmpGetSource    The {@link SnmpGetSource} defining the SNMP OID.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} containing the fetched SNMP GET data, or an empty table if processing fails.
+	 * @return a {@link SourceTable} containing the fetched SNMP GET data, or a failure.
 	 */
 	public SourceTable process(
 		final SnmpGetSource snmpGetSource,
@@ -79,16 +79,17 @@ public class SnmpGetSourceProcessor {
 
 		if (snmpConfiguration == null) {
 			log.debug(
-				"Hostname {} - The SNMP credentials are not configured. Returning an empty table for SNMP Get Source {}.",
+				"Hostname {} - The SNMP credentials are not configured. Cannot process SNMP Get Source {}.",
 				telemetryManager.getHostname(),
 				snmpGetSource
 			);
-			return SourceTable.empty();
+			return SourceTable.failed("SNMP Get: SNMP is not configured on the host.");
 		}
 
 		// Retrieve the hostname from the ISnmpConfiguration, otherwise from the telemetryManager
 		final String hostname = telemetryManager.getHostname(List.of(snmpConfiguration.getClass()));
 
+		final String request = String.format("SNMP Get: %s", snmpGetSource.getOid());
 		try {
 			final String result = snmpRequestExecutor.executeSNMPGet(
 				snmpGetSource.getOid(),
@@ -98,24 +99,19 @@ public class SnmpGetSourceProcessor {
 				telemetryManager.getRequestStats()
 			);
 
-			if (result != null) {
-				return SourceTable.ofTable(
-					Stream.of(
-						Stream.of(result).collect(Collectors.toList()) // NOSONAR
-					).collect(Collectors.toList()) // NOSONAR
-				);
+			// An OID without a value is an empty table
+			if (result == null) {
+				return SourceTable.empty();
 			}
+			return SourceTable.ofTable(
+				Stream.of(
+					Stream.of(result).collect(Collectors.toList()) // NOSONAR
+				).collect(Collectors.toList()) // NOSONAR
+			);
 		} catch (Exception e) {
 			// NOSONAR on interruption
-			LoggingHelper.logSourceError(
-				connectorId,
-				snmpGetSource.getKey(),
-				String.format("SNMP Get: %s.", snmpGetSource.getOid()),
-				hostname,
-				e
-			);
+			LoggingHelper.logSourceError(connectorId, snmpGetSource.getKey(), request, hostname, e);
+			return SourceTable.failed(request, e);
 		}
-
-		return SourceTable.empty();
 	}
 }

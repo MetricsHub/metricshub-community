@@ -146,6 +146,7 @@ public class JawkSource extends Source {
 	 * @param type                  The type of the source.
 	 * @param computes              List of computations to be applied to the source.
 	 * @param forceSerialization    Flag indicating whether to force serialization.
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param key                   The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 * @param script                The script to execute.
@@ -159,6 +160,7 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "type") String type,
 		@JsonProperty(value = "computes") List<Compute> computes,
 		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "key") String key,
 		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf,
 		@JsonProperty(value = "script") String script,
@@ -168,7 +170,7 @@ public class JawkSource extends Source {
 		) final Map<String, ?> variables,
 		@JsonProperty(value = "output") final ContentType output
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.script = script;
 		this.input = input;
 		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
@@ -181,6 +183,7 @@ public class JawkSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.script(script)
