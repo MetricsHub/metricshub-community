@@ -36,7 +36,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
-import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
@@ -59,11 +58,6 @@ import org.springframework.ai.tool.ToolCallback;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConnectorToolCallbacks {
-
-	/**
-	 * The properties of a protocol configuration that hold a credential, as {@link IConfiguration#getProperty} names them.
-	 */
-	private static final List<String> SECRET_PROPERTIES = List.of("password", "privacypassword", "community");
 
 	private static final String OTHER_DECLARATION_ERROR = "Connector %s declares tool %s otherwise on host %s, through its variables: another description, other parameters or another destructive flag.";
 
@@ -262,25 +256,16 @@ public final class ConnectorToolCallbacks {
 	 *
 	 * @param error            The error of the failed source
 	 * @param telemetryManager The host's telemetry manager
-	 * @return the error, each password or community of the host's configurations replaced with <code>********</code>
+	 * @return the error, each credential that a <code>${protocol::...}</code> reference resolved for the host replaced
+	 *         with <code>********</code>, whatever the protocol and wherever its configuration (an emulation included)
 	 */
 	static String withoutSecrets(final String error, final TelemetryManager telemetryManager) {
-		final Set<String> secrets = new HashSet<>();
-		for (IConfiguration configuration : telemetryManager.getHostConfiguration().getConfigurations().values()) {
-			for (String property : SECRET_PROPERTIES) {
-				try {
-					final String secret = configuration == null ? null : configuration.getProperty(property);
-					if (secret != null && !secret.isEmpty()) {
-						secrets.add(secret);
-					}
-				} catch (RuntimeException e) {
-					// String.valueOf of a null char[]: no such secret
-				}
-			}
-		}
 		// The longest first: a shorter secret inside a longer one must not leave a part of the longer one
 		String result = error;
-		for (String secret : secrets.stream().sorted(Comparator.comparingInt(String::length).reversed()).toList()) {
+		for (String secret : telemetryManager.getResolvedSecrets()
+			.stream()
+			.sorted(Comparator.comparingInt(String::length).reversed())
+			.toList()) {
 			result = result.replace(secret, "********");
 		}
 		return result;

@@ -198,9 +198,10 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 		final ConnectorNamespace namespace,
 		final Map<String, SourceTable> earlierTables
 	) {
+		// A failed table opened nothing: the failed source, or one it skipped, stored it for the readers of this run
 		final Set<String> stored = earlierTables.entrySet().stream().filter(entry -> {
 			final SourceTable table = namespace.getSourceTable(entry.getKey());
-			return table != null && table != entry.getValue();
+			return table != null && table != entry.getValue() && !table.isFailed();
 		}).map(Map.Entry::getKey).collect(Collectors.toSet());
 
 		final Set<String> needed = new HashSet<>();

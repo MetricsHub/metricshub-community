@@ -633,6 +633,17 @@ class ConnectorSessionTest {
 		assertEquals(1, requests.get());
 		assertTrue(started.isOpened());
 		assertTrue(noSource.isOpened());
+
+		// Its login failed: the failed table it stored opened nothing, so the afterAll sends no logout
+		final TelemetryManager refused = newTelemetryManager(
+			true,
+			LONG_TIMEOUT,
+			(connectorId, key) -> SourceTable.failed("refused"),
+			A
+		);
+		final BeforeAllStrategy failed = beforeAll(refused, A);
+		failed.run();
+		assertFalse(failed.isOpened());
 	}
 
 	/**

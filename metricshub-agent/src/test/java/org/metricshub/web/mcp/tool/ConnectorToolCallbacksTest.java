@@ -18,7 +18,6 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
-import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -151,22 +150,9 @@ class ConnectorToolCallbacksTest {
 
 	@Test
 	void testErrorWithoutSecrets() {
-		final IConfiguration configuration = mock(IConfiguration.class);
-		when(configuration.getProperty("password")).thenReturn("s3cr3t");
-		// A longer secret holding the shorter one
-		when(configuration.getProperty("privacypassword")).thenReturn("s3cr3t-2024");
-		// String.valueOf of a null char[]
-		when(configuration.getProperty("community")).thenThrow(new NullPointerException());
-		final TelemetryManager host = TelemetryManager.builder()
-			.hostConfiguration(
-				HostConfiguration.builder()
-					.hostId(HOSTNAME)
-					.hostname(HOSTNAME)
-					.hostType(DeviceKind.LINUX)
-					.configurations(Map.of(configuration.getClass(), configuration))
-					.build()
-			)
-			.build();
+		final TelemetryManager host = TelemetryManager.builder().build();
+		// What ${protocol::...} references resolved: a longer secret holds the shorter one
+		host.getResolvedSecrets().addAll(List.of("s3cr3t", "s3cr3t-2024"));
 
 		assertEquals(
 			"OS command: curl -u admin:******** -k ******** /x: Connection refused",
