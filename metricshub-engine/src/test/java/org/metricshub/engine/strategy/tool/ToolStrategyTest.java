@@ -1,7 +1,6 @@
 package org.metricshub.engine.strategy.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -144,11 +143,14 @@ class ToolStrategyTest {
 			"Not executed: no extension for the CommandLineSource source, or no configuration for its protocol on the host.",
 			strategy.getResult().getError()
 		);
-		assertNull(
+		// The copy is stored as failed too
+		assertEquals(
+			"Not executed: source ${source::tools.failing.sources.command} failed: Not executed: no extension for the CommandLineSource source, or no configuration for its protocol on the host.",
 			strategy.getTelemetryManager()
 				.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
 				.getSourceTable("${source::tools.failing.sources.output}")
+				.getError()
 		);
 	}
 
