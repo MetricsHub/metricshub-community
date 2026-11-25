@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.function.Function;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -43,7 +42,6 @@ import org.metricshub.extension.win.WinCommandService;
  * and generates the {@link SourceTable} using the command line response.
  */
 @RequiredArgsConstructor
-@Slf4j
 public class WinCommandLineSourceProcessor {
 
 	@NonNull
@@ -74,7 +72,6 @@ public class WinCommandLineSourceProcessor {
 			: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		if (commandLineSource == null || commandLineSource.getCommandLine().isEmpty()) {
-			log.error("Hostname {} - Malformed OS command source.", hostname);
 			return SourceTable.failed("Malformed OS command source: no command line.");
 		}
 

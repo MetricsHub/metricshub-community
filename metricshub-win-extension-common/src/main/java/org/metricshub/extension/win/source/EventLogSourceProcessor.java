@@ -128,7 +128,6 @@ public class EventLogSourceProcessor {
 		final String hostname = telemetryManager.getHostname();
 
 		if (eventLogSource == null) {
-			log.warn("Hostname {} - Malformed EventLog source {}.", hostname, eventLogSource);
 			return SourceTable.failed("Malformed EventLog source.");
 		}
 
@@ -136,11 +135,6 @@ public class EventLogSourceProcessor {
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (winConfiguration == null) {
-			log.debug(
-				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Cannot process EventLog source {}.",
-				hostname,
-				eventLogSource.getKey()
-			);
 			return SourceTable.failed("EventLog: neither WMI nor WinRM is configured on the host.");
 		}
 
@@ -159,11 +153,6 @@ public class EventLogSourceProcessor {
 		final String wqlQuery = buildEventLogQuery(eventLogSource, cursor);
 
 		if (wqlQuery == null || wqlQuery.isBlank()) {
-			log.error(
-				"Hostname {} - Failed to build WQL query for EventLog source {}.",
-				resolvedHostname,
-				eventLogSource.getKey()
-			);
 			return SourceTable.failed("EventLog: the WQL query cannot be built.");
 		}
 

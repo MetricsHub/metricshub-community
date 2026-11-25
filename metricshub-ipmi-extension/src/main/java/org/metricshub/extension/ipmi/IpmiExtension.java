@@ -166,10 +166,6 @@ public class IpmiExtension implements IProtocolExtension {
 			.get(IpmiConfiguration.class);
 
 		if (ipmiConfiguration == null) {
-			log.warn(
-				"Hostname {} - The IPMI credentials are not configured. Cannot process IPMI-over-LAN source.",
-				telemetryManager.getHostname()
-			);
 			return SourceTable.failed("IPMI-over-LAN: IPMI is not configured on the host.");
 		}
 
@@ -193,7 +189,6 @@ public class IpmiExtension implements IProtocolExtension {
 				record(telemetryManager, IpmiRecorder.GET_SENSORS_REQUEST, null, result);
 				return SourceTable.ofText(result);
 			}
-			log.error("Hostname {} - IPMI-over-LAN request returned <null> result.", hostname);
 			return SourceTable.failed("IPMI-over-LAN: no result.");
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "IPMI-over-LAN", hostname, e);

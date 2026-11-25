@@ -69,7 +69,6 @@ public class FileSourceProcessor {
 		final boolean isLocalhost = telemetryManager.getHostProperties().isLocalhost();
 
 		if (fileSource == null) {
-			log.error("Hostname {} - Malformed file source.", hostname);
 			return SourceTable.failed("Malformed file source.");
 		}
 
@@ -80,7 +79,6 @@ public class FileSourceProcessor {
 		final FileOperations fileOperations = isLocalhost ? createLocalFileOperations(hostname) : remoteFileOperations;
 
 		if (fileOperations == null) {
-			log.warn("Hostname {} - Cannot process files: file operations unavailable.", hostname);
 			return SourceTable.failed(
 				"Files %s: the file operations are not available on the host.".formatted(fileSource.getPaths())
 			);
@@ -146,7 +144,6 @@ public class FileSourceProcessor {
 			}
 		} catch (Exception e) {
 			// Path resolution, FLAT/LOG read, or close failed
-			log.info("Hostname {} - FileSource processing failed. Message: {}", hostname, e.getMessage());
 			log.debug("Hostname {} - FileSource processing failed.", hostname, e);
 			return SourceTable.failed("Files " + fileSource.getPaths(), e);
 		}

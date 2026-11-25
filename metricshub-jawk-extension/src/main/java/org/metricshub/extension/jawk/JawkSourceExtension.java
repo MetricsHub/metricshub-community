@@ -66,12 +66,10 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		final String hostname = telemetryManager.getHostname();
 
 		if (source == null) {
-			log.warn("Hostname {} - Awk Source cannot be null.", hostname);
 			return SourceTable.failed("Malformed Awk source.");
 		}
 
 		if (!(source instanceof JawkSource jawkSource)) {
-			log.warn("Hostname {} - Awk Source is invalid.", hostname);
 			return SourceTable.failed("Malformed Awk source.");
 		}
 
@@ -91,13 +89,11 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 					connectorId
 				);
 			} catch (Exception exception) {
-				log.warn("Hostname {} - Awk Operation script {} has not been set correctly.", hostname, script);
 				return SourceTable.failed("Awk script %s: not set correctly.".formatted(script));
 			}
 		}
 
 		if (maybeEmbeddedFile.isEmpty()) {
-			log.warn("Hostname {} - Awk Operation script {} embedded file can't be found.", hostname, script);
 			return SourceTable.failed("Awk script %s: the embedded file is not found.".formatted(script));
 		}
 

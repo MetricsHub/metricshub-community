@@ -84,11 +84,6 @@ public class SnmpGetSourceProcessor {
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
-			log.debug(
-				"Hostname {} - The SNMP credentials are not configured. Cannot process SNMP Get Source {}.",
-				telemetryManager.getHostname(),
-				snmpGetSource
-			);
 			return SourceTable.failed("SNMP Get: SNMP is not configured on the host.");
 		}
 

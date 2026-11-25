@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.function.Function;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -43,7 +42,6 @@ import org.metricshub.extension.win.IWinRequestExecutor;
  * It provides a method to run WMI queries through WMI or WinRm, gets the WMI response,
  * and generates the {@link SourceTable} using the WMI response.
  */
-@Slf4j
 @RequiredArgsConstructor
 public class WmiSourceProcessor {
 
@@ -68,7 +66,6 @@ public class WmiSourceProcessor {
 	 */
 	public SourceTable process(final WmiSource wmiSource, final TelemetryManager telemetryManager) {
 		if (wmiSource == null) {
-			log.warn("Hostname {} - Malformed WMI source {}.", telemetryManager.getHostname(), wmiSource);
 			return SourceTable.failed("Malformed WMI source.");
 		}
 
@@ -76,11 +73,6 @@ public class WmiSourceProcessor {
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (winConfiguration == null) {
-			log.debug(
-				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Cannot process WMI source {}.",
-				telemetryManager.getHostname(),
-				wmiSource.getKey()
-			);
 			return SourceTable.failed("WMI: neither WMI nor WinRM is configured on the host.");
 		}
 
@@ -91,11 +83,6 @@ public class WmiSourceProcessor {
 		final String namespace = getNamespace(wmiSource, telemetryManager);
 
 		if (namespace == null) {
-			log.error(
-				"Hostname {} - Failed to retrieve the WMI namespace to run the WMI source {}.",
-				hostname,
-				wmiSource.getKey()
-			);
 			return SourceTable.failed("WMI query %s: no WMI namespace.".formatted(wmiSource.getQuery()));
 		}
 

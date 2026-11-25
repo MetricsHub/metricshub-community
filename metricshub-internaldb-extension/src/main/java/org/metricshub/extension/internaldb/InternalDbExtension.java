@@ -61,21 +61,11 @@ public class InternalDbExtension implements ISourceComputationExtension {
 
 		final List<SqlTable> sqlTables = internalDbQuery.getTables();
 		if (sqlTables == null) {
-			log.debug(
-				"Hostname {} - Table list in the Internal DB Query Source cannot be null, the SQL operation {} fails.",
-				hostname,
-				internalDbQuery
-			);
 			return SourceTable.failed("Malformed Internal DB Query Source: no tables.");
 		}
 
 		final String query = internalDbQuery.getQuery();
 		if (query == null || query.isBlank()) {
-			log.debug(
-				"Hostname {} - Query in the Internal DB Query Source cannot be null, the SQL operation {} fails.",
-				hostname,
-				internalDbQuery
-			);
 			return SourceTable.failed("Malformed Internal DB Query Source: no query.");
 		}
 

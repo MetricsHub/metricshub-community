@@ -26,7 +26,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -38,7 +37,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Processes command-line data sources to extract and transform the output into a text {@link SourceTable}.
  * This class handles the execution of operating system commands provided through {@link CommandLineSource}, applies line and column filtering, and returns the selected lines as a text.
  */
-@Slf4j
 @RequiredArgsConstructor
 public class CommandLineSourceProcessor {
 
@@ -66,7 +64,6 @@ public class CommandLineSourceProcessor {
 				commandLineSource.getCommandLine() == null ||
 				commandLineSource.getCommandLine().isEmpty()
 		) {
-			log.error("Hostname {} - Malformed OS command source.", hostname);
 			return SourceTable.failed("Malformed OS command source: no command line.");
 		}
 
