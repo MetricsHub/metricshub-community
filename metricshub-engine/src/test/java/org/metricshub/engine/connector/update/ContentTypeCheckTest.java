@@ -139,6 +139,34 @@ class ContentTypeCheckTest {
 		assertEquals(THING + "computed}", compute.sourceKey());
 		assertEquals("TABLE", compute.expected());
 		assertEquals("TEXT", compute.actual());
+		assertEquals("write a toTable, or output: table on an awk or snmpGet source", compute.hint());
+	}
+
+	/**
+	 * An <code>snmpGet</code> source returns a text by default (#1615): read as the source of a mapping, it is a finding
+	 * whose hint names <code>output: table</code> and the simple mapping; with <code>output: table</code>, it is not.
+	 */
+	@Test
+	void snmpGetIsATextUnlessOutputTable() throws IOException {
+		final String connector = """
+			monitors:
+			  thing:
+			    simple:
+			      sources:
+			        value:
+			          type: snmpGet
+			          oid: 1.3.6.1.4.1.99999.1.0
+			          %s
+			      mapping:
+			        source: ${source::value}
+			        attributes:
+			          id: $1
+			""";
+		final List<ContentTypeFinding> findings = findings(connector.formatted(""));
+		assertEquals(Set.of("TEXT_FEEDS_TABLE monitors.thing.simple.mapping"), lines(findings));
+		assertEquals("write a toTable, output: table on an awk or snmpGet source, or type: simple", findings.get(0).hint());
+
+		assertEquals(List.of(), findings(connector.formatted("output: table")));
 	}
 
 	@Test

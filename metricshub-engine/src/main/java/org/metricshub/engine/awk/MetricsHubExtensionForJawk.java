@@ -235,13 +235,14 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * Execute a Snmp Get request through the context.
 	 *
 	 * @param argMap The array of arguments to use to create the {@link SnmpGetSource}.
-	 * @return The value: the first cell of the first row of the {@link SnmpGetSource} result, an empty string when it
-	 *         has no row.
+	 * @return The value of the OID as it is (line breaks as LF), or an empty string when the request fails. Always a
+	 *         text: an <code>output</code> in the arguments is ignored.
 	 */
 	@JawkFunction("executeSnmpGet")
 	public String executeSnmpGetRequest(final @JawkAssocArray Map<Object, Object> argMap) {
-		final SourceTable result = Source.fromMap(SnmpGetSource.class, argMap).accept(sourceProcessor);
-		return result == null || result.getTable().isEmpty() ? "" : result.getTable().get(0).get(0);
+		final SnmpGetSource snmpGetSource = Source.fromMap(SnmpGetSource.class, argMap);
+		snmpGetSource.setOutput(ContentType.TEXT);
+		return executeSource(snmpGetSource);
 	}
 
 	/**

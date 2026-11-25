@@ -51,6 +51,7 @@ import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
@@ -455,6 +456,7 @@ class SourceUpdaterProcessorTest {
 			);
 		final SnmpGetSource snmpGetSource = SnmpGetSource.builder()
 			.oid("$1")
+			.output(ContentType.TABLE)
 			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build())
 			.build();
 		doAnswer(invocation -> {

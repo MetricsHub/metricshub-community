@@ -30,6 +30,7 @@ import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -39,7 +40,8 @@ import org.metricshub.extension.snmp.ISnmpConfiguration;
 /**
  * A utility class for processing SNMP Get sources.
  * This class processes SNMP GET sources, fetch data from SNMP devices using
- * the given configuration, and return it as a {@link SourceTable} object.
+ * the given configuration, and return the value as a text {@link SourceTable}, or as a table of one cell with
+ * <code>output: table</code>.
  */
 @Slf4j
 @AllArgsConstructor
@@ -52,15 +54,16 @@ public class SnmpGetSourceProcessor {
 	private Function<TelemetryManager, ISnmpConfiguration> configurationRetriever;
 
 	/**
-	 * Fetches data from an SNMP device based on the provided {@link SnmpGetSource} connector's directive,
-	 * parses the data into a structured table format, and returns it.
-	 * An OID without a value gives an empty table. If the request fails, the agent answers with an error, or SNMP is
-	 * not configured, the source fails.
+	 * Fetches the value of the OID of the provided {@link SnmpGetSource} from an SNMP device and returns it whole, a
+	 * <code>;</code> or a line break in the value does not split it: as a text, or with <code>output: table</code> as a
+	 * table of one row of one cell.
+	 * An OID without a value gives an empty text, or an empty table (no row) with <code>output: table</code>. If the
+	 * request fails, the agent answers with an error, or SNMP is not configured, the source fails.
 	 *
 	 * @param snmpGetSource    The {@link SnmpGetSource} defining the SNMP OID.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} containing the fetched SNMP GET data, or a failure.
+	 * @return a {@link SourceTable} holding the value, an empty text or table, or a failure.
 	 */
 	public SourceTable process(
 		final SnmpGetSource snmpGetSource,
@@ -72,8 +75,11 @@ public class SnmpGetSourceProcessor {
 				"Hostname {} - SNMP Get Source cannot be null, the SNMP Get operation will return an empty result.",
 				telemetryManager.getHostname()
 			);
-			return SourceTable.empty();
+			return SourceTable.ofText(null);
 		}
+		final boolean table = snmpGetSource.getOutputContentType() == ContentType.TABLE;
+		final SourceTable noResult = table ? SourceTable.empty() : SourceTable.ofText(null);
+
 		// Find the configured protocol (Snmp or SnmpV3)
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
@@ -99,9 +105,12 @@ public class SnmpGetSourceProcessor {
 				telemetryManager.getRequestStats()
 			);
 
-			// An OID without a value is an empty table
+			// An OID without a value is an answer: an empty text, or an empty table
 			if (result == null) {
-				return SourceTable.empty();
+				return noResult;
+			}
+			if (!table) {
+				return SourceTable.ofText(result);
 			}
 			return SourceTable.ofTable(
 				Stream.of(

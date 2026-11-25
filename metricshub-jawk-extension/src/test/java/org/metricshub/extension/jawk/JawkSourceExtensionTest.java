@@ -259,8 +259,7 @@ class JawkSourceExtensionTest {
 			""");
 
 		// The value comes back as it is, without a separator after it
-		doReturn(SourceTable.ofTable(List.of(List.of("result1;result2")))).when(sourceProcessorMock)
-			.process(any(SnmpGetSource.class));
+		doReturn(SourceTable.ofText("result1;result2")).when(sourceProcessorMock).process(any(SnmpGetSource.class));
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<SnmpGetSource> snmpGetCaptor = ArgumentCaptor.forClass(SnmpGetSource.class);
