@@ -294,66 +294,32 @@ public abstract class AbstractStrategy implements IStrategy {
 				return null;
 			}
 
-			if (sourceTable.isFailed()) {
-				// Remembered for the jobs that read this source through a reference: a missing row is not a missing entity
+			// Remembered for the jobs that read this source through a reference, which then remove no monitor: the source
+			// failed, skipped a failed entry, or still gives nothing after its retry while it gave data before
+			final boolean failed = sourceTable.isFailed();
+			if (
+				failed || sourceTable.isPartial() || (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable))
+			) {
 				connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
-				if (!source.isContinueOnFailure()) {
-					log.error(
-						"Hostname {} - Source {} failed - Connector {} - Monitor {}. Skipped its computes, the sources {} and the mapping: {}",
-						hostname,
-						sourceKey,
-						connectorId,
-						monitorType,
-						sources.subList(sourceIndex + 1, sources.size()).stream().map(Source::getKey).toList(),
-						sourceTable.getError()
-					);
-					// Stored, so that the sources reading it during this run fail as well. The entries of the incremental
-					// sources polled are not mapped: they come again at the next poll
-					sourceTable.setFailedRun(strategyTime);
-					connectorNamespace.addSourceTable(sourceKey, sourceTable);
-					// The skipped sources fail as well: another job reading one of them must not map its table of a former run.
-					// So do the incremental sources already polled: their cursors roll back, so their entries come again at the
-					// next poll and must not be mapped by another job now
-					final List<Source> notMapped = new ArrayList<>(sources.subList(sourceIndex + 1, sources.size()));
-					sources.subList(0, sourceIndex).stream().filter(AbstractStrategy::isIncremental).forEach(notMapped::add);
-					for (Source skipped : notMapped) {
-						final SourceTable notRun = SourceTable.failed(
-							"Not executed: source %s failed: %s".formatted(sourceKey, sourceTable.getError())
-						);
-						notRun.setFailedRun(strategyTime);
-						connectorNamespace.addSourceTable(skipped.getKey(), notRun);
-						connectorNamespace.getUnansweredSourceKeys().add(skipped.getKey());
-					}
-					rollBackCursors(cursorRollbacks);
-					return sourceTable.getError();
-				}
-				log.error(
-					"Hostname {} - Source {} failed - Connector {} - Monitor {}. Continuing with an empty result: {}",
+			} else {
+				connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
+			}
+
+			if (failed && !source.isContinueOnFailure()) {
+				return stopJob(sources.subList(sourceIndex, sources.size()), sourceTable, jobInfo, cursorRollbacks);
+			}
+
+			// A failure is empty: with continueOnFailure, the source goes on with the empty result of its type
+			if (sourceTable.isEmpty()) {
+				log.warn(
+					"Hostname {} - Source {} {} - Connector {} - Monitor {}. Continuing with an empty result.",
 					hostname,
 					sourceKey,
+					failed ? "failed: " + sourceTable.getError() : "is empty",
 					connectorId,
-					monitorType,
-					sourceTable.getError()
+					monitorType
 				);
 				sourceTable = emptyResult(source);
-			} else {
-				// A source that gave data before and still gives nothing after its retry did not answer either, nor did one
-				// that skipped a failed entry: the jobs reading it do not remove monitors
-				if (sourceTable.isPartial() || (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable))) {
-					connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
-				} else {
-					connectorNamespace.getUnansweredSourceKeys().remove(sourceKey);
-				}
-				if (sourceTable.isEmpty()) {
-					log.warn(
-						"Hostname {} - Received empty source table for Source key {} - Connector {} - Monitor {}.",
-						hostname,
-						sourceKey,
-						connectorId,
-						monitorType
-					);
-					sourceTable = emptyResult(source);
-				}
 			}
 
 			// log the source table
@@ -429,6 +395,48 @@ public abstract class AbstractStrategy implements IStrategy {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Stops a job at its failed source: its computes, the next sources and the mapping are skipped. The failed source
+	 * and the sources it skips are stored failed for this run, so that a source of another job reading one of them fails
+	 * as well, rather than reading a table of a former run. The cursors of the incremental sources polled roll back.
+	 *
+	 * @param remainingSources   The failed source, then the sources it skips
+	 * @param failure            The failed table of the source
+	 * @param jobInfo            The job
+	 * @param cursorRollbacks    The rollbacks of the cursors of the incremental sources the job polled
+	 * @return the error of the failed source
+	 */
+	private String stopJob(
+		final List<Source> remainingSources,
+		final SourceTable failure,
+		final JobInfo jobInfo,
+		final List<Runnable> cursorRollbacks
+	) {
+		final String failedKey = remainingSources.get(0).getKey();
+		log.error(
+			"Hostname {} - Source {} failed - Connector {} - Monitor {}. Skipped its computes, the sources after it and the mapping: {}",
+			jobInfo.getHostname(),
+			failedKey,
+			jobInfo.getConnectorId(),
+			jobInfo.getMonitorType(),
+			failure.getError()
+		);
+		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
+			.getConnectorNamespace(jobInfo.getConnectorId());
+		failure.setFailedRun(strategyTime);
+		connectorNamespace.addSourceTable(failedKey, failure);
+		for (Source skipped : remainingSources.subList(1, remainingSources.size())) {
+			final SourceTable notRun = SourceTable.failed(
+				"Not executed: source %s failed: %s".formatted(failedKey, failure.getError())
+			);
+			notRun.setFailedRun(strategyTime);
+			connectorNamespace.addSourceTable(skipped.getKey(), notRun);
+			connectorNamespace.getUnansweredSourceKeys().add(skipped.getKey());
+		}
+		rollBackCursors(cursorRollbacks);
+		return failure.getError();
 	}
 
 	/**
