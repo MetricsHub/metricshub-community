@@ -149,21 +149,6 @@ class ConnectorToolCallbacksTest {
 	}
 
 	@Test
-	void testErrorWithoutSecrets() {
-		final TelemetryManager host = TelemetryManager.builder().build();
-		// What ${protocol::...} references resolved: a longer secret holds the shorter one
-		host.getResolvedSecrets().addAll(List.of("s3cr3t", "s3cr3t-2024"));
-
-		assertEquals(
-			"OS command: curl -u admin:******** -k ******** /x: Connection refused",
-			ConnectorToolCallbacks.withoutSecrets(
-				"OS command: curl -u admin:s3cr3t -k s3cr3t-2024 /x: Connection refused",
-				host
-			)
-		);
-	}
-
-	@Test
 	void testToolRunsOnlyWhereTheVariablesLeaveItAsAdvertised() throws Exception {
 		final ConnectorStore connectorStore = telemetryManager.getConnectorStore();
 		// host-02 is in two resources, the second one as host-01's

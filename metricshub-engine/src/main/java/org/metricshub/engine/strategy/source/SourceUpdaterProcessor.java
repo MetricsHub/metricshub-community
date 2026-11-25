@@ -115,14 +115,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	private static final Pattern PROTOCOL_PATTERN = Pattern.compile("\\$\\{protocol::(.*?)\\}", Pattern.CASE_INSENSITIVE);
 
-	/**
-	 * The protocol properties that hold a credential: a password, a key (BMC key), a community, a secret or a token.
-	 */
-	private static final Pattern SECRET_PROPERTY_PATTERN = Pattern.compile(
-		"\\.[^.]*(?:pass|key|community|secret|token)[^.]*$",
-		Pattern.CASE_INSENSITIVE
-	);
-
 	private ISourceProcessor sourceProcessor;
 	private TelemetryManager telemetryManager;
 	private String connectorId;
@@ -972,15 +964,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		while (matcher.find()) {
 			final String protocolPropertyValue = matcher.group(1);
 			if (protocolPropertyValue != null) {
-				final String value = ProtocolPropertyReferenceHelper.getProtocolProperty(
-					protocolPropertyValue,
-					telemetryManager
+				matcher.appendReplacement(
+					sb,
+					Matcher.quoteReplacement(
+						ProtocolPropertyReferenceHelper.getProtocolProperty(protocolPropertyValue, telemetryManager)
+					)
 				);
-				// A credential goes into the request: remembered, so that an error quoting it can mask it
-				if (value != null && !value.isEmpty() && SECRET_PROPERTY_PATTERN.matcher(protocolPropertyValue).find()) {
-					telemetryManager.getResolvedSecrets().add(value);
-				}
-				matcher.appendReplacement(sb, Matcher.quoteReplacement(value));
 			}
 		}
 		matcher.appendTail(sb);

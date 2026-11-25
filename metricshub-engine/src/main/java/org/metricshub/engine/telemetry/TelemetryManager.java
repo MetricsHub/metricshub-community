@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
@@ -80,14 +78,6 @@ public class TelemetryManager {
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
 	private final RequestStats requestStats = new RequestStats();
-
-	/**
-	 * The credentials a <code>${protocol::...}</code> reference put into a request of this resource (a password, a key,
-	 * a community): an error that quotes the request must not show them to a tool's caller.
-	 */
-	@EqualsAndHashCode.Exclude
-	@ToString.Exclude
-	private final Set<String> resolvedSecrets = ConcurrentHashMap.newKeySet();
 
 	private HostConfiguration hostConfiguration;
 	private ConnectorStore connectorStore;

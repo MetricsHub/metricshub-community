@@ -51,7 +51,6 @@ import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
-import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -1363,26 +1362,5 @@ class SourceUpdaterProcessorTest {
 		assertEquals(inputRef, captor.getAllValues().get(0).getInput(), "single reference: kept");
 		// Inside a text: the reference is expanded into the source's text (which looks like a reference)
 		assertEquals("x ${source::monitors.enclosure.discovery.sources.other}", captor.getAllValues().get(1).getInput());
-	}
-
-	@Test
-	void testProtocolReferencesRememberTheCredentials() {
-		final IConfiguration ipmi = org.mockito.Mockito.mock(IConfiguration.class);
-		doReturn(true).when(ipmi).isCorrespondingProtocol("ipmi");
-		doReturn("0011").when(ipmi).getProperty("bmckey");
-		doReturn("bmc-1").when(ipmi).getProperty("hostname");
-		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(HostConfiguration.builder().configurations(Map.of(ipmi.getClass(), ipmi)).build())
-			.build();
-
-		assertEquals(
-			"ipmitool -k 0011 -H bmc-1",
-			SourceUpdaterProcessor.replaceProtocolPropertyReferences(
-				"ipmitool -k ${protocol::ipmi.bmckey} -H ${protocol::ipmi.hostname}",
-				telemetryManager
-			)
-		);
-		// The key, not the hostname: an error quoting the request masks it for a tool's caller
-		assertEquals(Set.of("0011"), telemetryManager.getResolvedSecrets());
 	}
 }

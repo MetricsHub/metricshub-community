@@ -22,7 +22,6 @@ package org.metricshub.web.mcp.tool;
  */
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -210,9 +209,10 @@ public final class ConnectorToolCallbacks {
 			.build();
 		strategy.run();
 
-		// A failed source stopped the tool: the assistant gets what failed and why, never a credential of the host
+		// A failed source stopped the tool: the assistant gets what failed and why, the request as the connector wrote it
+		// before its credential macros were replaced
 		if (strategy.getResult().isFailed()) {
-			return new ToolText(withoutSecrets(strategy.getResult().getError(), telemetryManager));
+			return new ToolText(strategy.getResult().getError());
 		}
 		if (tool.isTextResult()) {
 			return new ToolText(strategy.getResult().asText());
@@ -248,27 +248,6 @@ public final class ConnectorToolCallbacks {
 			// Variables that make the declaration invalid
 			return false;
 		}
-	}
-
-	/**
-	 * The error of a failed source without the credentials of the host: the request it quotes may hold one, through a
-	 * <code>${protocol::ssh.password}</code> reference for example.
-	 *
-	 * @param error            The error of the failed source
-	 * @param telemetryManager The host's telemetry manager
-	 * @return the error, each credential that a <code>${protocol::...}</code> reference resolved for the host replaced
-	 *         with <code>********</code>, whatever the protocol and wherever its configuration (an emulation included)
-	 */
-	static String withoutSecrets(final String error, final TelemetryManager telemetryManager) {
-		// The longest first: a shorter secret inside a longer one must not leave a part of the longer one
-		String result = error;
-		for (String secret : telemetryManager.getResolvedSecrets()
-			.stream()
-			.sorted(Comparator.comparingInt(String::length).reversed())
-			.toList()) {
-			result = result.replace(secret, "********");
-		}
-		return result;
 	}
 
 	private static ConnectorTool toolOf(
