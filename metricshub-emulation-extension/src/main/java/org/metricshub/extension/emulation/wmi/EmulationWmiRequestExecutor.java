@@ -33,6 +33,7 @@ import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 
@@ -80,11 +81,6 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 			emulationInputDirectory = null;
 		}
 
-		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
-			log.warn("Hostname {} - WMI emulation input directory is not configured.", hostname);
-			return List.of();
-		}
-
 		return executorHelper.replayFromImage(
 			hostname,
 			emulationInputDirectory,
@@ -128,18 +124,16 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 				public List<List<String>> mapResponse(final String content) {
 					return SourceTable.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
 				}
-
-				@Override
-				public List<List<String>> emptyResult() {
-					return List.of();
-				}
 			}
 		);
 	}
 
+	/**
+	 * A request without a recorded response failed on the host as an acceptable error does: detection goes on.
+	 */
 	@Override
 	public boolean isAcceptableException(final Throwable t) {
-		return false;
+		return t != null && (t instanceof NoRecordedResponseException || isAcceptableException(t.getCause()));
 	}
 
 	@Override

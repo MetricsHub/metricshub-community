@@ -1,6 +1,8 @@
 package org.metricshub.extension.emulation.wbem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -19,6 +21,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.wbem.WbemConfiguration;
 
 /**
@@ -54,6 +57,13 @@ class EmulationWbemRequestExecutorTest {
 					.build()
 			)
 			.build();
+	}
+
+	@Test
+	void testIsAcceptableExceptionAcceptsAMissingRecording() {
+		assertTrue(executor.isAcceptableException(new NoRecordedResponseException("No recorded WBEM response.")));
+		assertTrue(executor.isAcceptableException(new ClientException("Failed", new NoRecordedResponseException("None"))));
+		assertFalse(executor.isAcceptableException(new ClientException("Timeout")));
 	}
 
 	@Test
@@ -156,15 +166,17 @@ class EmulationWbemRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
-		final List<List<String>> result = executor.executeWbem(
-			HOSTNAME,
-			WbemConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM CIM_ManagedElement",
-			"root/emc",
-			buildTelemetryManager(tempDir.toString())
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWbem(
+				HOSTNAME,
+				WbemConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM CIM_ManagedElement",
+				"root/emc",
+				buildTelemetryManager(tempDir.toString())
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -207,41 +219,45 @@ class EmulationWbemRequestExecutorTest {
 	}
 
 	@Test
-	void testExecuteWbemReturnsEmptyWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWbemFailsWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
 			SourceTable.tableToCsv(List.of(List.of("value1")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
-		final List<List<String>> result = executor.executeWbem(
-			HOSTNAME,
-			WbemConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM CIM_ManagedElement",
-			"root/emc",
-			buildTelemetryManager(tempDir.toString())
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWbem(
+				HOSTNAME,
+				WbemConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM CIM_ManagedElement",
+				"root/emc",
+				buildTelemetryManager(tempDir.toString())
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWbemReturnsEmptyWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWbemFailsWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), "not: [valid", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeWbem(
-			HOSTNAME,
-			WbemConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM CIM_ManagedElement",
-			"root/emc",
-			buildTelemetryManager(tempDir.toString())
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWbem(
+				HOSTNAME,
+				WbemConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM CIM_ManagedElement",
+				"root/emc",
+				buildTelemetryManager(tempDir.toString())
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWbemReturnsEmptyWhenMatchedResponseIsBlank(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWbemFailsWhenMatchedResponseIsBlank(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
@@ -250,19 +266,21 @@ class EmulationWbemRequestExecutorTest {
 			    response: " "
 			""", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeWbem(
-			HOSTNAME,
-			WbemConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM CIM_ManagedElement",
-			"root/emc",
-			buildTelemetryManager(tempDir.toString())
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWbem(
+				HOSTNAME,
+				WbemConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM CIM_ManagedElement",
+				"root/emc",
+				buildTelemetryManager(tempDir.toString())
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWbemReturnsEmptyWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWbemFailsWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - request:
@@ -271,15 +289,17 @@ class EmulationWbemRequestExecutorTest {
 			    response: missing.txt
 			""", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeWbem(
-			HOSTNAME,
-			WbemConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM CIM_ManagedElement",
-			"root/emc",
-			buildTelemetryManager(tempDir.toString())
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeWbem(
+				HOSTNAME,
+				WbemConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM CIM_ManagedElement",
+				"root/emc",
+				buildTelemetryManager(tempDir.toString())
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test

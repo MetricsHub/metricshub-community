@@ -38,6 +38,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.RequestOutcome;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.http.HttpResponse;
@@ -146,8 +147,15 @@ class HttpRequestExecutorTest {
 				final String result = executor.executeHttp(request, true, telemetryManager);
 				if (resultContent == ResultContent.ALL_WITH_STATUS) {
 					assertEquals("Status: " + status + "\n" + httpResponse.getHeader() + "\n{\"error\":\"bad token\"}", result);
+					// Who asks for the status gets the answer
+					assertEquals(SourceTable.ofText(result), executor.executeHttpSource(request, true, telemetryManager));
 				} else {
 					assertEquals("", result, status + " " + resultContent.name());
+					// An http source fails
+					assertEquals(
+						SourceTable.failed("The server answered with the status " + status + "."),
+						executor.executeHttpSource(request, true, telemetryManager)
+					);
 				}
 
 				// The response itself has its status, whatever the result content
@@ -308,7 +316,7 @@ class HttpRequestExecutorTest {
 		httpResponse.setStatusCode(200);
 		httpResponse.appendBody("body");
 		httpResponse.appendHeader("key", "value");
-		doThrow(new IOException()).when(executor)
+		doThrow(new IOException("Connection refused")).when(executor)
 			.send("https://hostname:443/", method, username, password, headerContent, bodyContent, timeout);
 
 		final String hostname = "hostname";
@@ -338,6 +346,11 @@ class HttpRequestExecutorTest {
 			.build();
 		final String result = executor.executeHttp(request, true, telemetryManager);
 		assertNull(result);
+		// No response: an http source fails, and says why
+		assertEquals(
+			SourceTable.failed("No response: IOException: Connection refused"),
+			executor.executeHttpSource(request, true, telemetryManager)
+		);
 	}
 
 	@ParameterizedTest

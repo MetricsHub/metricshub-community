@@ -561,9 +561,8 @@ class JawkSourceExtensionTest {
 			.script("BEGIN { system(\"echo x\"); print \"done\" }")
 			.build();
 
-		assertEquals(
-			SourceTable.empty(),
-			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		assertTrue(
+			(new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)).isFailed()
 		);
 	}
 

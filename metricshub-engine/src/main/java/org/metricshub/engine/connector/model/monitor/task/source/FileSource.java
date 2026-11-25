@@ -101,6 +101,7 @@ public class FileSource extends Source {
 	 * @param type                   the source type (e.g. {@code "file"})
 	 * @param computes               optional compute steps
 	 * @param forceSerialization     whether to force serialization
+	 * @param continueOnFailure     whether a failure of the source lets its job go on
 	 * @param paths                  file path patterns; may be null (defaults to empty set)
 	 * @param maxSizePerPoll         max size per poll in bytes; null or 0 use default, negative uses unlimited
 	 * @param mode                   LOG (incremental) or FLAT (full-file); null defaults to LOG
@@ -112,13 +113,14 @@ public class FileSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty("paths") Set<String> paths,
 		@JsonProperty("maxSizePerPoll") Long maxSizePerPoll,
 		@JsonProperty("mode") FileSourceProcessingMode mode,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.paths = (paths != null) ? paths : new LinkedHashSet<>();
 		this.mode = mode != null ? mode : FileSourceProcessingMode.LOG;
 
@@ -135,6 +137,7 @@ public class FileSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.paths(paths != null ? new LinkedHashSet<>(paths) : new LinkedHashSet<>())

@@ -110,14 +110,9 @@ public class JmxSourceProcessor {
 				)
 			);
 		} catch (Exception e) {
-			String hostname = jmxConfig.getHostname();
-			log.error(
-				"Hostname {} - Error processing JMX source for objectName '{}': {}",
-				hostname,
-				objectName,
-				e.getMessage()
-			);
+			final String hostname = jmxConfig != null ? jmxConfig.getHostname() : telemetryManager.getHostname();
 			log.debug("Hostname {} - Error processing JMX source for objectName '{}'", hostname, objectName, e);
+			return SourceTable.failed("JMX " + objectName, e);
 		}
 
 		return SourceTable.ofTable(rows);

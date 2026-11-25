@@ -315,15 +315,23 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * @param result what the request executor returned
-	 * @param <T>    a text or the rows of a table
-	 * @return the result
-	 * @throws IllegalStateException for no result: the executor returns none when the request failed
+	 * The text of an answer: an OID without a value (noSuchName, noSuchObject, noSuchInstance, endOfMibView) is an
+	 * empty text, the failures of the request are thrown by the executor.
+	 *
+	 * @param result what the request executor returned, {@code null} for an OID without a value
+	 * @return the result, an empty text for {@code null}
 	 */
-	private static <T> T done(final T result) {
-		if (result == null) {
-			throw new IllegalStateException("The SNMP request failed");
-		}
-		return result;
+	private static String done(final String result) {
+		return result == null ? "" : result;
+	}
+
+	/**
+	 * The rows of an answer, see {@link #done(String)}.
+	 *
+	 * @param result what the request executor returned, {@code null} for no value
+	 * @return the rows, none for {@code null}
+	 */
+	private static List<List<String>> done(final List<List<String>> result) {
+		return result == null ? List.of() : result;
 	}
 }

@@ -56,6 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
@@ -73,6 +74,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -292,8 +294,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param currentConnector The connector defining the monitor job
 	 * @param hostname         The host name of the monitored resource
 	 * @param monitorJobEntry  The monitor type and its monitor job
-	 * @return {@code true} when the job ran a trusted pass: every source answered, at least one monitor was mapped and the
-	 *         job reads no unreliable source
+	 * @return {@code true} when the job ran a trusted pass: at least one monitor was mapped and the job reads no
+	 *         unreliable source (a source that failed included)
 	 */
 	private boolean processMonitorJob(
 		final Connector currentConnector,
@@ -334,37 +336,43 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			)
 			.build();
 
-		// Create the sources and the computes for a connector
 		final List<Runnable> cursorRollbacks = new ArrayList<>();
-		final boolean sourcesAnswered = processSourcesAndComputes(
-			orderedSources.getSources(),
-			null,
-			jobInfo,
-			cursorRollbacks
-		);
-
-		// Create the monitors
-		final Mapping mapping = monitorTask.getMapping();
-
 		// Only discovery metrics are flagged so that PrepareCollectStrategy refreshes their collect time on each
 		// collect cycle, as they are never re-collected. Simple tasks run on every collect cycle, so their metrics
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		// An interrupted job did not refresh its sources: its mapping would read the tables of another run
-		final boolean mapped = !skipMappingIfInterrupted(
-			cursorRollbacks,
-			currentConnector.getCompiledFilename(),
-			hostname
-		) && processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
+		// Create the sources and the computes, then the monitors. An interrupted job did not refresh its sources: its
+		// mapping would read the tables of another run
+		boolean answered = false;
+		boolean mapped = false;
+		try {
+			processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
+			answered = !skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname);
+			mapped = answered &&
+				processSameTypeMonitors(
+					currentConnector,
+					monitorTask.getMapping(),
+					monitorType,
+					hostname,
+					monitorJob,
+					isDiscovery
+				);
+		} catch (SourceFailedException e) {
+			// A job stopped by a failed source maps nothing: its monitors are kept as they are, see untrustedRuns
+		}
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
 
-		final Set<String> unansweredSourceKeys = telemetryManager.getHostProperties()
-			.getConnectorNamespace(currentConnector.getCompiledFilename())
-			.getUnansweredSourceKeys();
-		return sourcesAnswered && mapped && !hasUnreliableSource(currentConnector, monitorTask, unansweredSourceKeys);
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties()
+			.getConnectorNamespace(currentConnector.getCompiledFilename());
+		final boolean reliable = answered &&
+			!hasUnreliableSource(currentConnector, monitorTask, namespace.getUnansweredSourceKeys());
+		if (!reliable) {
+			namespace.getUntrustedRuns().put(monitorType, strategyTime);
+		}
+		return mapped && reliable;
 	}
 
 	/**

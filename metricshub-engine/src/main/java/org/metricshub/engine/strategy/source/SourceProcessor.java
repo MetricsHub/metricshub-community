@@ -162,54 +162,68 @@ public class SourceProcessor implements ISourceProcessor {
 	/**
 	 * Processes a given {@link Source} by using an appropriate {@link IProtocolExtension} found through
 	 * an {@link ExtensionManager}. This method delegates the processing of the source to the protocol extension
-	 * if available, or returns an empty {@link SourceTable} if no suitable extension is found.
+	 * if available, or fails if no suitable extension is found.
 	 *
 	 * @param source The source data to be processed.
 	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
-	 *         or an empty table if no extension can process the source.
+	 *         or a failure if no extension can process the source.
 	 */
 	private SourceTable processSourceThroughExtension(Source source) {
 		// The job deadline expired or the job was cancelled: send no more request, whatever runs it (a source, an
 		// executeForEachEntryOf entry, a Jawk script)
 		if (ThreadHelper.isCancelled()) {
-			return SourceTable.empty();
+			return SourceTable.failed("Not executed: the job was interrupted.");
 		}
 		return extensionManager.findSourceExtension(source, telemetryManager)
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
-			.orElseGet(SourceTable::empty);
+			.orElseGet(() -> noExtension(source));
+	}
+
+	/**
+	 * The failure of a source that no extension executes.
+	 *
+	 * @param source The source
+	 * @return a failed source table
+	 */
+	private static SourceTable noExtension(final Source source) {
+		return SourceTable.failed(
+			"Not executed: no extension for the %s source, or no configuration for its protocol on the host.".formatted(
+				source.getClass().getSimpleName()
+			)
+		);
 	}
 
 	/**
 	 * Processes a given {@link Source} by using an appropriate {@link ISourceComputationExtension} found through
 	 * an {@link ExtensionManager}. This method delegates the processing of the source to the extension
-	 * if available, or returns an empty {@link SourceTable} if no suitable extension is found.
+	 * if available, or fails if no suitable extension is found.
 	 *
 	 * @param source The source data to be processed.
 	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
-	 *         or an empty table if no extension can process the source.
+	 *         or a failure if no extension can process the source.
 	 */
 	private SourceTable processSourceComputationThroughExtension(final Source source) {
 		final Optional<ISourceComputationExtension> maybeExtension = extensionManager.findSourceComputationExtension(
 			source
 		);
 		return maybeExtension.map(extension -> extension.processSource(source, connectorId, telemetryManager))
-			.orElseGet(SourceTable::empty);
+			.orElseGet(() -> noExtension(source));
 	}
 
 	/**
 	 * Processes a given {@link Source} by using an appropriate {@link ICompositeSourceScriptExtension} found through
 	 * an {@link ExtensionManager}. This method delegates the processing of the source to the extension
-	 * if available, or returns an empty {@link SourceTable} if no suitable extension is found.
+	 * if available, or fails if no suitable extension is found.
 	 *
 	 * @param source The source data to be processed.
 	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
-	 *         or an empty table if no extension can process the source.
+	 *         or a failure if no extension can process the source.
 	 */
 	private SourceTable processCompositeSourceScriptThroughExtension(final Source source) {
 		final Optional<ICompositeSourceScriptExtension> maybeExtension = extensionManager
 			.findCompositeSourceScriptExtension(source);
 		return maybeExtension.map(extension -> extension.processSource(source, connectorId, telemetryManager, this))
-			.orElseGet(SourceTable::empty);
+			.orElseGet(() -> noExtension(source));
 	}
 
 	@WithSpan("Source IPMI Exec")

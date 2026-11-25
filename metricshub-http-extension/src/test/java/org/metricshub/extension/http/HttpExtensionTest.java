@@ -452,8 +452,8 @@ class HttpExtensionTest {
 	void testProcessHttpSourceOk() {
 		initHttp();
 
-		doReturn(RESULT).when(httpRequestExecutorMock)
-			.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
+		doReturn(SourceTable.ofText(RESULT)).when(httpRequestExecutorMock)
+			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 		final SourceTable actual = httpExtension.processSource(
 			HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 			CONNECTOR_ID,
@@ -468,47 +468,54 @@ class HttpExtensionTest {
 	void testProcessHttpSourceThrowsException() {
 		initHttp();
 
-		doThrow(new RuntimeException("excepton")).when(httpRequestExecutorMock)
-			.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
+		doThrow(new RuntimeException("exception")).when(httpRequestExecutorMock)
+			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 		final SourceTable actual = httpExtension.processSource(
 			HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 			CONNECTOR_ID,
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.empty();
-		assertEquals(expected, actual);
+		assertEquals(SourceTable.failed("HTTP GET " + TEST_URL + ": RuntimeException: exception"), actual);
 	}
 
 	@Test
-	void testProcessHttpSourceEmptyResult() {
+	void testProcessHttpSourceEmptyResultAndRefusal() {
 		initHttp();
 
-		{
-			doReturn(null).when(httpRequestExecutorMock)
-				.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
-			final SourceTable actual = httpExtension.processSource(
+		// An empty body is an answer
+		doReturn(SourceTable.ofText("")).when(httpRequestExecutorMock)
+			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
+		assertEquals(
+			SourceTable.ofText(""),
+			httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 				CONNECTOR_ID,
 				telemetryManager
-			);
+			)
+		);
 
-			final SourceTable expected = SourceTable.empty();
-			assertEquals(expected, actual);
-		}
-
-		{
-			doReturn("").when(httpRequestExecutorMock)
-				.executeHttp(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
-			final SourceTable actual = httpExtension.processSource(
+		// A refused request fails, with the request in its error
+		doReturn(SourceTable.failed("The server answered with the status 401.")).when(httpRequestExecutorMock)
+			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
+		assertEquals(
+			SourceTable.failed("HTTP GET " + TEST_URL + ": The server answered with the status 401."),
+			httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 				CONNECTOR_ID,
 				telemetryManager
-			);
+			)
+		);
 
-			final SourceTable expected = SourceTable.empty();
-			assertEquals(expected, actual);
-		}
+		// A source that gives a path instead of a URL is named by its path
+		assertEquals(
+			SourceTable.failed("HTTP GET /redfish/v1/Systems: The server answered with the status 401."),
+			httpExtension.processSource(
+				HttpSource.builder().path("/redfish/v1/Systems").method(HttpMethod.GET).build(),
+				CONNECTOR_ID,
+				telemetryManager
+			)
+		);
 	}
 
 	@Test
@@ -518,7 +525,7 @@ class HttpExtensionTest {
 		telemetryManager.getHostConfiguration().setConfigurations(Map.of());
 
 		assertEquals(
-			SourceTable.empty(),
+			SourceTable.failed("HTTP GET " + TEST_URL + ": HTTP is not configured on the host."),
 			httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 				CONNECTOR_ID,

@@ -38,7 +38,8 @@ public class LoggingHelper {
 	static final Pattern PASSWORD_REGEX = Pattern.compile("(?i)(password).*");
 
 	/**
-	 * Log the given throwable
+	 * Logs the stack trace of the exception of a source, at debug level: its error is in the failed table of the
+	 * source, which the strategy logs
 	 *
 	 * @param connectorId  The identifier of the connector
 	 * @param sourceKey    The key of the source
@@ -53,22 +54,11 @@ public class LoggingHelper {
 		final String hostname,
 		final Throwable throwable
 	) {
-		if (log.isErrorEnabled()) {
-			log.error(
-				"Hostname {} - Source [{}] was unsuccessful due to an exception." +
-					" Context [{}]. Connector: [{}]. Returning an empty table. Errors:\n{}\n",
-				hostname,
-				sourceKey,
-				context,
-				connectorId,
-				StringHelper.getStackMessages(throwable)
-			);
-		}
-
+		// Logged at debug level only: the error goes on in the failed table, which the strategy logs once
 		if (log.isDebugEnabled()) {
 			log.debug(
 				String.format(
-					"Hostname %s - Source [%s] was unsuccessful due to an exception. Context [%s]. Connector: [%s]. Returning an empty table. Stack trace:",
+					"Hostname %s - Source [%s] was unsuccessful due to an exception. Context [%s]. Connector: [%s]. Stack trace:",
 					hostname,
 					sourceKey,
 					context,

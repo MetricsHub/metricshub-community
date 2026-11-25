@@ -36,6 +36,7 @@ import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
@@ -91,6 +92,20 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		return recorded.getKey() == ResultContent.ALL_WITH_STATUS
 			? HttpResult.parse(recorded.getValue())
 			: new HttpResult(HTTP_OK, "", recorded.getValue());
+	}
+
+	/**
+	 * The recorded text of an <code>http</code> source. A request that failed or that the server refused was not
+	 * recorded: the source fails, as it did.
+	 */
+	@Override
+	public SourceTable executeHttpSource(
+		final HttpRequest httpRequest,
+		final boolean logMode,
+		final TelemetryManager telemetryManager
+	) {
+		final String text = executeHttp(httpRequest, logMode, telemetryManager);
+		return text == null ? SourceTable.failed("No recorded response.") : SourceTable.ofText(text);
 	}
 
 	@Override

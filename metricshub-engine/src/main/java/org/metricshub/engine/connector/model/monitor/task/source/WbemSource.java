@@ -74,6 +74,7 @@ public class WbemSource extends Source {
 	 * @param type                 The type of the source.
 	 * @param computes             List of computations to be applied to the source.
 	 * @param forceSerialization   Flag indicating whether to force serialization.
+	 * @param continueOnFailure   whether a failure of the source lets its job go on
 	 * @param query                The WBEM query used to retrieve data.
 	 * @param namespace            The WBEM namespace for the query.
 	 * @param key                  The key associated with the source.
@@ -85,12 +86,13 @@ public class WbemSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty(value = "query", required = true) @NonNull String query,
 		@JsonProperty("namespace") String namespace,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.query = query;
 		this.namespace = namespace;
 	}
@@ -101,6 +103,7 @@ public class WbemSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.query(query)

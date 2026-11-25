@@ -87,19 +87,19 @@ public class FileSourceProcessor {
 
 	/**
 	 * Processes an {@link FileSource} and returns a {@link SourceTable} containing file paths and their content.
-	 * Any exception during path resolution or file reading is caught, logged, and results in an empty table.
+	 * Any exception during path resolution or file reading is caught, logged, and makes the source fail. A file that
+	 * cannot be read is skipped, and no file matching the paths gives an empty text.
 	 *
 	 * @param fileSource the file source definition
 	 * @param telemetryManager the telemetry manager providing host configuration and connector namespace
-	 * @return a {@link SourceTable} containing the file results, or an empty table on error
+	 * @return a {@link SourceTable} containing the file results, or a failure
 	 */
 	public SourceTable process(final FileSource fileSource, final TelemetryManager telemetryManager) {
 		final String hostname = telemetryManager.getHostname();
 		final boolean isLocalhost = telemetryManager.getHostProperties().isLocalhost();
 
 		if (fileSource == null) {
-			log.warn("Hostname {} - Malformed file source {}. Returning an empty table.", hostname, fileSource);
-			return SourceTable.empty();
+			return SourceTable.failed("Malformed file source.");
 		}
 
 		// Depending on whether the host is localhost or remote, create file operations
@@ -109,8 +109,9 @@ public class FileSourceProcessor {
 		final FileOperations fileOperations = isLocalhost ? createLocalFileOperations(hostname) : remoteFileOperations;
 
 		if (fileOperations == null) {
-			log.warn("Hostname {} - Cannot process files: file operations unavailable. Returning an empty table.", hostname);
-			return SourceTable.empty();
+			return SourceTable.failed(
+				"Files %s: the file operations are not available on the host.".formatted(fileSource.getPaths())
+			);
 		}
 
 		try (FileOperations ops = fileOperations) {
@@ -125,7 +126,7 @@ public class FileSourceProcessor {
 			}
 
 			if (sourceResolvedPaths.isEmpty()) {
-				return SourceTable.empty();
+				return SourceTable.ofText(null);
 			}
 
 			// Logging for debug purpose
@@ -167,14 +168,9 @@ public class FileSourceProcessor {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
 			}
 		} catch (Exception e) {
-			// Path resolution, FLAT/LOG read, or close failed; log and return empty table
-			log.info(
-				"Hostname {} - FileSource processing failed. Returning an empty table. Message: {}",
-				hostname,
-				e.getMessage()
-			);
+			// Path resolution, FLAT/LOG read, or close failed
 			log.debug("Hostname {} - FileSource processing failed.", hostname, e);
-			return SourceTable.empty();
+			return SourceTable.failed("Files " + fileSource.getPaths(), e);
 		}
 	}
 

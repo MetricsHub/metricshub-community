@@ -1,6 +1,7 @@
 package org.metricshub.extension.emulation.jmx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
@@ -119,16 +121,18 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor().fetchMBean(
-			config,
-			"nonexistent:type=Missing",
-			List.of("Attr1"),
-			List.of(),
-			requestStats,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> createExecutor().fetchMBean(
+				config,
+				"nonexistent:type=Missing",
+				List.of("Attr1"),
+				List.of(),
+				requestStats,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -199,29 +203,19 @@ class EmulationJmxRequestExecutorTest {
 	@Test
 	void testFetchMBeanNotEmulationConfig() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("host").build();
-		final List<List<String>> result = createExecutor().fetchMBean(
-			config,
-			"obj:type=T",
-			List.of("A"),
-			List.of(),
-			requestStats,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> createExecutor().fetchMBean(config, "obj:type=T", List.of("A"), List.of(), requestStats, null)
 		);
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
 	void testFetchMBeanNullDirectory() throws Exception {
 		final JmxEmulationConfig config = new JmxEmulationConfig(JmxConfiguration.builder().hostname("host").build(), null);
-		final List<List<String>> result = createExecutor().fetchMBean(
-			config,
-			"obj:type=T",
-			List.of("A"),
-			List.of(),
-			requestStats,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> createExecutor().fetchMBean(config, "obj:type=T", List.of("A"), List.of(), requestStats, null)
 		);
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -230,15 +224,10 @@ class EmulationJmxRequestExecutorTest {
 			JmxConfiguration.builder().hostname("host").build(),
 			tempDir.toString()
 		);
-		final List<List<String>> result = createExecutor().fetchMBean(
-			config,
-			"obj:type=T",
-			List.of("A"),
-			List.of(),
-			requestStats,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> createExecutor().fetchMBean(config, "obj:type=T", List.of("A"), List.of(), requestStats, null)
 		);
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -258,15 +247,10 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor().fetchMBean(
-			config,
-			"obj:type=T",
-			List.of("A"),
-			List.of(),
-			requestStats,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> createExecutor().fetchMBean(config, "obj:type=T", List.of("A"), List.of(), requestStats, null)
 		);
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -286,15 +270,10 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor().fetchMBean(
-			config,
-			"obj:type=T",
-			List.of("A"),
-			List.of(),
-			requestStats,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> createExecutor().fetchMBean(config, "obj:type=T", List.of("A"), List.of(), requestStats, null)
 		);
-		assertTrue(result.isEmpty());
 	}
 
 	@Test

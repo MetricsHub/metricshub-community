@@ -86,6 +86,7 @@ public class EventLogSource extends Source {
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("continueOnFailure") boolean continueOnFailure,
 		@JsonProperty("logName") String logName,
 		@JsonProperty("eventIds") Set<String> eventIds,
 		@JsonProperty("sources") Set<String> sources,
@@ -94,7 +95,7 @@ public class EventLogSource extends Source {
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.logName = logName;
 		this.eventIds = (eventIds != null) ? eventIds : new LinkedHashSet<>();
 		this.sources = (sources != null) ? sources : new LinkedHashSet<>();
@@ -113,6 +114,7 @@ public class EventLogSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.logName(logName)

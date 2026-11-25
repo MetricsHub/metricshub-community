@@ -115,20 +115,24 @@ class SnmpExtensionToolsTest {
 	}
 
 	@Test
-	void testExecuteToolFailsWhenTheRequestFails() throws Exception {
-		// The executor returns nothing for a request that failed: an error for the host, not an empty result
+	void testExecuteToolGivesAnEmptyResultForAnOidWithoutValue() throws Exception {
+		// The executor returns nothing for an OID without a value (noSuchObject...): an answer, not a failure
 		when(snmpRequestExecutorMock.executeSNMPTable(any(), any(), any(), any(), eq(false), isNull())).thenReturn(null);
-		for (final String tool : List.of("get", "getNext", "walk", "table")) {
-			assertThrows(
-				IllegalStateException.class,
-				() -> snmpExtension.executeTool(
-					tool,
-					configuration(),
-					JsonNodeFactory.instance.objectNode().put("oid", "1.3.6.1.2.1.1").put("columns", "ID")
-				),
+		for (final String tool : List.of("get", "getNext", "walk")) {
+			assertEquals(
+				new ToolText(""),
+				snmpExtension.executeTool(tool, configuration(), JsonNodeFactory.instance.objectNode().put("oid", "1.3.6.1")),
 				tool
 			);
 		}
+		assertEquals(
+			new ToolTable(List.of("ID"), List.of()),
+			snmpExtension.executeTool(
+				"table",
+				configuration(),
+				JsonNodeFactory.instance.objectNode().put("oid", "1.3.6.1").put("columns", "ID")
+			)
+		);
 	}
 
 	@Test

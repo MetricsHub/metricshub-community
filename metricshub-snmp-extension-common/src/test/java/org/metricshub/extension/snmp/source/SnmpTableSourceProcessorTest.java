@@ -1,6 +1,7 @@
 package org.metricshub.extension.snmp.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -60,7 +61,7 @@ public class SnmpTableSourceProcessorTest {
 
 		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.empty(), result);
+		assertTrue((result).isFailed());
 	}
 
 	// Test when the selected columns are empty
@@ -97,7 +98,7 @@ public class SnmpTableSourceProcessorTest {
 
 		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.empty(), result);
+		assertTrue((result).isFailed());
 	}
 
 	// Test when the executor returns a valid result

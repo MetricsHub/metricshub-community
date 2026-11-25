@@ -34,6 +34,7 @@ import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.wbem.WbemConfiguration;
 import org.metricshub.extension.wbem.WbemRequestExecutor;
 
@@ -80,11 +81,6 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			? emulationConfiguration.getWbem().getDirectory()
 			: null;
 
-		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
-			log.warn("Hostname {} - WBEM emulation input directory is not configured.", hostname);
-			return List.of();
-		}
-
 		return executorHelper.replayFromImage(
 			hostname,
 			emulationInputDirectory,
@@ -128,13 +124,16 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 				public List<List<String>> mapResponse(final String content) {
 					return SourceTable.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
 				}
-
-				@Override
-				public List<List<String>> emptyResult() {
-					return List.of();
-				}
 			}
 		);
+	}
+
+	/**
+	 * A request without a recorded response failed on the host as an acceptable error does: detection goes on.
+	 */
+	@Override
+	public boolean isAcceptableException(final Throwable t) {
+		return t instanceof NoRecordedResponseException || super.isAcceptableException(t);
 	}
 
 	/**

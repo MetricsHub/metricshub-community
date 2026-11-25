@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.function.Function;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -43,7 +42,6 @@ import org.metricshub.extension.win.IWinRequestExecutor;
  * It provides a method to run WMI queries through WMI or WinRm, gets the WMI response,
  * and generates the {@link SourceTable} using the WMI response.
  */
-@Slf4j
 @RequiredArgsConstructor
 public class WmiSourceProcessor {
 
@@ -64,28 +62,18 @@ public class WmiSourceProcessor {
 	 * @param wmiSource        The WMI source containing the query to be executed.
 	 * @param telemetryManager The telemetry manager providing host configuration used to get
 	 *                         the {@link IWinConfiguration} implementation.
-	 * @return A {@link SourceTable} containing the results of the executed query or an empty table in case of an error.
+	 * @return A {@link SourceTable} containing the results of the executed query or a failure.
 	 */
 	public SourceTable process(final WmiSource wmiSource, final TelemetryManager telemetryManager) {
 		if (wmiSource == null) {
-			log.warn(
-				"Hostname {} - Malformed WMI source {}. Returning an empty table.",
-				telemetryManager.getHostname(),
-				wmiSource
-			);
-			return SourceTable.empty();
+			return SourceTable.failed("Malformed WMI source.");
 		}
 
 		// Find the configured protocol (WinRM or WMI)
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (winConfiguration == null) {
-			log.debug(
-				"Hostname {} - Neither WMI nor WinRM credentials are configured for this host. Returning an empty table for WMI source {}.",
-				telemetryManager.getHostname(),
-				wmiSource.getKey()
-			);
-			return SourceTable.empty();
+			return SourceTable.failed("WMI: neither WMI nor WinRM is configured on the host.");
 		}
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
@@ -95,12 +83,7 @@ public class WmiSourceProcessor {
 		final String namespace = getNamespace(wmiSource, telemetryManager);
 
 		if (namespace == null) {
-			log.error(
-				"Hostname {} - Failed to retrieve the WMI namespace to run the WMI source {}. Returning an empty table.",
-				hostname,
-				wmiSource.getKey()
-			);
-			return SourceTable.empty();
+			return SourceTable.failed("WMI query %s: no WMI namespace.".formatted(wmiSource.getQuery()));
 		}
 
 		try {
@@ -129,7 +112,7 @@ public class WmiSourceProcessor {
 				e
 			);
 
-			return SourceTable.empty();
+			return SourceTable.failed("WMI query %s in namespace %s".formatted(wmiSource.getQuery(), namespace), e);
 		}
 	}
 

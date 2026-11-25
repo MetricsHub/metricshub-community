@@ -106,7 +106,7 @@ class InternalDbExtensionTest {
 
 		// Empty SQL Source
 		sourceTableResult = internalDbExtension.processSource(new InternalDbQuerySource(), connectorId, telemetryManager);
-		assertEquals(SourceTable.empty(), sourceTableResult);
+		assertTrue((sourceTableResult).isFailed());
 
 		final List<SqlColumn> columnsTable1 = new ArrayList<>();
 		final List<SqlColumn> columnsTable2 = new ArrayList<>();

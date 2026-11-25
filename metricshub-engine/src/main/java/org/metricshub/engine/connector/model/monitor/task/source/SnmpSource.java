@@ -62,6 +62,7 @@ public abstract class SnmpSource extends Source {
 	 * @param type                  the type of the source
 	 * @param computes              the list of compute operations to be applied
 	 * @param forceSerialization    flag indicating whether serialization should be forced
+	 * @param continueOnFailure    whether a failure of the source lets its job go on
 	 * @param oid                   the SNMP OID to retrieve data
 	 * @param key                   the key associated with the source
 	 * @param executeForEachEntryOf the execute-for-each-entry-of information
@@ -70,11 +71,12 @@ public abstract class SnmpSource extends Source {
 		String type,
 		List<Compute> computes,
 		boolean forceSerialization,
+		boolean continueOnFailure,
 		@NonNull String oid,
 		String key,
 		ExecuteForEachEntryOf executeForEachEntryOf
 	) {
-		super(type, computes, forceSerialization, key, executeForEachEntryOf);
+		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.oid = oid;
 	}
 

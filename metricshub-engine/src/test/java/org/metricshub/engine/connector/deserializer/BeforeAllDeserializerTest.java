@@ -35,7 +35,7 @@ class BeforeAllDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<String, Source>(
 			Map.of(
 				"ipmiSource",
-				new IpmiSource("ipmi", Collections.emptyList(), false, "${source::beforeAll.ipmiSource}", null)
+				new IpmiSource("ipmi", Collections.emptyList(), false, false, "${source::beforeAll.ipmiSource}", null)
 			)
 		);
 

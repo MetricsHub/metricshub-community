@@ -289,7 +289,10 @@ class SourceProcessorTest {
 			.hostType(DeviceKind.LINUX)
 			.build();
 		telemetryManager.setHostConfiguration(hostConfigurationNoProtocol);
-		assertEquals(SourceTable.empty(), sourceProcessor.process(SnmpGetSource.builder().oid(OID).build()));
+		assertEquals(
+			"Not executed: no extension for the SnmpGetSource source, or no configuration for its protocol on the host.",
+			sourceProcessor.process(SnmpGetSource.builder().oid(OID).build()).getError()
+		);
 
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
 		final HostConfiguration hostConfiguration = HostConfiguration.builder()

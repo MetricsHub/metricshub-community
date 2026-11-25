@@ -83,11 +83,6 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 			? emulationConfiguration.getJdbc().getDirectory()
 			: null;
 
-		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
-			log.warn("Hostname {} - JDBC emulation input directory is not configured.", hostname);
-			return List.of();
-		}
-
 		return executorHelper.replayFromImage(
 			hostname,
 			emulationInputDirectory,
@@ -130,11 +125,6 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 				@Override
 				public List<List<String>> mapResponse(final String content) {
 					return SourceTable.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
-				}
-
-				@Override
-				public List<List<String>> emptyResult() {
-					return List.of();
 				}
 			}
 		);

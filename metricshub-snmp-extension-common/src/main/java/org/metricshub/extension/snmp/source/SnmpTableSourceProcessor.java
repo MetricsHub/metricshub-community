@@ -51,13 +51,12 @@ public class SnmpTableSourceProcessor {
 	/**
 	 * Fetches data from an SNMP device based on the provided {@link SnmpTableSource} connector's directive,
 	 * parses the data into a structured table format, and returns it.
-	 * If any errors occur during the fetch or processing, or if the provided configurations are invalid,
-	 * an empty {@link SourceTable} is returned.
+	 * If the request fails, the agent answers with an error, or SNMP is not configured, the source fails.
 	 *
 	 * @param snmpTableSource      The {@link SnmpTableSource} defining the SNMP OID and the SNMP columns to request.
 	 * @param connectorId          The connector identifier used for logging purposes.
 	 * @param telemetryManager     The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} containing the fetched SNMP table data, or an empty table if processing fails.
+	 * @return a {@link SourceTable} containing the fetched SNMP table data, or a failure.
 	 */
 	public SourceTable process(
 		final SnmpTableSource snmpTableSource,
@@ -85,12 +84,7 @@ public class SnmpTableSourceProcessor {
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
-			log.debug(
-				"Hostname {} - The SNMP credentials are not configured. Returning an empty table for SNMP Get Table Source {}.",
-				telemetryManager.getHostname(),
-				snmpTableSource
-			);
-			return SourceTable.empty();
+			return SourceTable.failed("SNMP Table: SNMP is not configured on the host.");
 		}
 
 		// Retrieve the hostname from the ISnmpConfiguration, otherwise from the telemetryManager
@@ -109,15 +103,10 @@ public class SnmpTableSourceProcessor {
 			return SourceTable.ofTable(result);
 		} catch (Exception e) {
 			// NOSONAR on interruption
-			LoggingHelper.logSourceError(
-				connectorId,
-				snmpTableSource.getKey(),
-				String.format("SNMP Table: %s", snmpTableSource.getOid()),
-				hostname,
-				e
-			);
+			final String request = String.format("SNMP Table: %s", snmpTableSource.getOid());
+			LoggingHelper.logSourceError(connectorId, snmpTableSource.getKey(), request, hostname, e);
 
-			return SourceTable.empty();
+			return SourceTable.failed(request, e);
 		}
 	}
 }

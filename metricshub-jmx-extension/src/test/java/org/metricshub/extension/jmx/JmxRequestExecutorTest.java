@@ -229,12 +229,25 @@ class JmxRequestExecutorTest {
 	}
 
 	@Test
-	void testFetchMBeanReturnsEmptyOnConnectionFailure() throws Exception {
+	void testFetchMBeanThrowsOnConnectionFailure() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("badhost").port(1099).timeout(30L).build();
 
 		doThrow(new IOException("Connection refused")).when(jmxRequestExecutor).connect(any(), any(), any(), any());
 
-		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
+		final IOException e = assertThrows(IOException.class, () -> fetchHeapMemoryUsage(config));
+		assertEquals("Connection refused", e.getMessage());
+		assertCounts(0, 0, 1);
+	}
+
+	/**
+	 * Fetches the HeapMemoryUsage attribute of java.lang:type=Memory.
+	 *
+	 * @param config the JMX configuration
+	 * @return the rows
+	 * @throws Exception when the request fails
+	 */
+	private List<List<String>> fetchHeapMemoryUsage(final JmxConfiguration config) throws Exception {
+		return jmxRequestExecutor.fetchMBean(
 			config,
 			"java.lang:type=Memory",
 			List.of("HeapMemoryUsage"),
@@ -242,10 +255,6 @@ class JmxRequestExecutorTest {
 			requestStats,
 			null
 		);
-
-		assertNotNull(result);
-		assertTrue(result.isEmpty());
-		assertCounts(0, 0, 1);
 	}
 
 	@Test
@@ -269,11 +278,11 @@ class JmxRequestExecutorTest {
 		assertEquals(1, result.size());
 		assertEquals("12345", result.get(0).get(0));
 
-		// A failure without stats records nothing either, and does not throw
+		// A failure without stats records nothing either
 		doThrow(new IOException("Connection refused")).when(jmxRequestExecutor).connect(any(), any(), any(), any());
-		assertTrue(
-			jmxRequestExecutor.fetchMBean(config, "java.lang:type=Runtime", List.of("Uptime"), List.of(), null, null)
-				.isEmpty()
+		assertThrows(
+			IOException.class,
+			() -> jmxRequestExecutor.fetchMBean(config, "java.lang:type=Runtime", List.of("Uptime"), List.of(), null, null)
 		);
 		assertFalse(jmxRequestExecutor.checkConnection(config, null));
 		assertTrue(requestStats.snapshot().isEmpty());
@@ -286,16 +295,7 @@ class JmxRequestExecutorTest {
 		doThrow(new SecurityException("Authentication failed! Invalid username or password")).when(jmxRequestExecutor)
 			.connect(any(), any(), any(), any());
 
-		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
-			config,
-			"java.lang:type=Memory",
-			List.of("HeapMemoryUsage"),
-			List.of(),
-			requestStats,
-			null
-		);
-
-		assertTrue(result.isEmpty());
+		assertThrows(SecurityException.class, () -> fetchHeapMemoryUsage(config));
 		assertCounts(0, 0, 1);
 	}
 
@@ -308,16 +308,7 @@ class JmxRequestExecutorTest {
 			jmxRequestExecutor
 		).connect(any(), any(), any(), any());
 
-		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
-			config,
-			"java.lang:type=Memory",
-			List.of("HeapMemoryUsage"),
-			List.of(),
-			requestStats,
-			null
-		);
-
-		assertTrue(result.isEmpty());
+		assertThrows(IOException.class, () -> fetchHeapMemoryUsage(config));
 		assertCounts(0, 1, 0);
 	}
 
@@ -329,16 +320,7 @@ class JmxRequestExecutorTest {
 			new IOException("Connection reset")
 		);
 
-		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
-			config,
-			"java.lang:type=Memory",
-			List.of("HeapMemoryUsage"),
-			List.of(),
-			requestStats,
-			null
-		);
-
-		assertTrue(result.isEmpty());
+		assertThrows(IOException.class, () -> fetchHeapMemoryUsage(config));
 		assertCounts(0, 0, 1);
 	}
 
@@ -439,11 +421,14 @@ class JmxRequestExecutorTest {
 	void testFetchMBeanMalformedPatternSendsNothing() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("testhost").port(1099).timeout(30L).build();
 
-		assertTrue(
-			jmxRequestExecutor.fetchMBean(config, "no domain separator", List.of("A"), List.of(), requestStats, null)
-				.isEmpty()
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxRequestExecutor.fetchMBean(config, "no domain separator", List.of("A"), List.of(), requestStats, null)
 		);
-		assertTrue(jmxRequestExecutor.fetchMBean(config, null, List.of("A"), List.of(), requestStats, null).isEmpty());
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxRequestExecutor.fetchMBean(config, null, List.of("A"), List.of(), requestStats, null)
+		);
 
 		verify(jmxRequestExecutor, never()).connect(any(), any(), any(), any());
 		assertTrue(requestStats.snapshot().isEmpty());
@@ -456,9 +441,9 @@ class JmxRequestExecutorTest {
 		doThrow(new MalformedURLException("Service URL contains non-ASCII character")).when(jmxRequestExecutor)
 			.connect(any(), any(), any(), any());
 
-		assertTrue(
-			jmxRequestExecutor.fetchMBean(config, "java.lang:type=Memory", List.of("A"), List.of(), requestStats, null)
-				.isEmpty()
+		assertThrows(
+			MalformedURLException.class,
+			() -> jmxRequestExecutor.fetchMBean(config, "java.lang:type=Memory", List.of("A"), List.of(), requestStats, null)
 		);
 		assertFalse(jmxRequestExecutor.checkConnection(config, requestStats));
 		assertTrue(requestStats.snapshot().isEmpty());

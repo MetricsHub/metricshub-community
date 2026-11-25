@@ -38,6 +38,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -172,7 +173,21 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 					.build();
 
 				// Process the ordered sources along with computes, based on the constructed job information.
-				processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+				try {
+					processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+				} catch (SourceFailedException e) {
+					// Logged, and stored for the sources that read it: a failed login opens no session, see opened. An
+					// afterAll is the last job of a run: its earlier tables come back, so that a job of the next run that
+					// reads one of them, and that it reads in turn, does not keep failing
+					if (!beforeAll) {
+						earlierTables.forEach((key, table) -> {
+							final SourceTable stored = namespace.getSourceTable(key);
+							if (stored != null && stored.isFailed()) {
+								namespace.addSourceTable(key, table == null ? SourceTable.empty() : table);
+							}
+						});
+					}
+				}
 
 				final long jobEndTime = System.currentTimeMillis();
 				// Set the job duration metric in the host monitor
@@ -198,9 +213,10 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 		final ConnectorNamespace namespace,
 		final Map<String, SourceTable> earlierTables
 	) {
+		// A failed table opened nothing: the failed source, or one it skipped, stored it for the readers of this run
 		final Set<String> stored = earlierTables.entrySet().stream().filter(entry -> {
 			final SourceTable table = namespace.getSourceTable(entry.getKey());
-			return table != null && table != entry.getValue();
+			return table != null && table != entry.getValue() && !table.isFailed();
 		}).map(Map.Entry::getKey).collect(Collectors.toSet());
 
 		final Set<String> needed = new HashSet<>();

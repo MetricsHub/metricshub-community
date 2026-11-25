@@ -523,8 +523,8 @@ class SimpleStrategyTest {
 		// The incremental file source of beforeAll, read by before_all_log and before_all_log_copy
 		sourceTables.put("${source::beforeAll.logLines}", "new;1");
 
-		// null_source's source(2) answered during the previous run: now the extension returns null, which arrives as an
-		// empty table, so the source is retried then given up
+		// null_source's source(2) answered during the previous run: now the extension returns null, a failure, so the
+		// source is retried then given up
 		final String nullSourceKey = "${source::monitors.null_source.simple.sources.source(2)}";
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
@@ -570,6 +570,18 @@ class SimpleStrategyTest {
 				type
 			)
 		);
+		// The discovery times stay: the untrusted runs, recorded by type, keep the hardware post discovery from reporting
+		// these monitors missing
+		assertEquals(strategyTime - 60 * 1000, staleMonitors.get("null_source").getDiscoveryTime());
+		assertEquals(strategyTime - 60 * 1000, staleMonitors.get("failed_source").getDiscoveryTime());
+		final Map<String, Long> untrustedRuns = telemetryManager.getHostProperties()
+			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
+			.getUntrustedRuns();
+		// A failed or unanswered source, or an incremental one. An empty answer is an answer: its monitors may be missing
+		List.of("failed_source", "null_source", "event_log", "log_file", "before_all_union")
+			.forEach(type -> assertEquals(strategyTime, untrustedRuns.get(type), type));
+		Stream.concat(trustedTypes.stream(), Stream.of("empty_source"))
+			.forEach(type -> assertNull(untrustedRuns.get(type), type));
 	}
 
 	@Test

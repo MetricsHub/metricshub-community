@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
@@ -77,7 +78,7 @@ class EmulationOsCommandServiceTest {
 	}
 
 	@Test
-	void testRunOsCommandNoMatchReturnsEmpty(@TempDir Path tempDir) throws Exception {
+	void testRunOsCommandNoMatchFails(@TempDir Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - command: \"echo other\"
@@ -85,16 +86,11 @@ class EmulationOsCommandServiceTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
-		final OsCommandResult result = service.runOsCommand(
-			"echo test",
-			buildTelemetryManager(tempDir.toString()),
-			null,
-			true,
-			true,
-			Map.of()
+		assertThrows(
+			ClientException.class,
+			() -> service.runOsCommand("echo test", buildTelemetryManager(tempDir.toString()), null, true, true, Map.of())
 		);
 
-		assertEquals("", result.getResult());
 	}
 
 	@Test
@@ -122,32 +118,22 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandMissingIndex(@TempDir Path tempDir) throws Exception {
-		final OsCommandResult result = service.runOsCommand(
-			"echo test",
-			buildTelemetryManager(tempDir.toString()),
-			null,
-			true,
-			true,
-			Map.of()
+		assertThrows(
+			ClientException.class,
+			() -> service.runOsCommand("echo test", buildTelemetryManager(tempDir.toString()), null, true, true, Map.of())
 		);
 
-		assertEquals("", result.getResult());
 	}
 
 	@Test
 	void testRunOsCommandMalformedYaml(@TempDir Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), "this: is: [bad", StandardCharsets.UTF_8);
 
-		final OsCommandResult result = service.runOsCommand(
-			"echo test",
-			buildTelemetryManager(tempDir.toString()),
-			null,
-			true,
-			true,
-			Map.of()
+		assertThrows(
+			ClientException.class,
+			() -> service.runOsCommand("echo test", buildTelemetryManager(tempDir.toString()), null, true, true, Map.of())
 		);
 
-		assertEquals("", result.getResult());
 	}
 
 	@Test

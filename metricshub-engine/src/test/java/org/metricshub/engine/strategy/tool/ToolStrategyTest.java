@@ -133,6 +133,28 @@ class ToolStrategyTest {
 	}
 
 	@Test
+	void testFailedSourceStopsTheToolWithItsError() {
+		final ToolStrategy strategy = newStrategy("failing", Map.of());
+
+		strategy.run();
+
+		// The copy is not run: the result is the error of the command, for the assistant
+		assertEquals(
+			"Not executed: no extension for the CommandLineSource source, or no configuration for its protocol on the host.",
+			strategy.getResult().getError()
+		);
+		// The copy is stored as failed too
+		assertEquals(
+			"Not executed: source ${source::tools.failing.sources.command} failed: Not executed: no extension for the CommandLineSource source, or no configuration for its protocol on the host.",
+			strategy.getTelemetryManager()
+				.getHostProperties()
+				.getConnectorNamespace(CONNECTOR_ID)
+				.getSourceTable("${source::tools.failing.sources.output}")
+				.getError()
+		);
+	}
+
+	@Test
 	void testRunRejectsUnknownTool() {
 		final ToolStrategy strategy = newStrategy("nope", Map.of());
 

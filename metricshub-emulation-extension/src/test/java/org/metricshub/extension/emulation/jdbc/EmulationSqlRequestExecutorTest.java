@@ -1,6 +1,7 @@
 package org.metricshub.extension.emulation.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -149,16 +150,18 @@ class EmulationSqlRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			buildTelemetryManager(tempDir.toString()),
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				buildTelemetryManager(tempDir.toString()),
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -190,77 +193,85 @@ class EmulationSqlRequestExecutorTest {
 	}
 
 	@Test
-	void testExecuteSqlReturnsEmptyWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			buildTelemetryManager(tempDir.toString()),
-			null
+	void testExecuteSqlFailsWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				buildTelemetryManager(tempDir.toString()),
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteSqlReturnsEmptyWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
+	void testExecuteSqlFailsWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), "not: [valid", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			buildTelemetryManager(tempDir.toString()),
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				buildTelemetryManager(tempDir.toString()),
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteSqlReturnsEmptyWhenMatchedResponseIsBlank(@TempDir final Path tempDir) throws Exception {
+	void testExecuteSqlFailsWhenMatchedResponseIsBlank(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: " "
 			""", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			buildTelemetryManager(tempDir.toString()),
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				buildTelemetryManager(tempDir.toString()),
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteSqlReturnsEmptyWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
+	void testExecuteSqlFailsWhenResponseFileIsMissing(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), """
 			image:
 			  - query: SELECT * FROM test_table
 			    response: missing.csv
 			""", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			buildTelemetryManager(tempDir.toString()),
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				buildTelemetryManager(tempDir.toString()),
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteSqlReturnsEmptyWhenDirectoryIsNull() throws ClientException {
+	void testExecuteSqlFailsWhenDirectoryIsNull() throws ClientException {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder()
@@ -280,20 +291,22 @@ class EmulationSqlRequestExecutorTest {
 			)
 			.build();
 
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			telemetryManager,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				telemetryManager,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteSqlReturnsEmptyWhenJdbcConfigIsNull() throws ClientException {
+	void testExecuteSqlFailsWhenJdbcConfigIsNull() throws ClientException {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder()
@@ -307,16 +320,18 @@ class EmulationSqlRequestExecutorTest {
 			)
 			.build();
 
-		final List<List<String>> result = executor.executeSql(
-			HOSTNAME,
-			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT * FROM test_table",
-			false,
-			telemetryManager,
-			null
+		assertThrows(
+			ClientException.class,
+			() -> executor.executeSql(
+				HOSTNAME,
+				JdbcConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT * FROM test_table",
+				false,
+				telemetryManager,
+				null
+			)
 		);
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test

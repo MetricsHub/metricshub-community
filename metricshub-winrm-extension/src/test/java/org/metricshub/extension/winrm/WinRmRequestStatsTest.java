@@ -307,9 +307,8 @@ class WinRmRequestStatsTest {
 		final RequestStats requestStats = new RequestStats();
 		assertEquals("output", runCommand(0, null, requestStats));
 
-		// A non-zero exit code still fails the call, as before, but the command ran: it was answered
-		final ClientException e = assertThrows(ClientException.class, () -> runCommand(1, null, requestStats));
-		assertEquals("WinRM remote command failed on host.", e.getMessage());
+		// A non-zero exit code is an answer: its output is returned, as over WMI and SSH
+		assertEquals("output", runCommand(1, null, requestStats));
 		assertEquals(List.of(2L, 0L, 0L), winRmCounts(requestStats));
 	}
 

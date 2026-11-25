@@ -66,13 +66,11 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		final String hostname = telemetryManager.getHostname();
 
 		if (source == null) {
-			log.warn("Hostname {} - Awk Source cannot be null, the Awk operation will return an empty result.", hostname);
-			return SourceTable.empty();
+			return SourceTable.failed("Malformed Awk source.");
 		}
 
 		if (!(source instanceof JawkSource jawkSource)) {
-			log.warn("Hostname {} - Awk Source is invalid, the Awk operation will return an empty result.", hostname);
-			return SourceTable.empty();
+			return SourceTable.failed("Malformed Awk source.");
 		}
 
 		final String script = jawkSource.getScript();
@@ -91,14 +89,12 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 					connectorId
 				);
 			} catch (Exception exception) {
-				log.warn("Hostname {} - Awk Operation script {} has not been set correctly.", hostname, script);
-				return SourceTable.empty();
+				return SourceTable.failed("Awk script %s: not set correctly.".formatted(script));
 			}
 		}
 
 		if (maybeEmbeddedFile.isEmpty()) {
-			log.warn("Hostname {} - Awk Operation script {} embedded file can't be found.", hostname, script);
-			return SourceTable.empty();
+			return SourceTable.failed("Awk script %s: the embedded file is not found.".formatted(script));
 		}
 
 		final EmbeddedFile embeddedFile = maybeEmbeddedFile.get();
@@ -161,7 +157,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);
-			return SourceTable.empty();
+			return SourceTable.failed("Awk script", e);
 		}
 	}
 }

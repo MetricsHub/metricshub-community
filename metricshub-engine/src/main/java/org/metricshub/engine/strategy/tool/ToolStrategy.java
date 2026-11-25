@@ -31,6 +31,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.tool.ConnectorTool;
 import org.metricshub.engine.connector.model.tool.ToolResult;
@@ -62,7 +63,8 @@ public class ToolStrategy extends AbstractStrategy {
 	private final Map<String, String> arguments;
 
 	/**
-	 * The table of the tool's result source, empty until {@link #run()} completes.
+	 * The table of the tool's result source, empty until {@link #run()} completes, or the failure of the source that
+	 * stopped the tool (see {@link SourceTable#isFailed()}).
 	 */
 	@Getter
 	private SourceTable result = SourceTable.empty();
@@ -150,14 +152,18 @@ public class ToolStrategy extends AbstractStrategy {
 			// The arguments ride on the attribute map: ${param::name} is replaced in sources and computes
 			// exactly where ${attribute::name} is
 			final List<Runnable> cursorRollbacks = new ArrayList<>();
-			processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo, cursorRollbacks);
-
-			// A cancelled tool skipped its sources: the table found would be the one of an earlier call. Its incremental
-			// sources are polled again next time, since their entries are not returned
-			result = skipMappingIfInterrupted(cursorRollbacks, connectorId, hostname)
-				? SourceTable.empty()
-				: SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
-					.orElseGet(SourceTable::empty);
+			try {
+				processSourcesAndComputes(orderedSources.getSources(), resolvedArguments, jobInfo, cursorRollbacks);
+				// A cancelled tool skipped its sources: the table found would be the one of an earlier call. Its incremental
+				// sources are polled again next time, since their entries are not returned
+				result = skipMappingIfInterrupted(cursorRollbacks, connectorId, hostname)
+					? SourceTable.empty()
+					: SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
+						.orElseGet(SourceTable::empty);
+			} catch (SourceFailedException e) {
+				// A failed source stops the tool: its error is the result
+				result = SourceTable.failed(e.getMessage());
+			}
 		} finally {
 			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that
 			// counts them, whether or not its sources succeeded or the tool was cancelled

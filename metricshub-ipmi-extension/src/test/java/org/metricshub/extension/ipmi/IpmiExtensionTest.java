@@ -314,8 +314,7 @@ class IpmiExtensionTest {
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.empty();
-		assertEquals(expected, actual);
+		assertTrue((actual).isFailed());
 	}
 
 	@Test
@@ -334,8 +333,7 @@ class IpmiExtensionTest {
 				telemetryManager
 			);
 
-			final SourceTable expected = SourceTable.empty();
-			assertEquals(expected, actual);
+			assertTrue((actual).isFailed());
 		}
 
 		{
@@ -357,10 +355,7 @@ class IpmiExtensionTest {
 
 		telemetryManager.getHostConfiguration().setConfigurations(Map.of());
 
-		assertEquals(
-			SourceTable.empty(),
-			ipmiExtension.processSource(IpmiSource.builder().build(), CONNECTOR_ID, telemetryManager)
-		);
+		assertTrue((ipmiExtension.processSource(IpmiSource.builder().build(), CONNECTOR_ID, telemetryManager)).isFailed());
 	}
 
 	@Test
@@ -411,7 +406,7 @@ class IpmiExtensionTest {
 
 		// A source that does not hold numbers is an error of the source, refused before any request
 		final IpmiRawSource bad = IpmiRawSource.builder().key("bad").netFn("x").command("1").build();
-		assertEquals(SourceTable.empty(), ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager));
+		assertTrue((ipmiExtension.processSource(bad, CONNECTOR_ID, telemetryManager)).isFailed());
 		verify(ipmiRequestExecutorMock, never()).executeIpmiRaw(HOST_NAME, configuration, bad);
 	}
 

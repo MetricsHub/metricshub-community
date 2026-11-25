@@ -1,6 +1,8 @@
 package org.metricshub.extension.emulation.wmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -15,6 +17,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.NoRecordedResponseException;
 import org.metricshub.extension.wmi.WmiConfiguration;
 
 /**
@@ -31,6 +34,14 @@ class EmulationWmiRequestExecutorTest {
 
 	private WmiEmulationConfig buildWmiEmulationConfig(final String emulationInputDir) {
 		return new WmiEmulationConfig(WmiConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir);
+	}
+
+	@Test
+	void testIsAcceptableExceptionAcceptsOnlyAMissingRecording() {
+		assertTrue(executor.isAcceptableException(new NoRecordedResponseException("No recorded WMI response.")));
+		assertTrue(executor.isAcceptableException(new ClientException("Failed", new NoRecordedResponseException("None"))));
+		assertFalse(executor.isAcceptableException(new ClientException("Timeout")));
+		assertFalse(executor.isAcceptableException(null));
 	}
 
 	@Test
@@ -136,16 +147,19 @@ class EmulationWmiRequestExecutorTest {
 			StandardCharsets.UTF_8
 		);
 
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			buildWmiEmulationConfig(tempDir.toString()),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+		final ClientException e = assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				buildWmiEmulationConfig(tempDir.toString()),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
+		assertTrue(e.getMessage().startsWith("No recorded WMI response for "), e.getMessage());
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -177,47 +191,56 @@ class EmulationWmiRequestExecutorTest {
 	}
 
 	@Test
-	void testExecuteWmiReturnsEmptyWhenDirectoryNotConfigured() throws ClientException {
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			WmiConfiguration.builder().hostname(HOSTNAME).build(),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+	void testExecuteWmiFailsWhenDirectoryNotConfigured() throws ClientException {
+		final ClientException e = assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				WmiConfiguration.builder().hostname(HOSTNAME).build(),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
+		assertTrue(e.getMessage().endsWith(": the emulation input directory is not configured."), e.getMessage());
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWmiReturnsEmptyWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			buildWmiEmulationConfig(tempDir.toString()),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+	void testExecuteWmiFailsWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
+		final ClientException e = assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				buildWmiEmulationConfig(tempDir.toString()),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
+		assertTrue(e.getMessage().contains(": index file not found: "), e.getMessage());
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	void testExecuteWmiReturnsEmptyWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWmiFailsWhenIndexIsInvalid(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(tempDir.resolve("image.yaml"), "invalid: yaml: [[[", StandardCharsets.UTF_8);
 
-		final List<List<String>> result = executor.executeWmi(
-			HOSTNAME,
-			buildWmiEmulationConfig(tempDir.toString()),
-			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
-			null,
-			null
+		final ClientException e = assertThrows(
+			ClientException.class,
+			() -> executor.executeWmi(
+				HOSTNAME,
+				buildWmiEmulationConfig(tempDir.toString()),
+				"SELECT Name FROM Win32_Process",
+				"root\\cimv2",
+				null,
+				null
+			)
 		);
+		assertTrue(e.getMessage().contains(": index parse error: "), e.getMessage());
 
-		assertTrue(result.isEmpty());
 	}
 
 	@Test

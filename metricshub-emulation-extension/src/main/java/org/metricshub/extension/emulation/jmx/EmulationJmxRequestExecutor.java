@@ -81,13 +81,7 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 		if (jmxConfiguration instanceof JmxEmulationConfig jmxEmulationConfig) {
 			emulationInputDirectory = jmxEmulationConfig.getDirectory();
 		} else {
-			log.warn("Hostname {} - JMX emulation configuration is not an emulation config.", hostname);
-			return List.of();
-		}
-
-		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
-			log.warn("Hostname {} - JMX emulation input directory is not configured.", hostname);
-			return List.of();
+			emulationInputDirectory = null;
 		}
 
 		// Convert Iterable to List for matching
@@ -143,11 +137,6 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 				@Override
 				public List<List<String>> mapResponse(final String content) {
 					return SourceTable.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
-				}
-
-				@Override
-				public List<List<String>> emptyResult() {
-					return List.of();
 				}
 			}
 		);

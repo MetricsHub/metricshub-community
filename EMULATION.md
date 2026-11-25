@@ -90,4 +90,9 @@ resources:
 
 - Use absolute paths for emulation directories to avoid ambiguity.
 - Make sure each protocol flag points to the matching protocol folder.
-- If replay returns no data, verify the expected request exists in that protocol's recorded files.
+- If a source fails with `No recorded ... response`, verify the expected request exists in that protocol's recorded files. The error of a source says why the recording cannot be read (no input directory, a missing or invalid `image.yaml`, an unreadable response file), except for HTTP and IPMI, whose reason is in the agent log.
+
+## 7) Limitations
+
+- Only the requests that answered are recorded: a request that failed (a timeout, an HTTP error status, an SQL error...) fails again when it is replayed, and so does its source.
+- The commands run through WMI or WinRM, and the `file` and `eventLog` sources, are not recorded. When replayed, their sources fail: with `continueOnFailure: false` (the default), the job of such a source stops.

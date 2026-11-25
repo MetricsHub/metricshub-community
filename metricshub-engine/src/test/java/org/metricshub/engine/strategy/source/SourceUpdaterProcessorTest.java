@@ -41,6 +41,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -230,22 +232,36 @@ class SourceUpdaterProcessorTest {
 		final String expectedResult = "concatStart:{expectedVal1}concatEnd;concatStart:{expectedVal2}concatEnd;";
 		assertEquals(expectedResult, result.getText());
 
-		// An empty or failed entry adds nothing; a table entry is read as its text
+		// A failed entry makes the source fail; an empty entry is an answer, wrapped; a table entry is read as its text
 		final SourceTable threeRows = SourceTable.ofTable(
 			Arrays.asList(Arrays.asList("1"), Arrays.asList("2"), Arrays.asList("3"))
 		);
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(ENCLOSURE_COLLECT_SOURCE_1, threeRows);
-		doReturn(SourceTable.ofText("a"), SourceTable.empty(), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
-			sourceProcessor
-		).process(any(HttpSource.class));
-		final SourceTable custom = new SourceUpdaterProcessor(
+		doReturn(SourceTable.ofText("a"), SourceTable.failed("Refused"), SourceTable.ofTable(List.of(List.of("b", "c"))))
+			.when(sourceProcessor)
+			.process(any(HttpSource.class));
+		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
 			Map.of(),
 			extensionManager
-		).process(httpSource);
-		assertEquals(SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{b;c;}concatEnd;"), custom);
+		);
+		assertEquals(SourceTable.failed("Entry [2]: Refused"), updater.process(httpSource));
+
+		// With continueOnFailure, a failed entry is skipped
+		httpSource.setContinueOnFailure(true);
+		doReturn(SourceTable.ofText("a"), SourceTable.failed("Refused"), SourceTable.ofText("")).when(sourceProcessor)
+			.process(any(HttpSource.class));
+		assertEquals(SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;"), updater.process(httpSource));
+		httpSource.setContinueOnFailure(false);
+		doReturn(SourceTable.ofText("a"), SourceTable.ofText(""), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
+			sourceProcessor
+		).process(any(HttpSource.class));
+		assertEquals(
+			SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;concatStart:{b;c;}concatEnd;"),
+			updater.process(httpSource)
+		);
 
 		// LIST keeps the text type of an http source: a table entry is converted, never dropped
 		httpSource.setExecuteForEachEntryOf(
@@ -315,6 +331,26 @@ class SourceUpdaterProcessorTest {
 		final boolean forceSerialization,
 		final Answer<SourceTable> answer
 	) {
+		return runForEachEntry(executeForEachEntryOf, sequentialHost, forceSerialization, false, answer);
+	}
+
+	/**
+	 * Run an HTTP source with {@code path: $1} for each of the 4 entries "a", "b", "c" and "d".
+	 *
+	 * @param executeForEachEntryOf The executeForEachEntryOf definition (its source is overridden)
+	 * @param sequentialHost        Whether the host is configured as sequential
+	 * @param forceSerialization    Whether the source forces serialization
+	 * @param continueOnFailure     Whether the source continues on failure
+	 * @param answer                Answer returning the result of each entry
+	 * @return The concatenated result
+	 */
+	private SourceTable runForEachEntry(
+		final ExecuteForEachEntryOf executeForEachEntryOf,
+		final boolean sequentialHost,
+		final boolean forceSerialization,
+		final boolean continueOnFailure,
+		final Answer<SourceTable> answer
+	) {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder()
@@ -338,6 +374,7 @@ class SourceUpdaterProcessorTest {
 			.url(URL)
 			.path("$1")
 			.forceSerialization(forceSerialization)
+			.continueOnFailure(continueOnFailure)
 			.executeForEachEntryOf(executeForEachEntryOf)
 			.build();
 
@@ -687,6 +724,77 @@ class SourceUpdaterProcessorTest {
 			})
 		);
 		assertEquals("boom", thrown.getMessage());
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryParallelFailedEntry() {
+		// Two workers: a fails once b runs, b and c take 200 ms, d is queued until b ends
+		final Set<String> requested = ConcurrentHashMap.newKeySet();
+		final AtomicBoolean bEnded = new AtomicBoolean();
+		final CountDownLatch bStarted = new CountDownLatch(1);
+		final Answer<SourceTable> answer = invocation -> {
+			final String entry = invocation.<HttpSource>getArgument(0).getPath();
+			requested.add(entry);
+			if ("a".equals(entry)) {
+				// Without this wait, a slow pool thread could see the failure before b sends its request
+				assertTrue(bStarted.await(5, TimeUnit.SECONDS));
+				return SourceTable.failed("Refused");
+			}
+			if ("b".equals(entry)) {
+				bStarted.countDown();
+			}
+			Thread.sleep(200);
+			bEnded.compareAndSet(false, "b".equals(entry));
+			return SourceTable.ofText("result-" + entry);
+		};
+		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
+			.source(ENCLOSURE_COLLECT_SOURCE_1)
+			.maxParallel(2)
+			.build();
+
+		// The source fails once the entries still running have ended: the queued entries send no request
+		assertEquals(
+			SourceTable.failed("Entry [a]: Refused"),
+			runForEachEntry(executeForEachEntryOf, false, false, false, answer)
+		);
+		assertTrue(bEnded.get());
+		assertFalse(requested.contains("d"));
+
+		// With continueOnFailure, the failed entry is skipped, and the result says it is partial
+		final SourceTable partial = runForEachEntry(executeForEachEntryOf, false, false, true, answer);
+		assertEquals(SourceTable.ofText("result-b\nresult-c\nresult-d"), partial);
+		assertTrue(partial.isPartial());
+	}
+
+	@Test
+	void testProcessExecuteForEachEntryParallelLaterEntryFailsFirst() {
+		// Two workers: b fails once a runs, so c and d are queued after the failure
+		final Set<String> requested = ConcurrentHashMap.newKeySet();
+		final CountDownLatch aStarted = new CountDownLatch(1);
+		final Answer<SourceTable> answer = invocation -> {
+			final String entry = invocation.<HttpSource>getArgument(0).getPath();
+			requested.add(entry);
+			if ("a".equals(entry)) {
+				aStarted.countDown();
+			}
+			if ("b".equals(entry)) {
+				assertTrue(aStarted.await(5, TimeUnit.SECONDS));
+				return SourceTable.failed("Refused");
+			}
+			Thread.sleep(300);
+			return SourceTable.ofText("result-" + entry);
+		};
+		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
+			.source(ENCLOSURE_COLLECT_SOURCE_1)
+			.maxParallel(2)
+			.build();
+
+		// The failure stops the queued entries at once, not when the coordinator reaches b after a
+		assertEquals(
+			SourceTable.failed("Entry [b]: Refused"),
+			runForEachEntry(executeForEachEntryOf, false, false, false, answer)
+		);
+		assertEquals(Set.of("a", "b"), requested);
 	}
 
 	@Test

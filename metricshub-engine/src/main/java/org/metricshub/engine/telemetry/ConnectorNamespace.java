@@ -51,11 +51,19 @@ public class ConnectorNamespace {
 	private Map<String, SourceTable> sourceTables = new ConcurrentHashMap<>();
 
 	/**
-	 * Keys of the sources that did not answer the last time they ran: they had data before and came back empty after the
-	 * retry, or their table was null. A job reading such a source through a reference does not remove monitors.
+	 * Keys of the sources that did not answer the last time they ran: they failed, or they had data before and came back
+	 * empty after the retry. A job reading such a source through a reference does not remove monitors.
 	 */
 	@Default
 	private Set<String> unansweredSourceKeys = ConcurrentHashMap.newKeySet();
+
+	/**
+	 * By monitor type, the strategy time of the last run whose job could not tell which monitors are gone: a source
+	 * failed or did not answer, the job was interrupted, or it reads an incremental source. The monitors of such a run
+	 * are neither removed nor reported missing.
+	 */
+	@Default
+	private Map<String, Long> untrustedRuns = new ConcurrentHashMap<>();
 
 	private String automaticWmiNamespace;
 	private String automaticWbemNamespace;

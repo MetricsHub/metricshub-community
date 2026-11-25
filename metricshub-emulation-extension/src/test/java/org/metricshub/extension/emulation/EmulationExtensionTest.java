@@ -230,10 +230,11 @@ class EmulationExtensionTest {
 		);
 
 		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1").build();
-		// No emulation input directory → returns an empty text
+		// No emulation input directory: the request is not executed, the source fails
 		final SourceTable result = emulationExtension.processSource(snmpSource, "connector", tm);
 
-		assertEquals(SourceTable.ofText(null), result);
+		assertTrue(result.isFailed());
+		assertTrue(result.getError().contains("Emulation input directory is not configured."), result.getError());
 	}
 
 	@Test
@@ -419,6 +420,70 @@ class EmulationExtensionTest {
 		// null criterion triggers the empty path
 		final CriterionTestResult result = emulationExtension.processCriterion(null, "connector", tm, false);
 		assertEquals(CriterionTestResult.empty(), result);
+	}
+
+	@Test
+	void testProcessCriterionWbemAutomaticNamespaceSkipsUnrecordedRequests(@TempDir Path tempDir) throws IOException {
+		// Only the requests that answered are recorded: the other interop queries and the query on root/aaa failed
+		Files.writeString(tempDir.resolve("image.yaml"), """
+			image:
+			  - request:
+			      wql: SELECT Name from CIM_Namespace
+			      namespace: root/PG_Interop
+			    response: namespaces.csv
+			  - request:
+			      wql: SELECT Name FROM EMC_StorageSystem
+			      namespace: root/emc
+			    response: system.csv
+			""", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("namespaces.csv"), "aaa;\nemc;\n", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("system.csv"), "VNX;\n", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
+		);
+		final WbemCriterion criterion = WbemCriterion.builder()
+			.query("SELECT Name FROM EMC_StorageSystem")
+			.namespace("Automatic")
+			.build();
+
+		assertTrue(emulationExtension.processCriterion(criterion, "connector", tm, false).isSuccess());
+		assertEquals("root/emc", tm.getHostProperties().getConnectorNamespace("connector").getAutomaticWbemNamespace());
+	}
+
+	@Test
+	void testProcessCriterionWmiAutomaticNamespaceSkipsUnrecordedRequests(@TempDir Path tempDir) throws IOException {
+		// The query on root/aaa failed: it is not recorded
+		Files.writeString(tempDir.resolve("image.yaml"), """
+			image:
+			  - request:
+			      wql: SELECT Name FROM __NAMESPACE
+			      namespace: root
+			    response: namespaces.csv
+			  - request:
+			      wql: SELECT Name FROM HP_Chassis
+			      namespace: root/hp
+			    response: chassis.csv
+			""", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("namespaces.csv"), "aaa;\nhp;\n", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("chassis.csv"), "Chassis;\n", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration.builder()
+					.hostname(HOSTNAME)
+					.wmi(new WmiEmulationConfig(WmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+		final WmiCriterion criterion = WmiCriterion.builder()
+			.query("SELECT Name FROM HP_Chassis")
+			.namespace("Automatic")
+			.build();
+
+		assertTrue(emulationExtension.processCriterion(criterion, "connector", tm, false).isSuccess());
+		assertEquals("root/hp", tm.getHostProperties().getConnectorNamespace("connector").getAutomaticWmiNamespace());
 	}
 
 	@Test
