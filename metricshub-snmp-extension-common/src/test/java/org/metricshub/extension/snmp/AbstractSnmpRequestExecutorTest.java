@@ -415,7 +415,7 @@ class AbstractSnmpRequestExecutorTest {
 			telemetryManager
 		);
 
-		assertEquals(SourceTable.ofTable(List.of(List.of("value"))), result);
+		assertEquals(SourceTable.ofText("value"), result);
 		assertEquals("protocol-host", executor.requestedHostname);
 		assertCounts(telemetryManager.getRequestStats(), 1, 0, 0);
 	}

@@ -101,12 +101,15 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
-		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname")).thenReturn(
-			"a;b",
-			"two\r\nlines",
-			"",
-			null
-		);
+		when(
+			snmpRequestExecutor.executeSNMPGet(
+				"test_oid",
+				snmpConfiguration,
+				"hostname",
+				true,
+				telemetryManager.getRequestStats()
+			)
+		).thenReturn("a;b", "two\r\nlines", "", null);
 
 		assertEquals(SourceTable.ofText("a;b"), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 		assertEquals(
@@ -131,11 +134,15 @@ class SnmpGetSourceProcessorTest {
 			snmpConfiguration,
 			null
 		);
-		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname")).thenReturn(
-			"a;b\nc;d",
-			"",
-			null
-		).thenThrow(new InterruptedException("Test exception"));
+		when(
+			snmpRequestExecutor.executeSNMPGet(
+				"test_oid",
+				snmpConfiguration,
+				"hostname",
+				true,
+				telemetryManager.getRequestStats()
+			)
+		).thenReturn("a;b\nc;d", "", null).thenThrow(new InterruptedException("Test exception"));
 
 		assertEquals(
 			SourceTable.ofTable(List.of(List.of("a;b\nc;d"))),
