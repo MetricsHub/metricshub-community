@@ -22,6 +22,7 @@ package org.metricshub.web.mcp.tool;
  */
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -264,20 +265,23 @@ public final class ConnectorToolCallbacks {
 	 * @return the error, each password or community of the host's configurations replaced with <code>********</code>
 	 */
 	static String withoutSecrets(final String error, final TelemetryManager telemetryManager) {
-		String result = error;
+		final Set<String> secrets = new HashSet<>();
 		for (IConfiguration configuration : telemetryManager.getHostConfiguration().getConfigurations().values()) {
 			for (String property : SECRET_PROPERTIES) {
-				String secret;
 				try {
-					secret = configuration == null ? null : configuration.getProperty(property);
+					final String secret = configuration == null ? null : configuration.getProperty(property);
+					if (secret != null && !secret.isEmpty()) {
+						secrets.add(secret);
+					}
 				} catch (RuntimeException e) {
 					// String.valueOf of a null char[]: no such secret
-					secret = null;
-				}
-				if (secret != null && !secret.isEmpty()) {
-					result = result.replace(secret, "********");
 				}
 			}
+		}
+		// The longest first: a shorter secret inside a longer one must not leave a part of the longer one
+		String result = error;
+		for (String secret : secrets.stream().sorted(Comparator.comparingInt(String::length).reversed()).toList()) {
+			result = result.replace(secret, "********");
 		}
 		return result;
 	}

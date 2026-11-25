@@ -153,6 +153,8 @@ class ConnectorToolCallbacksTest {
 	void testErrorWithoutSecrets() {
 		final IConfiguration configuration = mock(IConfiguration.class);
 		when(configuration.getProperty("password")).thenReturn("s3cr3t");
+		// A longer secret holding the shorter one
+		when(configuration.getProperty("privacypassword")).thenReturn("s3cr3t-2024");
 		// String.valueOf of a null char[]
 		when(configuration.getProperty("community")).thenThrow(new NullPointerException());
 		final TelemetryManager host = TelemetryManager.builder()
@@ -167,8 +169,11 @@ class ConnectorToolCallbacksTest {
 			.build();
 
 		assertEquals(
-			"OS command: curl -u admin:******** /x: Connection refused",
-			ConnectorToolCallbacks.withoutSecrets("OS command: curl -u admin:s3cr3t /x: Connection refused", host)
+			"OS command: curl -u admin:******** -k ******** /x: Connection refused",
+			ConnectorToolCallbacks.withoutSecrets(
+				"OS command: curl -u admin:s3cr3t -k s3cr3t-2024 /x: Connection refused",
+				host
+			)
 		);
 	}
 
