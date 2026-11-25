@@ -311,8 +311,12 @@ public abstract class AbstractStrategy implements IStrategy {
 					// sources polled are not mapped: they come again at the next poll
 					sourceTable.setFailedRun(strategyTime);
 					connectorNamespace.addSourceTable(sourceKey, sourceTable);
-					// The skipped sources fail as well: another job reading one of them must not map its table of a former run
-					for (Source skipped : sources.subList(sourceIndex + 1, sources.size())) {
+					// The skipped sources fail as well: another job reading one of them must not map its table of a former run.
+					// So do the incremental sources already polled: their cursors roll back, so their entries come again at the
+					// next poll and must not be mapped by another job now
+					final List<Source> notMapped = new ArrayList<>(sources.subList(sourceIndex + 1, sources.size()));
+					sources.subList(0, sourceIndex).stream().filter(AbstractStrategy::isIncremental).forEach(notMapped::add);
+					for (Source skipped : notMapped) {
 						final SourceTable notRun = SourceTable.failed(
 							"Not executed: source %s failed: %s".formatted(sourceKey, sourceTable.getError())
 						);

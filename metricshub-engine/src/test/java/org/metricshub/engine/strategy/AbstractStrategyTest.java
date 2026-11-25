@@ -1145,6 +1145,36 @@ class AbstractStrategyTest {
 	}
 
 	@Test
+	void testFailedSourceInvalidatesTheIncrementalSourcesPolledBeforeIt() {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final IProtocolExtension extension = mock(IProtocolExtension.class);
+		final SimpleStrategy strategy = newFailingHttpStrategy(telemetryManager, extension, mock(ClientsExecutor.class));
+		doReturn(Set.of(HttpSource.class, IpmiSelSource.class)).when(extension).getSupportedSources();
+		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;event", ";"))).when(extension)
+			.processSource(any(IpmiSelSource.class), anyString(), any());
+
+		assertEquals(
+			"HTTP GET /x: status 401",
+			strategy.processSourcesAndComputes(
+				List.of(
+					IpmiSelSource.builder().key("${source::sel}").build(),
+					HttpSource.builder().url("/x").key("${source::a}").build()
+				),
+				null,
+				SIMPLE_JOB,
+				new ArrayList<>()
+			)
+		);
+
+		// Its cursor rolls back: its entries come again at the next poll, so no job maps them now
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+		final SourceTable sel = namespace.getSourceTable("${source::sel}");
+		assertTrue(sel.isFailed());
+		assertEquals(STRATEGY_TIME, sel.getFailedRun());
+		assertTrue(namespace.getUnansweredSourceKeys().contains("${source::sel}"));
+	}
+
+	@Test
 	void testSourceThatSkippedAFailedEntryIsUnanswered() {
 		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
 		final IProtocolExtension extension = mock(IProtocolExtension.class);
