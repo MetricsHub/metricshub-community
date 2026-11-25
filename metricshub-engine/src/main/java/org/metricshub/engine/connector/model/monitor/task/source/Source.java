@@ -145,10 +145,11 @@ public abstract class Source implements Serializable {
 
 	/**
 	 * The content type this source produces, before its computes run: text for <code>http</code>, <code>file</code>,
-	 * <code>ipmi</code>, <code>commandLine</code>, <code>textUnion</code> and the <code>awk</code> source, a table for
-	 * every other source
+	 * <code>ipmi</code>, <code>commandLine</code>, <code>textUnion</code>, and the <code>snmpGet</code> and
+	 * <code>awk</code> sources without <code>output: table</code>, a table for every other source
 	 * (<code>ipmiRaw</code> included: its result is one row holding the request and the response).
-	 * A static property of the class, never a YAML field.
+	 * A static property of the class, except the <code>output</code> field of <code>snmpGet</code> and
+	 * <code>awk</code>.
 	 *
 	 * @return the output content type
 	 */

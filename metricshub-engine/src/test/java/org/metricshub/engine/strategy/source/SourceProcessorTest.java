@@ -257,7 +257,7 @@ class SourceProcessorTest {
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfiguration);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SourceTable expected = SourceTable.ofTable(Arrays.asList(Arrays.asList(ECS1_01)));
+		final SourceTable expected = SourceTable.ofText(ECS1_01);
 		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpGetSource), anyString(), any(TelemetryManager.class));
 

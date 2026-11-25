@@ -204,7 +204,7 @@ public class ContentTypeCheck {
 				finding.location(),
 				finding.expected(),
 				finding.actual(),
-				finding.rule().hint()
+				finding.hint()
 			);
 		}
 	}

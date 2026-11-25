@@ -182,7 +182,7 @@ class AbstractSnmpExtensionTest {
 			)
 		).thenReturn("value");
 		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
-		assertNotNull(result);
+		assertEquals(SourceTable.ofText("value"), result);
 	}
 
 	@Test
