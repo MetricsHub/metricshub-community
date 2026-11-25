@@ -74,6 +74,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -343,10 +344,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 		// Create the sources and the computes, then the monitors. An interrupted job did not refresh its sources: its
 		// mapping would read the tables of another run
-		boolean mapped;
+		boolean answered = false;
+		boolean mapped = false;
 		try {
 			processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
-			mapped = !skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname) &&
+			answered = !skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname);
+			mapped = answered &&
 				processSameTypeMonitors(
 					currentConnector,
 					monitorTask.getMapping(),
@@ -356,19 +359,20 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 					isDiscovery
 				);
 		} catch (SourceFailedException e) {
-			// A job stopped by a failed source keeps its monitors, as rediscovered: the hardware post discovery would
-			// report them missing
-			telemetryManager.keepMonitorsDiscoveredAt(monitorType, currentConnector.getCompiledFilename(), strategyTime);
-			mapped = false;
+			// A job stopped by a failed source maps nothing: its monitors are kept as they are, see untrustedRuns
 		}
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);
 
-		final Set<String> unansweredSourceKeys = telemetryManager.getHostProperties()
-			.getConnectorNamespace(currentConnector.getCompiledFilename())
-			.getUnansweredSourceKeys();
-		return mapped && !hasUnreliableSource(currentConnector, monitorTask, unansweredSourceKeys);
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties()
+			.getConnectorNamespace(currentConnector.getCompiledFilename());
+		final boolean reliable = answered &&
+			!hasUnreliableSource(currentConnector, monitorTask, namespace.getUnansweredSourceKeys());
+		if (!reliable) {
+			namespace.getUntrustedRuns().put(monitorType, strategyTime);
+		}
+		return mapped && reliable;
 	}
 
 	/**

@@ -21,6 +21,7 @@ package org.metricshub.hardware.strategy;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.hardware.constants.CommonConstants.PRESENT_STATUS;
 import static org.metricshub.hardware.util.HwCollectHelper.connectorHasHardwareTag;
 
@@ -37,6 +38,7 @@ import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 /**
  * Strategy responsible for executing post-discovery actions for hardware monitors.<br>
@@ -118,11 +120,36 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 			.filter(telemetryManager::isConnectorStatusOk)
 			.filter(monitor -> connectorHasHardwareTag(monitor, telemetryManager))
 			.forEach(monitor -> {
-				if (!strategyTime.equals(monitor.getDiscoveryTime())) {
-					setAsMissing(monitor, telemetryManager.getHostname(), String.format(PRESENT_STATUS, monitor.getType()));
+				final String presentMetricName = String.format(PRESENT_STATUS, monitor.getType());
+				if (strategyTime.equals(monitor.getDiscoveryTime())) {
+					setAsPresent(monitor, telemetryManager.getHostname(), presentMetricName);
+				} else if (isUntrusted(monitor)) {
+					// Its job could not tell whether it is gone: its last status stays
+					final NumberMetric presentMetric = monitor.getMetric(presentMetricName, NumberMetric.class);
+					if (presentMetric != null) {
+						presentMetric.setCollectTime(strategyTime);
+					}
 				} else {
-					setAsPresent(monitor, telemetryManager.getHostname(), String.format(PRESENT_STATUS, monitor.getType()));
+					setAsMissing(monitor, telemetryManager.getHostname(), presentMetricName);
 				}
 			});
+	}
+
+	/**
+	 * Whether the job of the given monitor's type could not tell, during this discovery, which monitors are gone: a
+	 * source failed or did not answer, or the job was interrupted.
+	 *
+	 * @param monitor The monitor
+	 * @return {@code true} if its job ran an untrusted pass during this discovery
+	 */
+	private boolean isUntrusted(final Monitor monitor) {
+		final String connectorId = monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID);
+		return (connectorId != null &&
+			strategyTime.equals(
+				telemetryManager.getHostProperties()
+					.getConnectorNamespace(connectorId)
+					.getUntrustedRuns()
+					.get(monitor.getType())
+			));
 	}
 }

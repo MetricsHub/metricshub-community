@@ -150,8 +150,8 @@ public final class ConnectorToolCallbacks {
 	 * @param definition   the advertised definition, which the arguments were checked and completed with
 	 * @param hostname     the host
 	 * @param arguments    the resolved arguments
-	 * @return the table of the tool's result source, the error text of the source that failed, or an error when the
-	 *         host is not configured, when none of its resources has the tool, or when none declares it as advertised
+	 * @return the table of the tool's result source, or an error: the error of the source that failed, or the host is
+	 *         not configured, none of its resources has the tool, or none declares it as advertised
 	 */
 	static Object run(
 		final AgentContext agentContext,
@@ -209,10 +209,10 @@ public final class ConnectorToolCallbacks {
 			.build();
 		strategy.run();
 
-		// A failed source stopped the tool: the assistant gets what failed and why, the request as the connector wrote it
-		// before its credential macros were replaced
+		// A failed source stopped the tool: the assistant gets what failed and why. The request it quotes has its ${...}
+		// references replaced, not its credential macros (%{PASSWORD}...)
 		if (strategy.getResult().isFailed()) {
-			return new ToolText(strategy.getResult().getError());
+			return QueryResponse.builder().error(strategy.getResult().getError()).build();
 		}
 		if (tool.isTextResult()) {
 			return new ToolText(strategy.getResult().asText());

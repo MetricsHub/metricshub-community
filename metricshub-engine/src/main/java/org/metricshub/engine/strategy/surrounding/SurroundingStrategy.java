@@ -176,7 +176,17 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 				try {
 					processSourcesAndComputes(orderedSources.getSources(), jobInfo);
 				} catch (SourceFailedException e) {
-					// Logged, and stored for the sources that read it: a failed login opens no session, see opened
+					// Logged, and stored for the sources that read it: a failed login opens no session, see opened. An
+					// afterAll is the last job of a run: its earlier tables come back, so that a job of the next run that
+					// reads one of them, and that it reads in turn, does not keep failing
+					if (!beforeAll) {
+						earlierTables.forEach((key, table) -> {
+							final SourceTable stored = namespace.getSourceTable(key);
+							if (stored != null && stored.isFailed()) {
+								namespace.addSourceTable(key, table == null ? SourceTable.empty() : table);
+							}
+						});
+					}
 				}
 
 				final long jobEndTime = System.currentTimeMillis();

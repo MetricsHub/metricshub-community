@@ -570,10 +570,18 @@ class SimpleStrategyTest {
 				type
 			)
 		);
-		// The job stopped by its failed source keeps its monitor as rediscovered (not reported missing); a job that ran
-		// to its mapping leaves the monitors it did not map alone
-		assertEquals(strategyTime, staleMonitors.get("null_source").getDiscoveryTime());
+		// The discovery times stay: the untrusted runs, recorded by type, keep the hardware post discovery from reporting
+		// these monitors missing
+		assertEquals(strategyTime - 60 * 1000, staleMonitors.get("null_source").getDiscoveryTime());
 		assertEquals(strategyTime - 60 * 1000, staleMonitors.get("failed_source").getDiscoveryTime());
+		final Map<String, Long> untrustedRuns = telemetryManager.getHostProperties()
+			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
+			.getUntrustedRuns();
+		// A failed or unanswered source, or an incremental one. An empty answer is an answer: its monitors may be missing
+		List.of("failed_source", "null_source", "event_log", "log_file", "before_all_union")
+			.forEach(type -> assertEquals(strategyTime, untrustedRuns.get(type), type));
+		Stream.concat(trustedTypes.stream(), Stream.of("empty_source"))
+			.forEach(type -> assertNull(untrustedRuns.get(type), type));
 	}
 
 	@Test

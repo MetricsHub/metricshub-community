@@ -88,15 +88,6 @@ public class SourceTable {
 	private String error;
 
 	/**
-	 * The run (strategy time) of the job that the failure stopped, set when the failure is stored: only a failure of
-	 * the current run makes the sources reading it fail.
-	 */
-	@Getter
-	@Setter
-	@EqualsAndHashCode.Exclude
-	private Long failedRun;
-
-	/**
 	 * Set when an <code>executeForEachEntryOf</code> that continues on failure skipped a failed entry: a missing row
 	 * then does not mean a missing entity.
 	 */

@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
@@ -54,6 +55,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
@@ -634,7 +636,7 @@ class ConnectorSessionTest {
 		assertTrue(started.isOpened());
 		assertTrue(noSource.isOpened());
 
-		// Its login failed: the failed table it stored opened nothing, so the afterAll sends no logout
+		// Its login failed: the failed table it stored opened nothing, so an interrupted run sends no logout
 		final TelemetryManager refused = newTelemetryManager(
 			true,
 			LONG_TIMEOUT,
@@ -644,6 +646,66 @@ class ConnectorSessionTest {
 		final BeforeAllStrategy failed = beforeAll(refused, A);
 		failed.run();
 		assertFalse(failed.isOpened());
+	}
+
+	@Test
+	void testDiscoveryStoppedByAFailedSourceIsAnUntrustedRun() {
+		final AtomicBoolean refuse = new AtomicBoolean();
+		final TelemetryManager telemetryManager = newTelemetryManager(
+			true,
+			LONG_TIMEOUT,
+			(connectorId, key) -> FAN_DISCOVERY.equals(key) && refuse.get() ? SourceTable.failed("timeout") : table("fan-1"),
+			A
+		);
+		discovery(telemetryManager).run();
+		assertEquals(Set.of("fan-1"), fanIds(telemetryManager));
+		final Long firstDiscoveryTime = telemetryManager.findMonitorsByType("fan")
+			.values()
+			.iterator()
+			.next()
+			.getDiscoveryTime();
+
+		refuse.set(true);
+		final DiscoveryStrategy failed = discovery(telemetryManager);
+		failed.run();
+
+		// Kept as they are, discovery time included: the hardware post discovery leaves their present status alone
+		assertEquals(Set.of("fan-1"), fanIds(telemetryManager));
+		assertEquals(
+			firstDiscoveryTime,
+			telemetryManager.findMonitorsByType("fan").values().iterator().next().getDiscoveryTime()
+		);
+		assertEquals(
+			failed.getStrategyTime(),
+			telemetryManager.getHostProperties().getConnectorNamespace(A).getUntrustedRuns().get("fan")
+		);
+	}
+
+	@Test
+	void testFailedAfterAllPutsBackItsEarlierTable() {
+		final AtomicBoolean refuse = new AtomicBoolean();
+		final TelemetryManager telemetryManager = newTelemetryManager(
+			true,
+			LONG_TIMEOUT,
+			(connectorId, key) -> refuse.get() ? SourceTable.failed("refused") : table("bye"),
+			A
+		);
+		final Supplier<AfterAllStrategy> afterAll = () -> AfterAllStrategy.builder()
+			.telemetryManager(telemetryManager)
+			.strategyTime(System.currentTimeMillis())
+			.clientsExecutor(new ClientsExecutor(telemetryManager))
+			.connector(telemetryManager.getConnectorStore().getStore().get(A))
+			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
+			.build();
+		afterAll.get().run();
+		refuse.set(true);
+		afterAll.get().run();
+
+		// The afterAll ends the run: a job of the next run reading its table must not fail for good, nor fail the afterAll
+		// in turn when the afterAll reads it
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(A);
+		assertEquals(table("bye"), namespace.getSourceTable(LOGOUT));
+		assertTrue(namespace.getUnansweredSourceKeys().contains(LOGOUT));
 	}
 
 	/**

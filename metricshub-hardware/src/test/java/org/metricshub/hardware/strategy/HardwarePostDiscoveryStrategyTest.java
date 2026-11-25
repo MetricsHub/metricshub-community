@@ -146,6 +146,53 @@ class HardwarePostDiscoveryStrategyTest {
 	}
 
 	@Test
+	void testUntrustedJobKeepsTheLastPresentStatus() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+		final Connector connector = new Connector();
+		connector.setConnectorIdentity(
+			ConnectorIdentity.builder()
+				.detection(Detection.builder().tags(Set.of("hardware")).appliesTo(Set.of(DeviceKind.WINDOWS)).build())
+				.build()
+		);
+		connectorStore.setStore(Map.of(CONNECTOR, connector));
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
+			.connectorStore(connectorStore)
+			.build();
+		StrategyTestHelper.setConnectorStatusInNamespace(true, CONNECTOR, telemetryManager);
+		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
+		final ExtensionManager extensionManager = ExtensionManager.builder().build();
+		final long previousDiscoveryTime = System.currentTimeMillis() - 60 * 60 * 1000;
+		final long discoveryTime = previousDiscoveryTime + 30 * 60 * 1000;
+		final long nextDiscoveryTime = discoveryTime + 30 * 60 * 1000;
+
+		// Discovered, then not rediscovered by a trusted pass: missing
+		final Monitor enclosureMonitor = MonitorFactory.builder()
+			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "id", MONITOR_ATTRIBUTE_NAME, "name")))
+			.discoveryTime(previousDiscoveryTime)
+			.connectorId(CONNECTOR)
+			.telemetryManager(telemetryManager)
+			.monitorType(ENCLOSURE)
+			.keys(DEFAULT_KEYS)
+			.build()
+			.createOrUpdateMonitor();
+		new HardwarePostDiscoveryStrategy(telemetryManager, previousDiscoveryTime, clientsExecutor, extensionManager).run();
+		new HardwarePostDiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager).run();
+		assertEquals(0.0, enclosureMonitor.getMetric(ENCLOSURE_PRESENT_METRIC, NumberMetric.class).getValue());
+
+		// A failed source stops the enclosure job of the next discovery: the device stays missing, not present again
+		telemetryManager.getHostProperties()
+			.getConnectorNamespace(CONNECTOR)
+			.getUntrustedRuns()
+			.put(ENCLOSURE, nextDiscoveryTime);
+		new HardwarePostDiscoveryStrategy(telemetryManager, nextDiscoveryTime, clientsExecutor, extensionManager).run();
+		final NumberMetric present = enclosureMonitor.getMetric(ENCLOSURE_PRESENT_METRIC, NumberMetric.class);
+		assertEquals(0.0, present.getValue());
+		assertEquals(nextDiscoveryTime, present.getCollectTime());
+		assertEquals(previousDiscoveryTime, enclosureMonitor.getDiscoveryTime());
+	}
+
+	@Test
 	void testRunPresentDeviceDetectionWithoutHardwareTags() {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();

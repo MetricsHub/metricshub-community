@@ -57,6 +57,14 @@ public class ConnectorNamespace {
 	@Default
 	private Set<String> unansweredSourceKeys = ConcurrentHashMap.newKeySet();
 
+	/**
+	 * By monitor type, the strategy time of the last run whose job could not tell which monitors are gone: a source
+	 * failed or did not answer, the job was interrupted, or it reads an incremental source. The monitors of such a run
+	 * are neither removed nor reported missing.
+	 */
+	@Default
+	private Map<String, Long> untrustedRuns = new ConcurrentHashMap<>();
+
 	private String automaticWmiNamespace;
 	private String automaticWbemNamespace;
 	private boolean isStatusOk;

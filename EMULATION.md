@@ -90,7 +90,7 @@ resources:
 
 - Use absolute paths for emulation directories to avoid ambiguity.
 - Make sure each protocol flag points to the matching protocol folder.
-- If a source fails with `No recorded ... response`, verify the expected request exists in that protocol's recorded files. The error of a source says why the recording cannot be read (no input directory, a missing or invalid `image.yaml`, an unreadable response file).
+- If a source fails with `No recorded ... response`, verify the expected request exists in that protocol's recorded files. The error of a source says why the recording cannot be read (no input directory, a missing or invalid `image.yaml`, an unreadable response file), except for HTTP and IPMI, whose reason is in the agent log.
 
 ## 7) Limitations
 

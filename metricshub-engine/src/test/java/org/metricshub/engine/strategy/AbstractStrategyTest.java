@@ -1110,7 +1110,6 @@ class AbstractStrategyTest {
 		// The skipped source fails too: another job reading it must not get its table of a former run
 		final SourceTable skipped = namespace.getSourceTable("${source::b}");
 		assertEquals(SourceTable.failed("Not executed: source ${source::a} failed: HTTP GET /x: status 401"), skipped);
-		assertEquals(STRATEGY_TIME, skipped.getFailedRun());
 		assertEquals(Set.of("${source::a}", "${source::b}"), namespace.getUnansweredSourceKeys());
 	}
 
@@ -1172,7 +1171,6 @@ class AbstractStrategyTest {
 		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
 		final SourceTable failed = SourceTable.failed("SNMP Table: 1.3: timeout");
-		failed.setFailedRun(STRATEGY_TIME);
 		namespace.addSourceTable("${source::a}", failed);
 		final CopySource copy = CopySource.builder().from("${source::a}").key("${source::b}").build();
 		copy.setReferences(Set.of("${source::a}"));
@@ -1197,8 +1195,9 @@ class AbstractStrategyTest {
 	}
 
 	@Test
-	void testFailureOfAnEarlierRunDoesNotPropagate() throws Exception {
-		// A collect source and an afterAll source that read each other across runs
+	void testFailedTableFailsItsReadersUntilItsSourceAnswers() throws Exception {
+		// A collect source that reads a discovery source: the collects of the cycles that follow a failed discovery run
+		// at other strategy times
 		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
 		final IProtocolExtension extension = mock(IProtocolExtension.class);
@@ -1206,10 +1205,9 @@ class AbstractStrategyTest {
 		doReturn(Set.of(HttpSource.class)).when(extension).getSupportedSources();
 		doReturn(SourceTable.failed("HTTP GET /x: status 500"), SourceTable.ofText("x")).when(extension)
 			.processSource(any(HttpSource.class), anyString(), any());
-		final HttpSource collect = HttpSource.builder().url("/x?since=${source::y}").key("${source::x}").build();
-		collect.setReferences(Set.of("/x?since=${source::y}"));
-		final CopySource afterAll = CopySource.builder().from("${source::x}").key("${source::y}").build();
-		afterAll.setReferences(Set.of("${source::x}"));
+		final HttpSource discovery = HttpSource.builder().url("/x").key("${source::x}").build();
+		final CopySource collect = CopySource.builder().from("${source::x}").key("${source::y}").build();
+		collect.setReferences(Set.of("${source::x}"));
 		final LongFunction<SimpleStrategy> run = time -> SimpleStrategy.builder()
 			.strategyTime(time)
 			.telemetryManager(telemetryManager)
@@ -1217,24 +1215,24 @@ class AbstractStrategyTest {
 			.extensionManager(ExtensionManager.builder().withProtocolExtensions(List.of(extension)).build())
 			.build();
 
-		// The collect source fails, and the afterAll source that reads it during the same run fails as well
-		final SimpleStrategy firstRun = run.apply(STRATEGY_TIME);
-		assertEquals(
-			"HTTP GET /x: status 500",
-			assertThrows(SourceFailedException.class, () -> firstRun.processSourcesAndComputes(List.of(collect), SIMPLE_JOB))
-				.getMessage()
+		assertThrows(
+			SourceFailedException.class,
+			() -> run.apply(STRATEGY_TIME).processSourcesAndComputes(List.of(discovery), SIMPLE_JOB)
 		);
-		assertEquals(
-			"${source::x} failed: HTTP GET /x: status 500",
-			assertThrows(SourceFailedException.class, () -> firstRun.processSourcesAndComputes(List.of(afterAll), SIMPLE_JOB))
-				.getMessage()
-		);
+		for (long collectTime = STRATEGY_TIME + 1; collectTime < STRATEGY_TIME + 3; collectTime++) {
+			final SimpleStrategy collectRun = run.apply(collectTime);
+			assertEquals(
+				"${source::x} failed: HTTP GET /x: status 500",
+				assertThrows(
+					SourceFailedException.class,
+					() -> collectRun.processSourcesAndComputes(List.of(collect), SIMPLE_JOB)
+				).getMessage()
+			);
+		}
 
-		// The next run sends the request of the collect source again: the failure of the afterAll source is the one of
-		// an earlier run
-		final SimpleStrategy nextRun = run.apply(STRATEGY_TIME + 1);
-		nextRun.processSourcesAndComputes(List.of(collect), SIMPLE_JOB);
-		nextRun.processSourcesAndComputes(List.of(afterAll), SIMPLE_JOB);
+		// The next discovery answers: the collect reads it again
+		run.apply(STRATEGY_TIME + 3).processSourcesAndComputes(List.of(discovery), SIMPLE_JOB);
+		run.apply(STRATEGY_TIME + 4).processSourcesAndComputes(List.of(collect), SIMPLE_JOB);
 		assertEquals(SourceTable.ofText("x"), namespace.getSourceTable("${source::y}"));
 	}
 

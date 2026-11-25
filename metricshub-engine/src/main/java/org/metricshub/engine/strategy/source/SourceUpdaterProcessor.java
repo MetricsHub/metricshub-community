@@ -38,7 +38,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
@@ -629,7 +628,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final Thread coordinator = Thread.currentThread();
 		final BooleanSupplier cancelled = ThreadHelper.cancellation();
 		// The failure of the source, in row order: the running entries are awaited
-		final AtomicReference<SourceTable> failure = new AtomicReference<>();
+		SourceTable failure = null;
 		// Set by the entry that fails, at once: the queued entries send no request
 		final AtomicBoolean entryFailed = new AtomicBoolean();
 
@@ -689,9 +688,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					continue;
 				}
 
-				failure.set(concatEntryResult(source, result, row, copy.accept(sourceProcessor)));
-				if (failure.get() != null) {
-					return failure.get();
+				failure = concatEntryResult(source, result, row, copy.accept(sourceProcessor));
+				if (failure != null) {
+					return failure;
 				}
 				if (sleep != null && sleep != 0) {
 					try {
@@ -722,12 +721,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				}
 				// After a failed entry, the entries still running end before the source fails: the afterAll may close the
 				// session they use
-				if (failure.get() == null) {
-					failure.set(concatEntryResult(source, result, pendingRows.get(i), pendingResult.get()));
+				if (failure == null) {
+					failure = concatEntryResult(source, result, pendingRows.get(i), pendingResult.get());
 				}
 			}
-			if (failure.get() != null) {
-				return failure.get();
+			if (failure != null) {
+				return failure;
 			}
 		} catch (InterruptedException e) {
 			// Future.get of a completed task does not wait
