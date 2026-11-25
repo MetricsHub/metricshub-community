@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
@@ -292,13 +293,13 @@ public class CollectStrategy extends AbstractStrategy {
 				);
 				if (singleton != null) {
 					final List<Runnable> cursorRollbacks = new ArrayList<>();
-					// A failed source stops the job: the metrics are left unset for this cycle
-					if (
-						processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo, cursorRollbacks)
-							== null &&
-							!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)
-					) {
-						processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+					try {
+						processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo, cursorRollbacks);
+						if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+							processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+						}
+					} catch (SourceFailedException e) {
+						// The metrics are left unset for this cycle
 					}
 				}
 			} else if (collect instanceof MultiInstanceCollect multiInstanceCollect) {
@@ -309,13 +310,15 @@ public class CollectStrategy extends AbstractStrategy {
 
 				// Create the sources and the computes for a connector
 				final List<Runnable> cursorRollbacks = new ArrayList<>();
-				if (
-					processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks) == null &&
-						!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)
-				) {
-					// Retrieve monitor job keys
-					final Set<String> monitorJobKeys = monitorJob.getValue().getKeys();
-					processMonitors(monitorType, multiInstanceCollect.getMapping(), currentConnector, hostname, monitorJobKeys);
+				try {
+					processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
+					if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+						// Retrieve monitor job keys
+						final Set<String> monitorJobKeys = monitorJob.getValue().getKeys();
+						processMonitors(monitorType, multiInstanceCollect.getMapping(), currentConnector, hostname, monitorJobKeys);
+					}
+				} catch (SourceFailedException e) {
+					// The metrics are left unset for this cycle
 				}
 			} else {
 				// Get monitors by type and connectorId (connector id attribute)
@@ -331,16 +334,18 @@ public class CollectStrategy extends AbstractStrategy {
 						.forEach(monitor -> {
 							// One list per monitor: each monitor polls the sources again
 							final List<Runnable> cursorRollbacks = new ArrayList<>();
-							if (
+							try {
 								processSourcesAndComputes(
 									orderedSources.getSources(),
 									monitor.getAttributes(),
 									jobInfo,
 									cursorRollbacks
-								) == null &&
-									!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)
-							) {
-								processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor);
+								);
+								if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
+									processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor);
+								}
+							} catch (SourceFailedException e) {
+								// The metrics of this monitor are left unset for this cycle
 							}
 						});
 				}

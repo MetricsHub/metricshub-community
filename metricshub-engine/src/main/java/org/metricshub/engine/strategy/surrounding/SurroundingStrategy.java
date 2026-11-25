@@ -38,6 +38,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -172,7 +173,11 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 					.build();
 
 				// Process the ordered sources along with computes, based on the constructed job information.
-				processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+				try {
+					processSourcesAndComputes(orderedSources.getSources(), jobInfo);
+				} catch (SourceFailedException e) {
+					// Logged, and stored for the sources that read it: a failed login opens no session, see opened
+				}
 
 				final long jobEndTime = System.currentTimeMillis();
 				// Set the job duration metric in the host monitor

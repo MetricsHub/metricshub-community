@@ -56,6 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.Connector;
@@ -334,26 +335,32 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			)
 			.build();
 
-		// Create the sources and the computes for a connector
 		final List<Runnable> cursorRollbacks = new ArrayList<>();
-		final String failure = processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
-
-		// Create the monitors
-		final Mapping mapping = monitorTask.getMapping();
-
 		// Only discovery metrics are flagged so that PrepareCollectStrategy refreshes their collect time on each
 		// collect cycle, as they are never re-collected. Simple tasks run on every collect cycle, so their metrics
 		// must not be flagged, otherwise a metric that is no longer collected would be exported with a stale value.
 		final boolean isDiscovery = monitorTask instanceof Discovery;
 
-		// A job stopped by a failed source keeps its monitors, as rediscovered: the hardware post discovery would report
-		// them missing. An interrupted job did not refresh its sources: its mapping would read the tables of another run
-		if (failure != null) {
+		// Create the sources and the computes, then the monitors. An interrupted job did not refresh its sources: its
+		// mapping would read the tables of another run
+		boolean mapped;
+		try {
+			processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
+			mapped = !skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname) &&
+				processSameTypeMonitors(
+					currentConnector,
+					monitorTask.getMapping(),
+					monitorType,
+					hostname,
+					monitorJob,
+					isDiscovery
+				);
+		} catch (SourceFailedException e) {
+			// A job stopped by a failed source keeps its monitors, as rediscovered: the hardware post discovery would
+			// report them missing
 			telemetryManager.keepMonitorsDiscoveredAt(monitorType, currentConnector.getCompiledFilename(), strategyTime);
+			mapped = false;
 		}
-		final boolean mapped = failure == null &&
-			!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname) &&
-			processSameTypeMonitors(currentConnector, mapping, monitorType, hostname, monitorJob, isDiscovery);
 		final long jobEndTime = System.currentTimeMillis();
 		// Set the job duration metric in the host monitor
 		setJobDurationMetric(getJobName(), monitorType, currentConnector.getCompiledFilename(), jobStartTime, jobEndTime);

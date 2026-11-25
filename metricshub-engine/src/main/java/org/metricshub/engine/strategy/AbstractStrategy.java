@@ -58,6 +58,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
+import org.metricshub.engine.common.exception.SourceFailedException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
@@ -184,10 +185,11 @@ public abstract class AbstractStrategy implements IStrategy {
 	 *
 	 * @param sources The {@link List} of {@link Source} instances we wish to execute
 	 * @param jobInfo Information about the job such as hostname, monitorType, job name and connectorName.
-	 * @return the error of the failed source that stopped the job, null when the job goes on to its mapping
+	 * @throws SourceFailedException when a failed source stopped the job
 	 */
-	protected String processSourcesAndComputes(final List<Source> sources, final JobInfo jobInfo) {
-		return processSourcesAndComputes(sources, null, jobInfo);
+	protected void processSourcesAndComputes(final List<Source> sources, final JobInfo jobInfo)
+		throws SourceFailedException {
+		processSourcesAndComputes(sources, null, jobInfo);
 	}
 
 	/**
@@ -197,14 +199,14 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param sources    The {@link List} of {@link Source} instances we wish to execute
 	 * @param attributes Key-value pairs of the monitor's attributes used in the mono instance processing
 	 * @param jobInfo    Information about the job such as hostname, monitorType, job name and connectorName.
-	 * @return the error of the failed source that stopped the job, null when the job goes on to its mapping
+	 * @throws SourceFailedException when a failed source stopped the job
 	 */
-	protected String processSourcesAndComputes(
+	protected void processSourcesAndComputes(
 		final List<Source> sources,
 		final Map<String, String> attributes,
 		final JobInfo jobInfo
-	) {
-		return processSourcesAndComputes(sources, attributes, jobInfo, new ArrayList<>());
+	) throws SourceFailedException {
+		processSourcesAndComputes(sources, attributes, jobInfo, new ArrayList<>());
 	}
 
 	/**
@@ -217,16 +219,16 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param cursorRollbacks The caller's list, to which the rollback of the cursors of each incremental source polled
 	 *                        is added: the caller runs them when it skips the mapping, see
 	 *                        {@link #skipMappingIfInterrupted(List, String, String)}
-	 * @return the error of the failed source that stopped the job (see {@link Source#isContinueOnFailure()}), null
-	 *         when the job goes on to its mapping, unless it is interrupted (see
-	 *         {@link #skipMappingIfInterrupted(List, String, String)})
+	 * @throws SourceFailedException when a failed source stopped the job (see {@link Source#isContinueOnFailure()}).
+	 *                               Otherwise the job goes on to its mapping, unless it is interrupted (see
+	 *                               {@link #skipMappingIfInterrupted(List, String, String)})
 	 */
-	protected String processSourcesAndComputes(
+	protected void processSourcesAndComputes(
 		final List<Source> sources,
 		final Map<String, String> attributes,
 		final JobInfo jobInfo,
 		final List<Runnable> cursorRollbacks
-	) {
+	) throws SourceFailedException {
 		final String connectorId = jobInfo.getConnectorId();
 		final String monitorType = jobInfo.getMonitorType();
 		final String hostname = jobInfo.getHostname();
@@ -238,7 +240,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				connectorId,
 				monitorType
 			);
-			return null;
+			return;
 		}
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
@@ -248,7 +250,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			// a session. Then a beforeAll whose caller is interrupted starts no other source
 			final boolean stop = sourceIndex > 0 ? ThreadHelper.isStopping() : isInterrupted();
 			if (stop && skipSources(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)) {
-				return null;
+				return;
 			}
 
 			final Source source = sources.get(sourceIndex);
@@ -291,7 +293,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			if (
 				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
 			) {
-				return null;
+				return;
 			}
 
 			// Remembered for the jobs that read this source through a reference, which then remove no monitor: the source
@@ -306,7 +308,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			}
 
 			if (failed && !source.isContinueOnFailure()) {
-				return stopJob(sources.subList(sourceIndex, sources.size()), sourceTable, jobInfo, cursorRollbacks);
+				throw stopJob(sources.subList(sourceIndex, sources.size()), sourceTable, jobInfo, cursorRollbacks);
 			}
 
 			// A failure is empty: with continueOnFailure, the source goes on with the empty result of its type
@@ -374,7 +376,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				if (
 					skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
 				) {
-					return null;
+					return;
 				}
 
 				// log the updated source table
@@ -393,8 +395,6 @@ public abstract class AbstractStrategy implements IStrategy {
 				.getConnectorNamespace(connectorId)
 				.addSourceTable(sourceKey, computeProcessor.getSourceTable());
 		}
-
-		return null;
 	}
 
 	/**
@@ -406,9 +406,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param failure            The failed table of the source
 	 * @param jobInfo            The job
 	 * @param cursorRollbacks    The rollbacks of the cursors of the incremental sources the job polled
-	 * @return the error of the failed source
+	 * @return the exception that stops the job, with the error of the failed source
 	 */
-	private String stopJob(
+	private SourceFailedException stopJob(
 		final List<Source> remainingSources,
 		final SourceTable failure,
 		final JobInfo jobInfo,
@@ -436,7 +436,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			connectorNamespace.getUnansweredSourceKeys().add(skipped.getKey());
 		}
 		rollBackCursors(cursorRollbacks);
-		return failure.getError();
+		return new SourceFailedException(failure.getError());
 	}
 
 	/**
