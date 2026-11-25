@@ -768,12 +768,17 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessExecuteForEachEntryParallelLaterEntryFailsFirst() {
-		// Two workers: b fails at once while a still runs, so c and d are queued after the failure
+		// Two workers: b fails once a runs, so c and d are queued after the failure
 		final Set<String> requested = ConcurrentHashMap.newKeySet();
+		final CountDownLatch aStarted = new CountDownLatch(1);
 		final Answer<SourceTable> answer = invocation -> {
 			final String entry = invocation.<HttpSource>getArgument(0).getPath();
 			requested.add(entry);
+			if ("a".equals(entry)) {
+				aStarted.countDown();
+			}
 			if ("b".equals(entry)) {
+				assertTrue(aStarted.await(5, TimeUnit.SECONDS));
 				return SourceTable.failed("Refused");
 			}
 			Thread.sleep(300);
