@@ -14,6 +14,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -69,6 +70,32 @@ class AwkTest {
 	@Test
 	void testSandboxRejectsExpression() {
 		assertThrows(AwkException.class, () -> AwkExecutor.evalAwk("system(\"echo x\")", ""));
+	}
+
+	/**
+	 * A script that exits with a code other than 0 fails with its code (#1672), whatever its output type: its error is
+	 * what the <code>exitCodes</code> of its source or compute say of that code. <code>exit</code> and
+	 * <code>exit 0</code> end the script with what it printed.
+	 */
+	@Test
+	void testExitCode() throws Exception {
+		assertEquals("a\n", AwkExecutor.executeAwk("BEGIN { print \"a\"; exit; print \"b\" }", ""));
+		assertEquals("a\n", AwkExecutor.executeAwk("BEGIN { print \"a\"; exit 0 }", ""));
+
+		final String script = "BEGIN { print \"a\"; exit 3 }";
+		final AwkExitException exit = assertThrows(AwkExitException.class, () -> AwkExecutor.executeAwk(script, ""));
+		assertEquals(3, exit.getCode());
+		assertEquals("The script exited with code 3.", exit.getMessage());
+		assertEquals("No such system (exit code 3)", exit.describe(Map.of(2, "Login refused", 3, "No such system")));
+		assertEquals("Unspecified error (exit code 3)", exit.describe(Map.of(2, "Login refused")));
+		assertEquals("Unspecified error (exit code 3)", exit.describe(null));
+		assertEquals(
+			3,
+			assertThrows(
+				AwkExitException.class,
+				() -> AwkExecutor.executeAwkToTable(script, "", AwkExecutor.getUtilityEngine(), null)
+			).getCode()
+		);
 	}
 
 	/**

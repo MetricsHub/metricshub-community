@@ -28,7 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.awk.AwkException;
 import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.AwkExitException;
 import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.awk.TableInputSource;
@@ -157,7 +159,15 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);
-			return SourceResult.failed("Awk script", e);
+			// An exit code other than 0 fails the source with what the code means
+			if (e instanceof AwkExitException exit) {
+				return SourceResult.failed("Awk script: " + exit.describe(jawkSource.getExitCodes()));
+			}
+			// A script that does not compile holds the error of the compiler as its cause. Anything else a run throws
+			// (a failed request, a runtime error) holds its error as its message, whatever its class.
+			return e instanceof AwkException
+				? SourceResult.failed("Awk script", e)
+				: SourceResult.failed("Awk script: " + e.getMessage());
 		}
 	}
 }

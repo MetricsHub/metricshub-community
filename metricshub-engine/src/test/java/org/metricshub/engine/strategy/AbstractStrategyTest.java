@@ -67,6 +67,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TextUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -1140,6 +1141,49 @@ class AbstractStrategyTest {
 		assertEquals(List.of(List.of("b", "1")), namespace.getSourceResult("${source::b}").getTable());
 		// Not reliable for the removal of the monitors
 		assertEquals(Set.of("${source::a}"), namespace.getUnansweredSourceKeys());
+	}
+
+	/**
+	 * An awk compute whose script exits with a code other than 0 fails its source (#1672): the job stops with what
+	 * the code means, or goes on with the empty result of the compute when the source continues on failure.
+	 */
+	@Test
+	void testAwkComputeExitCodeFailsTheSource() throws Exception {
+		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
+		final SimpleStrategy strategy = newFailingHttpStrategy(
+			telemetryManager,
+			mock(IProtocolExtension.class),
+			new ClientsExecutor(telemetryManager)
+		);
+		final SnmpTableSource source = SnmpTableSource.builder()
+			.oid("1.3")
+			.selectColumns("1")
+			.key("${source::b}")
+			.computes(
+				List.of(
+					Awk.builder().script("$1 == \"b\" { exit 2 }").exitCodes(Map.of(2, "No sensor")).build(),
+					Append.builder().value("default").build()
+				)
+			)
+			.build();
+		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
+
+		assertEquals(
+			"Awk compute: No sensor (exit code 2)",
+			assertThrows(SourceFailedException.class, () -> strategy.processSourcesAndComputes(List.of(source), SIMPLE_JOB))
+				.getMessage()
+		);
+		assertEquals(
+			SourceResult.failed("Awk compute: No sensor (exit code 2)"),
+			namespace.getSourceResult("${source::b}")
+		);
+		assertEquals(Set.of("${source::b}"), namespace.getUnansweredSourceKeys());
+
+		// With continueOnFailure, the next compute runs on the empty text of the awk, and the source has not answered
+		source.setContinueOnFailure(true);
+		strategy.processSourcesAndComputes(List.of(source), SIMPLE_JOB);
+		assertEquals(SourceResult.ofText("default"), namespace.getSourceResult("${source::b}"));
+		assertEquals(Set.of("${source::b}"), namespace.getUnansweredSourceKeys());
 	}
 
 	@Test

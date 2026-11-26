@@ -71,6 +71,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.AwkExitException;
 import org.metricshub.engine.awk.AwkVariableHelper;
 import org.metricshub.engine.awk.TableInputSource;
 import org.metricshub.engine.client.ClientsExecutor;
@@ -456,6 +457,10 @@ public class ComputeProcessor implements IComputeProcessor {
 
 			// The text the script printed
 			sourceResult.setText(awkResult);
+		} catch (AwkExitException e) {
+			// An exit code other than 0 fails the source with what the code means: the strategy logs it, and stops
+			// the job, or goes on when the source continues on failure
+			sourceResult = SourceResult.failed("Awk compute: " + e.describe(awk.getExitCodes()));
 		} catch (Exception e) {
 			logComputeError(connectorId, computeKey, "AWK: " + embeddedFile.description(), e, hostname);
 		}
