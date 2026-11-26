@@ -95,6 +95,14 @@ public class Awk extends Compute {
 	private ContentType output = ContentType.TEXT;
 
 	/**
+	 * What each exit code of the script means: a script that exits with a code other than 0 fails the source of the
+	 * compute, and the error of the source is the message of that code, <code>Unspecified error</code> for a code
+	 * that is not listed.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private Map<Integer, String> exitCodes = new LinkedHashMap<>();
+
+	/**
 	 * Whether the connector writes the deprecated, ignored <code>input</code> property, which the content-type check
 	 * reports. Never serialized, not part of the equality, not copied.
 	 */
@@ -148,6 +156,7 @@ public class Awk extends Compute {
 	 * @param script    The AWK script to be executed.
 	 * @param variables The variables to expose to the AWK script.
 	 * @param output    What the script produces, null for text.
+	 * @param exitCodes What each exit code of the script means.
 	 */
 	@Builder
 	@JsonCreator
@@ -155,12 +164,14 @@ public class Awk extends Compute {
 		@JsonProperty("type") String type,
 		@JsonProperty(value = "script", required = true) @NonNull String script,
 		@JsonProperty("variables") @JsonDeserialize(using = AwkVariablesDeserializer.class) Map<String, ?> variables,
-		@JsonProperty("output") ContentType output
+		@JsonProperty("output") ContentType output,
+		@JsonProperty("exitCodes") Map<Integer, String> exitCodes
 	) {
 		super(type);
 		this.script = script;
 		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
+		this.exitCodes = exitCodes == null ? new LinkedHashMap<>() : new LinkedHashMap<>(exitCodes);
 	}
 
 	/**
@@ -189,13 +200,14 @@ public class Awk extends Compute {
 		addNonNull(stringJoiner, "- script=", script);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
 		addNonNull(stringJoiner, "- output=", output == ContentType.TABLE ? output : null);
+		addNonNull(stringJoiner, "- exitCodes=", exitCodes != null && exitCodes.isEmpty() ? null : exitCodes);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Awk copy() {
-		return Awk.builder().type(type).script(script).variables(variables).output(output).build();
+		return Awk.builder().type(type).script(script).variables(variables).output(output).exitCodes(exitCodes).build();
 	}
 
 	@Override

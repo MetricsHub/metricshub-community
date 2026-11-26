@@ -235,8 +235,9 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * Execute a Snmp Get request through the context.
 	 *
 	 * @param argMap The array of arguments to use to create the {@link SnmpGetSource}.
-	 * @return The value of the OID as it is (line breaks as LF), or an empty string when the request fails. Always a
-	 *         text: an <code>output</code> in the arguments is ignored.
+	 * @return The value of the OID as it is (line breaks as LF), or an empty string when the OID has no value. Always
+	 *         a text: an <code>output</code> in the arguments is ignored. A failed request stops the script, see
+	 *         {@link #executeSource(Source)}.
 	 */
 	@JawkFunction("executeSnmpGet")
 	public String executeSnmpGetRequest(final @JawkAssocArray Map<Object, Object> argMap) {
@@ -279,13 +280,21 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	}
 
 	/**
-	 * Execute a {@link Source} through the context.
+	 * Execute a {@link Source} through the context. A request that fails stops the script: the <code>awk</code> source
+	 * fails with the error of the request, and follows its own <code>continueOnFailure</code>. A request whose
+	 * arguments hold <code>continueOnFailure: "true"</code> returns an empty string instead, for a script that skips
+	 * a failed item and goes on with the others.
 	 *
 	 * @param source The {@link Source} to execute.
 	 * @return The table result from the execution of the {@link Source}.
+	 * @throws IllegalStateException when the request failed and its <code>continueOnFailure</code> is not set
 	 */
 	public String executeSource(final Source source) {
 		final SourceResult sourceResult = source.accept(sourceProcessor);
+
+		if (sourceResult != null && sourceResult.isFailed() && !source.isContinueOnFailure()) {
+			throw new IllegalStateException(sourceResult.getError());
+		}
 
 		if (sourceResult != null && !sourceResult.isEmpty()) {
 			return sourceResult.getContentType() == ContentType.TEXT

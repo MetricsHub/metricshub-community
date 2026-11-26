@@ -34,6 +34,7 @@ class AwkComputeDeserializerTest extends DeserializerTest {
 				.variables(
 					new LinkedHashMap<>(Map.of("FS", ";", "someConstant", "365.25", "aTable", "${source::beforeAll.otherSource}"))
 				)
+				.exitCodes(Map.of(2, "Permission denied"))
 				.build()
 		);
 

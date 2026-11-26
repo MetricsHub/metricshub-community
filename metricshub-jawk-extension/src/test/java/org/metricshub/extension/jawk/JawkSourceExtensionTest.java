@@ -546,6 +546,39 @@ class JawkSourceExtensionTest {
 	}
 
 	/**
+	 * The awk source fails with the error of a request of its script that failed, and with what its
+	 * <code>exitCodes</code> say of the code of a script that exits with a code other than 0 (#1672).
+	 */
+	@Test
+	void testProcessSourceFailsWithItsScript() {
+		final TelemetryManager telemetryManager = buildTelemetryManager(SourceResult.ofText("unused"));
+		when(sourceProcessorMock.process(any(HttpSource.class))).thenReturn(
+			SourceResult.failed("HTTP GET /a: Connection refused")
+		);
+		final JawkSource source = JawkSource.builder()
+			.type("awk")
+			.script("BEGIN { args[\"method\"] = \"get\"; args[\"path\"] = \"/a\"; print executeHttpRequest(args) }")
+			.build();
+
+		assertEquals(
+			SourceResult.failed("Awk script: HTTP GET /a: Connection refused"),
+			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
+		source.setScript("BEGIN { print \"partial\"; exit 3 }");
+		assertEquals(
+			SourceResult.failed("Awk script: Unspecified error (exit code 3)"),
+			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+
+		source.setExitCodes(Map.of(3, "Login refused"));
+		assertEquals(
+			SourceResult.failed("Awk script: Login refused (exit code 3)"),
+			new JawkSourceExtension().processSource(source, CONNECTOR_ID, telemetryManager, sourceProcessorMock)
+		);
+	}
+
+	/**
 	 * The awk source runs in the Jawk sandbox: a script that runs a command is rejected and gives an empty result.
 	 */
 	@Test

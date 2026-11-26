@@ -27,6 +27,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
 import io.jawk.AwkProgram;
+import io.jawk.ExitException;
 import io.jawk.SandboxedAwk;
 import io.jawk.ext.GawkExtension;
 import io.jawk.ext.JawkExtension;
@@ -254,7 +255,7 @@ public class AwkExecutor {
 		try {
 			return runBuilder.execute();
 		} catch (Exception e) {
-			throw new RuntimeException(e.getMessage());
+			throw failure(e);
 		}
 	}
 
@@ -281,7 +282,7 @@ public class AwkExecutor {
 		try {
 			return runBuilder.execute();
 		} catch (Exception e) {
-			throw new RuntimeException(e.getMessage());
+			throw failure(e);
 		}
 	}
 
@@ -346,9 +347,23 @@ public class AwkExecutor {
 		try {
 			runBuilder.execute(sink);
 		} catch (Exception e) {
-			throw new RuntimeException(e.getMessage());
+			throw failure(e);
 		}
 		return sink.getRows();
+	}
+
+	/**
+	 * The failure of a script run, whose message is the error of the source. A script that exits with a code other
+	 * than 0 fails with an {@link AwkExitException} that holds the code (Jawk gives no exception for <code>exit</code>
+	 * or <code>exit 0</code>).
+	 *
+	 * @param e What the run threw
+	 * @return the exception to throw
+	 */
+	private static RuntimeException failure(final Exception e) {
+		return e instanceof ExitException exit
+			? new AwkExitException(exit.getCode())
+			: new RuntimeException(e.getMessage());
 	}
 
 	/**
