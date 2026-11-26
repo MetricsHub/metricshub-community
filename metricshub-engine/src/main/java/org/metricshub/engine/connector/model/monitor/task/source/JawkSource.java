@@ -105,6 +105,14 @@ public class JawkSource extends Source {
 	private ContentType output = ContentType.TEXT;
 
 	/**
+	 * What each exit code of the script means: a script that exits with a code other than 0 fails the source, and
+	 * the error of the source is the message of that code, <code>Unspecified error</code> for a code that is not
+	 * listed.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private Map<Integer, String> exitCodes = new LinkedHashMap<>();
+
+	/**
 	 * Whether the connector writes the deprecated, ignored <code>inputFormat</code> property, which the content-type
 	 * check reports. Never serialized, not part of the equality, not copied.
 	 */
@@ -153,6 +161,7 @@ public class JawkSource extends Source {
 	 * @param input                 The input on which to execute the JAWK task.
 	 * @param variables             The variables to expose to the JAWK script.
 	 * @param output                What the script produces, null for text.
+	 * @param exitCodes             What each exit code of the script means.
 	 */
 	@Builder
 	@JsonCreator
@@ -168,13 +177,15 @@ public class JawkSource extends Source {
 		@JsonProperty(value = "variables") @JsonDeserialize(
 			using = AwkVariablesDeserializer.class
 		) final Map<String, ?> variables,
-		@JsonProperty(value = "output") final ContentType output
+		@JsonProperty(value = "output") final ContentType output,
+		@JsonProperty(value = "exitCodes") final Map<Integer, String> exitCodes
 	) {
 		super(type, computes, forceSerialization, continueOnFailure, key, executeForEachEntryOf);
 		this.script = script;
 		this.input = input;
 		this.variables = variables == null ? new LinkedHashMap<>() : AwkVariablesDeserializer.copy(variables);
 		this.output = output == null ? ContentType.TEXT : output;
+		this.exitCodes = exitCodes == null ? new LinkedHashMap<>() : new LinkedHashMap<>(exitCodes);
 	}
 
 	@Override
@@ -190,6 +201,7 @@ public class JawkSource extends Source {
 			.input(input)
 			.variables(variables)
 			.output(output)
+			.exitCodes(exitCodes)
 			.build();
 	}
 
@@ -236,6 +248,7 @@ public class JawkSource extends Source {
 		addNonNull(stringJoiner, "- script=", script);
 		addNonNull(stringJoiner, "- input=", input);
 		addNonNull(stringJoiner, "- variables=", variables != null && variables.isEmpty() ? null : variables);
+		addNonNull(stringJoiner, "- exitCodes=", exitCodes != null && exitCodes.isEmpty() ? null : exitCodes);
 
 		return stringJoiner.toString();
 	}

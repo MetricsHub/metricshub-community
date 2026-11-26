@@ -32,6 +32,7 @@ class JawkSourceDeserializerTest extends DeserializerTest {
 					.script("scriptTest")
 					.input("inputTest")
 					.variables(new LinkedHashMap<>(Map.of("FS", ";", "aTable", "${source::beforeAll.otherSource}")))
+					.exitCodes(Map.of(2, "Login refused", 3, "No such system"))
 					.build()
 			)
 		);

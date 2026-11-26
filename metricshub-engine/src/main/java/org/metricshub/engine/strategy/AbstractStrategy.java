@@ -373,6 +373,27 @@ public abstract class AbstractStrategy implements IStrategy {
 					return;
 				}
 
+				// A compute that leaves a failed result fails its source, as a source that fails does: the job stops, or
+				// goes on with the empty result of that compute when the source continues on failure
+				final SourceResult computed = computeProcessor.getSourceResult();
+				if (computed.isFailed()) {
+					connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
+					if (!source.isContinueOnFailure()) {
+						throw stopJob(sources.subList(sourceIndex, sources.size()), computed, jobInfo, cursorRollbacks);
+					}
+					log.warn(
+						"Hostname {} - Compute {} failed: {} - Connector {} - Monitor {}. Continuing with an empty result.",
+						hostname,
+						computeKey,
+						computed.getError(),
+						connectorId,
+						monitorType
+					);
+					computeProcessor.setSourceResult(
+						compute.getOutputContentType() == ContentType.TEXT ? SourceResult.ofText(null) : SourceResult.empty()
+					);
+				}
+
 				// log the updated source table
 				logSourceResult(
 					DEFAULT_SOURCE_RESULT_LOGGING_PROXY,

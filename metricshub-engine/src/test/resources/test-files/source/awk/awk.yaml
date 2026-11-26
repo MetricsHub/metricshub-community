@@ -10,3 +10,6 @@ beforeAll:
     variables:
       FS: ";"
       aTable: ${source::beforeAll.otherSource}
+    exitCodes:
+      2: Login refused
+      "3": No such system

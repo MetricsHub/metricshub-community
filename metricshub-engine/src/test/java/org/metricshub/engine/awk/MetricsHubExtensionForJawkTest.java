@@ -625,6 +625,58 @@ class MetricsHubExtensionForJawkTest {
 	}
 
 	/**
+	 * A failed request stops the script with the error of the request (#1672). A request whose arguments hold
+	 * <code>continueOnFailure: "true"</code> returns an empty string instead, and the script goes on.
+	 */
+	@Test
+	void testFailedRequestStopsTheScript() throws Exception {
+		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
+		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(
+			SourceResult.failed("HTTP GET /a: Connection refused")
+		);
+		when(sourceProcessor.process(any(IpmiSource.class))).thenReturn(SourceResult.failed("IPMI: no answer"));
+		final String script = """
+			BEGIN {
+				request["method"] = "get"
+				request["path"] = "/a"
+				if (skip) {
+					request["continueOnFailure"] = "true"
+				}
+				printf "[%s]", executeHttpRequest(request)
+				printf "[%s]", executeIpmiRequest()
+			}
+			""";
+
+		assertEquals(
+			"HTTP GET /a: Connection refused",
+			assertThrows(
+				RuntimeException.class,
+				() -> AwkExecutor.executeAwk(script, "", engine(sourceProcessor), Map.of("skip", 0))
+			).getMessage()
+		);
+		// The request that continues on failure is skipped, the next one stops the script
+		assertEquals(
+			"IPMI: no answer",
+			assertThrows(
+				RuntimeException.class,
+				() -> AwkExecutor.executeAwk(script, "", engine(sourceProcessor), Map.of("skip", 1))
+			).getMessage()
+		);
+		verify(sourceProcessor, Mockito.times(2)).process(any(HttpSource.class));
+		verify(sourceProcessor).process(any(IpmiSource.class));
+
+		final String skipping = """
+			BEGIN {
+				request["method"] = "get"
+				request["path"] = "/a"
+				request["continueOnFailure"] = "true"
+				printf "[%s] next", executeHttpRequest(request)
+			}
+			""";
+		assertEquals("[] next", AwkExecutor.executeAwk(skipping, "", engine(sourceProcessor), null));
+	}
+
+	/**
 	 * <code>asorti(a, a)</code> sorts the array in place.
 	 */
 	@Test

@@ -14,3 +14,5 @@ beforeAll:
           FS: ";"
           someConstant: "365.25"
           aTable: ${source::beforeAll.otherSource}
+        exitCodes:
+          2: Permission denied
