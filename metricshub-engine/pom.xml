@@ -40,10 +40,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.metricshub</groupId>
-			<artifactId>tablejoin</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.metricshub</groupId>
 			<artifactId>jflat</artifactId>
 		</dependency>
 		<dependency>

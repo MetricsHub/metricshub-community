@@ -121,7 +121,8 @@ class SourceTest {
 			forceSerialization: false
 			leftTable: ${source::monitors.cpu.discovery.sources.source1}
 			rightTable: ${source::monitors.cpu.discovery.sources.source2}
-			defaultRightLine: [ "", "", "", "", "", "" ]
+			joinType: left
+			rightColumns: 6
 			keyType: WBEM
 			leftKeyColumn: 1
 			rightKeyColumn: 2

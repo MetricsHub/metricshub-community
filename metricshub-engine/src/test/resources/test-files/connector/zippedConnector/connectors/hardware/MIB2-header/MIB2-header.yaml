@@ -51,7 +51,8 @@ monitors:
           rightTable: "${source::monitors.network.discovery.sources.source(2)}"
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "", "" ]
+          joinType: left
+          rightColumns: 3
     collect:
       # Collect type = multi-instance
       type: multiInstance
@@ -139,7 +140,8 @@ monitors:
           rightTable: ${source::monitors.network.collect.sources.source(2)}
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "", "", "", "", "" ]
+          joinType: left
+          rightColumns: 6
           computes:
             # Now add MSHW to the Left and Right of the ifMIBObjects SpeedMBS
             # PortID;Description;SpeedMBps;PATROLStatus;StatusInformation;LinkStatus;ReceivedBytes;ReceivedPackets;ReceivedNonUnicastPackets;TotalErrors;TransmittedBytes;TransmittedPackets;TransmittedNonUnicastPackets;TransmittedErrors;PortID;SpeedMBs;

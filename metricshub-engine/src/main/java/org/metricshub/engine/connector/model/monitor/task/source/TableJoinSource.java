@@ -100,8 +100,20 @@ public class TableJoinSource extends Source {
 	private Integer rightKeyColumn;
 
 	/**
-	 * The cells of the default line for right table entries when there is no match, a YAML list: exactly these cells,
-	 * <code>[ "", "" ]</code> being two empty cells. Null when the join has no default line.
+	 * The rows the join keeps, {@link JoinType#INNER} by default.
+	 */
+	private JoinType joinType;
+
+	/**
+	 * The number of empty cells on the right side of an unmatched left row, for a {@link JoinType#LEFT} join. Null when
+	 * the right side is the default right line, or as many empty cells as the widest right row.
+	 */
+	@JsonDeserialize(using = PositiveIntegerDeserializer.class)
+	private Integer rightColumns;
+
+	/**
+	 * The cells of the right side of an unmatched left row, for a {@link JoinType#LEFT} join, a YAML list: exactly
+	 * these cells. Null when the join has no default right line.
 	 */
 	private List<String> defaultRightLine;
 
@@ -122,8 +134,10 @@ public class TableJoinSource extends Source {
 	 * @param rightTable           The right table to join, in the same forms as the left table.
 	 * @param leftKeyColumn        The column index from the left table to use as the key for the join.
 	 * @param rightKeyColumn       The column index from the right table to use as the key for the join.
-	 * @param defaultRightLine     The cells of the default line for right table entries when there is no match.
-	 * @param keyType              The type of key used for the join.
+	 * @param joinType             The rows the join keeps, {@link JoinType#INNER} when null.
+	 * @param rightColumns         The number of empty cells on the right side of an unmatched left row.
+	 * @param defaultRightLine     The cells of the right side of an unmatched left row.
+	 * @param keyType             The type of key used for the join.
 	 * @param key                  The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 */
@@ -142,6 +156,8 @@ public class TableJoinSource extends Source {
 		) Object rightTable,
 		@JsonProperty(value = "leftKeyColumn", required = true) Integer leftKeyColumn,
 		@JsonProperty(value = "rightKeyColumn", required = true) Integer rightKeyColumn,
+		@JsonProperty("joinType") JoinType joinType,
+		@JsonProperty("rightColumns") Integer rightColumns,
 		@JsonProperty("defaultRightLine") @JsonDeserialize(using = CellsDeserializer.class) List<String> defaultRightLine,
 		@JsonProperty("keyType") String keyType,
 		@JsonProperty("key") String key,
@@ -160,9 +176,35 @@ public class TableJoinSource extends Source {
 		}
 		this.leftKeyColumn = leftKeyColumn;
 		this.rightKeyColumn = rightKeyColumn;
+		this.joinType = joinType != null ? joinType : JoinType.INNER;
+		requireJoinType("rightColumns", rightColumns);
+		requireJoinType("defaultRightLine", defaultRightLine);
+		if (rightColumns != null && rightColumns < 1) {
+			throw new IllegalArgumentException("rightColumns must be 1 or more, got %d.".formatted(rightColumns));
+		}
+		if (rightColumns != null && defaultRightLine != null) {
+			throw new IllegalArgumentException(
+				"rightColumns and defaultRightLine both describe the right side of an unmatched row: write one of them."
+			);
+		}
+		this.rightColumns = rightColumns;
 		// A mutable copy: update(UnaryOperator) changes the cells of the copy
 		this.defaultRightLine = defaultRightLine != null ? new ArrayList<>(defaultRightLine) : null;
 		this.keyType = keyType;
+	}
+
+	/**
+	 * Reject a property of the right side of an unmatched row on an inner join, which has no unmatched row: ignored, a
+	 * connector written for an engine without <code>joinType</code>, whose <code>defaultRightLine</code> made the join
+	 * a left join, would run an inner join.
+	 *
+	 * @param property The name of the property
+	 * @param value    The value of the property, null when it is not set
+	 */
+	private void requireJoinType(final String property, final Object value) {
+		if (value != null && joinType == JoinType.INNER) {
+			throw new IllegalArgumentException("%s requires joinType: left, the join type is inner.".formatted(property));
+		}
 	}
 
 	@Override
@@ -178,6 +220,8 @@ public class TableJoinSource extends Source {
 			.rightTable(rightTableRows != null ? rightTableRows : rightTable)
 			.leftKeyColumn(leftKeyColumn)
 			.rightKeyColumn(rightKeyColumn)
+			.joinType(joinType)
+			.rightColumns(rightColumns)
 			.defaultRightLine(defaultRightLine)
 			.keyType(keyType)
 			.build();
@@ -211,6 +255,8 @@ public class TableJoinSource extends Source {
 		addNonNull(stringJoiner, "- rightTable=", rightTableRows);
 		addNonNull(stringJoiner, "- leftKeyColumn=", leftKeyColumn);
 		addNonNull(stringJoiner, "- rightKeyColumn=", rightKeyColumn);
+		addNonNull(stringJoiner, "- joinType=", joinType);
+		addNonNull(stringJoiner, "- rightColumns=", rightColumns);
 		addNonNull(stringJoiner, "- defaultRightLine=", defaultRightLine);
 		addNonNull(stringJoiner, "- keyType=", keyType);
 

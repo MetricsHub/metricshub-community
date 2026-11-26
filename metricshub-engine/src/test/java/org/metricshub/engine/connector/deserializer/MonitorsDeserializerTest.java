@@ -19,6 +19,7 @@ import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.connector.model.monitor.task.MonoInstanceCollect;
 import org.metricshub.engine.connector.model.monitor.task.MultiInstanceCollect;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
+import org.metricshub.engine.connector.model.monitor.task.source.JoinType;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
@@ -98,7 +99,8 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(1)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(List.of("", ""))
+					.joinType(JoinType.LEFT)
+					.rightColumns(2)
 					.key("${source::monitors.enclosure.discovery.sources.source(6)}")
 					.build(),
 				"source(7)",
@@ -109,7 +111,8 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(5)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(List.of("", "", "", ""))
+					.joinType(JoinType.LEFT)
+					.rightColumns(4)
 					.key("${source::monitors.enclosure.discovery.sources.source(7)}")
 					.build()
 			)
@@ -294,7 +297,8 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(1)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(List.of("", ""))
+					.joinType(JoinType.LEFT)
+					.rightColumns(2)
 					.key("${source::monitors.enclosure.simple.sources.source(6)}")
 					.build(),
 				"source(7)",
@@ -305,7 +309,8 @@ class MonitorsDeserializerTest extends DeserializerTest {
 					.leftKeyColumn(5)
 					.rightKeyColumn(1)
 					.keyType("WBEM")
-					.defaultRightLine(List.of("", "", "", ""))
+					.joinType(JoinType.LEFT)
+					.rightColumns(4)
 					.key("${source::monitors.enclosure.simple.sources.source(7)}")
 					.build()
 			)

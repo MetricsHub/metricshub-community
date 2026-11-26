@@ -39,7 +39,8 @@ beforeAll:
     leftKeyColumn: 1
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: [ "", "" ]
+    joinType: left
+    rightColumns: 2
   source(7):
     type: tableJoin
     leftTable: ${source::beforeAll.source(6)}
@@ -47,7 +48,8 @@ beforeAll:
     leftKeyColumn: 5
     rightKeyColumn: 1
     keyType: WBEM
-    defaultRightLine: [ "", "", "", "" ]
+    joinType: left
+    rightColumns: 4
 
 monitors:
   enclosure:

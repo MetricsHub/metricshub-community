@@ -42,6 +42,15 @@ public class PositiveIntegerDeserializer extends JsonDeserializer<Integer> {
 
 		final String str = parser.getValueAsString();
 		if (str == null) {
+			// A list or a map left unread would end the object being read: the properties after it would be lost
+			if (parser.isExpectedStartArrayToken() || parser.isExpectedStartObjectToken()) {
+				throw new InvalidFormatException(
+					parser,
+					String.format("Invalid value encountered for property '%s'. Expected an integer.", key),
+					null,
+					Integer.class
+				);
+			}
 			return null;
 		}
 

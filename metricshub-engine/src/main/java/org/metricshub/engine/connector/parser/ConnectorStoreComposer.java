@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.parser;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.identity.ConnectorDefaultVariable;
+import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
 import org.metricshub.engine.connector.update.ContentTypeCheck;
 
@@ -148,8 +150,7 @@ public class ConnectorStoreComposer {
 						// Add all the resulting connectors in the connector store
 						connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
 					} catch (IOException e) {
-						log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
-						log.debug(EXCEPTION_MESSAGE, e);
+						logLoadError(connectorId, e);
 					}
 				}
 			});
@@ -212,8 +213,7 @@ public class ConnectorStoreComposer {
 			try {
 				connectors.put(connectorId, parseConnector(processedIntermediateConnector));
 			} catch (IOException e) {
-				log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
-				log.debug(EXCEPTION_MESSAGE + e);
+				logLoadError(connectorId, e);
 			}
 		});
 		return connectors;
@@ -452,6 +452,53 @@ public class ConnectorStoreComposer {
 		// A connector that breaks the strict content types (#1560) does not load
 		ContentTypeCheck.validate(connector, intermediateConnector.getConnectorId());
 
+		emptyDefaultRightLines(connector, intermediateConnector.getConnectorId()).forEach(log::warn);
+
 		return connector;
+	}
+
+	/**
+	 * Logs why a connector does not load. A deserialization error says why at ERROR, for instance a
+	 * <code>defaultRightLine</code> without <code>joinType: left</code>; the content type check has already logged
+	 * each of its findings at ERROR.
+	 *
+	 * @param connectorId The identifier of the connector
+	 * @param e           The error
+	 */
+	private static void logLoadError(final String connectorId, final IOException e) {
+		if (e instanceof JsonProcessingException jsonException) {
+			log.error("Error while deserializing connector {}: {}", connectorId, jsonException.getOriginalMessage());
+		} else {
+			log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
+		}
+		log.debug(EXCEPTION_MESSAGE, e);
+	}
+
+	/**
+	 * Recommends <code>rightColumns</code> for each <code>tableJoin</code> whose <code>defaultRightLine</code> has only
+	 * empty cells: the number of cells says the same, and is read at a glance.
+	 *
+	 * @param connector   The connector
+	 * @param connectorId The identifier of the connector
+	 * @return one message per such <code>tableJoin</code>, in source order
+	 */
+	public static List<String> emptyDefaultRightLines(final Connector connector, final String connectorId) {
+		final List<String> messages = new ArrayList<>();
+		ContentTypeCheck.forEachSource(connector, source -> {
+			if (
+				source instanceof TableJoinSource join &&
+					join.getDefaultRightLine() != null &&
+					join.getDefaultRightLine().stream().allMatch(String::isEmpty)
+			) {
+				messages.add(
+					"Connector %s - Source %s: defaultRightLine has only empty cells, write rightColumns: %d instead.".formatted(
+						connectorId,
+						join.getKey(),
+						join.getDefaultRightLine().size()
+					)
+				);
+			}
+		});
+		return messages;
 	}
 }
