@@ -373,8 +373,8 @@ public abstract class AbstractStrategy implements IStrategy {
 					return;
 				}
 
-				// An awk compute whose script exited with a code other than 0 failed the source: the job stops, or goes
-				// on with the empty result of that compute when the source continues on failure
+				// A compute that leaves a failed result fails its source, as a source that fails does: the job stops, or
+				// goes on with the empty result of that compute when the source continues on failure
 				final SourceResult computed = computeProcessor.getSourceResult();
 				if (computed.isFailed()) {
 					connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
