@@ -44,7 +44,7 @@ import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.RetryOperation;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
@@ -136,7 +136,7 @@ public class HttpRequestExecutor {
 	 * @return The text, or a failure.
 	 */
 	@WithSpan("HTTP")
-	public SourceTable executeHttpSource(
+	public SourceResult executeHttpSource(
 		@SpanAttribute("http.config") @NonNull HttpRequest httpRequest,
 		final boolean logMode,
 		final TelemetryManager telemetryManager
@@ -147,15 +147,15 @@ public class HttpRequestExecutor {
 			response = execute(httpRequest, logMode, telemetryManager, resultContent);
 		} catch (UncheckedIOException e) {
 			// Why: a refused connection, a timeout, an unknown host, a TLS error
-			return SourceTable.failed("No response", e.getCause());
+			return SourceResult.failed("No response", e.getCause());
 		}
 		if (response == null) {
-			return SourceTable.failed("No response.");
+			return SourceResult.failed("No response.");
 		}
 		if (isRefused(response, resultContent)) {
-			return SourceTable.failed("The server answered with the status " + response.statusCode() + ".");
+			return SourceResult.failed("The server answered with the status " + response.statusCode() + ".");
 		}
-		return SourceTable.ofText(response.toText(resultContent));
+		return SourceResult.ofText(response.toText(resultContent));
 	}
 
 	/**

@@ -21,30 +21,28 @@ package org.metricshub.engine.strategy;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.metricshub.engine.strategy.source.SourceTable;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Proxy that formats a {@link SourceTable} result for logging.
- * Allows source-type-specific handling (e.g. FileSource: summary only; others: full table).
- */
-public interface SourceTableLoggingProxy {
-	/**
-	 * Produces the log message for this source table result.
-	 *
-	 * @param operationTag       e.g. "source" or "compute"
-	 * @param executionClassName e.g. "FileSource"
-	 * @param executionKey       source or compute key
-	 * @param connectorId        connector identifier
-	 * @param sourceTable        the result (may be large for file sources)
-	 * @param hostname           hostname
-	 * @return the message to log (never null)
-	 */
-	String formatForLog(
-		String operationTag,
-		String executionClassName,
-		String executionKey,
-		String connectorId,
-		SourceTable sourceTable,
-		String hostname
-	);
+import org.junit.jupiter.api.Test;
+import org.metricshub.engine.strategy.source.SourceResult;
+
+class DefaultSourceResultLoggingProxyTest {
+
+	private static final String OPERATION_TAG = "collect";
+	private static final String CONNECTOR_ID = "conn-1";
+	private static final String HOSTNAME = "host-1";
+
+	private final DefaultSourceResultLoggingProxy proxy = new DefaultSourceResultLoggingProxy();
+
+	@Test
+	void formatForLogReturnsFullMessageWithRawData() {
+		SourceResult sourceResult = SourceResult.ofText("full raw content");
+
+		String result = proxy.formatForLog(OPERATION_TAG, "OtherSource", "key1", CONNECTOR_ID, sourceResult, HOSTNAME);
+
+		assertNotNull(result);
+		assertTrue(result.contains("full raw content"));
+		assertTrue(result.contains("Raw result:"));
+	}
 }

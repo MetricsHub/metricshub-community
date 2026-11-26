@@ -53,7 +53,7 @@ import org.metricshub.engine.deserialization.TimeDeserializer;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
@@ -160,13 +160,13 @@ public class IpmiExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		final IpmiConfiguration ipmiConfiguration = (IpmiConfiguration) telemetryManager.getHostConfiguration()
 			.getConfigurations()
 			.get(IpmiConfiguration.class);
 
 		if (ipmiConfiguration == null) {
-			return SourceTable.failed("IPMI-over-LAN: IPMI is not configured on the host.");
+			return SourceResult.failed("IPMI-over-LAN: IPMI is not configured on the host.");
 		}
 
 		// Retrieve the hostname from the IpmiConfiguration, otherwise from the telemetryManager
@@ -187,12 +187,12 @@ public class IpmiExtension implements IProtocolExtension {
 
 			if (result != null) {
 				record(telemetryManager, IpmiRecorder.GET_SENSORS_REQUEST, null, result);
-				return SourceTable.ofText(result);
+				return SourceResult.ofText(result);
 			}
-			return SourceTable.failed("IPMI-over-LAN: no result.");
+			return SourceResult.failed("IPMI-over-LAN: no result.");
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "IPMI-over-LAN", hostname, e);
-			return SourceTable.failed("IPMI-over-LAN", e);
+			return SourceResult.failed("IPMI-over-LAN", e);
 		}
 	}
 
@@ -205,7 +205,7 @@ public class IpmiExtension implements IProtocolExtension {
 	 * @param telemetryManager  The telemetry manager, for the recording directory
 	 * @return the one-row table
 	 */
-	private SourceTable processRawSource(
+	private SourceResult processRawSource(
 		final IpmiRawSource source,
 		final String hostname,
 		final IpmiConfiguration ipmiConfiguration,
@@ -219,7 +219,7 @@ public class IpmiExtension implements IProtocolExtension {
 			IpmiExtension::rawOutcome
 		);
 		record(telemetryManager, IpmiRecorder.RAW_REQUEST, rawQuery, result);
-		return SourceTable.ofTable(List.of(IpmiResultConverter.rawRow(result)));
+		return SourceResult.ofTable(List.of(IpmiResultConverter.rawRow(result)));
 	}
 
 	/**
@@ -233,7 +233,7 @@ public class IpmiExtension implements IProtocolExtension {
 	 * @param telemetryManager  The telemetry manager, for the cursor and the recording directory
 	 * @return the table of new entries
 	 */
-	private SourceTable processSelSource(
+	private SourceResult processSelSource(
 		final IpmiSelSource source,
 		final String connectorId,
 		final String hostname,
@@ -258,7 +258,7 @@ public class IpmiExtension implements IProtocolExtension {
 				end.recordId()
 			);
 			record(telemetryManager, IpmiRecorder.GET_SEL_REQUEST, null, "");
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final SelRead read = send(
@@ -293,9 +293,9 @@ public class IpmiExtension implements IProtocolExtension {
 			telemetryManager,
 			IpmiRecorder.GET_SEL_REQUEST,
 			null,
-			SourceTable.tableToCsv(rows, AbstractRecorder.CSV_SEPARATOR, true)
+			SourceResult.tableToCsv(rows, AbstractRecorder.CSV_SEPARATOR, true)
 		);
-		return SourceTable.ofTable(rows);
+		return SourceResult.ofTable(rows);
 	}
 
 	/**
@@ -527,7 +527,7 @@ public class IpmiExtension implements IProtocolExtension {
 			case "sel" ->
 				IpmiResultConverter.SEL_HEADER +
 					NEW_LINE +
-					SourceTable.tableToCsv(
+					SourceResult.tableToCsv(
 						selRows(hostname, ipmiConfiguration, text(query, "since")),
 						IpmiResultConverter.SEPARATOR,
 						true

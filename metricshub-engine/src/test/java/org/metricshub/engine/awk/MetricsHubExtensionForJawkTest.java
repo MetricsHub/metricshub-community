@@ -27,7 +27,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -90,10 +90,13 @@ class MetricsHubExtensionForJawkTest {
 	 */
 	private static SourceProcessor sourceProcessor() {
 		final SourceProcessor sourceProcessor = mock(SourceProcessor.class);
-		final SourceTable response = SourceTable.ofText("response");
+		final SourceResult response = SourceResult.ofText("response");
 		when(sourceProcessor.process(any(HttpSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(IpmiSource.class))).thenReturn(response);
-		when(sourceProcessor.process(any(SnmpGetSource.class))).thenReturn(SourceTable.ofText("v;w"), SourceTable.empty());
+		when(sourceProcessor.process(any(SnmpGetSource.class))).thenReturn(
+			SourceResult.ofText("v;w"),
+			SourceResult.empty()
+		);
 		when(sourceProcessor.process(any(SnmpTableSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(WbemSource.class))).thenReturn(response);
 		when(sourceProcessor.process(any(WmiSource.class))).thenReturn(response);

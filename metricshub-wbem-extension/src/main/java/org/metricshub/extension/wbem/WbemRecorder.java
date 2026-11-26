@@ -32,7 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Records WBEM query/namespace exchanges to an emulation image ({@code image.yaml})
@@ -119,7 +119,7 @@ public class WbemRecorder extends AbstractRecorder<WbemRecorder.WbemRecordReques
 		final String responseFileName = UUID.randomUUID() + ".csv";
 		Files.writeString(
 			outputDir.resolve(responseFileName),
-			SourceTable.tableToCsv(request.responseTable(), CSV_SEPARATOR, true),
+			SourceResult.tableToCsv(request.responseTable(), CSV_SEPARATOR, true),
 			StandardCharsets.UTF_8
 		);
 		return responseFileName;

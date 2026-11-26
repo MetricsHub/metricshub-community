@@ -39,7 +39,7 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * A source that sends one raw IPMI command to the BMC and returns its completion code and response bytes.
@@ -134,7 +134,7 @@ public class IpmiRawSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(final ISourceProcessor sourceProcessor) {
+	public SourceResult accept(final ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

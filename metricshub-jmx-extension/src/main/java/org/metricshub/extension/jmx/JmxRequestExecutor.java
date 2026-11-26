@@ -42,7 +42,7 @@ import javax.management.remote.JMXServiceURL;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 
@@ -105,7 +105,7 @@ public class JmxRequestExecutor {
 				attributes.forEach(attrList::add);
 			}
 			final List<String> keyPropList = keyProperties != null ? new ArrayList<>(keyProperties) : List.of();
-			final String csv = SourceTable.tableToCsv(result, AbstractRecorder.CSV_SEPARATOR, true);
+			final String csv = SourceResult.tableToCsv(result, AbstractRecorder.CSV_SEPARATOR, true);
 			JmxRecorder.getInstance(recordOutputDirectory).record(objectNamePattern, attrList, keyPropList, csv);
 		}
 

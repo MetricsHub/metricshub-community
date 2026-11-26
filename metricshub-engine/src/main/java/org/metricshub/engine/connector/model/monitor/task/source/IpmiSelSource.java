@@ -39,7 +39,7 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * A source that returns the System Event Log (SEL) entries a BMC added since the previous poll, over IPMI.
@@ -130,7 +130,7 @@ public class IpmiSelSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(final ISourceProcessor sourceProcessor) {
+	public SourceResult accept(final ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

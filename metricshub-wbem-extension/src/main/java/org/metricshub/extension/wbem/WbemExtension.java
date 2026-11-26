@@ -42,7 +42,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolResult;
@@ -187,7 +187,7 @@ public class WbemExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof WbemSource wbemSource) {
 			return new WbemSourceProcessor(wbemRequestExecutor, connectorId).process(wbemSource, telemetryManager);
 		}

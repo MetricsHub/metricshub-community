@@ -67,7 +67,7 @@ import org.metricshub.engine.extension.IHttpRequestExtension;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
 import org.metricshub.extension.emulation.ipmi.EmulationIpmiRequestExecutor;
@@ -423,7 +423,7 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 	}
 
 	@Override
-	public SourceTable processSource(
+	public SourceResult processSource(
 		final Source source,
 		final String connectorId,
 		final TelemetryManager telemetryManager
@@ -462,27 +462,27 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiRaw(hostname, ipmiCfg, emulCfg, rawSource);
 			if (result != null) {
-				return SourceTable.ofTable(List.of(IpmiResultConverter.rawRow(result)));
+				return SourceResult.ofTable(List.of(IpmiResultConverter.rawRow(result)));
 			}
-			return SourceTable.failed(NO_RECORDED_IPMI_RESPONSE);
+			return SourceResult.failed(NO_RECORDED_IPMI_RESPONSE);
 		} else if (source instanceof IpmiSelSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiSel(hostname, ipmiCfg, emulCfg);
 			if (result != null) {
-				return SourceTable.ofTable(SourceTable.csvToTable(result, AbstractRecorder.CSV_SEPARATOR));
+				return SourceResult.ofTable(SourceResult.csvToTable(result, AbstractRecorder.CSV_SEPARATOR));
 			}
-			return SourceTable.failed(NO_RECORDED_IPMI_RESPONSE);
+			return SourceResult.failed(NO_RECORDED_IPMI_RESPONSE);
 		} else if (source instanceof IpmiSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
 			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
 			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiCfg, emulCfg);
 			if (result != null) {
-				return SourceTable.ofText(result);
+				return SourceResult.ofText(result);
 			}
-			return SourceTable.failed(NO_RECORDED_IPMI_RESPONSE);
+			return SourceResult.failed(NO_RECORDED_IPMI_RESPONSE);
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = getSnmpRequestExecutor(telemetryManager);
@@ -501,7 +501,9 @@ public class EmulationExtension implements IProtocolExtension, IHttpRequestExten
 			);
 		}
 
-		return SourceTable.failed("The emulation extension does not replay the " + source.getClass().getSimpleName() + ".");
+		return SourceResult.failed(
+			"The emulation extension does not replay the " + source.getClass().getSimpleName() + "."
+		);
 	}
 
 	@Override

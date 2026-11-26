@@ -30,13 +30,13 @@ import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.extension.HttpResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
 
 /**
  * This class is responsible for executing HTTP request based on the provided
- * {@link HttpSource} and generating {@link SourceTable} based on the
+ * {@link HttpSource} and generating {@link SourceResult} based on the
  * outcome of the HTTP response. It utilizes an {@link HttpRequestExecutor} to perform
  * the actual HTTP requests.
  */
@@ -89,25 +89,25 @@ public class HttpSourceProcessor {
 	 * @param httpSource       The {@link HttpSource} defining HTTP request.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and HTTP credentials.
-	 * @return a {@link SourceTable} containing the fetched HTTP raw data, or a failure.
+	 * @return a {@link SourceResult} containing the fetched HTTP raw data, or a failure.
 	 */
-	public SourceTable process(
+	public SourceResult process(
 		final HttpSource httpSource,
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
 		final String request = describe(httpSource);
-		final SourceTable result = execute(
+		final SourceResult result = execute(
 			httpSource,
 			connectorId,
 			telemetryManager,
 			httpRequest -> httpRequestExecutor.executeHttpSource(httpRequest, true, telemetryManager),
-			error -> SourceTable.failed(StringHelper.getStackMessages(error).strip())
+			error -> SourceResult.failed(StringHelper.getStackMessages(error).strip())
 		);
 		if (result == null) {
-			return SourceTable.failed(request + ": HTTP is not configured on the host.");
+			return SourceResult.failed(request + ": HTTP is not configured on the host.");
 		}
-		return result.isFailed() ? SourceTable.failed(request + ": " + result.getError()) : result;
+		return result.isFailed() ? SourceResult.failed(request + ": " + result.getError()) : result;
 	}
 
 	/**

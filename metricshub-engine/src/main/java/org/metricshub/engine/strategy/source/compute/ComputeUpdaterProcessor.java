@@ -264,12 +264,12 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 		// A table compute on a text reads no rows and gives an empty table, whatever it changes in place
 		if (
 			computeProcessor instanceof ComputeProcessor processor &&
-				processor.getSourceTable() != null &&
-				processor.getSourceTable().getContentType() == ContentType.TEXT &&
+				processor.getSourceResult() != null &&
+				processor.getSourceResult().getContentType() == ContentType.TEXT &&
 				copy.getInputContentType() == ContentType.TABLE &&
 				copy.getOutputContentType() == ContentType.TABLE
 		) {
-			processor.getSourceTable().setTable(new ArrayList<>());
+			processor.getSourceResult().setTable(new ArrayList<>());
 		}
 
 		// Call the next compute visitor

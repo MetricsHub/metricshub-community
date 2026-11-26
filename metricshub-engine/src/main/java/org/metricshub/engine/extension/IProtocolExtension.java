@@ -32,7 +32,7 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolResult;
@@ -102,9 +102,9 @@ public interface IProtocolExtension {
 	 * @param source           The source to execute.
 	 * @param connectorId      The unique identifier of the connector.
 	 * @param telemetryManager The telemetry manager to use for monitoring.
-	 * @return A {@link SourceTable} object representing the result of the source execution.
+	 * @return A {@link SourceResult} object representing the result of the source execution.
 	 */
-	SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager);
+	SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager);
 
 	/**
 	 * Executes a criterion check based on the given criterion and configuration within the telemetry manager.

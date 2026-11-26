@@ -77,7 +77,7 @@ import org.metricshub.engine.strategy.detection.ConnectorTestResult;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
 import org.metricshub.engine.strategy.source.SourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 import org.metricshub.engine.strategy.source.compute.ComputeUpdaterProcessor;
@@ -121,7 +121,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	/**
 	 * Stateless proxy for full source table log lines (used for non-file sources and for file sources when detail logging is on).
 	 */
-	private static final SourceTableLoggingProxy DEFAULT_SOURCE_TABLE_LOGGING_PROXY = new DefaultSourceTableLoggingProxy();
+	private static final SourceResultLoggingProxy DEFAULT_SOURCE_RESULT_LOGGING_PROXY = new DefaultSourceResultLoggingProxy();
 
 	/**
 	 * Format for string value like: <em>connector_connector-id</em>
@@ -177,7 +177,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	/**
 	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
-	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
+	 * When the {@link SourceResult} is ready it is added to {@link TelemetryManager}
 	 *
 	 * @param sources The {@link List} of {@link Source} instances we wish to execute
 	 * @param jobInfo Information about the job such as hostname, monitorType, job name and connectorName.
@@ -190,7 +190,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	/**
 	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
-	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
+	 * When the {@link SourceResult} is ready it is added to {@link TelemetryManager}
 	 *
 	 * @param sources    The {@link List} of {@link Source} instances we wish to execute
 	 * @param attributes Key-value pairs of the monitor's attributes used in the mono instance processing
@@ -207,7 +207,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	/**
 	 * Execute each source in the given list of sources then for each source table apply all the attached computes.
-	 * When the {@link SourceTable} is ready it is added to {@link TelemetryManager}
+	 * When the {@link SourceResult} is ready it is added to {@link TelemetryManager}
 	 *
 	 * @param sources         The {@link List} of {@link Source} instances we wish to execute
 	 * @param attributes      Key-value pairs of the monitor's attributes used in the mono instance processing
@@ -256,18 +256,18 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId);
-			final SourceTable previousSourceTable = connectorNamespace.getSourceTable(sourceKey);
+			final SourceResult previousSourceResult = connectorNamespace.getSourceResult(sourceKey);
 			// The poll begins before its cursors are read: a late rollback of an older poll then leaves them alone
 			final long poll = isIncremental(source) ? connectorNamespace.beginPoll(sourceKey) : 0L;
 			final SourceCursors cursorsBefore = isIncremental(source) ? connectorNamespace.getSourceCursors(sourceKey) : null;
 
 			// A source that reads a failed source fails as well. Otherwise, execute the source and retry it once when it
 			// fails or gives nothing while it gave data before: the last attempt is the result
-			SourceTable sourceTable = failureOfReferences(source, connectorNamespace);
-			if (sourceTable == null) {
-				sourceTable = runSource(connectorId, attributes, source);
-				if (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable) && waitBeforeRetry(sourceKey)) {
-					sourceTable = runSource(connectorId, attributes, source);
+			SourceResult sourceResult = failureOfReferences(source, connectorNamespace);
+			if (sourceResult == null) {
+				sourceResult = runSource(connectorId, attributes, source);
+				if (sourceResult.isEmpty() && !isNullOrEmptySourceResult(previousSourceResult) && waitBeforeRetry(sourceKey)) {
+					sourceResult = runSource(connectorId, attributes, source);
 				}
 			}
 
@@ -288,9 +288,11 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			// Remembered for the jobs that read this source through a reference, which then remove no monitor: the source
 			// failed, skipped a failed entry, or still gives nothing after its retry while it gave data before
-			final boolean failed = sourceTable.isFailed();
+			final boolean failed = sourceResult.isFailed();
 			if (
-				failed || sourceTable.isPartial() || (sourceTable.isEmpty() && !isNullOrEmptySourceTable(previousSourceTable))
+				failed ||
+					sourceResult.isPartial() ||
+					(sourceResult.isEmpty() && !isNullOrEmptySourceResult(previousSourceResult))
 			) {
 				connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
 			} else {
@@ -298,30 +300,30 @@ public abstract class AbstractStrategy implements IStrategy {
 			}
 
 			if (failed && !source.isContinueOnFailure()) {
-				throw stopJob(sources.subList(sourceIndex, sources.size()), sourceTable, jobInfo, cursorRollbacks);
+				throw stopJob(sources.subList(sourceIndex, sources.size()), sourceResult, jobInfo, cursorRollbacks);
 			}
 
 			// A failure is empty: with continueOnFailure, the source goes on with the empty result of its type
-			if (sourceTable.isEmpty()) {
+			if (sourceResult.isEmpty()) {
 				log.warn(
 					"Hostname {} - Source {} {} - Connector {} - Monitor {}. Continuing with an empty result.",
 					hostname,
 					sourceKey,
-					failed ? "failed: " + sourceTable.getError() : "is empty",
+					failed ? "failed: " + sourceResult.getError() : "is empty",
 					connectorId,
 					monitorType
 				);
-				sourceTable = emptyResult(source);
+				sourceResult = emptyResult(source);
 			}
 
 			// log the source table
-			logSourceTable(
-				resolveSourceTableLoggingProxy(source),
+			logSourceResult(
+				resolveSourceResultLoggingProxy(source),
 				SOURCE,
 				source.getClass().getSimpleName(),
 				sourceKey,
 				connectorId,
-				sourceTable,
+				sourceResult,
 				hostname
 			);
 
@@ -329,13 +331,15 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			// Add the source table and stop if no compute is found
 			if (computes == null || computes.isEmpty()) {
-				telemetryManager.getHostProperties().getConnectorNamespace(connectorId).addSourceTable(sourceKey, sourceTable);
+				telemetryManager.getHostProperties()
+					.getConnectorNamespace(connectorId)
+					.addSourceResult(sourceKey, sourceResult);
 				continue;
 			}
 
 			final ComputeProcessor computeProcessor = ComputeProcessor.builder()
 				.sourceKey(sourceKey)
-				.sourceTable(sourceTable)
+				.sourceResult(sourceResult)
 				.connectorId(connectorId)
 				.hostname(hostname)
 				.clientsExecutor(clientsExecutor)
@@ -370,20 +374,20 @@ public abstract class AbstractStrategy implements IStrategy {
 				}
 
 				// log the updated source table
-				logSourceTable(
-					DEFAULT_SOURCE_TABLE_LOGGING_PROXY,
+				logSourceResult(
+					DEFAULT_SOURCE_RESULT_LOGGING_PROXY,
 					COMPUTE,
 					compute.getClass().getSimpleName(),
 					computeKey,
 					connectorId,
-					computeProcessor.getSourceTable(),
+					computeProcessor.getSourceResult(),
 					hostname
 				);
 			}
 
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
-				.addSourceTable(sourceKey, computeProcessor.getSourceTable());
+				.addSourceResult(sourceKey, computeProcessor.getSourceResult());
 		}
 	}
 
@@ -400,7 +404,7 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	private SourceFailedException stopJob(
 		final List<Source> remainingSources,
-		final SourceTable failure,
+		final SourceResult failure,
 		final JobInfo jobInfo,
 		final List<Runnable> cursorRollbacks
 	) {
@@ -415,12 +419,12 @@ public abstract class AbstractStrategy implements IStrategy {
 		);
 		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(jobInfo.getConnectorId());
-		connectorNamespace.addSourceTable(failedKey, failure);
+		connectorNamespace.addSourceResult(failedKey, failure);
 		for (Source skipped : remainingSources.subList(1, remainingSources.size())) {
-			final SourceTable notRun = SourceTable.failed(
+			final SourceResult notRun = SourceResult.failed(
 				"Not executed: source %s failed: %s".formatted(failedKey, failure.getError())
 			);
-			connectorNamespace.addSourceTable(skipped.getKey(), notRun);
+			connectorNamespace.addSourceResult(skipped.getKey(), notRun);
 			connectorNamespace.getUnansweredSourceKeys().add(skipped.getKey());
 		}
 		rollBackCursors(cursorRollbacks);
@@ -437,13 +441,13 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param connectorNamespace The namespace holding the tables of the sources
 	 * @return a failed source table, null when no source it reads failed
 	 */
-	private SourceTable failureOfReferences(final Source source, final ConnectorNamespace connectorNamespace) {
+	private SourceResult failureOfReferences(final Source source, final ConnectorNamespace connectorNamespace) {
 		for (final String reference : source.getReferences()) {
 			final Matcher matcher = SOURCE_REF_PATTERN.matcher(reference);
 			while (matcher.find()) {
-				final SourceTable table = connectorNamespace.getSourceTable(matcher.group());
+				final SourceResult table = connectorNamespace.getSourceResult(matcher.group());
 				if (table != null && table.isFailed()) {
-					return SourceTable.failed("%s failed: %s".formatted(matcher.group(), table.getError()));
+					return SourceResult.failed("%s failed: %s".formatted(matcher.group(), table.getError()));
 				}
 			}
 		}
@@ -768,18 +772,18 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param source The source
 	 * @return a new empty text or empty table
 	 */
-	static SourceTable emptyResult(final Source source) {
-		return source.getResultContentType() == ContentType.TEXT ? SourceTable.ofText(null) : SourceTable.empty();
+	static SourceResult emptyResult(final Source source) {
+		return source.getResultContentType() == ContentType.TEXT ? SourceResult.ofText(null) : SourceResult.empty();
 	}
 
 	/**
 	 * Whether the given source table is empty or not
 	 *
-	 * @param sourceTable The result produced after executing a source
+	 * @param sourceResult The result produced after executing a source
 	 * @return boolean value
 	 */
-	private boolean isNullOrEmptySourceTable(final SourceTable sourceTable) {
-		return sourceTable == null || sourceTable.isEmpty();
+	private boolean isNullOrEmptySourceResult(final SourceResult sourceResult) {
+		return sourceResult == null || sourceResult.isEmpty();
 	}
 
 	/**
@@ -791,9 +795,9 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param attributes          Key-value pairs of the monitor's attributes used
 	 *                            in the mono instance processing
 	 * @param source              The source we want to run
-	 * @return new {@link SourceTable} instance, a failed one when the source processor gave nothing
+	 * @return new {@link SourceResult} instance, a failed one when the source processor gave nothing
 	 */
-	private SourceTable runSource(final String connectorId, final Map<String, String> attributes, final Source source) {
+	private SourceResult runSource(final String connectorId, final Map<String, String> attributes, final Source source) {
 		final ISourceProcessor sourceProcessor = SourceProcessor.builder()
 			.connectorId(connectorId)
 			.clientsExecutor(clientsExecutor)
@@ -802,7 +806,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			.attributes(attributes)
 			.build();
 
-		final Supplier<SourceTable> executable = () -> source.accept(
+		final Supplier<SourceResult> executable = () -> source.accept(
 			SourceUpdaterProcessor.builder()
 				.connectorId(connectorId)
 				.sourceProcessor(sourceProcessor)
@@ -814,19 +818,19 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		// Process the source to get a source table
 
-		final SourceTable result = source.isForceSerialization()
+		final SourceResult result = source.isForceSerialization()
 			? ForceSerializationHelper.forceSerialization(
 				executable,
 				telemetryManager,
 				connectorId,
 				source,
 				SOURCE,
-				SourceTable.failed(
+				SourceResult.failed(
 					"Not executed: the force serialization lock is not available or an earlier request still runs on the device."
 				)
 			)
 			: executable.get();
-		return result != null ? result : SourceTable.failed("The source processor gave no result.");
+		return result != null ? result : SourceResult.failed("The source processor gave no result.");
 	}
 
 	/**
@@ -888,16 +892,16 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Resolves the {@link SourceTableLoggingProxy} to use when logging a source result.
+	 * Resolves the {@link SourceResultLoggingProxy} to use when logging a source result.
 	 *
 	 * @param source the executed source
 	 * @return the proxy (never null)
 	 */
-	private SourceTableLoggingProxy resolveSourceTableLoggingProxy(final Source source) {
+	private SourceResultLoggingProxy resolveSourceResultLoggingProxy(final Source source) {
 		if (source instanceof FileSource) {
-			return new FileSourceTableLoggingProxy(DEFAULT_SOURCE_TABLE_LOGGING_PROXY, isLogFileSourceDetails());
+			return new FileSourceResultLoggingProxy(DEFAULT_SOURCE_RESULT_LOGGING_PROXY, isLogFileSourceDetails());
 		}
-		return DEFAULT_SOURCE_TABLE_LOGGING_PROXY;
+		return DEFAULT_SOURCE_RESULT_LOGGING_PROXY;
 	}
 
 	private boolean isLogFileSourceDetails() {
@@ -906,23 +910,23 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Log the {@link SourceTable} result.
+	 * Log the {@link SourceResult}.
 	 *
 	 * @param loggingProxy         formats the table for the log line
 	 * @param operationTag         the tag of the operation. E.g. source or compute
 	 * @param executionClassName   the source or the compute class name we want to log
 	 * @param executionKey         the key of the source or the compute we want to log
 	 * @param connectorId          the compiled file name of the connector (identifier)
-	 * @param sourceTable          the source's result we wish to log
+	 * @param sourceResult          the source's result we wish to log
 	 * @param hostname             the hostname of the source we wish to log
 	 */
-	static void logSourceTable(
-		final SourceTableLoggingProxy loggingProxy,
+	static void logSourceResult(
+		final SourceResultLoggingProxy loggingProxy,
 		final String operationTag,
 		final String executionClassName,
 		final String executionKey,
 		final String connectorId,
-		final SourceTable sourceTable,
+		final SourceResult sourceResult,
 		final String hostname
 	) {
 		if (!log.isInfoEnabled()) {
@@ -933,7 +937,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			executionClassName,
 			executionKey,
 			connectorId,
-			sourceTable,
+			sourceResult,
 			hostname
 		);
 		log.info("{}", message);

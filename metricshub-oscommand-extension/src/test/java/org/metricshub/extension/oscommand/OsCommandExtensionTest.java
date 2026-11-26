@@ -43,7 +43,7 @@ import org.metricshub.engine.connector.model.identity.criterion.CommandLineCrite
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.Monitor;
@@ -647,7 +647,7 @@ class OsCommandExtensionTest {
 				eq(Map.of())
 			);
 
-		final SourceTable expected = SourceTable.ofText("1;ext_bus;3;4;5");
+		final SourceResult expected = SourceResult.ofText("1;ext_bus;3;4;5");
 		assertEquals(expected, osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager));
 	}
 

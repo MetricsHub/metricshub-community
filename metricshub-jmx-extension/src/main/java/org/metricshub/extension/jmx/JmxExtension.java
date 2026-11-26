@@ -45,7 +45,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolResult;
@@ -111,7 +111,7 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public SourceTable processSource(
+	public SourceResult processSource(
 		final Source source,
 		final String connectorId,
 		final TelemetryManager telemetryManager

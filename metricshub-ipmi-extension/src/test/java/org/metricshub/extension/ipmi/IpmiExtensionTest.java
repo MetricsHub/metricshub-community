@@ -37,7 +37,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -288,13 +288,13 @@ class IpmiExtensionTest {
 			.get(IpmiConfiguration.class);
 
 		doReturn(RESULT).when(ipmiRequestExecutorMock).executeIpmiGetSensors(HOST_NAME, configuration);
-		final SourceTable actual = ipmiExtension.processSource(
+		final SourceResult actual = ipmiExtension.processSource(
 			IpmiSource.builder().build(),
 			CONNECTOR_ID,
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.ofText(RESULT);
+		final SourceResult expected = SourceResult.ofText(RESULT);
 		assertEquals(expected, actual);
 	}
 
@@ -308,7 +308,7 @@ class IpmiExtensionTest {
 
 		doThrow(new RuntimeException("exception")).when(ipmiRequestExecutorMock)
 			.executeIpmiGetSensors(HOST_NAME, configuration);
-		final SourceTable actual = ipmiExtension.processSource(
+		final SourceResult actual = ipmiExtension.processSource(
 			IpmiSource.builder().build(),
 			CONNECTOR_ID,
 			telemetryManager
@@ -327,7 +327,7 @@ class IpmiExtensionTest {
 
 		{
 			doReturn(null).when(ipmiRequestExecutorMock).executeIpmiGetSensors(HOST_NAME, configuration);
-			final SourceTable actual = ipmiExtension.processSource(
+			final SourceResult actual = ipmiExtension.processSource(
 				IpmiSource.builder().build(),
 				CONNECTOR_ID,
 				telemetryManager
@@ -338,13 +338,13 @@ class IpmiExtensionTest {
 
 		{
 			doReturn("").when(ipmiRequestExecutorMock).executeIpmiGetSensors(HOST_NAME, configuration);
-			final SourceTable actual = ipmiExtension.processSource(
+			final SourceResult actual = ipmiExtension.processSource(
 				IpmiSource.builder().build(),
 				CONNECTOR_ID,
 				telemetryManager
 			);
 
-			final SourceTable expected = SourceTable.ofText("");
+			final SourceResult expected = SourceResult.ofText("");
 			assertEquals(expected, actual);
 		}
 	}
@@ -400,7 +400,7 @@ class IpmiExtensionTest {
 
 		doReturn("00;20 01").when(ipmiRequestExecutorMock).executeIpmiRaw(HOST_NAME, configuration, source);
 		assertEquals(
-			SourceTable.ofTable(List.of(List.of("00", "20 01"))),
+			SourceResult.ofTable(List.of(List.of("00", "20 01"))),
 			ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)
 		);
 
@@ -450,14 +450,14 @@ class IpmiExtensionTest {
 		// First poll: the end of the log is located, nothing is read nor returned
 		final SelCursor end = new SelCursor(null, 5, new byte[] { 0x05, 0x00, 0x02 });
 		doReturn(end).when(ipmiRequestExecutorMock).executeIpmiSelEnd(HOST_NAME, configuration);
-		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
+		assertEquals(SourceResult.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
 		assertSame(end, namespace.getSourceCursor("sel"));
 		verify(ipmiRequestExecutorMock, never()).executeIpmiSel(any(), any(), any(), anyBoolean(), anyInt());
 
 		// Next poll: the read stops at maxEventsPerPoll (one entry after record 5), the cursor stops at it
 		doReturn(new SelRead(IpmiClientResults.selEntryList(List.of(entry6), null), null)).when(ipmiRequestExecutorMock)
 			.executeIpmiSel(HOST_NAME, configuration, end, true, 1);
-		final SourceTable table = ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager);
+		final SourceResult table = ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager);
 		assertEquals(1, table.getTable().size());
 		assertEquals("6", table.getTable().get(0).get(0));
 		assertEquals("", table.getTable().get(0).get(4));

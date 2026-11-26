@@ -23,7 +23,7 @@ package org.metricshub.engine.extension;
 
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.strategy.source.SourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -38,9 +38,9 @@ public interface ICompositeSourceScriptExtension {
 	 * @param connectorId      The connector Identifier.
 	 * @param telemetryManager The telemetry manager to use for monitoring.
 	 * @param sourceProcessor  The {@link SourceProcessor} that will be used to execute requests and commands.
-	 * @return A {@link SourceTable} object representing the result of the source execution.
+	 * @return A {@link SourceResult} object representing the result of the source execution.
 	 */
-	SourceTable processSource(
+	SourceResult processSource(
 		Source source,
 		String connectorId,
 		TelemetryManager telemetryManager,

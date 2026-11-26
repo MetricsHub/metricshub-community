@@ -54,7 +54,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.Monitor;
@@ -419,7 +419,7 @@ class WinRmExtensionTest {
 				.runOsCommand(COMMAND_LINE, HOST_NAME, winRmConfiguration, Map.of(), telemetryManager.getRequestStats());
 
 			assertEquals(
-				SourceTable.ofText("16384 MB\n8192 MB"),
+				SourceResult.ofText("16384 MB\n8192 MB"),
 				winRmExtension.processSource(commandLineSource, CONNECTOR_ID, telemetryManager)
 			);
 		}
@@ -440,7 +440,7 @@ class WinRmExtensionTest {
 				);
 			final WmiSource wmiSource = WmiSource.builder().query(WQL).build();
 			assertEquals(
-				SourceTable.ofTable(expected),
+				SourceResult.ofTable(expected),
 				winRmExtension.processSource(wmiSource, CONNECTOR_ID, telemetryManager)
 			);
 		}

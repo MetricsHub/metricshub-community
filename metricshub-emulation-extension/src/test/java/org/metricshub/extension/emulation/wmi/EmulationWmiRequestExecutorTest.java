@@ -13,7 +13,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
@@ -55,7 +55,7 @@ class EmulationWmiRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("value1", "value2")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("value1", "value2")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -91,12 +91,12 @@ class EmulationWmiRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("first")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("first")), ";", true),
 			StandardCharsets.UTF_8
 		);
 		Files.writeString(
 			tempDir.resolve("r2.txt"),
-			SourceTable.tableToCsv(List.of(List.of("second")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("second")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -143,7 +143,7 @@ class EmulationWmiRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("other")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("other")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -254,7 +254,7 @@ class EmulationWmiRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("matched")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("matched")), ";", true),
 			StandardCharsets.UTF_8
 		);
 

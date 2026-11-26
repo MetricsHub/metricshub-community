@@ -35,7 +35,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -55,7 +55,7 @@ public class ForceSerializationHelper {
 	 * interruption then the defaultValue is returned
 	 *
 	 * @param <T>          for example {@link CriterionTestResult} or a
-	 *                     {@link SourceTable}
+	 *                     {@link SourceResult}
 	 *
 	 * @param executable       the supplier executable function, e.g. visiting a criterion or a source
 	 * @param telemetryManager wraps the host's properties where the connector namespace holds the lock
@@ -88,7 +88,7 @@ public class ForceSerializationHelper {
 	 * Force the serialization when processing the given object, waiting at most the given time for the lock and for the
 	 * requests of a job cut short that are still running on the device.
 	 *
-	 * @param <T>              for example {@link CriterionTestResult} or a {@link SourceTable}
+	 * @param <T>              for example {@link CriterionTestResult} or a {@link SourceResult}
 	 * @param executable       the supplier executable function, e.g. visiting a criterion or a source
 	 * @param telemetryManager wraps the host's properties where the connector namespace holds the lock
 	 * @param connectorId      the identifier of the connector (criterion, source or compute) belongs to

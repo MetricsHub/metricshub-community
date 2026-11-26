@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -421,13 +421,13 @@ class AbstractSnmpRequestExecutorTest {
 			.build();
 		final TestSnmpRequestExecutor executor = new TestSnmpRequestExecutor(() -> client);
 
-		final SourceTable result = new SnmpGetSourceProcessor(executor, manager -> configuration).process(
+		final SourceResult result = new SnmpGetSourceProcessor(executor, manager -> configuration).process(
 			SnmpGetSource.builder().oid(OID).build(),
 			"connector",
 			telemetryManager
 		);
 
-		assertEquals(SourceTable.ofText("value"), result);
+		assertEquals(SourceResult.ofText("value"), result);
 		assertEquals("protocol-host", executor.requestedHostname);
 		assertCounts(telemetryManager.getRequestStats(), 1, 0, 0);
 	}

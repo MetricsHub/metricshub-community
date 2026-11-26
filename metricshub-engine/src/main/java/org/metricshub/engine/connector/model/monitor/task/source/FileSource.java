@@ -44,7 +44,7 @@ import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * A file source that reads content from local or remote files.
@@ -170,7 +170,7 @@ public class FileSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(ISourceProcessor sourceProcessor) {
+	public SourceResult accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

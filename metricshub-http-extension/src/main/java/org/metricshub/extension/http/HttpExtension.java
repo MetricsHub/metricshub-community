@@ -49,7 +49,7 @@ import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.extension.IHttpRequestExtension;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
 import org.metricshub.engine.tool.ToolParameter;
@@ -161,7 +161,7 @@ public class HttpExtension implements IProtocolExtension, IHttpRequestExtension 
 	}
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof HttpSource httpSource) {
 			return new HttpSourceProcessor(httpRequestExecutor).process(httpSource, connectorId, telemetryManager);
 		}

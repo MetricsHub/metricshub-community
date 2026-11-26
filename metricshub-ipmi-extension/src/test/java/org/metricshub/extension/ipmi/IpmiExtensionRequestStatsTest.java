@@ -30,7 +30,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.IpmiRawSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSelSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor.SelCursor;
@@ -221,7 +221,7 @@ class IpmiExtensionRequestStatsTest {
 		when(bmc.sensors()).thenReturn(sensorsRequest);
 
 		assertEquals(
-			SourceTable.ofText("FRU;IBM;System x3650 M2;KD9098C - 794722G"),
+			SourceResult.ofText("FRU;IBM;System x3650 M2;KD9098C - 794722G"),
 			ipmiExtension.processSource(IpmiSource.builder().build(), CONNECTOR_ID, telemetryManager)
 		);
 		assertCounts(1, 0, 0);
@@ -242,7 +242,7 @@ class IpmiExtensionRequestStatsTest {
 
 		doReturn("00;20 01").when(ipmiRequestExecutor).executeIpmiRaw(HOST_NAME, configuration, source);
 		assertEquals(
-			SourceTable.ofTable(List.of(List.of("00", "20 01"))),
+			SourceResult.ofTable(List.of(List.of("00", "20 01"))),
 			ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)
 		);
 		assertCounts(1, 0, 0);
@@ -250,7 +250,7 @@ class IpmiExtensionRequestStatsTest {
 		// The BMC answered with an error completion code: the row is still returned
 		doReturn("C1;").when(ipmiRequestExecutor).executeIpmiRaw(HOST_NAME, configuration, source);
 		assertEquals(
-			SourceTable.ofTable(List.of(List.of("C1", ""))),
+			SourceResult.ofTable(List.of(List.of("C1", ""))),
 			ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager)
 		);
 		assertCounts(1, 0, 1);
@@ -274,7 +274,7 @@ class IpmiExtensionRequestStatsTest {
 		// First poll: the end of the log
 		final SelCursor end = new SelCursor(null, 5, new byte[] { 0x05, 0x00, 0x02 });
 		doReturn(end).when(ipmiRequestExecutor).executeIpmiSelEnd(HOST_NAME, configuration);
-		assertEquals(SourceTable.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
+		assertEquals(SourceResult.empty(), ipmiExtension.processSource(source, CONNECTOR_ID, telemetryManager));
 		assertCounts(1, 0, 0);
 
 		// Next poll fails: the cursor stays

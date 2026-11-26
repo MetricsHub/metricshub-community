@@ -11,7 +11,7 @@ import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2List;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * The <code>json2List</code> compute (#1561): one row per leaf value, its JFlat path and its value.
@@ -26,14 +26,14 @@ class Json2ListTest {
 		return rows;
 	}
 
-	private static SourceTable json2List(final String json) {
-		final SourceTable sourceTable = SourceTable.ofText(json);
+	private static SourceResult json2List(final String json) {
+		final SourceResult sourceResult = SourceResult.ofText(json);
 		ComputeProcessor.builder()
 			.hostname(LOCALHOST)
-			.sourceTable(sourceTable)
+			.sourceResult(sourceResult)
 			.build()
 			.process(Json2List.builder().type("json2List").build());
-		return sourceTable;
+		return sourceResult;
 	}
 
 	@Test
@@ -49,7 +49,7 @@ class Json2ListTest {
 	@Test
 	void objectsAndArraysInDocumentOrder() {
 		assertEquals(
-			SourceTable.ofTable(
+			SourceResult.ofTable(
 				rows("/b", "1", "/a/x", "y", "/items[0]/name", "n0", "/items[1]/name", "n1", "/items[1]/id", "7")
 			),
 			json2List("{\"b\":1,\"a\":{\"x\":\"y\"},\"items\":[{\"name\":\"n0\"},{\"name\":\"n1\",\"id\":7}]}")
@@ -139,8 +139,8 @@ class Json2ListTest {
 	@Test
 	void emptyContainersHaveNoRow() {
 		assertEquals(rows("/after", "1"), json2List("{\"o\":{},\"a\":[],\"after\":1}").getTable());
-		assertEquals(SourceTable.ofTable(new ArrayList<>()), json2List("{}"));
-		assertEquals(SourceTable.ofTable(new ArrayList<>()), json2List("[]"));
+		assertEquals(SourceResult.ofTable(new ArrayList<>()), json2List("{}"));
+		assertEquals(SourceResult.ofTable(new ArrayList<>()), json2List("[]"));
 	}
 
 	/**
@@ -160,20 +160,20 @@ class Json2ListTest {
 			"{\"huge\":1e9999999999}",
 			"{\"tiny\":1.5e-2147483648}"
 		)) {
-			assertEquals(SourceTable.ofTable(new ArrayList<>()), json2List(json), json);
+			assertEquals(SourceResult.ofTable(new ArrayList<>()), json2List(json), json);
 		}
 		assertEquals(rows("/a", "1"), json2List("{\"a\":1} trailing").getTable());
 	}
 
 	@Test
 	void tableInputIsUnchanged() {
-		final SourceTable sourceTable = SourceTable.ofTable(rows("a", "b"));
+		final SourceResult sourceResult = SourceResult.ofTable(rows("a", "b"));
 		ComputeProcessor.builder()
 			.hostname(LOCALHOST)
-			.sourceTable(sourceTable)
+			.sourceResult(sourceResult)
 			.build()
 			.process(Json2List.builder().build());
-		assertEquals(SourceTable.ofTable(rows("a", "b")), sourceTable);
+		assertEquals(SourceResult.ofTable(rows("a", "b")), sourceResult);
 	}
 
 	@Test
@@ -192,14 +192,14 @@ class Json2ListTest {
 	 */
 	@Test
 	void awkReadsTheTable() {
-		final SourceTable sourceTable = json2List(
+		final SourceResult sourceResult = json2List(
 			"{\"data\":{\"id\":\"x\",\"token\":\"ab;c\\nd\"},\"items\":[{\"name\":\"n0\"}]}"
 		);
 		ComputeProcessor.builder()
 			.hostname(LOCALHOST)
-			.sourceTable(sourceTable)
+			.sourceResult(sourceResult)
 			.build()
 			.process(Awk.builder().script("$1 == \"/data/token\" { print $2; exit }").output(ContentType.TABLE).build());
-		assertEquals(SourceTable.ofTable(List.of(List.of("ab;c\nd"))), sourceTable);
+		assertEquals(SourceResult.ofTable(List.of(List.of("ab;c\nd"))), sourceResult);
 	}
 }

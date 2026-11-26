@@ -60,7 +60,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.strategy.source.SourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.source.compute.ComputeProcessor;
 
 /**
@@ -285,12 +285,12 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The table result from the execution of the {@link Source}.
 	 */
 	public String executeSource(final Source source) {
-		final SourceTable sourceTableResult = source.accept(sourceProcessor);
+		final SourceResult sourceResult = source.accept(sourceProcessor);
 
-		if (sourceTableResult != null && !sourceTableResult.isEmpty()) {
-			return sourceTableResult.getContentType() == ContentType.TEXT
-				? sourceTableResult.getText()
-				: SourceTable.tableToCsv(sourceTableResult.getTable(), CELL_SEPARATOR, false);
+		if (sourceResult != null && !sourceResult.isEmpty()) {
+			return sourceResult.getContentType() == ContentType.TEXT
+				? sourceResult.getText()
+				: SourceResult.tableToCsv(sourceResult.getTable(), CELL_SEPARATOR, false);
 		} else {
 			return "";
 		}

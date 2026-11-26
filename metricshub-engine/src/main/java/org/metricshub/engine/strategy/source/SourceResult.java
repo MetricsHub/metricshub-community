@@ -55,7 +55,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  */
 @EqualsAndHashCode
 @ToString
-public class SourceTable {
+public class SourceResult {
 
 	/**
 	 * The separator between the cells of a line when a text is converted to a table, or a table to a text, and the
@@ -96,7 +96,7 @@ public class SourceTable {
 	@EqualsAndHashCode.Exclude
 	private boolean partial;
 
-	private SourceTable() {}
+	private SourceResult() {}
 
 	/**
 	 * The result of a source that failed: its request was not executed (an exception, a timeout, no configuration or
@@ -106,10 +106,10 @@ public class SourceTable {
 	 * @param error What failed and why
 	 * @return a new empty table holding the error
 	 */
-	public static SourceTable failed(@NonNull final String error) {
-		final SourceTable sourceTable = empty();
-		sourceTable.error = error;
-		return sourceTable;
+	public static SourceResult failed(@NonNull final String error) {
+		final SourceResult sourceResult = empty();
+		sourceResult.error = error;
+		return sourceResult;
 	}
 
 	/**
@@ -119,7 +119,7 @@ public class SourceTable {
 	 * @param throwable The exception
 	 * @return a new empty table holding the request and the messages of the exception and its causes
 	 */
-	public static SourceTable failed(final String request, final Throwable throwable) {
+	public static SourceResult failed(final String request, final Throwable throwable) {
 		return failed(request + ": " + StringHelper.getStackMessages(throwable).strip());
 	}
 
@@ -135,47 +135,47 @@ public class SourceTable {
 	/**
 	 * Whether the source failed, see {@link #failed(String)}.
 	 *
-	 * @return {@code true} if this source table holds an error
+	 * @return {@code true} if this source result holds an error
 	 */
 	public boolean isFailed() {
 		return error != null;
 	}
 
 	/**
-	 * A source table holding a text.
+	 * A source result holding a text.
 	 *
 	 * @param text The text, null meaning empty, stored with each CRLF converted to LF
-	 * @return a new source table whose content type is {@link ContentType#TEXT}
+	 * @return a new source result whose content type is {@link ContentType#TEXT}
 	 */
-	public static SourceTable ofText(final String text) {
-		final SourceTable sourceTable = new SourceTable();
-		sourceTable.setText(text);
-		return sourceTable;
+	public static SourceResult ofText(final String text) {
+		final SourceResult sourceResult = new SourceResult();
+		sourceResult.setText(text);
+		return sourceResult;
 	}
 
 	/**
-	 * A source table holding a table.
+	 * A source result holding a table.
 	 *
 	 * @param table The table, null meaning empty
-	 * @return a new source table whose content type is {@link ContentType#TABLE}
+	 * @return a new source result whose content type is {@link ContentType#TABLE}
 	 */
-	public static SourceTable ofTable(final List<List<String>> table) {
-		final SourceTable sourceTable = new SourceTable();
-		sourceTable.setTable(table);
-		return sourceTable;
+	public static SourceResult ofTable(final List<List<String>> table) {
+		final SourceResult sourceResult = new SourceResult();
+		sourceResult.setTable(table);
+		return sourceResult;
 	}
 
 	/**
 	 * Creates an empty table, a new instance on every call.
 	 *
-	 * @return a new empty {@code SourceTable} whose content type is {@link ContentType#TABLE}
+	 * @return a new empty {@code SourceResult} whose content type is {@link ContentType#TABLE}
 	 */
-	public static SourceTable empty() {
+	public static SourceResult empty() {
 		return ofTable(null);
 	}
 
 	/**
-	 * The content type of this source table, never null.
+	 * The content type of this source result, never null.
 	 *
 	 * @return {@link ContentType#TEXT} or {@link ContentType#TABLE}
 	 */
@@ -184,7 +184,7 @@ public class SourceTable {
 	}
 
 	/**
-	 * The text of this source table.
+	 * The text of this source result.
 	 *
 	 * @return the text, with LF line endings, an empty text for a table
 	 */
@@ -193,7 +193,7 @@ public class SourceTable {
 	}
 
 	/**
-	 * The table of this source table, which the table computes change in place.
+	 * The table of this source result, which the table computes change in place.
 	 *
 	 * @return the table, an empty table for a text (the legacy rule: a table reader of a text sees no rows)
 	 */
@@ -202,7 +202,7 @@ public class SourceTable {
 	}
 
 	/**
-	 * Makes this source table a text, dropping its table.
+	 * Makes this source result a text, dropping its table.
 	 *
 	 * @param text The text, null meaning empty, stored with each CRLF converted to LF
 	 */
@@ -213,7 +213,7 @@ public class SourceTable {
 	}
 
 	/**
-	 * Makes this source table a table, dropping its text.
+	 * Makes this source result a table, dropping its text.
 	 *
 	 * @param table The table, null meaning empty
 	 */
@@ -224,7 +224,7 @@ public class SourceTable {
 	}
 
 	/**
-	 * Whether the value of this source table is empty.
+	 * Whether the value of this source result is empty.
 	 *
 	 * @return true for an empty text or a table with no rows
 	 */
@@ -233,10 +233,10 @@ public class SourceTable {
 	}
 
 	/**
-	 * This source table as a text: the text itself, or the table with one line per row, cells joined with
+	 * This source result as a text: the text itself, or the table with one line per row, cells joined with
 	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code>, and
 	 * the line breaks inside a cell replaced by a space, so that a row is one line. Either way, the text has LF line
-	 * endings. This source table is not changed.
+	 * endings. This source result is not changed.
 	 *
 	 * @return the text
 	 */
@@ -246,7 +246,7 @@ public class SourceTable {
 		}
 		return table.stream()
 			.filter(Objects::nonNull)
-			.map(row -> lineToCsv(row.stream().map(SourceTable::onOneLine).toList(), DEFAULT_SEPARATOR, true))
+			.map(row -> lineToCsv(row.stream().map(SourceResult::onOneLine).toList(), DEFAULT_SEPARATOR, true))
 			.collect(Collectors.joining(NEW_LINE));
 	}
 
@@ -263,8 +263,8 @@ public class SourceTable {
 	}
 
 	/**
-	 * This source table as a table: a copy of the table itself, or the text split on <code>;</code> by
-	 * {@link #textToTable(String, String)}. This source table is not changed.
+	 * This source result as a table: a copy of the table itself, or the text split on <code>;</code> by
+	 * {@link #textToTable(String, String)}. This source result is not changed.
 	 *
 	 * @return a new table
 	 */
@@ -280,7 +280,7 @@ public class SourceTable {
 	 * kept but the one after a trailing separator; a blank separator (a space, a tab) splits on runs of it and keeps
 	 * no empty cell. A blank line, or a line that gives no cell, gives no row.
 	 *
-	 * @param text      The text, with LF line endings as the text of a source table has, null meaning empty
+	 * @param text      The text, with LF line endings as the text of a source result has, null meaning empty
 	 * @param separator The literal separator
 	 * @return a new table
 	 */
@@ -410,14 +410,14 @@ public class SourceTable {
 	}
 
 	/**
-	 * Find the source table instance from the connector namespace.
+	 * Find the source result instance from the connector namespace.
 	 * @param sourceKey The reference of the source
-	 * @param connectorId The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
+	 * @param connectorId The connector identifier used to retrieve {@link SourceResult} from the connector namespace.
 	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
-	 * @return {@link Optional} instance of {@link SourceTable}, empty when the source has no table yet or when
+	 * @return {@link Optional} instance of {@link SourceResult}, empty when the source has no table yet or when
 	 *         <em>sourceKey</em> is not a source reference: the load-time check rejects a hard-coded table there
 	 */
-	public static Optional<SourceTable> lookupSourceTable(
+	public static Optional<SourceResult> lookupSourceResult(
 		final String sourceKey,
 		final String connectorId,
 		final TelemetryManager telemetryManager
@@ -426,7 +426,7 @@ public class SourceTable {
 
 		if (matcher.find()) {
 			return Optional.ofNullable(
-				telemetryManager.getHostProperties().getConnectorNamespace(connectorId).getSourceTable(matcher.group())
+				telemetryManager.getHostProperties().getConnectorNamespace(connectorId).getSourceResult(matcher.group())
 			);
 		}
 
@@ -438,11 +438,11 @@ public class SourceTable {
 	 * {@link Mapping.Type#SIMPLE} mapping, a table of exactly one row without any cell.
 	 *
 	 * @param mapping          The mapping
-	 * @param connectorId      The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
+	 * @param connectorId      The connector identifier used to retrieve {@link SourceResult} from the connector namespace.
 	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
-	 * @return {@link Optional} instance of {@link SourceTable}
+	 * @return {@link Optional} instance of {@link SourceResult}
 	 */
-	public static Optional<SourceTable> lookupMappingTable(
+	public static Optional<SourceResult> lookupMappingTable(
 		final Mapping mapping,
 		final String connectorId,
 		final TelemetryManager telemetryManager
@@ -450,21 +450,21 @@ public class SourceTable {
 		if (mapping.getType() == Mapping.Type.SIMPLE) {
 			return Optional.of(ofTable(List.of(List.of())));
 		}
-		return lookupSourceTable(mapping.getSource(), connectorId, telemetryManager);
+		return lookupSourceResult(mapping.getSource(), connectorId, telemetryManager);
 	}
 
 	/**
 	 * Find the table of a <code>tableUnion</code> member or of a <code>tableJoin</code> input: a table literal written
 	 * as a list of rows gives a new table of exactly these rows, a string is looked up by
-	 * {@link #lookupSourceTable(String, String, TelemetryManager)}.
+	 * {@link #lookupSourceResult(String, String, TelemetryManager)}.
 	 *
 	 * @param table            A {@link List} of rows, each a {@link List} of cells, or a {@link String}
-	 * @param connectorId      The connector identifier used to retrieve {@link SourceTable} from the connector namespace.
+	 * @param connectorId      The connector identifier used to retrieve {@link SourceResult} from the connector namespace.
 	 * @param telemetryManager The instance wrapping the host properties where the connector namespace is located.
-	 * @return {@link Optional} instance of {@link SourceTable}
+	 * @return {@link Optional} instance of {@link SourceResult}
 	 */
 	@SuppressWarnings("unchecked")
-	public static Optional<SourceTable> lookupTableOrLiteral(
+	public static Optional<SourceResult> lookupTableOrLiteral(
 		final Object table,
 		final String connectorId,
 		final TelemetryManager telemetryManager
@@ -476,6 +476,6 @@ public class SourceTable {
 				)
 			);
 		}
-		return lookupSourceTable((String) table, connectorId, telemetryManager);
+		return lookupSourceResult((String) table, connectorId, telemetryManager);
 	}
 }

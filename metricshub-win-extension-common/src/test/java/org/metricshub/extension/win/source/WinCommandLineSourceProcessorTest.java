@@ -17,7 +17,7 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
@@ -129,7 +129,7 @@ class WinCommandLineSourceProcessorTest {
 			.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of(), telemetryManager.getRequestStats());
 
 		assertEquals(
-			SourceTable.ofText("16384 MB\n8192 MB"),
+			SourceResult.ofText("16384 MB\n8192 MB"),
 			winCommandLineSourceProcessor.process(commandLineSource, telemetryManager)
 		);
 

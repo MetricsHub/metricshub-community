@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
@@ -40,18 +40,18 @@ public class SnmpTableSourceProcessorTest {
 
 	// Test when snmpTableSource is null
 	@Test
-	public void testProcess_WhenSourceIsNull_ReturnsEmptySourceTable() {
+	public void testProcess_WhenSourceIsNull_ReturnsEmptySourceResult() {
 		SnmpTableSource snmpTableSource = null;
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
-		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
+		SourceResult result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceResult.empty(), result);
 	}
 
 	// Test when snmpConfiguration is null
 	@Test
-	public void testProcess_WhenConfigurationIsNull_ReturnsEmptySourceTable() {
+	public void testProcess_WhenConfigurationIsNull_ReturnsEmptySourceResult() {
 		SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("test_oid")
 			.selectColumns("column1, column2")
@@ -59,25 +59,25 @@ public class SnmpTableSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(null);
 
-		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
+		SourceResult result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
 		assertTrue((result).isFailed());
 	}
 
 	// Test when the selected columns are empty
 	@Test
-	public void testProcess_WhenSelectedColumnsAreBlank_ReturnsEmptySourceTable() {
+	public void testProcess_WhenSelectedColumnsAreBlank_ReturnsEmptySourceResult() {
 		SnmpTableSource snmpTableSource = SnmpTableSource.builder().oid("test_oid").selectColumns("").build();
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
-		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
+		SourceResult result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.empty(), result);
+		assertEquals(SourceResult.empty(), result);
 	}
 
 	// Test when the executor throws an exception
 	@Test
-	public void testProcess_WhenExecutorThrowsException_ReturnsEmptySourceTable() throws Exception {
+	public void testProcess_WhenExecutorThrowsException_ReturnsEmptySourceResult() throws Exception {
 		SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("test_oid")
 			.selectColumns("column1, column2")
@@ -96,14 +96,14 @@ public class SnmpTableSourceProcessorTest {
 				telemetryManager.getRequestStats()
 			);
 
-		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
+		SourceResult result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
 		assertTrue((result).isFailed());
 	}
 
 	// Test when the executor returns a valid result
 	@Test
-	public void testProcess_WhenExecutorReturnsValidResult_ReturnsSourceTableWithResult() throws Exception {
+	public void testProcess_WhenExecutorReturnsValidResult_ReturnsSourceResultWithResult() throws Exception {
 		SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("test_oid")
 			.selectColumns("column1, column2")
@@ -126,9 +126,9 @@ public class SnmpTableSourceProcessorTest {
 			)
 		).thenReturn(expectedResult);
 
-		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
+		SourceResult result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.ofTable(expectedResult), result);
+		assertEquals(SourceResult.ofTable(expectedResult), result);
 	}
 
 	/**

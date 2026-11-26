@@ -28,7 +28,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -119,7 +119,7 @@ public class JmxCriterionProcessor {
 			);
 
 			// Serialize the result as a CSV
-			final String result = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
+			final String result = SourceResult.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 			return checkJmxResult(jmxConfiguration.getHostname(), result, jmxCriterion.getExpectedResult());
 		} catch (Exception e) {

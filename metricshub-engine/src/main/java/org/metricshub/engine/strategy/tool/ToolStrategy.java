@@ -38,7 +38,7 @@ import org.metricshub.engine.connector.model.tool.ToolResult;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -64,10 +64,10 @@ public class ToolStrategy extends AbstractStrategy {
 
 	/**
 	 * The table of the tool's result source, empty until {@link #run()} completes, or the failure of the source that
-	 * stopped the tool (see {@link SourceTable#isFailed()}).
+	 * stopped the tool (see {@link SourceResult#isFailed()}).
 	 */
 	@Getter
-	private SourceTable result = SourceTable.empty();
+	private SourceResult result = SourceResult.empty();
 
 	/**
 	 * Builds the strategy.
@@ -157,12 +157,12 @@ public class ToolStrategy extends AbstractStrategy {
 				// A cancelled tool skipped its sources: the table found would be the one of an earlier call. Its incremental
 				// sources are polled again next time, since their entries are not returned
 				result = skipMappingIfInterrupted(cursorRollbacks, connectorId, hostname)
-					? SourceTable.empty()
-					: SourceTable.lookupSourceTable(toolResult.source(), connectorId, telemetryManager)
-						.orElseGet(SourceTable::empty);
+					? SourceResult.empty()
+					: SourceResult.lookupSourceResult(toolResult.source(), connectorId, telemetryManager)
+						.orElseGet(SourceResult::empty);
 			} catch (SourceFailedException e) {
 				// A failed source stops the tool: its error is the result
-				result = SourceTable.failed(e.getMessage());
+				result = SourceResult.failed(e.getMessage());
 			}
 		} finally {
 			// Whatever beforeAll opened, afterAll closes: a tool must not leave a session behind on a host that

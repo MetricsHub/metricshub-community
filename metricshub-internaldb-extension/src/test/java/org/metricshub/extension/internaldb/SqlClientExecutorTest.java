@@ -35,7 +35,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.SqlColumn;
 import org.metricshub.engine.connector.model.common.SqlTable;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -75,8 +75,8 @@ class SqlClientExecutorTest {
 			.hostType(DeviceKind.LINUX)
 			.build();
 
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		SourceTable tabl1 = SourceTable.ofTable(
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		SourceResult tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
 				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
@@ -84,7 +84,7 @@ class SqlClientExecutorTest {
 				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
 			)
 		);
-		final SourceTable tabl2 = SourceTable.ofTable(
+		final SourceResult tabl2 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
 				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
@@ -95,7 +95,7 @@ class SqlClientExecutorTest {
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 
-		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
+		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceResults(mapSources).build();
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(CONNECTOR_ID, connectorNamespace);
 
@@ -283,7 +283,7 @@ class SqlClientExecutorTest {
 
 		expectedResult = Arrays.asList(Arrays.asList(LOWERCASE_B, ""), Arrays.asList(LOWERCASE_D, ""));
 
-		tabl1 = SourceTable.ofTable(
+		tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
 				Arrays.asList(LOWERCASE_B, "", TRUE, TWO),
@@ -293,7 +293,7 @@ class SqlClientExecutorTest {
 		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
-		connectorNamespace.setSourceTables(mapSources);
+		connectorNamespace.setSourceResults(mapSources);
 
 		sqlColumn1Table1 = SqlColumn.builder().name("COL1_1").number(1).type("VARCHAR(255)").build();
 		sqlColumn2Table1 = SqlColumn.builder().name("COL2_1").number(2).type("VARCHAR(255)").build();
@@ -314,8 +314,8 @@ class SqlClientExecutorTest {
 			.hostType(DeviceKind.LINUX)
 			.build();
 
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		SourceTable tabl1 = SourceTable.ofTable(
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		SourceResult tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE, DATE, TIME, TIMESTAMP),
 				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO, DATE, TIME, TIMESTAMP),
@@ -323,7 +323,7 @@ class SqlClientExecutorTest {
 				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR, DATE, TIME, TIMESTAMP)
 			)
 		);
-		final SourceTable tabl2 = SourceTable.ofTable(
+		final SourceResult tabl2 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
 				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
@@ -334,7 +334,7 @@ class SqlClientExecutorTest {
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 
-		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
+		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceResults(mapSources).build();
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(CONNECTOR_ID, connectorNamespace);
 
@@ -396,11 +396,11 @@ class SqlClientExecutorTest {
 	 * Builds an executor whose telemetry manager exposes a single source table under {@code TAB1_REF}.
 	 */
 	private static SqlClientExecutor executorWithSource(final List<List<String>> rows) {
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		mapSources.put(TAB1_REF, SourceTable.ofTable(rows));
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		mapSources.put(TAB1_REF, SourceResult.ofTable(rows));
 
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
-		connectorNamespaces.put(CONNECTOR_ID, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		connectorNamespaces.put(CONNECTOR_ID, ConnectorNamespace.builder().sourceResults(mapSources).build());
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
@@ -476,7 +476,7 @@ class SqlClientExecutorTest {
 	}
 
 	@Test
-	void testLargeSourceTableTriggersIntermediateBatches() throws Exception {
+	void testLargeSourceResultTriggersIntermediateBatches() throws Exception {
 		// 1000 rows hit the periodic batch execution boundary (batchSize = 1000).
 		final List<List<String>> rows = new ArrayList<>();
 		for (int i = 0; i < 1000; i++) {

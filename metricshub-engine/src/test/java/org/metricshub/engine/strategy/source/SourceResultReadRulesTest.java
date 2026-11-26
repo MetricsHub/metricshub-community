@@ -49,12 +49,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * How the readers of a {@link SourceTable} treat its single content type: a text or a table, never both (stage 4 of
+ * How the readers of a {@link SourceResult} treat its single content type: a text or a table, never both (stage 4 of
  * the content-type epic, #1508). These rules replaced the legacy dual-state rules (a table and a raw text, with a
  * fallback at each read site) that were pinned before.
  */
 @ExtendWith(MockitoExtension.class)
-class SourceTableReadRulesTest {
+class SourceResultReadRulesTest {
 
 	private static final String SOURCE_REF = "${source::monitors.enclosure.discovery.sources.source(1)}";
 	private static final String OTHER_REF = "${source::monitors.enclosure.discovery.sources.source(2)}";
@@ -83,15 +83,15 @@ class SourceTableReadRulesTest {
 			.build();
 	}
 
-	private static TelemetryManager telemetryManagerWith(final String sourceRef, final SourceTable sourceTable) {
+	private static TelemetryManager telemetryManagerWith(final String sourceRef, final SourceResult sourceResult) {
 		final TelemetryManager telemetryManager = telemetryManager();
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(sourceRef, sourceTable);
+			.addSourceResult(sourceRef, sourceResult);
 		return telemetryManager;
 	}
 
-	private static ComputeProcessor computeProcessor(final SourceTable sourceTable) {
+	private static ComputeProcessor computeProcessor(final SourceResult sourceResult) {
 		final TelemetryManager telemetryManager = telemetryManager();
 		return ComputeProcessor.builder()
 			.telemetryManager(telemetryManager)
@@ -100,7 +100,7 @@ class SourceTableReadRulesTest {
 			.hostname(LOCALHOST)
 			.sourceKey(SOURCE_REF)
 			.index(0)
-			.sourceTable(sourceTable)
+			.sourceResult(sourceResult)
 			.build();
 	}
 
@@ -124,11 +124,11 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void awkComputeOutputIsThePrintedText() {
-		final SourceTable sourceTable = SourceTable.ofText("in");
-		computeProcessor(sourceTable).process(Awk.builder().script("{ print \"a;b\"; print \"\"; print \"c;\" }").build());
-		assertEquals(ContentType.TEXT, sourceTable.getContentType());
-		assertEquals("a;b\n\nc;\n", sourceTable.getText());
-		assertEquals(table("a|b", "c"), sourceTable.asTable());
+		final SourceResult sourceResult = SourceResult.ofText("in");
+		computeProcessor(sourceResult).process(Awk.builder().script("{ print \"a;b\"; print \"\"; print \"c;\" }").build());
+		assertEquals(ContentType.TEXT, sourceResult.getContentType());
+		assertEquals("a;b\n\nc;\n", sourceResult.getText());
+		assertEquals(table("a|b", "c"), sourceResult.asTable());
 	}
 
 	/**
@@ -137,15 +137,15 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void awkComputeTokenReachesTheHeaderAsPrinted() {
-		final SourceTable printf = SourceTable.ofText("in");
+		final SourceResult printf = SourceResult.ofText("in");
 		computeProcessor(printf).process(Awk.builder().script("{ printf \"abc\" }").build());
 		assertEquals("abc", printf.getText());
 
-		final SourceTable print = SourceTable.ofText("in");
+		final SourceResult print = SourceResult.ofText("in");
 		computeProcessor(print).process(Awk.builder().script("{ print \"abc\" }").build());
 		assertEquals("abc\n", print.getText());
 
-		for (final SourceTable token : List.of(printf, print)) {
+		for (final SourceResult token : List.of(printf, print)) {
 			assertEquals(
 				"X-Auth-Token: abc",
 				SourceUpdaterProcessor.replaceSourceReferenceContent(
@@ -171,15 +171,15 @@ class SourceTableReadRulesTest {
 	@Test
 	void sourceReferenceContentIsTheText() {
 		// A text
-		assertEquals("k;\nv1;v2\n\nz;", extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText("k;\nv1;v2\n\nz;"))));
-		assertEquals("abc", extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText("abc\n\n"))));
+		assertEquals("k;\nv1;v2\n\nz;", extract(telemetryManagerWith(SOURCE_REF, SourceResult.ofText("k;\nv1;v2\n\nz;"))));
+		assertEquals("abc", extract(telemetryManagerWith(SOURCE_REF, SourceResult.ofText("abc\n\n"))));
 
 		// A table
-		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofTable(table("a", "b|c")))));
+		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceResult.ofTable(table("a", "b|c")))));
 
 		// Nothing at all
-		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceTable.empty())));
-		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceTable.ofText(EMPTY))));
+		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceResult.empty())));
+		assertEquals(EMPTY, extract(telemetryManagerWith(SOURCE_REF, SourceResult.ofText(EMPTY))));
 	}
 
 	private static String extract(final TelemetryManager telemetryManager) {
@@ -202,32 +202,32 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void appendAndPrependValuesStayInTheirCell() {
-		SourceTable sourceTable = SourceTable.ofTable(table("a|b"));
-		computeProcessor(sourceTable).process(Append.builder().column(1).value(";x").build());
-		assertEquals(table("a;x|b"), sourceTable.getTable());
+		SourceResult sourceResult = SourceResult.ofTable(table("a|b"));
+		computeProcessor(sourceResult).process(Append.builder().column(1).value(";x").build());
+		assertEquals(table("a;x|b"), sourceResult.getTable());
 
-		sourceTable = SourceTable.ofTable(table("a|b"));
-		computeProcessor(sourceTable).process(Prepend.builder().column(2).value("MSHW;").build());
-		assertEquals(table("a|MSHW;b"), sourceTable.getTable());
+		sourceResult = SourceResult.ofTable(table("a|b"));
+		computeProcessor(sourceResult).process(Prepend.builder().column(2).value("MSHW;").build());
+		assertEquals(table("a|MSHW;b"), sourceResult.getTable());
 
-		sourceTable = SourceTable.ofTable(table("a|b"));
-		computeProcessor(sourceTable).process(Append.builder().column(1).value(";\nz").build());
-		assertEquals(table("a;\nz|b"), sourceTable.getTable());
+		sourceResult = SourceResult.ofTable(table("a|b"));
+		computeProcessor(sourceResult).process(Append.builder().column(1).value(";\nz").build());
+		assertEquals(table("a;\nz|b"), sourceResult.getTable());
 
 		// $n reference: the referenced cell contains ";", no column is added
-		sourceTable = SourceTable.ofTable(table("a|x;y"));
-		computeProcessor(sourceTable).process(Append.builder().column(1).value("$2").build());
-		assertEquals(table("ax;y|x;y"), sourceTable.getTable());
+		sourceResult = SourceResult.ofTable(table("a|x;y"));
+		computeProcessor(sourceResult).process(Append.builder().column(1).value("$2").build());
+		assertEquals(table("ax;y|x;y"), sourceResult.getTable());
 
 		// New column past the last one: the value is added as one cell
-		sourceTable = SourceTable.ofTable(table("a"));
-		computeProcessor(sourceTable).process(Append.builder().column(2).value("p;q").build());
-		assertEquals(table("a|p;q"), sourceTable.getTable());
+		sourceResult = SourceResult.ofTable(table("a"));
+		computeProcessor(sourceResult).process(Append.builder().column(2).value("p;q").build());
+		assertEquals(table("a|p;q"), sourceResult.getTable());
 
 		// Line feed: one row
-		sourceTable = SourceTable.ofTable(table("a|b"));
-		computeProcessor(sourceTable).process(Append.builder().column(1).value("\nz").build());
-		assertEquals(table("a\nz|b"), sourceTable.getTable());
+		sourceResult = SourceResult.ofTable(table("a|b"));
+		computeProcessor(sourceResult).process(Append.builder().column(1).value("\nz").build());
+		assertEquals(table("a\nz|b"), sourceResult.getTable());
 	}
 
 	/**
@@ -236,21 +236,21 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void replaceAndTranslateValuesStayInTheirCell() {
-		SourceTable sourceTable = SourceTable.ofTable(table("a|b"));
-		computeProcessor(sourceTable).process(Replace.builder().column(1).existingValue("a").newValue("a;x").build());
-		assertEquals(table("a;x|b"), sourceTable.getTable());
+		SourceResult sourceResult = SourceResult.ofTable(table("a|b"));
+		computeProcessor(sourceResult).process(Replace.builder().column(1).existingValue("a").newValue("a;x").build());
+		assertEquals(table("a;x|b"), sourceResult.getTable());
 
-		sourceTable = SourceTable.ofTable(table("a\nb|c;d"));
-		computeProcessor(sourceTable).process(Replace.builder().column(1).existingValue("zzz").newValue(EMPTY).build());
-		assertEquals(table("a\nb|c;d"), sourceTable.getTable());
+		sourceResult = SourceResult.ofTable(table("a\nb|c;d"));
+		computeProcessor(sourceResult).process(Replace.builder().column(1).existingValue("zzz").newValue(EMPTY).build());
+		assertEquals(table("a\nb|c;d"), sourceResult.getTable());
 
-		sourceTable = SourceTable.ofTable(table("a|b", "z|b"));
+		sourceResult = SourceResult.ofTable(table("a|b", "z|b"));
 		final Map<String, String> translations = new LinkedHashMap<>();
 		translations.put("a", "p;q");
 		translations.put("default", "line1\nline2");
 		final TranslationTable translationTable = TranslationTable.builder().translations(translations).build();
-		computeProcessor(sourceTable).process(Translate.builder().column(1).translationTable(translationTable).build());
-		assertEquals(table("p;q|b", "line1\nline2|b"), sourceTable.getTable());
+		computeProcessor(sourceResult).process(Translate.builder().column(1).translationTable(translationTable).build());
+		assertEquals(table("p;q|b", "line1\nline2|b"), sourceResult.getTable());
 	}
 
 	// ---------------------------------------------------------------------------------------------------------------
@@ -270,16 +270,16 @@ class SourceTableReadRulesTest {
 			KeepOnlyMatchingLines.builder().column(1).regExp("a").build(),
 			ExcludeMatchingLines.builder().column(1).regExp("a").build()
 		)) {
-			final SourceTable sourceTable = SourceTable.ofText("text");
+			final SourceResult sourceResult = SourceResult.ofText("text");
 			compute.accept(
 				ComputeUpdaterProcessor.builder()
-					.computeProcessor(computeProcessor(sourceTable))
+					.computeProcessor(computeProcessor(sourceResult))
 					.telemetryManager(telemetryManager())
 					.connectorId(MY_CONNECTOR_1_NAME)
 					.attributes(Map.of())
 					.build()
 			);
-			assertEquals(SourceTable.empty(), sourceTable, compute.toString());
+			assertEquals(SourceResult.empty(), sourceResult, compute.toString());
 		}
 	}
 
@@ -290,20 +290,20 @@ class SourceTableReadRulesTest {
 	/**
 	 * Runs the compute as a source does, through the updater, on the given result.
 	 */
-	private static SourceTable run(final Compute compute, final SourceTable sourceTable) {
+	private static SourceResult run(final Compute compute, final SourceResult sourceResult) {
 		compute.accept(
 			ComputeUpdaterProcessor.builder()
-				.computeProcessor(computeProcessor(sourceTable))
+				.computeProcessor(computeProcessor(sourceResult))
 				.telemetryManager(telemetryManager())
 				.connectorId(MY_CONNECTOR_1_NAME)
 				.attributes(Map.of())
 				.build()
 		);
-		return sourceTable;
+		return sourceResult;
 	}
 
-	private static SourceTable onText(final Compute compute, final String text) {
-		return run(compute, SourceTable.ofText(text));
+	private static SourceResult onText(final Compute compute, final String text) {
+		return run(compute, SourceResult.ofText(text));
 	}
 
 	/**
@@ -312,55 +312,55 @@ class SourceTableReadRulesTest {
 	@Test
 	void computeWithoutColumnWritesLfOnly() {
 		assertEquals(
-			SourceTable.ofText("x\ny\na\nb\n"),
+			SourceResult.ofText("x\ny\na\nb\n"),
 			onText(Prepend.builder().value("x\r\ny\r\n").build(), "a\r\nb\r\n")
 		);
-		assertEquals(SourceTable.ofText("a\nb\nx\n"), onText(Append.builder().value("x\r\n").build(), "a\r\nb\r\n"));
+		assertEquals(SourceResult.ofText("a\nb\nx\n"), onText(Append.builder().value("x\r\n").build(), "a\r\nb\r\n"));
 		assertEquals(
-			SourceTable.ofText("a\nb-\n"),
+			SourceResult.ofText("a\nb-\n"),
 			onText(Replace.builder().existingValue(";").newValue("-\r\n").build(), "a\r\nb;")
 		);
 		// A line ending to replace is LF, whatever its form in the text that was read: a text holds no CRLF
 		assertEquals(
-			SourceTable.ofText("a-b-"),
+			SourceResult.ofText("a-b-"),
 			onText(Replace.builder().existingValue("\n").newValue("-").build(), "a\r\nb\n")
 		);
 		assertEquals(
-			SourceTable.ofText("a\nb\n"),
+			SourceResult.ofText("a\nb\n"),
 			onText(Replace.builder().existingValue("\r\n").newValue("-").build(), "a\r\nb\n")
 		);
 		// The positions count the LF text: a, LF, b
-		assertEquals(SourceTable.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\r\nb\r\n"));
+		assertEquals(SourceResult.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\r\nb\r\n"));
 	}
 
 	@Test
 	void computeWithoutColumnAppliesOnceToTheWholeText() {
 		// The value goes before or after the whole text, after its final line ending, with no column reference
-		assertEquals(SourceTable.ofText("Bearer abc"), onText(Prepend.builder().value("Bearer ").build(), "abc"));
-		assertEquals(SourceTable.ofText("$1;a;b\nc;d\n"), onText(Prepend.builder().value("$1;").build(), "a;b\nc;d\n"));
-		assertEquals(SourceTable.ofText("a;b\nc;d\n$2"), onText(Append.builder().value("$2").build(), "a;b\nc;d\n"));
-		assertEquals(SourceTable.ofText("x"), onText(Append.builder().value("x").build(), EMPTY));
+		assertEquals(SourceResult.ofText("Bearer abc"), onText(Prepend.builder().value("Bearer ").build(), "abc"));
+		assertEquals(SourceResult.ofText("$1;a;b\nc;d\n"), onText(Prepend.builder().value("$1;").build(), "a;b\nc;d\n"));
+		assertEquals(SourceResult.ofText("a;b\nc;d\n$2"), onText(Append.builder().value("$2").build(), "a;b\nc;d\n"));
+		assertEquals(SourceResult.ofText("x"), onText(Append.builder().value("x").build(), EMPTY));
 
 		// Every occurrence, on every line, literally: no regular expression, no column reference
 		assertEquals(
-			SourceTable.ofText("a-b\nc-d\n"),
+			SourceResult.ofText("a-b\nc-d\n"),
 			onText(Replace.builder().existingValue(";").newValue("-").build(), "a;b\nc;d\n")
 		);
 		assertEquals(
-			SourceTable.ofText("a$1b"),
+			SourceResult.ofText("a$1b"),
 			onText(Replace.builder().existingValue(".").newValue("$1").build(), "a.b")
 		);
 		assertEquals(
-			SourceTable.ofText("ab"),
+			SourceResult.ofText("ab"),
 			onText(Replace.builder().existingValue("$1").newValue(EMPTY).build(), "a$1b")
 		);
 		// A missing value leaves the text unchanged
-		assertEquals(SourceTable.ofText("a"), onText(Replace.builder().existingValue("a").build(), "a"));
+		assertEquals(SourceResult.ofText("a"), onText(Replace.builder().existingValue("a").build(), "a"));
 
 		// As on a cell: start is 1-based, length is the 1-based position of the last character kept
-		assertEquals(SourceTable.ofText("bcd"), onText(Substring.builder().start("2").length("4").build(), "abcdef"));
-		assertEquals(SourceTable.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\nb\nc"));
-		assertEquals(SourceTable.ofText(EMPTY), onText(Substring.builder().start("1").length("0").build(), "abc"));
+		assertEquals(SourceResult.ofText("bcd"), onText(Substring.builder().start("2").length("4").build(), "abcdef"));
+		assertEquals(SourceResult.ofText("a\nb"), onText(Substring.builder().start("1").length("3").build(), "a\nb\nc"));
+		assertEquals(SourceResult.ofText(EMPTY), onText(Substring.builder().start("1").length("0").build(), "abc"));
 		// Out of the text, not a number, a column reference: the text is unchanged
 		for (final Substring invalid : List.of(
 			Substring.builder().start("0").length("2").build(),
@@ -369,7 +369,7 @@ class SourceTableReadRulesTest {
 			Substring.builder().start("$1").length("2").build(),
 			Substring.builder().start("1").length("$2").build()
 		)) {
-			assertEquals(SourceTable.ofText("abcdef"), onText(invalid, "abcdef"), invalid.toString());
+			assertEquals(SourceResult.ofText("abcdef"), onText(invalid, "abcdef"), invalid.toString());
 		}
 	}
 
@@ -381,7 +381,7 @@ class SourceTableReadRulesTest {
 			Replace.builder().existingValue("a").newValue("b").build(),
 			Substring.builder().start("1").length("1").build()
 		)) {
-			assertEquals(SourceTable.ofTable(table("ab|cd")), run(compute, SourceTable.ofTable(table("ab|cd"))));
+			assertEquals(SourceResult.ofTable(table("ab|cd")), run(compute, SourceResult.ofTable(table("ab|cd"))));
 		}
 	}
 
@@ -398,11 +398,11 @@ class SourceTableReadRulesTest {
 			Replace.builder().column(1).existingValue("a").newValue("b").build(),
 			Substring.builder().column(1).start("1").length("1").build()
 		)) {
-			assertEquals(SourceTable.ofText("ab"), onText(compute, "ab"), compute.toString());
+			assertEquals(SourceResult.ofText("ab"), onText(compute, "ab"), compute.toString());
 
-			final SourceTable sourceTable = SourceTable.ofText("ab");
-			compute.accept(computeProcessor(sourceTable));
-			assertEquals(SourceTable.ofText("ab"), sourceTable, compute.toString());
+			final SourceResult sourceResult = SourceResult.ofText("ab");
+			compute.accept(computeProcessor(sourceResult));
+			assertEquals(SourceResult.ofText("ab"), sourceResult, compute.toString());
 		}
 	}
 
@@ -418,49 +418,49 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void executeForEachEntryOfJsonAndCustomConcatenateText() {
-		final Map<String, SourceTable> results = Map.of(
+		final Map<String, SourceResult> results = Map.of(
 			"a",
-			SourceTable.ofText("{\"v\":1}"),
+			SourceResult.ofText("{\"v\":1}"),
 			"b",
-			SourceTable.ofText(EMPTY),
+			SourceResult.ofText(EMPTY),
 			"c",
-			SourceTable.ofText("{\"v\":3}")
+			SourceResult.ofText("{\"v\":3}")
 		);
 
-		final SourceTable jsonArray = runForEachEntry(EntryConcatMethod.JSON_ARRAY, results);
-		assertEquals(SourceTable.ofText("[{\"v\":1},\n{\"v\":3}]"), jsonArray);
+		final SourceResult jsonArray = runForEachEntry(EntryConcatMethod.JSON_ARRAY, results);
+		assertEquals(SourceResult.ofText("[{\"v\":1},\n{\"v\":3}]"), jsonArray);
 
-		final SourceTable extended = runForEachEntry(EntryConcatMethod.JSON_ARRAY_EXTENDED, results);
+		final SourceResult extended = runForEachEntry(EntryConcatMethod.JSON_ARRAY_EXTENDED, results);
 		assertEquals(
-			SourceTable.ofText(
+			SourceResult.ofText(
 				"[{\n\"Entry\":{\n\"Column(1)\":\"a\",\n\"Column(2)\":\"x;y\",\n\"Value\":{\"v\":1}\n}\n},\n" +
 					"{\n\"Entry\":{\n\"Column(1)\":\"c\",\n\"Column(2)\":\"x;y\",\n\"Value\":{\"v\":3}\n}\n}]"
 			),
 			extended
 		);
 
-		final SourceTable custom = runForEachEntry(
+		final SourceResult custom = runForEachEntry(
 			CustomConcatMethod.builder().concatStart("<$1>").concatEnd("</$1>\n").build(),
 			results
 		);
-		assertEquals(SourceTable.ofText("<a>{\"v\":1}</a>\n<b></b>\n<c>{\"v\":3}</c>\n"), custom);
+		assertEquals(SourceResult.ofText("<a>{\"v\":1}</a>\n<b></b>\n<c>{\"v\":3}</c>\n"), custom);
 
 		// An entry that is a table is read as its text
-		final SourceTable tableEntries = runForEachEntry(
+		final SourceResult tableEntries = runForEachEntry(
 			EntryConcatMethod.JSON_ARRAY,
-			Map.of("a", SourceTable.ofTable(table("p;q|r")), "b", SourceTable.empty(), "c", SourceTable.empty())
+			Map.of("a", SourceResult.ofTable(table("p;q|r")), "b", SourceResult.empty(), "c", SourceResult.empty())
 		);
-		assertEquals(SourceTable.ofText("[p,q;r;]"), tableEntries);
+		assertEquals(SourceResult.ofText("[p,q;r;]"), tableEntries);
 	}
 
 	/**
 	 * Runs an HTTP source with <code>path: $1</code> for the entries a, b and c (second column "x;y"), each entry
 	 * returning the given source table.
 	 */
-	private SourceTable runForEachEntry(final IEntryConcatMethod concatMethod, final Map<String, SourceTable> results) {
+	private SourceResult runForEachEntry(final IEntryConcatMethod concatMethod, final Map<String, SourceResult> results) {
 		final TelemetryManager telemetryManager = telemetryManagerWith(
 			ENTRIES_REF,
-			SourceTable.ofTable(table("a|x;y", "b|x;y", "c|x;y"))
+			SourceResult.ofTable(table("a|x;y", "b|x;y", "c|x;y"))
 		);
 		final HttpSource httpSource = HttpSource.builder()
 			.url("http://host")
@@ -468,11 +468,11 @@ class SourceTableReadRulesTest {
 			.executeForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENTRIES_REF).concatMethod(concatMethod).build())
 			.build();
 		doAnswer(invocation -> {
-			final SourceTable entryResult = results.get(invocation.<HttpSource>getArgument(0).getPath());
+			final SourceResult entryResult = results.get(invocation.<HttpSource>getArgument(0).getPath());
 			// A fresh copy each time, as the real processor builds a new result for each entry
 			return entryResult.getContentType() == ContentType.TEXT
-				? SourceTable.ofText(entryResult.getText())
-				: SourceTable.ofTable(entryResult.asTable());
+				? SourceResult.ofText(entryResult.getText())
+				: SourceResult.ofTable(entryResult.asTable());
 		}).when(sourceProcessor).process(any(HttpSource.class));
 		return sourceUpdaterProcessor(telemetryManager).process(httpSource);
 	}
@@ -487,16 +487,16 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void awkVariableExposesTheTableOrTheConvertedText() {
-		assertEquals(table("a|b", "c"), resolveVariable(SourceTable.ofTable(table("a|b", "c"))));
-		assertEquals(table("a|b", "c"), resolveVariable(SourceTable.ofText("a;b\r\n\r\nc;")));
-		assertEquals(List.of(), resolveVariable(SourceTable.empty()));
-		assertEquals(List.of(), resolveVariable(SourceTable.ofText(EMPTY)));
+		assertEquals(table("a|b", "c"), resolveVariable(SourceResult.ofTable(table("a|b", "c"))));
+		assertEquals(table("a|b", "c"), resolveVariable(SourceResult.ofText("a;b\r\n\r\nc;")));
+		assertEquals(List.of(), resolveVariable(SourceResult.empty()));
+		assertEquals(List.of(), resolveVariable(SourceResult.ofText(EMPTY)));
 	}
 
-	private static Object resolveVariable(final SourceTable sourceTable) {
+	private static Object resolveVariable(final SourceResult sourceResult) {
 		return AwkVariableHelper.resolveVariables(
 			Map.of("v", SOURCE_REF),
-			telemetryManagerWith(SOURCE_REF, sourceTable),
+			telemetryManagerWith(SOURCE_REF, sourceResult),
 			MY_CONNECTOR_1_NAME,
 			Map.of(),
 			"key"
@@ -509,18 +509,18 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void httpTokenIsFirstCellOfATableOrFirstLineOfAText() {
-		assertEquals("tok", extractToken(SourceTable.ofTable(table("tok|x"))));
-		assertEquals("tok;en", extractToken(SourceTable.ofText("tok;en\nline2")));
-		assertEquals("tok;en;", extractToken(SourceTable.ofText("tok;en;")));
-		assertEquals("abc", extractToken(SourceTable.ofText("abc\ndef")));
-		assertEquals("abc", extractToken(SourceTable.ofText("abc\r\ndef")));
-		assertEquals("abc", extractToken(SourceTable.ofText("abc\n")));
+		assertEquals("tok", extractToken(SourceResult.ofTable(table("tok|x"))));
+		assertEquals("tok;en", extractToken(SourceResult.ofText("tok;en\nline2")));
+		assertEquals("tok;en;", extractToken(SourceResult.ofText("tok;en;")));
+		assertEquals("abc", extractToken(SourceResult.ofText("abc\ndef")));
+		assertEquals("abc", extractToken(SourceResult.ofText("abc\r\ndef")));
+		assertEquals("abc", extractToken(SourceResult.ofText("abc\n")));
 		// A lone CR ends no line
-		assertEquals("abc\rdef", extractToken(SourceTable.ofText("abc\rdef\nghi")));
-		assertEquals("a b=c", extractToken(SourceTable.ofText("a b=c")));
-		assertEquals(EMPTY, extractToken(SourceTable.ofText("\nabc")));
-		assertEquals(EMPTY, extractToken(SourceTable.ofText(EMPTY)));
-		assertNull(extractToken(SourceTable.empty()));
+		assertEquals("abc\rdef", extractToken(SourceResult.ofText("abc\rdef\nghi")));
+		assertEquals("a b=c", extractToken(SourceResult.ofText("a b=c")));
+		assertEquals(EMPTY, extractToken(SourceResult.ofText("\nabc")));
+		assertEquals(EMPTY, extractToken(SourceResult.ofText(EMPTY)));
+		assertNull(extractToken(SourceResult.empty()));
 	}
 
 	/**
@@ -530,15 +530,15 @@ class SourceTableReadRulesTest {
 	@Test
 	void httpTokenThatIsNotAReferenceIsTheTokenItself() {
 		final SourceUpdaterProcessor processor = sourceUpdaterProcessor(
-			telemetryManagerWith(SOURCE_REF, SourceTable.empty())
+			telemetryManagerWith(SOURCE_REF, SourceResult.empty())
 		);
 		assertEquals("to;ken;", processor.extractHttpTokenFromSource("original", "to;ken;", "authenticationToken"));
 		assertEquals(EMPTY, processor.extractHttpTokenFromSource("original", EMPTY, "authenticationToken"));
 		assertNull(processor.extractHttpTokenFromSource("original", null, "authenticationToken"));
 	}
 
-	private String extractToken(final SourceTable sourceTable) {
-		return sourceUpdaterProcessor(telemetryManagerWith(SOURCE_REF, sourceTable)).extractHttpTokenFromSource(
+	private String extractToken(final SourceResult sourceResult) {
+		return sourceUpdaterProcessor(telemetryManagerWith(SOURCE_REF, sourceResult)).extractHttpTokenFromSource(
 			"original",
 			SOURCE_REF,
 			"authenticationToken"
@@ -551,20 +551,20 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void copyKeepsTheTextOrCopiesTheRows() {
-		final TelemetryManager telemetryManager = telemetryManagerWith(SOURCE_REF, SourceTable.ofText("body\n"));
+		final TelemetryManager telemetryManager = telemetryManagerWith(SOURCE_REF, SourceResult.ofText("body\n"));
 		final List<List<String>> rows = table("a|b", "c");
 		rows.add(new ArrayList<>());
-		final SourceTable origin = SourceTable.ofTable(rows);
-		telemetryManager.getHostProperties().getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(OTHER_REF, origin);
+		final SourceResult origin = SourceResult.ofTable(rows);
+		telemetryManager.getHostProperties().getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceResult(OTHER_REF, origin);
 		final SourceProcessor processor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.connectorId(MY_CONNECTOR_1_NAME)
 			.build();
 
-		assertEquals(SourceTable.ofText("body\n"), processor.process(CopySource.builder().from(SOURCE_REF).build()));
+		assertEquals(SourceResult.ofText("body\n"), processor.process(CopySource.builder().from(SOURCE_REF).build()));
 
-		final SourceTable tableCopy = processor.process(CopySource.builder().from(OTHER_REF).build());
-		assertEquals(SourceTable.ofTable(table("a|b", "c")), tableCopy);
+		final SourceResult tableCopy = processor.process(CopySource.builder().from(OTHER_REF).build());
+		assertEquals(SourceResult.ofTable(table("a|b", "c")), tableCopy);
 		tableCopy.getTable().get(0).set(0, "changed");
 		assertEquals("a", origin.getTable().get(0).get(0));
 	}
@@ -576,7 +576,7 @@ class SourceTableReadRulesTest {
 	 */
 	@Test
 	void staticCellInterpolatesTheTextOfASource() {
-		final TelemetryManager telemetryManager = telemetryManagerWith(SOURCE_REF, SourceTable.ofText("body"));
+		final TelemetryManager telemetryManager = telemetryManagerWith(SOURCE_REF, SourceResult.ofText("body"));
 		final SourceUpdaterProcessor processor = new SourceUpdaterProcessor(
 			SourceProcessor.builder().telemetryManager(telemetryManager).connectorId(MY_CONNECTOR_1_NAME).build(),
 			telemetryManager,
@@ -586,7 +586,7 @@ class SourceTableReadRulesTest {
 		);
 
 		assertEquals(
-			SourceTable.ofTable(table("id|a-body")),
+			SourceResult.ofTable(table("id|a-body")),
 			processor.process(StaticSource.builder().value(List.of("id", "a-" + SOURCE_REF)).build())
 		);
 	}

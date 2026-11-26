@@ -16,7 +16,7 @@ import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -89,7 +89,7 @@ class AwkVariablesUpdateTest {
 
 		final List<List<String>> table = List.of(List.of("FOO", "1"), List.of("BAR", "2"));
 		final HostProperties hostProperties = HostProperties.builder().build();
-		hostProperties.getConnectorNamespace(CONNECTOR_ID).addSourceTable(SOURCE_REF, SourceTable.ofTable(table));
+		hostProperties.getConnectorNamespace(CONNECTOR_ID).addSourceResult(SOURCE_REF, SourceResult.ofTable(table));
 		telemetryManager.setHostProperties(hostProperties);
 
 		final Map<String, Object> resolved = AwkVariableHelper.resolveVariables(
@@ -135,7 +135,7 @@ class AwkVariablesUpdateTest {
 			)
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().build();
-		hostProperties.getConnectorNamespace(CONNECTOR_ID).addSourceTable(SOURCE_REF, SourceTable.ofTable(table));
+		hostProperties.getConnectorNamespace(CONNECTOR_ID).addSourceResult(SOURCE_REF, SourceResult.ofTable(table));
 		telemetryManager.setHostProperties(hostProperties);
 		return telemetryManager;
 	}

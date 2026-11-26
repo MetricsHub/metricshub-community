@@ -42,7 +42,7 @@ import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 @Data
 @NoArgsConstructor
@@ -127,7 +127,7 @@ public class SqlSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(ISourceProcessor sourceProcessor) {
+	public SourceResult accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

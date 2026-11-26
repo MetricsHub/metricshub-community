@@ -16,7 +16,7 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -34,9 +34,9 @@ class CommandLineSourceProcessorTest {
 
 	@Test
 	void textKeepsLinesAsIsAndTableIsTheCanonicalConversion() throws Exception {
-		final SourceTable result = process("a;b;;\n\nc;d\n;e\n", CommandLineSource.builder().commandLine("cmd").build());
+		final SourceResult result = process("a;b;;\n\nc;d\n;e\n", CommandLineSource.builder().commandLine("cmd").build());
 
-		assertEquals(SourceTable.ofText("a;b;;\n\nc;d\n;e"), result);
+		assertEquals(SourceResult.ofText("a;b;;\n\nc;d\n;e"), result);
 		assertEquals(List.of(List.of("a", "b", ""), List.of("c", "d"), List.of("", "e")), result.asTable());
 	}
 
@@ -65,8 +65,8 @@ class CommandLineSourceProcessorTest {
 	@Test
 	void emptyOutputIsAnAnswerAndNoOutputAFailure() throws Exception {
 		final CommandLineSource source = CommandLineSource.builder().commandLine("cmd").build();
-		assertEquals(SourceTable.ofText(""), process("", source));
-		assertEquals(SourceTable.failed("OS command: cmd: the command did not run."), process(null, source));
+		assertEquals(SourceResult.ofText(""), process("", source));
+		assertEquals(SourceResult.failed("OS command: cmd: the command did not run."), process(null, source));
 	}
 
 	/**
@@ -80,7 +80,7 @@ class CommandLineSourceProcessorTest {
 			.runOsCommand(any(), any(), any(), anyBoolean(), anyBoolean(), any());
 
 		try {
-			final SourceTable result = new CommandLineSourceProcessor(osCommandService).process(
+			final SourceResult result = new CommandLineSourceProcessor(osCommandService).process(
 				CommandLineSource.builder().commandLine("cmd").build(),
 				CONNECTOR_ID,
 				newTelemetryManager()
@@ -100,7 +100,7 @@ class CommandLineSourceProcessorTest {
 	 * @param source The source
 	 * @return the result of the source
 	 */
-	private static SourceTable process(final String output, final CommandLineSource source) throws Exception {
+	private static SourceResult process(final String output, final CommandLineSource source) throws Exception {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 		doReturn(new OsCommandResult(output, "cmd")).when(osCommandService)
 			.runOsCommand(any(), any(), any(), anyBoolean(), anyBoolean(), any());

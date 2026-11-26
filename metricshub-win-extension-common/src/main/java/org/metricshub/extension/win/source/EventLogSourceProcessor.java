@@ -39,14 +39,14 @@ import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogLevel;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 
 /**
- * Processes {@link EventLogSource} definitions and returns a {@link SourceTable} built from Windows Event Log data.
+ * Processes {@link EventLogSource} definitions and returns a {@link SourceResult} built from Windows Event Log data.
  * <p>
  * This processor:
  * <ul>
@@ -118,24 +118,24 @@ public class EventLogSourceProcessor {
 	private String connectorId;
 
 	/**
-	 * Processes an {@link EventLogSource} and returns a {@link SourceTable} containing Windows Event Log data.
+	 * Processes an {@link EventLogSource} and returns a {@link SourceResult} containing Windows Event Log data.
 	 *
 	 * @param eventLogSource the event log source definition
 	 * @param telemetryManager the telemetry manager providing host configuration and connector namespace
-	 * @return a {@link SourceTable} containing the event log results, or a failure
+	 * @return a {@link SourceResult} containing the event log results, or a failure
 	 */
-	public SourceTable process(final EventLogSource eventLogSource, final TelemetryManager telemetryManager) {
+	public SourceResult process(final EventLogSource eventLogSource, final TelemetryManager telemetryManager) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (eventLogSource == null) {
-			return SourceTable.failed("Malformed EventLog source.");
+			return SourceResult.failed("Malformed EventLog source.");
 		}
 
 		// Find the configured protocol (WinRM or WMI)
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (winConfiguration == null) {
-			return SourceTable.failed("EventLog: neither WMI nor WinRM is configured on the host.");
+			return SourceResult.failed("EventLog: neither WMI nor WinRM is configured on the host.");
 		}
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
@@ -153,7 +153,7 @@ public class EventLogSourceProcessor {
 		final String wqlQuery = buildEventLogQuery(eventLogSource, cursor);
 
 		if (wqlQuery == null || wqlQuery.isBlank()) {
-			return SourceTable.failed("EventLog: the WQL query cannot be built.");
+			return SourceResult.failed("EventLog: the WQL query cannot be built.");
 		}
 
 		log.info("Executing WMI query on {}: \n{}", hostname, wqlQuery);
@@ -190,7 +190,7 @@ public class EventLogSourceProcessor {
 			// Store the new marker in the telemetry manager to use in the next iteration.
 			connectorNamespace.setEventLogCursor(sourceKey, postProcessingResult.getCursor());
 
-			return SourceTable.ofTable(postProcessingResult.getResults());
+			return SourceResult.ofTable(postProcessingResult.getResults());
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,
@@ -206,7 +206,7 @@ public class EventLogSourceProcessor {
 				e
 			);
 
-			return SourceTable.failed("EventLog query " + wqlQuery, e);
+			return SourceResult.failed("EventLog query " + wqlQuery, e);
 		}
 	}
 

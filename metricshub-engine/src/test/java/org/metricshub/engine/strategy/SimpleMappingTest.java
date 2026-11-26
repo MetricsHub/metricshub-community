@@ -34,7 +34,7 @@ import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
@@ -75,9 +75,9 @@ class SimpleMappingTest {
 		lenient().doAnswer(invocation -> {
 			if (invocation.getArgument(0) instanceof CommandLineSource commandLine) {
 				final String text = texts.get(commandLine.getCommandLine());
-				return text == null ? SourceTable.failed("No such command") : SourceTable.ofText(text);
+				return text == null ? SourceResult.failed("No such command") : SourceResult.ofText(text);
 			}
-			return SourceTable.ofTable(SourceTable.csvToTable("row-1;10\nrow-2;20", ";"));
+			return SourceResult.ofTable(SourceResult.csvToTable("row-1;10\nrow-2;20", ";"));
 		}).when(protocolExtensionMock).processSource(any(), anyString(), any(TelemetryManager.class));
 		extensionManager = ExtensionManager.builder().withProtocolExtensions(List.of(protocolExtensionMock)).build();
 

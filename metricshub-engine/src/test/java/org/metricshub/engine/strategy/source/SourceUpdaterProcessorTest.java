@@ -104,9 +104,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(HttpSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(HttpSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -119,20 +119,20 @@ class SourceUpdaterProcessorTest {
 		final HttpSource httpSource = HttpSource.builder().url(URL).build();
 		httpSource.setExecuteForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build());
 
-		final SourceTable sourceTable = SourceTable.ofTable(
+		final SourceResult sourceResult = SourceResult.ofTable(
 			Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
 		);
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
-		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(ENCLOSURE_COLLECT_SOURCE_1, sourceTable);
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceResult(ENCLOSURE_COLLECT_SOURCE_1, sourceResult);
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		final SourceTable expected1 = SourceTable.ofText(EXPECTED_VAL_1);
-		final SourceTable expected2 = SourceTable.ofText(EXPECTED_VAL_2);
+		final SourceResult expected1 = SourceResult.ofText(EXPECTED_VAL_1);
+		final SourceResult expected2 = SourceResult.ofText(EXPECTED_VAL_2);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
-		SourceTable result = new SourceUpdaterProcessor(
+		SourceResult result = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
@@ -208,21 +208,21 @@ class SourceUpdaterProcessorTest {
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(customConcatMethod).build()
 		);
 
-		final SourceTable sourceTable = SourceTable.ofTable(
+		final SourceResult sourceResult = SourceResult.ofTable(
 			Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
 		);
 
 		final HostProperties hostProperties = HostProperties.builder().build();
 
-		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(ENCLOSURE_COLLECT_SOURCE_1, sourceTable);
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceResult(ENCLOSURE_COLLECT_SOURCE_1, sourceResult);
 
 		telemetryManager.setHostProperties(hostProperties);
 
-		final SourceTable expected1 = SourceTable.ofText(EXPECTED_VAL_1);
-		final SourceTable expected2 = SourceTable.ofText(EXPECTED_VAL_2);
+		final SourceResult expected1 = SourceResult.ofText(EXPECTED_VAL_1);
+		final SourceResult expected2 = SourceResult.ofText(EXPECTED_VAL_2);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
 
-		SourceTable result = new SourceUpdaterProcessor(
+		SourceResult result = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
@@ -233,11 +233,11 @@ class SourceUpdaterProcessorTest {
 		assertEquals(expectedResult, result.getText());
 
 		// A failed entry makes the source fail; an empty entry is an answer, wrapped; a table entry is read as its text
-		final SourceTable threeRows = SourceTable.ofTable(
+		final SourceResult threeRows = SourceResult.ofTable(
 			Arrays.asList(Arrays.asList("1"), Arrays.asList("2"), Arrays.asList("3"))
 		);
-		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(ENCLOSURE_COLLECT_SOURCE_1, threeRows);
-		doReturn(SourceTable.ofText("a"), SourceTable.failed("Refused"), SourceTable.ofTable(List.of(List.of("b", "c"))))
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceResult(ENCLOSURE_COLLECT_SOURCE_1, threeRows);
+		doReturn(SourceResult.ofText("a"), SourceResult.failed("Refused"), SourceResult.ofTable(List.of(List.of("b", "c"))))
 			.when(sourceProcessor)
 			.process(any(HttpSource.class));
 		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(
@@ -247,19 +247,19 @@ class SourceUpdaterProcessorTest {
 			Map.of(),
 			extensionManager
 		);
-		assertEquals(SourceTable.failed("Entry [2]: Refused"), updater.process(httpSource));
+		assertEquals(SourceResult.failed("Entry [2]: Refused"), updater.process(httpSource));
 
 		// With continueOnFailure, a failed entry is skipped
 		httpSource.setContinueOnFailure(true);
-		doReturn(SourceTable.ofText("a"), SourceTable.failed("Refused"), SourceTable.ofText("")).when(sourceProcessor)
+		doReturn(SourceResult.ofText("a"), SourceResult.failed("Refused"), SourceResult.ofText("")).when(sourceProcessor)
 			.process(any(HttpSource.class));
-		assertEquals(SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;"), updater.process(httpSource));
+		assertEquals(SourceResult.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;"), updater.process(httpSource));
 		httpSource.setContinueOnFailure(false);
-		doReturn(SourceTable.ofText("a"), SourceTable.ofText(""), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
+		doReturn(SourceResult.ofText("a"), SourceResult.ofText(""), SourceResult.ofTable(List.of(List.of("b", "c")))).when(
 			sourceProcessor
 		).process(any(HttpSource.class));
 		assertEquals(
-			SourceTable.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;concatStart:{b;c;}concatEnd;"),
+			SourceResult.ofText("concatStart:{a}concatEnd;concatStart:{}concatEnd;concatStart:{b;c;}concatEnd;"),
 			updater.process(httpSource)
 		);
 
@@ -267,17 +267,17 @@ class SourceUpdaterProcessorTest {
 		httpSource.setExecuteForEachEntryOf(
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(EntryConcatMethod.LIST).build()
 		);
-		doReturn(SourceTable.ofText("a"), SourceTable.empty(), SourceTable.ofTable(List.of(List.of("b", "c")))).when(
+		doReturn(SourceResult.ofText("a"), SourceResult.empty(), SourceResult.ofTable(List.of(List.of("b", "c")))).when(
 			sourceProcessor
 		).process(any(HttpSource.class));
-		final SourceTable list = new SourceUpdaterProcessor(
+		final SourceResult list = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
 			Map.of(),
 			extensionManager
 		).process(httpSource);
-		assertEquals(SourceTable.ofText("a\nb;c;"), list);
+		assertEquals(SourceResult.ofText("a\nb;c;"), list);
 	}
 
 	@Test
@@ -325,11 +325,11 @@ class SourceUpdaterProcessorTest {
 	 * @param answer                Answer returning the result of each entry
 	 * @return The concatenated result
 	 */
-	private SourceTable runForEachEntry(
+	private SourceResult runForEachEntry(
 		final ExecuteForEachEntryOf executeForEachEntryOf,
 		final boolean sequentialHost,
 		final boolean forceSerialization,
-		final Answer<SourceTable> answer
+		final Answer<SourceResult> answer
 	) {
 		return runForEachEntry(executeForEachEntryOf, sequentialHost, forceSerialization, false, answer);
 	}
@@ -344,12 +344,12 @@ class SourceUpdaterProcessorTest {
 	 * @param answer                Answer returning the result of each entry
 	 * @return The concatenated result
 	 */
-	private SourceTable runForEachEntry(
+	private SourceResult runForEachEntry(
 		final ExecuteForEachEntryOf executeForEachEntryOf,
 		final boolean sequentialHost,
 		final boolean forceSerialization,
 		final boolean continueOnFailure,
-		final Answer<SourceTable> answer
+		final Answer<SourceResult> answer
 	) {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
@@ -363,9 +363,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().build();
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(
+			.addSourceResult(
 				ENCLOSURE_COLLECT_SOURCE_1,
-				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
+				SourceResult.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
 			);
 		telemetryManager.setHostProperties(hostProperties);
 
@@ -392,13 +392,13 @@ class SourceUpdaterProcessorTest {
 	/**
 	 * Answer recording the maximum number of concurrent calls in {@code maxConcurrent}.
 	 */
-	private static Answer<SourceTable> concurrencyRecordingAnswer(final AtomicInteger maxConcurrent) {
+	private static Answer<SourceResult> concurrencyRecordingAnswer(final AtomicInteger maxConcurrent) {
 		final AtomicInteger current = new AtomicInteger();
 		return invocation -> {
 			maxConcurrent.accumulateAndGet(current.incrementAndGet(), Math::max);
 			Thread.sleep(20);
 			current.decrementAndGet();
-			return SourceTable.ofText("result-" + invocation.<HttpSource>getArgument(0).getPath());
+			return SourceResult.ofText("result-" + invocation.<HttpSource>getArgument(0).getPath());
 		};
 	}
 
@@ -407,17 +407,17 @@ class SourceUpdaterProcessorTest {
 		// Every entry waits until all 4 entries run at the same time, then the first entries finish last
 		final CountDownLatch allRunning = new CountDownLatch(4);
 		final List<String> notConcurrent = Collections.synchronizedList(new ArrayList<>());
-		final Answer<SourceTable> answer = invocation -> {
+		final Answer<SourceResult> answer = invocation -> {
 			final String entry = invocation.<HttpSource>getArgument(0).getPath();
 			allRunning.countDown();
 			if (!allRunning.await(10, TimeUnit.SECONDS)) {
 				notConcurrent.add(entry);
 			}
 			Thread.sleep(('e' - entry.charAt(0)) * 30L);
-			return SourceTable.ofText("result-" + entry);
+			return SourceResult.ofText("result-" + entry);
 		};
 
-		final SourceTable parallel = runForEachEntry(
+		final SourceResult parallel = runForEachEntry(
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).build(),
 			false,
 			false,
@@ -426,13 +426,13 @@ class SourceUpdaterProcessorTest {
 
 		assertEquals(List.of(), notConcurrent);
 		// Same output, in the same order, as the sequential run
-		final SourceTable sequential = runForEachEntry(
+		final SourceResult sequential = runForEachEntry(
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build(),
 			false,
 			false,
 			concurrencyRecordingAnswer(new AtomicInteger())
 		);
-		assertEquals(SourceTable.ofText("result-a\nresult-b\nresult-c\nresult-d"), parallel);
+		assertEquals(SourceResult.ofText("result-a\nresult-b\nresult-c\nresult-d"), parallel);
 		assertEquals(sequential, parallel);
 	}
 
@@ -450,9 +450,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(
+			.addSourceResult(
 				ENCLOSURE_COLLECT_SOURCE_1,
-				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
+				SourceResult.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
 			);
 		final SnmpGetSource snmpGetSource = SnmpGetSource.builder()
 			.oid("$1")
@@ -462,12 +462,12 @@ class SourceUpdaterProcessorTest {
 		doAnswer(invocation -> {
 			final String entry = invocation.<SnmpGetSource>getArgument(0).getOid();
 			if ("c".equals(entry)) {
-				return SourceTable.ofTable(new ArrayList<>(List.of(new ArrayList<>(), new ArrayList<>(List.of("")))));
+				return SourceResult.ofTable(new ArrayList<>(List.of(new ArrayList<>(), new ArrayList<>(List.of("")))));
 			}
-			return "d".equals(entry) ? SourceTable.empty() : SourceTable.ofTable(List.of(List.of(entry, "x")));
+			return "d".equals(entry) ? SourceResult.empty() : SourceResult.ofTable(List.of(List.of(entry, "x")));
 		}).when(sourceProcessor).process(any(SnmpGetSource.class));
 
-		final SourceTable result = new SourceUpdaterProcessor(
+		final SourceResult result = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
@@ -475,14 +475,14 @@ class SourceUpdaterProcessorTest {
 			extensionManager
 		).process(snmpGetSource);
 
-		assertEquals(SourceTable.ofTable(List.of(List.of("a", "x"), List.of("b", "x"), List.of(""))), result);
+		assertEquals(SourceResult.ofTable(List.of(List.of("a", "x"), List.of("b", "x"), List.of(""))), result);
 	}
 
 	@Test
 	void testProcessExecuteForEachEntryStopsWhenInterrupted() {
 		final AtomicInteger requests = new AtomicInteger();
 		try {
-			final SourceTable result = runForEachEntry(
+			final SourceResult result = runForEachEntry(
 				ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build(),
 				false,
 				false,
@@ -490,7 +490,7 @@ class SourceUpdaterProcessorTest {
 					// The job deadline expires during the first request
 					requests.incrementAndGet();
 					Thread.currentThread().interrupt();
-					return SourceTable.ofText("{}");
+					return SourceResult.ofText("{}");
 				}
 			);
 			assertEquals(1, requests.get());
@@ -515,9 +515,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(
+			.addSourceResult(
 				ENCLOSURE_COLLECT_SOURCE_1,
-				SourceTable.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
+				SourceResult.ofTable(List.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")))
 			);
 		final HttpSource httpSource = HttpSource.builder()
 			.url(URL)
@@ -555,10 +555,10 @@ class SourceUpdaterProcessorTest {
 			} else {
 				queuedEntrySent.countDown();
 			}
-			return SourceTable.ofText(entry);
+			return SourceResult.ofText(entry);
 		}).when(sourceProcessor).process(any(HttpSource.class));
 
-		final SourceTable[] result = new SourceTable[1];
+		final SourceResult[] result = new SourceResult[1];
 		final Thread coordinator = new Thread(
 			() -> result[0] = new SourceUpdaterProcessor(
 				sourceProcessor,
@@ -617,7 +617,7 @@ class SourceUpdaterProcessorTest {
 		}
 		try {
 			for (int run = 0; run < 200; run++) {
-				final SourceTable[] result = new SourceTable[1];
+				final SourceResult[] result = new SourceResult[1];
 				final Thread coordinator = Thread.ofPlatform()
 					.daemon()
 					.start(
@@ -630,7 +630,7 @@ class SourceUpdaterProcessorTest {
 								if ("a".equals(entry)) {
 									LockSupport.parkNanos(200_000);
 								}
-								return SourceTable.ofText(entry);
+								return SourceResult.ofText(entry);
 							}
 						)
 					);
@@ -638,7 +638,7 @@ class SourceUpdaterProcessorTest {
 				final boolean stuck = coordinator.isAlive();
 				coordinator.interrupt();
 				assertFalse(stuck, "Coordinator still waiting at run " + run);
-				assertEquals(SourceTable.ofText("a\nb\nc\nd"), result[0]);
+				assertEquals(SourceResult.ofText("a\nb\nc\nd"), result[0]);
 			}
 		} finally {
 			stop.set(true);
@@ -650,7 +650,7 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessExecuteForEachEntryParallelJsonArray() {
-		final SourceTable result = runForEachEntry(
+		final SourceResult result = runForEachEntry(
 			ExecuteForEachEntryOf.builder()
 				.source(ENCLOSURE_COLLECT_SOURCE_1)
 				.concatMethod(EntryConcatMethod.JSON_ARRAY)
@@ -661,7 +661,7 @@ class SourceUpdaterProcessorTest {
 			invocation -> {
 				final String entry = invocation.<HttpSource>getArgument(0).getPath();
 				Thread.sleep(('e' - entry.charAt(0)) * 20L);
-				return SourceTable.ofText("{\"id\":\"" + entry + "\"}");
+				return SourceResult.ofText("{\"id\":\"" + entry + "\"}");
 			}
 		);
 		assertEquals("[{\"id\":\"a\"},\n{\"id\":\"b\"},\n{\"id\":\"c\"},\n{\"id\":\"d\"}]", result.getText());
@@ -701,7 +701,7 @@ class SourceUpdaterProcessorTest {
 
 		// maxParallel set, but the source forces serialization
 		maxConcurrent = new AtomicInteger();
-		final SourceTable result = runForEachEntry(
+		final SourceResult result = runForEachEntry(
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).maxParallel(4).build(),
 			false,
 			true,
@@ -732,20 +732,20 @@ class SourceUpdaterProcessorTest {
 		final Set<String> requested = ConcurrentHashMap.newKeySet();
 		final AtomicBoolean bEnded = new AtomicBoolean();
 		final CountDownLatch bStarted = new CountDownLatch(1);
-		final Answer<SourceTable> answer = invocation -> {
+		final Answer<SourceResult> answer = invocation -> {
 			final String entry = invocation.<HttpSource>getArgument(0).getPath();
 			requested.add(entry);
 			if ("a".equals(entry)) {
 				// Without this wait, a slow pool thread could see the failure before b sends its request
 				assertTrue(bStarted.await(5, TimeUnit.SECONDS));
-				return SourceTable.failed("Refused");
+				return SourceResult.failed("Refused");
 			}
 			if ("b".equals(entry)) {
 				bStarted.countDown();
 			}
 			Thread.sleep(200);
 			bEnded.compareAndSet(false, "b".equals(entry));
-			return SourceTable.ofText("result-" + entry);
+			return SourceResult.ofText("result-" + entry);
 		};
 		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
 			.source(ENCLOSURE_COLLECT_SOURCE_1)
@@ -754,15 +754,15 @@ class SourceUpdaterProcessorTest {
 
 		// The source fails once the entries still running have ended: the queued entries send no request
 		assertEquals(
-			SourceTable.failed("Entry [a]: Refused"),
+			SourceResult.failed("Entry [a]: Refused"),
 			runForEachEntry(executeForEachEntryOf, false, false, false, answer)
 		);
 		assertTrue(bEnded.get());
 		assertFalse(requested.contains("d"));
 
 		// With continueOnFailure, the failed entry is skipped, and the result says it is partial
-		final SourceTable partial = runForEachEntry(executeForEachEntryOf, false, false, true, answer);
-		assertEquals(SourceTable.ofText("result-b\nresult-c\nresult-d"), partial);
+		final SourceResult partial = runForEachEntry(executeForEachEntryOf, false, false, true, answer);
+		assertEquals(SourceResult.ofText("result-b\nresult-c\nresult-d"), partial);
 		assertTrue(partial.isPartial());
 	}
 
@@ -771,7 +771,7 @@ class SourceUpdaterProcessorTest {
 		// Two workers: b fails once a runs, so c and d are queued after the failure
 		final Set<String> requested = ConcurrentHashMap.newKeySet();
 		final CountDownLatch aStarted = new CountDownLatch(1);
-		final Answer<SourceTable> answer = invocation -> {
+		final Answer<SourceResult> answer = invocation -> {
 			final String entry = invocation.<HttpSource>getArgument(0).getPath();
 			requested.add(entry);
 			if ("a".equals(entry)) {
@@ -779,10 +779,10 @@ class SourceUpdaterProcessorTest {
 			}
 			if ("b".equals(entry)) {
 				assertTrue(aStarted.await(5, TimeUnit.SECONDS));
-				return SourceTable.failed("Refused");
+				return SourceResult.failed("Refused");
 			}
 			Thread.sleep(300);
-			return SourceTable.ofText("result-" + entry);
+			return SourceResult.ofText("result-" + entry);
 		};
 		final ExecuteForEachEntryOf executeForEachEntryOf = ExecuteForEachEntryOf.builder()
 			.source(ENCLOSURE_COLLECT_SOURCE_1)
@@ -791,7 +791,7 @@ class SourceUpdaterProcessorTest {
 
 		// The failure stops the queued entries at once, not when the coordinator reaches b after a
 		assertEquals(
-			SourceTable.failed("Entry [b]: Refused"),
+			SourceResult.failed("Entry [b]: Refused"),
 			runForEachEntry(executeForEachEntryOf, false, false, false, answer)
 		);
 		assertEquals(Set.of("a", "b"), requested);
@@ -808,9 +808,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(SnmpGetSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -820,7 +820,7 @@ class SourceUpdaterProcessorTest {
 			).process(SnmpGetSource.builder().oid(OID).build())
 		);
 
-		final SourceTable expected1 = SourceTable.ofText(EXPECTED_VAL_1);
+		final SourceResult expected1 = SourceResult.ofText(EXPECTED_VAL_1);
 
 		doReturn(expected1).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
@@ -845,9 +845,9 @@ class SourceUpdaterProcessorTest {
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(SnmpTableSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(SnmpTableSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -857,7 +857,7 @@ class SourceUpdaterProcessorTest {
 			).process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
 		);
 
-		SourceTable expected = SourceTable.ofTable(EXPECTED_SNMP_TABLE_DATA);
+		SourceResult expected = SourceResult.ofTable(EXPECTED_SNMP_TABLE_DATA);
 		doReturn(expected).when(sourceProcessor).process(any(SnmpTableSource.class));
 		assertEquals(
 			expected,
@@ -881,9 +881,9 @@ class SourceUpdaterProcessorTest {
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(TableJoinSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(TableJoinSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -904,9 +904,9 @@ class SourceUpdaterProcessorTest {
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(TableUnionSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(TableUnionSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -924,9 +924,9 @@ class SourceUpdaterProcessorTest {
 			.build();
 		final String member = "${source::monitors.cpu.discovery.sources.member}";
 		final TextUnionSource textUnion = TextUnionSource.builder().texts(new ArrayList<>(List.of(member))).build();
-		doReturn(SourceTable.ofText("x")).when(sourceProcessor).process(any(TextUnionSource.class));
+		doReturn(SourceResult.ofText("x")).when(sourceProcessor).process(any(TextUnionSource.class));
 		assertEquals(
-			SourceTable.ofText("x"),
+			SourceResult.ofText("x"),
 			new SourceUpdaterProcessor(sourceProcessor, telemetryManager, MY_CONNECTOR_1_NAME, Map.of(), extensionManager)
 				.process(textUnion)
 		);
@@ -944,9 +944,9 @@ class SourceUpdaterProcessorTest {
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CopySource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(CopySource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -958,12 +958,12 @@ class SourceUpdaterProcessorTest {
 
 		CopySource copySource = CopySource.builder().from(TAB1_REF).build();
 		final List<List<String>> result = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expected = SourceTable.ofTable(result);
+		final SourceResult expected = SourceResult.ofTable(result);
 
 		final SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid(OID).build();
 
 		final List<List<String>> resultSnmp = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expectedSnmp = SourceTable.ofTable(resultSnmp);
+		final SourceResult expectedSnmp = SourceResult.ofTable(resultSnmp);
 		doReturn(expectedSnmp).when(sourceProcessor).process(any(SnmpGetSource.class));
 		assertEquals(
 			expectedSnmp,
@@ -1002,7 +1002,7 @@ class SourceUpdaterProcessorTest {
 
 		StaticSource staticSource = StaticSource.builder().value(List.of(VALUE_VAL1)).build();
 		final List<List<String>> resultTable = Collections.singletonList(Collections.singletonList(VALUE_VAL1));
-		final SourceTable expected = SourceTable.ofTable(resultTable);
+		final SourceResult expected = SourceResult.ofTable(resultTable);
 		doReturn(expected).when(sourceProcessor).process(any(StaticSource.class));
 		assertEquals(
 			expected,
@@ -1112,9 +1112,9 @@ class SourceUpdaterProcessorTest {
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(WbemSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(WbemSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -1127,12 +1127,12 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessWmiSource() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(WmiSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(WmiSource.class));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -1145,12 +1145,12 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessCommandLineSource() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -1165,9 +1165,9 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessIpmiSource() {
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(IpmiSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(IpmiSource.class));
 		assertEquals(
-			SourceTable.empty(),
+			SourceResult.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				TelemetryManager.builder().build(),
@@ -1189,7 +1189,7 @@ class SourceUpdaterProcessorTest {
 			final String value = String.format("%s value", vendorSource1Ref);
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
+				.addSourceResult(vendorSource1Ref, SourceResult.ofText("vendor"));
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
 				value,
@@ -1205,7 +1205,7 @@ class SourceUpdaterProcessorTest {
 			final String value = String.format("%s %s value", vendorSource1Ref, vendorSource1Ref);
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
+				.addSourceResult(vendorSource1Ref, SourceResult.ofText("vendor"));
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
 				value,
@@ -1220,7 +1220,7 @@ class SourceUpdaterProcessorTest {
 			final String value = String.format("%s%s value", vendorSource1Ref, vendorSource1Ref);
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
+				.addSourceResult(vendorSource1Ref, SourceResult.ofText("vendor"));
 
 			final String result = SourceUpdaterProcessor.replaceSourceReferenceContent(
 				value,
@@ -1235,7 +1235,7 @@ class SourceUpdaterProcessorTest {
 			// A table is not interpolated: the reference gives an empty text
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-				.addSourceTable(vendorSource1Ref, SourceTable.ofTable(List.of(List.of("a", "b"))));
+				.addSourceResult(vendorSource1Ref, SourceResult.ofTable(List.of(List.of("a", "b"))));
 
 			assertEquals(
 				" value",
@@ -1261,13 +1261,13 @@ class SourceUpdaterProcessorTest {
 			.keyProperties(new LinkedList<>(List.of("scope")))
 			.build();
 
-		final SourceTable sourceTable = SourceTable.ofTable(List.of(List.of("12345")));
-		doReturn(sourceTable).when(sourceProcessor).process(any(JmxSource.class));
+		final SourceResult sourceResult = SourceResult.ofTable(List.of(List.of("12345")));
+		doReturn(sourceResult).when(sourceProcessor).process(any(JmxSource.class));
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		assertEquals(
-			sourceTable,
+			sourceResult,
 			new SourceUpdaterProcessor(
 				sourceProcessor,
 				telemetryManager,
@@ -1312,7 +1312,7 @@ class SourceUpdaterProcessorTest {
 			.variables(variables)
 			.build();
 
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(JawkSource.class));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(JawkSource.class));
 
 		new SourceUpdaterProcessor(
 			sourceProcessor,
@@ -1349,8 +1349,8 @@ class SourceUpdaterProcessorTest {
 		// A text that looks like a source reference
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME)
-			.addSourceTable(inputRef, SourceTable.ofText("${source::monitors.enclosure.discovery.sources.other}"));
-		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(JawkSource.class));
+			.addSourceResult(inputRef, SourceResult.ofText("${source::monitors.enclosure.discovery.sources.other}"));
+		doReturn(SourceResult.empty()).when(sourceProcessor).process(any(JawkSource.class));
 		final SourceUpdaterProcessor updater = new SourceUpdaterProcessor(
 			sourceProcessor,
 			telemetryManager,

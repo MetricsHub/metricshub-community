@@ -48,7 +48,7 @@ import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.parser.SourceKeyProcessor;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * An abstract class representing a data source in the MetricsHub engine.
@@ -197,9 +197,9 @@ public abstract class Source implements Serializable {
 	 * Accepts a source processor to perform processing on the source.
 	 *
 	 * @param sourceProcessor The source processor to accept.
-	 * @return A SourceTable representing the processed source.
+	 * @return A SourceResult representing the processed source.
 	 */
-	public abstract SourceTable accept(ISourceProcessor sourceProcessor);
+	public abstract SourceResult accept(ISourceProcessor sourceProcessor);
 
 	@Override
 	public String toString() {

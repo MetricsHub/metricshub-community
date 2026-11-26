@@ -39,7 +39,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ICompositeSourceScriptExtension;
 import org.metricshub.engine.strategy.source.SourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -57,7 +57,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	}
 
 	@Override
-	public SourceTable processSource(
+	public SourceResult processSource(
 		final Source source,
 		final String connectorId,
 		final TelemetryManager telemetryManager,
@@ -66,11 +66,11 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		final String hostname = telemetryManager.getHostname();
 
 		if (source == null) {
-			return SourceTable.failed("Malformed Awk source.");
+			return SourceResult.failed("Malformed Awk source.");
 		}
 
 		if (!(source instanceof JawkSource jawkSource)) {
-			return SourceTable.failed("Malformed Awk source.");
+			return SourceResult.failed("Malformed Awk source.");
 		}
 
 		final String script = jawkSource.getScript();
@@ -89,12 +89,12 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 					connectorId
 				);
 			} catch (Exception exception) {
-				return SourceTable.failed("Awk script %s: not set correctly.".formatted(script));
+				return SourceResult.failed("Awk script %s: not set correctly.".formatted(script));
 			}
 		}
 
 		if (maybeEmbeddedFile.isEmpty()) {
-			return SourceTable.failed("Awk script %s: the embedded file is not found.".formatted(script));
+			return SourceResult.failed("Awk script %s: the embedded file is not found.".formatted(script));
 		}
 
 		final EmbeddedFile embeddedFile = maybeEmbeddedFile.get();
@@ -108,9 +108,9 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		final String input = jawkSource.getInput();
 		final boolean reference = JawkSource.isSourceReference(input);
 		final List<List<String>> inputTable = reference
-			? SourceTable.lookupSourceTable(input.trim(), connectorId, telemetryManager)
+			? SourceResult.lookupSourceResult(input.trim(), connectorId, telemetryManager)
 				.filter(table -> table.getContentType() == ContentType.TABLE)
-				.map(SourceTable::getTable)
+				.map(SourceResult::getTable)
 				.orElse(null)
 			: null;
 		final boolean tableInput = inputTable != null;
@@ -144,20 +144,20 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			Awk awkEngine = AwkExecutor.newAwk(null, extension);
 			if (jawkSource.getOutput() == ContentType.TABLE) {
 				// Each print is a row
-				return SourceTable.ofTable(
+				return SourceResult.ofTable(
 					tableInput
 						? AwkExecutor.executeAwkToTable(awkScript, new TableInputSource(inputTable), awkEngine, variables)
 						: AwkExecutor.executeAwkToTable(awkScript, inputContent, awkEngine, variables)
 				);
 			}
-			return SourceTable.ofText(
+			return SourceResult.ofText(
 				tableInput
 					? AwkExecutor.executeAwk(awkScript, new TableInputSource(inputTable), awkEngine, variables)
 					: AwkExecutor.executeAwk(awkScript, inputContent, awkEngine, variables)
 			);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);
-			return SourceTable.failed("Awk script", e);
+			return SourceResult.failed("Awk script", e);
 		}
 	}
 }

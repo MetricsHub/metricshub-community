@@ -28,7 +28,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
@@ -36,7 +36,7 @@ import org.metricshub.extension.snmp.ISnmpConfiguration;
 /**
  * A utility class for processing SNMP table sources.
  * This class processes SNMP table sources, fetch data from SNMP devices using
- * the given configuration, and return it as a {@link SourceTable} object.
+ * the given configuration, and return it as a {@link SourceResult} object.
  */
 @Slf4j
 @AllArgsConstructor
@@ -56,9 +56,9 @@ public class SnmpTableSourceProcessor {
 	 * @param snmpTableSource      The {@link SnmpTableSource} defining the SNMP OID and the SNMP columns to request.
 	 * @param connectorId          The connector identifier used for logging purposes.
 	 * @param telemetryManager     The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} containing the fetched SNMP table data, or a failure.
+	 * @return a {@link SourceResult} containing the fetched SNMP table data, or a failure.
 	 */
-	public SourceTable process(
+	public SourceResult process(
 		final SnmpTableSource snmpTableSource,
 		final String connectorId,
 		final TelemetryManager telemetryManager
@@ -68,13 +68,13 @@ public class SnmpTableSourceProcessor {
 				"Hostname {} - SNMP Get Table Source cannot be null, the SNMP Get Table operation will return an empty result.",
 				telemetryManager.getHostname()
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final String selectedColumns = snmpTableSource.getSelectColumns();
 
 		if (selectedColumns.isBlank()) {
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		// The selectedColumns String is like "column1, column2, column3" and we want to split it into ["column1", "column2", "column3"]
@@ -84,7 +84,7 @@ public class SnmpTableSourceProcessor {
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
-			return SourceTable.failed("SNMP Table: SNMP is not configured on the host.");
+			return SourceResult.failed("SNMP Table: SNMP is not configured on the host.");
 		}
 
 		// Retrieve the hostname from the ISnmpConfiguration, otherwise from the telemetryManager
@@ -100,13 +100,13 @@ public class SnmpTableSourceProcessor {
 				telemetryManager.getRequestStats()
 			);
 
-			return SourceTable.ofTable(result);
+			return SourceResult.ofTable(result);
 		} catch (Exception e) {
 			// NOSONAR on interruption
 			final String request = String.format("SNMP Table: %s", snmpTableSource.getOid());
 			LoggingHelper.logSourceError(connectorId, snmpTableSource.getKey(), request, hostname, e);
 
-			return SourceTable.failed(request, e);
+			return SourceResult.failed(request, e);
 		}
 	}
 }

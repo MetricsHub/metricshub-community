@@ -45,7 +45,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.RequestOutcome;
@@ -229,7 +229,7 @@ class WbemExtensionTest {
 			whenExecuteWql(wbemExecutorMock).thenReturn(new WbemQueryResult(List.of("Name"), List.of(List.of("value"))));
 
 			assertEquals(
-				SourceTable.ofTable(List.of(List.of("value"))),
+				SourceResult.ofTable(List.of(List.of("value"))),
 				wbemExtension.processSource(
 					WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 					CONNECTOR_ID,
@@ -429,7 +429,7 @@ class WbemExtensionTest {
 			true
 		);
 
-		assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
+		assertEquals(SourceResult.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
 		assertTrue(criterionTestResult.isSuccess());
 		assertTrue(criterionTestResult.getMessage().contains(message));
 		assertNull(criterionTestResult.getException());
@@ -479,7 +479,7 @@ class WbemExtensionTest {
 			true
 		);
 
-		assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
+		assertEquals(SourceResult.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
 		assertTrue(criterionTestResult.isSuccess());
 		assertTrue(criterionTestResult.getMessage().contains(message));
 		assertNull(criterionTestResult.getException());
@@ -547,7 +547,7 @@ class WbemExtensionTest {
 						true
 					);
 
-					assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
+					assertEquals(SourceResult.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
 					assertTrue(criterionTestResult.isSuccess());
 					assertTrue(criterionTestResult.getMessage().contains(message));
 					assertNull(criterionTestResult.getException());
@@ -606,7 +606,7 @@ class WbemExtensionTest {
 					true
 				);
 
-				assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
+				assertEquals(SourceResult.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
 				assertTrue(criterionTestResult.isSuccess());
 				assertTrue(criterionTestResult.getMessage().contains(message));
 				assertNull(criterionTestResult.getException());
@@ -676,7 +676,7 @@ class WbemExtensionTest {
 			false
 		);
 
-		assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
+		assertEquals(SourceResult.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
 		assertTrue(criterionTestResult.isSuccess());
 		assertTrue(criterionTestResult.getMessage().contains(message));
 		assertNull(criterionTestResult.getException());
@@ -692,13 +692,13 @@ class WbemExtensionTest {
 
 		doReturn(EXECUTE_WBEM_RESULT).when(wbemRequestExecutorSpy)
 			.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
-		final SourceTable actual = wbemExtension.processSource(
+		final SourceResult actual = wbemExtension.processSource(
 			WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 			CONNECTOR_ID,
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.ofTable(EXECUTE_WBEM_RESULT);
+		final SourceResult expected = SourceResult.ofTable(EXECUTE_WBEM_RESULT);
 		assertEquals(expected, actual);
 	}
 
@@ -712,7 +712,7 @@ class WbemExtensionTest {
 
 		doThrow(new RuntimeException("exception")).when(wbemRequestExecutorSpy)
 			.executeWbem(anyString(), eq(configuration), eq(WBEM_TEST_QUERY), eq(WBEM_TEST_NAMESPACE), eq(telemetryManager));
-		final SourceTable actual = wbemExtension.processSource(
+		final SourceResult actual = wbemExtension.processSource(
 			WbemSource.builder().query(WBEM_TEST_QUERY).build(),
 			CONNECTOR_ID,
 			telemetryManager
@@ -732,26 +732,26 @@ class WbemExtensionTest {
 		{
 			doReturn(null).when(wbemRequestExecutorSpy)
 				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
-			final SourceTable actual = wbemExtension.processSource(
+			final SourceResult actual = wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 				CONNECTOR_ID,
 				telemetryManager
 			);
 
-			final SourceTable expected = SourceTable.empty();
+			final SourceResult expected = SourceResult.empty();
 			assertEquals(expected, actual);
 		}
 
 		{
 			doReturn(Collections.emptyList()).when(wbemRequestExecutorSpy)
 				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
-			final SourceTable actual = wbemExtension.processSource(
+			final SourceResult actual = wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 				CONNECTOR_ID,
 				telemetryManager
 			);
 
-			final SourceTable expected = SourceTable.empty();
+			final SourceResult expected = SourceResult.empty();
 			assertEquals(expected, actual);
 		}
 	}

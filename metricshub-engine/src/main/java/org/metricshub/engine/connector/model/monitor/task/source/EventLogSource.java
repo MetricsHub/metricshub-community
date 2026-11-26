@@ -42,7 +42,7 @@ import org.metricshub.engine.connector.deserializer.custom.LinkedHashSetDeserial
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Represents a source that retrieves data from Windows Event Logs.
@@ -148,7 +148,7 @@ public class EventLogSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(ISourceProcessor sourceProcessor) {
+	public SourceResult accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

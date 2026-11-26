@@ -17,7 +17,7 @@ import org.metricshub.engine.connector.model.common.SqlTable;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -62,8 +62,8 @@ class InternalDbExtensionTest {
 			.hostType(DeviceKind.LINUX)
 			.build();
 
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		final SourceTable tabl1 = SourceTable.ofTable(
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		final SourceResult tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
 				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
@@ -71,7 +71,7 @@ class InternalDbExtensionTest {
 				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
 			)
 		);
-		final SourceTable tabl2 = SourceTable.ofTable(
+		final SourceResult tabl2 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
 				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
@@ -81,7 +81,7 @@ class InternalDbExtensionTest {
 		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
-		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
+		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceResults(mapSources).build();
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(connectorId, connectorNamespace);
 
@@ -97,16 +97,16 @@ class InternalDbExtensionTest {
 		final InternalDbExtension internalDbExtension = new InternalDbExtension();
 
 		// Source null
-		SourceTable sourceTableResult = internalDbExtension.processSource(null, connectorId, telemetryManager);
-		assertEquals(SourceTable.empty(), sourceTableResult);
+		SourceResult sourceResult = internalDbExtension.processSource(null, connectorId, telemetryManager);
+		assertEquals(SourceResult.empty(), sourceResult);
 
 		// Source is not a SQL Source
-		sourceTableResult = internalDbExtension.processSource(new HttpSource(), connectorId, telemetryManager);
-		assertEquals(SourceTable.empty(), sourceTableResult);
+		sourceResult = internalDbExtension.processSource(new HttpSource(), connectorId, telemetryManager);
+		assertEquals(SourceResult.empty(), sourceResult);
 
 		// Empty SQL Source
-		sourceTableResult = internalDbExtension.processSource(new InternalDbQuerySource(), connectorId, telemetryManager);
-		assertTrue((sourceTableResult).isFailed());
+		sourceResult = internalDbExtension.processSource(new InternalDbQuerySource(), connectorId, telemetryManager);
+		assertTrue((sourceResult).isFailed());
 
 		final List<SqlColumn> columnsTable1 = new ArrayList<>();
 		final List<SqlColumn> columnsTable2 = new ArrayList<>();
@@ -134,7 +134,7 @@ class InternalDbExtensionTest {
 			Arrays.asList(LOWERCASE_D, FALSE, LOWERCASE_D, FALSE)
 		);
 
-		sourceTableResult = internalDbExtension.processSource(internalDbQuery, connectorId, telemetryManager);
-		assertEquals(SourceTable.ofTable(expectedResult), sourceTableResult);
+		sourceResult = internalDbExtension.processSource(internalDbQuery, connectorId, telemetryManager);
+		assertEquals(SourceResult.ofTable(expectedResult), sourceResult);
 	}
 }

@@ -19,7 +19,7 @@ import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
@@ -109,7 +109,7 @@ class WmiSourceProcessorTest {
 				telemetryManager.getRequestStats()
 			);
 
-		assertEquals(SourceTable.ofTable(expected), wmiSourceProcessor.process(wmiSource, telemetryManager));
+		assertEquals(SourceResult.ofTable(expected), wmiSourceProcessor.process(wmiSource, telemetryManager));
 	}
 
 	@Test

@@ -70,7 +70,7 @@ import org.metricshub.engine.connector.model.monitor.task.Simple;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
@@ -499,13 +499,13 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		}
 
 		// A simple mapping gives one row without any cell: the singleton that the job's empty keys identify
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
+		final Optional<SourceResult> maybeSourceResult = SourceResult.lookupMappingTable(
 			mapping,
 			connectorId,
 			telemetryManager
 		);
 
-		if (maybeSourceTable.isEmpty()) {
+		if (maybeSourceResult.isEmpty()) {
 			log.warn(
 				"Hostname {} - The source table {} is not found during the {} job for the connector {}. Skip processing.",
 				hostname,
@@ -517,7 +517,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		}
 
 		// If the source table is not empty, loop over the source table rows
-		final List<List<String>> table = maybeSourceTable.get().getTable();
+		final List<List<String>> table = maybeSourceResult.get().getTable();
 
 		log.debug(
 			"Hostname {} - Start {} {} mapping with source {}, attributes {}, metrics {}, conditional collection {} and legacy text parameters {}" +

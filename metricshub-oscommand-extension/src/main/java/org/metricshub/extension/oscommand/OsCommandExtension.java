@@ -43,7 +43,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.tool.ToolDefinition;
@@ -181,7 +181,7 @@ public class OsCommandExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
 		} else if (source instanceof FileSource fileSource) {
