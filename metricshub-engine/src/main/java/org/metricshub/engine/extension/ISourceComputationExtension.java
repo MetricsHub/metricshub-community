@@ -22,7 +22,7 @@ package org.metricshub.engine.extension;
  */
 
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -36,9 +36,9 @@ public interface ISourceComputationExtension {
 	 * @param source           The source to execute.
 	 * @param connectorId      The connector Identifier.
 	 * @param telemetryManager The telemetry manager to use for monitoring.
-	 * @return A {@link SourceTable} object representing the result of the source execution.
+	 * @return A {@link SourceResult} object representing the result of the source execution.
 	 */
-	SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager);
+	SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager);
 
 	/**
 	 * Check if a {@link Source} is of the right sub type of source to be processed through the extension.

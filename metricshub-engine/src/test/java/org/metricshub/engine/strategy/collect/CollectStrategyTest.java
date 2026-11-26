@@ -51,7 +51,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.IStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -174,7 +174,7 @@ class CollectStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
@@ -184,7 +184,7 @@ class CollectStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		collectStrategy.run();
@@ -338,7 +338,7 @@ class CollectStrategyTest {
 		lenient().doReturn(Set.of(EventLogSource.class)).when(protocolExtensionMock).getSupportedSources();
 		lenient().doAnswer(invocation -> {
 			namespace.setSourceCursor(sourceKey, (Integer) namespace.getSourceCursor(sourceKey) + 10);
-			return SourceTable.ofTable(SourceTable.csvToTable("event;polled", ";"));
+			return SourceResult.ofTable(SourceResult.csvToTable("event;polled", ";"));
 		}).when(protocolExtensionMock).processSource(any(), anyString(), any(TelemetryManager.class));
 
 		// The job deadline expires while the table of the second monitor is stored: after the last check of its sources
@@ -348,7 +348,7 @@ class CollectStrategyTest {
 				Thread.currentThread().interrupt();
 			}
 			return invocation.callRealMethod();
-		}).when(namespace).addSourceTable(eq(sourceKey), any());
+		}).when(namespace).addSourceResult(eq(sourceKey), any());
 
 		try {
 			CollectStrategy.builder()

@@ -30,16 +30,16 @@ import lombok.RequiredArgsConstructor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
 
 /**
- * A class responsible for processing CommandLine sources producing the {@link SourceTable} result.
+ * A class responsible for processing CommandLine sources producing the {@link SourceResult}.
  * It provides a method to run Windows remote commands through WMI or WinRm, gets the response,
- * and generates the {@link SourceTable} using the command line response.
+ * and generates the {@link SourceResult} using the command line response.
  */
 @RequiredArgsConstructor
 public class WinCommandLineSourceProcessor {
@@ -55,14 +55,14 @@ public class WinCommandLineSourceProcessor {
 
 	/**
 	 * Processes a command line defined in a {@link CommandLineSource}, executes it through Wmi or WinRM, and converts the output
-	 * into a structured {@link SourceTable}.
+	 * into a structured {@link SourceResult}.
 	 *
 	 * @param commandLineSource The command line source configuration containing the command, filtering, and selection settings.
 	 * @param telemetryManager  Provides host configurations necessary for command execution.
-	 * @return A {@link SourceTable} containing the processed and formatted output of the command line, whatever its
+	 * @return A {@link SourceResult} containing the processed and formatted output of the command line, whatever its
 	 *         exit code. A failure if the command cannot run or if the command line is invalid.
 	 */
-	public SourceTable process(final CommandLineSource commandLineSource, final TelemetryManager telemetryManager) {
+	public SourceResult process(final CommandLineSource commandLineSource, final TelemetryManager telemetryManager) {
 		// Retrieve the IWinConfiguration (WMI or WinRm)
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
@@ -72,7 +72,7 @@ public class WinCommandLineSourceProcessor {
 			: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		if (commandLineSource == null || commandLineSource.getCommandLine().isEmpty()) {
-			return SourceTable.failed("Malformed OS command source: no command line.");
+			return SourceResult.failed("Malformed OS command source: no command line.");
 		}
 
 		final String request = String.format("OS command: %s", commandLineSource.getCommandLine());
@@ -86,7 +86,7 @@ public class WinCommandLineSourceProcessor {
 			);
 
 			// transform to lines
-			final List<String> resultLines = SourceTable.lineToList(osCommandResult.getResult(), NEW_LINE);
+			final List<String> resultLines = SourceResult.lineToList(osCommandResult.getResult(), NEW_LINE);
 
 			final List<String> filteredLines = FilterResultHelper.filterLines(
 				resultLines,
@@ -102,11 +102,11 @@ public class WinCommandLineSourceProcessor {
 				commandLineSource.getSelectColumns()
 			);
 
-			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
+			return SourceResult.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, commandLineSource.getKey(), request, hostname, e);
 
-			return SourceTable.failed(request, e);
+			return SourceResult.failed(request, e);
 		}
 	}
 }

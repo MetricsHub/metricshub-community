@@ -42,7 +42,7 @@ import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WqlCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -400,7 +400,7 @@ public class WbemCriterionProcessor {
 		}
 
 		// Serialize the result as a CSV
-		String actualResult = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
+		String actualResult = SourceResult.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 		// Empty result? ==> failure
 		if (actualResult == null || actualResult.isBlank()) {

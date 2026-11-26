@@ -42,7 +42,7 @@ import org.metricshub.engine.connector.deserializer.custom.TablesDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Represents a source that performs a union operation on multiple tables.
@@ -121,7 +121,7 @@ public class TableUnionSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(final ISourceProcessor sourceProcessor) {
+	public SourceResult accept(final ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

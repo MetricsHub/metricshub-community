@@ -58,7 +58,7 @@ import org.metricshub.engine.connector.model.monitor.task.MultiInstanceCollect;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
@@ -423,14 +423,14 @@ public class CollectStrategy extends AbstractStrategy {
 		final String mappingSource = mapping.getSource();
 
 		// A simple mapping gives one row without any cell, read for its singleton
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupMappingTable(
+		final Optional<SourceResult> maybeSourceResult = SourceResult.lookupMappingTable(
 			mapping,
 			connectorId,
 			telemetryManager
 		);
 
-		// No sourceTable no monitor
-		if (maybeSourceTable.isEmpty()) {
+		// No sourceResult no monitor
+		if (maybeSourceResult.isEmpty()) {
 			log.debug(
 				"Hostname {} - Collect - No source table created with source key {} for connector {}.",
 				hostname,
@@ -440,7 +440,7 @@ public class CollectStrategy extends AbstractStrategy {
 			return;
 		}
 
-		final List<List<String>> table = maybeSourceTable.get().getTable();
+		final List<List<String>> table = maybeSourceResult.get().getTable();
 
 		if (table.isEmpty()) {
 			return;

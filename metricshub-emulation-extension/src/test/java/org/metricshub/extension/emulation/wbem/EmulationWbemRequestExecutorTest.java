@@ -16,7 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
@@ -77,7 +77,7 @@ class EmulationWbemRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("value1", "value2")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("value1", "value2")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -112,12 +112,12 @@ class EmulationWbemRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("first")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("first")), ";", true),
 			StandardCharsets.UTF_8
 		);
 		Files.writeString(
 			tempDir.resolve("r2.txt"),
-			SourceTable.tableToCsv(List.of(List.of("second")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("second")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -162,7 +162,7 @@ class EmulationWbemRequestExecutorTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("other")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("other")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -222,7 +222,7 @@ class EmulationWbemRequestExecutorTest {
 	void testExecuteWbemFailsWhenIndexIsMissing(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(
 			tempDir.resolve("r1.txt"),
-			SourceTable.tableToCsv(List.of(List.of("value1")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("value1")), ";", true),
 			StandardCharsets.UTF_8
 		);
 

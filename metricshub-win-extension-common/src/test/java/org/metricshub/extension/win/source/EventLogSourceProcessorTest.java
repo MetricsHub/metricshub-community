@@ -21,7 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogLevel;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -152,7 +152,7 @@ class EventLogSourceProcessorTest {
 		// ITERATION 1:
 		// WMI request result contains 4 records
 		// Cursors not set yet: setting up the cursors and not returning any results
-		SourceTable results = processor.process(source, telemetryManagerMock);
+		SourceResult results = processor.process(source, telemetryManagerMock);
 		assertEquals(
 			8,
 			connectorNamespace.getEventLogCursor("sourceKey"),
@@ -336,7 +336,7 @@ class EventLogSourceProcessorTest {
 		// ITERATION 1:
 		// WMI request result contains 4 records
 		// Cursors not set yet: setting up the cursors and not returning any results
-		SourceTable results = processor.process(source, telemetryManagerMock);
+		SourceResult results = processor.process(source, telemetryManagerMock);
 		assertEquals(
 			8,
 			connectorNamespace.getEventLogCursor("sourceKey"),

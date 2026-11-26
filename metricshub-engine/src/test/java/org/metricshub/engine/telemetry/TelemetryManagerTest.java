@@ -50,7 +50,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.IStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -169,7 +169,7 @@ class TelemetryManagerTest {
 			.key("${source::monitors.disk_controller.discovery.sources.source(1)}")
 			.build();
 		// Mock source table information for disk controller
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", ";"))).when(
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", ";"))).when(
 			protocolExtensionMock
 		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
@@ -186,7 +186,7 @@ class TelemetryManagerTest {
 			)
 			.build();
 		// Mock source table information for physical_disk
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", ";"))).when(
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("disk-1;1;0;vendor-1;5;500000;512", ";"))).when(
 			protocolExtensionMock
 		).processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
@@ -199,7 +199,7 @@ class TelemetryManagerTest {
 			.computes(List.of(Multiply.builder().column(3).value("1048576").type("multiply").build()))
 			.build();
 		// Mock source table information for logical_disk
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", ";"))).when(
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("logical-disk-1;1;500;RAID-5", ";"))).when(
 			protocolExtensionMock
 		).processSource(eq(logicalDiskSource), anyString(), any(TelemetryManager.class));
 

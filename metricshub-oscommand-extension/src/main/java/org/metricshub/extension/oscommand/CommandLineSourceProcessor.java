@@ -29,12 +29,12 @@ import lombok.RequiredArgsConstructor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Processes command-line data sources to extract and transform the output into a text {@link SourceTable}.
+ * Processes command-line data sources to extract and transform the output into a text {@link SourceResult}.
  * This class handles the execution of operating system commands provided through {@link CommandLineSource}, applies line and column filtering, and returns the selected lines as a text.
  */
 @RequiredArgsConstructor
@@ -44,15 +44,15 @@ public class CommandLineSourceProcessor {
 	private final OsCommandService osCommandService;
 
 	/**
-	 * Processes an OS command defined in a {@link CommandLineSource}, executes it, and returns the selected lines as a text {@link SourceTable}.
+	 * Processes an OS command defined in a {@link CommandLineSource}, executes it, and returns the selected lines as a text {@link SourceResult}.
 	 *
 	 * @param commandLineSource The command line source configuration containing the command, filtering, and selection settings.
 	 * @param connectorId       Identifier for the connector instance processing this source.
 	 * @param telemetryManager  Provides access to system and host configurations necessary for command execution.
-	 * @return A {@link SourceTable} containing the processed and formatted output of the OS command, whatever its exit
+	 * @return A {@link SourceResult} containing the processed and formatted output of the OS command, whatever its exit
 	 *         code. A failure if the command cannot run or if the command line is invalid.
 	 */
-	public SourceTable process(
+	public SourceResult process(
 		final CommandLineSource commandLineSource,
 		String connectorId,
 		TelemetryManager telemetryManager
@@ -64,7 +64,7 @@ public class CommandLineSourceProcessor {
 				commandLineSource.getCommandLine() == null ||
 				commandLineSource.getCommandLine().isEmpty()
 		) {
-			return SourceTable.failed("Malformed OS command source: no command line.");
+			return SourceResult.failed("Malformed OS command source: no command line.");
 		}
 
 		final String request = String.format("OS command: %s", commandLineSource.getCommandLine());
@@ -78,11 +78,11 @@ public class CommandLineSourceProcessor {
 				telemetryManager.getEmbeddedFiles(connectorId)
 			);
 			if (osCommandResult.getResult() == null) {
-				return SourceTable.failed(request + ": the command did not run.");
+				return SourceResult.failed(request + ": the command did not run.");
 			}
 
 			// transform to lines
-			final List<String> resultLines = SourceTable.lineToList(osCommandResult.getResult(), NEW_LINE);
+			final List<String> resultLines = SourceResult.lineToList(osCommandResult.getResult(), NEW_LINE);
 
 			final List<String> filteredLines = FilterResultHelper.filterLines(
 				resultLines,
@@ -98,12 +98,12 @@ public class CommandLineSourceProcessor {
 				commandLineSource.getSelectColumns()
 			);
 
-			return SourceTable.ofText(String.join(NEW_LINE, selectedColumnsLines));
+			return SourceResult.ofText(String.join(NEW_LINE, selectedColumnsLines));
 		} catch (Exception e) {
 			OsCommandService.restoreInterrupt(e);
 			LoggingHelper.logSourceError(connectorId, commandLineSource.getKey(), request, hostname, e);
 
-			return SourceTable.failed(request, e);
+			return SourceResult.failed(request, e);
 		}
 	}
 }

@@ -37,7 +37,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -186,9 +186,10 @@ public class AwkVariableHelper {
 
 		final String hostname = telemetryManager.getHostname();
 
-		final SourceTable sourceTable = SourceTable.lookupSourceTable(value, connectorId, telemetryManager).orElse(null);
+		final SourceResult sourceResult = SourceResult.lookupSourceResult(value, connectorId, telemetryManager)
+			.orElse(null);
 
-		if (sourceTable == null) {
+		if (sourceResult == null) {
 			log.error(
 				"Hostname {} - The source table is not available. Couldn't extract {} referenced by the Awk variable" +
 					" {} in {}. The variable will be exposed as an empty array.",
@@ -201,9 +202,9 @@ public class AwkVariableHelper {
 		}
 
 		// A text (e.g. an HTTP source returning a body) is exposed as the table it converts to
-		final List<List<String>> table = sourceTable.getContentType() == ContentType.TEXT
-			? sourceTable.asTable()
-			: sourceTable.getTable();
+		final List<List<String>> table = sourceResult.getContentType() == ContentType.TEXT
+			? sourceResult.asTable()
+			: sourceResult.getTable();
 
 		if (!table.isEmpty()) {
 			return table;

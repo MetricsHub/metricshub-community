@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
-class SourceTableTest {
+class SourceResultTest {
 
 	private static final String HARDCODED_SOURCE = "Hardcoded Source";
 	private static final String SOURCE_REF_KEY = "${source::monitors.cpu.discovery.sources.source5}";
@@ -22,18 +22,18 @@ class SourceTableTest {
 	 */
 	@Test
 	void testTextIsStoredWithLfLineEndings() {
-		assertEquals("a\nb\rc\n", SourceTable.ofText("a\r\nb\rc\r\n").getText());
-		assertEquals("a\nb", SourceTable.ofText("a\r\r\nb").getText());
+		assertEquals("a\nb\rc\n", SourceResult.ofText("a\r\nb\rc\r\n").getText());
+		assertEquals("a\nb", SourceResult.ofText("a\r\r\nb").getText());
 
-		final SourceTable sourceTable = SourceTable.empty();
-		sourceTable.setText("a;b\r\n\r\nc;");
-		assertEquals("a;b\n\nc;", sourceTable.getText());
-		assertEquals("a;b\n\nc;", sourceTable.asText());
-		assertEquals(SourceTable.ofText("a;b\n\nc;"), sourceTable);
+		final SourceResult sourceResult = SourceResult.empty();
+		sourceResult.setText("a;b\r\n\r\nc;");
+		assertEquals("a;b\n\nc;", sourceResult.getText());
+		assertEquals("a;b\n\nc;", sourceResult.asText());
+		assertEquals(SourceResult.ofText("a;b\n\nc;"), sourceResult);
 	}
 
 	@Test
-	void testLookupSourceTableFromHardcodedSource() {
+	void testLookupSourceResultFromHardcodedSource() {
 		final HostProperties hostProperties = HostProperties.builder().build();
 
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME);
@@ -41,53 +41,53 @@ class SourceTableTest {
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostProperties(hostProperties).build();
 
 		// What is not a source reference is no source: a hard-coded table is never parsed
-		assertTrue(SourceTable.lookupSourceTable(HARDCODED_SOURCE, MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
-		assertTrue(SourceTable.lookupSourceTable("a;b;c", MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
+		assertTrue(SourceResult.lookupSourceResult(HARDCODED_SOURCE, MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
+		assertTrue(SourceResult.lookupSourceResult("a;b;c", MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
 	}
 
 	@Test
-	void testLookupSourceTableFromReferencedSource() {
+	void testLookupSourceResultFromReferencedSource() {
 		final HostProperties hostProperties = HostProperties.builder().build();
 
-		final SourceTable expected = SourceTable.ofTable(List.of(List.of("value")));
+		final SourceResult expected = SourceResult.ofTable(List.of(List.of("value")));
 
-		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceTable(SOURCE_REF_KEY, expected);
+		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME).addSourceResult(SOURCE_REF_KEY, expected);
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostProperties(hostProperties).build();
 
-		final Optional<SourceTable> sourceTableOpt = SourceTable.lookupSourceTable(
+		final Optional<SourceResult> sourceResultOpt = SourceResult.lookupSourceResult(
 			SOURCE_REF_KEY,
 			MY_CONNECTOR_1_NAME,
 			telemetryManager
 		);
-		assertTrue(sourceTableOpt.isPresent());
+		assertTrue(sourceResultOpt.isPresent());
 
-		assertEquals(expected, sourceTableOpt.get());
+		assertEquals(expected, sourceResultOpt.get());
 	}
 
 	@Test
-	void testLookupSourceTableFromReferencedSourceNotFound() {
+	void testLookupSourceResultFromReferencedSourceNotFound() {
 		final HostProperties hostProperties = HostProperties.builder().build();
 
 		hostProperties.getConnectorNamespace(MY_CONNECTOR_1_NAME);
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostProperties(hostProperties).build();
 
-		assertTrue(SourceTable.lookupSourceTable(SOURCE_REF_KEY, MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
+		assertTrue(SourceResult.lookupSourceResult(SOURCE_REF_KEY, MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
 	}
 
 	@Test
 	void testLineToCsvAppendsTrailingSeparator() {
-		assertEquals("a;b;c;", SourceTable.lineToCsv(List.of("a", "b", "c"), ";", false));
+		assertEquals("a;b;c;", SourceResult.lineToCsv(List.of("a", "b", "c"), ";", false));
 	}
 
 	@Test
 	void testLineToCsvConvertsNullsToEmpty() {
-		assertEquals("a;;c;", SourceTable.lineToCsv(Arrays.asList("a", null, "c"), ";", false));
+		assertEquals("a;;c;", SourceResult.lineToCsv(Arrays.asList("a", null, "c"), ";", false));
 	}
 
 	@Test
 	void testLineToCsvReplacesSeparatorWhenEnabled() {
-		assertEquals("a,b;c;", SourceTable.lineToCsv(List.of("a;b", "c"), ";", true));
+		assertEquals("a,b;c;", SourceResult.lineToCsv(List.of("a;b", "c"), ";", true));
 	}
 }

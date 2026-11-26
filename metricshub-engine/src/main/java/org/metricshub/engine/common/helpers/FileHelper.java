@@ -627,7 +627,7 @@ public class FileHelper {
 	}
 
 	/**
-	 * Normalizes {@code [path, text]} rows into a single raw payload for {@link org.metricshub.engine.strategy.source.SourceTable}.
+	 * Normalizes {@code [path, text]} rows into a single raw payload for {@link org.metricshub.engine.strategy.source.SourceResult}.
 	 * <p>
 	 * When {@link #isSinglePathMapping(Set, Set, List)} is true, the sole row text is returned as-is (path and segment
 	 * markers are omitted).

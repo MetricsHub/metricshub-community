@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.extension.recorder.AbstractRecorder;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
@@ -124,7 +124,7 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 
 				@Override
 				public List<List<String>> mapResponse(final String content) {
-					return SourceTable.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
+					return SourceResult.csvToTable(content, AbstractRecorder.CSV_SEPARATOR);
 				}
 			}
 		);

@@ -33,7 +33,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.InjectMocks;
@@ -201,7 +201,7 @@ class PingExtensionTest {
 
 	@Test
 	void testProcessSource() {
-		assertEquals(SourceTable.empty(), pingExtension.processSource(new HttpSource(), CONNECTOR_ID, telemetryManager));
+		assertEquals(SourceResult.empty(), pingExtension.processSource(new HttpSource(), CONNECTOR_ID, telemetryManager));
 	}
 
 	@Test

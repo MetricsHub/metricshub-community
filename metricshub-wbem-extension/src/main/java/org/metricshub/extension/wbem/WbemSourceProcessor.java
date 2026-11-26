@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.function.Function;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -93,13 +93,13 @@ public class WbemSourceProcessor {
 	}
 
 	/**
-	 * Process the given {@link WbemSource} and return the resulting {@link SourceTable}
+	 * Process the given {@link WbemSource} and return the resulting {@link SourceResult}
 	 *
 	 * @param wbemSource {@link WbemSource} instance we wish to run
 	 * @param telemetryManager {@link TelemetryManager} instance from which we fetch the hostname and related configuration
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
-	public SourceTable process(WbemSource wbemSource, TelemetryManager telemetryManager) {
+	public SourceResult process(WbemSource wbemSource, TelemetryManager telemetryManager) {
 		final WbemConfiguration wbemConfiguration = wbemConfigurationProvider.apply(telemetryManager);
 
 		// Retrieve the hostname from the WbemConfiguration, otherwise from the telemetryManager
@@ -108,11 +108,11 @@ public class WbemSourceProcessor {
 			: telemetryManager.getHostname();
 
 		if (wbemSource == null) {
-			return SourceTable.failed("Malformed WBEM source.");
+			return SourceResult.failed("Malformed WBEM source.");
 		}
 
 		if (wbemConfiguration == null) {
-			return SourceTable.failed("WBEM: WBEM is not configured on the host.");
+			return SourceResult.failed("WBEM: WBEM is not configured on the host.");
 		}
 
 		// Get the namespace, the default one is : root/cimv2
@@ -120,10 +120,10 @@ public class WbemSourceProcessor {
 
 		try {
 			if (hostname == null) {
-				return SourceTable.failed("WBEM: no hostname, the URL cannot be built.");
+				return SourceResult.failed("WBEM: no hostname, the URL cannot be built.");
 			}
 			if (wbemConfiguration.getPort() == null || wbemConfiguration.getPort() == 0) {
-				return SourceTable.failed("WBEM: no port to connect to the host.");
+				return SourceResult.failed("WBEM: no port to connect to the host.");
 			}
 
 			final List<List<String>> table = wbemRequestExecutor.executeWbem(
@@ -134,7 +134,7 @@ public class WbemSourceProcessor {
 				telemetryManager
 			);
 
-			return SourceTable.ofTable(table);
+			return SourceResult.ofTable(table);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,
@@ -150,7 +150,7 @@ public class WbemSourceProcessor {
 				e
 			);
 
-			return SourceTable.failed(String.format("WBEM query %s in namespace %s", wbemSource.getQuery(), namespace), e);
+			return SourceResult.failed(String.format("WBEM query %s in namespace %s", wbemSource.getQuery(), namespace), e);
 		}
 	}
 }

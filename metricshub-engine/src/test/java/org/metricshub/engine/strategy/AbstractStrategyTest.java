@@ -76,7 +76,7 @@ import org.metricshub.engine.strategy.detection.ConnectorSelection;
 import org.metricshub.engine.strategy.detection.ConnectorTestResult;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.tool.ToolStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
@@ -758,12 +758,12 @@ class AbstractStrategyTest {
 			if (requests.incrementAndGet() == 2) {
 				Thread.currentThread().interrupt();
 			}
-			return SourceTable.ofTable(SourceTable.csvToTable("a;1", ";"));
+			return SourceResult.ofTable(SourceResult.csvToTable("a;1", ";"));
 		}).when(extension).processSource(any(), anyString(), any());
 
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
 		// A table written by another run (the next run, when this thread is an abandoned one)
-		namespace.addSourceTable("${source::c}", SourceTable.ofTable(SourceTable.csvToTable("old;1", ";")));
+		namespace.addSourceResult("${source::c}", SourceResult.ofTable(SourceResult.csvToTable("old;1", ";")));
 
 		final List<Source> sources = List.of("a", "b", "c")
 			.stream()
@@ -791,11 +791,11 @@ class AbstractStrategyTest {
 
 			assertEquals(2, requests.get());
 			assertTrue(Thread.currentThread().isInterrupted());
-			assertEquals(List.of(List.of("a", "1")), namespace.getSourceTable("${source::a}").getTable());
+			assertEquals(List.of(List.of("a", "1")), namespace.getSourceResult("${source::a}").getTable());
 			// The source interrupted while it ran may have been cut short: it did not answer, whatever it returned.
 			// The interrupted thread writes nothing more: the table of another run is left alone
-			assertNull(namespace.getSourceTable("${source::b}"));
-			assertEquals(List.of(List.of("old", "1")), namespace.getSourceTable("${source::c}").getTable());
+			assertNull(namespace.getSourceResult("${source::b}"));
+			assertEquals(List.of(List.of("old", "1")), namespace.getSourceResult("${source::c}").getTable());
 			assertTrue(namespace.getUnansweredSourceKeys().isEmpty());
 		} finally {
 			Thread.interrupted();
@@ -815,10 +815,10 @@ class AbstractStrategyTest {
 		doAnswer(invocation -> {
 			if (invocation.getArgument(0) instanceof IpmiSelSource) {
 				namespace.setSourceCursor("${source::sel}", "sel-20");
-				return SourceTable.ofTable(SourceTable.csvToTable("event;1", ";"));
+				return SourceResult.ofTable(SourceResult.csvToTable("event;1", ";"));
 			}
 			Thread.currentThread().interrupt();
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}).when(extension).processSource(any(), anyString(), any());
 
 		final SimpleStrategy strategy = SimpleStrategy.builder()
@@ -868,14 +868,14 @@ class AbstractStrategyTest {
 		doReturn(Set.of(IpmiSelSource.class)).when(extension).getSupportedSources();
 		doAnswer(invocation -> {
 			namespace.setSourceCursor("${source::sel}", "sel-20");
-			return SourceTable.ofTable(SourceTable.csvToTable("event;1", ";"));
+			return SourceResult.ofTable(SourceResult.csvToTable("event;1", ";"));
 		}).when(extension).processSource(any(), anyString(), any());
 
 		// The job deadline expires while the table of the last source is stored: after the last check of the sources
 		doAnswer(invocation -> {
 			Thread.currentThread().interrupt();
 			return invocation.callRealMethod();
-		}).when(namespace).addSourceTable(eq("${source::sel}"), any());
+		}).when(namespace).addSourceResult(eq("${source::sel}"), any());
 
 		final SimpleStrategy strategy = SimpleStrategy.builder()
 			.strategyTime(STRATEGY_TIME)
@@ -933,7 +933,7 @@ class AbstractStrategyTest {
 		final IProtocolExtension extension = mock(IProtocolExtension.class);
 		doReturn(true).when(extension).isValidConfiguration(any());
 		doReturn(Set.of(HttpSource.class)).when(extension).getSupportedSources();
-		doReturn(SourceTable.ofText("{\"a\":1}")).when(extension).processSource(any(), anyString(), any());
+		doReturn(SourceResult.ofText("{\"a\":1}")).when(extension).processSource(any(), anyString(), any());
 
 		// The job deadline expires during the last (and only) compute of the source
 		final ClientsExecutor clientsExecutor = mock(ClientsExecutor.class);
@@ -967,7 +967,7 @@ class AbstractStrategyTest {
 
 			// The half computed table is not stored: the namespace may be the next run's
 			assertNull(
-				telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID).getSourceTable("${source::a}")
+				telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID).getSourceResult("${source::a}")
 			);
 			assertTrue(Thread.currentThread().isInterrupted());
 		} finally {
@@ -1056,9 +1056,9 @@ class AbstractStrategyTest {
 	) {
 		doReturn(true).when(extension).isValidConfiguration(any());
 		doReturn(Set.of(HttpSource.class, SnmpTableSource.class)).when(extension).getSupportedSources();
-		doReturn(SourceTable.failed("HTTP GET /x: status 401")).when(extension)
+		doReturn(SourceResult.failed("HTTP GET /x: status 401")).when(extension)
 			.processSource(any(HttpSource.class), anyString(), any());
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("b;1", ";"))).when(extension)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("b;1", ";"))).when(extension)
 			.processSource(any(SnmpTableSource.class), anyString(), any());
 		return SimpleStrategy.builder()
 			.strategyTime(STRATEGY_TIME)
@@ -1106,10 +1106,10 @@ class AbstractStrategyTest {
 		assertTrue(rolledBack.get());
 		// The failure is stored, for the sources that read it
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
-		assertEquals(SourceTable.failed("HTTP GET /x: status 401"), namespace.getSourceTable("${source::a}"));
+		assertEquals(SourceResult.failed("HTTP GET /x: status 401"), namespace.getSourceResult("${source::a}"));
 		// The skipped source fails too: another job reading it must not get its table of a former run
-		final SourceTable skipped = namespace.getSourceTable("${source::b}");
-		assertEquals(SourceTable.failed("Not executed: source ${source::a} failed: HTTP GET /x: status 401"), skipped);
+		final SourceResult skipped = namespace.getSourceResult("${source::b}");
+		assertEquals(SourceResult.failed("Not executed: source ${source::a} failed: HTTP GET /x: status 401"), skipped);
 		assertEquals(Set.of("${source::a}", "${source::b}"), namespace.getUnansweredSourceKeys());
 	}
 
@@ -1136,8 +1136,8 @@ class AbstractStrategyTest {
 
 		// Today's behavior: the computes run on an empty text, the job goes on
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
-		assertEquals(SourceTable.ofText("default"), namespace.getSourceTable("${source::a}"));
-		assertEquals(List.of(List.of("b", "1")), namespace.getSourceTable("${source::b}").getTable());
+		assertEquals(SourceResult.ofText("default"), namespace.getSourceResult("${source::a}"));
+		assertEquals(List.of(List.of("b", "1")), namespace.getSourceResult("${source::b}").getTable());
 		// Not reliable for the removal of the monitors
 		assertEquals(Set.of("${source::a}"), namespace.getUnansweredSourceKeys());
 	}
@@ -1151,7 +1151,7 @@ class AbstractStrategyTest {
 			extension,
 			new ClientsExecutor(telemetryManager)
 		);
-		final SourceTable partial = SourceTable.ofTable(SourceTable.csvToTable("b;1", ";"));
+		final SourceResult partial = SourceResult.ofTable(SourceResult.csvToTable("b;1", ";"));
 		partial.setPartial(true);
 		doReturn(partial).when(extension).processSource(any(SnmpTableSource.class), anyString(), any());
 
@@ -1162,7 +1162,7 @@ class AbstractStrategyTest {
 
 		// Its rows are kept, but a missing row does not remove a monitor
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
-		assertEquals(List.of(List.of("b", "1")), namespace.getSourceTable("${source::b}").getTable());
+		assertEquals(List.of(List.of("b", "1")), namespace.getSourceResult("${source::b}").getTable());
 		assertEquals(Set.of("${source::b}"), namespace.getUnansweredSourceKeys());
 	}
 
@@ -1170,8 +1170,8 @@ class AbstractStrategyTest {
 	void testSourceReadingAFailedSourceFails() throws Exception {
 		final TelemetryManager telemetryManager = newInterruptibleTelemetryManager();
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(TEST_CONNECTOR_ID);
-		final SourceTable failed = SourceTable.failed("SNMP Table: 1.3: timeout");
-		namespace.addSourceTable("${source::a}", failed);
+		final SourceResult failed = SourceResult.failed("SNMP Table: 1.3: timeout");
+		namespace.addSourceResult("${source::a}", failed);
 		final CopySource copy = CopySource.builder().from("${source::a}").key("${source::b}").build();
 		copy.setReferences(Set.of("${source::a}"));
 		final SimpleStrategy strategy = SimpleStrategy.builder()
@@ -1186,12 +1186,12 @@ class AbstractStrategyTest {
 			assertThrows(SourceFailedException.class, () -> strategy.processSourcesAndComputes(List.of(copy), SIMPLE_JOB))
 				.getMessage()
 		);
-		assertTrue(namespace.getSourceTable("${source::b}").isFailed());
+		assertTrue(namespace.getSourceResult("${source::b}").isFailed());
 
 		// The same with continueOnFailure: the copy gives an empty table, the source that failed is not run again
 		copy.setContinueOnFailure(true);
 		strategy.processSourcesAndComputes(List.of(copy), SIMPLE_JOB);
-		assertEquals(SourceTable.empty(), namespace.getSourceTable("${source::b}"));
+		assertEquals(SourceResult.empty(), namespace.getSourceResult("${source::b}"));
 	}
 
 	@Test
@@ -1203,7 +1203,7 @@ class AbstractStrategyTest {
 		final IProtocolExtension extension = mock(IProtocolExtension.class);
 		doReturn(true).when(extension).isValidConfiguration(any());
 		doReturn(Set.of(HttpSource.class)).when(extension).getSupportedSources();
-		doReturn(SourceTable.failed("HTTP GET /x: status 500"), SourceTable.ofText("x")).when(extension)
+		doReturn(SourceResult.failed("HTTP GET /x: status 500"), SourceResult.ofText("x")).when(extension)
 			.processSource(any(HttpSource.class), anyString(), any());
 		final HttpSource discovery = HttpSource.builder().url("/x").key("${source::x}").build();
 		final CopySource collect = CopySource.builder().from("${source::x}").key("${source::y}").build();
@@ -1233,7 +1233,7 @@ class AbstractStrategyTest {
 		// The next discovery answers: the collect reads it again
 		run.apply(STRATEGY_TIME + 3).processSourcesAndComputes(List.of(discovery), SIMPLE_JOB);
 		run.apply(STRATEGY_TIME + 4).processSourcesAndComputes(List.of(collect), SIMPLE_JOB);
-		assertEquals(SourceTable.ofText("x"), namespace.getSourceTable("${source::y}"));
+		assertEquals(SourceResult.ofText("x"), namespace.getSourceResult("${source::y}"));
 	}
 
 	private TelemetryManager newInterruptibleTelemetryManager() {

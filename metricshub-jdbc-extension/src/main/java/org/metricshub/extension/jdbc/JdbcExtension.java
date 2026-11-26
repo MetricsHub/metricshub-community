@@ -53,7 +53,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.RequestOutcome;
 import org.metricshub.engine.telemetry.RequestStats;
@@ -173,7 +173,7 @@ public class JdbcExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof SqlSource sqlSource) {
 			final JdbcDriverSelection selection = ensureDeclaredDriver(connectorId, telemetryManager);
 			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, selection).process(sqlSource, telemetryManager);

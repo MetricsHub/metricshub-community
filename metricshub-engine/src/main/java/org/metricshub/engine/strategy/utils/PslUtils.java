@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Utility class for handling PSL (PATROL Script Language) regular expressions
@@ -173,7 +173,7 @@ public class PslUtils {
 	 * @param tableResult The output returned by the SourceVisitor.
 	 * @return String value
 	 */
-	public static String formatExtendedJSON(@NonNull List<String> row, @NonNull SourceTable tableResult)
+	public static String formatExtendedJSON(@NonNull List<String> row, @NonNull SourceResult tableResult)
 		throws IllegalArgumentException {
 		if (row.isEmpty()) {
 			log.error("formatExtendedJSON received an empty row of values. Returning empty string.");
@@ -182,7 +182,7 @@ public class PslUtils {
 
 		final String text = tableResult.asText();
 		if (text.isEmpty()) {
-			log.error("formatExtendedJSON received Empty SourceTable data {}. Returning empty string.", tableResult);
+			log.error("formatExtendedJSON received Empty SourceResult data {}. Returning empty string.", tableResult);
 			return EMPTY;
 		}
 

@@ -36,7 +36,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Represents a namespace for a connector, containing information about source tables and related settings.
@@ -48,7 +48,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 public class ConnectorNamespace {
 
 	@Default
-	private Map<String, SourceTable> sourceTables = new ConcurrentHashMap<>();
+	private Map<String, SourceResult> sourceResults = new ConcurrentHashMap<>();
 
 	/**
 	 * Keys of the sources that did not answer the last time they ran: they failed, or they had data before and came back
@@ -132,23 +132,23 @@ public class ConnectorNamespace {
 	}
 
 	/**
-	 * Add a source in the current sourceTables map
+	 * Add a source in the current sourceResults map
 	 *
-	 * @param key sourceTable key
-	 * @param sourceTable sourceTable instance
+	 * @param key sourceResult key
+	 * @param sourceResult sourceResult instance
 	 */
-	public void addSourceTable(@NonNull String key, @NonNull SourceTable sourceTable) {
-		sourceTables.put(key, sourceTable);
+	public void addSourceResult(@NonNull String key, @NonNull SourceResult sourceResult) {
+		sourceResults.put(key, sourceResult);
 	}
 
 	/**
-	 * Get the {@link SourceTable} identified with the given key
+	 * Get the {@link SourceResult} identified with the given key
 	 *
-	 * @param key sourceTable key
-	 * @return return existing {@link SourceTable} object
+	 * @param key sourceResult key
+	 * @return return existing {@link SourceResult} object
 	 */
-	public SourceTable getSourceTable(@NonNull String key) {
-		return sourceTables.get(key);
+	public SourceResult getSourceResult(@NonNull String key) {
+		return sourceResults.get(key);
 	}
 
 	/**

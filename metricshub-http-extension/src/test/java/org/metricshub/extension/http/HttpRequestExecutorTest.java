@@ -38,7 +38,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
 import org.metricshub.engine.telemetry.RequestOutcome;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.http.HttpResponse;
@@ -148,12 +148,12 @@ class HttpRequestExecutorTest {
 				if (resultContent == ResultContent.ALL_WITH_STATUS) {
 					assertEquals("Status: " + status + "\n" + httpResponse.getHeader() + "\n{\"error\":\"bad token\"}", result);
 					// Who asks for the status gets the answer
-					assertEquals(SourceTable.ofText(result), executor.executeHttpSource(request, true, telemetryManager));
+					assertEquals(SourceResult.ofText(result), executor.executeHttpSource(request, true, telemetryManager));
 				} else {
 					assertEquals("", result, status + " " + resultContent.name());
 					// An http source fails
 					assertEquals(
-						SourceTable.failed("The server answered with the status " + status + "."),
+						SourceResult.failed("The server answered with the status " + status + "."),
 						executor.executeHttpSource(request, true, telemetryManager)
 					);
 				}
@@ -348,7 +348,7 @@ class HttpRequestExecutorTest {
 		assertNull(result);
 		// No response: an http source fails, and says why
 		assertEquals(
-			SourceTable.failed("No response: IOException: Connection refused"),
+			SourceResult.failed("No response: IOException: Connection refused"),
 			executor.executeHttpSource(request, true, telemetryManager)
 		);
 	}

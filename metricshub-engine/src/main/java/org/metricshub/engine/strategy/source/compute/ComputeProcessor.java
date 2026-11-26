@@ -118,7 +118,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ToTable
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ToText;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -129,7 +129,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * among others, on the source data table.
  *
  * <p>It relies on a TelemetryManager, connectorId, MatsyaClientsExecutor, sourceKey, hostname,
- * SourceTable, and index for its operations. It also uses a predefined map of mathematical functions
+ * SourceResult, and index for its operations. It also uses a predefined map of mathematical functions
  * for certain operations.
  * </p>
  */
@@ -145,7 +145,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	private ClientsExecutor clientsExecutor;
 	private String sourceKey;
 	private String hostname;
-	private SourceTable sourceTable;
+	private SourceResult sourceResult;
 	private Integer index;
 	private Map<String, String> attributes;
 	private static final Map<Class<? extends Compute>, BiFunction<String, String, String>> MATH_FUNCTIONS_MAP;
@@ -239,7 +239,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final List<List<String>> resultTable = new ArrayList<>();
 		List<String> resultRow;
 
-		for (List<String> row : sourceTable.getTable()) {
+		for (List<String> row : sourceResult.getTable()) {
 			if (columnIndex >= row.size()) {
 				log.warn(
 					"Hostname {} - The index of the column is {} but the row size is {}, the translate computation cannot be performed.",
@@ -268,7 +268,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			resultTable.add(resultRow);
 		}
 
-		sourceTable.setTable(resultTable);
+		sourceResult.setTable(resultTable);
 	}
 
 	@Override
@@ -302,7 +302,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		int colOperand2 = getColumnIndex(operand2);
 
-		for (List<String> line : sourceTable.getTable()) {
+		for (List<String> line : sourceResult.getTable()) {
 			try {
 				if (columnIndex < line.size()) {
 					// Set the column value of the 'line' at 'columnIndex' to the result of a bitwise 'AND' operation
@@ -399,8 +399,8 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// The input is the source result as it is at run time (#1559): a table is read structured (the rows are the
 		// records, nothing is serialized), a text the traditional way
-		final boolean tableInput = sourceTable.getContentType() == ContentType.TABLE;
-		final String input = tableInput ? null : sourceTable.getText();
+		final boolean tableInput = sourceResult.getContentType() == ContentType.TABLE;
+		final String input = tableInput ? null : sourceResult.getText();
 
 		final String computeKey = String.format(LOG_COMPUTE_KEY_SUFFIX_TEMPLATE, sourceKey, this.index);
 
@@ -425,19 +425,19 @@ public class ComputeProcessor implements IComputeProcessor {
 				final List<List<String>> rows = tableInput
 					? AwkExecutor.executeAwkToTable(
 						awkScript,
-						new TableInputSource(sourceTable.getTable()),
+						new TableInputSource(sourceResult.getTable()),
 						AwkExecutor.getUtilityEngine(),
 						variables
 					)
 					: AwkExecutor.executeAwkToTable(awkScript, input, AwkExecutor.getUtilityEngine(), variables);
-				sourceTable.setTable(rows);
+				sourceResult.setTable(rows);
 				return;
 			}
 
 			String awkResult = tableInput
 				? AwkExecutor.executeAwk(
 					awkScript,
-					new TableInputSource(sourceTable.getTable()),
+					new TableInputSource(sourceResult.getTable()),
 					AwkExecutor.getUtilityEngine(),
 					variables
 				)
@@ -450,12 +450,12 @@ public class ComputeProcessor implements IComputeProcessor {
 					computeKey,
 					(awkResult == null ? "null" : "empty")
 				);
-				sourceTable.setText(EMPTY);
+				sourceResult.setText(EMPTY);
 				return;
 			}
 
 			// The text the script printed
-			sourceTable.setText(awkResult);
+			sourceResult.setText(awkResult);
 		} catch (Exception e) {
 			logComputeError(connectorId, computeKey, "AWK: " + embeddedFile.description(), e, hostname);
 		}
@@ -495,7 +495,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param columnIndex The column number
 	 */
 	void convertHex2Dec(final Integer columnIndex) {
-		sourceTable.getTable().forEach(row -> {
+		sourceResult.getTable().forEach(row -> {
 			if (columnIndex < row.size()) {
 				final String value = row.get(columnIndex).replace("0x", EMPTY).replace(":", EMPTY).replaceAll("\\s*", EMPTY);
 				if (HEXA_PATTERN.matcher(value).matches()) {
@@ -528,7 +528,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param columnIndex The column number
 	 */
 	void convertArray2SimpleStatus(final Integer columnIndex) {
-		sourceTable.getTable().forEach(row -> {
+		sourceResult.getTable().forEach(row -> {
 			if (columnIndex < row.size()) {
 				final String value = PslUtils.nthArg(row.get(columnIndex), "1-", VERTICAL_BAR, NEW_LINE);
 				row.set(columnIndex, getWorstStatus(value.split(NEW_LINE)));
@@ -586,7 +586,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final int columnIndex = decode.getColumn() - 1;
 		final String encoding = decode.getEncoding();
 
-		for (final List<String> line : sourceTable.getTable()) {
+		for (final List<String> line : sourceResult.getTable()) {
 			if (columnIndex < line.size()) {
 				final String valueToBeDecoded = line.get(columnIndex);
 
@@ -668,7 +668,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		// for each list in the list, duplicate the column of the given index
 		int columnIndex = duplicateColumn.getColumn() - 1;
 
-		for (List<String> elementList : sourceTable.getTable()) {
+		for (List<String> elementList : sourceResult.getTable()) {
 			if (columnIndex >= 0 && columnIndex < elementList.size()) {
 				elementList.add(columnIndex, elementList.get(columnIndex));
 			}
@@ -696,7 +696,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final int columnIndex = encode.getColumn() - 1;
 		final String encoding = encode.getEncoding();
 
-		for (final List<String> line : sourceTable.getTable()) {
+		for (final List<String> line : sourceResult.getTable()) {
 			if (columnIndex < line.size()) {
 				final String valueToBeEncoded = line.get(columnIndex);
 
@@ -731,13 +731,13 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
-	 * Updates the {@link SourceTable}
+	 * Updates the {@link SourceResult}
 	 * by keeping or removing lines
 	 * according to the definition of the given {@link AbstractMatchingLines}.
 	 *
 	 * @param abstractMatchingLines	The {@link AbstractMatchingLines}
 	 *                              describing the rules
-	 *                              regarding which lines should be kept or removed in/from the {@link SourceTable}.
+	 *                              regarding which lines should be kept or removed in/from the {@link SourceResult}.
 	 */
 	private void processAbstractMatchingLines(final AbstractMatchingLines abstractMatchingLines) {
 		if (isConsistentMatchingLinesInfo(abstractMatchingLines)) {
@@ -760,7 +760,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				: null;
 
 			// If there are both a regex and a valueList, both are applied, one after the other.
-			final List<List<String>> filteredTable = sourceTable.getTable()
+			final List<List<String>> filteredTable = sourceResult.getTable()
 				.stream()
 				.filter(
 					line -> columnIndex < line.size() &&
@@ -769,7 +769,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				)
 				.collect(Collectors.toList());
 
-			sourceTable.setTable(filteredTable);
+			sourceResult.setTable(filteredTable);
 		}
 	}
 
@@ -806,21 +806,21 @@ public class ComputeProcessor implements IComputeProcessor {
 		return (abstractMatchingLines != null &&
 			abstractMatchingLines.getColumn() != null &&
 			abstractMatchingLines.getColumn() > 0 &&
-			sourceTable != null &&
-			sourceTable.getTable() != null &&
-			!sourceTable.getTable().isEmpty());
+			sourceResult != null &&
+			sourceResult.getTable() != null &&
+			!sourceResult.getTable().isEmpty());
 	}
 
 	/**
-	 * @param pslRegexp				The PSL regular expression used to filter the lines in the {@link SourceTable}.
+	 * @param pslRegexp				The PSL regular expression used to filter the lines in the {@link SourceResult}.
 	 * @param abstractMatchingLines	The {@link AbstractMatchingLines}
 	 *                              describing the rules
-	 *                              regarding which lines should be kept or removed in/from the {@link SourceTable}.
+	 *                              regarding which lines should be kept or removed in/from the {@link SourceResult}.
 	 *
 	 * @return						A {@link Predicate},
 	 * 								based on the given regular expression
 	 * 								and the concrete type of the given {@link AbstractMatchingLines},
-	 * 								that can be used to filter the lines in the {@link SourceTable}.
+	 * 								that can be used to filter the lines in the {@link SourceResult}.
 	 */
 	private Predicate<String> getPredicate(final String pslRegexp, final AbstractMatchingLines abstractMatchingLines) {
 		Pattern pattern = Pattern.compile(PslUtils.psl2JavaRegex(pslRegexp), Pattern.CASE_INSENSITIVE);
@@ -831,15 +831,15 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
-	 * @param valueSet				The set of values used to filter the lines in the {@link SourceTable}.
+	 * @param valueSet				The set of values used to filter the lines in the {@link SourceResult}.
 	 * @param abstractMatchingLines	The {@link AbstractMatchingLines}
 	 *                              describing the rules
-	 *                              regarding which lines should be kept or removed in/from the {@link SourceTable}.
+	 *                              regarding which lines should be kept or removed in/from the {@link SourceResult}.
 	 *
 	 * @return						A {@link Predicate},
 	 * 								based on the given list of values
 	 * 								and the concrete type of the given {@link AbstractMatchingLines},
-	 * 								that can be used to filter the lines in the {@link SourceTable}.
+	 * 								that can be used to filter the lines in the {@link SourceResult}.
 	 */
 	private Predicate<String> getPredicate(
 		final Set<String> valueSet,
@@ -896,7 +896,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		String text;
 		List<List<String>> resultTable = new ArrayList<>();
 		List<String> resultRow;
-		for (List<String> row : sourceTable.getTable()) {
+		for (List<String> row : sourceResult.getTable()) {
 			if (columnIndex >= row.size()) {
 				log.warn("Hostname {} - Invalid column index: {}. The table remains unchanged.", hostname, column);
 				return;
@@ -916,7 +916,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			resultTable.add(resultRow);
 		}
 
-		sourceTable.setTable(resultTable);
+		sourceResult.setTable(resultTable);
 	}
 
 	@Override
@@ -947,7 +947,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		columnIndex--;
 
-		for (final List<String> line : sourceTable.getTable()) {
+		for (final List<String> line : sourceResult.getTable()) {
 			if (columnIndex < line.size()) {
 				final String columnValue = line.get(columnIndex);
 
@@ -1002,9 +1002,9 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		final List<List<String>> table = sourceTable.getTable();
+		final List<List<String>> table = sourceResult.getTable();
 		final int kept = Math.min(count, table.size());
-		sourceTable.setTable(
+		sourceResult.setTable(
 			new ArrayList<>(last ? table.subList(table.size() - kept, table.size()) : table.subList(0, kept))
 		);
 	}
@@ -1038,7 +1038,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		if (sourceTable.getContentType() == ContentType.TABLE) {
+		if (sourceResult.getContentType() == ContentType.TABLE) {
 			log.warn("Hostname {} - Json2CSV compute on a table: nothing to parse, the table remains unchanged.", hostname);
 			return;
 		}
@@ -1050,14 +1050,14 @@ public class ComputeProcessor implements IComputeProcessor {
 				"Hostname {} - Json2CSV processor encountered null properties. As a result, the table is empty.",
 				hostname
 			);
-			sourceTable.setTable(new ArrayList<>());
+			sourceResult.setTable(new ArrayList<>());
 			return;
 		}
 
 		try {
 			// A document that does not parse gives no rows: the result is a table all the same
-			sourceTable.setTable(
-				clientsExecutor.executeJson2Table(sourceTable.getText(), json2csv.getEntryKey(), properties)
+			sourceResult.setTable(
+				clientsExecutor.executeJson2Table(sourceResult.getText(), json2csv.getEntryKey(), properties)
 			);
 		} catch (Exception e) {
 			logComputeError(
@@ -1067,7 +1067,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				e,
 				hostname
 			);
-			sourceTable.setTable(new ArrayList<>());
+			sourceResult.setTable(new ArrayList<>());
 		}
 	}
 
@@ -1085,13 +1085,13 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		if (sourceTable.getContentType() == ContentType.TABLE) {
+		if (sourceResult.getContentType() == ContentType.TABLE) {
 			log.warn("Hostname {} - Json2List compute on a table: nothing to parse, the table remains unchanged.", hostname);
 			return;
 		}
 
 		try {
-			sourceTable.setTable(jsonToList(sourceTable.getText() == null ? EMPTY : sourceTable.getText()));
+			sourceResult.setTable(jsonToList(sourceResult.getText() == null ? EMPTY : sourceResult.getText()));
 		} catch (IOException | NumberFormatException e) {
 			// The kind and the location only: the message of the parser quotes the document. A number whose exponent
 			// overflows a BigDecimal throws a NumberFormatException
@@ -1104,7 +1104,7 @@ public class ComputeProcessor implements IComputeProcessor {
 					? jpe.getLocation().offsetDescription()
 					: "no location"
 			);
-			sourceTable.setTable(new ArrayList<>());
+			sourceResult.setTable(new ArrayList<>());
 		}
 	}
 
@@ -1237,7 +1237,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		List<List<String>> resultTable = new ArrayList<>();
 		List<String> resultRow;
 		columnNumbers = columnNumbers.stream().filter(Objects::nonNull).sorted().collect(Collectors.toList());
-		for (List<String> row : sourceTable.getTable()) {
+		for (List<String> row : sourceResult.getTable()) {
 			resultRow = new ArrayList<>();
 			for (Integer columnIndex : columnNumbers) {
 				if (columnIndex < 1 || columnIndex > row.size()) {
@@ -1257,7 +1257,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			resultTable.add(resultRow);
 		}
 
-		sourceTable.setTable(resultTable);
+		sourceResult.setTable(resultTable);
 	}
 
 	/**
@@ -1367,7 +1367,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		for (List<String> line : sourceTable.getTable()) {
+		for (List<String> line : sourceResult.getTable()) {
 			if (columnIndex < line.size()) {
 				long valueToBeReplacedLong;
 
@@ -1422,7 +1422,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// No column: every occurrence in the whole text, the values taken literally (a text has no column)
 		if (columnToReplace == null) {
-			sourceTable.setText(sourceTable.getText().replace(strToReplace, replacement));
+			sourceResult.setText(sourceResult.getText().replace(strToReplace, replacement));
 			return;
 		}
 
@@ -1440,11 +1440,11 @@ public class ComputeProcessor implements IComputeProcessor {
 		if (COLUMN_PATTERN.matcher(replacement).matches()) {
 			final int replacementColumnIndex = getColumnIndex(replacement);
 
-			if (!sourceTable.getTable().isEmpty()) {
+			if (!sourceResult.getTable().isEmpty()) {
 				// If strToReplace is like "$n", the strToReplace is actually the content of the column n.
 				if (COLUMN_PATTERN.matcher(strToReplace).matches()) {
 					final int strToReplaceColumnIndex = getColumnIndex(strToReplace);
-					sourceTable.getTable().forEach(line -> {
+					sourceResult.getTable().forEach(line -> {
 						if (validateSizeAndIndices(line.size(), columnIndex, replacementColumnIndex, strToReplaceColumnIndex)) {
 							line.set(
 								columnIndex,
@@ -1453,7 +1453,7 @@ public class ComputeProcessor implements IComputeProcessor {
 						}
 					});
 				} else {
-					sourceTable.getTable().forEach(line -> {
+					sourceResult.getTable().forEach(line -> {
 						if (validateSizeAndIndices(line.size(), columnIndex, replacementColumnIndex)) {
 							line.set(columnIndex, line.get(columnIndex).replace(strToReplace, line.get(replacementColumnIndex)));
 						}
@@ -1464,15 +1464,15 @@ public class ComputeProcessor implements IComputeProcessor {
 			// If strToReplace is like "$n", the strToReplace is actually the content of the column n.
 			if (COLUMN_PATTERN.matcher(strToReplace).matches()) {
 				final int strToReplaceColumnIndex = getColumnIndex(strToReplace);
-				if (!sourceTable.getTable().isEmpty()) {
-					sourceTable.getTable().forEach(line -> {
+				if (!sourceResult.getTable().isEmpty()) {
+					sourceResult.getTable().forEach(line -> {
 						if (validateSizeAndIndices(line.size(), columnIndex, strToReplaceColumnIndex)) {
 							line.set(columnIndex, line.get(columnIndex).replace(line.get(strToReplaceColumnIndex), replacement));
 						}
 					});
 				}
 			} else {
-				sourceTable.getTable().forEach(line -> {
+				sourceResult.getTable().forEach(line -> {
 					if (validateSizeAndIndices(line.size(), columnIndex)) {
 						line.set(columnIndex, line.get(columnIndex).replace(strToReplace, replacement));
 					}
@@ -1516,7 +1516,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		// direction
 		final List<List<String>> sorted = new ArrayList<>();
 		final List<List<String>> others = new ArrayList<>();
-		for (final List<String> line : sourceTable.getTable()) {
+		for (final List<String> line : sourceResult.getTable()) {
 			final String value = columnIndex < line.size() ? line.get(columnIndex) : null;
 			if (sort.isNumeric() ? toExactNumber(value) != null : value != null) {
 				sorted.add(line);
@@ -1542,7 +1542,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		sorted.sort(Comparator.comparing(line -> line.get(columnIndex), comparator));
 		sorted.addAll(others);
 
-		sourceTable.setTable(sorted);
+		sourceResult.setTable(sorted);
 	}
 
 	@Override
@@ -1603,11 +1603,11 @@ public class ComputeProcessor implements IComputeProcessor {
 		// No column: the substring of the whole text, with the start and the end of a cell (a text has no column to
 		// read them from)
 		if (substring != null && substring.getColumn() == null) {
-			final String text = sourceTable.getText();
+			final String text = sourceResult.getText();
 			final Integer beginIndex = toSubstringIndex(substring.getStart());
 			final Integer endIndex = toSubstringIndex(substring.getLength());
 			if (checkSubstringArguments(beginIndex, endIndex, text.length())) {
-				sourceTable.setText(text.substring(beginIndex - 1, endIndex));
+				sourceResult.setText(text.substring(beginIndex - 1, endIndex));
 			} else {
 				log.warn("Hostname {} - The substring {} is not valid, the text remains unchanged.", hostname, substring);
 			}
@@ -1656,7 +1656,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @return whether the compute cannot run on the result
 	 */
 	private boolean isContentTypeMismatch(final Integer column, final String compute) {
-		if ((column == null) == (sourceTable.getContentType() == ContentType.TEXT)) {
+		if ((column == null) == (sourceResult.getContentType() == ContentType.TEXT)) {
 			return false;
 		}
 		log.warn(
@@ -1693,7 +1693,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	/**
 	 * Perform a substring operation on the column identified by the given <code>columnIndex</code>
 	 *
-	 * @param columnIndex      The column number in the current {@link SourceTable}
+	 * @param columnIndex      The column number in the current {@link SourceResult}
 	 * @param start            The begin index, inclusive and starts at 1
 	 * @param startColumnIndex The column index, so that we extract the start index. If equals -1 then it is not used
 	 * @param end              The ending index, exclusive
@@ -1709,7 +1709,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final Function<ComputeValue, String> startFunction = getValueFunction(startColumnIndex);
 		final Function<ComputeValue, String> endFunction = getValueFunction(endColumnIndex);
 
-		sourceTable.getTable().forEach(row -> {
+		sourceResult.getTable().forEach(row -> {
 			if (columnIndex < row.size()) {
 				final String columnValue = row.get(columnIndex);
 
@@ -1831,7 +1831,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		final String defaultTranslation = translations.get(DEFAULT);
 
-		for (List<String> line : sourceTable.getTable()) {
+		for (List<String> line : sourceResult.getTable()) {
 			if (columnIndex < line.size()) {
 				final String valueToBeReplaced = line.get(columnIndex).toLowerCase();
 				final String newValue = translations.getOrDefault(valueToBeReplaced, defaultTranslation);
@@ -1856,10 +1856,10 @@ public class ComputeProcessor implements IComputeProcessor {
 	 */
 	/**
 	 * Converts the text into a table: one row per line, split on the separator by
-	 * {@link SourceTable#textToTable(String, String)} (what {@link SourceTable#asTable()} does with <code>;</code>),
+	 * {@link SourceResult#textToTable(String, String)} (what {@link SourceResult#asTable()} does with <code>;</code>),
 	 * after the line filters and before the column selection of the compute (the <code>commandLine</code> semantics).
 	 * A table is already a table: it remains unchanged, unless the compute filters lines, selects columns or sets a
-	 * separator, which then apply to {@link SourceTable#asText()} as they did to the legacy raw text of a table.
+	 * separator, which then apply to {@link SourceResult#asText()} as they did to the legacy raw text of a table.
 	 *
 	 * @param toTable The {@link ToTable} compute
 	 */
@@ -1873,8 +1873,8 @@ public class ComputeProcessor implements IComputeProcessor {
 		final boolean hasOptions = toTable.getKeep() != null ||
 			toTable.getExclude() != null ||
 			toTable.getSelectColumns() != null ||
-			!SourceTable.DEFAULT_SEPARATOR.equals(toTable.getSeparator());
-		if (sourceTable.getContentType() == ContentType.TABLE && !hasOptions) {
+			!SourceResult.DEFAULT_SEPARATOR.equals(toTable.getSeparator());
+		if (sourceResult.getContentType() == ContentType.TABLE && !hasOptions) {
 			log.debug("Hostname {} - Compute Operation (ToTable) on a table: the table remains unchanged.", hostname);
 			return;
 		}
@@ -1882,7 +1882,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		// A table with line filters or a column selection is read as its text, as the legacy toTable read the raw
 		// text of a table. The text has LF line endings: the result does not depend on the host
 		final List<String> filteredLines = FilterResultHelper.filterLines(
-			SourceTable.lineToList(sourceTable.asText(), NEW_LINE),
+			SourceResult.lineToList(sourceResult.asText(), NEW_LINE),
 			null,
 			null,
 			toTable.getExclude(),
@@ -1892,11 +1892,11 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		// A blank line, or a line of blank separators only, gives no row; a line whose selected columns are all
 		// absent gives empty cells
-		final List<List<String>> table = SourceTable.textToTable(
+		final List<List<String>> table = SourceResult.textToTable(
 			String.join(NEW_LINE, filteredLines),
 			toTable.getSeparator()
 		);
-		sourceTable.setTable(
+		sourceResult.setTable(
 			columns == null
 				? table
 				: table.stream().map(cells -> selectCells(cells, columns)).collect(Collectors.toCollection(ArrayList::new))
@@ -1967,7 +1967,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	/**
-	 * Converts the table into text with {@link SourceTable#asText()}: one line per row, cells joined with
+	 * Converts the table into text with {@link SourceResult#asText()}: one line per row, cells joined with
 	 * <code>;</code> and a trailing <code>;</code>, a <code>;</code> inside a cell replaced by <code>,</code> (what
 	 * the <code>awk</code> compute read from a table so far), never a CRLF. A text remains unchanged.
 	 *
@@ -1980,7 +1980,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			log.warn("Hostname {} - Compute Operation (ToText) is null, the table remains unchanged.", hostname);
 			return;
 		}
-		sourceTable.setText(sourceTable.asText());
+		sourceResult.setText(sourceResult.asText());
 	}
 
 	/**
@@ -2013,7 +2013,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		// Fresh rows: a source may hand out fixed-size rows (Arrays.asList)
 		final List<List<String>> table = new ArrayList<>();
 		boolean tooFar = false;
-		for (final List<String> original : sourceTable.getTable()) {
+		for (final List<String> original : sourceResult.getTable()) {
 			final List<String> row = new ArrayList<>(original);
 			table.add(row);
 			// More than MAX_RANGE_PADDING missing cells is a mistake in the connector (a mistyped column): padding up to
@@ -2051,7 +2051,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				MAX_RANGE_PADDING
 			);
 		}
-		sourceTable.setTable(table);
+		sourceResult.setTable(table);
 	}
 
 	@Override
@@ -2062,20 +2062,20 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		if (sourceTable.getContentType() == ContentType.TABLE) {
+		if (sourceResult.getContentType() == ContentType.TABLE) {
 			log.warn("Hostname {} - Xml2Csv compute on a table: nothing to parse, the table remains unchanged.", hostname);
 			return;
 		}
 
 		try {
 			final List<List<String>> xmlResult = clientsExecutor.executeXmlParsing(
-				sourceTable.getText(),
+				sourceResult.getText(),
 				xml2csv.getProperties(),
 				xml2csv.getRecordTag()
 			);
 
 			// A document that does not parse gives no rows: the result is a table all the same
-			sourceTable.setTable(xmlResult == null ? new ArrayList<>() : xmlResult);
+			sourceResult.setTable(xmlResult == null ? new ArrayList<>() : xmlResult);
 		} catch (Exception e) {
 			logComputeError(
 				connectorId,
@@ -2084,12 +2084,12 @@ public class ComputeProcessor implements IComputeProcessor {
 				e,
 				hostname
 			);
-			sourceTable.setTable(new ArrayList<>());
+			sourceResult.setTable(new ArrayList<>());
 		}
 	}
 
 	/**
-	 * Perform a mathematical computation (add, subtract, multiply or divide) on a given column in the sourceTable
+	 * Perform a mathematical computation (add, subtract, multiply or divide) on a given column in the sourceResult
 	 * Check if the operand2 is a reference to a column or a raw value
 	 * @param computeOperation The compute operation must be one of : Add, Subtract, Multiply, Divide.
 	 * @param column           Column to be changed
@@ -2144,7 +2144,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param computeOperation The {@link Compute} operation that should be performed.
 	 * @param columnIndex      The index of the column on which the operation should be performed.
 	 * @param operand2         The second operand of the operation.
-	 * @param operand2Index    The column holding the value of the second operand in the {@link SourceTable}.
+	 * @param operand2Index    The column holding the value of the second operand in the {@link SourceResult}.
 	 */
 	private void performMathComputeOnTable(
 		final Compute computeOperation,
@@ -2152,7 +2152,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		final String operand2,
 		final int operand2Index
 	) {
-		for (List<String> line : sourceTable.getTable()) {
+		for (List<String> line : sourceResult.getTable()) {
 			performMathComputeOnLine(computeOperation, columnIndex, operand2, operand2Index, line);
 		}
 
@@ -2162,7 +2162,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param computeOperation The {@link Compute} operation that should be performed.
 	 * @param columnIndex      The index of the column on which the operation should be performed.
 	 * @param operand2         The second operand of the operation.
-	 * @param operand2Index	   The column holding the value of the second operand in the {@link SourceTable}.
+	 * @param operand2Index	   The column holding the value of the second operand in the {@link SourceResult}.
 	 * @param line             The line that is being processed.
 	 */
 	private void performMathComputeOnLine(
@@ -2192,7 +2192,7 @@ public class ComputeProcessor implements IComputeProcessor {
 	 *
 	 * @param computeOperation The {@link Compute} operation that should be performed.
 	 * @param columnIndex      The index of the column on which the operation should be performed.
-	 * @param line             The row of the {@link SourceTable} that is being operated on.
+	 * @param line             The row of the {@link SourceResult} that is being operated on.
 	 * @param operand1         The first operand of the operation.
 	 * @param operand2         The second operand of the operation.
 	 */
@@ -2241,16 +2241,16 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @param abstractConcat
 	 */
 	private void processAbstractConcat(final AbstractConcat abstractConcat) {
-		if (abstractConcat != null && abstractConcat.getValue() != null && sourceTable != null) {
+		if (abstractConcat != null && abstractConcat.getValue() != null && sourceResult != null) {
 			if (isContentTypeMismatch(abstractConcat.getColumn(), abstractConcat.getClass().getSimpleName())) {
 				return;
 			}
 
 			// No column: the value before or after the whole text, taken literally (a text has no column)
 			if (abstractConcat.getColumn() == null) {
-				final String text = sourceTable.getText();
+				final String text = sourceResult.getText();
 				final String value = abstractConcat.getValue();
-				sourceTable.setText(abstractConcat instanceof Prepend ? value.concat(text) : text.concat(value));
+				sourceResult.setText(abstractConcat instanceof Prepend ? value.concat(text) : text.concat(value));
 				return;
 			}
 		}
@@ -2259,13 +2259,13 @@ public class ComputeProcessor implements IComputeProcessor {
 			abstractConcat.getValue() != null &&
 			abstractConcat.getColumn() != null &&
 			abstractConcat.getColumn() > 0 &&
-			sourceTable != null &&
-			sourceTable.getTable() != null &&
-			!sourceTable.getTable().isEmpty();
+			sourceResult != null &&
+			sourceResult.getTable() != null &&
+			!sourceResult.getTable().isEmpty();
 
 		if (firstChecks) {
 			// Case 1 : concatenation with an exiting column
-			if (abstractConcat.getColumn() <= sourceTable.getTable().get(0).size()) {
+			if (abstractConcat.getColumn() <= sourceResult.getTable().get(0).size()) {
 				int columnIndex = abstractConcat.getColumn() - 1;
 				String concatString = abstractConcat.getValue();
 
@@ -2274,15 +2274,15 @@ public class ComputeProcessor implements IComputeProcessor {
 				Matcher matcher = COLUMN_PATTERN.matcher(concatString);
 				if (matcher.matches()) {
 					int concatColumnIndex = Integer.parseInt(matcher.group(1)) - 1;
-					sourceTable.getTable().forEach(line -> concatColumns(line, columnIndex, concatColumnIndex, abstractConcat));
+					sourceResult.getTable().forEach(line -> concatColumns(line, columnIndex, concatColumnIndex, abstractConcat));
 				} else {
-					sourceTable.getTable().forEach(line -> concatString(line, columnIndex, abstractConcat));
+					sourceResult.getTable().forEach(line -> concatString(line, columnIndex, abstractConcat));
 				}
-			} else if (abstractConcat.getColumn() == sourceTable.getTable().get(0).size() + 1) {
+			} else if (abstractConcat.getColumn() == sourceResult.getTable().get(0).size() + 1) {
 				// Case 2 : concatenation with non existing column
 
 				// add at the end of the list (or at the beginning if the list is empty)
-				sourceTable.getTable().forEach(line -> line.add(abstractConcat.getValue()));
+				sourceResult.getTable().forEach(line -> line.add(abstractConcat.getValue()));
 			}
 		}
 	}

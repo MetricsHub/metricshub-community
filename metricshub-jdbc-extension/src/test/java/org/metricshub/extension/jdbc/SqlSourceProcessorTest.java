@@ -17,7 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,7 +39,7 @@ class SqlSourceProcessorTest {
 	}
 
 	@Test
-	void testProcessWhenConfigurationIsNullReturnsEmptySourceTable() {
+	void testProcessWhenConfigurationIsNullReturnsEmptySourceResult() {
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
 
 		final HostConfiguration hostConfiguration = HostConfiguration.builder()
@@ -49,7 +49,7 @@ class SqlSourceProcessorTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
+		final SourceResult result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 
 		assertNotNull(result);
 		assertEquals(ContentType.TABLE, result.getContentType());
@@ -57,7 +57,7 @@ class SqlSourceProcessorTest {
 	}
 
 	@Test
-	void testProcessWhenRequestExecutorThrowsExceptionReturnsEmptySourceTable() throws Exception {
+	void testProcessWhenRequestExecutorThrowsExceptionReturnsEmptySourceResult() throws Exception {
 		// Test case when the requestExecutor throws an exception
 		when(jdbcConfiguration.copy()).thenReturn(JdbcConfiguration.builder().hostname("hostname").build());
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
@@ -74,14 +74,14 @@ class SqlSourceProcessorTest {
 				any()
 			);
 
-		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
+		final SourceResult result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 		assertNotNull(result);
 		assertEquals(ContentType.TABLE, result.getContentType());
 		assertTrue(result.getTable().isEmpty());
 	}
 
 	@Test
-	void testProcessWhenReturnsSourceTableWithResult() throws Exception {
+	void testProcessWhenReturnsSourceResultWithResult() throws Exception {
 		// Test case when requestExecutor returns a valid result
 		when(jdbcConfiguration.copy()).thenReturn(JdbcConfiguration.builder().hostname("hostname").build());
 
@@ -100,7 +100,7 @@ class SqlSourceProcessorTest {
 			)
 		).thenReturn(expectedResults);
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
-		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
+		final SourceResult result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 
 		assertNotNull(result);
 		assertEquals(ContentType.TABLE, result.getContentType());
@@ -130,11 +130,11 @@ class SqlSourceProcessorTest {
 		when(sqlRequestExecutor.executeSql(eq("hostname"), any(JdbcConfiguration.class), any(), eq(false), any(), any()))
 			.thenReturn(List.of(List.of("a;b", "c"), List.of("", "d")));
 
-		final SourceTable result = sqlSourceProcessor.process(
+		final SourceResult result = sqlSourceProcessor.process(
 			SqlSource.builder().query("SELECT 1").build(),
 			createTelemetryManagerWithHostConfiguration()
 		);
 
-		assertEquals(SourceTable.ofTable(List.of(List.of("a;b", "c"), List.of("", "d"))), result);
+		assertEquals(SourceResult.ofTable(List.of(List.of("a;b", "c"), List.of("", "d"))), result);
 	}
 }

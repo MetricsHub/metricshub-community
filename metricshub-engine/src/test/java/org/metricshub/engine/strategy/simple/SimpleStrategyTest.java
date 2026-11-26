@@ -56,7 +56,7 @@ import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -100,7 +100,7 @@ class SimpleStrategyTest {
 	/**
 	 * The CSV tables returned by the mocked protocol extension, by source key. The other sources return an empty table.
 	 */
-	private final Map<String, String> sourceTables = new HashMap<>();
+	private final Map<String, String> sourceResults = new HashMap<>();
 
 	@Test
 	void testRun() throws Exception {
@@ -173,7 +173,7 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.simple.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
@@ -183,7 +183,7 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.simple.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		simpleStrategy.run();
@@ -346,7 +346,7 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.simple.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
@@ -356,7 +356,7 @@ class SimpleStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.simple.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// First collect cycle: both simple jobs collect their metrics
@@ -390,7 +390,7 @@ class SimpleStrategyTest {
 
 		// Second collect cycle: the enclosure source no longer returns any row
 		final long secondCollectTime = firstCollectTime + 60 * 1000;
-		doReturn(SourceTable.empty()).when(protocolExtensionMock)
+		doReturn(SourceResult.empty()).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		new PrepareCollectStrategy(telemetryManager, secondCollectTime, clientsExecutorMock, extensionManager).run();
@@ -431,7 +431,7 @@ class SimpleStrategyTest {
 		final String process2Id = "TestConnectorWithRemoval_process_process-2";
 
 		// First collect: the process job maps process-1 and process-2
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(PROCESS), "process-1;10\nprocess-2;20");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(PROCESS), "process-1;10\nprocess-2;20");
 		collect(telemetryManager, strategyTime);
 
 		final Monitor process1 = telemetryManager.getMonitors().get(PROCESS).get(process1Id);
@@ -440,7 +440,7 @@ class SimpleStrategyTest {
 
 		// Second collect: process-2 is gone
 		final long secondCollectTime = strategyTime + 60 * 1000;
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(PROCESS), "process-1;70");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(PROCESS), "process-1;70");
 		collect(telemetryManager, secondCollectTime);
 
 		assertEquals(Set.of(process1Id), telemetryManager.getMonitors().get(PROCESS).keySet());
@@ -462,12 +462,12 @@ class SimpleStrategyTest {
 		final String idle2Id = "TestConnectorWithRemoval_idle_entity_idle-2";
 
 		// First collect: the idle_entity job (removalDelay: 1m) maps idle-1 and idle-2
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(IDLE_ENTITY), "idle-1;10\nidle-2;20");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(IDLE_ENTITY), "idle-1;10\nidle-2;20");
 		collect(telemetryManager, strategyTime);
 		final Monitor idle2 = telemetryManager.getMonitors().get(IDLE_ENTITY).get(idle2Id);
 
 		// idle-2 is no longer returned, but it was discovered 1 minute ago, not more: it is kept with its metrics and its rate state
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(IDLE_ENTITY), "idle-1;30");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(IDLE_ENTITY), "idle-1;30");
 		final long endOfRemovalDelay = strategyTime + 60 * 1000;
 		collect(telemetryManager, endOfRemovalDelay);
 
@@ -510,7 +510,7 @@ class SimpleStrategyTest {
 		// Every mapping table has a row, except the one of empty_source
 		Stream.concat(trustedTypes.stream(), untrustedTypes.stream())
 			.filter(type -> !"empty_source".equals(type))
-			.forEach(type -> sourceTables.put(SOURCE_KEY_FORMAT.formatted(type), "new;1"));
+			.forEach(type -> sourceResults.put(SOURCE_KEY_FORMAT.formatted(type), "new;1"));
 
 		// A mapping without attributes is deserialized as an empty map: null is the consolidation job case
 		final SimpleMonitorJob noAttributesJob = (SimpleMonitorJob) telemetryManager.getConnectorStore()
@@ -521,14 +521,14 @@ class SimpleStrategyTest {
 		noAttributesJob.getSimple().getMapping().setAttributes(null);
 
 		// The incremental file source of beforeAll, read by before_all_log and before_all_log_copy
-		sourceTables.put("${source::beforeAll.logLines}", "new;1");
+		sourceResults.put("${source::beforeAll.logLines}", "new;1");
 
 		// null_source's source(2) answered during the previous run: now the extension returns null, a failure, so the
 		// source is retried then given up
 		final String nullSourceKey = "${source::monitors.null_source.simple.sources.source(2)}";
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
-			.addSourceTable(nullSourceKey, SourceTable.ofTable(SourceTable.csvToTable("previous;1", ";")));
+			.addSourceResult(nullSourceKey, SourceResult.ofTable(SourceResult.csvToTable("previous;1", ";")));
 		lenient().doReturn(null)
 			.when(protocolExtensionMock)
 			.processSource(
@@ -539,17 +539,17 @@ class SimpleStrategyTest {
 
 		// The union of beforeAll read by before_all_union: partA has a row, partB answered during the previous run and is now
 		// empty, so it is retried then given up
-		sourceTables.put("${source::beforeAll.partA}", "new;1");
+		sourceResults.put("${source::beforeAll.partA}", "new;1");
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
-			.addSourceTable("${source::beforeAll.partB}", SourceTable.ofTable(SourceTable.csvToTable("previous;1", ";")));
+			.addSourceResult("${source::beforeAll.partB}", SourceResult.ofTable(SourceResult.csvToTable("previous;1", ";")));
 
 		// failed_source's source(2) answered during the previous run: now empty, it is retried then given up
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
-			.addSourceTable(
+			.addSourceResult(
 				"${source::monitors.failed_source.simple.sources.source(2)}",
-				SourceTable.ofTable(SourceTable.csvToTable("previous;1", ";"))
+				SourceResult.ofTable(SourceResult.csvToTable("previous;1", ";"))
 			);
 
 		collect(telemetryManager, strategyTime);
@@ -599,13 +599,13 @@ class SimpleStrategyTest {
 		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder());
 
 		final Monitor staleEnclosure = addStaleMonitor(telemetryManager, ENCLOSURE.getKey());
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
 		// A table this run did not refresh (written by another run): the mapping of the interrupted job must not read it
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(REMOVAL_CONNECTOR_ID)
-			.addSourceTable(
+			.addSourceResult(
 				SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()),
-				SourceTable.ofTable(SourceTable.csvToTable("other;1", ";"))
+				SourceResult.ofTable(SourceResult.csvToTable("other;1", ";"))
 			);
 
 		// The strategy thread is interrupted (abandoned run)
@@ -632,7 +632,7 @@ class SimpleStrategyTest {
 		// The source of the process job, run after the enclosure job, interrupts the strategy thread
 		lenient().doAnswer(invocation -> {
 			Thread.currentThread().interrupt();
-			return SourceTable.empty();
+			return SourceResult.empty();
 		})
 			.when(protocolExtensionMock)
 			.processSource(
@@ -657,7 +657,7 @@ class SimpleStrategyTest {
 		lenient().doAnswer(invocation -> {
 			Thread.currentThread().interrupt();
 			return invocation.callRealMethod();
-		}).when(namespace).addSourceTable(eq(SOURCE_KEY_FORMAT.formatted(EVENT_LOG)), any());
+		}).when(namespace).addSourceResult(eq(SOURCE_KEY_FORMAT.formatted(EVENT_LOG)), any());
 
 		try {
 			collect(telemetryManager, strategyTime);
@@ -677,12 +677,12 @@ class SimpleStrategyTest {
 
 		// The job deadline expires while the mapping reads the event_log table
 		lenient().doAnswer(invocation -> {
-			final Object sourceTable = invocation.callRealMethod();
-			if (sourceTable != null) {
+			final Object sourceResult = invocation.callRealMethod();
+			if (sourceResult != null) {
 				Thread.currentThread().interrupt();
 			}
-			return sourceTable;
-		}).when(namespace).getSourceTable(SOURCE_KEY_FORMAT.formatted(EVENT_LOG));
+			return sourceResult;
+		}).when(namespace).getSourceResult(SOURCE_KEY_FORMAT.formatted(EVENT_LOG));
 
 		try {
 			collect(telemetryManager, strategyTime);
@@ -711,7 +711,7 @@ class SimpleStrategyTest {
 
 		lenient().doAnswer(invocation -> {
 			namespace.setSourceCursor(sourceKey, "event-20");
-			return SourceTable.ofTable(SourceTable.csvToTable("e1;1", ";"));
+			return SourceResult.ofTable(SourceResult.csvToTable("e1;1", ";"));
 		})
 			.when(protocolExtensionMock)
 			.processSource(argThat(EventLogSource.class::isInstance), anyString(), any(TelemetryManager.class));
@@ -738,7 +738,7 @@ class SimpleStrategyTest {
 		connectorMonitor.setDiscoveryTime(strategyTime - 60 * 1000);
 
 		// A job declared under the connector type maps a monitor of that type
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(CONNECTOR.getKey()), "new;1");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(CONNECTOR.getKey()), "new;1");
 		collect(telemetryManager, strategyTime);
 
 		assertEquals(
@@ -755,7 +755,7 @@ class SimpleStrategyTest {
 	 */
 	private void assertStaleEnclosureKept(final TelemetryManager telemetryManager) {
 		final Monitor staleEnclosure = addStaleMonitor(telemetryManager, ENCLOSURE.getKey());
-		sourceTables.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
+		sourceResults.put(SOURCE_KEY_FORMAT.formatted(ENCLOSURE.getKey()), "new;1");
 
 		collect(telemetryManager, strategyTime);
 
@@ -766,7 +766,7 @@ class SimpleStrategyTest {
 
 	/**
 	 * Create a telemetry manager holding the endpoint host and the TestConnectorWithRemoval connector monitor, and
-	 * make the mocked protocol extension return the {@link #sourceTables}.
+	 * make the mocked protocol extension return the {@link #sourceResults}.
 	 *
 	 * @param hostConfigurationBuilder The host configuration to complete
 	 * @return a new {@link TelemetryManager}
@@ -786,8 +786,8 @@ class SimpleStrategyTest {
 			.when(protocolExtensionMock)
 			.getSupportedSources();
 		lenient().doAnswer(
-			invocation -> SourceTable.ofTable(
-				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), ";")
+			invocation -> SourceResult.ofTable(
+				SourceResult.csvToTable(sourceResults.get(invocation.<Source>getArgument(0).getKey()), ";")
 			)
 		).when(protocolExtensionMock).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 

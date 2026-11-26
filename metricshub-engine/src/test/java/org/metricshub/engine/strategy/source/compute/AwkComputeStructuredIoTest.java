@@ -15,7 +15,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -31,78 +31,78 @@ class AwkComputeStructuredIoTest {
 		return table;
 	}
 
-	private static ComputeProcessor processor(final SourceTable sourceTable) {
-		return ComputeProcessor.builder().hostname(LOCALHOST).sourceTable(sourceTable).build();
+	private static ComputeProcessor processor(final SourceResult sourceResult) {
+		return ComputeProcessor.builder().hostname(LOCALHOST).sourceResult(sourceResult).build();
 	}
 
 	@Test
 	void tableInputReadsCellsAsFields() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("a;b|c", "|d"));
-		processor(sourceTable).process(Awk.builder().script("{ print $1 \";\" NF \";\" $2 }").build());
+		final SourceResult sourceResult = SourceResult.ofTable(table("a;b|c", "|d"));
+		processor(sourceResult).process(Awk.builder().script("{ print $1 \";\" NF \";\" $2 }").build());
 		// Text output: the ";" inside the first cell is a field separator for whoever splits the text
-		assertEquals(SourceTable.ofText("a;b;2;c\n;2;d\n"), sourceTable);
+		assertEquals(SourceResult.ofText("a;b;2;c\n;2;d\n"), sourceResult);
 	}
 
 	@Test
 	void tableOutputMakesOneRowPerPrint() {
-		final SourceTable sourceTable = SourceTable.ofText("a 21\nb 1\n");
-		processor(sourceTable).process(
+		final SourceResult sourceResult = SourceResult.ofText("a 21\nb 1\n");
+		processor(sourceResult).process(
 			Awk.builder().script("$2 > 1 { print $1, $2 * 2, \"x;y\" }").output(ContentType.TABLE).build()
 		);
 		// The cell keeps its ";"
-		assertEquals(SourceTable.ofTable(table("a|42|x;y")), sourceTable);
+		assertEquals(SourceResult.ofTable(table("a|42|x;y")), sourceResult);
 	}
 
 	@Test
 	void tableInputAndOutputTogether() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("fan1|3000|ok", "fan2|0|failed"));
-		processor(sourceTable).process(
+		final SourceResult sourceResult = SourceResult.ofTable(table("fan1|3000|ok", "fan2|0|failed"));
+		processor(sourceResult).process(
 			Awk.builder().script("$2 > 0 { print $1, $2 / 60, toupper($3) }").output(ContentType.TABLE).build()
 		);
-		assertEquals(table("fan1|50|OK"), sourceTable.getTable());
+		assertEquals(table("fan1|50|OK"), sourceResult.getTable());
 	}
 
 	@Test
 	void tableOutputPrintsNumbersWith15SignificantDigits() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("fan1|3000"));
-		processor(sourceTable).process(Awk.builder().script("{ print $2 / 9000, 2.5 }").output(ContentType.TABLE).build());
-		assertEquals(table("0.333333333333333|2.5"), sourceTable.getTable());
+		final SourceResult sourceResult = SourceResult.ofTable(table("fan1|3000"));
+		processor(sourceResult).process(Awk.builder().script("{ print $2 / 9000, 2.5 }").output(ContentType.TABLE).build());
+		assertEquals(table("0.333333333333333|2.5"), sourceResult.getTable());
 
 		// A text output is standard AWK
-		final SourceTable text = SourceTable.ofTable(table("fan1|3000"));
+		final SourceResult text = SourceResult.ofTable(table("fan1|3000"));
 		processor(text).process(Awk.builder().script("{ print $2 / 9000 }").build());
 		assertEquals("0.333333\n", text.getText());
 	}
 
 	@Test
 	void tableOutputKeepsCrlfInACell() {
-		final SourceTable sourceTable = SourceTable.ofText("");
-		processor(sourceTable).process(
+		final SourceResult sourceResult = SourceResult.ofText("");
+		processor(sourceResult).process(
 			Awk.builder().script("BEGIN { print \"a\\r\\nb\", \"c\" }").output(ContentType.TABLE).build()
 		);
-		assertEquals(SourceTable.ofTable(table("a\r\nb|c")), sourceTable);
+		assertEquals(SourceResult.ofTable(table("a\r\nb|c")), sourceResult);
 		// Its text has one line per row: the line break of the cell becomes a space
-		assertEquals("a b;c;", sourceTable.asText());
+		assertEquals("a b;c;", sourceResult.asText());
 	}
 
 	@Test
 	void emptyTableOutputEmptiesTheTable() {
-		final SourceTable sourceTable = SourceTable.ofText("stale");
-		processor(sourceTable).process(Awk.builder().script("BEGIN { }").output(ContentType.TABLE).build());
+		final SourceResult sourceResult = SourceResult.ofText("stale");
+		processor(sourceResult).process(Awk.builder().script("BEGIN { }").output(ContentType.TABLE).build());
 		// An empty table stays a table
-		assertEquals(SourceTable.empty(), sourceTable);
+		assertEquals(SourceResult.empty(), sourceResult);
 	}
 
 	@Test
 	void textOutputOfTableInputHasNoCrlf() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("x"));
-		processor(sourceTable).process(Awk.builder().script("BEGIN { print \"a\\r\\nb\" }").build());
-		assertEquals(SourceTable.ofText("a\nb\n"), sourceTable);
+		final SourceResult sourceResult = SourceResult.ofTable(table("x"));
+		processor(sourceResult).process(Awk.builder().script("BEGIN { print \"a\\r\\nb\" }").build());
+		assertEquals(SourceResult.ofText("a\nb\n"), sourceResult);
 
 		// Neither when the CRLF comes from a cell
-		final SourceTable cell = SourceTable.ofTable(table("a\r\nb|c"));
+		final SourceResult cell = SourceResult.ofTable(table("a\r\nb|c"));
 		processor(cell).process(Awk.builder().script("{ print $1 }").build());
-		assertEquals(SourceTable.ofText("a\nb\n"), cell);
+		assertEquals(SourceResult.ofText("a\nb\n"), cell);
 	}
 
 	/**
@@ -111,11 +111,11 @@ class AwkComputeStructuredIoTest {
 	 */
 	@Test
 	void textInputOfACrlfHostHasNoCarriageReturn() {
-		final SourceTable sourceTable = SourceTable.ofText("a b\r\nc d\r\n");
-		processor(sourceTable).process(Awk.builder().script("{ print $1, $NF }").output(ContentType.TABLE).build());
-		assertEquals(SourceTable.ofTable(table("a|b", "c|d")), sourceTable);
+		final SourceResult sourceResult = SourceResult.ofText("a b\r\nc d\r\n");
+		processor(sourceResult).process(Awk.builder().script("{ print $1, $NF }").output(ContentType.TABLE).build());
+		assertEquals(SourceResult.ofTable(table("a|b", "c|d")), sourceResult);
 
-		final SourceTable text = SourceTable.ofText("a b\r\nc d\r\n");
+		final SourceResult text = SourceResult.ofText("a b\r\nc d\r\n");
 		processor(text).process(Awk.builder().script("{ print $NF \";\" $1 }").build());
 		assertEquals("b;a\nd;c\n", text.getText());
 	}
@@ -125,27 +125,27 @@ class AwkComputeStructuredIoTest {
 	 */
 	@Test
 	void emptyTextOutputIsAnEmptyText() {
-		final SourceTable sourceTable = SourceTable.ofTable(table("a|b"));
-		processor(sourceTable).process(Awk.builder().script("BEGIN { }").build());
-		assertEquals(SourceTable.ofText(""), sourceTable);
+		final SourceResult sourceResult = SourceResult.ofTable(table("a|b"));
+		processor(sourceResult).process(Awk.builder().script("BEGIN { }").build());
+		assertEquals(SourceResult.ofText(""), sourceResult);
 
-		final SourceTable text = SourceTable.ofText("a;b");
+		final SourceResult text = SourceResult.ofText("a;b");
 		processor(text).process(Awk.builder().script("BEGIN { }").build());
-		assertEquals(SourceTable.ofText(""), text);
+		assertEquals(SourceResult.ofText(""), text);
 	}
 
 	/**
 	 * Runs the awk compute the way the strategies do: through the {@link ComputeUpdaterProcessor}.
 	 *
 	 * @param yaml        The awk compute, as written in a connector
-	 * @param sourceTable The source table it changes
+	 * @param sourceResult The source table it changes
 	 */
-	private static void runThroughUpdater(final String yaml, final SourceTable sourceTable) throws Exception {
+	private static void runThroughUpdater(final String yaml, final SourceResult sourceResult) throws Exception {
 		JsonHelper.buildYamlMapper()
 			.readValue("type: awk\n" + yaml, Compute.class)
 			.accept(
 				ComputeUpdaterProcessor.builder()
-					.computeProcessor(processor(sourceTable))
+					.computeProcessor(processor(sourceResult))
 					.telemetryManager(
 						TelemetryManager.builder()
 							.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
@@ -165,24 +165,24 @@ class AwkComputeStructuredIoTest {
 	void inputFollowsTheSourceResult() throws Exception {
 		final String script = "script: '{ print $1, NF, $2 }'\noutput: table\n";
 		for (final String input : List.of("", "input: table\n", "input: text\n")) {
-			final SourceTable fromTable = SourceTable.ofTable(table("fan;1|3000", "fan2|0"));
+			final SourceResult fromTable = SourceResult.ofTable(table("fan;1|3000", "fan2|0"));
 			runThroughUpdater(script + input, fromTable);
-			assertEquals(SourceTable.ofTable(table("fan;1|2|3000", "fan2|2|0")), fromTable, input);
+			assertEquals(SourceResult.ofTable(table("fan;1|2|3000", "fan2|2|0")), fromTable, input);
 
 			// The text is split on FS, a space by default: the ";" are plain characters
-			final SourceTable fromText = SourceTable.ofText("fan1;3000; x\nfan2 0\n");
+			final SourceResult fromText = SourceResult.ofText("fan1;3000; x\nfan2 0\n");
 			runThroughUpdater(script + input, fromText);
-			assertEquals(SourceTable.ofTable(table("fan1;3000;|2|x", "fan2|2|0")), fromText, input);
+			assertEquals(SourceResult.ofTable(table("fan1;3000;|2|x", "fan2|2|0")), fromText, input);
 		}
 
 		// Text output, both ways
-		final SourceTable fromTable = SourceTable.ofTable(table("fan;1|3000"));
+		final SourceResult fromTable = SourceResult.ofTable(table("fan;1|3000"));
 		runThroughUpdater("script: '{ print $1 \"#\" NF }'\ninput: text", fromTable);
-		assertEquals(SourceTable.ofText("fan;1#2\n"), fromTable);
+		assertEquals(SourceResult.ofText("fan;1#2\n"), fromTable);
 
-		final SourceTable fromText = SourceTable.ofText("fan1 3000\n");
+		final SourceResult fromText = SourceResult.ofText("fan1 3000\n");
 		runThroughUpdater("script: '{ print $1 \"#\" NF }'\ninput: table", fromText);
-		assertEquals(SourceTable.ofText("fan1#2\n"), fromText);
+		assertEquals(SourceResult.ofText("fan1#2\n"), fromText);
 	}
 
 	@Test

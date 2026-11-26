@@ -29,7 +29,7 @@ import org.metricshub.engine.connector.model.common.SqlTable;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ISourceComputationExtension;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -40,7 +40,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public class InternalDbExtension implements ISourceComputationExtension {
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (source == null) {
@@ -48,7 +48,7 @@ public class InternalDbExtension implements ISourceComputationExtension {
 				"Hostname {} - Internal DB Query Source cannot be null, the SQL operation will return an empty result.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		if (!(source instanceof InternalDbQuerySource internalDbQuery)) {
@@ -56,17 +56,17 @@ public class InternalDbExtension implements ISourceComputationExtension {
 				"Hostname {} - Internal DB Query Source is invalid, the SQL operation will return an empty result.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final List<SqlTable> sqlTables = internalDbQuery.getTables();
 		if (sqlTables == null) {
-			return SourceTable.failed("Malformed Internal DB Query Source: no tables.");
+			return SourceResult.failed("Malformed Internal DB Query Source: no tables.");
 		}
 
 		final String query = internalDbQuery.getQuery();
 		if (query == null || query.isBlank()) {
-			return SourceTable.failed("Malformed Internal DB Query Source: no query.");
+			return SourceResult.failed("Malformed Internal DB Query Source: no query.");
 		}
 
 		final List<List<String>> executeSqlQuery;
@@ -74,10 +74,10 @@ public class InternalDbExtension implements ISourceComputationExtension {
 			executeSqlQuery = new SqlClientExecutor(telemetryManager, connectorId).executeQuery(sqlTables, query);
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, internalDbQuery.getKey(), "Internal DB Query: " + query, hostname, e);
-			return SourceTable.failed("Internal DB Query: " + query, e);
+			return SourceResult.failed("Internal DB Query: " + query, e);
 		}
 
-		final SourceTable sourceTable = SourceTable.ofTable(executeSqlQuery);
+		final SourceResult sourceResult = SourceResult.ofTable(executeSqlQuery);
 
 		LoggingHelper.debug(
 			() -> log.trace(
@@ -87,7 +87,7 @@ public class InternalDbExtension implements ISourceComputationExtension {
 			)
 		);
 
-		return sourceTable;
+		return sourceResult;
 	}
 
 	@Override

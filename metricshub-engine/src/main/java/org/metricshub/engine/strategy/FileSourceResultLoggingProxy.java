@@ -22,16 +22,16 @@ package org.metricshub.engine.strategy;
  */
 
 import lombok.RequiredArgsConstructor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
- * {@link SourceTableLoggingProxy} for file sources: logs only a short header unless full file-source logging is enabled,
+ * {@link SourceResultLoggingProxy} for file sources: logs only a short header unless full file-source logging is enabled,
  * to avoid log flooding and excessive memory use from large file contents.
  */
 @RequiredArgsConstructor
-public class FileSourceTableLoggingProxy implements SourceTableLoggingProxy {
+public class FileSourceResultLoggingProxy implements SourceResultLoggingProxy {
 
-	private final SourceTableLoggingProxy delegate;
+	private final SourceResultLoggingProxy delegate;
 	private final boolean logFileSourceDetails;
 
 	@Override
@@ -40,11 +40,11 @@ public class FileSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final String executionClassName,
 		final String executionKey,
 		final String connectorId,
-		final SourceTable sourceTable,
+		final SourceResult sourceResult,
 		final String hostname
 	) {
 		if (!logFileSourceDetails) {
-			final String headerOnly = DefaultSourceTableLoggingProxy.buildLogHeader(
+			final String headerOnly = DefaultSourceResultLoggingProxy.buildLogHeader(
 				operationTag,
 				executionClassName,
 				executionKey,
@@ -53,6 +53,6 @@ public class FileSourceTableLoggingProxy implements SourceTableLoggingProxy {
 			) + "\n";
 			return headerOnly;
 		}
-		return delegate.formatForLog(operationTag, executionClassName, executionKey, connectorId, sourceTable, hostname);
+		return delegate.formatForLog(operationTag, executionClassName, executionKey, connectorId, sourceResult, hostname);
 	}
 }

@@ -142,13 +142,13 @@ class SourceProcessorTest {
 
 		doReturn(Set.of(HttpSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SourceTable expected = SourceTable.ofText(ECS1_01);
+		final SourceResult expected = SourceResult.ofText(ECS1_01);
 
 		final HttpSource source = HttpSource.builder().url(URL).method(HttpMethod.GET).build();
 
 		doReturn(expected).when(protocolExtensionMock).processSource(eq(source), anyString(), any(TelemetryManager.class));
 
-		final SourceTable actual = sourceProcessor.process(source);
+		final SourceResult actual = sourceProcessor.process(source);
 
 		assertEquals(expected, actual);
 	}
@@ -207,14 +207,14 @@ class SourceProcessorTest {
 
 		doReturn(Set.of(WmiSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SourceTable expected = SourceTable.ofText(ECS1_01);
+		final SourceResult expected = SourceResult.ofText(ECS1_01);
 
 		final WmiSource wmiSource = WmiSource.builder().query(WBEM_QUERY).namespace(AUTOMATIC).build();
 
 		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(wmiSource), anyString(), any(TelemetryManager.class));
 
-		final SourceTable actual = sourceProcessor.process(wmiSource);
+		final SourceResult actual = sourceProcessor.process(wmiSource);
 
 		assertEquals(expected, actual);
 	}
@@ -257,11 +257,11 @@ class SourceProcessorTest {
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfiguration);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SourceTable expected = SourceTable.ofText(ECS1_01);
+		final SourceResult expected = SourceResult.ofText(ECS1_01);
 		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpGetSource), anyString(), any(TelemetryManager.class));
 
-		final SourceTable actual = sourceProcessor.process(snmpGetSource);
+		final SourceResult actual = sourceProcessor.process(snmpGetSource);
 		assertEquals(expected, actual);
 	}
 
@@ -310,10 +310,10 @@ class SourceProcessorTest {
 			.oid(OID)
 			.selectColumns(SNMP_SELECTED_COLUMNS)
 			.build();
-		final SourceTable expected = SourceTable.ofTable(EXPECTED_SNMP_TABLE_DATA);
+		final SourceResult expected = SourceResult.ofTable(EXPECTED_SNMP_TABLE_DATA);
 		doReturn(expected).when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
-		final SourceTable actual = sourceProcessor.process(snmpTableSource);
+		final SourceResult actual = sourceProcessor.process(snmpTableSource);
 		assertEquals(expected, actual);
 	}
 
@@ -327,8 +327,8 @@ class SourceProcessorTest {
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
 
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		SourceTable tabl1 = SourceTable.ofTable(
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		SourceResult tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1),
 				Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3),
@@ -336,7 +336,7 @@ class SourceProcessorTest {
 				Arrays.asList(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z)
 			)
 		);
-		SourceTable tabl2 = SourceTable.ofTable(
+		SourceResult tabl2 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
 				Arrays.asList(LOWERCASE_V1, LOWERCASE_V2, LOWERCASE_V3),
@@ -346,7 +346,7 @@ class SourceProcessorTest {
 		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
-		ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
+		ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceResults(mapSources).build();
 
 		Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, connectorNamespace);
@@ -369,7 +369,7 @@ class SourceProcessorTest {
 			Arrays.asList(UPPERCASE_V1, UPPERCASE_V2, UPPERCASE_V3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
 			Arrays.asList(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1)
 		);
-		SourceTable expectedResult = SourceTable.ofTable(expectedJoin);
+		SourceResult expectedResult = SourceResult.ofTable(expectedJoin);
 
 		List<List<String>> clientReturn = Arrays.asList(
 			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
@@ -408,7 +408,7 @@ class SourceProcessorTest {
 		expectedJoin = Arrays.asList(
 			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)
 		);
-		expectedResult = SourceTable.ofTable(expectedJoin);
+		expectedResult = SourceResult.ofTable(expectedJoin);
 		doReturn(expectedJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
@@ -451,7 +451,7 @@ class SourceProcessorTest {
 		assertEquals(literalJoin, sourceProcessor.process(tableJoinExample).getTable());
 
 		// no matches
-		SourceTable tabl3 = SourceTable.ofTable(
+		SourceResult tabl3 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C),
 				Arrays.asList(LOWERCASE_V10, LOWERCASE_V20, LOWERCASE_V30)
@@ -459,7 +459,7 @@ class SourceProcessorTest {
 		);
 		mapSources.put(TAB3_REF, tabl3);
 		expectedJoin = Arrays.asList(Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C));
-		expectedResult = SourceTable.ofTable(expectedJoin);
+		expectedResult = SourceResult.ofTable(expectedJoin);
 		doReturn(expectedJoin).when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl3.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
@@ -473,7 +473,7 @@ class SourceProcessorTest {
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 
 		// wrong column key
-		tabl3 = SourceTable.ofTable(
+		tabl3 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C),
 				Arrays.asList(LOWERCASE_V10, LOWERCASE_V20, LOWERCASE_V30)
@@ -488,7 +488,7 @@ class SourceProcessorTest {
 			.rightKeyColumn(1)
 			.defaultRightLine(null)
 			.build();
-		assertEquals(SourceTable.empty(), sourceProcessor.process(tableJoinExample));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(tableJoinExample));
 
 		// null args
 		tableJoinExample = TableJoinSource.builder()
@@ -536,20 +536,20 @@ class SourceProcessorTest {
 
 	@Test
 	void testProcessTableUnionSourceTest() {
-		SourceTable tabl1 = SourceTable.ofTable(
+		SourceResult tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1),
 				Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3)
 			)
 		);
-		SourceTable tabl2 = SourceTable.ofTable(
+		SourceResult tabl2 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
 				Arrays.asList(LOWERCASE_V1, LOWERCASE_V2, LOWERCASE_V3)
 			)
 		);
 
-		final Map<String, SourceTable> mapSources = new HashMap<>();
+		final Map<String, SourceResult> mapSources = new HashMap<>();
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
 
@@ -568,7 +568,7 @@ class SourceProcessorTest {
 			.hostType(DeviceKind.LINUX)
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
-		ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
+		ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceResults(mapSources).build();
 
 		Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, connectorNamespace);
@@ -589,8 +589,8 @@ class SourceProcessorTest {
 
 		tableUnionExample = TableUnionSource.builder().tables(Arrays.asList(TAB1_REF, TAB2_REF, TAB3_REF)).build();
 
-		final SourceTable union = sourceProcessor.process(tableUnionExample);
-		assertEquals(SourceTable.ofTable(expectedUnion), union);
+		final SourceResult union = sourceProcessor.process(tableUnionExample);
+		assertEquals(SourceResult.ofTable(expectedUnion), union);
 
 		// The rows are copied: a compute on the union leaves its members unchanged
 		union.getTable().get(0).set(0, "changed");
@@ -608,15 +608,15 @@ class SourceProcessorTest {
 		final String tableOnly = "${source::monitors.cpu.discovery.sources.tableOnly}";
 		final String emptyTable = "${source::monitors.cpu.discovery.sources.emptyTable}";
 		final String last = "${source::monitors.cpu.discovery.sources.last}";
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		mapSources.put(empty, SourceTable.ofText(""));
-		mapSources.put(lines, SourceTable.ofText("x\n\n\ny\n"));
-		mapSources.put(tableOnly, SourceTable.ofTable(List.of(List.of("t"))));
-		mapSources.put(emptyTable, SourceTable.empty());
-		mapSources.put(last, SourceTable.ofText("z"));
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		mapSources.put(empty, SourceResult.ofText(""));
+		mapSources.put(lines, SourceResult.ofText("x\n\n\ny\n"));
+		mapSources.put(tableOnly, SourceResult.ofTable(List.of(List.of("t"))));
+		mapSources.put(emptyTable, SourceResult.empty());
+		mapSources.put(last, SourceResult.ofText("z"));
 
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
-		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceResults(mapSources).build());
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(ECS1_01).hostId(ECS1_01).build())
 			.hostProperties(HostProperties.builder().connectorNamespaces(connectorNamespaces).build())
@@ -627,15 +627,15 @@ class SourceProcessorTest {
 			.connectorId(MY_CONNECTOR_1_NAME)
 			.build();
 
-		final SourceTable result = sourceProcessor.process(
+		final SourceResult result = sourceProcessor.process(
 			TableUnionSource.builder().tables(Arrays.asList(empty, lines, emptyTable, last)).build()
 		);
-		assertEquals(SourceTable.ofTable(List.of()), result);
+		assertEquals(SourceResult.ofTable(List.of()), result);
 
-		final SourceTable mixed = sourceProcessor.process(
+		final SourceResult mixed = sourceProcessor.process(
 			TableUnionSource.builder().tables(Arrays.asList(empty, lines, tableOnly, last)).build()
 		);
-		assertEquals(SourceTable.ofTable(List.of(List.of("t"))), mixed);
+		assertEquals(SourceResult.ofTable(List.of(List.of("t"))), mixed);
 	}
 
 	/**
@@ -681,15 +681,15 @@ class SourceProcessorTest {
 	 * @return the text of the union
 	 */
 	private String textUnion(final String... texts) {
-		final Map<String, SourceTable> mapSources = new HashMap<>();
+		final Map<String, SourceResult> mapSources = new HashMap<>();
 		final List<String> keys = new ArrayList<>();
 		for (int i = 0; i < texts.length; i++) {
 			final String key = "${source::monitors.cpu.discovery.sources.member" + i + "}";
-			mapSources.put(key, SourceTable.ofText(texts[i]));
+			mapSources.put(key, SourceResult.ofText(texts[i]));
 			keys.add(key);
 		}
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
-		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceResults(mapSources).build());
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(ECS1_01).hostId(ECS1_01).build())
 			.hostProperties(HostProperties.builder().connectorNamespaces(connectorNamespaces).build())
@@ -699,7 +699,7 @@ class SourceProcessorTest {
 			.clientsExecutor(clientsExecutorMock)
 			.connectorId(MY_CONNECTOR_1_NAME)
 			.build();
-		final SourceTable union = sourceProcessor.process(TextUnionSource.builder().texts(keys).build());
+		final SourceResult union = sourceProcessor.process(TextUnionSource.builder().texts(keys).build());
 		assertEquals(ContentType.TEXT, union.getContentType());
 		return union.getText();
 	}
@@ -714,12 +714,12 @@ class SourceProcessorTest {
 		final String table = "${source::monitors.cpu.discovery.sources.table}";
 		final String emptyTable = "${source::monitors.cpu.discovery.sources.emptyTable}";
 		final String missing = "${source::monitors.cpu.discovery.sources.missing}";
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		mapSources.put(lines, SourceTable.ofText("x\r\n\r\ny"));
-		mapSources.put(table, SourceTable.ofTable(List.of(List.of("a", "b;c"), List.of("d"))));
-		mapSources.put(emptyTable, SourceTable.empty());
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		mapSources.put(lines, SourceResult.ofText("x\r\n\r\ny"));
+		mapSources.put(table, SourceResult.ofTable(List.of(List.of("a", "b;c"), List.of("d"))));
+		mapSources.put(emptyTable, SourceResult.empty());
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
-		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceTables(mapSources).build());
+		connectorNamespaces.put(MY_CONNECTOR_1_NAME, ConnectorNamespace.builder().sourceResults(mapSources).build());
 		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(
 				TelemetryManager.builder()
@@ -732,11 +732,11 @@ class SourceProcessorTest {
 			.build();
 
 		assertEquals(
-			SourceTable.ofText("x\n\ny\na;b,c;\nd;"),
+			SourceResult.ofText("x\n\ny\na;b,c;\nd;"),
 			sourceProcessor.process(TextUnionSource.builder().texts(List.of(lines, emptyTable, missing, table)).build())
 		);
-		assertEquals(SourceTable.ofText(""), sourceProcessor.process(TextUnionSource.builder().texts(List.of()).build()));
-		assertEquals(SourceTable.ofText(""), sourceProcessor.process((TextUnionSource) null));
+		assertEquals(SourceResult.ofText(""), sourceProcessor.process(TextUnionSource.builder().texts(List.of()).build()));
+		assertEquals(SourceResult.ofText(""), sourceProcessor.process((TextUnionSource) null));
 	}
 
 	/**
@@ -750,7 +750,7 @@ class SourceProcessorTest {
 		connectorNamespaces.put(
 			MY_CONNECTOR_1_NAME,
 			ConnectorNamespace.builder()
-				.sourceTables(new HashMap<>(Map.of(TAB1_REF, SourceTable.ofTable(List.of(List.of("r", "s"))))))
+				.sourceResults(new HashMap<>(Map.of(TAB1_REF, SourceResult.ofTable(List.of(List.of("r", "s"))))))
 				.build()
 		);
 		final SourceProcessor sourceProcessor = SourceProcessor.builder()
@@ -765,10 +765,10 @@ class SourceProcessorTest {
 			.build();
 
 		final List<List<String>> literal = List.of(List.of("in", "a;b", ""), List.of("out"));
-		final SourceTable union = sourceProcessor.process(
+		final SourceResult union = sourceProcessor.process(
 			TableUnionSource.builder().tables(List.of(literal, TAB1_REF, "x;y;")).build()
 		);
-		assertEquals(SourceTable.ofTable(List.of(List.of("in", "a;b", ""), List.of("out"), List.of("r", "s"))), union);
+		assertEquals(SourceResult.ofTable(List.of(List.of("in", "a;b", ""), List.of("out"), List.of("r", "s"))), union);
 		// A compute on the union cannot change the literal
 		union.getTable().get(0).set(0, "changed");
 		assertEquals("in", literal.get(0).get(0));
@@ -791,11 +791,11 @@ class SourceProcessorTest {
 			)
 		);
 
-		SourceTable table = SourceTable.ofTable(expectedTable);
+		SourceResult table = SourceResult.ofTable(expectedTable);
 		final String emptyTableRef = "${source::monitors.cpu.discovery.sources.emptyTable}";
 
 		ConnectorNamespace namespace = ConnectorNamespace.builder()
-			.sourceTables(Map.of(TAB1_REF, table, emptyTableRef, SourceTable.ofTable(new ArrayList<>())))
+			.sourceResults(Map.of(TAB1_REF, table, emptyTableRef, SourceResult.ofTable(new ArrayList<>())))
 			.build();
 		Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, namespace);
@@ -812,23 +812,23 @@ class SourceProcessorTest {
 			.build();
 
 		CopySource copySource = null;
-		assertEquals(SourceTable.empty(), sourceProcessor.process(copySource));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(copySource));
 		copySource = new CopySource();
-		assertEquals(SourceTable.empty(), sourceProcessor.process(copySource));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(copySource));
 
 		copySource = CopySource.builder().from("").build();
-		assertEquals(SourceTable.empty(), sourceProcessor.process(copySource));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(copySource));
 
 		copySource = CopySource.builder().from(TAB1_REF).build();
 
-		final SourceTable copy = sourceProcessor.process(copySource);
+		final SourceResult copy = sourceProcessor.process(copySource);
 		final List<List<String>> tableResult = copy.getTable();
 
 		assertEquals(expectedTable, tableResult);
 		assertEquals(ContentType.TABLE, copy.getContentType());
 
 		// An empty table stays a table once copied
-		final SourceTable emptyCopy = sourceProcessor.process(CopySource.builder().from(emptyTableRef).build());
+		final SourceResult emptyCopy = sourceProcessor.process(CopySource.builder().from(emptyTableRef).build());
 		assertEquals(List.of(), emptyCopy.getTable());
 		assertEquals(ContentType.TABLE, emptyCopy.getContentType());
 
@@ -859,16 +859,16 @@ class SourceProcessorTest {
 			.build();
 
 		StaticSource staticSource = null;
-		assertEquals(SourceTable.empty(), sourceProcessor.process(staticSource));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(staticSource));
 		staticSource = new StaticSource();
-		assertEquals(SourceTable.empty(), sourceProcessor.process(staticSource));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(staticSource));
 
 		List<List<String>> expectedTable = Arrays.asList(Arrays.asList(LOWERCASE_A1));
 
 		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1)).build();
 
 		assertEquals(expectedTable, sourceProcessor.process(staticSource).getTable());
-		assertEquals(SourceTable.empty(), sourceProcessor.process(new StaticSource()));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(new StaticSource()));
 
 		expectedTable = Arrays.asList(new ArrayList<>(Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1)));
 
@@ -878,23 +878,23 @@ class SourceProcessorTest {
 
 		// The single row of exactly these cells, a ';' in a cell included
 		staticSource = StaticSource.builder().value(List.of(LOWERCASE_A1, "", "b;1")).build();
-		final SourceTable listResult = sourceProcessor.process(staticSource);
-		assertEquals(SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "", "b;1"))), listResult);
+		final SourceResult listResult = sourceProcessor.process(staticSource);
+		assertEquals(SourceResult.ofTable(List.of(List.of(LOWERCASE_A1, "", "b;1"))), listResult);
 
 		// A cell keeps its line break; as a text, the row is one line
 		staticSource = StaticSource.builder().value(List.of("x\r\ny", "z")).build();
-		final SourceTable breakResult = sourceProcessor.process(staticSource);
-		assertEquals(SourceTable.ofTable(List.of(List.of("x\r\ny", "z"))), breakResult);
+		final SourceResult breakResult = sourceProcessor.process(staticSource);
+		assertEquals(SourceResult.ofTable(List.of(List.of("x\r\ny", "z"))), breakResult);
 		assertEquals("x y;z;", breakResult.asText());
 
 		// A list of rows is exactly these rows, an empty list is an empty table
 		staticSource = StaticSource.builder().value(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))).build();
 		assertEquals(
-			SourceTable.ofTable(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))),
+			SourceResult.ofTable(List.of(List.of(LOWERCASE_A1, "1"), List.of(LOWERCASE_B1))),
 			sourceProcessor.process(staticSource)
 		);
 		assertEquals(
-			SourceTable.ofTable(List.of()),
+			SourceResult.ofTable(List.of()),
 			sourceProcessor.process(StaticSource.builder().value(List.of()).build())
 		);
 	}
@@ -926,13 +926,13 @@ class SourceProcessorTest {
 
 		doReturn(Set.of(HttpSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SourceTable expected = SourceTable.ofText(ECS1_01);
+		final SourceResult expected = SourceResult.ofText(ECS1_01);
 
 		final HttpSource source = HttpSource.builder().url(URL).method(HttpMethod.GET).build();
 
 		doReturn(expected).when(protocolExtensionMock).processSource(eq(source), anyString(), any(TelemetryManager.class));
 
-		final SourceTable actual = sourceProcessor.process(source);
+		final SourceResult actual = sourceProcessor.process(source);
 
 		assertEquals(expected, actual);
 	}
@@ -948,7 +948,7 @@ class SourceProcessorTest {
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.build();
-		assertEquals(SourceTable.empty(), sourceProcessor.process(new IpmiSource()));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(new IpmiSource()));
 	}
 
 	@Test
@@ -959,8 +959,8 @@ class SourceProcessorTest {
 			.hostType(DeviceKind.LINUX)
 			.build();
 
-		final Map<String, SourceTable> mapSources = new HashMap<>();
-		final SourceTable tabl1 = SourceTable.ofTable(
+		final Map<String, SourceResult> mapSources = new HashMap<>();
+		final SourceResult tabl1 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
 				Arrays.asList(LOWERCASE_B, LOWERCASE_V2, TRUE, TWO),
@@ -968,7 +968,7 @@ class SourceProcessorTest {
 				Arrays.asList(LOWERCASE_D, LOWERCASE_V4, FALSE, FOUR)
 			)
 		);
-		final SourceTable tabl2 = SourceTable.ofTable(
+		final SourceResult tabl2 = SourceResult.ofTable(
 			Arrays.asList(
 				Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
 				Arrays.asList(ONE, LOWERCASE_B, UPPERCASE_V2, FALSE),
@@ -978,7 +978,7 @@ class SourceProcessorTest {
 		);
 		mapSources.put(TAB1_REF, tabl1);
 		mapSources.put(TAB2_REF, tabl2);
-		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceTables(mapSources).build();
+		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().sourceResults(mapSources).build();
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(CONNECTOR_ID, connectorNamespace);
 
@@ -1014,10 +1014,10 @@ class SourceProcessorTest {
 			.build();
 
 		doReturn(true).when(sourceComputationExtensionMock).isValidSource(internalDbQuery);
-		doReturn(SourceTable.empty()).when(sourceComputationExtensionMock)
+		doReturn(SourceResult.empty()).when(sourceComputationExtensionMock)
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
-		assertEquals(SourceTable.empty(), sourceProcessor.process(internalDbQuery));
+		assertEquals(SourceResult.empty(), sourceProcessor.process(internalDbQuery));
 
 		// InternalDbQuerySource well formed
 		columnsTable1.add(SqlColumn.builder().name("COL1_1").number(1).type("VARCHAR(255)").build());
@@ -1035,10 +1035,10 @@ class SourceProcessorTest {
 			Arrays.asList(LOWERCASE_D, FALSE, LOWERCASE_D, FALSE)
 		);
 
-		final SourceTable sourceTableExpected = SourceTable.ofTable(result);
+		final SourceResult sourceResultExpected = SourceResult.ofTable(result);
 
 		doReturn(true).when(sourceComputationExtensionMock).isValidSource(internalDbQuery);
-		doReturn(sourceTableExpected).when(sourceComputationExtensionMock)
+		doReturn(sourceResultExpected).when(sourceComputationExtensionMock)
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
 		assertEquals(result, sourceProcessor.process(internalDbQuery).getTable());
@@ -1071,7 +1071,7 @@ class SourceProcessorTest {
 
 		doReturn(Set.of(JmxSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SourceTable expected = SourceTable.ofText("data");
+		final SourceResult expected = SourceResult.ofText("data");
 
 		final JmxSource source = JmxSource.builder()
 			.type("jmx")
@@ -1084,7 +1084,7 @@ class SourceProcessorTest {
 
 		doReturn(expected).when(protocolExtensionMock).processSource(eq(source), anyString(), any(TelemetryManager.class));
 
-		final SourceTable actual = sourceProcessor.process(source);
+		final SourceResult actual = sourceProcessor.process(source);
 
 		assertEquals(expected, actual, "Processed JMX source should match expected output");
 	}

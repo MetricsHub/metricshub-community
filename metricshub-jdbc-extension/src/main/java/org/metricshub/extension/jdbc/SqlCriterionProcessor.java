@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -162,7 +162,7 @@ public class SqlCriterionProcessor {
 		}
 
 		// Serialize the result as a CSV
-		final String result = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
+		final String result = SourceResult.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 		return checkSqlResult(hostname, result, sqlCriterion.getExpectedResult());
 	}

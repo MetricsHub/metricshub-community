@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 class JmxSourceProcessorTest {
@@ -30,7 +30,7 @@ class JmxSourceProcessorTest {
 	}
 
 	@Test
-	void testShouldReturnSourceTableWithFetchedRows() throws Exception {
+	void testShouldReturnSourceResultWithFetchedRows() throws Exception {
 		final JmxConfiguration jmxConfig = JmxConfiguration.builder().hostname("localhost").build();
 		final List<List<String>> mockResponse = List.of(List.of("attr1", "value1"));
 
@@ -46,10 +46,10 @@ class JmxSourceProcessorTest {
 		when(jmxExecutor.fetchMBean(jmxConfig, "java.lang:type=Memory", List.of("HeapMemoryUsage"), List.of(), null, null))
 			.thenReturn(mockResponse);
 
-		final SourceTable resultTable = processor.process(source, telemetryManager);
+		final SourceResult resultTable = processor.process(source, telemetryManager);
 
-		assertNotNull(resultTable, "SourceTable should not be null");
-		assertEquals(1, resultTable.getTable().size(), "Expected one row in SourceTable");
+		assertNotNull(resultTable, "SourceResult should not be null");
+		assertEquals(1, resultTable.getTable().size(), "Expected one row in SourceResult");
 		assertEquals("attr1", resultTable.getTable().get(0).get(0), "First cell value should match fetched data");
 	}
 
@@ -70,10 +70,10 @@ class JmxSourceProcessorTest {
 			List.of()
 		);
 
-		final SourceTable resultTable = processor.process(source, telemetryManager);
+		final SourceResult resultTable = processor.process(source, telemetryManager);
 
-		assertNotNull(resultTable, "SourceTable should not be null");
-		assertEquals(SourceTable.empty(), resultTable, "Expected an empty table when no attributes are returned");
+		assertNotNull(resultTable, "SourceResult should not be null");
+		assertEquals(SourceResult.empty(), resultTable, "Expected an empty table when no attributes are returned");
 	}
 
 	@Test
@@ -93,9 +93,9 @@ class JmxSourceProcessorTest {
 			new RuntimeException("JMX connection failed")
 		);
 
-		final SourceTable resultTable = processor.process(source, telemetryManager);
+		final SourceResult resultTable = processor.process(source, telemetryManager);
 
-		assertNotNull(resultTable, "SourceTable should not be null even if exception occurs");
+		assertNotNull(resultTable, "SourceResult should not be null even if exception occurs");
 		assertTrue((resultTable).isFailed(), "Expected an empty table if fetchBeanInfo fails");
 	}
 
@@ -117,8 +117,8 @@ class JmxSourceProcessorTest {
 			List.of(List.of("a;b", "c"), List.of("", "d"))
 		);
 
-		final SourceTable result = processor.process(source, telemetryManager);
+		final SourceResult result = processor.process(source, telemetryManager);
 
-		assertEquals(SourceTable.ofTable(List.of(List.of("a;b", "c"), List.of("", "d"))), result);
+		assertEquals(SourceResult.ofTable(List.of(List.of("a;b", "c"), List.of("", "d"))), result);
 	}
 }

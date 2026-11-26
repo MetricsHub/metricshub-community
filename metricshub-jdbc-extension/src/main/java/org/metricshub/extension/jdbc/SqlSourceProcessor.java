@@ -26,12 +26,12 @@ import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 
 /**
- * A class responsible for processing SQL sources and returning the result as a {@link SourceTable}.
+ * A class responsible for processing SQL sources and returning the result as a {@link SourceResult}.
  */
 @Slf4j
 public class SqlSourceProcessor {
@@ -118,9 +118,9 @@ public class SqlSourceProcessor {
 	 *
 	 * @param sqlSource        The SQL source containing the query to be executed.
 	 * @param telemetryManager The telemetry manager providing host configuration and credentials for the SQL query.
-	 * @return A {@link SourceTable} containing the results of the executed query, or an empty table if an error occurs.
+	 * @return A {@link SourceResult} containing the results of the executed query, or an empty table if an error occurs.
 	 */
-	public SourceTable process(final SqlSource sqlSource, final TelemetryManager telemetryManager) {
+	public SourceResult process(final SqlSource sqlSource, final TelemetryManager telemetryManager) {
 		final JdbcConfiguration jdbcConfiguration = jdbcConfigurationProvider.apply(telemetryManager);
 
 		if (jdbcConfiguration == null) {
@@ -130,7 +130,7 @@ public class SqlSourceProcessor {
 				sqlSource.getKey()
 			);
 
-			return SourceTable.failed("SQL Query: JDBC is not configured on the host.");
+			return SourceResult.failed("SQL Query: JDBC is not configured on the host.");
 		}
 
 		final String hostname = jdbcConfiguration.getHostname();
@@ -152,11 +152,11 @@ public class SqlSourceProcessor {
 				driverSelection
 			);
 
-			return SourceTable.ofTable(results);
+			return SourceResult.ofTable(results);
 		} catch (Exception e) {
 			final String request = String.format("SQL Query: %s", sqlSource.getQuery());
 			LoggingHelper.logSourceError(connectorId, sqlSource.getKey(), request, hostname, e);
-			return SourceTable.failed(request, e);
+			return SourceResult.failed(request, e);
 		}
 	}
 }

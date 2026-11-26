@@ -54,7 +54,7 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
@@ -86,7 +86,7 @@ class ConnectorSessionTest {
 	 */
 	@FunctionalInterface
 	private interface Device {
-		SourceTable answer(String connectorId, String sourceKey) throws Exception;
+		SourceResult answer(String connectorId, String sourceKey) throws Exception;
 	}
 
 	private final IProtocolExtension extension = mock(IProtocolExtension.class);
@@ -157,18 +157,18 @@ class ConnectorSessionTest {
 			.build();
 	}
 
-	private static SourceTable table(final String csv) {
-		return SourceTable.ofTable(SourceTable.csvToTable(csv, ";"));
+	private static SourceResult table(final String csv) {
+		return SourceResult.ofTable(SourceResult.csvToTable(csv, ";"));
 	}
 
 	/**
 	 * A request the way a protocol extension sends it: an interrupted caller stops waiting and gets nothing.
 	 */
-	private static SourceTable request(final Callable<SourceTable> io) throws ExecutionException {
+	private static SourceResult request(final Callable<SourceResult> io) throws ExecutionException {
 		try {
 			return ThreadHelper.executeInterruptibly(io);
 		} catch (InterruptedException e) {
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 	}
 
@@ -283,7 +283,7 @@ class ConnectorSessionTest {
 	void testLoginAnsweringAfterTheInterruptKeepsItsTokenForTheLogout() throws InterruptedException {
 		final CountDownLatch loginSent = new CountDownLatch(1);
 		final AtomicReference<TelemetryManager> telemetryManagerRef = new AtomicReference<>();
-		final AtomicReference<SourceTable> tokenAtLogout = new AtomicReference<>();
+		final AtomicReference<SourceResult> tokenAtLogout = new AtomicReference<>();
 		final TelemetryManager telemetryManager = newTelemetryManager(
 			true,
 			LONG_TIMEOUT,
@@ -295,7 +295,7 @@ class ConnectorSessionTest {
 				});
 				case LOGOUT -> {
 					tokenAtLogout.set(
-						telemetryManagerRef.get().getHostProperties().getConnectorNamespace(A).getSourceTable(LOGIN)
+						telemetryManagerRef.get().getHostProperties().getConnectorNamespace(A).getSourceResult(LOGIN)
 					);
 					yield table("bye");
 				}
@@ -582,7 +582,7 @@ class ConnectorSessionTest {
 		assertTrue(stoppingSeen.get());
 		assertEquals(1, beforeAllRequests.get());
 		assertTrue(beforeAllStrategy.isOpened());
-		assertNotNull(telemetryManager.getHostProperties().getConnectorNamespace(C).getSourceTable(firstSource.get()));
+		assertNotNull(telemetryManager.getHostProperties().getConnectorNamespace(C).getSourceResult(firstSource.get()));
 	}
 
 	@Test
@@ -640,7 +640,7 @@ class ConnectorSessionTest {
 		final TelemetryManager refused = newTelemetryManager(
 			true,
 			LONG_TIMEOUT,
-			(connectorId, key) -> SourceTable.failed("refused"),
+			(connectorId, key) -> SourceResult.failed("refused"),
 			A
 		);
 		final BeforeAllStrategy failed = beforeAll(refused, A);
@@ -654,7 +654,7 @@ class ConnectorSessionTest {
 		final TelemetryManager telemetryManager = newTelemetryManager(
 			true,
 			LONG_TIMEOUT,
-			(connectorId, key) -> FAN_DISCOVERY.equals(key) && refuse.get() ? SourceTable.failed("timeout") : table("fan-1"),
+			(connectorId, key) -> FAN_DISCOVERY.equals(key) && refuse.get() ? SourceResult.failed("timeout") : table("fan-1"),
 			A
 		);
 		discovery(telemetryManager).run();
@@ -687,7 +687,7 @@ class ConnectorSessionTest {
 		final TelemetryManager telemetryManager = newTelemetryManager(
 			true,
 			LONG_TIMEOUT,
-			(connectorId, key) -> refuse.get() ? SourceTable.failed("refused") : table("bye"),
+			(connectorId, key) -> refuse.get() ? SourceResult.failed("refused") : table("bye"),
 			A
 		);
 		final Supplier<AfterAllStrategy> afterAll = () -> AfterAllStrategy.builder()
@@ -704,7 +704,7 @@ class ConnectorSessionTest {
 		// The afterAll ends the run: a job of the next run reading its table must not fail for good, nor fail the afterAll
 		// in turn when the afterAll reads it
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(A);
-		assertEquals(table("bye"), namespace.getSourceTable(LOGOUT));
+		assertEquals(table("bye"), namespace.getSourceResult(LOGOUT));
 		assertTrue(namespace.getUnansweredSourceKeys().contains(LOGOUT));
 	}
 
@@ -722,7 +722,7 @@ class ConnectorSessionTest {
 		final TelemetryManager telemetryManager = newTelemetryManager(true, LONG_TIMEOUT, (connectorId, key) -> {
 			if (LOGOUT.equals(key)) {
 				final ConnectorNamespace namespace = holder.get().getHostProperties().getConnectorNamespace(connectorId);
-				logoutTokens.add(String.valueOf(namespace.getSourceTable(LOGIN).getTable()));
+				logoutTokens.add(String.valueOf(namespace.getSourceResult(LOGIN).getTable()));
 				return table("bye");
 			}
 			return answer.answer(connectorId, key);
@@ -732,7 +732,7 @@ class ConnectorSessionTest {
 		telemetryManager.getConnectorStore().getStore().get(D).getAfterAll().get("logout").setReferences(Set.of(LOGIN));
 		telemetryManager.getHostProperties()
 			.getConnectorNamespace(D)
-			.addSourceTable(LOGIN, table("token-of-an-earlier-run"));
+			.addSourceResult(LOGIN, table("token-of-an-earlier-run"));
 		final BeforeAllStrategy beforeAllStrategy = beforeAll(telemetryManager, D);
 		final long runStartTime = System.nanoTime();
 
@@ -755,7 +755,7 @@ class ConnectorSessionTest {
 	 * @param strategyThread The strategy thread
 	 * @return the token
 	 */
-	private static SourceTable interruptAndAnswer(final Thread strategyThread) {
+	private static SourceResult interruptAndAnswer(final Thread strategyThread) {
 		strategyThread.interrupt();
 		final long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
 		while (!ThreadHelper.isStopping() && System.nanoTime() - end < 0) {
@@ -967,8 +967,8 @@ class ConnectorSessionTest {
 		assertFalse(afterAllThread.get().isAlive());
 		assertEquals(1, afterAllRequests.get());
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(C);
-		assertNull(namespace.getSourceTable(LOGOUT));
-		assertNull(namespace.getSourceTable("${source::afterAll.audit}"));
+		assertNull(namespace.getSourceResult(LOGOUT));
+		assertNull(namespace.getSourceResult("${source::afterAll.audit}"));
 	}
 
 	@Test
@@ -996,7 +996,7 @@ class ConnectorSessionTest {
 		final String job = collect ? FAN_COLLECT : FAN_DISCOVERY;
 		final TelemetryManager telemetryManager = newTelemetryManager(false, LONG_TIMEOUT, (connectorId, key) -> {
 			if (job.equals(key) && A.equals(connectorId)) {
-				final SourceTable answer = request(() -> {
+				final SourceResult answer = request(() -> {
 					never.await();
 					return table("fan-1;7");
 				});
@@ -1056,7 +1056,7 @@ class ConnectorSessionTest {
 		final String job = collect ? FAN_COLLECT : FAN_DISCOVERY;
 		final TelemetryManager telemetryManager = newTelemetryManager(false, LONG_TIMEOUT, (connectorId, key) -> {
 			if (job.equals(key) && A.equals(connectorId)) {
-				final SourceTable answer = request(() -> {
+				final SourceResult answer = request(() -> {
 					never.await();
 					return table("fan-1;7");
 				});
@@ -1150,7 +1150,7 @@ class ConnectorSessionTest {
 					events.add("logout " + connectorId);
 					yield table("bye");
 				}
-				default -> SourceTable.empty();
+				default -> SourceResult.empty();
 			},
 			A,
 			B
@@ -1175,7 +1175,7 @@ class ConnectorSessionTest {
 		final AtomicInteger logouts = new AtomicInteger();
 		final TelemetryManager telemetryManager = newTelemetryManager(false, 2, (connectorId, key) -> switch (key) {
 			case FAN_DISCOVERY -> {
-				final SourceTable answer = request(() -> {
+				final SourceResult answer = request(() -> {
 					never.await();
 					return table("fan-1");
 				});

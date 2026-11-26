@@ -42,7 +42,7 @@ import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Represents a source task for SNMP-based tables.
@@ -126,7 +126,7 @@ public class SnmpTableSource extends SnmpSource {
 	}
 
 	@Override
-	public SourceTable accept(final ISourceProcessor sourceProcessor) {
+	public SourceResult accept(final ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

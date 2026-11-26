@@ -42,7 +42,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.common.SqlColumn;
 import org.metricshub.engine.connector.model.common.SqlTable;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -209,15 +209,18 @@ public class SqlClientExecutor {
 	}
 
 	/**
-	 * Insert the data from the {@link SourceTable} corresponding to the {@link SqlTable} object into the SQL table
+	 * Insert the data from the {@link SourceResult} corresponding to the {@link SqlTable} object into the SQL table
 	 *
 	 * @param sqlTable   The table to insert the data from.
 	 * @param connection The connection to the database.
 	 */
 	private void insertTableDataBatch(final SqlTable sqlTable, final Connection connection) {
-		final SourceTable sourceTable = SourceTable.lookupSourceTable(sqlTable.getSource(), connectorId, telemetryManager)
-			.orElse(null);
-		if (sourceTable == null) {
+		final SourceResult sourceResult = SourceResult.lookupSourceResult(
+			sqlTable.getSource(),
+			connectorId,
+			telemetryManager
+		).orElse(null);
+		if (sourceResult == null) {
 			log.error(
 				"The source table {} is not found during the Internal DB Query job. Skip processing.",
 				sqlTable.getSource()
@@ -225,7 +228,7 @@ public class SqlClientExecutor {
 			return;
 		}
 
-		List<List<String>> table = sourceTable.getTable();
+		List<List<String>> table = sourceResult.getTable();
 		if (table == null || table.isEmpty()) {
 			log.error("The source table {} is empty. Skip Internal DB Query job processing.", sqlTable.getSource());
 			return;

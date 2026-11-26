@@ -47,7 +47,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.HttpEmulationConfig;
@@ -231,7 +231,7 @@ class EmulationExtensionTest {
 
 		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1").build();
 		// No emulation input directory: the request is not executed, the source fails
-		final SourceTable result = emulationExtension.processSource(snmpSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(snmpSource, "connector", tm);
 
 		assertTrue(result.isFailed());
 		assertTrue(result.getError().contains("Emulation input directory is not configured."), result.getError());
@@ -250,9 +250,9 @@ class EmulationExtensionTest {
 		);
 
 		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1.2.1.1.1.0").build();
-		final SourceTable result = emulationExtension.processSource(snmpSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(snmpSource, "connector", tm);
 
-		assertEquals(SourceTable.ofText("Linux server 5.4.0"), result);
+		assertEquals(SourceResult.ofText("Linux server 5.4.0"), result);
 	}
 
 	@Test
@@ -267,7 +267,7 @@ class EmulationExtensionTest {
 			.resultContent(ResultContent.BODY)
 			.build();
 		// No emulation input directory → returns empty table (no match in executor)
-		final SourceTable result = emulationExtension.processSource(httpSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(httpSource, "connector", tm);
 
 		assertNotNull(result);
 	}
@@ -286,9 +286,9 @@ class EmulationExtensionTest {
 		);
 
 		final CommandLineSource source = CommandLineSource.builder().commandLine("echo test").build();
-		final SourceTable result = emulationExtension.processSource(source, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(source, "connector", tm);
 
-		assertEquals(SourceTable.ofText("ok"), result);
+		assertEquals(SourceResult.ofText("ok"), result);
 	}
 
 	@Test
@@ -300,7 +300,7 @@ class EmulationExtensionTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
-			SourceTable.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -315,7 +315,7 @@ class EmulationExtensionTest {
 		);
 
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
-		final SourceTable result = emulationExtension.processSource(sqlSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(sqlSource, "connector", tm);
 
 		assertNotNull(result);
 		assertFalse(result.getTable().isEmpty());
@@ -329,7 +329,7 @@ class EmulationExtensionTest {
 		);
 
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
-		final SourceTable result = emulationExtension.processSource(sqlSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(sqlSource, "connector", tm);
 
 		assertNotNull(result);
 		assertTrue(result.getTable().isEmpty());
@@ -355,10 +355,10 @@ class EmulationExtensionTest {
 		);
 
 		final IpmiSource ipmiSource = IpmiSource.builder().build();
-		final SourceTable result = emulationExtension.processSource(ipmiSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(ipmiSource, "connector", tm);
 
 		assertNotNull(result);
-		assertEquals(SourceTable.ofText("FRU data here"), result);
+		assertEquals(SourceResult.ofText("FRU data here"), result);
 	}
 
 	@Test
@@ -368,7 +368,7 @@ class EmulationExtensionTest {
 		);
 
 		final IpmiSource ipmiSource = IpmiSource.builder().build();
-		final SourceTable result = emulationExtension.processSource(ipmiSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(ipmiSource, "connector", tm);
 
 		assertNotNull(result);
 		assertTrue(result.getTable().isEmpty());
@@ -405,7 +405,7 @@ class EmulationExtensionTest {
 		final IpmiRawSource unknown = IpmiRawSource.builder().netFn("6").command("2").build();
 		assertTrue(emulationExtension.processSource(unknown, "connector", tm).getTable().isEmpty());
 
-		final SourceTable sel = emulationExtension.processSource(IpmiSelSource.builder().build(), "connector", tm);
+		final SourceResult sel = emulationExtension.processSource(IpmiSelSource.builder().build(), "connector", tm);
 		assertEquals(List.of(List.of("5", "1593835520", "PowerSupply"), List.of("6", "", "")), sel.getTable());
 	}
 
@@ -612,7 +612,7 @@ class EmulationExtensionTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
-			SourceTable.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -671,7 +671,7 @@ class EmulationExtensionTest {
 			""", StandardCharsets.UTF_8);
 		Files.writeString(
 			tempDir.resolve("r1.csv"),
-			SourceTable.tableToCsv(List.of(List.of("MyHost")), ";", true),
+			SourceResult.tableToCsv(List.of(List.of("MyHost")), ";", true),
 			StandardCharsets.UTF_8
 		);
 
@@ -689,7 +689,7 @@ class EmulationExtensionTest {
 			.query("SELECT Name FROM Win32_ComputerSystem")
 			.namespace("root\\cimv2")
 			.build();
-		final SourceTable result = emulationExtension.processSource(wmiSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(wmiSource, "connector", tm);
 
 		assertNotNull(result);
 		assertFalse(result.getTable().isEmpty());
@@ -706,7 +706,7 @@ class EmulationExtensionTest {
 			.query("SELECT Name FROM Win32_ComputerSystem")
 			.namespace("root\\cimv2")
 			.build();
-		final SourceTable result = emulationExtension.processSource(wmiSource, "connector", tm);
+		final SourceResult result = emulationExtension.processSource(wmiSource, "connector", tm);
 
 		assertNotNull(result);
 		assertTrue(result.getTable().isEmpty());

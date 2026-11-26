@@ -41,7 +41,7 @@ import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Represents a source that retrieves data by making an HTTP request.
@@ -183,7 +183,7 @@ public class HttpSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(final ISourceProcessor sourceProcessor) {
+	public SourceResult accept(final ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 }

@@ -40,7 +40,7 @@ import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
 import org.metricshub.engine.strategy.source.FileSourceProcessingResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.SshConfiguration;
@@ -62,14 +62,14 @@ public class FileSourceProcessor {
 	 * @param fileSource The file source configuration containing paths and settings
 	 * @param connectorId The connector identifier for namespace management
 	 * @param telemetryManager The telemetry manager providing host configuration and properties
-	 * @return A SourceTable containing the file paths and their content, or a failure
+	 * @return A SourceResult containing the file paths and their content, or a failure
 	 */
-	public SourceTable process(final FileSource fileSource, String connectorId, TelemetryManager telemetryManager) {
+	public SourceResult process(final FileSource fileSource, String connectorId, TelemetryManager telemetryManager) {
 		final String hostname = telemetryManager.getHostname();
 		final boolean isLocalhost = telemetryManager.getHostProperties().isLocalhost();
 
 		if (fileSource == null) {
-			return SourceTable.failed("Malformed file source.");
+			return SourceResult.failed("Malformed file source.");
 		}
 
 		// Depending on whether the host is localhost or remote, create file operations
@@ -79,7 +79,7 @@ public class FileSourceProcessor {
 		final FileOperations fileOperations = isLocalhost ? createLocalFileOperations(hostname) : remoteFileOperations;
 
 		if (fileOperations == null) {
-			return SourceTable.failed(
+			return SourceResult.failed(
 				"Files %s: the file operations are not available on the host.".formatted(fileSource.getPaths())
 			);
 		}
@@ -98,7 +98,7 @@ public class FileSourceProcessor {
 			}
 
 			if (sourceResolvedPaths.isEmpty()) {
-				return SourceTable.ofText(null);
+				return SourceResult.ofText(null);
 			}
 
 			if (!isLocalhost) {
@@ -123,7 +123,7 @@ public class FileSourceProcessor {
 			if (mode.equals(FileSourceProcessingMode.FLAT)) {
 				final List<List<String>> results = processFilesInFlatMode(ops, sourceResolvedPaths, hostname);
 
-				return SourceTable.ofText(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths));
+				return SourceResult.ofText(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths));
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
 				Map<String, Long> sourceCursors = telemetryManager.getHostProperties()
@@ -138,14 +138,14 @@ public class FileSourceProcessor {
 					hostname
 				);
 
-				return SourceTable.ofText(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths));
+				return SourceResult.ofText(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths));
 			} else {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
 			}
 		} catch (Exception e) {
 			// Path resolution, FLAT/LOG read, or close failed
 			log.debug("Hostname {} - FileSource processing failed.", hostname, e);
-			return SourceTable.failed("Files " + fileSource.getPaths(), e);
+			return SourceResult.failed("Files " + fileSource.getPaths(), e);
 		}
 	}
 

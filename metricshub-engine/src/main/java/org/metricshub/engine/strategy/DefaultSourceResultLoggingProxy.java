@@ -24,12 +24,12 @@ package org.metricshub.engine.strategy;
 import java.util.List;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
- * Default {@link SourceTableLoggingProxy}: logs the full text or table representation.
+ * Default {@link SourceResultLoggingProxy}: logs the full text or table representation.
  */
-public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
+public class DefaultSourceResultLoggingProxy implements SourceResultLoggingProxy {
 
 	private static final String RAW_RESULT_LABEL = "Raw result:\n";
 	private static final String TABLE_RESULT_LABEL = "Table result:\n";
@@ -40,10 +40,10 @@ public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final String executionClassName,
 		final String executionKey,
 		final String connectorId,
-		final SourceTable sourceTable,
+		final SourceResult sourceResult,
 		final String hostname
 	) {
-		return buildFullMessage(operationTag, executionClassName, executionKey, connectorId, sourceTable, hostname);
+		return buildFullMessage(operationTag, executionClassName, executionKey, connectorId, sourceResult, hostname);
 	}
 
 	static String buildLogHeader(
@@ -68,14 +68,14 @@ public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final String executionClassName,
 		final String executionKey,
 		final String connectorId,
-		final SourceTable sourceTable,
+		final SourceResult sourceResult,
 		final String hostname
 	) {
 		final String header = buildLogHeader(operationTag, executionClassName, executionKey, connectorId, hostname) + "\n";
-		if (sourceTable.getContentType() == ContentType.TEXT) {
-			return header + RAW_RESULT_LABEL + sourceTable.getText() + "\n";
+		if (sourceResult.getContentType() == ContentType.TEXT) {
+			return header + RAW_RESULT_LABEL + sourceResult.getText() + "\n";
 		}
-		final List<List<String>> table = sourceTable.getTable();
+		final List<List<String>> table = sourceResult.getTable();
 		final String tableStr = table.isEmpty() ? "<empty>" : TextTableHelper.generateTextTable(table);
 		return header + TABLE_RESULT_LABEL + tableStr + "\n";
 	}

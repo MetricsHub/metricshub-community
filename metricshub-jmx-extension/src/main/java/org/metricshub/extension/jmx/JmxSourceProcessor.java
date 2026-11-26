@@ -27,7 +27,7 @@ import java.util.function.Function;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -74,13 +74,13 @@ public class JmxSourceProcessor {
 	}
 
 	/**
-	 * Processes a JmxSource by fetching its attributes and returning a SourceTable.
+	 * Processes a JmxSource by fetching its attributes and returning a SourceResult.
 	 *
 	 * @param jmxSource        The JmxSource defining the JMX object and attributes to fetch.
 	 * @param telemetryManager The TelemetryManager to access host configuration and log errors.
-	 * @return SourceTable containing the fetched attributes.
+	 * @return SourceResult containing the fetched attributes.
 	 */
-	public SourceTable process(final JmxSource jmxSource, final TelemetryManager telemetryManager) {
+	public SourceResult process(final JmxSource jmxSource, final TelemetryManager telemetryManager) {
 		final JmxConfiguration jmxConfig = jmxConfigurationProvider.apply(telemetryManager);
 
 		final String objectName = jmxSource.getObjectName();
@@ -112,9 +112,9 @@ public class JmxSourceProcessor {
 		} catch (Exception e) {
 			final String hostname = jmxConfig != null ? jmxConfig.getHostname() : telemetryManager.getHostname();
 			log.debug("Hostname {} - Error processing JMX source for objectName '{}'", hostname, objectName, e);
-			return SourceTable.failed("JMX " + objectName, e);
+			return SourceResult.failed("JMX " + objectName, e);
 		}
 
-		return SourceTable.ofTable(rows);
+		return SourceResult.ofTable(rows);
 	}
 }

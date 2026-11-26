@@ -47,7 +47,7 @@ import org.metricshub.engine.strategy.IStrategy;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -182,7 +182,7 @@ class AfterAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
@@ -192,7 +192,7 @@ class AfterAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.collect.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		final SnmpTableSource afterAllSource = SnmpTableSource.builder()
@@ -202,9 +202,9 @@ class AfterAllStrategyTest {
 			.key("${source::afterAll.snmpSource}")
 			.build();
 		// Mock source table information for the snmp afterAll source
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("afterAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", ";"))).when(
-			protocolExtensionMock
-		).processSource(eq(afterAllSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("afterAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", ";")))
+			.when(protocolExtensionMock)
+			.processSource(eq(afterAllSource), anyString(), any(TelemetryManager.class));
 
 		collectStrategy.run();
 
@@ -221,19 +221,19 @@ class AfterAllStrategyTest {
 		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace("afterAllSource");
 		assertNotNull(connectorNamespace);
-		final SourceTable sourceTable = connectorNamespace.getSourceTables().get("${source::afterAll.snmpSource}");
-		assertNotNull(sourceTable);
-		List<String> sourceTableLine = sourceTable.getTable().get(0);
-		assertEquals("afterAllSource-1", sourceTableLine.get(0));
-		assertEquals("1", sourceTableLine.get(1));
-		assertEquals("2", sourceTableLine.get(2));
-		assertEquals("3", sourceTableLine.get(3));
-		assertEquals("4", sourceTableLine.get(4));
-		assertEquals("5", sourceTableLine.get(5));
-		assertEquals("6", sourceTableLine.get(6));
-		assertEquals("7", sourceTableLine.get(7));
-		assertEquals("healthy", sourceTableLine.get(8));
-		assertEquals("health-ok", sourceTableLine.get(9));
+		final SourceResult sourceResult = connectorNamespace.getSourceResults().get("${source::afterAll.snmpSource}");
+		assertNotNull(sourceResult);
+		List<String> sourceResultLine = sourceResult.getTable().get(0);
+		assertEquals("afterAllSource-1", sourceResultLine.get(0));
+		assertEquals("1", sourceResultLine.get(1));
+		assertEquals("2", sourceResultLine.get(2));
+		assertEquals("3", sourceResultLine.get(3));
+		assertEquals("4", sourceResultLine.get(4));
+		assertEquals("5", sourceResultLine.get(5));
+		assertEquals("6", sourceResultLine.get(6));
+		assertEquals("7", sourceResultLine.get(7));
+		assertEquals("healthy", sourceResultLine.get(8));
+		assertEquals("health-ok", sourceResultLine.get(9));
 
 		// Check job duration metrics values
 		assertNotNull(
@@ -301,7 +301,7 @@ class AfterAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.discovery.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("enclosure-1;1;healthy", ";"))).when(protocolExtensionMock)
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
@@ -311,9 +311,9 @@ class AfterAllStrategyTest {
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.discovery.sources.source(1)}")
 			.build();
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("diskController-1;1;2;3;4;5;6;7;healthy;health-ok", ";"))).when(
-			protocolExtensionMock
-		).processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("diskController-1;1;2;3;4;5;6;7;healthy;health-ok", ";")))
+			.when(protocolExtensionMock)
+			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for the snmp afterAll source
 		final SnmpTableSource afterAllSource = SnmpTableSource.builder()
@@ -323,9 +323,9 @@ class AfterAllStrategyTest {
 			.key("${source::afterAll.snmpSource}")
 			.build();
 		// Mock source table information for the snmp afterAll source
-		doReturn(SourceTable.ofTable(SourceTable.csvToTable("afterAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", ";"))).when(
-			protocolExtensionMock
-		).processSource(eq(afterAllSource), anyString(), any(TelemetryManager.class));
+		doReturn(SourceResult.ofTable(SourceResult.csvToTable("afterAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", ";")))
+			.when(protocolExtensionMock)
+			.processSource(eq(afterAllSource), anyString(), any(TelemetryManager.class));
 
 		discoveryStrategy.run();
 
@@ -333,17 +333,17 @@ class AfterAllStrategyTest {
 		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace("afterAllSource");
 		assertNotNull(connectorNamespace);
-		final SourceTable sourceTable = connectorNamespace.getSourceTables().get("${source::afterAll.snmpSource}");
-		assertNotNull(sourceTable);
-		assertEquals("afterAllSource-1", sourceTable.getTable().get(0).get(0));
-		assertEquals("1", sourceTable.getTable().get(0).get(1));
-		assertEquals("2", sourceTable.getTable().get(0).get(2));
-		assertEquals("3", sourceTable.getTable().get(0).get(3));
-		assertEquals("4", sourceTable.getTable().get(0).get(4));
-		assertEquals("5", sourceTable.getTable().get(0).get(5));
-		assertEquals("6", sourceTable.getTable().get(0).get(6));
-		assertEquals("7", sourceTable.getTable().get(0).get(7));
-		assertEquals("healthy", sourceTable.getTable().get(0).get(8));
-		assertEquals("health-ok", sourceTable.getTable().get(0).get(9));
+		final SourceResult sourceResult = connectorNamespace.getSourceResults().get("${source::afterAll.snmpSource}");
+		assertNotNull(sourceResult);
+		assertEquals("afterAllSource-1", sourceResult.getTable().get(0).get(0));
+		assertEquals("1", sourceResult.getTable().get(0).get(1));
+		assertEquals("2", sourceResult.getTable().get(0).get(2));
+		assertEquals("3", sourceResult.getTable().get(0).get(3));
+		assertEquals("4", sourceResult.getTable().get(0).get(4));
+		assertEquals("5", sourceResult.getTable().get(0).get(5));
+		assertEquals("6", sourceResult.getTable().get(0).get(6));
+		assertEquals("7", sourceResult.getTable().get(0).get(7));
+		assertEquals("healthy", sourceResult.getTable().get(0).get(8));
+		assertEquals("health-ok", sourceResult.getTable().get(0).get(9));
 	}
 }

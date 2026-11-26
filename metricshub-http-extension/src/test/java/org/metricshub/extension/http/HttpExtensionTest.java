@@ -34,7 +34,7 @@ import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
@@ -452,15 +452,15 @@ class HttpExtensionTest {
 	void testProcessHttpSourceOk() {
 		initHttp();
 
-		doReturn(SourceTable.ofText(RESULT)).when(httpRequestExecutorMock)
+		doReturn(SourceResult.ofText(RESULT)).when(httpRequestExecutorMock)
 			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
-		final SourceTable actual = httpExtension.processSource(
+		final SourceResult actual = httpExtension.processSource(
 			HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 			CONNECTOR_ID,
 			telemetryManager
 		);
 
-		final SourceTable expected = SourceTable.ofText(RESULT);
+		final SourceResult expected = SourceResult.ofText(RESULT);
 		assertEquals(expected, actual);
 	}
 
@@ -470,13 +470,13 @@ class HttpExtensionTest {
 
 		doThrow(new RuntimeException("exception")).when(httpRequestExecutorMock)
 			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
-		final SourceTable actual = httpExtension.processSource(
+		final SourceResult actual = httpExtension.processSource(
 			HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 			CONNECTOR_ID,
 			telemetryManager
 		);
 
-		assertEquals(SourceTable.failed("HTTP GET " + TEST_URL + ": RuntimeException: exception"), actual);
+		assertEquals(SourceResult.failed("HTTP GET " + TEST_URL + ": RuntimeException: exception"), actual);
 	}
 
 	@Test
@@ -484,10 +484,10 @@ class HttpExtensionTest {
 		initHttp();
 
 		// An empty body is an answer
-		doReturn(SourceTable.ofText("")).when(httpRequestExecutorMock)
+		doReturn(SourceResult.ofText("")).when(httpRequestExecutorMock)
 			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 		assertEquals(
-			SourceTable.ofText(""),
+			SourceResult.ofText(""),
 			httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 				CONNECTOR_ID,
@@ -496,10 +496,10 @@ class HttpExtensionTest {
 		);
 
 		// A refused request fails, with the request in its error
-		doReturn(SourceTable.failed("The server answered with the status 401.")).when(httpRequestExecutorMock)
+		doReturn(SourceResult.failed("The server answered with the status 401.")).when(httpRequestExecutorMock)
 			.executeHttpSource(any(HttpRequest.class), eq(true), any(TelemetryManager.class));
 		assertEquals(
-			SourceTable.failed("HTTP GET " + TEST_URL + ": The server answered with the status 401."),
+			SourceResult.failed("HTTP GET " + TEST_URL + ": The server answered with the status 401."),
 			httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 				CONNECTOR_ID,
@@ -509,7 +509,7 @@ class HttpExtensionTest {
 
 		// A source that gives a path instead of a URL is named by its path
 		assertEquals(
-			SourceTable.failed("HTTP GET /redfish/v1/Systems: The server answered with the status 401."),
+			SourceResult.failed("HTTP GET /redfish/v1/Systems: The server answered with the status 401."),
 			httpExtension.processSource(
 				HttpSource.builder().path("/redfish/v1/Systems").method(HttpMethod.GET).build(),
 				CONNECTOR_ID,
@@ -525,7 +525,7 @@ class HttpExtensionTest {
 		telemetryManager.getHostConfiguration().setConfigurations(Map.of());
 
 		assertEquals(
-			SourceTable.failed("HTTP GET " + TEST_URL + ": HTTP is not configured on the host."),
+			SourceResult.failed("HTTP GET " + TEST_URL + ": HTTP is not configured on the host."),
 			httpExtension.processSource(
 				HttpSource.builder().url(TEST_URL).method(HttpMethod.GET).build(),
 				CONNECTOR_ID,

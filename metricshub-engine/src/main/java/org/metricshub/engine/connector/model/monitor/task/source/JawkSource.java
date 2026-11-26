@@ -49,7 +49,7 @@ import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 
 /**
  * Represents a source that executes an jawk script to retrieve data.
@@ -206,7 +206,7 @@ public class JawkSource extends Source {
 	}
 
 	@Override
-	public SourceTable accept(ISourceProcessor sourceProcessor) {
+	public SourceResult accept(ISourceProcessor sourceProcessor) {
 		return sourceProcessor.process(this);
 	}
 

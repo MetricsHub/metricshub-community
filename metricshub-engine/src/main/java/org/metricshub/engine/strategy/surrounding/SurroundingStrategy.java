@@ -45,7 +45,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -151,8 +151,8 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 
 		// The tables of an earlier run: a table this run stores is a new instance
 		final ConnectorNamespace namespace = telemetryManager.getHostProperties().getConnectorNamespace(connectorId);
-		final Map<String, SourceTable> earlierTables = new HashMap<>();
-		sources.values().forEach(source -> earlierTables.put(source.getKey(), namespace.getSourceTable(source.getKey())));
+		final Map<String, SourceResult> earlierTables = new HashMap<>();
+		sources.values().forEach(source -> earlierTables.put(source.getKey(), namespace.getSourceResult(source.getKey())));
 
 		// On a child thread that ignores the interrupt for a grace period: a login answered within it keeps its token,
 		// and the logout of a job cut short is still sent (see AbstractStrategy.CLEANUP_WINDOW_MILLIS). A beforeAll whose
@@ -181,9 +181,9 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 					// reads one of them, and that it reads in turn, does not keep failing
 					if (!beforeAll) {
 						earlierTables.forEach((key, table) -> {
-							final SourceTable stored = namespace.getSourceTable(key);
+							final SourceResult stored = namespace.getSourceResult(key);
 							if (stored != null && stored.isFailed()) {
-								namespace.addSourceTable(key, table == null ? SourceTable.empty() : table);
+								namespace.addSourceResult(key, table == null ? SourceResult.empty() : table);
 							}
 						});
 					}
@@ -211,11 +211,11 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 	 */
 	private boolean storedWhatTheAfterAllNeeds(
 		final ConnectorNamespace namespace,
-		final Map<String, SourceTable> earlierTables
+		final Map<String, SourceResult> earlierTables
 	) {
 		// A failed table opened nothing: the failed source, or one it skipped, stored it for the readers of this run
 		final Set<String> stored = earlierTables.entrySet().stream().filter(entry -> {
-			final SourceTable table = namespace.getSourceTable(entry.getKey());
+			final SourceResult table = namespace.getSourceResult(entry.getKey());
 			return table != null && table != entry.getValue() && !table.isFailed();
 		}).map(Map.Entry::getKey).collect(Collectors.toSet());
 

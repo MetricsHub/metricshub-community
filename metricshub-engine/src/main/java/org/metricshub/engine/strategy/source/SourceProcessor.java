@@ -92,7 +92,7 @@ public class SourceProcessor implements ISourceProcessor {
 
 	@WithSpan("Source Copy Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final CopySource copySource) {
+	public SourceResult process(@SpanAttribute("source.definition") final CopySource copySource) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (copySource == null) {
@@ -100,7 +100,7 @@ public class SourceProcessor implements ISourceProcessor {
 				"Hostname {} - CopySource cannot be null, the CopySource operation will return an empty result.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final String copyFrom = copySource.getFrom();
@@ -111,32 +111,32 @@ public class SourceProcessor implements ISourceProcessor {
 				hostname,
 				copySource
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
-		final Optional<SourceTable> maybeOrigin = SourceTable.lookupSourceTable(copyFrom, connectorId, telemetryManager);
+		final Optional<SourceResult> maybeOrigin = SourceResult.lookupSourceResult(copyFrom, connectorId, telemetryManager);
 
 		if (maybeOrigin.isEmpty()) {
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
-		final SourceTable origin = maybeOrigin.get();
+		final SourceResult origin = maybeOrigin.get();
 
 		// A text is copied as is, a table row by row (a deep copy), without its rows of no cell
-		final SourceTable sourceTable = origin.getContentType() == ContentType.TEXT
-			? SourceTable.ofText(origin.getText())
-			: SourceTable.ofTable(
+		final SourceResult sourceResult = origin.getContentType() == ContentType.TEXT
+			? SourceResult.ofText(origin.getText())
+			: SourceResult.ofTable(
 				origin.getTable().stream().map(ArrayList::new).filter(row -> !row.isEmpty()).collect(Collectors.toList()) // NOSONAR
 			);
 
-		logSourceCopy(connectorId, copyFrom, copySource.getKey(), sourceTable, hostname);
+		logSourceCopy(connectorId, copyFrom, copySource.getKey(), sourceResult, hostname);
 
-		return sourceTable;
+		return sourceResult;
 	}
 
 	@WithSpan("Source HTTP Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final HttpSource httpSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final HttpSource httpSource) {
 		return processSourceThroughExtension(httpSource);
 	}
 
@@ -165,14 +165,14 @@ public class SourceProcessor implements ISourceProcessor {
 	 * if available, or fails if no suitable extension is found.
 	 *
 	 * @param source The source data to be processed.
-	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
+	 * @return A {@link SourceResult} containing the results from processing the source through the extension,
 	 *         or a failure if no extension can process the source.
 	 */
-	private SourceTable processSourceThroughExtension(Source source) {
+	private SourceResult processSourceThroughExtension(Source source) {
 		// The job deadline expired or the job was cancelled: send no more request, whatever runs it (a source, an
 		// executeForEachEntryOf entry, a Jawk script)
 		if (ThreadHelper.isCancelled()) {
-			return SourceTable.failed("Not executed: the job was interrupted.");
+			return SourceResult.failed("Not executed: the job was interrupted.");
 		}
 		return extensionManager.findSourceExtension(source, telemetryManager)
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
@@ -185,8 +185,8 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @param source The source
 	 * @return a failed source table
 	 */
-	private static SourceTable noExtension(final Source source) {
-		return SourceTable.failed(
+	private static SourceResult noExtension(final Source source) {
+		return SourceResult.failed(
 			"Not executed: no extension for the %s source, or no configuration for its protocol on the host.".formatted(
 				source.getClass().getSimpleName()
 			)
@@ -199,10 +199,10 @@ public class SourceProcessor implements ISourceProcessor {
 	 * if available, or fails if no suitable extension is found.
 	 *
 	 * @param source The source data to be processed.
-	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
+	 * @return A {@link SourceResult} containing the results from processing the source through the extension,
 	 *         or a failure if no extension can process the source.
 	 */
-	private SourceTable processSourceComputationThroughExtension(final Source source) {
+	private SourceResult processSourceComputationThroughExtension(final Source source) {
 		final Optional<ISourceComputationExtension> maybeExtension = extensionManager.findSourceComputationExtension(
 			source
 		);
@@ -216,10 +216,10 @@ public class SourceProcessor implements ISourceProcessor {
 	 * if available, or fails if no suitable extension is found.
 	 *
 	 * @param source The source data to be processed.
-	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
+	 * @return A {@link SourceResult} containing the results from processing the source through the extension,
 	 *         or a failure if no extension can process the source.
 	 */
-	private SourceTable processCompositeSourceScriptThroughExtension(final Source source) {
+	private SourceResult processCompositeSourceScriptThroughExtension(final Source source) {
 		final Optional<ICompositeSourceScriptExtension> maybeExtension = extensionManager
 			.findCompositeSourceScriptExtension(source);
 		return maybeExtension.map(extension -> extension.processSource(source, connectorId, telemetryManager, this))
@@ -228,43 +228,43 @@ public class SourceProcessor implements ISourceProcessor {
 
 	@WithSpan("Source IPMI Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final IpmiSource ipmiSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final IpmiSource ipmiSource) {
 		return processSourceThroughExtension(ipmiSource);
 	}
 
 	@WithSpan("Source IPMI SEL Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final IpmiSelSource ipmiSelSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final IpmiSelSource ipmiSelSource) {
 		return processSourceThroughExtension(ipmiSelSource);
 	}
 
 	@WithSpan("Source IPMI Raw Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final IpmiRawSource ipmiRawSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final IpmiRawSource ipmiRawSource) {
 		return processSourceThroughExtension(ipmiRawSource);
 	}
 
 	@WithSpan("Source OS Command Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final CommandLineSource commandLineSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final CommandLineSource commandLineSource) {
 		return processSourceThroughExtension(commandLineSource);
 	}
 
 	@WithSpan("Source SNMP Get Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final SnmpGetSource snmpGetSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final SnmpGetSource snmpGetSource) {
 		return processSourceThroughExtension(snmpGetSource);
 	}
 
 	@WithSpan("Source SNMP Table Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final SnmpTableSource snmpTableSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final SnmpTableSource snmpTableSource) {
 		return processSourceThroughExtension(snmpTableSource);
 	}
 
 	@WithSpan("Source Static Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final StaticSource staticSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final StaticSource staticSource) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (staticSource == null || staticSource.getValue() == null) {
@@ -272,11 +272,11 @@ public class SourceProcessor implements ISourceProcessor {
 				"Hostname {} - Static Source cannot be null, the StaticSource operation will return an empty result.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		// Exactly these rows and cells, an empty list being an empty table
-		return SourceTable.ofTable(
+		return SourceResult.ofTable(
 			staticSource.getValue()
 				.stream()
 				// Map each row in the table to a new ArrayList, effectively performing a deep copy of each row.
@@ -288,7 +288,7 @@ public class SourceProcessor implements ISourceProcessor {
 
 	@WithSpan("Source TableJoin Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final TableJoinSource tableJoinSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final TableJoinSource tableJoinSource) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (tableJoinSource == null) {
@@ -296,7 +296,7 @@ public class SourceProcessor implements ISourceProcessor {
 				"Hostname {} - Table Join Source cannot be null, the Table Join will return an empty result.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final Object left = tableJoinSource.getLeftTableRows() != null
@@ -308,17 +308,21 @@ public class SourceProcessor implements ISourceProcessor {
 				hostname,
 				tableJoinSource
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
-		final Optional<SourceTable> maybeLeftTable = SourceTable.lookupTableOrLiteral(left, connectorId, telemetryManager);
+		final Optional<SourceResult> maybeLeftTable = SourceResult.lookupTableOrLiteral(
+			left,
+			connectorId,
+			telemetryManager
+		);
 		if (maybeLeftTable.isEmpty()) {
 			log.debug(
 				"Hostname {} - Reference to Left table cannot be found, the Join {} will return an empty result.",
 				hostname,
 				tableJoinSource
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final Object right = tableJoinSource.getRightTableRows() != null
@@ -330,10 +334,10 @@ public class SourceProcessor implements ISourceProcessor {
 				hostname,
 				tableJoinSource
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
-		final Optional<SourceTable> maybeRightTable = SourceTable.lookupTableOrLiteral(
+		final Optional<SourceResult> maybeRightTable = SourceResult.lookupTableOrLiteral(
 			right,
 			connectorId,
 			telemetryManager
@@ -344,7 +348,7 @@ public class SourceProcessor implements ISourceProcessor {
 				hostname,
 				tableJoinSource
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		if (tableJoinSource.getLeftKeyColumn() < 1 || tableJoinSource.getRightKeyColumn() < 1) {
@@ -354,11 +358,11 @@ public class SourceProcessor implements ISourceProcessor {
 				tableJoinSource.getLeftKeyColumn(),
 				tableJoinSource.getRightKeyColumn()
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
-		final SourceTable leftTable = maybeLeftTable.get();
-		final SourceTable rightTable = maybeRightTable.get();
+		final SourceResult leftTable = maybeLeftTable.get();
+		final SourceResult rightTable = maybeRightTable.get();
 		logTableJoin(
 			tableJoinSource.getKey(),
 			tableJoinSource.getLeftTableRows() != null ? "table literal" : tableJoinSource.getLeftTable(),
@@ -378,7 +382,7 @@ public class SourceProcessor implements ISourceProcessor {
 			true
 		);
 
-		return SourceTable.ofTable(executeTableJoin);
+		return SourceResult.ofTable(executeTableJoin);
 	}
 
 	/**
@@ -394,8 +398,8 @@ public class SourceProcessor implements ISourceProcessor {
 		final String sourceKey,
 		final String leftSourceKey,
 		final String rightSourceKey,
-		final SourceTable leftTable,
-		final SourceTable rightTable,
+		final SourceResult leftTable,
+		final SourceResult rightTable,
 		final String hostname
 	) {
 		if (!log.isDebugEnabled()) {
@@ -415,7 +419,7 @@ public class SourceProcessor implements ISourceProcessor {
 
 	@WithSpan("Source TableUnion Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final TableUnionSource tableUnionSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final TableUnionSource tableUnionSource) {
 		final String hostname = telemetryManager.getHostname();
 
 		if (tableUnionSource == null) {
@@ -423,7 +427,7 @@ public class SourceProcessor implements ISourceProcessor {
 				"Hostname {} - Table Union Source cannot be null, the Table Union operation will return an empty result.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		final List<Object> unionTables = tableUnionSource.getTables();
@@ -433,19 +437,19 @@ public class SourceProcessor implements ISourceProcessor {
 				hostname,
 				tableUnionSource
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
-		final List<SourceTable> sourceTablesToConcat = unionTables.stream()
-			.map(table -> SourceTable.lookupTableOrLiteral(table, connectorId, telemetryManager))
+		final List<SourceResult> sourceResultsToConcat = unionTables.stream()
+			.map(table -> SourceResult.lookupTableOrLiteral(table, connectorId, telemetryManager))
 			.filter(Optional::isPresent)
 			.map(Optional::get)
 			.collect(Collectors.toList()); //NOSONAR
 
 		// The rows of the members, copied (a compute on the union must not change them)
-		return SourceTable.ofTable(
-			sourceTablesToConcat.stream()
-				.map(SourceTable::getTable)
+		return SourceResult.ofTable(
+			sourceResultsToConcat.stream()
+				.map(SourceResult::getTable)
 				.flatMap(Collection::stream)
 				.map(row -> row == null ? null : new ArrayList<>(row))
 				.collect(Collectors.toList()) //NOSONAR
@@ -454,21 +458,21 @@ public class SourceProcessor implements ISourceProcessor {
 
 	@WithSpan("Source TextUnion Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final TextUnionSource textUnionSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final TextUnionSource textUnionSource) {
 		if (textUnionSource == null || textUnionSource.getTexts() == null) {
 			log.debug(
 				"Hostname {} - Text Union Source or its texts cannot be null, the Text Union will return an empty text.",
 				telemetryManager.getHostname()
 			);
-			return SourceTable.ofText(null);
+			return SourceResult.ofText(null);
 		}
 
 		// A member that is a table is joined as its text: the load-time check reports it
-		return SourceTable.ofText(
+		return SourceResult.ofText(
 			joinTexts(
 				textUnionSource.getTexts()
 					.stream()
-					.map(text -> SourceTable.lookupSourceTable(text, connectorId, telemetryManager))
+					.map(text -> SourceResult.lookupSourceResult(text, connectorId, telemetryManager))
 					.flatMap(Optional::stream)
 					.toList()
 			)
@@ -480,12 +484,12 @@ public class SourceProcessor implements ISourceProcessor {
 	 * other, a line feed added only when the text so far does not end with one; the blank lines of the members are
 	 * kept.
 	 *
-	 * @param members The members, a table being read as its text ({@link SourceTable#asText()})
+	 * @param members The members, a table being read as its text ({@link SourceResult#asText()})
 	 * @return the joined text
 	 */
-	static String joinTexts(final List<SourceTable> members) {
+	static String joinTexts(final List<SourceResult> members) {
 		final StringBuilder text = new StringBuilder();
-		members.stream().filter(member -> !member.isEmpty()).map(SourceTable::asText).forEach(memberText -> {
+		members.stream().filter(member -> !member.isEmpty()).map(SourceResult::asText).forEach(memberText -> {
 			if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
 				text.append(NEW_LINE);
 			}
@@ -497,23 +501,23 @@ public class SourceProcessor implements ISourceProcessor {
 	/**
 	 * This method processes {@link WbemSource} instance
 	 * @param wbemSource {@link WbemSource} instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 
 	@WithSpan("Source WBEM HTTP Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final WbemSource wbemSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final WbemSource wbemSource) {
 		return processSourceThroughExtension(wbemSource);
 	}
 
 	/**
 	 * This method processes {@link WmiSource} source
 	 * @param wmiSource {@link WmiSource} source instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@WithSpan("Source WMI Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final WmiSource wmiSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final WmiSource wmiSource) {
 		return processSourceThroughExtension(wmiSource);
 	}
 
@@ -523,28 +527,28 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @param connectorId     the identifier of the connector defining the source
 	 * @param parentSourceKey the parent source key referenced in the source copy
 	 * @param childSourceKey  the source key referencing the parent source
-	 * @param sourceTable     the source's result we wish to log
+	 * @param sourceResult     the source's result we wish to log
 	 * @param hostname        the host's name
 	 */
 	private static void logSourceCopy(
 		final String connectorId,
 		final String parentSourceKey,
 		final String childSourceKey,
-		final SourceTable sourceTable,
+		final SourceResult sourceResult,
 		final String hostname
 	) {
 		if (!log.isDebugEnabled()) {
 			return;
 		}
 
-		if (sourceTable.getContentType() == ContentType.TEXT) {
+		if (sourceResult.getContentType() == ContentType.TEXT) {
 			log.debug(
 				"Hostname {} - Got Source [{}] referenced in Source [{}]. Connector: [{}].\nRaw result:\n{}\n",
 				hostname,
 				parentSourceKey,
 				childSourceKey,
 				connectorId,
-				sourceTable.getText()
+				sourceResult.getText()
 			);
 			return;
 		}
@@ -555,30 +559,30 @@ public class SourceProcessor implements ISourceProcessor {
 			parentSourceKey,
 			childSourceKey,
 			connectorId,
-			TextTableHelper.generateTextTable(sourceTable.getTable())
+			TextTableHelper.generateTextTable(sourceResult.getTable())
 		);
 	}
 
 	@WithSpan("Source InternalDbQuerySource Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final InternalDbQuerySource internalDbQuery) {
+	public SourceResult process(@SpanAttribute("source.definition") final InternalDbQuerySource internalDbQuery) {
 		return processSourceComputationThroughExtension(internalDbQuery);
 	}
 
 	@WithSpan("Source JawkSource Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final JawkSource jawkSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final JawkSource jawkSource) {
 		return processCompositeSourceScriptThroughExtension(jawkSource);
 	}
 
 	/**
 	 * This method processes {@link SqlSource} source
 	 * @param sqlSource {@link SqlSource} source instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@WithSpan("Source SQL Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") final SqlSource sqlSource) {
+	public SourceResult process(@SpanAttribute("source.definition") final SqlSource sqlSource) {
 		return processSourceThroughExtension(sqlSource);
 	}
 
@@ -586,11 +590,11 @@ public class SourceProcessor implements ISourceProcessor {
 	 * This method processes {@link JmxSource} source
 	 *
 	 * @param jmxSource {@link JmxSource} source instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@WithSpan("Source JmxSource Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") JmxSource jmxSource) {
+	public SourceResult process(@SpanAttribute("source.definition") JmxSource jmxSource) {
 		return processSourceThroughExtension(jmxSource);
 	}
 
@@ -598,11 +602,11 @@ public class SourceProcessor implements ISourceProcessor {
 	 * This method processes {@link EventLogSource} source
 	 *
 	 * @param eventLogSource {@link EventLogSource} source instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@WithSpan("Source EventLogSource Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") EventLogSource eventLogSource) {
+	public SourceResult process(@SpanAttribute("source.definition") EventLogSource eventLogSource) {
 		return processSourceThroughExtension(eventLogSource);
 	}
 
@@ -610,11 +614,11 @@ public class SourceProcessor implements ISourceProcessor {
 	 * This method processes {@link FileSource} source
 	 *
 	 * @param fileSource {@link FileSource} source instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@WithSpan("Source FileSource Exec")
 	@Override
-	public SourceTable process(@SpanAttribute("source.definition") FileSource fileSource) {
+	public SourceResult process(@SpanAttribute("source.definition") FileSource fileSource) {
 		return processSourceThroughExtension(fileSource);
 	}
 }

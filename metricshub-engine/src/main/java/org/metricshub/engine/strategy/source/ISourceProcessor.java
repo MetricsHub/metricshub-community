@@ -44,165 +44,165 @@ import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 
 /**
  * Interface for processing different types of data sources.
- * Implementations of this interface handle specific source types and provide a SourceTable as a result.
+ * Implementations of this interface handle specific source types and provide a SourceResult as a result.
  */
 public interface ISourceProcessor {
 	/**
-	 * Process the CopySource and return a SourceTable.
+	 * Process the CopySource and return a SourceResult.
 	 *
 	 * @param copySource The CopySource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(CopySource copySource);
+	SourceResult process(CopySource copySource);
 
 	/**
-	 * Process the HttpSource and return a SourceTable.
+	 * Process the HttpSource and return a SourceResult.
 	 *
 	 * @param httpSource The HttpSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(HttpSource httpSource);
+	SourceResult process(HttpSource httpSource);
 
 	/**
-	 * Process the IpmiSource and return a SourceTable.
+	 * Process the IpmiSource and return a SourceResult.
 	 *
 	 * @param ipmiSource The IpmiSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(IpmiSource ipmiSource);
+	SourceResult process(IpmiSource ipmiSource);
 
 	/**
-	 * Process the IpmiSelSource and return a SourceTable.
+	 * Process the IpmiSelSource and return a SourceResult.
 	 *
 	 * @param ipmiSelSource The IpmiSelSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(IpmiSelSource ipmiSelSource);
+	SourceResult process(IpmiSelSource ipmiSelSource);
 
 	/**
-	 * Process the IpmiRawSource and return a SourceTable.
+	 * Process the IpmiRawSource and return a SourceResult.
 	 *
 	 * @param ipmiRawSource The IpmiRawSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(IpmiRawSource ipmiRawSource);
+	SourceResult process(IpmiRawSource ipmiRawSource);
 
 	/**
-	 * Process the CommandLineSource and return a SourceTable.
+	 * Process the CommandLineSource and return a SourceResult.
 	 *
 	 * @param commandLineSource The CommandLineSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(CommandLineSource commandLineSource);
+	SourceResult process(CommandLineSource commandLineSource);
 
 	/**
-	 * Process the SnmpGetSource and return a SourceTable.
+	 * Process the SnmpGetSource and return a SourceResult.
 	 *
 	 * @param snmpSource The SnmpGetSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(SnmpGetSource snmpSource);
+	SourceResult process(SnmpGetSource snmpSource);
 
 	/**
-	 * Process the SnmpTableSource and return a SourceTable.
+	 * Process the SnmpTableSource and return a SourceResult.
 	 *
 	 * @param snmpTableSource The SnmpTableSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(SnmpTableSource snmpTableSource);
+	SourceResult process(SnmpTableSource snmpTableSource);
 
 	/**
-	 * Process the StaticSource and return a SourceTable.
+	 * Process the StaticSource and return a SourceResult.
 	 *
 	 * @param staticSource The StaticSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(StaticSource staticSource);
+	SourceResult process(StaticSource staticSource);
 
 	/**
-	 * Process the TableJoinSource and return a SourceTable.
+	 * Process the TableJoinSource and return a SourceResult.
 	 *
 	 * @param tableJoinSource The TableJoinSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(TableJoinSource tableJoinSource);
+	SourceResult process(TableJoinSource tableJoinSource);
 
 	/**
-	 * Process the TableUnionSource and return a SourceTable.
+	 * Process the TableUnionSource and return a SourceResult.
 	 *
 	 * @param tableUnionSource The TableUnionSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(TableUnionSource tableUnionSource);
+	SourceResult process(TableUnionSource tableUnionSource);
 
 	/**
-	 * Process the TextUnionSource and return a SourceTable.
+	 * Process the TextUnionSource and return a SourceResult.
 	 *
 	 * @param textUnionSource The TextUnionSource to process.
-	 * @return The SourceTable result, a text.
+	 * @return The SourceResult, a text.
 	 */
-	SourceTable process(TextUnionSource textUnionSource);
+	SourceResult process(TextUnionSource textUnionSource);
 
 	/**
-	 * Process the WbemSource and return a SourceTable.
+	 * Process the WbemSource and return a SourceResult.
 	 *
 	 * @param wbemSource The WbemSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(WbemSource wbemSource);
+	SourceResult process(WbemSource wbemSource);
 
 	/**
-	 * Process the WmiSource and return a SourceTable.
+	 * Process the WmiSource and return a SourceResult.
 	 *
 	 * @param wmiSource The WmiSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(WmiSource wmiSource);
+	SourceResult process(WmiSource wmiSource);
 
 	/**
-	 * Process the {@link InternalDbQuerySource} and return a SourceTable.
+	 * Process the {@link InternalDbQuerySource} and return a SourceResult.
 	 *
 	 * @param internalDbQuery The {@link InternalDbQuerySource} to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(InternalDbQuerySource internalDbQuery);
+	SourceResult process(InternalDbQuerySource internalDbQuery);
 
 	/**
-	 * Process the {@link JawkSource} and return a SourceTable.
+	 * Process the {@link JawkSource} and return a SourceResult.
 	 *
 	 * @param jawkSource The {@link JawkSource} to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(JawkSource jawkSource);
+	SourceResult process(JawkSource jawkSource);
 
 	/**
 	 * This method processes {@link SqlSource} source
 	 * @param sqlSource {@link SqlSource} source instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
-	SourceTable process(SqlSource sqlSource);
+	SourceResult process(SqlSource sqlSource);
 
 	/**
-	 * Processes a JmxSource and returns a SourceTable.
+	 * Processes a JmxSource and returns a SourceResult.
 	 *
 	 * @param jmxSource The JmxSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(JmxSource jmxSource);
+	SourceResult process(JmxSource jmxSource);
 
 	/**
-	 * Processes an EventLogSource and returns a SourceTable.
+	 * Processes an EventLogSource and returns a SourceResult.
 	 *
 	 * @param eventLogSource The EventLogSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(EventLogSource eventLogSource);
+	SourceResult process(EventLogSource eventLogSource);
 
 	/**
-	 * Processes a FileSource and returns a SourceTable.
+	 * Processes a FileSource and returns a SourceResult.
 	 *
 	 * @param fileSource The FileSource to process.
-	 * @return The SourceTable result.
+	 * @return The SourceResult.
 	 */
-	SourceTable process(FileSource fileSource);
+	SourceResult process(FileSource fileSource);
 }

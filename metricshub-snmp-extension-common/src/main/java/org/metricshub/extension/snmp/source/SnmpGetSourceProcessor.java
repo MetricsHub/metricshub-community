@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
@@ -40,7 +40,7 @@ import org.metricshub.extension.snmp.ISnmpConfiguration;
 /**
  * A utility class for processing SNMP Get sources.
  * This class processes SNMP GET sources, fetch data from SNMP devices using
- * the given configuration, and return the value as a text {@link SourceTable}, or as a table of one cell with
+ * the given configuration, and return the value as a text {@link SourceResult}, or as a table of one cell with
  * <code>output: table</code>.
  */
 @Slf4j
@@ -63,9 +63,9 @@ public class SnmpGetSourceProcessor {
 	 * @param snmpGetSource    The {@link SnmpGetSource} defining the SNMP OID.
 	 * @param connectorId      The connector identifier used for logging purposes.
 	 * @param telemetryManager The telemetry manager providing access to host configuration and SNMP credentials.
-	 * @return a {@link SourceTable} holding the value, an empty text or table, or a failure.
+	 * @return a {@link SourceResult} holding the value, an empty text or table, or a failure.
 	 */
-	public SourceTable process(
+	public SourceResult process(
 		final SnmpGetSource snmpGetSource,
 		final String connectorId,
 		final TelemetryManager telemetryManager
@@ -75,16 +75,16 @@ public class SnmpGetSourceProcessor {
 				"Hostname {} - SNMP Get Source cannot be null, the SNMP Get operation will return an empty result.",
 				telemetryManager.getHostname()
 			);
-			return SourceTable.ofText(null);
+			return SourceResult.ofText(null);
 		}
 		final boolean table = snmpGetSource.getOutputContentType() == ContentType.TABLE;
-		final SourceTable noResult = table ? SourceTable.empty() : SourceTable.ofText(null);
+		final SourceResult noResult = table ? SourceResult.empty() : SourceResult.ofText(null);
 
 		// Find the configured protocol (Snmp or SnmpV3)
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
-			return SourceTable.failed("SNMP Get: SNMP is not configured on the host.");
+			return SourceResult.failed("SNMP Get: SNMP is not configured on the host.");
 		}
 
 		// Retrieve the hostname from the ISnmpConfiguration, otherwise from the telemetryManager
@@ -105,9 +105,9 @@ public class SnmpGetSourceProcessor {
 				return noResult;
 			}
 			if (!table) {
-				return SourceTable.ofText(result);
+				return SourceResult.ofText(result);
 			}
-			return SourceTable.ofTable(
+			return SourceResult.ofTable(
 				Stream.of(
 					Stream.of(result).collect(Collectors.toList()) // NOSONAR
 				).collect(Collectors.toList()) // NOSONAR
@@ -115,7 +115,7 @@ public class SnmpGetSourceProcessor {
 		} catch (Exception e) {
 			// NOSONAR on interruption
 			LoggingHelper.logSourceError(connectorId, snmpGetSource.getKey(), request, hostname, e);
-			return SourceTable.failed(request, e);
+			return SourceResult.failed(request, e);
 		}
 	}
 }

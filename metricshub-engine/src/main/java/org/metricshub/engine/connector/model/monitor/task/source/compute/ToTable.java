@@ -23,7 +23,7 @@ package org.metricshub.engine.connector.model.monitor.task.source.compute;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
-import static org.metricshub.engine.strategy.source.SourceTable.DEFAULT_SEPARATOR;
+import static org.metricshub.engine.strategy.source.SourceResult.DEFAULT_SEPARATOR;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

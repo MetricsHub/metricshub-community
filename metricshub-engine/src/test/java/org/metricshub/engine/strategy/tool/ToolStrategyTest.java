@@ -22,7 +22,7 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -70,9 +70,9 @@ class ToolStrategyTest {
 		// The session token fetched in beforeAll reached the tool's source
 		assertEquals(List.of(List.of("token-123-used")), strategy.getResult().getTable());
 		// And afterAll ran once the tool was done
-		final SourceTable logout = telemetryManager.getHostProperties()
+		final SourceResult logout = telemetryManager.getHostProperties()
 			.getConnectorNamespace(CONNECTOR_ID)
-			.getSourceTable("${source::afterAll.logout}");
+			.getSourceResult("${source::afterAll.logout}");
 		assertEquals(List.of(List.of("bye")), logout.getTable());
 	}
 
@@ -86,7 +86,7 @@ class ToolStrategyTest {
 		doAnswer(invocation -> {
 			Thread.currentThread().interrupt();
 			return invocation.callRealMethod();
-		}).when(namespace).addSourceTable(eq("${source::tools.withSession.sources.authenticated}"), any());
+		}).when(namespace).addSourceResult(eq("${source::tools.withSession.sources.authenticated}"), any());
 
 		try {
 			strategy.run();
@@ -97,7 +97,7 @@ class ToolStrategyTest {
 
 		// No table of a cut-short run, and the session opened in beforeAll is closed
 		assertTrue(strategy.getResult().isEmpty());
-		assertEquals(List.of(List.of("bye")), namespace.getSourceTable("${source::afterAll.logout}").getTable());
+		assertEquals(List.of(List.of("bye")), namespace.getSourceResult("${source::afterAll.logout}").getTable());
 	}
 
 	@Test
@@ -149,7 +149,7 @@ class ToolStrategyTest {
 			strategy.getTelemetryManager()
 				.getHostProperties()
 				.getConnectorNamespace(CONNECTOR_ID)
-				.getSourceTable("${source::tools.failing.sources.output}")
+				.getSourceResult("${source::tools.failing.sources.output}")
 				.getError()
 		);
 	}

@@ -14,7 +14,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.extension.HttpResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
@@ -386,7 +386,7 @@ class EmulationHttpRequestExecutorTest {
 
 		assertNull(executor.executeHttp(request, false, tm));
 		// A request that failed or was refused is not recorded: an http source fails, as it did
-		assertEquals(SourceTable.failed("No recorded response."), executor.executeHttpSource(request, false, tm));
+		assertEquals(SourceResult.failed("No recorded response."), executor.executeHttpSource(request, false, tm));
 	}
 
 	// ---- Method mismatch ----

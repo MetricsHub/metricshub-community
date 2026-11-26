@@ -15,7 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
@@ -40,12 +40,12 @@ class SnmpGetSourceProcessorTest {
 
 	// Test case when snmpGetSource is null.
 	@Test
-	void testProcess_WhenSourceIsNull_ReturnsEmptySourceTable() {
+	void testProcess_WhenSourceIsNull_ReturnsEmptySourceResult() {
 		SnmpGetSource snmpGetSource = null;
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
-		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.ofText(null), result);
+		SourceResult result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
+		assertEquals(SourceResult.ofText(null), result);
 	}
 
 	// Test case for when snmpconfiguration is null."
@@ -55,8 +55,8 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(null);
 
-		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.failed("SNMP Get: SNMP is not configured on the host."), result);
+		SourceResult result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
+		assertEquals(SourceResult.failed("SNMP Get: SNMP is not configured on the host."), result);
 	}
 
 	// Test case when the requestExecutor throws an exception.
@@ -69,13 +69,13 @@ class SnmpGetSourceProcessorTest {
 		doThrow(new InterruptedException("Test exception")).when(snmpRequestExecutor)
 			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, telemetryManager.getRequestStats());
 
-		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
-		assertEquals(SourceTable.failed("SNMP Get: test_oid: InterruptedException: Test exception"), result);
+		SourceResult result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
+		assertEquals(SourceResult.failed("SNMP Get: test_oid: InterruptedException: Test exception"), result);
 	}
 
 	//Test case when requestExecutor returns a valid result.
 	@Test
-	void testProcess_WhenRequestExecutorReturnsValidResult_ReturnsSourceTableWithResult() throws Exception {
+	void testProcess_WhenRequestExecutorReturnsValidResult_ReturnsSourceResultWithResult() throws Exception {
 		SnmpGetSource snmpGetSource = SnmpGetSource.builder().oid("test_oid").build();
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
@@ -90,9 +90,9 @@ class SnmpGetSourceProcessorTest {
 			)
 		).thenReturn("result");
 
-		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
+		SourceResult result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
 
-		assertEquals(SourceTable.ofText("result"), result);
+		assertEquals(SourceResult.ofText("result"), result);
 	}
 
 	// The value is the text, whole: no split on ";" or on a line break. No value (null) is an empty text.
@@ -112,13 +112,13 @@ class SnmpGetSourceProcessorTest {
 			)
 		).thenReturn("a;b", "two\r\nlines", "", null);
 
-		assertEquals(SourceTable.ofText("a;b"), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceResult.ofText("a;b"), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 		assertEquals(
-			SourceTable.ofText("two\nlines"),
+			SourceResult.ofText("two\nlines"),
 			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
 		);
-		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
-		assertEquals(SourceTable.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceResult.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceResult.ofText(null), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 	}
 
 	// output: table: one row of one cell holding the value, never split; an empty value is one empty cell; no value is
@@ -146,20 +146,20 @@ class SnmpGetSourceProcessorTest {
 		).thenReturn("a;b\nc;d", "", null).thenThrow(new InterruptedException("Test exception"));
 
 		assertEquals(
-			SourceTable.ofTable(List.of(List.of("a;b\nc;d"))),
+			SourceResult.ofTable(List.of(List.of("a;b\nc;d"))),
 			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
 		);
 		assertEquals(
-			SourceTable.ofTable(List.of(List.of(""))),
+			SourceResult.ofTable(List.of(List.of(""))),
 			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
 		);
-		assertEquals(SourceTable.empty(), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
+		assertEquals(SourceResult.empty(), snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager));
 		assertEquals(
-			SourceTable.failed("SNMP Get: test_oid: InterruptedException: Test exception"),
+			SourceResult.failed("SNMP Get: test_oid: InterruptedException: Test exception"),
 			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
 		);
 		assertEquals(
-			SourceTable.failed("SNMP Get: SNMP is not configured on the host."),
+			SourceResult.failed("SNMP Get: SNMP is not configured on the host."),
 			snmpGetSourceProcessor.process(snmpGetSource, "id", telemetryManager)
 		);
 	}

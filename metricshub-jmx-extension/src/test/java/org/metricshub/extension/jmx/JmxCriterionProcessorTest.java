@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 class JmxCriterionProcessorTest {
@@ -68,7 +68,7 @@ class JmxCriterionProcessorTest {
 
 		final CriterionTestResult result = processor.process(criterion, "connector123", telemetryManager);
 
-		final String expectedCsv = SourceTable.tableToCsv(response, ";", true);
+		final String expectedCsv = SourceResult.tableToCsv(response, ";", true);
 
 		assertTrue(result.isSuccess(), "Expected success for non-empty result with no expected match");
 		assertEquals(expectedCsv, result.getResult(), "Result should match the CSV-formatted response");

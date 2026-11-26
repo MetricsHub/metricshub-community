@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.RequestStats;
 import org.metricshub.extension.win.IWinConfiguration;
@@ -108,7 +108,7 @@ public class WmiDetectionService {
 		}
 
 		// Serialize the result as a CSV
-		String actualResult = SourceTable.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
+		String actualResult = SourceResult.tableToCsv(queryResult, CriterionTestResult.RESULT_SEPARATOR, true);
 
 		// Empty result? ==> failure
 		if (actualResult == null || actualResult.isBlank()) {

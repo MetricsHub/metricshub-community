@@ -38,7 +38,7 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -424,19 +424,19 @@ class HardwarePostDiscoveryStrategyTest {
 
 		final String enclosureSource = "${source::monitors.enclosure.discovery.sources.source(1)}";
 		final String temperatureSource = "${source::monitors.temperature.discovery.sources.source(1)}";
-		final Map<String, String> sourceTables = new HashMap<>(
+		final Map<String, String> sourceResults = new HashMap<>(
 			Map.of(enclosureSource, "enclosure-1", temperatureSource, "temperature-1")
 		);
 		doAnswer(
-			invocation -> SourceTable.ofTable(
-				SourceTable.csvToTable(sourceTables.get(invocation.<Source>getArgument(0).getKey()), ";")
+			invocation -> SourceResult.ofTable(
+				SourceResult.csvToTable(sourceResults.get(invocation.<Source>getArgument(0).getKey()), ";")
 			)
 		).when(protocolExtension).processSource(any(Source.class), anyString(), any(TelemetryManager.class));
 
 		new DiscoveryStrategy(telemetryManager, firstDiscoveryTime, clientsExecutor, extensionManager).run();
 
 		// Both jobs map a monitor in the second discovery: their passes are trusted
-		sourceTables.putAll(Map.of(enclosureSource, "enclosure-2", temperatureSource, "temperature-2"));
+		sourceResults.putAll(Map.of(enclosureSource, "enclosure-2", temperatureSource, "temperature-2"));
 		new DiscoveryStrategy(telemetryManager, secondDiscoveryTime, clientsExecutor, extensionManager).run();
 
 		return telemetryManager;

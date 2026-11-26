@@ -15,7 +15,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.constants.Constants;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
@@ -33,9 +33,9 @@ class MappingProcessorTest {
 		telemetryManager.setHostConfiguration(HostConfiguration.builder().hostname("hostname").build());
 		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME);
-		connectorNamespace.addSourceTable("${source::price}", SourceTable.ofText("costs $1"));
-		connectorNamespace.addSourceTable("${source::description}", SourceTable.ofText("Refresh rate(Hz)"));
-		connectorNamespace.addSourceTable("${source::column}", SourceTable.ofText("$1"));
+		connectorNamespace.addSourceResult("${source::price}", SourceResult.ofText("costs $1"));
+		connectorNamespace.addSourceResult("${source::description}", SourceResult.ofText("Refresh rate(Hz)"));
+		connectorNamespace.addSourceResult("${source::column}", SourceResult.ofText("$1"));
 
 		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
@@ -82,8 +82,8 @@ class MappingProcessorTest {
 
 		final ConnectorNamespace connectorNamespace = telemetryManager.getHostProperties()
 			.getConnectorNamespace(MY_CONNECTOR_1_NAME);
-		connectorNamespace.addSourceTable(vendorSource1Ref, SourceTable.ofText("vendor"));
-		connectorNamespace.addSourceTable(vendorIdSource1Ref, SourceTable.ofText("1"));
+		connectorNamespace.addSourceResult(vendorSource1Ref, SourceResult.ofText("vendor"));
+		connectorNamespace.addSourceResult(vendorIdSource1Ref, SourceResult.ofText("1"));
 
 		// Value conversion tests, basic value and invalid value
 		{

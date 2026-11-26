@@ -121,7 +121,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	private ExtensionManager extensionManager;
 
 	@Override
-	public SourceTable process(final HttpSource httpSource) {
+	public SourceResult process(final HttpSource httpSource) {
 		// Very important! otherwise we will overlap in multi-host mode
 		final var copy = httpSource.copy();
 
@@ -134,107 +134,107 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	@Override
-	public SourceTable process(EventLogSource eventLogSource) {
+	public SourceResult process(EventLogSource eventLogSource) {
 		return processSource(eventLogSource.copy());
 	}
 
 	@Override
-	public SourceTable process(FileSource fileSource) {
+	public SourceResult process(FileSource fileSource) {
 		return processSource(fileSource.copy());
 	}
 
 	@Override
-	public SourceTable process(JmxSource jmxSource) {
+	public SourceResult process(JmxSource jmxSource) {
 		return processSource(jmxSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final CopySource copySource) {
+	public SourceResult process(final CopySource copySource) {
 		return processSource(copySource.copy());
 	}
 
 	@Override
-	public SourceTable process(final IpmiSource ipmiSource) {
+	public SourceResult process(final IpmiSource ipmiSource) {
 		return processSource(ipmiSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final IpmiSelSource ipmiSelSource) {
+	public SourceResult process(final IpmiSelSource ipmiSelSource) {
 		return processSource(ipmiSelSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final IpmiRawSource ipmiRawSource) {
+	public SourceResult process(final IpmiRawSource ipmiRawSource) {
 		return processSource(ipmiRawSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final CommandLineSource commandLineSource) {
+	public SourceResult process(final CommandLineSource commandLineSource) {
 		return processSource(commandLineSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final SnmpGetSource snmpGetSource) {
+	public SourceResult process(final SnmpGetSource snmpGetSource) {
 		return processSource(snmpGetSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final SnmpTableSource snmpTableSource) {
+	public SourceResult process(final SnmpTableSource snmpTableSource) {
 		return processSource(snmpTableSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final StaticSource staticSource) {
+	public SourceResult process(final StaticSource staticSource) {
 		return processSource(staticSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final TableJoinSource tableJoinSource) {
+	public SourceResult process(final TableJoinSource tableJoinSource) {
 		return processSource(tableJoinSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final TableUnionSource tableUnionSource) {
+	public SourceResult process(final TableUnionSource tableUnionSource) {
 		return processSource(tableUnionSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final TextUnionSource textUnionSource) {
+	public SourceResult process(final TextUnionSource textUnionSource) {
 		return processSource(textUnionSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final WbemSource wbemSource) {
+	public SourceResult process(final WbemSource wbemSource) {
 		return processSource(wbemSource.copy());
 	}
 
 	@Override
-	public SourceTable process(final InternalDbQuerySource internalDbQuery) {
+	public SourceResult process(final InternalDbQuerySource internalDbQuery) {
 		return processSource(internalDbQuery.copy());
 	}
 
 	@Override
-	public SourceTable process(final JawkSource jawkSource) {
+	public SourceResult process(final JawkSource jawkSource) {
 		return processSource(jawkSource.copy());
 	}
 
 	/**
 	 * This method processes {@link WmiSource} source
 	 * @param wmiSource {@link WmiSource} instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@Override
-	public SourceTable process(final WmiSource wmiSource) {
+	public SourceResult process(final WmiSource wmiSource) {
 		return processSource(wmiSource.copy());
 	}
 
 	/**
 	 * This method processes {@link SqlSource} source
 	 * @param sqlSource {@link SqlSource} instance
-	 * @return {@link SourceTable} instance
+	 * @return {@link SourceResult} instance
 	 */
 	@Override
-	public SourceTable process(final SqlSource sqlSource) {
+	public SourceResult process(final SqlSource sqlSource) {
 		return processSource(sqlSource.copy());
 	}
 
@@ -242,9 +242,9 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * Process the given source copy
 	 *
 	 * @param copy copy of the original source
-	 * @return {@link SourceTable}
+	 * @return {@link SourceResult}
 	 */
-	private SourceTable processSource(final Source copy) {
+	private SourceResult processSource(final Source copy) {
 		if (copy.isExecuteForEachEntryOf()) {
 			return runExecuteForEachEntryOf(copy);
 		}
@@ -285,14 +285,14 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		}
 
 		// Get the source table defining where we are going to fetch the value
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupSourceTable(
+		final Optional<SourceResult> maybeSourceResult = SourceResult.lookupSourceResult(
 			foreignSourceKey,
 			connectorId,
 			telemetryManager
 		);
 
 		final String hostname = telemetryManager.getHostname();
-		if (maybeSourceTable.isEmpty()) {
+		if (maybeSourceResult.isEmpty()) {
 			log.error(
 				"Hostname {} - Could not extract the foreign source table identified by {} and defined in original source {} to set the {} field.",
 				hostname,
@@ -303,17 +303,17 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return null;
 		}
 
-		final SourceTable sourceTable = maybeSourceTable.get();
+		final SourceResult sourceResult = maybeSourceResult.get();
 
 		String value = null;
-		if (sourceTable.getContentType() == ContentType.TEXT) {
+		if (sourceResult.getContentType() == ContentType.TEXT) {
 			// A text: its whole first line, without its line ending (a text has LF line endings only)
 			log.debug("Hostname {} - Get {} defined in source {} from raw data.", hostname, fieldLabel, foreignSourceKey);
-			value = sourceTable.getText().split("\n", 2)[0];
-		} else if (!sourceTable.getTable().isEmpty()) {
+			value = sourceResult.getText().split("\n", 2)[0];
+		} else if (!sourceResult.getTable().isEmpty()) {
 			// A table: the first cell
 			log.debug("Hostname {} - Get {} defined in source {} from list table.", hostname, fieldLabel, foreignSourceKey);
-			final List<String> firstRow = sourceTable.getTable().get(0);
+			final List<String> firstRow = sourceResult.getTable().get(0);
 			if (firstRow != null && !firstRow.isEmpty()) {
 				value = firstRow.get(0);
 			}
@@ -327,13 +327,13 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Run an execution for each entry in the {@link SourceTable} referenced by the given source copy.
+	 * Run an execution for each entry in the {@link SourceResult} referenced by the given source copy.
 	 *
 	 * @param copy Must be a copy of the source.
-	 * @return {@link SourceTable} result
+	 * @return {@link SourceResult}
 	 */
-	private SourceTable runExecuteForEachEntryOf(final Source copy) {
-		final SourceTable result = processExecuteForEachEntryOf(copy, copy.getExecuteForEachEntryOf());
+	private SourceResult runExecuteForEachEntryOf(final Source copy) {
+		final SourceResult result = processExecuteForEachEntryOf(copy, copy.getExecuteForEachEntryOf());
 
 		if (result != null && !result.isFailed() && isEntryConcatMethodJsonArrayOrExtended(copy)) {
 			result.setText(String.format("[%s]", result.getText()));
@@ -547,15 +547,15 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final String sourceRefKey
 	) {
 		// Get the source table from the connector namespace
-		final SourceTable sourceTable = telemetryManager.getHostProperties()
+		final SourceResult sourceResult = telemetryManager.getHostProperties()
 			.getConnectorNamespace(connectorId)
-			.getSourceTables()
+			.getSourceResults()
 			.get(sourceRefKey);
 
 		// Hostname used for the debug messages
 		final String hostname = telemetryManager.getHostname();
 
-		if (sourceTable == null) {
+		if (sourceResult == null) {
 			log.error(
 				"Hostname {} - The source table is not available. Couldn't extract {} referenced in {} ({}). The source reference will be replaced with an empty value.",
 				hostname,
@@ -568,8 +568,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		// The load-time check rejects a table in an interpolation: a table here is the empty result of a source that
 		// failed, or the table that a failed compute left in place
-		if (sourceTable.getContentType() != ContentType.TEXT) {
-			if (!sourceTable.isEmpty()) {
+		if (sourceResult.getContentType() != ContentType.TEXT) {
+			if (!sourceResult.isEmpty()) {
 				log.warn(
 					"Hostname {} - {} referenced in {} ({}) is a table, not a text. The source reference will be replaced with an empty value.",
 					hostname,
@@ -584,51 +584,51 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		log.debug("Hostname {} - Get {} referenced in {} ({}).", hostname, sourceRefKey, operationType, operationKey);
 
 		// The text as it is, without its final line feeds, which would end up in a URL, a body or an attribute
-		return String.join(NEW_LINE, sourceTable.getText().split(NEW_LINE));
+		return String.join(NEW_LINE, sourceResult.getText().split(NEW_LINE));
 	}
 
 	/**
-	 * Process the given {@link Source} for the source table entries in the source result of <em>sourceTableKey</em>
+	 * Process the given {@link Source} for the source table entries in the source result of <em>sourceResultKey</em>
 	 *
 	 * @param source         The {@link Source} we wish to process
-	 * @param sourceTableKey The key of the source table defining the entries
-	 * @return {@link SourceTable} containing all the result concatenated using the
+	 * @param sourceResultKey The key of the source table defining the entries
+	 * @return {@link SourceResult} containing all the result concatenated using the
 	 *         EntryConcatMethod defined in the original {@link Source}
 	 */
-	private SourceTable processExecuteForEachEntryOf(final Source source, final String sourceTableKey) {
-		final Optional<SourceTable> maybeSourceTable = SourceTable.lookupSourceTable(
-			sourceTableKey,
+	private SourceResult processExecuteForEachEntryOf(final Source source, final String sourceResultKey) {
+		final Optional<SourceResult> maybeSourceResult = SourceResult.lookupSourceResult(
+			sourceResultKey,
 			connectorId,
 			telemetryManager
 		);
 		final String hostname = telemetryManager.getHostname();
-		if (maybeSourceTable.isEmpty()) {
+		if (maybeSourceResult.isEmpty()) {
 			log.error(
-				"Hostname {} - The SourceTable referenced in the ExecuteForEachEntryOf field cannot be found : {}.",
+				"Hostname {} - The SourceResult referenced in the ExecuteForEachEntryOf field cannot be found : {}.",
 				hostname,
-				sourceTableKey
+				sourceResultKey
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		}
 
 		// A text for a text source or a text concatenation (JSON, custom), a table otherwise
-		final SourceTable result = source.getResultContentType() == ContentType.TEXT
-			? SourceTable.ofText(EMPTY)
-			: SourceTable.empty();
+		final SourceResult result = source.getResultContentType() == ContentType.TEXT
+			? SourceResult.ofText(EMPTY)
+			: SourceResult.empty();
 
 		final Integer sleep = source.getSleepExecuteForEachEntryOf();
-		final List<List<String>> table = maybeSourceTable.get().getTable();
+		final List<List<String>> table = maybeSourceResult.get().getTable();
 
 		final int poolSize = computeExecuteForEachEntryOfPoolSize(source, sleep, table.size());
 		final ExecutorService pool = poolSize > 1 ? Executors.newFixedThreadPool(poolSize) : null;
 		final List<List<String>> pendingRows = new ArrayList<>();
-		final List<Future<SourceTable>> pendingResults = new ArrayList<>();
+		final List<Future<SourceResult>> pendingResults = new ArrayList<>();
 		// The pool threads do not inherit the interrupt of this thread: a queued entry checks its cancellation before its
 		// request, and wakes this thread up when it ends
 		final Thread coordinator = Thread.currentThread();
 		final BooleanSupplier cancelled = ThreadHelper.cancellation();
 		// The failure of the source, in row order: the running entries are awaited
-		SourceTable failure = null;
+		SourceResult failure = null;
 		// Set by the entry that fails, at once: the queued entries send no request
 		final AtomicBoolean entryFailed = new AtomicBoolean();
 
@@ -640,7 +640,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 						"Hostname {} - Thread interrupted: skipping the remaining 'execute for each entry' requests.",
 						hostname
 					);
-					return SourceTable.empty();
+					return SourceResult.empty();
 				}
 
 				if (row == null) {
@@ -667,11 +667,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 				if (pool != null) {
 					pendingRows.add(row);
-					final FutureTask<SourceTable> pendingResult = new FutureTask<>(() -> {
+					final FutureTask<SourceResult> pendingResult = new FutureTask<>(() -> {
 						if (cancelled.getAsBoolean() || entryFailed.get()) {
-							return SourceTable.empty();
+							return SourceResult.empty();
 						}
-						final SourceTable entryResult = copy.accept(sourceProcessor);
+						final SourceResult entryResult = copy.accept(sourceProcessor);
 						if (entryResult.isFailed() && !source.isContinueOnFailure()) {
 							entryFailed.set(true);
 						}
@@ -707,7 +707,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 			// Concatenate the parallel results in the original row order, as the sequential run does
 			for (int i = 0; i < pendingResults.size(); i++) {
-				final Future<SourceTable> pendingResult = pendingResults.get(i);
+				final Future<SourceResult> pendingResult = pendingResults.get(i);
 				// park, unlike Future.get, never clears the interrupt that the queued entries check
 				while (!cancelled.getAsBoolean() && !pendingResult.isDone()) {
 					LockSupport.park(this);
@@ -717,7 +717,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 						"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
 						hostname
 					);
-					return SourceTable.empty();
+					return SourceResult.empty();
 				}
 				// After a failed entry, the entries still running end before the source fails: the afterAll may close the
 				// session they use
@@ -735,7 +735,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				"Hostname {} - Thread interrupted while waiting for the parallel 'execute for each entry' requests.",
 				hostname
 			);
-			return SourceTable.empty();
+			return SourceResult.empty();
 		} catch (ExecutionException e) {
 			// Source.accept throws no checked exception: rethrow what the sequential run would have thrown
 			if (e.getCause() instanceof Error error) {
@@ -801,25 +801,25 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Based on the EntryConcatMethod, concatenate the <em>sourceTableToConcat</em> in the <em>result</em> source table.
+	 * Based on the EntryConcatMethod, concatenate the <em>sourceResultToConcat</em> in the <em>result</em> source table.
 	 * A failed entry makes the source fail, unless the source continues on failure: then the entry is skipped.
 	 *
 	 * @param source               The source used to get the entry concat start/end
 	 * @param currentResult        The current result we wish to update
 	 * @param row                  The row to concatenate in case we have the JSON_ARRAY_EXTENDED concatenation method
-	 * @param sourceTableToConcat  The current source table result
+	 * @param sourceResultToConcat  The current source table result
 	 * @return the failure of the source when the entry failed, null otherwise
 	 */
-	private SourceTable concatEntryResult(
+	private SourceResult concatEntryResult(
 		final Source source,
-		final SourceTable currentResult,
+		final SourceResult currentResult,
 		final List<String> row,
-		final SourceTable sourceTableToConcat
+		final SourceResult sourceResultToConcat
 	) {
-		if (sourceTableToConcat.isFailed()) {
-			final String error = "Entry %s: %s".formatted(row, sourceTableToConcat.getError());
+		if (sourceResultToConcat.isFailed()) {
+			final String error = "Entry %s: %s".formatted(row, sourceResultToConcat.getError());
 			if (!source.isContinueOnFailure()) {
-				return SourceTable.failed(error);
+				return SourceResult.failed(error);
 			}
 			log.error(
 				"Hostname {} - Source {} skips a failed entry. {}",
@@ -836,13 +836,13 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (iEntryConcatMethod == null || iEntryConcatMethod == EntryConcatMethod.LIST) {
 			// LIST keeps the result type the source declares: an entry of the other type is converted, never dropped
 			if (currentResult.getContentType() == ContentType.TEXT) {
-				final String text = sourceTableToConcat.asText();
+				final String text = sourceResultToConcat.asText();
 				if (!text.isBlank()) {
 					joinStringValue(currentResult, text, "\n");
 				}
 			} else {
 				final List<List<String>> rows = currentResult.getTable();
-				sourceTableToConcat.asTable().stream().filter(line -> line != null && !line.isEmpty()).forEach(rows::add);
+				sourceResultToConcat.asTable().stream().filter(line -> line != null && !line.isEmpty()).forEach(rows::add);
 			}
 			return null;
 		}
@@ -850,26 +850,26 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		// The text concatenations read each entry as a text (a table is serialized): an empty answer is wrapped by the
 		// custom method
 		if (iEntryConcatMethod instanceof CustomConcatMethod customConcatMethod) {
-			appendCustomEntryResult(customConcatMethod, currentResult, row, sourceTableToConcat.asText());
+			appendCustomEntryResult(customConcatMethod, currentResult, row, sourceResultToConcat.asText());
 		} else if (iEntryConcatMethod == EntryConcatMethod.JSON_ARRAY) {
-			appendJsonToArray(currentResult, sourceTableToConcat.asText());
+			appendJsonToArray(currentResult, sourceResultToConcat.asText());
 		} else {
-			appendExtendedJsonToArray(currentResult, row, sourceTableToConcat);
+			appendExtendedJsonToArray(currentResult, row, sourceResultToConcat);
 		}
 		return null;
 	}
 
 	/**
-	 * Append the custom entry result <em>text</em> to the given <em>currentResult</em> {@link SourceTable}.
+	 * Append the custom entry result <em>text</em> to the given <em>currentResult</em> {@link SourceResult}.
 	 *
 	 * @param customConcatMethod The {@link CustomConcatMethod} instance.
-	 * @param currentResult      The {@link SourceTable} result to update.
+	 * @param currentResult      The {@link SourceResult} to update.
 	 * @param row                The row to concatenate in case we have the JSON_ARRAY_EXTENDED concatenation method.
 	 * @param text               The text to append.
 	 */
 	private void appendCustomEntryResult(
 		final CustomConcatMethod customConcatMethod,
-		final SourceTable currentResult,
+		final SourceResult currentResult,
 		final List<String> row,
 		final String text
 	) {
@@ -884,18 +884,18 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Build the Extended JSON then append it to the <em>currentResult</em> {@link SourceTable}.
+	 * Build the Extended JSON then append it to the <em>currentResult</em> {@link SourceResult}.
 	 *
-	 * @param currentResult       The {@link SourceTable} result to update
+	 * @param currentResult       The {@link SourceResult} to update
 	 * @param row                 The row used to build the Extended JSON
-	 * @param sourceTableToConcat The {@link SourceTable} defining the <em>text</em> to concatenate.
+	 * @param sourceResultToConcat The {@link SourceResult} defining the <em>text</em> to concatenate.
 	 */
 	private void appendExtendedJsonToArray(
-		final SourceTable currentResult,
+		final SourceResult currentResult,
 		final List<String> row,
-		final SourceTable sourceTableToConcat
+		final SourceResult sourceResultToConcat
 	) {
-		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(row, sourceTableToConcat);
+		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(row, sourceResultToConcat);
 		// This will mess the JSON Extended
 		if (formattedExtendedJSON.isBlank()) {
 			return;
@@ -905,13 +905,13 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Append the given <em>json</em> node to the <em>currentResult</em> {@link SourceTable} with
+	 * Append the given <em>json</em> node to the <em>currentResult</em> {@link SourceResult} with
 	 * the intent of building a JSON Array
 	 *
-	 * @param currentResult The {@link SourceTable} result to update
+	 * @param currentResult The {@link SourceResult} to update
 	 * @param json      The JSON node as string to append
 	 */
-	private void appendJsonToArray(final SourceTable currentResult, final String json) {
+	private void appendJsonToArray(final SourceResult currentResult, final String json) {
 		// Don't mess the JSON Array
 		if (json == null || json.isBlank()) {
 			return;
@@ -921,14 +921,14 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Append the string value to the <em>currentResult</em> {@link SourceTable} using the passed <em>separator</em>.
+	 * Append the string value to the <em>currentResult</em> {@link SourceResult} using the passed <em>separator</em>.
 	 * The separator is not appended for the first value
 	 *
-	 * @param currentResult The {@link SourceTable} result to update
+	 * @param currentResult The {@link SourceResult} to update
 	 * @param string        String value to append
 	 * @param separator     Separator of the appended values
 	 */
-	private void joinStringValue(final SourceTable currentResult, final String string, @NonNull String separator) {
+	private void joinStringValue(final SourceResult currentResult, final String string, @NonNull String separator) {
 		currentResult.setText(
 			(currentResult.getText().isBlank() ? EMPTY : currentResult.getText().concat(separator)).concat(string)
 		);

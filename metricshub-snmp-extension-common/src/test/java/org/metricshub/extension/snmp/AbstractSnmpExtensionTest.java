@@ -29,7 +29,7 @@ import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCrite
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -164,7 +164,7 @@ class AbstractSnmpExtensionTest {
 				same(telemetryManager.getRequestStats())
 			)
 		).thenReturn(List.of(List.of("a", "b")));
-		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
+		final SourceResult result = extension.processSource(source, "connector1", telemetryManager);
 		assertNotNull(result);
 	}
 
@@ -181,8 +181,8 @@ class AbstractSnmpExtensionTest {
 				same(telemetryManager.getRequestStats())
 			)
 		).thenReturn("value");
-		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
-		assertEquals(SourceTable.ofText("value"), result);
+		final SourceResult result = extension.processSource(source, "connector1", telemetryManager);
+		assertEquals(SourceResult.ofText("value"), result);
 	}
 
 	@Test
