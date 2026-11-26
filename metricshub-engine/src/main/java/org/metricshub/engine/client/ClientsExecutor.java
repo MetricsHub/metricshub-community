@@ -37,7 +37,6 @@ import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.jflat.JFlat;
-import org.metricshub.tablejoin.TableJoin;
 import org.metricshub.xflat.XFlat;
 import org.metricshub.xflat.exceptions.XFlatException;
 
@@ -45,7 +44,7 @@ import org.metricshub.xflat.exceptions.XFlatException;
  * The ClientsExecutor class provides utility methods for executing
  * various operations through Clients. It includes functionalities for executing
  * computations and running scripts. The execution is done on utilities like
- * AWK, JFlat, TableJoin and XFlat are supported.
+ * AWK, JFlat and XFlat are supported.
  */
 @Slf4j
 @Data
@@ -67,57 +66,6 @@ public class ClientsExecutor {
 	private static final int PRIVATE_USE_LAST = 0xF8FF;
 
 	private TelemetryManager telemetryManager;
-
-	/**
-	 * Execute TableJoin
-	 *
-	 * @param leftTable              The left table.
-	 * @param rightTable             The right table.
-	 * @param leftKeyColumnNumber    The column number for the key in the left table.
-	 * @param rightKeyColumnNumber   The column number for the key in the right table.
-	 * @param defaultRightLine       The default line for the right table.
-	 * @param wbemKeyType            {@code true} if WBEM.
-	 * @param caseInsensitive        {@code true} for case-insensitive comparison.
-	 * @return The result of the table join operation.
-	 */
-	public List<List<String>> executeTableJoin(
-		final List<List<String>> leftTable,
-		final List<List<String>> rightTable,
-		final int leftKeyColumnNumber,
-		final int rightKeyColumnNumber,
-		final List<String> defaultRightLine,
-		final boolean wbemKeyType,
-		boolean caseInsensitive
-	) {
-		LoggingHelper.trace(
-			() -> log.trace(
-				"Executing Table Join request:\n- Left-table:\n{}\n- Right-table:\n{}\n",
-				TextTableHelper.generateTextTable(leftTable),
-				TextTableHelper.generateTextTable(rightTable)
-			)
-		);
-
-		List<List<String>> result = TableJoin.join(
-			leftTable,
-			rightTable,
-			leftKeyColumnNumber,
-			rightKeyColumnNumber,
-			defaultRightLine,
-			wbemKeyType,
-			caseInsensitive
-		);
-
-		LoggingHelper.trace(
-			() -> log.trace(
-				"Executed Table Join request:\n- Left-table:\n{}\n- Right-table:\n{}\n- Result:\n{}\n",
-				TextTableHelper.generateTextTable(leftTable),
-				TextTableHelper.generateTextTable(rightTable),
-				TextTableHelper.generateTextTable(result)
-			)
-		);
-
-		return result;
-	}
 
 	/**
 	 * Execute JSON to CSV operation. A document of {@link #JSON_EVENTS_MIN_LENGTH} characters or more is read as a

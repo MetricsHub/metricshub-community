@@ -65,7 +65,8 @@ monitors:
           rightTable: "${source::monitors.enclosure.discovery.sources.source(2)}"
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "" ]
+          joinType: left
+          rightColumns: 2
       mapping:
         # Now we have what is necessary to define the computer model
         source: "${source::monitors.enclosure.discovery.sources.source(3)}"
@@ -125,7 +126,8 @@ monitors:
           rightTable: "${source::monitors.enclosure.collect.sources.source(2)}"
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "" ]
+          joinType: left
+          rightColumns: 2
         source(4):
           # Source(4) = powerUsageTable SNMP Table
           # chassisIndex;systemWattage
@@ -146,7 +148,8 @@ monitors:
           rightTable: "${source::monitors.enclosure.collect.sources.source(4)}"
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "" ]
+          joinType: left
+          rightColumns: 2
       mapping:
         # The ValueTable = Source(5)
         source: "${source::monitors.enclosure.collect.sources.source(5)}"
@@ -632,7 +635,8 @@ monitors:
           rightTable: "${source::monitors.cpu.discovery.sources.source(2)}"
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "" ]
+          joinType: left
+          rightColumns: 2
       mapping:
         # InstanceTable = Source(3)
         source: "${source::monitors.cpu.discovery.sources.source(3)}"
@@ -684,7 +688,8 @@ monitors:
           rightTable: "${source::monitors.cpu.collect.sources.source(2)}"
           leftKeyColumn: 1
           rightKeyColumn: 1
-          defaultRightLine: [ "", "" ]
+          joinType: left
+          rightColumns: 2
       mapping:
         # ValueTable = Source(3)
         source: "${source::monitors.cpu.collect.sources.source(3)}"

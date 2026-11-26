@@ -47,6 +47,7 @@ import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.identity.ConnectorDefaultVariable;
+import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
 import org.metricshub.engine.connector.update.ContentTypeCheck;
 
@@ -452,6 +453,36 @@ public class ConnectorStoreComposer {
 		// A connector that breaks the strict content types (#1560) does not load
 		ContentTypeCheck.validate(connector, intermediateConnector.getConnectorId());
 
+		emptyDefaultRightLines(connector, intermediateConnector.getConnectorId()).forEach(log::warn);
+
 		return connector;
+	}
+
+	/**
+	 * Recommends <code>rightColumns</code> for each <code>tableJoin</code> whose <code>defaultRightLine</code> has only
+	 * empty cells: the number of cells says the same, and is read at a glance.
+	 *
+	 * @param connector   The connector
+	 * @param connectorId The identifier of the connector
+	 * @return one message per such <code>tableJoin</code>, in source order
+	 */
+	static List<String> emptyDefaultRightLines(final Connector connector, final String connectorId) {
+		final List<String> messages = new ArrayList<>();
+		ContentTypeCheck.forEachSource(connector, source -> {
+			if (
+				source instanceof TableJoinSource join &&
+					join.getDefaultRightLine() != null &&
+					join.getDefaultRightLine().stream().allMatch(String::isEmpty)
+			) {
+				messages.add(
+					"Connector %s - Source %s: defaultRightLine has only empty cells, write rightColumns: %d instead.".formatted(
+						connectorId,
+						join.getKey(),
+						join.getDefaultRightLine().size()
+					)
+				);
+			}
+		});
+		return messages;
 	}
 }

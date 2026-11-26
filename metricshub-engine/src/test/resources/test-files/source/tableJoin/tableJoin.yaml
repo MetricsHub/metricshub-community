@@ -9,4 +9,5 @@ beforeAll:
     rightTable: testRight
     leftKeyColumn: "2"
     rightKeyColumn: 3
+    joinType: left
     defaultRightLine: [ "testdefault", "", "" ]

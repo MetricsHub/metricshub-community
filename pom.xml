@@ -274,11 +274,6 @@
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
-				<artifactId>tablejoin</artifactId>
-				<version>1.0.02</version>
-			</dependency>
-			<dependency>
-				<groupId>org.metricshub</groupId>
 				<artifactId>snmp-java</artifactId>
 				<version>2.1.02</version>
 			</dependency>

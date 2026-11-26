@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -241,5 +242,50 @@ class ConnectorStoreComposerTest {
 			.getSources()
 			.get("process")
 			.getComputes();
+	}
+
+	@Test
+	void testEmptyDefaultRightLines() throws IOException {
+		final String yaml = """
+			connector:
+			  detection:
+			    appliesTo: [ Linux ]
+			beforeAll:
+			  empty:
+			    type: tableJoin
+			    leftTable: ${source::beforeAll.left}
+			    rightTable: ${source::beforeAll.right}
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			    joinType: left
+			    defaultRightLine: [ "", "", "" ]
+			  values:
+			    type: tableJoin
+			    leftTable: ${source::beforeAll.left}
+			    rightTable: ${source::beforeAll.right}
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			    joinType: left
+			    defaultRightLine: [ "", "0" ]
+			  columns:
+			    type: tableJoin
+			    leftTable: ${source::beforeAll.left}
+			    rightTable: ${source::beforeAll.right}
+			    leftKeyColumn: 1
+			    rightKeyColumn: 1
+			    joinType: left
+			    rightColumns: 3
+			""";
+		final Connector connector = new ConnectorDeserializer(JsonHelper.buildYamlMapper()).deserialize(
+			new SourceKeyProcessor().process(JsonHelper.buildYamlMapper().readTree(yaml))
+		);
+		// Only the default right line whose cells are all empty: rightColumns says the same
+		assertEquals(
+			List.of(
+				"Connector Test - Source ${source::beforeAll.empty}: defaultRightLine has only empty cells, " +
+					"write rightColumns: 3 instead."
+			),
+			ConnectorStoreComposer.emptyDefaultRightLines(connector, "Test")
+		);
 	}
 }

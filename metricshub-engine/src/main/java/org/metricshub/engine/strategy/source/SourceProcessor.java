@@ -372,17 +372,18 @@ public class SourceProcessor implements ISourceProcessor {
 			hostname
 		);
 
-		final List<List<String>> executeTableJoin = clientsExecutor.executeTableJoin(
-			leftTable.getTable(),
-			rightTable.getTable(),
-			tableJoinSource.getLeftKeyColumn(),
-			tableJoinSource.getRightKeyColumn(),
-			tableJoinSource.getDefaultRightLine() != null ? tableJoinSource.getDefaultRightLine() : new ArrayList<>(),
-			"wbem".equalsIgnoreCase(tableJoinSource.getKeyType()),
-			true
+		return SourceResult.ofTable(
+			TableJoin.join(
+				leftTable.getTable(),
+				rightTable.getTable(),
+				tableJoinSource.getLeftKeyColumn(),
+				tableJoinSource.getRightKeyColumn(),
+				tableJoinSource.getJoinType(),
+				tableJoinSource.getRightColumns(),
+				tableJoinSource.getDefaultRightLine(),
+				"wbem".equalsIgnoreCase(tableJoinSource.getKeyType())
+			)
 		);
-
-		return SourceResult.ofTable(executeTableJoin);
 	}
 
 	/**

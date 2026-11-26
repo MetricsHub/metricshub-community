@@ -44,6 +44,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JoinType;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -362,93 +363,76 @@ class SourceProcessorTest {
 			.connectorId(MY_CONNECTOR_1_NAME)
 			.build();
 
-		// standard
-		List<List<String>> expectedJoin = Arrays.asList(
-			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
-			Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
-			Arrays.asList(UPPERCASE_V1, UPPERCASE_V2, UPPERCASE_V3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
-			Arrays.asList(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1)
+		// left join with a default right line; the keys are compared case-insensitively
+		final List<List<String>> innerRows = List.of(
+			List.of(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
+			List.of(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
+			List.of(UPPERCASE_V1, UPPERCASE_V2, UPPERCASE_V3, LOWERCASE_V1, LOWERCASE_V2, LOWERCASE_V3)
 		);
-		SourceResult expectedResult = SourceResult.ofTable(expectedJoin);
-
-		List<List<String>> clientReturn = Arrays.asList(
-			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
-			Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
-			Arrays.asList(UPPERCASE_V1, UPPERCASE_V2, UPPERCASE_V3, CAMELCASE_VAL1, UPPERCASE_B2, UPPERCASE_C2),
-			Arrays.asList(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1)
-		);
-		doReturn(clientReturn).when(clientsExecutorMock)
-			.executeTableJoin(
-				tabl1.getTable(),
-				tabl2.getTable(),
-				1,
-				1,
-				Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1),
-				false,
-				true
-			);
-
+		final List<List<String>> leftRows = new ArrayList<>(innerRows);
+		leftRows.add(List.of(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1));
 		TableJoinSource tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable(TAB2_REF)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
+			.joinType(JoinType.LEFT)
 			.defaultRightLine(VALUE_LIST)
 			.build();
-		assertEquals(expectedJoin, sourceProcessor.process(tableJoinExample).getTable());
-		assertTrue(
-			expectedJoin.size() == sourceProcessor.process(tableJoinExample).getTable().size() &&
-				expectedJoin.containsAll(sourceProcessor.process(tableJoinExample).getTable()) &&
-				sourceProcessor.process(tableJoinExample).getTable().containsAll(expectedJoin)
-		);
-		assertEquals(expectedResult, sourceProcessor.process(tableJoinExample));
+		assertEquals(SourceResult.ofTable(leftRows), sourceProcessor.process(tableJoinExample));
 
-		// no default right line
-		expectedJoin = Arrays.asList(
-			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)
-		);
-		expectedResult = SourceResult.ofTable(expectedJoin);
-		doReturn(expectedJoin).when(clientsExecutorMock)
-			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, new ArrayList<>(), false, true);
+		// inner join, the default
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable(TAB2_REF)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
-			.defaultRightLine(null)
 			.build();
-		assertEquals(expectedResult, sourceProcessor.process(tableJoinExample));
+		assertEquals(SourceResult.ofTable(innerRows), sourceProcessor.process(tableJoinExample));
 
 		// the default right line is the exact cells, not split on ';'
-		final List<List<String>> listJoin = List.of(List.of("joined"));
-		doReturn(listJoin).when(clientsExecutorMock)
-			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, List.of("", "a;b", ""), false, true);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable(TAB2_REF)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
+			.joinType(JoinType.LEFT)
 			.defaultRightLine(List.of("", "a;b", ""))
 			.build();
-		assertEquals(listJoin, sourceProcessor.process(tableJoinExample).getTable());
+		assertEquals(
+			List.of(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, "", "a;b", ""),
+			sourceProcessor.process(tableJoinExample).getTable().get(3)
+		);
 
-		// table literals written as lists of rows: exactly these rows, a ';' in a cell included
-		final List<List<String>> leftRows = List.of(List.of("k", "a;b"));
-		final List<List<String>> rightRows = List.of(List.of("k", "c"), List.of("l", ""));
-		final List<List<String>> literalJoin = List.of(List.of("k", "a;b", "k", "c"));
-		doReturn(literalJoin).when(clientsExecutorMock)
-			.executeTableJoin(leftRows, rightRows, 1, 1, new ArrayList<>(), false, true);
+		// left join with right columns: empty cells
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
-			.leftTable(leftRows)
-			.rightTable(rightRows)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB2_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.joinType(JoinType.LEFT)
+			.rightColumns(2)
+			.build();
+		assertEquals(
+			List.of(LOWERCASE_X, LOWERCASE_Y, LOWERCASE_Z, "", ""),
+			sourceProcessor.process(tableJoinExample).getTable().get(3)
+		);
+
+		// table literals written as lists of rows: exactly these rows, a ';' in a cell included
+		final List<List<String>> leftLiteral = List.of(List.of("k", "a;b"));
+		final List<List<String>> rightLiteral = List.of(List.of("k", "c"), List.of("l", ""));
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(leftLiteral)
+			.rightTable(rightLiteral)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
 			.build();
-		assertEquals(literalJoin, sourceProcessor.process(tableJoinExample).getTable());
+		assertEquals(List.of(List.of("k", "a;b", "k", "c")), sourceProcessor.process(tableJoinExample).getTable());
 
 		// no matches
 		SourceResult tabl3 = SourceResult.ofTable(
@@ -458,35 +442,22 @@ class SourceProcessorTest {
 			)
 		);
 		mapSources.put(TAB3_REF, tabl3);
-		expectedJoin = Arrays.asList(Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C));
-		expectedResult = SourceResult.ofTable(expectedJoin);
-		doReturn(expectedJoin).when(clientsExecutorMock)
-			.executeTableJoin(tabl1.getTable(), tabl3.getTable(), 1, 1, new ArrayList<>(), false, true);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable(TAB3_REF)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
-			.defaultRightLine(null)
 			.build();
-		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
+		assertEquals(List.of(), sourceProcessor.process(tableJoinExample).getTable());
 
 		// wrong column key
-		tabl3 = SourceResult.ofTable(
-			Arrays.asList(
-				Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C),
-				Arrays.asList(LOWERCASE_V10, LOWERCASE_V20, LOWERCASE_V30)
-			)
-		);
-		mapSources.put(TAB3_REF, tabl3);
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable(TAB3_REF)
 			.leftKeyColumn(0)
 			.rightKeyColumn(1)
-			.defaultRightLine(null)
 			.build();
 		assertEquals(SourceResult.empty(), sourceProcessor.process(tableJoinExample));
 
@@ -497,7 +468,6 @@ class SourceProcessorTest {
 			.rightTable(TAB3_REF)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
-			.defaultRightLine(null)
 			.build();
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getTable());
 		tableJoinExample = TableJoinSource.builder()
@@ -506,32 +476,19 @@ class SourceProcessorTest {
 			.rightTable(null)
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
-			.defaultRightLine(null)
 			.build();
-		// table not in sources
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getTable());
+
+		// table not in sources, even for a left join
 		tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable("blabla")
 			.leftKeyColumn(1)
 			.rightKeyColumn(1)
-			.defaultRightLine(null)
+			.joinType(JoinType.LEFT)
 			.build();
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getTable());
-
-		tableJoinExample = TableJoinSource.builder()
-			.keyType(CAMELCASE_NOT_WBEM)
-			.leftTable(TAB1_REF)
-			.rightTable(TAB2_REF)
-			.leftKeyColumn(1)
-			.rightKeyColumn(1)
-			.defaultRightLine(null)
-			.build();
-		assertEquals(
-			Arrays.asList(Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)),
-			sourceProcessor.process(tableJoinExample).getTable()
-		);
 	}
 
 	@Test
