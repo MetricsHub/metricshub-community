@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
@@ -38,6 +39,7 @@ import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.parser.ConnectorParser;
+import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.connector.parser.ReferenceResolverProcessor;
 import org.metricshub.engine.connector.parser.SourceKeyProcessor;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
@@ -46,6 +48,7 @@ import org.metricshub.engine.connector.update.ContentTypeCheck;
 /**
  * Custom JSON deserializer for mapping monitor jobs from JSON to a {@code Map<String, MonitorJob>} using Jackson.
  */
+@Slf4j
 public class MonitorJobsDeserializer extends JsonDeserializer<Map<String, MonitorJob>> {
 
 	/**
@@ -83,6 +86,7 @@ public class MonitorJobsDeserializer extends JsonDeserializer<Map<String, Monito
 
 		// Monitors that break the strict content types (#1560) do not load, as for a connector
 		ContentTypeCheck.validate(connector, "(monitors of a resource)");
+		ConnectorStoreComposer.emptyDefaultRightLines(connector, "(monitors of a resource)").forEach(log::warn);
 
 		// Here we are going to get the parsing context to get the parent object (ResourceConfig)
 		// Once the parent is retrieved, the connector is set in this parent instance.

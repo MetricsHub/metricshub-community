@@ -80,7 +80,7 @@ public class ConnectorStoreComposer {
 	/**
 	 * Error message used when connector deserialization fails.
 	 */
-	private static final String DESERIALIZATION_ERROR_MESSAGE = "Error while deserializing connector {}.";
+	private static final String DESERIALIZATION_ERROR_MESSAGE = "Error while deserializing connector {}: {}";
 
 	/**
 	 * Log message template for printing exceptions.
@@ -149,7 +149,7 @@ public class ConnectorStoreComposer {
 						// Add all the resulting connectors in the connector store
 						connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
 					} catch (IOException e) {
-						log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
+						log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId, e.getMessage());
 						log.debug(EXCEPTION_MESSAGE, e);
 					}
 				}
@@ -213,7 +213,7 @@ public class ConnectorStoreComposer {
 			try {
 				connectors.put(connectorId, parseConnector(processedIntermediateConnector));
 			} catch (IOException e) {
-				log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
+				log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId, e.getMessage());
 				log.debug(EXCEPTION_MESSAGE + e);
 			}
 		});
@@ -466,7 +466,7 @@ public class ConnectorStoreComposer {
 	 * @param connectorId The identifier of the connector
 	 * @return one message per such <code>tableJoin</code>, in source order
 	 */
-	static List<String> emptyDefaultRightLines(final Connector connector, final String connectorId) {
+	public static List<String> emptyDefaultRightLines(final Connector connector, final String connectorId) {
 		final List<String> messages = new ArrayList<>();
 		ContentTypeCheck.forEachSource(connector, source -> {
 			if (

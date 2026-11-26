@@ -282,9 +282,13 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "0", "-1", "a", "1.5" })
+	@ValueSource(strings = { "0", "-1", "a", "1.5", "[ 14 ]", "{ a: 1 }" })
 	void testColumnsNotPositive(final String columns) {
-		assertThrows(IOException.class, () -> deserializeJoin("joinType: left", "rightColumns: " + columns));
+		// A list or a map must not be skipped: it would also drop the properties after it, here keyType
+		assertThrows(
+			IOException.class,
+			() -> deserializeJoin("joinType: left", "rightColumns: " + columns, "keyType: wbem")
+		);
 	}
 
 	@ParameterizedTest
