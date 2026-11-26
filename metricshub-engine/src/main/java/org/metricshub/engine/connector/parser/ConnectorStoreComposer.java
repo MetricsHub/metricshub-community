@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.parser;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -80,7 +81,7 @@ public class ConnectorStoreComposer {
 	/**
 	 * Error message used when connector deserialization fails.
 	 */
-	private static final String DESERIALIZATION_ERROR_MESSAGE = "Error while deserializing connector {}: {}";
+	private static final String DESERIALIZATION_ERROR_MESSAGE = "Error while deserializing connector {}.";
 
 	/**
 	 * Log message template for printing exceptions.
@@ -149,8 +150,7 @@ public class ConnectorStoreComposer {
 						// Add all the resulting connectors in the connector store
 						connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
 					} catch (IOException e) {
-						log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId, e.getMessage());
-						log.debug(EXCEPTION_MESSAGE, e);
+						logLoadError(connectorId, e);
 					}
 				}
 			});
@@ -213,8 +213,7 @@ public class ConnectorStoreComposer {
 			try {
 				connectors.put(connectorId, parseConnector(processedIntermediateConnector));
 			} catch (IOException e) {
-				log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId, e.getMessage());
-				log.debug(EXCEPTION_MESSAGE + e);
+				logLoadError(connectorId, e);
 			}
 		});
 		return connectors;
@@ -456,6 +455,23 @@ public class ConnectorStoreComposer {
 		emptyDefaultRightLines(connector, intermediateConnector.getConnectorId()).forEach(log::warn);
 
 		return connector;
+	}
+
+	/**
+	 * Logs why a connector does not load. A deserialization error says why at ERROR, for instance a
+	 * <code>defaultRightLine</code> without <code>joinType: left</code>; the content type check has already logged
+	 * each of its findings at ERROR.
+	 *
+	 * @param connectorId The identifier of the connector
+	 * @param e           The error
+	 */
+	private static void logLoadError(final String connectorId, final IOException e) {
+		if (e instanceof JsonProcessingException jsonException) {
+			log.error("Error while deserializing connector {}: {}", connectorId, jsonException.getOriginalMessage());
+		} else {
+			log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
+		}
+		log.debug(EXCEPTION_MESSAGE, e);
 	}
 
 	/**
