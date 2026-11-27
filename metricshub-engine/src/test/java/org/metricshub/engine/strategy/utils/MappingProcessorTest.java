@@ -745,6 +745,83 @@ class MappingProcessorTest {
 	}
 
 	@Test
+	void testTotalsWithSeveralRowsOnTheSameMonitorAndNoSave() {
+		final Monitor monitor = Monitor.builder().build();
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
+			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
+			.build();
+		final String energy = "hw.enclosure.energy";
+		final String errors = "hw.errors";
+
+		// Each run maps two rows (power in watts, errors since the last reading) to the same monitor, one minute after the
+		// run before, and no run is preceded by PrepareCollectStrategy: the last row wins, as it does after a save()
+
+		// First reading: no energy, not even 0
+		assertEquals(Map.of(energy, "", errors, "5.0"), mapRow(telemetryManager, monitor, List.of("100", "5"), 60000L));
+		assertEquals(Map.of(energy, "", errors, "7.0"), mapRow(telemetryManager, monitor, List.of("200", "7"), 60000L));
+
+		// Each row adds to the total of the run before, not to the total of the row before
+		assertEquals(
+			Map.of(energy, "6000.0", errors, "8.0"),
+			mapRow(telemetryManager, monitor, List.of("100", "1"), 120000L)
+		);
+		assertEquals(
+			Map.of(energy, "12000.0", errors, "9.0"),
+			mapRow(telemetryManager, monitor, List.of("200", "2"), 120000L)
+		);
+
+		// The total of the run before is the one of its last row
+		assertEquals(
+			Map.of(energy, "18000.0", errors, "10.0"),
+			mapRow(telemetryManager, monitor, List.of("100", "1"), 180000L)
+		);
+		assertEquals(
+			Map.of(energy, "24000.0", errors, "10.0"),
+			mapRow(telemetryManager, monitor, List.of("200", "1"), 180000L)
+		);
+	}
+
+	/**
+	 * Map a row to the monitor as the strategies do: interpret <code>fakeCounter($1)</code> and
+	 * <code>accumulate($2)</code>, then collect the metrics that have a value.
+	 *
+	 * @param telemetryManager The telemetry manager
+	 * @param monitor          The monitor the row is mapped to
+	 * @param row              The power and the number of errors
+	 * @param collectTime      The collect time of the run
+	 * @return the value of each metric
+	 */
+	private static Map<String, String> mapRow(
+		final TelemetryManager telemetryManager,
+		final Monitor monitor,
+		final List<String> row,
+		final long collectTime
+	) {
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
+			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
+			.telemetryManager(telemetryManager)
+			.mapping(
+				Mapping.builder()
+					.source(HARDCODED_SOURCE)
+					.metrics(Map.of("hw.enclosure.energy", "fakeCounter($1)", "hw.errors", "accumulate($2)"))
+					.build()
+			)
+			.row(row)
+			.collectTime(collectTime)
+			.build();
+		mappingProcessor.interpretNonContextMappingMetrics();
+		final Map<String, String> metrics = mappingProcessor.interpretContextMappingMetrics(monitor);
+
+		final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME, new ConnectorStore());
+		metrics.forEach((name, value) -> {
+			if (!value.isEmpty()) {
+				metricFactory.collectNumberMetric(monitor, name, value, collectTime);
+			}
+		});
+		return metrics;
+	}
+
+	@Test
 	void testInterpretNonContextMappingAccumulate() {
 		Monitor monitor = Monitor.builder().build();
 

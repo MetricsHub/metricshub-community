@@ -457,6 +457,10 @@ public class MappingProcessor {
 
 		final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
+		// The previous reading and the previous counter must be those of the last run
+		saveLastRun(monitor, metricRateName);
+		saveLastRun(monitor, metricName);
+
 		// Collect the metric raw value
 		final Double rawValue = maybeMetricRateValue.get();
 		metricFactory.collectNumberMetric(monitor, metricRateName, rawValue, collectTime);
@@ -502,6 +506,23 @@ public class MappingProcessor {
 			);
 		}
 		return EMPTY;
+	}
+
+	/**
+	 * Save the value and the collect time of the given metric as its previous ones, unless this run already collected
+	 * it. The functions that add to the total of the last run read these previous values:
+	 * <code>PrepareCollectStrategy</code> saves them before a collect, but not before the simple jobs of the discovery
+	 * phase. When several rows are mapped to the same monitor during a run, the rows after the first one find the metric
+	 * collected at this collect time: the previous values stay those of the last run.
+	 *
+	 * @param monitor    The monitor we currently collect.
+	 * @param metricName The name of the metric to save.
+	 */
+	private void saveLastRun(final Monitor monitor, final String metricName) {
+		final NumberMetric metric = monitor.getMetric(metricName, NumberMetric.class);
+		if (metric != null && !Long.valueOf(collectTime).equals(metric.getCollectTime())) {
+			metric.save();
+		}
 	}
 
 	/**
@@ -627,6 +648,9 @@ public class MappingProcessor {
 
 		// Start with the current delta value
 		Double counter = maybeDeltaValue.get();
+
+		// The previous counter must be the one of the last run
+		saveLastRun(monitor, metricName);
 
 		// Get the previous counter value to accumulate
 		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);

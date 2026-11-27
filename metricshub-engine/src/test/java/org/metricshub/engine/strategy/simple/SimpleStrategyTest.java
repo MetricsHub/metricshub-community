@@ -89,6 +89,9 @@ class SimpleStrategyTest {
 	private static final String IDLE_ENTITY = "idle_entity";
 	private static final String COUNTER_METRIC = "test.counter";
 	private static final String RATE_FROM_METRIC = "__test.rate.rate_from";
+	private static final String METER = "meter";
+	private static final String ERRORS_METRIC = "test.errors";
+	private static final String ENERGY_METRIC = "test.energy";
 
 	@Mock
 	private ClientsExecutor clientsExecutorMock;
@@ -453,6 +456,48 @@ class SimpleStrategyTest {
 		assertEquals(strategyTime, process1Counter.getPreviousCollectTime());
 		assertEquals(10.0, process1.getMetric(RATE_FROM_METRIC, NumberMetric.class).getPreviousValue());
 		assertEquals(1.0, process1.getMetric("test.rate", NumberMetric.class).getValue());
+	}
+
+	@Test
+	void testRunAddsToTheLastTotalWhenNotPrepared() {
+		final TelemetryManager telemetryManager = newRemovalTelemetryManager(HostConfiguration.builder());
+		final String sourceKey = SOURCE_KEY_FORMAT.formatted(METER);
+
+		// Three collect cycles, one minute apart. The meter job reads the errors since the last reading and the power in
+		// watts: accumulate() totals the errors, fakeCounter() the energy in joules
+		sourceResults.put(sourceKey, "meter-1;0;100");
+		collect(telemetryManager, strategyTime);
+		final Monitor meter = telemetryManager.getMonitors().get(METER).get("TestConnectorWithRemoval_meter_meter-1");
+		assertEquals(0.0, meter.getMetric(ERRORS_METRIC, NumberMetric.class).getValue());
+		assertNull(meter.getMetric(ENERGY_METRIC, NumberMetric.class));
+
+		sourceResults.put(sourceKey, "meter-1;5;100");
+		collect(telemetryManager, strategyTime + 60 * 1000);
+		assertEquals(5.0, meter.getMetric(ERRORS_METRIC, NumberMetric.class).getValue());
+		assertEquals(6000.0, meter.getMetric(ENERGY_METRIC, NumberMetric.class).getValue());
+
+		sourceResults.put(sourceKey, "meter-1;3;100");
+		collect(telemetryManager, strategyTime + 2 * 60 * 1000);
+		assertEquals(8.0, meter.getMetric(ERRORS_METRIC, NumberMetric.class).getValue());
+		assertEquals(12000.0, meter.getMetric(ENERGY_METRIC, NumberMetric.class).getValue());
+
+		// Discovery cycle: the monitoring task runs the simple jobs at the discovery time, without PrepareCollectStrategy...
+		final long discoveryTime = strategyTime + 3 * 60 * 1000;
+		sourceResults.put(sourceKey, "meter-1;2;10");
+		new SimpleStrategy(
+			telemetryManager,
+			discoveryTime,
+			clientsExecutorMock,
+			ExtensionManager.builder().withProtocolExtensions(List.of(protocolExtensionMock)).build()
+		).run();
+		assertEquals(10.0, meter.getMetric(ERRORS_METRIC, NumberMetric.class).getValue());
+		assertEquals(12600.0, meter.getMetric(ENERGY_METRIC, NumberMetric.class).getValue());
+
+		// ... then again at the collect time, 5 seconds later
+		sourceResults.put(sourceKey, "meter-1;1;10");
+		collect(telemetryManager, discoveryTime + 5 * 1000);
+		assertEquals(11.0, meter.getMetric(ERRORS_METRIC, NumberMetric.class).getValue());
+		assertEquals(12650.0, meter.getMetric(ENERGY_METRIC, NumberMetric.class).getValue());
 	}
 
 	@Test
