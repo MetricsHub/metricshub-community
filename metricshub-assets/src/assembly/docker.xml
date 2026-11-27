@@ -32,14 +32,6 @@
 	<fileSets>
 
 		<fileSet>
-			<directory>src/main/resources/common</directory>
-			<outputDirectory>/defaults</outputDirectory>
-			<fileMode>0644</fileMode>
-			<lineEnding>unix</lineEnding>
-			<filtered>false</filtered>
-		</fileSet>
-
-		<fileSet>
 			<directory>src/main/resources/linux/config</directory>
 			<outputDirectory>/defaults/config</outputDirectory>
 			<fileMode>0644</fileMode>

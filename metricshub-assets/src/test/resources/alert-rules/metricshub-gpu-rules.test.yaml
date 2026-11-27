@@ -1,8 +1,8 @@
 # Run from this folder with: promtool test rules metricshub-gpu-rules.test.yaml
 # The hardware rules are loaded too, because several GPU and NVLink alerts stop when a hardware alert fires.
 rule_files:
-  - ../../../main/resources/common/config/metricshub-gpu-rules.yaml
-  - ../../../main/resources/common/config/metricshub-hardware-rules.yaml
+  - ../../../main/resources/common/alert-rules/metricshub-gpu-rules.yaml
+  - ../../../main/resources/common/alert-rules/metricshub-hardware-rules.yaml
 
 evaluation_interval: 15s
 
