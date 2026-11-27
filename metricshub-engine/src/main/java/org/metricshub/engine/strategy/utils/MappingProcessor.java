@@ -457,13 +457,15 @@ public class MappingProcessor {
 
 		final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
-		// The time of the last reading, read before this reading replaces it: PrepareCollectStrategy does not save it as the
-		// previous collect time before every run (simple job of the discovery phase)
-		final Double collectTimePrevious = CollectHelper.getNumberMetricCollectTime(monitor, metricRateName, false);
+		// The previous reading and the previous counter must be those of the last run
+		saveLastRun(monitor, metricRateName);
+		saveLastRun(monitor, metricName);
 
 		// Collect the metric raw value
 		final Double rawValue = maybeMetricRateValue.get();
 		metricFactory.collectNumberMetric(monitor, metricRateName, rawValue, collectTime);
+
+		final Double collectTimePrevious = CollectHelper.getNumberMetricCollectTime(monitor, metricRateName, true);
 
 		final Double deltaTimeMs = MathOperationsHelper.subtract(
 			metricRateName,
@@ -482,9 +484,8 @@ public class MappingProcessor {
 			// The counter will start from the usage delta
 			Double counter = usageDelta;
 
-			// The last counter is needed to make a sum with the delta counter value on this collect: it is the current
-			// value of the metric, saved or not as its previous value
-			Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, false);
+			// The previous counter is needed to make a sum with the delta counter value on this collect
+			Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
 
 			// Ok, we have the previous counter value ? sum the previous counter and the current delta counter
 			if (previousCounter != null) {
@@ -505,6 +506,23 @@ public class MappingProcessor {
 			);
 		}
 		return EMPTY;
+	}
+
+	/**
+	 * Save the value and the collect time of the given metric as its previous ones, unless this run already collected
+	 * it. The functions that add to the total of the last run read these previous values:
+	 * <code>PrepareCollectStrategy</code> saves them before a collect, but not before the simple jobs of the discovery
+	 * phase. When several rows are mapped to the same monitor during a run, the rows after the first one find the metric
+	 * collected at this collect time: the previous values stay those of the last run.
+	 *
+	 * @param monitor    The monitor we currently collect.
+	 * @param metricName The name of the metric to save.
+	 */
+	private void saveLastRun(final Monitor monitor, final String metricName) {
+		final NumberMetric metric = monitor.getMetric(metricName, NumberMetric.class);
+		if (metric != null && !Long.valueOf(collectTime).equals(metric.getCollectTime())) {
+			metric.save();
+		}
 	}
 
 	/**
@@ -599,8 +617,8 @@ public class MappingProcessor {
 	}
 
 	/**
-	 * Accumulate delta values into a counter. On each run of the job, the current delta value
-	 * is added to the last counter value. If there is no last value, the current delta
+	 * Accumulate delta values into a counter. On each collect cycle, the current delta value
+	 * is added to the previous counter value. If no previous value exists, the current delta
 	 * value is used as the initial counter value.
 	 *
 	 * @param keyValuePair key-value where the key is the metric name and the value is function call
@@ -631,9 +649,11 @@ public class MappingProcessor {
 		// Start with the current delta value
 		Double counter = maybeDeltaValue.get();
 
-		// Get the last counter value to accumulate: it is the current value of the metric, saved or not as its previous
-		// value (PrepareCollectStrategy does not run before the simple job of the discovery phase)
-		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, false);
+		// The previous counter must be the one of the last run
+		saveLastRun(monitor, metricName);
+
+		// Get the previous counter value to accumulate
+		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
 
 		// If a previous counter exists, add the current delta to it
 		if (previousCounter != null) {
