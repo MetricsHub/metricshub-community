@@ -396,6 +396,12 @@
 			<artifactId>winrm-java</artifactId>
 		</dependency>
 
+		<!-- IPMI Java Client, whose own CLI backs the ipmicli launcher -->
+		<dependency>
+			<groupId>org.metricshub</groupId>
+			<artifactId>ipmi-java</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>
