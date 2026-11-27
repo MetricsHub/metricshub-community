@@ -391,6 +391,19 @@
 							<finalName>assets</finalName>
 						</configuration>
 					</execution>
+					<execution>
+						<id>alert-rules</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<descriptors>
+								<descriptor>src/assembly/alert-rules.xml</descriptor>
+							</descriptors>
+							<finalName>assets</finalName>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>

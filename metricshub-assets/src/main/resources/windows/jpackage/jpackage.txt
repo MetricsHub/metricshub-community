@@ -5,7 +5,7 @@
 --description "${package.description}"
 --vendor "MetricsHub"
 --app-version ${project.version.noSnapshot}
---app-content assets\connectors,assets\config,assets\LICENSE,assets\extensions,assets\web,assets\upgrade-runner
+--app-content assets\connectors,assets\config,assets\alert-rules,assets\LICENSE,assets\extensions,assets\web,assets\upgrade-runner
 --win-console
 --main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports
