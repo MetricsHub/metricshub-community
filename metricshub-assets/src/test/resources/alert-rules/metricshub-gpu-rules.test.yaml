@@ -1,0 +1,490 @@
+# Run from this folder with: promtool test rules metricshub-gpu-rules.test.yaml
+# The hardware rules are loaded too, because several GPU and NVLink alerts stop when a hardware alert fires.
+rule_files:
+  - ../../../main/resources/common/config/metricshub-gpu-rules.yaml
+  - ../../../main/resources/common/config/metricshub-hardware-rules.yaml
+
+evaluation_interval: 15s
+
+tests:
+
+  # An error counter that goes from 0 to 1 fires its alert without an hour of history, and clears an hour later.
+  - name: Error counters that grow
+    interval: 1m
+    input_series:
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="ecc-memory-corrected"}'
+        values: '0x10 1x120'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="ecc-memory-uncorrected"}'
+        values: '0x10 1x120'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="xid"}'
+        values: '0x10 1x120'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="nvlink-crc"}'
+        values: '0x10 1x120'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="nvlink-replay"}'
+        values: '0x10 1x120'
+      # A MIG instance must not raise the GPU NVLink alerts.
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu1-mig-3", name="GPU 1 (MIG 3)", hw_type="gpu", hw_gpu_nvidia_mig_instance_id="3", hw_error_type="nvlink-replay"}'
+        values: '0x10 1x120'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="port0", name="port 0", hw_type="network", device_type="NVLink", hw_error_type="crc"}'
+        values: '0x10 1x120'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="port0", name="port 0", hw_type="network", device_type="NVLink", hw_error_type="replay"}'
+        values: '0x10 1x120'
+      # A counter that first appears above zero is a starting point, not growth.
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu2", name="GPU 2", hw_type="gpu", hw_error_type="xid"}'
+        values: '_x10 7x120'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: MetricsHub-GPU-MemoryErrors-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: ecc-memory-corrected}
+            exp_annotations:
+              summary: "GPU 0 on h1: corrected memory error count increased by 1 in the last hour"
+              description: "The GPU recorded corrected memory errors in the last hour.\nConsequence: A growing error count can indicate a memory problem.\nRecommended action: Monitor the error count. If it continues to increase, schedule NVIDIA GPU diagnostics.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nNew errors in the last hour: 1\n"
+      - eval_time: 15m
+        alertname: MetricsHub-GPU-MemoryErrors-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: ecc-memory-uncorrected}
+            exp_annotations:
+              summary: "GPU 0 on h1: uncorrected memory error count increased by 1 in the last hour"
+              description: "The GPU recorded uncorrected memory errors in the last hour.\nConsequence: These errors can cause affected jobs to fail or produce incorrect results.\nRecommended action: Check affected jobs and the GPU recovery status. Follow the recovery action reported by the driver and run NVIDIA GPU diagnostics.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nNew errors in the last hour: 1\n"
+      - eval_time: 15m
+        alertname: MetricsHub-GPU-XidErrors-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: xid}
+            exp_annotations:
+              summary: "GPU 0 on h1: XID error count increased by 1 in the last hour"
+              description: "The NVIDIA driver reported new XID errors for the GPU in the last hour.\nConsequence: XID errors can indicate an application, driver or hardware problem.\nRecommended action: Find the XID codes in the server's kernel log and check NVIDIA's XID documentation.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nNew XID errors in the last hour: 1\n"
+      - eval_time: 15m
+        alertname: MetricsHub-NVLink-GPU-Errors-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: nvlink-crc}
+            exp_annotations:
+              summary: "GPU 0 on h1: nvlink-crc error count increased by 1 in the last hour"
+              description: "The GPU recorded new CRC errors on its NVLink connections in the last hour.\nConsequence: Link errors can slow communication between GPUs or make it less reliable.\nRecommended action: Monitor the error count. If it continues to increase, inspect the GPU and the devices at the other ends of its NVLink connections.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nError type: nvlink-crc\nNew errors in the last hour: 1\n"
+      - eval_time: 15m
+        alertname: MetricsHub-NVLink-GPU-Errors-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: nvlink-replay}
+            exp_annotations:
+              summary: "GPU 0 on h1: nvlink-replay error count increased by 1 in the last hour"
+              description: "The GPU recorded NVLink replay or recovery errors in the last hour.\nConsequence: Resending data or restoring a link can interrupt communication between GPUs. These errors can also cause the GPU's DCGM health check to fail.\nRecommended action: Check the GPU and the devices at the other ends of its NVLink connections. Schedule a hardware inspection.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nError type: nvlink-replay\nNew errors in the last hour: 1\n"
+      - eval_time: 15m
+        alertname: MetricsHub-NVLink-Port-Errors-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: port, host_name: h1, site: s1, id: port0, hw_error_type: crc}
+            exp_annotations:
+              summary: "NVLink port port0 on h1: crc error count increased by 1 in the last hour"
+              description: "The NVLink port recorded new CRC, ECC or flit errors in the last hour.\nConsequence: Link errors can slow communication between GPUs or make it less reliable.\nRecommended action: Monitor the error count. If it continues to increase, inspect the GPU and NVSwitch at both ends of the link.\n\nHost: h1\nPort ID: port0\nError type: crc\nNew errors in the last hour: 1\n"
+      - eval_time: 15m
+        alertname: MetricsHub-NVLink-Port-Errors-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: port, host_name: h1, site: s1, id: port0, hw_error_type: replay}
+            exp_annotations:
+              summary: "NVLink port port0 on h1: replay error count increased by 1 in the last hour"
+              description: "The NVLink port recorded replay or recovery errors in the last hour.\nConsequence: Resending data or restoring a link can interrupt communication between GPUs. These errors can also cause the connected GPU's DCGM health check to fail.\nRecommended action: Check the GPU and NVSwitch at both ends of the link. Schedule a hardware inspection.\n\nHost: h1\nPort ID: port0\nError type: replay\nNew errors in the last hour: 1\n"
+      - eval_time: 75m
+        alertname: MetricsHub-GPU-MemoryErrors-Warning
+      - eval_time: 75m
+        alertname: MetricsHub-GPU-XidErrors-Warning
+      - eval_time: 75m
+        alertname: MetricsHub-NVLink-Port-Errors-Critical
+
+  # An hour with a counter decrease is discarded. Growth counts again once the decrease is an hour old.
+  - name: Error counter that decreases, then grows
+    interval: 1m
+    input_series:
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="xid"}'
+        values: '5x10 3x10 4x50 5x60'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: MetricsHub-GPU-XidErrors-Warning
+      - eval_time: 74m
+        alertname: MetricsHub-GPU-XidErrors-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: xid}
+            exp_annotations:
+              summary: "GPU 0 on h1: XID error count increased by 2 in the last hour"
+              description: "The NVIDIA driver reported new XID errors for the GPU in the last hour.\nConsequence: XID errors can indicate an application, driver or hardware problem.\nRecommended action: Find the XID codes in the server's kernel log and check NVIDIA's XID documentation.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nNew XID errors in the last hour: 2\n"
+
+  # Accepted limit: an error counted at the moment a port changes name is not seen.
+  - name: Port error counter across a name change
+    interval: 1m
+    input_series:
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="port0", name="port 0 (up)", hw_type="network", device_type="NVLink", hw_error_type="crc"}'
+        values: '0x10'
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="port0", name="port 0 (down)", hw_type="network", device_type="NVLink", hw_error_type="crc"}'
+        values: '_x11 1x60'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: MetricsHub-NVLink-Port-Errors-Warning
+
+  # The critical memory alert stops only when Device-Status-Critical fires for the memory of the same GPU.
+  - name: Memory errors and the memory status
+    interval: 1m
+    input_series:
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_error_type="ecc-memory-uncorrected"}'
+        values: '0x10 1x20 2x20 3x20'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_gpu_subsystem="memory", state="failed"}'
+        values: '0x20 1x60'
+      # None of these three may stop the alert of gpu1: another site, another subsystem, and a warning.
+      - series: 'hw_errors_total{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_type="gpu", hw_error_type="ecc-memory-uncorrected"}'
+        values: '0x10 1x20 2x20 3x20'
+      - series: 'hw_status{host_name="h1", site="s2", id="gpu1", name="GPU 1", hw_type="gpu", hw_gpu_subsystem="memory", state="failed"}'
+        values: '1x80'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_type="gpu", hw_gpu_subsystem="thermal", state="failed"}'
+        values: '1x80'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_type="gpu", hw_gpu_subsystem="memory", state="degraded"}'
+        values: '1x80'
+    alert_rule_test:
+      # The status of gpu0 is still pending at 24m, so both GPUs alert.
+      - eval_time: 24m
+        alertname: MetricsHub-GPU-MemoryErrors-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_error_type: ecc-memory-uncorrected}
+            exp_annotations:
+              summary: "GPU 0 on h1: uncorrected memory error count increased by 1 in the last hour"
+              description: "The GPU recorded uncorrected memory errors in the last hour.\nConsequence: These errors can cause affected jobs to fail or produce incorrect results.\nRecommended action: Check affected jobs and the GPU recovery status. Follow the recovery action reported by the driver and run NVIDIA GPU diagnostics.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nNew errors in the last hour: 1\n"
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu1, name: GPU 1, hw_error_type: ecc-memory-uncorrected}
+            exp_annotations:
+              summary: "GPU 1 on h1: uncorrected memory error count increased by 1 in the last hour"
+              description: "The GPU recorded uncorrected memory errors in the last hour.\nConsequence: These errors can cause affected jobs to fail or produce incorrect results.\nRecommended action: Check affected jobs and the GPU recovery status. Follow the recovery action reported by the driver and run NVIDIA GPU diagnostics.\n\nHost: h1\nGPU: GPU 1\nGPU ID: gpu1\nNew errors in the last hour: 1\n"
+      - eval_time: 40m
+        alertname: MetricsHub-GPU-MemoryErrors-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu1, name: GPU 1, hw_error_type: ecc-memory-uncorrected}
+            exp_annotations:
+              summary: "GPU 1 on h1: uncorrected memory error count increased by 2 in the last hour"
+              description: "The GPU recorded uncorrected memory errors in the last hour.\nConsequence: These errors can cause affected jobs to fail or produce incorrect results.\nRecommended action: Check affected jobs and the GPU recovery status. Follow the recovery action reported by the driver and run NVIDIA GPU diagnostics.\n\nHost: h1\nGPU: GPU 1\nGPU ID: gpu1\nNew errors in the last hour: 2\n"
+
+  - name: Thermal throttling
+    interval: 1m
+    input_series:
+      # 30 seconds of throttling at 11m, then 90 seconds at 41m.
+      - series: 'hw_gpu_throttle_time_seconds_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_throttle_reason="software-thermal"}'
+        values: '0x10 30x29 120x60'
+      - series: 'hw_gpu_throttle_time_seconds_total{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_throttle_reason="hardware-thermal"}'
+        values: '0x10 30x29 120x60'
+      # Same throttling on gpu1, whose thermal status already alerts.
+      - series: 'hw_gpu_throttle_time_seconds_total{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_gpu_throttle_reason="software-thermal"}'
+        values: '0x10 30x29 120x60'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_type="gpu", hw_gpu_subsystem="thermal", state="degraded"}'
+        values: '1x100'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: MetricsHub-GPU-ThermalThrottling-Warning
+      - eval_time: 15m
+        alertname: MetricsHub-GPU-ThermalThrottling-Critical
+      # Checked at 45m30s, between two samples, so that Prometheus 2 and 3 compute the same duration.
+      - eval_time: 45m30s
+        alertname: MetricsHub-GPU-ThermalThrottling-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0}
+            exp_annotations:
+              summary: "GPU 0 on h1 was throttled by the driver for 1m 36s in the last 15 minutes"
+              description: "The driver reduced the GPU clock speed because of heat for more than 1 minute in the last 15 minutes.\nConsequence: Reduced clock speeds can slow down jobs on this GPU.\nRecommended action: Check the server's fans, airflow and room temperature.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nTime throttled by the driver in the last 15 minutes: 1m 36s\n"
+      - eval_time: 45m30s
+        alertname: MetricsHub-GPU-ThermalThrottling-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0}
+            exp_annotations:
+              summary: "GPU 0 on h1 recorded hardware thermal throttling for 1m 36s in the last 15 minutes"
+              description: "The GPU hardware reduced its clock speed to protect against overheating for more than 1 minute in the last 15 minutes.\nConsequence: This reduces GPU performance and can slow down jobs.\nRecommended action: Check the server's fans, airflow and room temperature now.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nTime throttled by the hardware in the last 15 minutes: 1m 36s\n"
+
+  # A named configuration fault alerts even when the fabric status of the GPU reads ok.
+  - name: Fabric configuration fault
+    interval: 1m
+    input_series:
+      - series: 'hw_gpu_fabric_configuration_status{host_name="h1", site="s1", id="gpu0", name="GPU 0", state="ok"}'
+        values: '0x30'
+      - series: 'hw_gpu_fabric_configuration_status{host_name="h1", site="s1", id="gpu0", name="GPU 0", state="incompatible-gpu-firmware"}'
+        values: '1x30'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_gpu_subsystem="fabric", state="ok"}'
+        values: '1x30'
+      # A healthy GPU.
+      - series: 'hw_gpu_fabric_configuration_status{host_name="h1", site="s1", id="gpu1", name="GPU 1", state="ok"}'
+        values: '1x30'
+      - series: 'hw_gpu_fabric_configuration_status{host_name="h1", site="s1", id="gpu1", name="GPU 1", state="no-partition"}'
+        values: '0x30'
+      # A fault that lasts 3 minutes.
+      - series: 'hw_gpu_fabric_configuration_status{host_name="h1", site="s1", id="gpu2", name="GPU 2", state="no-partition"}'
+        values: '1x3 0x27'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: MetricsHub-GPU-FabricConfiguration-Warning
+      - eval_time: 10m
+        alertname: MetricsHub-GPU-FabricConfiguration-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, state: incompatible-gpu-firmware}
+            exp_annotations:
+              summary: "GPU 0 on h1 reports a fabric configuration fault: incompatible-gpu-firmware"
+              description: "The GPU reports a fault in its NVLink fabric configuration.\nConsequence: The GPU may not be able to exchange data with the other GPUs of the fabric until the configuration is corrected.\nRecommended action: Check what the reported fault names: the GPU firmware, the partition, the number of links, or the identity and location of the system. Then check the Fabric Manager logs.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nFault: incompatible-gpu-firmware\n"
+
+  - name: Recovery action and the driver status
+    interval: 1m
+    input_series:
+      - series: 'hw_gpu_recovery_action{host_name="h1", site="s1", id="gpu0", name="GPU 0", state="none"}'
+        values: '1x10 0x60'
+      - series: 'hw_gpu_recovery_action{host_name="h1", site="s1", id="gpu0", name="GPU 0", state="gpu-reset"}'
+        values: '0x10 1x60'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_type="gpu", hw_gpu_subsystem="driver", state="failed"}'
+        values: '0x30 1x40'
+      # An action that the DCGM driver check ignores, so no status ever takes over.
+      - series: 'hw_gpu_recovery_action{host_name="h1", site="s1", id="gpu1", name="GPU 1", state="recover-imex-domain"}'
+        values: '1x70'
+    alert_rule_test:
+      - eval_time: 33m
+        alertname: MetricsHub-GPU-RecoveryAction-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, state: gpu-reset}
+            exp_annotations:
+              summary: "GPU 0 on h1 requires recovery action: gpu-reset"
+              description: "The NVIDIA driver reports that a recovery action is required for this GPU.\nConsequence: The GPU may not operate correctly until recovery is complete.\nRecommended action: Follow NVIDIA's procedure for the reported action. Stop or drain affected jobs before a GPU reset or server reboot.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nAction: gpu-reset\n"
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu1, name: GPU 1, state: recover-imex-domain}
+            exp_annotations:
+              summary: "GPU 1 on h1 requires recovery action: recover-imex-domain"
+              description: "The NVIDIA driver reports that a recovery action is required for this GPU.\nConsequence: The GPU may not operate correctly until recovery is complete.\nRecommended action: Follow NVIDIA's procedure for the reported action. Stop or drain affected jobs before a GPU reset or server reboot.\n\nHost: h1\nGPU: GPU 1\nGPU ID: gpu1\nAction: recover-imex-domain\n"
+      - eval_time: 40m
+        alertname: MetricsHub-GPU-RecoveryAction-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu1, name: GPU 1, state: recover-imex-domain}
+            exp_annotations:
+              summary: "GPU 1 on h1 requires recovery action: recover-imex-domain"
+              description: "The NVIDIA driver reports that a recovery action is required for this GPU.\nConsequence: The GPU may not operate correctly until recovery is complete.\nRecommended action: Follow NVIDIA's procedure for the reported action. Stop or drain affected jobs before a GPU reset or server reboot.\n\nHost: h1\nGPU: GPU 1\nGPU ID: gpu1\nAction: recover-imex-domain\n"
+
+  - name: Memory row remapping and spare rows
+    interval: 1m
+    input_series:
+      - series: 'hw_gpu_memory_condition_active_ratio{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_memory_condition_type="row-remap-pending"}'
+        values: '1x30'
+      - series: 'hw_gpu_memory_condition_active_ratio{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_memory_condition_type="row-remap-failure-occurred"}'
+        values: '1x30'
+      - series: 'hw_gpu_memory_condition_active_ratio{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_memory_condition_type="sram-threshold-exceeded"}'
+        values: '1x6 0x24'
+      - series: 'hw_gpu_memory_row_remap_bank_count{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_memory_row_remap_availability="max"}'
+        values: '190x30'
+      - series: 'hw_gpu_memory_row_remap_bank_count{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_memory_row_remap_availability="low"}'
+        values: '1x30'
+      - series: 'hw_gpu_memory_row_remap_bank_count{host_name="h1", site="s1", id="gpu0", name="GPU 0", hw_gpu_memory_row_remap_availability="none"}'
+        values: '1x30'
+      # A failed remap on gpu1, whose memory status already alerts.
+      - series: 'hw_gpu_memory_condition_active_ratio{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_gpu_memory_condition_type="row-remap-failure-occurred"}'
+        values: '1x30'
+      - series: 'hw_status{host_name="h1", site="s1", id="gpu1", name="GPU 1", hw_type="gpu", hw_gpu_subsystem="memory", state="failed"}'
+        values: '1x30'
+      # A healthy GPU.
+      - series: 'hw_gpu_memory_row_remap_bank_count{host_name="h1", site="s1", id="gpu2", name="GPU 2", hw_gpu_memory_row_remap_availability="low"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: MetricsHub-GPU-RowRemapPending-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_gpu_memory_condition_type: row-remap-pending}
+            exp_annotations:
+              summary: "GPU 0 on h1 needs a reset to complete a memory row replacement"
+              description: "A failing memory row is scheduled for replacement at the next GPU reset.\nConsequence: The repair remains pending until the reset. Unaffected jobs can continue running.\nRecommended action: Schedule a GPU reset during maintenance. If the driver reports a recovery action, follow that action first.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\n"
+      - eval_time: 10m
+        alertname: MetricsHub-GPU-RowRemapFailed-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_gpu_memory_condition_type: row-remap-failure-occurred}
+            exp_annotations:
+              summary: "GPU 0 on h1 recorded a failed memory row remap"
+              description: "The GPU has recorded a failure to replace a faulty memory row.\nConsequence: Memory errors may continue if the affected row has not been replaced.\nRecommended action: Run NVIDIA GPU diagnostics and contact NVIDIA support with the results.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\n"
+      - eval_time: 4m45s
+        alertname: MetricsHub-GPU-SramThresholdExceeded-Critical
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: MetricsHub-GPU-SramThresholdExceeded-Critical
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: MetricsHub-GPU-SramThresholdExceeded-Critical
+        exp_alerts:
+          - exp_labels: {severity: critical, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0, hw_gpu_memory_condition_type: sram-threshold-exceeded}
+            exp_annotations:
+              summary: "GPU 0 on h1 exceeded its SRAM error threshold"
+              description: "The GPU reports that an SRAM bank exceeded its threshold for uncorrectable errors.\nConsequence: The affected GPU may need service.\nRecommended action: Run NVIDIA Field Diagnostics to determine whether the GPU qualifies for replacement.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\n"
+      - eval_time: 10m
+        alertname: MetricsHub-GPU-SpareRowsLow-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: gpu, host_name: h1, site: s1, id: gpu0, name: GPU 0}
+            exp_annotations:
+              summary: "Memory banks with one or no spare rows on GPU 0 at h1: 2"
+              description: "At least one GPU memory bank has one or no spare rows remaining.\nConsequence: A bank with no spare rows cannot replace another failing row.\nRecommended action: Schedule NVIDIA GPU diagnostics and assess whether the GPU needs replacement.\n\nHost: h1\nGPU: GPU 0\nGPU ID: gpu0\nMemory banks with one spare row or none: 2\n"
+
+  # The name of a port changes with its state, and the old name stays readable for 5 minutes.
+  - name: Port flaps across name changes
+    interval: 1m
+    input_series:
+      # port0: down at 11m, up at 13m. Two changes.
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port0", name="port 0 (up)", device_type="NVLink"}'
+        values: '1x10 _x2 1x60'
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port0", name="port 0 (down)", device_type="NVLink"}'
+        values: '_x11 0 0'
+      # port1: down at 11m, up at 13m, down at 19m, up at 21m. Four changes.
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port1", name="port 1 (up)", device_type="NVLink"}'
+        values: '1x10 _x2 1x5 _x2 1x60'
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port1", name="port 1 (down)", device_type="NVLink"}'
+        values: '_x11 0 0 _x6 0 0'
+      # port2: down at 20m and stays down. One change.
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port2", name="port 2 (up)", device_type="NVLink"}'
+        values: '1x19'
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port2", name="port 2 (down)", device_type="NVLink"}'
+        values: '_x20 0x60'
+    alert_rule_test:
+      - eval_time: 24m
+        alertname: MetricsHub-NVLink-Port-Flapping-Info
+        exp_alerts:
+          - exp_labels: {severity: info, category: port, host_name: h1, site: s1, id: port0}
+            exp_annotations:
+              summary: "NVLink port port0 on h1 changed state 2 times in the last hour"
+              description: "The NVLink port changed between up and down 2 times in the last hour.\nConsequence: A link interruption can disrupt communication between GPUs. Interruptions shorter than 5 minutes do not trigger the hardware status alert.\nRecommended action: Check for GPU resets, job activity or scheduled maintenance. If the state changes continue, inspect the GPU and NVSwitch at both ends of the link.\n\nHost: h1\nPort ID: port0\nState changes in the last hour: 2\n"
+      - eval_time: 24m
+        alertname: MetricsHub-NVLink-Port-Flapping-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: port, host_name: h1, site: s1, id: port1}
+            exp_annotations:
+              summary: "NVLink port port1 on h1 changed state 4 times in the last hour"
+              description: "The NVLink port changed between up and down 4 times in the last hour.\nConsequence: Repeated link interruptions can slow or disrupt jobs that communicate between GPUs.\nRecommended action: Check the GPU and NVSwitch at both ends of the link and review the Fabric Manager logs. Schedule a hardware inspection if the state changes continue.\n\nHost: h1\nPort ID: port1\nState changes in the last hour: 4\n"
+
+  # A drop seen in one sample only, collected 15 seconds late. A subquery step of one minute would miss it.
+  - name: Port drop seen in one late sample
+    interval: 15s
+    input_series:
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port0", name="port 0", device_type="NVLink"}'
+        values: '1 _x3 1 _x3 1 _x3 1 _x3 1 _x3 _ 0 _x2 1 _x3 1 _x3 1 _x3 1 _x3 1 _x3'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: MetricsHub-NVLink-Port-Flapping-Info
+        exp_alerts:
+          - exp_labels: {severity: info, category: port, host_name: h1, site: s1, id: port0}
+            exp_annotations:
+              summary: "NVLink port port0 on h1 changed state 2 times in the last hour"
+              description: "The NVLink port changed between up and down 2 times in the last hour.\nConsequence: A link interruption can disrupt communication between GPUs. Interruptions shorter than 5 minutes do not trigger the hardware status alert.\nRecommended action: Check for GPU resets, job activity or scheduled maintenance. If the state changes continue, inspect the GPU and NVSwitch at both ends of the link.\n\nHost: h1\nPort ID: port0\nState changes in the last hour: 2\n"
+
+  # A port that flaps and then stays down hands over to the status alert, and does not come back once it is no longer reported.
+  - name: Flapping port that stays down
+    interval: 1m
+    input_series:
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port0", name="port 0", device_type="NVLink"}'
+        values: '1x10 0 0 1x2 0x14'
+      - series: 'hw_status{host_name="h1", site="s1", id="port0", name="port 0", hw_type="network", device_type="NVLink", state="failed"}'
+        values: '0x15 1x14'
+    alert_rule_test:
+      - eval_time: 19m
+        alertname: MetricsHub-NVLink-Port-Flapping-Info
+        exp_alerts:
+          - exp_labels: {severity: info, category: port, host_name: h1, site: s1, id: port0}
+            exp_annotations:
+              summary: "NVLink port port0 on h1 changed state 3 times in the last hour"
+              description: "The NVLink port changed between up and down 3 times in the last hour.\nConsequence: A link interruption can disrupt communication between GPUs. Interruptions shorter than 5 minutes do not trigger the hardware status alert.\nRecommended action: Check for GPU resets, job activity or scheduled maintenance. If the state changes continue, inspect the GPU and NVSwitch at both ends of the link.\n\nHost: h1\nPort ID: port0\nState changes in the last hour: 3\n"
+      - eval_time: 23m
+        alertname: MetricsHub-NVLink-Port-Flapping-Info
+      - eval_time: 45m
+        alertname: MetricsHub-NVLink-Port-Flapping-Info
+
+  - name: Port saturation
+    interval: 1m
+    input_series:
+      - series: 'hw_network_bandwidth_utilization_ratio{host_name="h1", site="s1", id="port0", name="port 0", device_type="NVLink", direction="transmit"}'
+        values: '0.95x30'
+      - series: 'hw_network_bandwidth_utilization_ratio{host_name="h1", site="s1", id="port0", name="port 0", device_type="NVLink", direction="receive"}'
+        values: '0.2x30'
+      # port1 is high for 14 minutes under its old name, then low under its new name.
+      - series: 'hw_network_bandwidth_utilization_ratio{host_name="h1", site="s1", id="port1", name="port 1 (up)", device_type="NVLink", direction="transmit"}'
+        values: '0.95x14'
+      - series: 'hw_network_bandwidth_utilization_ratio{host_name="h1", site="s1", id="port1", name="port 1 (down)", device_type="NVLink", direction="transmit"}'
+        values: '_x15 0.2x30'
+      # port2 has one sample above 100%.
+      - series: 'hw_network_bandwidth_utilization_ratio{host_name="h1", site="s1", id="port2", name="port 2", device_type="NVLink", direction="transmit"}'
+        values: '0.3x9 1.44 0.3x20'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: MetricsHub-NVLink-Port-Saturation-Info
+      - eval_time: 17m
+        alertname: MetricsHub-NVLink-Port-Saturation-Info
+        exp_alerts:
+          - exp_labels: {severity: info, category: port, host_name: h1, site: s1, id: port0, direction: transmit}
+            exp_annotations:
+              summary: "NVLink port port0 on h1 is using 95% of its estimated bandwidth (transmit)"
+              description: "The NVLink port has used at least 90% of its estimated bandwidth for 15 minutes.\nConsequence: The link may be limiting communication between GPUs.\nRecommended action: Check whether other links on the same GPU are down and whether jobs are running more slowly than expected.\n\nHost: h1\nPort ID: port0\nDirection: transmit\nBandwidth utilization: 95%\n"
+
+  - name: Missing port error counters
+    interval: 5m
+    input_series:
+      - series: 'hw_network_up{host_name="h1", site="s1", id="port0", name="port 0", device_type="NVLink"}'
+        values: '1x80'
+      # Same host name on another site, with counters.
+      - series: 'hw_network_up{host_name="h1", site="s2", id="port0", name="port 0", device_type="NVLink"}'
+        values: '1x80'
+      - series: 'hw_errors_total{host_name="h1", site="s2", id="port0", name="port 0", hw_type="network", device_type="NVLink", hw_error_type="crc"}'
+        values: '0x80'
+    alert_rule_test:
+      - eval_time: 5h55m
+        alertname: MetricsHub-NVLink-Port-ErrorCountersMissing-Info
+      - eval_time: 6h5m
+        alertname: MetricsHub-NVLink-Port-ErrorCountersMissing-Info
+        exp_alerts:
+          - exp_labels: {severity: info, category: port, host_name: h1, site: s1}
+            exp_annotations:
+              summary: "NVLink port error counters are missing on h1"
+              description: "The server has reported NVLink ports without any port error counters for 6 hours.\nConsequence: NVLink port error alerts cannot detect errors without these counters.\nRecommended action: Check that the NVLink port error fields are enabled in the DCGM exporter counters file and that the exporter container has the SYS_ADMIN capability.\n\nHost: h1\nNVLink ports: 1\n"
+
+  - name: Temperature forecast
+    interval: 1m
+    input_series:
+      # sw0 rises 1°C a minute from 80°C and reaches its limit at 22m. The hardware alert fires at 32m.
+      - series: 'hw_temperature_celsius{host_name="h1", site="s1", id="sw0-temp", name="NVSwitch 0 temperature"}'
+        values: '80+1x60'
+      - series: 'hw_temperature_limit_celsius{host_name="h1", site="s1", id="sw0-temp", name="NVSwitch 0 temperature", limit_type="high.degraded"}'
+        values: '102x60'
+      # sw1 rises the same way, then its temperature goes stale at 16m while its limit stays.
+      - series: 'hw_temperature_celsius{host_name="h1", site="s1", id="sw1-temp", name="NVSwitch 1 temperature"}'
+        values: '80+1x15 stale'
+      - series: 'hw_temperature_limit_celsius{host_name="h1", site="s1", id="sw1-temp", name="NVSwitch 1 temperature", limit_type="high.degraded"}'
+        values: '102x60'
+      # sw2 is steady and cool.
+      - series: 'hw_temperature_celsius{host_name="h1", site="s1", id="sw2-temp", name="NVSwitch 2 temperature"}'
+        values: '40x60'
+      - series: 'hw_temperature_limit_celsius{host_name="h1", site="s1", id="sw2-temp", name="NVSwitch 2 temperature", limit_type="high.degraded"}'
+        values: '102x60'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: MetricsHub-NVLink-Switch-TemperatureRising-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: switch, host_name: h1, site: s1, id: sw0-temp, name: NVSwitch 0 temperature}
+            exp_annotations:
+              summary: "NVSwitch 0 temperature on h1 has a projected temperature of 155°C in one hour, at or above its slowdown limit"
+              description: "The temperature trend over the last 30 minutes projects the NVSwitch at or above its slowdown limit in one hour. The current temperature may already be at or above the limit.\nConsequence: Thermal throttling can slow communication between GPUs through this switch.\nRecommended action: Check the switch temperature, server fans and airflow.\n\nHost: h1\nSwitch: NVSwitch 0 temperature\nSensor ID: sw0-temp\nProjected temperature in one hour: 155°C\n"
+          - exp_labels: {severity: warning, category: switch, host_name: h1, site: s1, id: sw1-temp, name: NVSwitch 1 temperature}
+            exp_annotations:
+              summary: "NVSwitch 1 temperature on h1 has a projected temperature of 155°C in one hour, at or above its slowdown limit"
+              description: "The temperature trend over the last 30 minutes projects the NVSwitch at or above its slowdown limit in one hour. The current temperature may already be at or above the limit.\nConsequence: Thermal throttling can slow communication between GPUs through this switch.\nRecommended action: Check the switch temperature, server fans and airflow.\n\nHost: h1\nSwitch: NVSwitch 1 temperature\nSensor ID: sw1-temp\nProjected temperature in one hour: 155°C\n"
+      - eval_time: 20m
+        alertname: MetricsHub-NVLink-Switch-TemperatureRising-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: switch, host_name: h1, site: s1, id: sw0-temp, name: NVSwitch 0 temperature}
+            exp_annotations:
+              summary: "NVSwitch 0 temperature on h1 has a projected temperature of 160°C in one hour, at or above its slowdown limit"
+              description: "The temperature trend over the last 30 minutes projects the NVSwitch at or above its slowdown limit in one hour. The current temperature may already be at or above the limit.\nConsequence: Thermal throttling can slow communication between GPUs through this switch.\nRecommended action: Check the switch temperature, server fans and airflow.\n\nHost: h1\nSwitch: NVSwitch 0 temperature\nSensor ID: sw0-temp\nProjected temperature in one hour: 160°C\n"
+      - eval_time: 34m
+        alertname: MetricsHub-NVLink-Switch-TemperatureRising-Warning
+
+  # Accepted gap: the forecast can clear while the hardware alert is still waiting its 10 minutes.
+  - name: Temperature forecast that clears before the hardware alert fires
+    interval: 1m
+    input_series:
+      - series: 'hw_temperature_celsius{host_name="h1", site="s1", id="sw0-temp", name="NVSwitch 0 temperature"}'
+        values: '101.99x13 103.99 101.99x14 102x30'
+      - series: 'hw_temperature_limit_celsius{host_name="h1", site="s1", id="sw0-temp", name="NVSwitch 0 temperature", limit_type="high.degraded"}'
+        values: '102x60'
+    alert_rule_test:
+      - eval_time: 26m
+        alertname: MetricsHub-NVLink-Switch-TemperatureRising-Warning
+        exp_alerts:
+          - exp_labels: {severity: warning, category: switch, host_name: h1, site: s1, id: sw0-temp, name: NVSwitch 0 temperature}
+            exp_annotations:
+              summary: "NVSwitch 0 temperature on h1 has a projected temperature of 102°C in one hour, at or above its slowdown limit"
+              description: "The temperature trend over the last 30 minutes projects the NVSwitch at or above its slowdown limit in one hour. The current temperature may already be at or above the limit.\nConsequence: Thermal throttling can slow communication between GPUs through this switch.\nRecommended action: Check the switch temperature, server fans and airflow.\n\nHost: h1\nSwitch: NVSwitch 0 temperature\nSensor ID: sw0-temp\nProjected temperature in one hour: 102°C\n"
+      - eval_time: 36m
+        alertname: MetricsHub-NVLink-Switch-TemperatureRising-Warning
+      - eval_time: 36m
+        alertname: MetricsHub-Hardware-Temperature-High-Warning

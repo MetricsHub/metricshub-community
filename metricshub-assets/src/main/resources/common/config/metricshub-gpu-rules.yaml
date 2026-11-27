@@ -1,0 +1,468 @@
+groups:
+
+  # ---------------------------------------------------------------------
+  # GPUs
+  # ---------------------------------------------------------------------
+  - name: gpus
+    rules:
+
+      - alert: MetricsHub-GPU-MemoryErrors-Warning
+        expr: |
+          sum by (host_name, site, id, name, hw_error_type) (
+            increase(hw_errors_total{hw_type="gpu", hw_error_type="ecc-memory-corrected"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, name, hw_error_type) (
+            resets(hw_errors_total{hw_type="gpu", hw_error_type="ecc-memory-corrected"}[1h])
+          ) == 0
+        for: 0m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }}: corrected memory error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The GPU recorded corrected memory errors in the last hour.
+            Consequence: A growing error count can indicate a memory problem.
+            Recommended action: Monitor the error count. If it continues to increase, schedule NVIDIA GPU diagnostics.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            New errors in the last hour: {{ printf "%.0f" $value }}
+
+      - alert: MetricsHub-GPU-MemoryErrors-Critical
+        expr: |
+          sum by (host_name, site, id, name, hw_error_type) (
+            increase(hw_errors_total{hw_type="gpu", hw_error_type="ecc-memory-uncorrected"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, name, hw_error_type) (
+            resets(hw_errors_total{hw_type="gpu", hw_error_type="ecc-memory-uncorrected"}[1h])
+          ) == 0
+          unless on (host_name, site, id) ALERTS{alertstate="firing", alertname="MetricsHub-Hardware-Device-Status-Critical", hw_gpu_subsystem="memory"}
+        for: 0m
+        labels:
+          severity: critical
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }}: uncorrected memory error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The GPU recorded uncorrected memory errors in the last hour.
+            Consequence: These errors can cause affected jobs to fail or produce incorrect results.
+            Recommended action: Check affected jobs and the GPU recovery status. Follow the recovery action reported by the driver and run NVIDIA GPU diagnostics.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            New errors in the last hour: {{ printf "%.0f" $value }}
+
+      - alert: MetricsHub-GPU-XidErrors-Warning
+        expr: |
+          sum by (host_name, site, id, name, hw_error_type) (
+            increase(hw_errors_total{hw_type="gpu", hw_error_type="xid"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, name, hw_error_type) (
+            resets(hw_errors_total{hw_type="gpu", hw_error_type="xid"}[1h])
+          ) == 0
+        for: 0m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }}: XID error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The NVIDIA driver reported new XID errors for the GPU in the last hour.
+            Consequence: XID errors can indicate an application, driver or hardware problem.
+            Recommended action: Find the XID codes in the server's kernel log and check NVIDIA's XID documentation.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            New XID errors in the last hour: {{ printf "%.0f" $value }}
+
+      - alert: MetricsHub-GPU-ThermalThrottling-Warning
+        expr: |
+          sum by (host_name, site, id, name) (
+            increase(hw_gpu_throttle_time_seconds_total{hw_gpu_throttle_reason="software-thermal"}[15m])
+          ) > 60
+          unless on (host_name, site, id) ALERTS{alertstate="firing", alertname=~"MetricsHub-Hardware-Device-Status-(Warning|Critical)", hw_gpu_subsystem="thermal"}
+        for: 0m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} was throttled by the driver for {{ $value | humanizeDuration }} in the last 15 minutes"
+          description: |
+            The driver reduced the GPU clock speed because of heat for more than 1 minute in the last 15 minutes.
+            Consequence: Reduced clock speeds can slow down jobs on this GPU.
+            Recommended action: Check the server's fans, airflow and room temperature.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Time throttled by the driver in the last 15 minutes: {{ $value | humanizeDuration }}
+
+      - alert: MetricsHub-GPU-ThermalThrottling-Critical
+        expr: |
+          sum by (host_name, site, id, name) (
+            increase(hw_gpu_throttle_time_seconds_total{hw_gpu_throttle_reason="hardware-thermal"}[15m])
+          ) > 60
+        for: 0m
+        labels:
+          severity: critical
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} recorded hardware thermal throttling for {{ $value | humanizeDuration }} in the last 15 minutes"
+          description: |
+            The GPU hardware reduced its clock speed to protect against overheating for more than 1 minute in the last 15 minutes.
+            Consequence: This reduces GPU performance and can slow down jobs.
+            Recommended action: Check the server's fans, airflow and room temperature now.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Time throttled by the hardware in the last 15 minutes: {{ $value | humanizeDuration }}
+
+      - alert: MetricsHub-GPU-RecoveryAction-Warning
+        expr: |
+          hw_gpu_recovery_action{state!="none"} == 1
+          unless on (host_name, site, id) ALERTS{alertstate="firing", alertname=~"MetricsHub-Hardware-Device-Status-(Warning|Critical)", hw_gpu_subsystem="driver"}
+        for: 5m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} requires recovery action: {{ $labels.state }}"
+          description: |
+            The NVIDIA driver reports that a recovery action is required for this GPU.
+            Consequence: The GPU may not operate correctly until recovery is complete.
+            Recommended action: Follow NVIDIA's procedure for the reported action. Stop or drain affected jobs before a GPU reset or server reboot.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Action: {{ $labels.state }}
+
+      - alert: MetricsHub-GPU-FabricConfiguration-Warning
+        expr: hw_gpu_fabric_configuration_status{state!="ok"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} reports a fabric configuration fault: {{ $labels.state }}"
+          description: |
+            The GPU reports a fault in its NVLink fabric configuration.
+            Consequence: The GPU may not be able to exchange data with the other GPUs of the fabric until the configuration is corrected.
+            Recommended action: Check what the reported fault names: the GPU firmware, the partition, the number of links, or the identity and location of the system. Then check the Fabric Manager logs.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Fault: {{ $labels.state }}
+
+      - alert: MetricsHub-GPU-RowRemapPending-Warning
+        expr: hw_gpu_memory_condition_active_ratio{hw_gpu_memory_condition_type="row-remap-pending"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} needs a reset to complete a memory row replacement"
+          description: |
+            A failing memory row is scheduled for replacement at the next GPU reset.
+            Consequence: The repair remains pending until the reset. Unaffected jobs can continue running.
+            Recommended action: Schedule a GPU reset during maintenance. If the driver reports a recovery action, follow that action first.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+
+      - alert: MetricsHub-GPU-RowRemapFailed-Critical
+        expr: |
+          hw_gpu_memory_condition_active_ratio{hw_gpu_memory_condition_type="row-remap-failure-occurred"} == 1
+          unless on (host_name, site, id) ALERTS{alertstate="firing", alertname="MetricsHub-Hardware-Device-Status-Critical", hw_gpu_subsystem="memory"}
+        for: 5m
+        labels:
+          severity: critical
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} recorded a failed memory row remap"
+          description: |
+            The GPU has recorded a failure to replace a faulty memory row.
+            Consequence: Memory errors may continue if the affected row has not been replaced.
+            Recommended action: Run NVIDIA GPU diagnostics and contact NVIDIA support with the results.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+
+      - alert: MetricsHub-GPU-SramThresholdExceeded-Critical
+        expr: hw_gpu_memory_condition_active_ratio{hw_gpu_memory_condition_type="sram-threshold-exceeded"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} exceeded its SRAM error threshold"
+          description: |
+            The GPU reports that an SRAM bank exceeded its threshold for uncorrectable errors.
+            Consequence: The affected GPU may need service.
+            Recommended action: Run NVIDIA Field Diagnostics to determine whether the GPU qualifies for replacement.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+
+      - alert: MetricsHub-GPU-SpareRowsLow-Warning
+        expr: |
+          sum by (host_name, site, id, name) (
+            hw_gpu_memory_row_remap_bank_count{hw_gpu_memory_row_remap_availability=~"low|none"}
+          ) > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "Memory banks with one or no spare rows on {{ $labels.name }} at {{ $labels.host_name }}: {{ $value | humanize }}"
+          description: |
+            At least one GPU memory bank has one or no spare rows remaining.
+            Consequence: A bank with no spare rows cannot replace another failing row.
+            Recommended action: Schedule NVIDIA GPU diagnostics and assess whether the GPU needs replacement.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Memory banks with one spare row or none: {{ $value | humanize }}
+
+      - alert: MetricsHub-NVLink-GPU-Errors-Warning
+        expr: |
+          sum by (host_name, site, id, name, hw_error_type) (
+            increase(hw_errors_total{hw_type="gpu", hw_gpu_nvidia_mig_instance_id="", hw_error_type=~"nvlink-crc|nvlink-crc-flit"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, name, hw_error_type) (
+            resets(hw_errors_total{hw_type="gpu", hw_gpu_nvidia_mig_instance_id="", hw_error_type=~"nvlink-crc|nvlink-crc-flit"}[1h])
+          ) == 0
+        for: 0m
+        labels:
+          severity: warning
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }}: {{ $labels.hw_error_type }} error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The GPU recorded new CRC errors on its NVLink connections in the last hour.
+            Consequence: Link errors can slow communication between GPUs or make it less reliable.
+            Recommended action: Monitor the error count. If it continues to increase, inspect the GPU and the devices at the other ends of its NVLink connections.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Error type: {{ $labels.hw_error_type }}
+            New errors in the last hour: {{ printf "%.0f" $value }}
+
+      - alert: MetricsHub-NVLink-GPU-Errors-Critical
+        expr: |
+          sum by (host_name, site, id, name, hw_error_type) (
+            increase(hw_errors_total{hw_type="gpu", hw_gpu_nvidia_mig_instance_id="", hw_error_type=~"nvlink-replay|nvlink-recovery"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, name, hw_error_type) (
+            resets(hw_errors_total{hw_type="gpu", hw_gpu_nvidia_mig_instance_id="", hw_error_type=~"nvlink-replay|nvlink-recovery"}[1h])
+          ) == 0
+        for: 0m
+        labels:
+          severity: critical
+          category: gpu
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }}: {{ $labels.hw_error_type }} error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The GPU recorded NVLink replay or recovery errors in the last hour.
+            Consequence: Resending data or restoring a link can interrupt communication between GPUs. These errors can also cause the GPU's DCGM health check to fail.
+            Recommended action: Check the GPU and the devices at the other ends of its NVLink connections. Schedule a hardware inspection.
+
+            Host: {{ $labels.host_name }}
+            GPU: {{ $labels.name }}
+            GPU ID: {{ $labels.id }}
+            Error type: {{ $labels.hw_error_type }}
+            New errors in the last hour: {{ printf "%.0f" $value }}
+
+  # ---------------------------------------------------------------------
+  # NVLink Ports
+  # ---------------------------------------------------------------------
+  - name: nvlink_ports
+    rules:
+
+      - alert: MetricsHub-NVLink-Port-Flapping-Info
+        expr: |
+          changes((
+            max by (host_name, site, id) (
+              hw_network_up{device_type="NVLink"}
+              and topk by (host_name, site, id) (1, timestamp(hw_network_up{device_type="NVLink"}))
+            )
+          )[1h:15s]) >= 2 < 4
+          and on (host_name, site, id) hw_network_up{device_type="NVLink"}
+          unless on (host_name, site, id) ALERTS{alertstate="firing", hw_type="network", alertname=~"MetricsHub-Hardware-Device-(Status-(Critical|Warning)|Predicted-Failure-Warning)"}
+        for: 0m
+        labels:
+          severity: info
+          category: port
+        annotations:
+          summary: "NVLink port {{ $labels.id }} on {{ $labels.host_name }} changed state {{ $value | humanize }} times in the last hour"
+          description: |
+            The NVLink port changed between up and down {{ $value | humanize }} times in the last hour.
+            Consequence: A link interruption can disrupt communication between GPUs. Interruptions shorter than 5 minutes do not trigger the hardware status alert.
+            Recommended action: Check for GPU resets, job activity or scheduled maintenance. If the state changes continue, inspect the GPU and NVSwitch at both ends of the link.
+
+            Host: {{ $labels.host_name }}
+            Port ID: {{ $labels.id }}
+            State changes in the last hour: {{ $value | humanize }}
+
+      - alert: MetricsHub-NVLink-Port-Flapping-Warning
+        expr: |
+          changes((
+            max by (host_name, site, id) (
+              hw_network_up{device_type="NVLink"}
+              and topk by (host_name, site, id) (1, timestamp(hw_network_up{device_type="NVLink"}))
+            )
+          )[1h:15s]) >= 4
+          and on (host_name, site, id) hw_network_up{device_type="NVLink"}
+          unless on (host_name, site, id) ALERTS{alertstate="firing", hw_type="network", alertname=~"MetricsHub-Hardware-Device-(Status-(Critical|Warning)|Predicted-Failure-Warning)"}
+        for: 0m
+        labels:
+          severity: warning
+          category: port
+        annotations:
+          summary: "NVLink port {{ $labels.id }} on {{ $labels.host_name }} changed state {{ $value | humanize }} times in the last hour"
+          description: |
+            The NVLink port changed between up and down {{ $value | humanize }} times in the last hour.
+            Consequence: Repeated link interruptions can slow or disrupt jobs that communicate between GPUs.
+            Recommended action: Check the GPU and NVSwitch at both ends of the link and review the Fabric Manager logs. Schedule a hardware inspection if the state changes continue.
+
+            Host: {{ $labels.host_name }}
+            Port ID: {{ $labels.id }}
+            State changes in the last hour: {{ $value | humanize }}
+
+      - alert: MetricsHub-NVLink-Port-Errors-Warning
+        expr: |
+          sum by (host_name, site, id, hw_error_type) (
+            increase(hw_errors_total{hw_type="network", device_type="NVLink", hw_error_type=~"crc|ecc|flit"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, hw_error_type) (
+            resets(hw_errors_total{hw_type="network", device_type="NVLink", hw_error_type=~"crc|ecc|flit"}[1h])
+          ) == 0
+        for: 0m
+        labels:
+          severity: warning
+          category: port
+        annotations:
+          summary: "NVLink port {{ $labels.id }} on {{ $labels.host_name }}: {{ $labels.hw_error_type }} error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The NVLink port recorded new CRC, ECC or flit errors in the last hour.
+            Consequence: Link errors can slow communication between GPUs or make it less reliable.
+            Recommended action: Monitor the error count. If it continues to increase, inspect the GPU and NVSwitch at both ends of the link.
+
+            Host: {{ $labels.host_name }}
+            Port ID: {{ $labels.id }}
+            Error type: {{ $labels.hw_error_type }}
+            New errors in the last hour: {{ printf "%.0f" $value }}
+
+      - alert: MetricsHub-NVLink-Port-Errors-Critical
+        expr: |
+          sum by (host_name, site, id, hw_error_type) (
+            increase(hw_errors_total{hw_type="network", device_type="NVLink", hw_error_type=~"replay|recovery"}[1h])
+          ) > 0
+          and
+          sum by (host_name, site, id, hw_error_type) (
+            resets(hw_errors_total{hw_type="network", device_type="NVLink", hw_error_type=~"replay|recovery"}[1h])
+          ) == 0
+        for: 0m
+        labels:
+          severity: critical
+          category: port
+        annotations:
+          summary: "NVLink port {{ $labels.id }} on {{ $labels.host_name }}: {{ $labels.hw_error_type }} error count increased by {{ printf \"%.0f\" $value }} in the last hour"
+          description: |
+            The NVLink port recorded replay or recovery errors in the last hour.
+            Consequence: Resending data or restoring a link can interrupt communication between GPUs. These errors can also cause the connected GPU's DCGM health check to fail.
+            Recommended action: Check the GPU and NVSwitch at both ends of the link. Schedule a hardware inspection.
+
+            Host: {{ $labels.host_name }}
+            Port ID: {{ $labels.id }}
+            Error type: {{ $labels.hw_error_type }}
+            New errors in the last hour: {{ printf "%.0f" $value }}
+
+      - alert: MetricsHub-NVLink-Port-Saturation-Info
+        expr: |
+          max by (host_name, site, id, direction) (
+            hw_network_bandwidth_utilization_ratio{device_type="NVLink"}
+            and topk by (host_name, site, id, direction) (1, timestamp(hw_network_bandwidth_utilization_ratio{device_type="NVLink"}))
+          ) >= 0.9
+        for: 15m
+        labels:
+          severity: info
+          category: port
+        annotations:
+          summary: "NVLink port {{ $labels.id }} on {{ $labels.host_name }} is using {{ $value | humanizePercentage }} of its estimated bandwidth ({{ $labels.direction }})"
+          description: |
+            The NVLink port has used at least 90% of its estimated bandwidth for 15 minutes.
+            Consequence: The link may be limiting communication between GPUs.
+            Recommended action: Check whether other links on the same GPU are down and whether jobs are running more slowly than expected.
+
+            Host: {{ $labels.host_name }}
+            Port ID: {{ $labels.id }}
+            Direction: {{ $labels.direction }}
+            Bandwidth utilization: {{ $value | humanizePercentage }}
+
+      - alert: MetricsHub-NVLink-Port-ErrorCountersMissing-Info
+        expr: |
+          count by (host_name, site) (hw_network_up{device_type="NVLink"})
+          unless on (host_name, site)
+          count by (host_name, site) (hw_errors_total{hw_type="network", device_type="NVLink"})
+        for: 6h
+        labels:
+          severity: info
+          category: port
+        annotations:
+          summary: "NVLink port error counters are missing on {{ $labels.host_name }}"
+          description: |
+            The server has reported NVLink ports without any port error counters for 6 hours.
+            Consequence: NVLink port error alerts cannot detect errors without these counters.
+            Recommended action: Check that the NVLink port error fields are enabled in the DCGM exporter counters file and that the exporter container has the SYS_ADMIN capability.
+
+            Host: {{ $labels.host_name }}
+            NVLink ports: {{ $value | humanize }}
+
+  # ---------------------------------------------------------------------
+  # NVSwitches
+  # ---------------------------------------------------------------------
+  - name: nvlink_switches
+    rules:
+
+      - alert: MetricsHub-NVLink-Switch-TemperatureRising-Warning
+        expr: |
+          (
+            predict_linear(hw_temperature_celsius{name=~"NVSwitch.*"}[30m], 3600)
+            >= ignoring(limit_type)
+            hw_temperature_limit_celsius{name=~"NVSwitch.*", limit_type="high.degraded"}
+          )
+          and hw_temperature_celsius{name=~"NVSwitch.*"}
+          unless on (host_name, site, id) ALERTS{alertstate="firing", alertname=~"MetricsHub-Hardware-Temperature-High-(Warning|Critical)"}
+        for: 10m
+        labels:
+          severity: warning
+          category: switch
+        annotations:
+          summary: "{{ $labels.name }} on {{ $labels.host_name }} has a projected temperature of {{ printf \"%.0f\" $value }}°C in one hour, at or above its slowdown limit"
+          description: |
+            The temperature trend over the last 30 minutes projects the NVSwitch at or above its slowdown limit in one hour. The current temperature may already be at or above the limit.
+            Consequence: Thermal throttling can slow communication between GPUs through this switch.
+            Recommended action: Check the switch temperature, server fans and airflow.
+
+            Host: {{ $labels.host_name }}
+            Switch: {{ $labels.name }}
+            Sensor ID: {{ $labels.id }}
+            Projected temperature in one hour: {{ printf "%.0f" $value }}°C
