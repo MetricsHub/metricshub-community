@@ -460,7 +460,7 @@ class MappingProcessorTest {
 		metricFactory.collectNumberMetric(monitor, "hw.enclosure.energy", 120000.0, 120000L);
 		monitor.getMetric("hw.enclosure.energy", NumberMetric.class).save();
 
-		// Correct values with previous value
+		// Correct values with previous value: the usage since the last reading (at 240000) is added to the last counter
 		{
 			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
@@ -468,7 +468,7 @@ class MappingProcessorTest {
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
 				.mapping(Mapping.builder().metrics(Map.of("hw.enclosure.energy", "fakeCounter($1)")).build())
 				.row(List.of("2000"))
-				.collectTime(240000L)
+				.collectTime(360000L)
 				.build();
 
 			final Map<String, String> expected = Map.of("hw.enclosure.energy", Double.valueOf(360000.0).toString());

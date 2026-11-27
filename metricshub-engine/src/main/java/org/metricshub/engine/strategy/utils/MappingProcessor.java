@@ -457,11 +457,13 @@ public class MappingProcessor {
 
 		final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
+		// The time of the last reading, read before this reading replaces it: PrepareCollectStrategy does not save it as the
+		// previous collect time before every run (simple job of the discovery phase)
+		final Double collectTimePrevious = CollectHelper.getNumberMetricCollectTime(monitor, metricRateName, false);
+
 		// Collect the metric raw value
 		final Double rawValue = maybeMetricRateValue.get();
 		metricFactory.collectNumberMetric(monitor, metricRateName, rawValue, collectTime);
-
-		final Double collectTimePrevious = CollectHelper.getNumberMetricCollectTime(monitor, metricRateName, true);
 
 		final Double deltaTimeMs = MathOperationsHelper.subtract(
 			metricRateName,
@@ -480,8 +482,9 @@ public class MappingProcessor {
 			// The counter will start from the usage delta
 			Double counter = usageDelta;
 
-			// The previous counter is needed to make a sum with the delta counter value on this collect
-			Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
+			// The last counter is needed to make a sum with the delta counter value on this collect: it is the current
+			// value of the metric, saved or not as its previous value
+			Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, false);
 
 			// Ok, we have the previous counter value ? sum the previous counter and the current delta counter
 			if (previousCounter != null) {
@@ -596,8 +599,8 @@ public class MappingProcessor {
 	}
 
 	/**
-	 * Accumulate delta values into a counter. On each collect cycle, the current delta value
-	 * is added to the previous counter value. If no previous value exists, the current delta
+	 * Accumulate delta values into a counter. On each run of the job, the current delta value
+	 * is added to the last counter value. If there is no last value, the current delta
 	 * value is used as the initial counter value.
 	 *
 	 * @param keyValuePair key-value where the key is the metric name and the value is function call
@@ -628,8 +631,9 @@ public class MappingProcessor {
 		// Start with the current delta value
 		Double counter = maybeDeltaValue.get();
 
-		// Get the previous counter value to accumulate
-		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
+		// Get the last counter value to accumulate: it is the current value of the metric, saved or not as its previous
+		// value (PrepareCollectStrategy does not run before the simple job of the discovery phase)
+		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, false);
 
 		// If a previous counter exists, add the current delta to it
 		if (previousCounter != null) {

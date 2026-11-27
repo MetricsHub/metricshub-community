@@ -78,6 +78,21 @@ monitors:
         metrics:
           test.counter: $2
           test.rate: rate($2)
+  # Trusted simple job whose metrics are totals: each run adds to the total of the run before
+  meter:
+    simple:
+      sources:
+        source(1):
+          type: snmpTable
+          oid: 1.3.6.1.22
+          selectColumns: "ID,1,2,3"
+      mapping:
+        source: "${source::monitors.meter.simple.sources.source(1)}"
+        attributes:
+          id: $1
+        metrics:
+          test.errors: accumulate($2)
+          test.energy: fakeCounter($3)
   # Trusted discovery job
   volume:
     discovery:
