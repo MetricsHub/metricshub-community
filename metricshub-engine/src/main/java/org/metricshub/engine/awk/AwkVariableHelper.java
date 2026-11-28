@@ -30,11 +30,14 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.source.SourceResult;
@@ -111,6 +114,53 @@ public class AwkVariableHelper {
 				resolveValue(name, value, telemetryManager, connectorId, attributes, operationKey)
 			)
 		);
+
+		return Collections.unmodifiableMap(resolved);
+	}
+
+	/**
+	 * Resolve the given Awk variables, then add the connector values the script uses: each constant, connector variable
+	 * and text source of the job whose name is in usedNames, unless the variables declare that name.
+	 *
+	 * @param variables        The variables declared in the connector, see
+	 *                         {@link #resolveVariables(Map, TelemetryManager, String, Map, Object)}
+	 * @param telemetryManager The current {@link TelemetryManager} instance, whose connector store holds the connector;
+	 *                         <code>null</code> counts as an empty store
+	 * @param connectorId      The connector's identifier.
+	 * @param attributes       The attributes of the monitor, in the mono instance processing
+	 * @param operationKey     The unique key of the operation, used for logging.
+	 * @param usedNames        The global names the script uses
+	 * @param textSources      The text sources that ran before the script in this run of the job, by name, or
+	 *                         <code>null</code>
+	 * @return An unmodifiable map of variable name to value, never <code>null</code>.
+	 */
+	public static Map<String, Object> resolveVariables(
+		final Map<String, ?> variables,
+		final TelemetryManager telemetryManager,
+		final String connectorId,
+		final Map<String, String> attributes,
+		final Object operationKey,
+		final Set<String> usedNames,
+		final Map<String, String> textSources
+	) {
+		final Map<String, Object> resolved = new LinkedHashMap<>(
+			resolveVariables(variables, telemetryManager, connectorId, attributes, operationKey)
+		);
+
+		final ConnectorStore connectorStore = telemetryManager == null ? null : telemetryManager.getConnectorStore();
+		final Map<String, Connector> store = connectorStore == null ? null : connectorStore.getStore();
+		final Connector connector = store == null ? null : store.get(connectorId);
+		final Map<String, String> values = AwkNames.values(
+			connector == null ? null : connector.getConstants(),
+			connector == null ? null : connector.getVariableValues(),
+			textSources
+		);
+		usedNames.forEach(name -> {
+			final String value = values.get(name);
+			if (value != null) {
+				resolved.putIfAbsent(name, value);
+			}
+		});
 
 		return Collections.unmodifiableMap(resolved);
 	}

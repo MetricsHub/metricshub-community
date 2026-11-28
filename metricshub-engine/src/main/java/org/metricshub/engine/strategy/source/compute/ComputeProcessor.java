@@ -149,6 +149,12 @@ public class ComputeProcessor implements IComputeProcessor {
 	private SourceResult sourceResult;
 	private Integer index;
 	private Map<String, String> attributes;
+
+	/**
+	 * The text sources that ran before this source in this run of the job, by name: the AWK variables of an awk compute.
+	 */
+	private Map<String, String> textSources;
+
 	private static final Map<Class<? extends Compute>, BiFunction<String, String, String>> MATH_FUNCTIONS_MAP;
 
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
@@ -410,17 +416,20 @@ public class ComputeProcessor implements IComputeProcessor {
 
 		log.debug("Hostname {} - Compute Operation [{}]. AWK Script:\n{}\n", hostname, computeKey, awkScript);
 
-		// Resolve the variables declared on the compute, in one pass: every textual reference is substituted and a
-		// variable referencing a source is exposed to the script as an array holding that source's table
-		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
-			awk.getVariables(),
-			telemetryManager,
-			connectorId,
-			attributes,
-			computeKey
-		);
-
 		try {
+			// Resolve the variables declared on the compute, in one pass: every textual reference is substituted and a
+			// variable referencing a source is exposed to the script as an array holding that source's table. The
+			// constants, connector variables and earlier text sources the script uses are added
+			final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+				awk.getVariables(),
+				telemetryManager,
+				connectorId,
+				attributes,
+				computeKey,
+				AwkExecutor.compile(awkScript, AwkExecutor.getUtilityEngine()).getGlobalVariableOffsetMap().keySet(),
+				textSources
+			);
+
 			if (awk.getOutputContentType() == ContentType.TABLE) {
 				// Each print is a row: no re-parsing
 				final List<List<String>> rows = tableInput
