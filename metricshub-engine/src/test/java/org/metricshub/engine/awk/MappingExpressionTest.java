@@ -129,6 +129,12 @@ class MappingExpressionTest {
 		assertWholeValue("= fakeCounter($2) # joules", "fakeCounter");
 		assertWholeValue("= accumulate($2) # a\n", "accumulate");
 		assertNotWholeValue("= fakeCounter($2) + 1 # c", "fakeCounter");
+		// A comment that holds a parenthesis, a string that holds a parenthesis and a #
+		assertWholeValue("= fakeCounter($2) # see rate()", "fakeCounter");
+		assertWholeValue("= fakeCounter($2) # power (W)", "fakeCounter");
+		assertWholeValue("= fakeCounter(int(length($1))) # (x)", "fakeCounter");
+		assertWholeValue("= fakeCounter($1 \")# \" $2)", "fakeCounter");
+		assertNotWholeValue("= fakeCounter($2) + 1 # see rate()", "fakeCounter");
 
 		assertNotWholeValue("= fakeCounter($5) / 1000", "fakeCounter");
 		assertNotWholeValue("= (fakeCounter($5))", "fakeCounter");

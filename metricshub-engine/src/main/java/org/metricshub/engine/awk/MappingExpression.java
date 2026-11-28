@@ -106,13 +106,16 @@ public final class MappingExpression {
 	private static final Pattern ENVIRON_PATTERN = Pattern.compile("\\b(ENVIRON|SYMTAB)\\b");
 
 	/**
-	 * The call of a whole-value function, then AWK comments at most: once the argument compiles, its literals are
-	 * closed, so a <code>#</code> after the closing parenthesis starts a comment
+	 * The start of a whole-value call, up to its opening parenthesis
 	 */
-	private static final Pattern WHOLE_VALUE_PATTERN = Pattern.compile(
-		"^(fakeCounter|accumulate|computePowerShareRatio)\\s*\\((.*)\\)(?:\\s*#[^\\n]*)*$",
-		Pattern.DOTALL
+	private static final Pattern WHOLE_VALUE_CALL = Pattern.compile(
+		"^(fakeCounter|accumulate|computePowerShareRatio)\\s*\\("
 	);
+
+	/**
+	 * AWK comments at most
+	 */
+	private static final Pattern COMMENTS_ONLY = Pattern.compile("(?:\\s*#[^\\n]*)*");
 
 	private static final Pattern STRING_LITERAL = Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"", Pattern.DOTALL);
 
@@ -284,13 +287,11 @@ public final class MappingExpression {
 
 		String function = null;
 		if (metrics && !compiles(NO_WHOLE_VALUE_ENGINE, body)) {
-			// It calls fakeCounter, accumulate or computePowerShareRatio: the call must be the whole value. The argument
-			// compiles only when its parentheses balance, so the anchored call is the whole value.
-			final Matcher matcher = WHOLE_VALUE_PATTERN.matcher(body.trim());
-			if (!matcher.matches() || !compiles(NO_STATE_ENGINE, matcher.group(2))) {
+			// It calls fakeCounter, accumulate or computePowerShareRatio: the call must be the whole value
+			function = wholeValueFunction(body.trim());
+			if (function == null) {
 				return invalid(Problem.NOT_WHOLE_VALUE, body, firstWholeValueFunction(body), null);
 			}
-			function = matcher.group(1);
 		}
 
 		final Kind kind;
@@ -330,6 +331,30 @@ public final class MappingExpression {
 			case "AwkSandboxException" -> Problem.SANDBOX;
 			default -> Problem.OTHER;
 		};
+	}
+
+	/**
+	 * The function whose call is the whole value, followed by AWK comments at most. Any <code>)</code> can close the
+	 * call, a comment may hold one too: the first one followed by comments only whose argument compiles closes it. Once
+	 * the argument compiles, its literals are closed, so a <code>#</code> after it starts a comment.
+	 *
+	 * @param text The trimmed expression
+	 * @return the function name, <code>null</code> when no whole-value call is the whole value
+	 */
+	private static String wholeValueFunction(final String text) {
+		final Matcher call = WHOLE_VALUE_CALL.matcher(text);
+		if (!call.lookingAt()) {
+			return null;
+		}
+		for (int close = text.indexOf(')', call.end()); close >= 0; close = text.indexOf(')', close + 1)) {
+			if (
+				COMMENTS_ONLY.matcher(text).region(close + 1, text.length()).matches() &&
+					compiles(NO_STATE_ENGINE, text.substring(call.end(), close))
+			) {
+				return call.group(1);
+			}
+		}
+		return null;
 	}
 
 	private static String firstWholeValueFunction(final String body) {
