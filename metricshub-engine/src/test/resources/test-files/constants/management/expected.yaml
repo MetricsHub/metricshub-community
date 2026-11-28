@@ -3,6 +3,10 @@ connector:
   detection:
     appliesTo: [ linux ]
 
+constants:
+  query: SELECT Name FROM EMC_StorageSystem
+  namespace: root/emc
+
 beforeAll:
   wbemSource:
     type: wbem

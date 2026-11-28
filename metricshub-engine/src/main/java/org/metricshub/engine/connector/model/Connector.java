@@ -101,6 +101,14 @@ public class Connector implements Serializable {
 	private Map<String, String> constants = new HashMap<>();
 
 	/**
+	 * The value of each connector variable declared under connector.variables, for the resource this connector was
+	 * composed for: the configured value, else the default. A variable without either is absent.
+	 */
+	@Default
+	@JsonIgnore
+	private Map<String, String> variableValues = new HashMap<>();
+
+	/**
 	 * Set of sudo commands.
 	 */
 	@Default

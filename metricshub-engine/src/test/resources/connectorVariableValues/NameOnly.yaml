@@ -1,0 +1,14 @@
+connector:
+  displayName: NameOnly
+  platforms: Test
+  reliesOn: Test
+  information: Declares a variable without any reference to it
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: commandLine
+      commandLine: echo
+  variables:
+    scale:
+      description: Multiplier
+      defaultValue: 2

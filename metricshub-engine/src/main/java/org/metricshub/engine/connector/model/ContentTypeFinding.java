@@ -87,7 +87,43 @@ public record ContentTypeFinding(
 		/** A monitor job whose mappings do not all have the same type. */
 		MIXED_MAPPING_TYPES("give every mapping of the job the same type"),
 		/** <code>keys</code> on a job with a simple mapping: its one instance has no key attribute. */
-		KEYS_WITH_SIMPLE_MAPPING("remove the keys");
+		KEYS_WITH_SIMPLE_MAPPING("remove the keys"),
+		/** A mapping value that is a YAML null. */
+		NULL_MAPPING_VALUE("write a text, or = and an AWK expression; or remove the key"),
+		/** A mapping expression (<code>= ...</code>) that does not compile. */
+		EXPRESSION_SYNTAX(
+			"a text is written without =, a text that starts with = is written = \"=text\"; function names are case-sensitive"
+		),
+		/** A function that needs the monitor in a mapping expression outside <code>metrics</code>. */
+		MONITOR_FUNCTION_OUTSIDE_METRICS(
+			"rate, fakeCounter, accumulate, computePowerShareRatio, legacyLedStatus and legacyPowerSupplyUtilization need the monitor: write them under metrics"
+		),
+		/** fakeCounter, accumulate or computePowerShareRatio that is not the whole mapping expression. */
+		STATE_FUNCTION_NOT_WHOLE_VALUE(
+			"write = fakeCounter(...), = accumulate(...) or = computePowerShareRatio(...) alone, the arithmetic inside the argument"
+		),
+		/** A name in a mapping expression that is no constant, connector variable or text source of the job. */
+		EXPRESSION_UNKNOWN_NAME(
+			"write a text in quotes, or the name of a constant, a connector variable or a text source of the job"
+		),
+		/** A reference (<code>${source::</code>, <code>${constant::</code>...) in a mapping expression. */
+		REFERENCE_IN_EXPRESSION(
+			"write the name of the constant, the connector variable or the text source, without ${...}"
+		),
+		/** <code>ENVIRON</code> or <code>SYMTAB</code> in a mapping expression. */
+		ENVIRON_IN_EXPRESSION("the environment of the agent is not readable"),
+		/** The name of a constant that holds a reference, used in AWK. */
+		CONSTANT_HOLDS_REFERENCE("use ${constant::NAME} in a text: a constant that holds a reference has no AWK name"),
+		/** A constant or a connector variable named like an AWK keyword, built-in function or special variable. */
+		RESERVED_NAME("rename it: AWK keywords, built-in functions and special variables are reserved"),
+		/** A constant, a connector variable or a text source used as an array. */
+		NAME_USED_AS_ARRAY("rename the array: this name is a text variable"),
+		/** A function of a script named like a constant, a connector variable or a text source. */
+		NAME_DEFINED_AS_FUNCTION("rename the function"),
+		/** A <code>variables:</code> entry of a script named like a constant, a connector variable or a text source. */
+		NAME_DECLARED_IN_VARIABLES("remove the entry: the script already has this name; or rename it"),
+		/** A script that reads a text source of its scope that runs after it, or its own source. */
+		TEXT_SOURCE_NOT_YET_RUN("run the source before this one (executionOrder or a reference), or rename the variable");
 
 		private final String hint;
 

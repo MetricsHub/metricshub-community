@@ -72,6 +72,8 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
+import org.metricshub.engine.strategy.utils.MappingEvaluator;
+import org.metricshub.engine.strategy.utils.MappingEvaluator.Section;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
@@ -347,7 +349,12 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		boolean answered = false;
 		boolean mapped = false;
 		try {
-			processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
+			final Map<String, String> textSources = processSourcesAndComputes(
+				orderedSources.getSources(),
+				null,
+				jobInfo,
+				cursorRollbacks
+			);
 			answered = !skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname);
 			mapped = answered &&
 				processSameTypeMonitors(
@@ -356,7 +363,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 					monitorType,
 					hostname,
 					monitorJob,
-					isDiscovery
+					isDiscovery,
+					textSources
 				);
 		} catch (SourceFailedException e) {
 			// A job stopped by a failed source maps nothing: its monitors are kept as they are, see untrustedRuns
@@ -470,6 +478,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 	 * @param hostname    The host name of the monitored resource
 	 * @param monitorJob  The monitor job defining the discovery or simple task
 	 * @param isDiscovery Whether the task is a discovery, in which case the collected metrics are flagged for a collect time reset
+	 * @param textSources The text sources of this run of the job, by name
 	 * @return {@code true} if at least one monitor was created or updated
 	 */
 	private boolean processSameTypeMonitors(
@@ -478,7 +487,8 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		final String monitorType,
 		final String hostname,
 		final MonitorJob monitorJob,
-		final boolean isDiscovery
+		final boolean isDiscovery,
+		final Map<String, String> textSources
 	) {
 		final String connectorId = connector.getCompiledFilename();
 
@@ -533,29 +543,41 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			connectorId
 		);
 
+		final JobInfo jobInfo = JobInfo.builder()
+			.connectorId(connectorId)
+			.hostname(hostname)
+			.monitorType(monitorType)
+			.jobName(getJobName())
+			.build();
+
+		// The values that start with "=" are AWK expressions, evaluated apart from the legacy mapping
+		final MappingEvaluator evaluator = new MappingEvaluator(
+			telemetryManager,
+			connector,
+			mapping,
+			jobInfo,
+			strategyTime,
+			textSources
+		);
+
 		int mappedMonitors = 0;
 		for (int i = 0; i < table.size(); i++) {
 			final List<String> row = table.get(i);
 			// Init mapping processor
 			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.telemetryManager(telemetryManager)
-				.mapping(mapping)
-				.jobInfo(
-					JobInfo.builder()
-						.connectorId(connectorId)
-						.hostname(hostname)
-						.monitorType(monitorType)
-						.jobName(getJobName())
-						.build()
-				)
+				.mapping(evaluator.getLegacyMapping())
+				.jobInfo(jobInfo)
 				.collectTime(strategyTime)
 				.row(row)
 				.indexCounter(i + 1)
 				.build();
 
 			// Use the mapping processor to extract attributes and resource
-			final Map<String, String> noContextAttributeInterpretedValues = mappingProcessor
-				.interpretNonContextMappingAttributes();
+			final Map<String, String> noContextAttributeInterpretedValues = new HashMap<>(
+				mappingProcessor.interpretNonContextMappingAttributes()
+			);
+			noContextAttributeInterpretedValues.putAll(evaluator.evaluate(Section.ATTRIBUTES, row, null));
 
 			// Initialize a monitor factory with the previously created attributes and resources
 
@@ -599,11 +621,13 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			// Collect conditional collection
 			monitor.addConditionalCollection(mappingProcessor.interpretNonContextMappingConditionalCollection());
 			monitor.addConditionalCollection(mappingProcessor.interpretContextMappingConditionalCollection(monitor));
+			monitor.addConditionalCollection(evaluator.evaluate(Section.CONDITIONAL_COLLECTION, row, monitor));
 
 			// Collect metrics
-			final Map<String, String> metrics = mappingProcessor.interpretNonContextMappingMetrics();
+			final Map<String, String> metrics = new HashMap<>(mappingProcessor.interpretNonContextMappingMetrics());
 
 			metrics.putAll(mappingProcessor.interpretContextMappingMetrics(monitor));
+			metrics.putAll(evaluator.evaluate(Section.METRICS, row, monitor));
 
 			final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
@@ -620,6 +644,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			// Collect legacy parameters
 			monitor.addLegacyParameters(mappingProcessor.interpretNonContextMappingLegacyTextParameters());
 			monitor.addLegacyParameters(mappingProcessor.interpretContextMappingLegacyTextParameters(monitor));
+			monitor.addLegacyParameters(evaluator.evaluate(Section.LEGACY_TEXT_PARAMETERS, row, monitor));
 		}
 
 		return mappedMonitors > 0;

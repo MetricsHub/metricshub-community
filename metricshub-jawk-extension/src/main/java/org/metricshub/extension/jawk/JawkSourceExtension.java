@@ -128,22 +128,26 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 				)
 				: input;
 
-		// Resolve the variables declared on the source, in one pass: every textual reference is substituted and a
-		// variable referencing a source is exposed to the script as an array holding that source's table
-		final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
-			jawkSource.getVariables(),
-			telemetryManager,
-			connectorId,
-			sourceProcessor.getAttributes(),
-			source.getKey()
-		);
-
 		// Instantiate the MetricsHub extension for Jawk with the proper context
 		MetricsHubExtensionForJawk extension = new MetricsHubExtensionForJawk(sourceProcessor, hostname, connectorId);
 
 		// Execute
 		try {
 			Awk awkEngine = AwkExecutor.newAwk(null, extension);
+
+			// Resolve the variables declared on the source, in one pass: every textual reference is substituted and a
+			// variable referencing a source is exposed to the script as an array holding that source's table. The
+			// constants, connector variables and earlier text sources the script uses are added
+			final Map<String, Object> variables = AwkVariableHelper.resolveVariables(
+				jawkSource.getVariables(),
+				telemetryManager,
+				connectorId,
+				sourceProcessor.getAttributes(),
+				source.getKey(),
+				AwkExecutor.compile(awkScript, awkEngine).getGlobalVariableOffsetMap().keySet(),
+				sourceProcessor.getTextSources()
+			);
+
 			if (jawkSource.getOutput() == ContentType.TABLE) {
 				// Each print is a row
 				return SourceResult.ofTable(

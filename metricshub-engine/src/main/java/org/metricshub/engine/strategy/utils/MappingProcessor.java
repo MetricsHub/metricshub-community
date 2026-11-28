@@ -25,6 +25,11 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PA
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
+import static org.metricshub.engine.strategy.utils.MappingFunctions.MEBIBYTE_2_BYTE_FACTOR;
+import static org.metricshub.engine.strategy.utils.MappingFunctions.MEGABIT_2_BIT_FACTOR;
+import static org.metricshub.engine.strategy.utils.MappingFunctions.MEGAHERTZ_2_HERTZ_FACTOR;
+import static org.metricshub.engine.strategy.utils.MappingFunctions.MILLIVOLT_2_VOLT_FACTOR;
+import static org.metricshub.engine.strategy.utils.MappingFunctions.PERCENT_2_RATIO_FACTOR;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +40,6 @@ import java.util.function.BiFunction;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -52,7 +56,6 @@ import org.metricshub.engine.common.helpers.state.NeedsCleaning;
 import org.metricshub.engine.common.helpers.state.PredictedFailure;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
-import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
@@ -71,16 +74,10 @@ import org.metricshub.engine.telemetry.metric.NumberMetric;
 public class MappingProcessor {
 
 	private static final String RESULT_MESSAGE = "As a result, {} cannot be updated.";
-	private static final double MEBIBYTE_2_BYTE_FACTOR = 1_048_576.0;
-	private static final double MEGABIT_2_BIT_FACTOR = 1_000_000.0;
-	public static final double MEGABIT_2_BYTE_FACTOR = MEGABIT_2_BIT_FACTOR / 8.0;
-	private static final double MEGAHERTZ_2_HERTZ_FACTOR = 1_000_000.0;
-	private static final double MILLIVOLT_2_VOLT_FACTOR = 0.001;
-	private static final double PERCENT_2_RATIO_FACTOR = 0.01;
+	public static final double MEGABIT_2_BYTE_FACTOR = MappingFunctions.MEGABIT_2_BYTE_FACTOR;
 
 	private static final String ZERO = "0";
 	private static final String ONE = "1";
-	private static final String TRUE = "true";
 	private static final String INVALID_VALUE = "Hostname {} - Value {} is invalid for {}.";
 
 	private static final Pattern MEBIBYTE_2_BYTE_PATTERN = Pattern.compile(
@@ -273,7 +270,7 @@ public class MappingProcessor {
 		} else if (isLookupFunction(value)) {
 			result.put(key, lookup(value, key));
 		} else if (isComputePowerShareRatioFunction(value)) {
-			result.put(String.format("__%s.raw_power_share", key), computePowerShareRatio(value, key));
+			result.put(MappingFunctions.powerShareName(key), computePowerShareRatio(value, key));
 		} else if (isLegacyPowerSupplyUtilization(value)) {
 			computationFunctions.put(key, this::legacyPowerSupplyUtilization);
 		} else if (isFakeCounterFunction(value)) {
@@ -365,11 +362,7 @@ public class MappingProcessor {
 			return null;
 		}
 
-		final Stream<Monitor> monitors = typedMonitors.values()
-			.stream()
-			.filter(monitor -> lookupAttributeValue.equals(monitor.getAttributes().get(lookupAttributeKey)));
-
-		final Monitor monitor = monitors.findFirst().orElse(null);
+		final Monitor monitor = MappingFunctions.findMonitor(typedMonitors, lookupAttributeKey, lookupAttributeValue);
 
 		if (monitor == null) {
 			log.error(
@@ -396,25 +389,21 @@ public class MappingProcessor {
 		final String key = keyValuePair.getKey();
 		final String value = keyValuePair.getValue();
 		final String hostname = jobInfo.getHostname();
-		final NumberMetric metric;
+		// Without the limit, the argument is not read, as before
 		try {
-			metric = monitor.getMetric("hw.power_supply.limit", NumberMetric.class);
+			if (monitor.getMetric("hw.power_supply.limit", NumberMetric.class) == null) {
+				return EMPTY;
+			}
 		} catch (Exception e) {
 			return EMPTY;
 		}
-
-		if (metric == null) {
-			return EMPTY;
-		}
-
-		final Double powerLimit = metric.getValue();
 
 		final List<String> functionArguments = FunctionArgumentsExtractor.extractArguments(value);
 		final String extracted = functionArguments.get(0);
 		final Optional<Double> maybePower = extractDoubleValue(extracted, key);
 
 		if (maybePower.isPresent()) {
-			final Double result = MathOperationsHelper.divide(key, maybePower.get(), powerLimit, hostname);
+			final Double result = MappingFunctions.powerSupplyUtilization(monitor, key, maybePower.get(), hostname);
 			if (result != null) {
 				return result.toString();
 			}
@@ -452,77 +441,31 @@ public class MappingProcessor {
 			return EMPTY;
 		}
 
-		// Build the metric where we need to store the raw value
-		final String metricRateName = String.format("__%s.fake_counter_from", metricName);
-
-		final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
-
-		// The previous reading and the previous counter must be those of the last run
-		saveLastRun(monitor, metricRateName);
-		saveLastRun(monitor, metricName);
-
-		// Collect the metric raw value
 		final Double rawValue = maybeMetricRateValue.get();
-		metricFactory.collectNumberMetric(monitor, metricRateName, rawValue, collectTime);
-
-		final Double collectTimePrevious = CollectHelper.getNumberMetricCollectTime(monitor, metricRateName, true);
-
-		final Double deltaTimeMs = MathOperationsHelper.subtract(
-			metricRateName,
-			Double.valueOf(collectTime),
-			collectTimePrevious,
-			hostname
+		final Double counter = MappingFunctions.fakeCounter(
+			monitor,
+			metricName,
+			rawValue,
+			collectTime,
+			hostname,
+			telemetryManager.getConnectorStore()
 		);
 
-		// Convert deltaTimeMs from milliseconds (ms) to seconds
-		final Double deltaTime = deltaTimeMs != null ? deltaTimeMs / 1000.0 : null;
-
-		// Calculate the usage over time. E.g from Power Consumption: E = P * T
-		final Double usageDelta = MathOperationsHelper.multiply(metricRateName, rawValue, deltaTime, hostname);
-
-		if (usageDelta != null) {
-			// The counter will start from the usage delta
-			Double counter = usageDelta;
-
-			// The previous counter is needed to make a sum with the delta counter value on this collect
-			Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
-
-			// Ok, we have the previous counter value ? sum the previous counter and the current delta counter
-			if (previousCounter != null) {
-				counter += previousCounter;
-			}
-
+		if (counter != null) {
 			// Everything is good return the counter metric
 			return counter.toString();
-		} else {
-			log.debug(
-				"Hostname {} - Cannot calculate fake counter {} for monitor {}. Current raw value {} - Current time {} - Previous time {}.",
-				hostname,
-				metricName,
-				monitor.getId(),
-				rawValue,
-				collectTime,
-				collectTimePrevious
-			);
 		}
-		return EMPTY;
-	}
 
-	/**
-	 * Save the value and the collect time of the given metric as its previous ones, unless this run already collected
-	 * it. The functions that add to the total of the last run read these previous values:
-	 * <code>PrepareCollectStrategy</code> saves them before a collect, but not before the simple jobs of the discovery
-	 * phase. When several rows are mapped to the same monitor during a run, the rows after the first one find the metric
-	 * collected at this collect time: the previous values stay those of the last run.
-	 *
-	 * @param monitor    The monitor we currently collect.
-	 * @param metricName The name of the metric to save.
-	 */
-	private void saveLastRun(final Monitor monitor, final String metricName) {
-		final NumberMetric metric = monitor.getMetric(metricName, NumberMetric.class);
-		if (metric != null && !Long.valueOf(collectTime).equals(metric.getCollectTime())) {
-			metric.save();
-		}
+		log.debug(
+			"Hostname {} - Cannot calculate fake counter {} for monitor {}. Current raw value {} - Current time {} - Previous time {}.",
+			hostname,
+			metricName,
+			monitor.getId(),
+			rawValue,
+			collectTime,
+			CollectHelper.getNumberMetricCollectTime(monitor, MappingFunctions.fakeCounterStateName(metricName), true)
+		);
+		return EMPTY;
 	}
 
 	/**
@@ -553,46 +496,30 @@ public class MappingProcessor {
 			return EMPTY;
 		}
 
-		// Build the metrics where we need to store the raw value
-		final String metricRateName = String.format("__%s.rate_from", metricName);
-
-		final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
-
-		// Collect the metric raw value
 		final Double rawValue = maybeMetricCounterValue.get();
-		metricFactory.collectNumberMetric(monitor, metricRateName, rawValue, collectTime);
-
-		final Double collectTimePrevious = CollectHelper.getNumberMetricCollectTime(monitor, metricRateName, true);
-
-		final Double deltaTimeMs = MathOperationsHelper.subtract(
-			metricRateName,
-			Double.valueOf(collectTime),
-			collectTimePrevious,
-			hostname
+		final Double result = MappingFunctions.rate(
+			monitor,
+			metricName,
+			rawValue,
+			collectTime,
+			hostname,
+			telemetryManager.getConnectorStore()
 		);
-
-		// Convert deltaTimeMs from milliseconds (ms) to seconds
-		final Double deltaTime = deltaTimeMs != null ? deltaTimeMs / 1000.0 : null;
-		final Double previousValue = CollectHelper.getNumberMetricValue(monitor, metricRateName, true);
-
-		final Double deltaCounter = MathOperationsHelper.subtract(metricRateName, rawValue, previousValue, hostname);
-
-		final Double result = MathOperationsHelper.divide(metricName, deltaCounter, deltaTime, hostname);
 
 		if (result != null) {
 			return result.toString();
-		} else {
-			log.debug(
-				"Hostname {} - Cannot create rate {} for monitor {}. Current raw value {} - Current time {} - Previous time {}.",
-				hostname,
-				metricName,
-				monitor.getId(),
-				rawValue,
-				collectTime,
-				collectTimePrevious
-			);
-			return EMPTY;
 		}
+
+		log.debug(
+			"Hostname {} - Cannot create rate {} for monitor {}. Current raw value {} - Current time {} - Previous time {}.",
+			hostname,
+			metricName,
+			monitor.getId(),
+			rawValue,
+			collectTime,
+			CollectHelper.getNumberMetricCollectTime(monitor, MappingFunctions.rateStateName(metricName), true)
+		);
+		return EMPTY;
 	}
 
 	/**
@@ -646,21 +573,7 @@ public class MappingProcessor {
 			return EMPTY;
 		}
 
-		// Start with the current delta value
-		Double counter = maybeDeltaValue.get();
-
-		// The previous counter must be the one of the last run
-		saveLastRun(monitor, metricName);
-
-		// Get the previous counter value to accumulate
-		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
-
-		// If a previous counter exists, add the current delta to it
-		if (previousCounter != null) {
-			counter += previousCounter;
-		}
-
-		return counter.toString();
+		return Double.toString(MappingFunctions.accumulate(monitor, metricName, maybeDeltaValue.get(), collectTime));
 	}
 
 	/**
@@ -978,22 +891,8 @@ public class MappingProcessor {
 		final String extractedArgument = FunctionArgumentsExtractor.extractArguments(keyValuePair.value).get(0);
 		final String extractedValue = extractColumnValueOrTextValue(extractedArgument, keyValuePair.getKey());
 
-		String status = null;
-		switch (extractedValue.toLowerCase()) {
-			case "on":
-				status = monitorAttributes.get("__on_status"); // ok, failed
-				break;
-			case "off":
-				status = monitorAttributes.get("__off_status"); // ok, failed
-				break;
-			case "blinking":
-				status = monitorAttributes.get("__blinking_status"); // ok, failed
-				break;
-			default:
-				status = EMPTY;
-		}
-
-		return status != null ? status.toLowerCase() : EMPTY;
+		final String status = MappingFunctions.ledStatus(monitorAttributes, extractedValue);
+		return status != null ? status : EMPTY;
 	}
 
 	/**
@@ -1022,7 +921,7 @@ public class MappingProcessor {
 			extractedValue = extractColumnValue(extracted, key);
 		}
 
-		if (ONE.equals(extractedValue) || TRUE.equalsIgnoreCase(extractedValue)) {
+		if (MappingFunctions.isTrue(extractedValue)) {
 			return ONE;
 		}
 

@@ -29,6 +29,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MON
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,8 @@ import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.strategy.source.OrderedSources;
 import org.metricshub.engine.strategy.source.SourceResult;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
+import org.metricshub.engine.strategy.utils.MappingEvaluator;
+import org.metricshub.engine.strategy.utils.MappingEvaluator.Section;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
 import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
@@ -294,9 +297,14 @@ public class CollectStrategy extends AbstractStrategy {
 				if (singleton != null) {
 					final List<Runnable> cursorRollbacks = new ArrayList<>();
 					try {
-						processSourcesAndComputes(orderedSources.getSources(), singleton.getAttributes(), jobInfo, cursorRollbacks);
+						final Map<String, String> textSources = processSourcesAndComputes(
+							orderedSources.getSources(),
+							singleton.getAttributes(),
+							jobInfo,
+							cursorRollbacks
+						);
 						if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
-							processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton);
+							processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, singleton, textSources);
 						}
 					} catch (SourceFailedException e) {
 						// The metrics are left unset for this cycle
@@ -311,11 +319,23 @@ public class CollectStrategy extends AbstractStrategy {
 				// Create the sources and the computes for a connector
 				final List<Runnable> cursorRollbacks = new ArrayList<>();
 				try {
-					processSourcesAndComputes(orderedSources.getSources(), null, jobInfo, cursorRollbacks);
+					final Map<String, String> textSources = processSourcesAndComputes(
+						orderedSources.getSources(),
+						null,
+						jobInfo,
+						cursorRollbacks
+					);
 					if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
 						// Retrieve monitor job keys
 						final Set<String> monitorJobKeys = monitorJob.getValue().getKeys();
-						processMonitors(monitorType, multiInstanceCollect.getMapping(), currentConnector, hostname, monitorJobKeys);
+						processMonitors(
+							monitorType,
+							multiInstanceCollect.getMapping(),
+							currentConnector,
+							hostname,
+							monitorJobKeys,
+							textSources
+						);
 					}
 				} catch (SourceFailedException e) {
 					// The metrics are left unset for this cycle
@@ -335,14 +355,14 @@ public class CollectStrategy extends AbstractStrategy {
 							// One list per monitor: each monitor polls the sources again
 							final List<Runnable> cursorRollbacks = new ArrayList<>();
 							try {
-								processSourcesAndComputes(
+								final Map<String, String> textSources = processSourcesAndComputes(
 									orderedSources.getSources(),
 									monitor.getAttributes(),
 									jobInfo,
 									cursorRollbacks
 								);
 								if (!skipMappingIfInterrupted(cursorRollbacks, currentConnector.getCompiledFilename(), hostname)) {
-									processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor);
+									processMonitors(monitorType, collect.getMapping(), currentConnector, hostname, monitor, textSources);
 								}
 							} catch (SourceFailedException e) {
 								// The metrics of this monitor are left unset for this cycle
@@ -364,15 +384,17 @@ public class CollectStrategy extends AbstractStrategy {
 	 * @param connector   The current connector instance
 	 * @param hostname    The host name we currently monitor
 	 * @param keys        {@link Set} of attribute keys used to find the monitor to collect
+	 * @param textSources The text sources of this run of the job, by name
 	 */
 	private void processMonitors(
 		final String monitorType,
 		final Mapping mapping,
 		final Connector connector,
 		final String hostname,
-		final Set<String> keys
+		final Set<String> keys,
+		final Map<String, String> textSources
 	) {
-		processMonitors(monitorType, mapping, connector, hostname, Optional.empty(), keys);
+		processMonitors(monitorType, mapping, connector, hostname, Optional.empty(), keys, textSources);
 	}
 
 	/**
@@ -383,15 +405,17 @@ public class CollectStrategy extends AbstractStrategy {
 	 * @param connector   The current connector instance
 	 * @param hostname    The host name we currently monitor
 	 * @param monitor     {@link Monitor} instance collect (mono instance)
+	 * @param textSources The text sources of this run of the job, by name
 	 */
 	private void processMonitors(
 		final String monitorType,
 		final Mapping mapping,
 		final Connector connector,
 		final String hostname,
-		final Monitor monitor
+		final Monitor monitor,
+		final Map<String, String> textSources
 	) {
-		processMonitors(monitorType, mapping, connector, hostname, Optional.of(monitor), null);
+		processMonitors(monitorType, mapping, connector, hostname, Optional.of(monitor), null, textSources);
 	}
 
 	/**
@@ -405,6 +429,7 @@ public class CollectStrategy extends AbstractStrategy {
 	 *                        {@link Monitor} instance used to process the mono instance collect
 	 * @param attributeKeys  null in case of mono-instance processing  otherwise a {@link Set} of attribute keys
 	 *                       used to find the monitor to collect in multi-instance mode
+	 * @param textSources    The text sources of this run of the job, by name
 	 */
 	private void processMonitors(
 		final String monitorType,
@@ -412,7 +437,8 @@ public class CollectStrategy extends AbstractStrategy {
 		final Connector connector,
 		final String hostname,
 		final Optional<Monitor> maybeMonitor,
-		final Set<String> attributeKeys
+		final Set<String> attributeKeys,
+		final Map<String, String> textSources
 	) {
 		if (mapping == null) {
 			return;
@@ -465,6 +491,23 @@ public class CollectStrategy extends AbstractStrategy {
 
 		final Map<String, Monitor> sameTypeMonitors = telemetryManager.findMonitorsByType(monitorType);
 
+		final JobInfo jobInfo = JobInfo.builder()
+			.connectorId(connectorId)
+			.hostname(hostname)
+			.monitorType(monitorType)
+			.jobName(JOB_NAME)
+			.build();
+
+		// The values that start with "=" are AWK expressions, evaluated apart from the legacy mapping
+		final MappingEvaluator evaluator = new MappingEvaluator(
+			telemetryManager,
+			connector,
+			mapping,
+			jobInfo,
+			strategyTime,
+			textSources
+		);
+
 		// Loop over the source table rows
 		for (int i = 0; i < rowCountLimit; i++) {
 			final List<String> row = table.get(i);
@@ -472,33 +515,24 @@ public class CollectStrategy extends AbstractStrategy {
 			// Init mapping processor
 			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.telemetryManager(telemetryManager)
-				.mapping(mapping)
-				.jobInfo(
-					JobInfo.builder()
-						.connectorId(connectorId)
-						.hostname(hostname)
-						.monitorType(monitorType)
-						.jobName(JOB_NAME)
-						.build()
-				)
+				.mapping(evaluator.getLegacyMapping())
+				.jobInfo(jobInfo)
 				.collectTime(strategyTime)
 				.row(row)
 				.indexCounter(i + 1)
 				.build();
 
 			// In case of multi-instance, maybeMonitor is empty. So, we try to find it by type, connector id and attribute keys
-			maybeMonitor.or(
-				() -> findMonitor(
-					connectorId,
-					sameTypeMonitors,
-					mappingProcessor.interpretNonContextMappingAttributes(),
-					attributeKeys
-				)
-			).ifPresent(monitor -> {
+			maybeMonitor.or(() -> {
+				final Map<String, String> attributes = new HashMap<>(mappingProcessor.interpretNonContextMappingAttributes());
+				attributes.putAll(evaluator.evaluate(Section.ATTRIBUTES, row, null));
+				return findMonitor(connectorId, sameTypeMonitors, attributes, attributeKeys);
+			}).ifPresent(monitor -> {
 				// Collect metrics
-				final Map<String, String> metrics = mappingProcessor.interpretNonContextMappingMetrics();
+				final Map<String, String> metrics = new HashMap<>(mappingProcessor.interpretNonContextMappingMetrics());
 
 				metrics.putAll(mappingProcessor.interpretContextMappingMetrics(monitor));
+				metrics.putAll(evaluator.evaluate(Section.METRICS, row, monitor));
 
 				final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
@@ -507,6 +541,7 @@ public class CollectStrategy extends AbstractStrategy {
 				// Collect legacy parameters
 				monitor.addLegacyParameters(mappingProcessor.interpretNonContextMappingLegacyTextParameters());
 				monitor.addLegacyParameters(mappingProcessor.interpretContextMappingLegacyTextParameters(monitor));
+				monitor.addLegacyParameters(evaluator.evaluate(Section.LEGACY_TEXT_PARAMETERS, row, monitor));
 			});
 		}
 	}
