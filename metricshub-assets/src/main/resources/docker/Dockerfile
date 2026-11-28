@@ -38,6 +38,7 @@ RUN apt-get update &&\
     ln -s /opt/metricshub/lib/LICENSE /opt/metricshub/LICENSE &&\
     ln -s /opt/metricshub/lib/connectors /opt/metricshub/connectors &&\
     ln -s /opt/metricshub/lib/extensions /opt/metricshub/extensions &&\
+    ln -s /opt/metricshub/lib/alert-rules /opt/metricshub/alert-rules &&\
     useradd -d /opt/metricshub -s /bin/bash -U metricshub &&\
     chown -R metricshub:metricshub /opt/metricshub &&\
     ls -al /opt/metricshub/**

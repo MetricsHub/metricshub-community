@@ -63,6 +63,10 @@ if [ -d /opt/metricshub ]; then
   if [ ! -e /opt/metricshub/extensions ]; then
     cd /opt/metricshub && ln -s lib/extensions extensions
   fi
+
+  if [ ! -e /opt/metricshub/alert-rules ]; then
+    cd /opt/metricshub && ln -s lib/alert-rules alert-rules
+  fi
 fi
 
 exit 0

@@ -128,6 +128,10 @@ if [ -d APPLICATION_DIRECTORY ]; then
   if [ -L APPLICATION_DIRECTORY/extensions ]; then
     rm -f APPLICATION_DIRECTORY/extensions
   fi
+
+  if [ -L APPLICATION_DIRECTORY/alert-rules ]; then
+    rm -f APPLICATION_DIRECTORY/alert-rules
+  fi
 fi
 
 # Remove the upgrade staging directory on package removal ($1 == 0), not on upgrade ($1 == 1),
@@ -172,5 +176,9 @@ if [ -d APPLICATION_DIRECTORY ]; then
   
   if [ ! -e  APPLICATION_DIRECTORY/extensions ]; then
     cd APPLICATION_DIRECTORY && ln -s lib/extensions extensions
+  fi
+
+  if [ ! -e  APPLICATION_DIRECTORY/alert-rules ]; then
+    cd APPLICATION_DIRECTORY && ln -s lib/alert-rules alert-rules
   fi
 fi
