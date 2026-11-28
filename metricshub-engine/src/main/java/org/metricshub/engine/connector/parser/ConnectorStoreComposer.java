@@ -205,13 +205,15 @@ public class ConnectorStoreComposer {
 	 */
 	private Map<String, Connector> processConnector(final IntermediateConnector intermediateConnector) {
 		// Store all the connectors that emerged from the current one in a map.
-		final List<IntermediateConnector> processedConnectors = processVariables(intermediateConnector);
+		final List<Variant> variants = processVariables(intermediateConnector);
 
 		final Map<String, Connector> connectors = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-		processedConnectors.forEach((IntermediateConnector processedIntermediateConnector) -> {
-			final String connectorId = processedIntermediateConnector.getConnectorId();
+		variants.forEach((Variant variant) -> {
+			final String connectorId = variant.connector().getConnectorId();
 			try {
-				connectors.put(connectorId, parseConnector(processedIntermediateConnector));
+				final Connector connector = parseConnector(variant.connector());
+				connector.setVariableValues(new HashMap<>(variant.variableValues()));
+				connectors.put(connectorId, connector);
 			} catch (IOException e) {
 				logLoadError(connectorId, e);
 			}
@@ -227,9 +229,10 @@ public class ConnectorStoreComposer {
 	 *</p>
 	 *
 	 * @param intermediateConnector The base connector containing variables to resolve.
-	 * @return A list of {@link IntermediateConnector} instances, including the default and all configured variants.
+	 * @return A list of {@link Variant} instances, including the default and all configured variants, each with the
+	 *         value of each declared variable.
 	 */
-	private List<IntermediateConnector> processVariables(final IntermediateConnector intermediateConnector) {
+	private List<Variant> processVariables(final IntermediateConnector intermediateConnector) {
 		// Retrieve the connectorId from the intermediate connector
 		final String connectorId = intermediateConnector.getConnectorId();
 
@@ -237,7 +240,7 @@ public class ConnectorStoreComposer {
 		final JsonNode connectorNode = intermediateConnector.getConnectorNode();
 
 		// List containing resulting JsonNodes
-		final List<IntermediateConnector> processedConnectors = new ArrayList<>();
+		final List<Variant> processedConnectors = new ArrayList<>();
 
 		// Filter additional connectors configs to keep only those for the current connector
 		final Map<String, AdditionalConnector> connectorConfigurations = filterAdditionalConnectors(connectorId);
@@ -251,7 +254,8 @@ public class ConnectorStoreComposer {
 		// If a connector with the same name is configured, it will override this one.
 		final IntermediateConnector connectorWithDefaultVariables = intermediateConnector.getDeepCopy(connectorId);
 		replaceVariables(connectorWithDefaultVariables, defaultVariables);
-		processedConnectors.add(connectorWithDefaultVariables);
+		// The defaults are those of the declared variables
+		processedConnectors.add(new Variant(connectorWithDefaultVariables, defaultVariables));
 
 		// Apply user-defined configurations if they exist
 		if (!connectorConfigurations.isEmpty()) {
@@ -274,15 +278,23 @@ public class ConnectorStoreComposer {
 				// Override the default connector variables by the connector variables that the
 				// user configured.
 				final Map<String, String> configuredVariables = additionalConnectorValue.getVariables();
+				// The value of each declared variable: the configured one, else the default
+				final Map<String, String> variableValues = new HashMap<>(defaultVariables);
 				if (configuredVariables != null) {
 					connectorVariables.putAll(configuredVariables);
+					connectorNode.path("connector").path("variables").fieldNames().forEachRemaining(name -> {
+						final String value = configuredVariables.get(name);
+						if (value != null) {
+							variableValues.put(name, value);
+						}
+					});
 				}
 
 				// Replace the connector and embedded files variables by the obtained variables values.
 				replaceVariables(newIntermediateConnector, connectorVariables);
 
 				// Add the new intermediate connector to the processed connectors set.
-				processedConnectors.add(newIntermediateConnector);
+				processedConnectors.add(new Variant(newIntermediateConnector, variableValues));
 
 				// Add the connector to the host connectors set.
 				connectorsParsingResult.getResourceConnectors()
@@ -291,6 +303,15 @@ public class ConnectorStoreComposer {
 		}
 		return processedConnectors;
 	}
+
+	/**
+	 * A connector composed for a resource, with the value of each variable it declares.
+	 *
+	 * @param connector      The connector with its variables replaced
+	 * @param variableValues The value of each declared variable: the configured one, else the default; a declared
+	 *                       variable without either is absent
+	 */
+	private record Variant(IntermediateConnector connector, Map<String, String> variableValues) {}
 
 	/**
 	 * Converts the "variables" section of a {@link JsonNode} into a {@link Map} where each entry consists of

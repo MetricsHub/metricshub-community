@@ -62,10 +62,14 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 		final UnaryOperator<String> updater = this::performEnvReplacements;
 		final Predicate<String> replacementPredicate = Objects::nonNull;
 
-		JsonNodeUpdater.jsonNodeUpdaterBuilder()
+		JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 			.withJsonNode(node)
 			.withPredicate(replacementPredicate)
-			.withUpdater(updater)
+			.withUpdater(
+				(value, path) -> MappingValueReplacement.isMappingValue(path)
+					? MappingValueReplacement.replace(value, updater)
+					: updater.apply(value)
+			)
 			.build()
 			.update();
 

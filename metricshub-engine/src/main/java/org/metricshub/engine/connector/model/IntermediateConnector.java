@@ -109,14 +109,22 @@ public class IntermediateConnector {
 	}
 
 	/**
-	 * Checks if the connector JsonNode or one of its embedded files contain variables.
-	 * @return True if it contains variables, False otherwise.
+	 * Checks if the connector declares variables under <code>connector.variables</code>, or if its JsonNode or one of
+	 * its embedded files contain variables.
+	 * @return True if it declares or contains variables, False otherwise.
 	 */
 	public boolean hasVariables() {
-		// Detect if the connector node contains variable patterns
-		if (connectorNode != null && connectorNode.toString().contains(CONNECTOR_VARIABLE_PATTERN)) {
-			// Register this connector as one that contains variables for late replacement
-			return true;
+		if (connectorNode != null) {
+			// A connector that declares variables is composed per resource, so its AWK expressions and scripts get the
+			// configured values even when it uses them only by name.
+			final JsonNode variables = connectorNode.path("connector").path("variables");
+			// Detect if the connector node contains variable patterns
+			if (
+				(variables.isObject() && !variables.isEmpty()) || connectorNode.toString().contains(CONNECTOR_VARIABLE_PATTERN)
+			) {
+				// Register this connector as one that contains variables for late replacement
+				return true;
+			}
 		}
 
 		// Detect if any of the connector's embedded files contain variable patterns
