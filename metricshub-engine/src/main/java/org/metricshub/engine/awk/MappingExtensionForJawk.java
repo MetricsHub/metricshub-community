@@ -77,31 +77,6 @@ public class MappingExtensionForJawk extends AbstractExtension {
 		"computePowerShareRatio"
 	);
 
-	/**
-	 * The 19 function names, case-sensitive.
-	 */
-	public static final Set<String> FUNCTIONS = Set.of(
-		"megaBit2Bit",
-		"megaBit2Byte",
-		"percent2Ratio",
-		"megaHertz2Hertz",
-		"mebiByte2Byte",
-		"milliVolt2Volt",
-		"boolean",
-		"legacyIntrusionStatus",
-		"legacyPredictedFailure",
-		"legacyNeedsCleaning",
-		"legacyLinkStatus",
-		"legacyFullDuplex",
-		"lookup",
-		"legacyLedStatus",
-		"legacyPowerSupplyUtilization",
-		"rate",
-		"fakeCounter",
-		"accumulate",
-		"computePowerShareRatio"
-	);
-
 	private final TelemetryManager telemetryManager;
 	private final String hostname;
 	private final long collectTime;
@@ -115,24 +90,21 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 * A prototype that compiles expressions of the metrics section: no context, never called.
 	 */
 	public MappingExtensionForJawk() {
-		this(null, null, null, 0L);
+		this(null, null, 0L);
 	}
 
 	/**
-	 * The extension of one evaluator: the host, the connector and the collect time of the table it evaluates.
+	 * The extension of one evaluator: the host and the collect time of the table it evaluates.
 	 *
 	 * @param telemetryManager The host
 	 * @param hostname         The host name, for the logs
-	 * @param connectorId      The connector
 	 * @param collectTime      The collect time, in milliseconds
 	 */
 	public MappingExtensionForJawk(
 		final TelemetryManager telemetryManager,
 		final String hostname,
-		final String connectorId,
 		final long collectTime
 	) {
-		// The connector is part of the context of an evaluator, but no function needs it yet
 		this.telemetryManager = telemetryManager;
 		this.hostname = hostname;
 		this.collectTime = collectTime;
@@ -250,7 +222,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("boolean")
 	public Long toBoolean(final Object value) {
-		return MappingFunctions.isTrue(text(value)) ? 1L : 0L;
+		return MappingFunctions.isTrue(toAwkString(value)) ? 1L : 0L;
 	}
 
 	/**
@@ -261,7 +233,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("legacyIntrusionStatus")
 	public Long legacyIntrusionStatus(final Object value) {
-		return state(IntrusionStatus.interpret(text(value)));
+		return state(IntrusionStatus.interpret(toAwkString(value)));
 	}
 
 	/**
@@ -272,7 +244,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("legacyPredictedFailure")
 	public Long legacyPredictedFailure(final Object value) {
-		return state(PredictedFailure.interpret(text(value)));
+		return state(PredictedFailure.interpret(toAwkString(value)));
 	}
 
 	/**
@@ -283,7 +255,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("legacyNeedsCleaning")
 	public Long legacyNeedsCleaning(final Object value) {
-		return state(NeedsCleaning.interpret(text(value)));
+		return state(NeedsCleaning.interpret(toAwkString(value)));
 	}
 
 	/**
@@ -294,7 +266,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("legacyLinkStatus")
 	public Long legacyLinkStatus(final Object value) {
-		return state(LinkStatus.interpret(text(value)));
+		return state(LinkStatus.interpret(toAwkString(value)));
 	}
 
 	/**
@@ -305,7 +277,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("legacyFullDuplex")
 	public Long legacyFullDuplex(final Object value) {
-		return state(DuplexMode.interpret(text(value)));
+		return state(DuplexMode.interpret(toAwkString(value)));
 	}
 
 	/**
@@ -319,10 +291,10 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("lookup")
 	public String lookup(final Object type, final Object returned, final Object matched, final Object value) {
-		final String typeText = text(type);
-		final String returnedText = text(returned);
-		final String matchedText = text(matched);
-		final String valueText = text(value);
+		final String typeText = toAwkString(type);
+		final String returnedText = toAwkString(returned);
+		final String matchedText = toAwkString(matched);
+		final String valueText = toAwkString(value);
 		if (typeText.isEmpty() || returnedText.isEmpty() || matchedText.isEmpty() || valueText.isEmpty()) {
 			throw NoValue.EMPTY_ARGUMENT;
 		}
@@ -346,7 +318,7 @@ public class MappingExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("legacyLedStatus")
 	public String legacyLedStatus(final Object value) {
-		final String status = MappingFunctions.ledStatus(requireMonitor().getAttributes(), text(value));
+		final String status = MappingFunctions.ledStatus(requireMonitor().getAttributes(), toAwkString(value));
 		if (status == null || status.isEmpty()) {
 			throw NoValue.UNKNOWN_STATE;
 		}
@@ -461,16 +433,6 @@ public class MappingExtensionForJawk extends AbstractExtension {
 		return number;
 	}
 
-	/**
-	 * A text argument, not trimmed.
-	 *
-	 * @param value The argument
-	 * @return its AWK text
-	 */
-	private String text(final Object value) {
-		return toAwkString(value);
-	}
-
 	private static Long state(final Optional<? extends IState> state) {
 		return state.map(s -> (long) s.getNumericValue()).orElseThrow(() -> NoValue.UNKNOWN_STATE);
 	}
@@ -499,81 +461,52 @@ public class MappingExtensionForJawk extends AbstractExtension {
 		/**
 		 * An argument is not a number
 		 */
-		public static final NoValue NOT_A_NUMBER = new NoValue("an argument is not a number", false, false);
+		public static final NoValue NOT_A_NUMBER = new NoValue("an argument is not a number");
 
 		/**
 		 * The state is not known
 		 */
-		public static final NoValue UNKNOWN_STATE = new NoValue("the state is not known", false, false);
+		public static final NoValue UNKNOWN_STATE = new NoValue("the state is not known");
 
 		/**
 		 * No monitor matches
 		 */
-		public static final NoValue NO_MATCH = new NoValue("no monitor matches", false, false);
+		public static final NoValue NO_MATCH = new NoValue("no monitor matches");
 
 		/**
 		 * An argument is empty
 		 */
-		public static final NoValue EMPTY_ARGUMENT = new NoValue("an argument is empty", false, false);
+		public static final NoValue EMPTY_ARGUMENT = new NoValue("an argument is empty");
 
 		/**
 		 * The monitor has no power limit
 		 */
-		public static final NoValue NO_LIMIT = new NoValue("the monitor has no hw.power_supply.limit", false, false);
+		public static final NoValue NO_LIMIT = new NoValue("the monitor has no hw.power_supply.limit");
 
 		/**
 		 * No result yet
 		 */
 		public static final NoValue NO_RESULT_YET = new NoValue(
-			"no result: first collect, counter reset or no elapsed time",
-			false,
-			false
+			"no result: first collect, counter reset or no elapsed time"
 		);
 
 		/**
 		 * The function needs the monitor
 		 */
-		public static final NoValue NO_MONITOR = new NoValue("the function needs the monitor", false, false);
+		public static final NoValue NO_MONITOR = new NoValue("the function needs the monitor");
 
 		/**
 		 * A second call of a function that keeps a state
 		 */
-		public static final NoValue SECOND_STATE_CALL = new NoValue(
-			"a second call of a function that keeps a state",
-			false,
-			true
-		);
+		public static final NoValue SECOND_STATE_CALL = new NoValue("a second call of a function that keeps a state");
 
 		/**
 		 * computePowerShareRatio: the key has no value, the hidden metric is in {@link #getPowerShare()}
 		 */
-		public static final NoValue POWER_SHARE = new NoValue("the power share is a hidden metric", true, false);
+		public static final NoValue POWER_SHARE = new NoValue("the power share is a hidden metric");
 
-		private final boolean silent;
-		private final boolean secondStateCall;
-
-		private NoValue(final String reason, final boolean silent, final boolean secondStateCall) {
+		private NoValue(final String reason) {
 			super(reason, null, false, false);
-			this.silent = silent;
-			this.secondStateCall = secondStateCall;
-		}
-
-		/**
-		 * Whether there is nothing to log (<code>computePowerShareRatio</code>).
-		 *
-		 * @return whether the evaluator logs nothing
-		 */
-		public boolean isSilent() {
-			return silent;
-		}
-
-		/**
-		 * Whether a function that keeps a state was called a second time: the evaluator logs a WARN.
-		 *
-		 * @return whether this is a second state call
-		 */
-		public boolean isSecondStateCall() {
-			return secondStateCall;
 		}
 	}
 

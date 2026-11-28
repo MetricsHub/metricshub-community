@@ -120,12 +120,7 @@ public class MappingEvaluator {
 		final Map<String, String> textSources
 	) {
 		this.jobInfo = jobInfo;
-		this.extension = new MappingExtensionForJawk(
-			telemetryManager,
-			jobInfo.getHostname(),
-			jobInfo.getConnectorId(),
-			collectTime
-		);
+		this.extension = new MappingExtensionForJawk(telemetryManager, jobInfo.getHostname(), collectTime);
 
 		final Set<String> referencedNames = new HashSet<>();
 		for (final Section section : Section.values()) {
@@ -270,15 +265,16 @@ public class MappingEvaluator {
 	}
 
 	/**
-	 * Logs a failed evaluation: nothing for a silent {@link NoValue}, DEBUG for another {@link NoValue} or a strict
-	 * number error, WARN once for a second state call or any other exception.
+	 * Logs a failed evaluation: nothing for {@link NoValue#POWER_SHARE}, WARN once for
+	 * {@link NoValue#SECOND_STATE_CALL}, DEBUG for another {@link NoValue} or a strict number error, WARN once for any
+	 * other exception.
 	 */
 	private void logFailure(final Section section, final String key, final Exception failure) {
 		final NoValue noValue = find(failure, NoValue.class);
-		if (noValue != null && noValue.isSilent()) {
+		if (noValue == NoValue.POWER_SHARE) {
 			return;
 		}
-		if (noValue != null && noValue.isSecondStateCall()) {
+		if (noValue == NoValue.SECOND_STATE_CALL) {
 			warnOnce(section, key, "has no value: " + describe(failure));
 		} else if (noValue != null || find(failure, AwkNumberFormatException.class) != null) {
 			log.debug(

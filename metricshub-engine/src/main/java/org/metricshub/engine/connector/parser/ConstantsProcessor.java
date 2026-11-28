@@ -33,6 +33,7 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.metricshub.engine.awk.AwkNames;
 
 /**
  * Processor for replacing placeholder values in a JsonNode using constant values.
@@ -45,6 +46,11 @@ public class ConstantsProcessor extends AbstractNodeProcessor {
 	 * Constants Pattern
 	 */
 	private static final String CONSTANTS_PATTERN = "${constant::%s}";
+
+	/**
+	 * The kept value of a constant that holds a reference: a reference that no processor resolves
+	 */
+	private static final String REFERENCE_PLACEHOLDER = "${reference::}";
 
 	/**
 	 * Constructs a ConstantsProcessor with a next processor.
@@ -74,11 +80,7 @@ public class ConstantsProcessor extends AbstractNodeProcessor {
 			JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 				.withJsonNode(node)
 				.withPredicate(replacementPredicate)
-				.withUpdater(
-					(value, path) -> MappingValueReplacement.isMappingValue(path)
-						? MappingValueReplacement.replace(value, updater)
-						: updater.apply(value)
-				)
+				.withUpdater(MappingValueReplacement.updater(updater))
 				.build()
 				.update();
 
@@ -88,7 +90,10 @@ public class ConstantsProcessor extends AbstractNodeProcessor {
 			node.get("constants").properties().forEach(entry -> {
 				final JsonNode value = entry.getValue();
 				if (value.isValueNode() && !value.isNull()) {
-					keptConstants.put(entry.getKey(), value.asText());
+					final String text = value.asText();
+					// A constant with a reference stays a text macro: its kept value only tells AwkCheck that it holds
+					// one, and must not make EmbeddedFilesResolver load a ${file::} that nothing uses
+					keptConstants.put(entry.getKey(), AwkNames.holdsReference(text) ? REFERENCE_PLACEHOLDER : text);
 				}
 			});
 			((ObjectNode) node).set("constants", keptConstants);

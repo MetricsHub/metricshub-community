@@ -21,6 +21,7 @@ package org.metricshub.engine.connector.parser;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
@@ -55,6 +56,17 @@ final class MappingValueReplacement {
 	}
 
 	/**
+	 * The updater of a load-time replacement for {@link JsonNodeContextUpdater}: mapping values follow the
+	 * first-character rule, other values are replaced as is.
+	 *
+	 * @param replacement The replacement of the references
+	 * @return The (value, path) updater
+	 */
+	static BinaryOperator<String> updater(final UnaryOperator<String> replacement) {
+		return (value, path) -> isMappingValue(path) ? replace(value, replacement) : replacement.apply(value);
+	}
+
+	/**
 	 * Replaces the references of a mapping value: an expression is returned unchanged, a text that the replacement
 	 * turns into <code>=...</code> is returned as <code>= "&lt;literal&gt;"</code>, so it stays a text.
 	 *
@@ -74,8 +86,8 @@ final class MappingValueReplacement {
 	 * The AWK string literal of a text.
 	 *
 	 * @param text The text
-	 * @return The text between double quotes, with its backslashes, double quotes, line feeds, carriage returns and
-	 *         tabs escaped
+	 * @return The text between double quotes, with its backslashes, double quotes, line feeds, carriage returns, tabs
+	 *         and NUL characters escaped
 	 */
 	static String awkStringLiteral(final String text) {
 		final StringBuilder literal = new StringBuilder(text.length() + 2).append('"');
@@ -87,6 +99,8 @@ final class MappingValueReplacement {
 				case '\n' -> literal.append("\\n");
 				case '\r' -> literal.append("\\r");
 				case '\t' -> literal.append("\\t");
+				// Three digits, so that a digit after it is not part of the escape
+				case '\0' -> literal.append("\\000");
 				default -> literal.append(c);
 			}
 		}

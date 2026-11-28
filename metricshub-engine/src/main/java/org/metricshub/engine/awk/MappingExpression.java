@@ -24,7 +24,6 @@ package org.metricshub.engine.awk;
 import io.jawk.Awk;
 import io.jawk.AwkExpression;
 import io.jawk.jrt.JRT;
-import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -106,8 +105,12 @@ public final class MappingExpression {
 
 	private static final Pattern ENVIRON_PATTERN = Pattern.compile("\\b(ENVIRON|SYMTAB)\\b");
 
+	/**
+	 * The call of a whole-value function, then AWK comments at most: once the argument compiles, its literals are
+	 * closed, so a <code>#</code> after the closing parenthesis starts a comment
+	 */
 	private static final Pattern WHOLE_VALUE_PATTERN = Pattern.compile(
-		"^(fakeCounter|accumulate|computePowerShareRatio)\\s*\\((.*)\\)$",
+		"^(fakeCounter|accumulate|computePowerShareRatio)\\s*\\((.*)\\)(?:\\s*#[^\\n]*)*$",
 		Pattern.DOTALL
 	);
 
@@ -144,19 +147,6 @@ public final class MappingExpression {
 		MappingExtensionForJawk.without(MappingExtensionForJawk.STATE_FUNCTIONS)
 	);
 
-	/**
-	 * The global names every expression has (FS, NR, ENVIRON...)
-	 */
-	private static final Set<String> BASE_NAMES;
-
-	static {
-		try {
-			BASE_NAMES = Set.copyOf(BASE_ENGINE.compileExpression("1").getGlobalVariableOffsetMap().keySet());
-		} catch (IOException e) {
-			throw new ExceptionInInitializerError(e);
-		}
-	}
-
 	// ponytail: unbounded, bounded by the values of the connectors and by human edits in the web editor; LRU if it
 	// ever matters
 	private static final ConcurrentHashMap<String, MappingExpression> CACHE = new ConcurrentHashMap<>();
@@ -171,18 +161,26 @@ public final class MappingExpression {
 	private final Set<String> arrayNames;
 	private final String function;
 
+	/**
+	 * The matched word for {@link Problem#ENVIRON}, the Jawk compiler message for a compile failure, <code>null</code>
+	 * otherwise: connector code, never run-time data
+	 */
+	private final String error;
+
 	private MappingExpression(
 		final Kind kind,
 		final Problem problem,
 		final String body,
 		final AwkExpression expression,
-		final String function
+		final String function,
+		final String error
 	) {
 		this.kind = kind;
 		this.problem = problem;
 		this.body = body;
 		this.expression = expression;
 		this.function = function;
+		this.error = error;
 		this.fieldIndex = kind == Kind.FIELD ? expression.getFieldIndex() : -1;
 		this.constantText = kind == Kind.CONSTANT ? toText(expression.getConstantValue()) : null;
 		if (expression == null) {
@@ -193,7 +191,7 @@ public final class MappingExpression {
 			referencedNames = expression.getGlobalVariableOffsetMap()
 				.keySet()
 				.stream()
-				.filter(name -> !BASE_NAMES.contains(name))
+				.filter(name -> !AwkNames.SPECIAL_VARIABLES.contains(name))
 				.collect(Collectors.toUnmodifiableSet());
 			arrayNames = referencedNames.stream()
 				.filter(name -> Boolean.TRUE.equals(arrays.get(name)))
@@ -215,11 +213,15 @@ public final class MappingExpression {
 	 * The compiled form of the value, from the cache, compiled on a miss.
 	 *
 	 * @param metrics Whether the value is under <code>metrics</code>
-	 * @param value   The mapping value, an expression
+	 * @param value   The mapping value, an expression; its trailing whitespace (the line feed of a YAML block scalar)
+	 *                is ignored
 	 * @return its compiled form, {@link Kind#INVALID} when it is refused
 	 */
 	public static MappingExpression of(final boolean metrics, final String value) {
-		return CACHE.computeIfAbsent((metrics ? "M" : "B") + value, k -> compile(metrics, value.substring(1)));
+		return CACHE.computeIfAbsent(
+			(metrics ? "M" : "B") + value,
+			k -> compile(metrics, value.substring(1).stripTrailing())
+		);
 	}
 
 	/**
@@ -263,10 +265,11 @@ public final class MappingExpression {
 
 	private static MappingExpression compile(final boolean metrics, final String body) {
 		if (AwkNames.holdsReference(body)) {
-			return invalid(Problem.REFERENCE, body, null);
+			return invalid(Problem.REFERENCE, body, null, null);
 		}
-		if (ENVIRON_PATTERN.matcher(body).find()) {
-			return invalid(Problem.ENVIRON, body, null);
+		final Matcher environ = ENVIRON_PATTERN.matcher(body);
+		if (environ.find()) {
+			return invalid(Problem.ENVIRON, body, null, environ.group(1));
 		}
 
 		final AwkExpression expression;
@@ -274,9 +277,9 @@ public final class MappingExpression {
 			expression = (metrics ? METRICS_ENGINE : BASE_ENGINE).compileExpression(body);
 		} catch (Exception e) {
 			if (!metrics && compiles(METRICS_ENGINE, body)) {
-				return invalid(Problem.METRICS_FUNCTION_OUTSIDE_METRICS, body, null);
+				return invalid(Problem.METRICS_FUNCTION_OUTSIDE_METRICS, body, null, null);
 			}
-			return invalid(problemOf(e), body, null);
+			return invalid(problemOf(e), body, null, e.getMessage());
 		}
 
 		String function = null;
@@ -285,7 +288,7 @@ public final class MappingExpression {
 			// compiles only when its parentheses balance, so the anchored call is the whole value.
 			final Matcher matcher = WHOLE_VALUE_PATTERN.matcher(body.trim());
 			if (!matcher.matches() || !compiles(NO_STATE_ENGINE, matcher.group(2))) {
-				return invalid(Problem.NOT_WHOLE_VALUE, body, firstWholeValueFunction(body));
+				return invalid(Problem.NOT_WHOLE_VALUE, body, firstWholeValueFunction(body), null);
 			}
 			function = matcher.group(1);
 		}
@@ -298,11 +301,16 @@ public final class MappingExpression {
 		} else {
 			kind = Kind.EVAL;
 		}
-		return new MappingExpression(kind, null, body, expression, function);
+		return new MappingExpression(kind, null, body, expression, function, null);
 	}
 
-	private static MappingExpression invalid(final Problem problem, final String body, final String function) {
-		return new MappingExpression(Kind.INVALID, problem, body, null, function);
+	private static MappingExpression invalid(
+		final Problem problem,
+		final String body,
+		final String function,
+		final String error
+	) {
+		return new MappingExpression(Kind.INVALID, problem, body, null, function, error);
 	}
 
 	private static boolean compiles(final Awk engine, final String text) {

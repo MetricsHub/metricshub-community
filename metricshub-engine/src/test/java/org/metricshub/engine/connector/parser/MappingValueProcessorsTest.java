@@ -32,6 +32,7 @@ class MappingValueProcessorsTest {
 			  X: 2
 			  EQ: "=x"
 			  L: [ a, b ]
+			  F: ${file::missing.awk}
 			monitors:
 			  m:
 			    discovery:
@@ -69,11 +70,13 @@ class MappingValueProcessorsTest {
 		assertEquals("a2", mapping(node).get("text").asText());
 		assertEquals("=2", compute(node));
 
-		// The constants are kept, scalars as texts, a list left out
+		// The constants are kept, scalars as texts, a list left out, a reference as a placeholder that no embedded
+		// file resolution loads
 		assertEquals("2", node.at("/constants/X").textValue());
 		assertNull(node.get("constants").get("L"));
+		assertEquals("${reference::}", node.at("/constants/F").textValue());
 		final Connector connector = new ConnectorDeserializer(MAPPER).deserialize(node);
-		assertEquals(Map.of("X", "2", "EQ", "=x"), connector.getConstants());
+		assertEquals(Map.of("X", "2", "EQ", "=x", "F", "${reference::}"), connector.getConstants());
 	}
 
 	@Test

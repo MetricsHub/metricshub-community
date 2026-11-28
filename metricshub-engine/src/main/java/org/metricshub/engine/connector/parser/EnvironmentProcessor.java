@@ -65,11 +65,7 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 		JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 			.withJsonNode(node)
 			.withPredicate(replacementPredicate)
-			.withUpdater(
-				(value, path) -> MappingValueReplacement.isMappingValue(path)
-					? MappingValueReplacement.replace(value, updater)
-					: updater.apply(value)
-			)
+			.withUpdater(MappingValueReplacement.updater(updater))
 			.build()
 			.update();
 

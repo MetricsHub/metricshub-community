@@ -2,6 +2,7 @@ package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -67,6 +68,7 @@ class MappingExpressionTest {
 		assertEquals(Set.of(), product.getArrayNames());
 
 		assertEquals(Set.of(), MappingExpression.of(false, "= NF").getReferencedNames());
+		assertEquals(Set.of(), MappingExpression.of(false, "= OFS").getReferencedNames());
 
 		final MappingExpression split = MappingExpression.of(false, "= split($1, a, \".\") ? a[1] : \"\"");
 		assertEquals(Kind.EVAL, split.getKind());
@@ -84,11 +86,25 @@ class MappingExpressionTest {
 	void environmentIsRefused() {
 		assertInvalid(false, "= ENVIRON[\"PATH\"]", Problem.ENVIRON);
 		assertInvalid(false, "= length(SYMTAB[\"ENV\" \"IRON\"])", Problem.ENVIRON);
+		assertEquals("SYMTAB", MappingExpression.of(false, "= length(SYMTAB[\"ENV\" \"IRON\"])").getError());
+	}
+
+	@Test
+	void trailingWhitespaceIsIgnored() {
+		// The line feed a YAML block scalar (| or >) keeps
+		final MappingExpression field = MappingExpression.of(true, "= $1\n");
+		assertEquals(Kind.FIELD, field.getKind());
+		assertEquals(1, field.getFieldIndex());
+		assertConstant("= \"x\"\n\n", "x");
+		assertEquals(Kind.EVAL, MappingExpression.of(true, "= rate($1)\n").getKind());
+		assertEquals(Kind.EVAL, MappingExpression.of(false, "= $1 / 10 \n").getKind());
+		assertEquals(MappingExpression.of(false, "=").getKind(), MappingExpression.of(false, "=\n").getKind());
 	}
 
 	@Test
 	void compileProblems() {
 		assertInvalid(false, "= $1 +", Problem.SYNTAX);
+		assertNotNull(MappingExpression.of(false, "= $1 +").getError());
 		assertInvalid(false, "= x = 5", Problem.SYNTAX);
 		assertInvalid(false, "= foo($1)", Problem.UNKNOWN_FUNCTION);
 		assertInvalid(false, "= megabit2bit($1)", Problem.UNKNOWN_FUNCTION);
@@ -109,6 +125,10 @@ class MappingExpressionTest {
 		assertWholeValue("= fakeCounter(legacyPowerSupplyUtilization($1))", "fakeCounter");
 		assertWholeValue("= accumulate($2)", "accumulate");
 		assertWholeValue("= computePowerShareRatio($4)", "computePowerShareRatio");
+		// AWK comments after the call
+		assertWholeValue("= fakeCounter($2) # joules", "fakeCounter");
+		assertWholeValue("= accumulate($2) # a\n", "accumulate");
+		assertNotWholeValue("= fakeCounter($2) + 1 # c", "fakeCounter");
 
 		assertNotWholeValue("= fakeCounter($5) / 1000", "fakeCounter");
 		assertNotWholeValue("= (fakeCounter($5))", "fakeCounter");

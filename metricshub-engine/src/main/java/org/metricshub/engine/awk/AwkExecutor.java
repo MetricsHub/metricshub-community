@@ -127,22 +127,6 @@ public class AwkExecutor {
 	 * @throws AwkException when unable to compile the script
 	 */
 	public static AwkProgram compile(final String awkScript, final Awk awkEngine) throws AwkException {
-		return getAwkProgram(awkScript, awkEngine);
-	}
-
-	/**
-	 * Compiles the specified script into an {@link AwkProgram}.
-	 * <p>
-	 * Retrieves the program from the cache if present to avoid compiling the same
-	 * script again and again.
-	 * <p>
-	 *
-	 * @param awkScript Script to compile
-	 * @param awkEngine The Awk engine used to compile the script
-	 * @return the corresponding AwkProgram
-	 * @throws AwkException when unable to compile the script
-	 */
-	private static AwkProgram getAwkProgram(String awkScript, Awk awkEngine) throws AwkException {
 		// We're using our ConcurrentHashMap to cache the intermediate
 		// code, so we don't "compile" it every time.
 		// This saves a lot of CPU.
@@ -253,7 +237,7 @@ public class AwkExecutor {
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final AwkProgram program = getAwkProgram(awkScript, awkEngine);
+		final AwkProgram program = compile(awkScript, awkEngine);
 		if (program == null) {
 			throw new AwkException("Failed to compile Awk script:\n" + awkScript);
 		}
@@ -288,7 +272,7 @@ public class AwkExecutor {
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine)).input(input);
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(compile(awkScript, awkEngine)).input(input);
 		if (awkVariables != null && !awkVariables.isEmpty()) {
 			runBuilder.variables(awkVariables);
 		}
@@ -317,7 +301,7 @@ public class AwkExecutor {
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine))
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(compile(awkScript, awkEngine))
 			.input(awkInput == null ? EMPTY : awkInput);
 		return executeToTable(runBuilder, awkVariables);
 	}
@@ -340,7 +324,7 @@ public class AwkExecutor {
 		final Awk awkEngine,
 		final Map<String, Object> awkVariables
 	) throws AwkException {
-		final Awk.AwkRunBuilder runBuilder = awkEngine.script(getAwkProgram(awkScript, awkEngine)).input(input);
+		final Awk.AwkRunBuilder runBuilder = awkEngine.script(compile(awkScript, awkEngine)).input(input);
 		return executeToTable(runBuilder, awkVariables);
 	}
 

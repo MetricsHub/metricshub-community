@@ -33,13 +33,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.awk.AwkNames;
 import org.metricshub.engine.awk.MappingExpression;
-import org.metricshub.engine.awk.MappingExtensionForJawk;
 import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.connector.model.Connector;
@@ -72,23 +70,12 @@ final class AwkCheck {
 	private static final String CONNECTOR_VARIABLE = "connector variable";
 	private static final String CONSTANT = "constant";
 
-	private static final Pattern ENVIRON_PATTERN = Pattern.compile("\\b(ENVIRON|SYMTAB)\\b");
-
 	/**
 	 * Compiles the awk sources, as the Jawk source extension does
 	 */
 	private static final io.jawk.Awk SOURCE_ENGINE = AwkExecutor.newAwk(
 		null,
 		MetricsHubExtensionForJawk.builder().build()
-	);
-
-	/**
-	 * Compile again a failing expression for its message, at DEBUG
-	 */
-	private static final io.jawk.Awk METRICS_ENGINE = AwkExecutor.newAwk(";", new MappingExtensionForJawk());
-	private static final io.jawk.Awk BASE_ENGINE = AwkExecutor.newAwk(
-		";",
-		MappingExtensionForJawk.without(MappingExtensionForJawk.METRICS_FUNCTIONS)
 	);
 
 	private final Connector connector;
@@ -213,7 +200,7 @@ final class AwkCheck {
 			if (value == null) {
 				add(NONE, location, Rule.NULL_MAPPING_VALUE, "a text or an expression", "nothing");
 			} else if (MappingExpression.isExpression(value)) {
-				checkExpression(location, MappingExpression.of(metrics, value), metrics, texts, tables);
+				checkExpression(location, MappingExpression.of(metrics, value), texts, tables);
 			}
 		});
 	}
@@ -221,7 +208,6 @@ final class AwkCheck {
 	private void checkExpression(
 		final String location,
 		final MappingExpression expression,
-		final boolean metrics,
 		final Set<String> texts,
 		final Set<String> tables
 	) {
@@ -229,10 +215,7 @@ final class AwkCheck {
 		if (expression.getKind() == MappingExpression.Kind.INVALID) {
 			switch (expression.getProblem()) {
 				case REFERENCE -> add(NONE, location, Rule.REFERENCE_IN_EXPRESSION, "no reference", "a reference");
-				case ENVIRON -> {
-					final Matcher matcher = ENVIRON_PATTERN.matcher(body);
-					add(NONE, location, Rule.ENVIRON_IN_EXPRESSION, "no ENVIRON", matcher.find() ? matcher.group(1) : "ENVIRON");
-				}
+				case ENVIRON -> add(NONE, location, Rule.ENVIRON_IN_EXPRESSION, "no ENVIRON", expression.getError());
 				case METRICS_FUNCTION_OUTSIDE_METRICS ->
 					add(
 						NONE,
@@ -251,7 +234,13 @@ final class AwkCheck {
 					);
 				default -> {
 					add(NONE, location, Rule.EXPRESSION_SYNTAX, "one AWK expression", syntaxActual(expression.getProblem()));
-					logCompileError(location, metrics, body);
+					// The compiler message: connector code, never run-time data
+					log.debug(
+						"Connector {} - The expression at {} does not compile: {}",
+						connectorId,
+						location,
+						expression.getError()
+					);
 				}
 			}
 			return;
@@ -259,8 +248,7 @@ final class AwkCheck {
 
 		for (final String name : expression.getReferencedNames()) {
 			if (
-				!AwkNames.SPECIAL_VARIABLES.contains(name) &&
-					!checkName(NONE, location, name, expression.getArrayNames().contains(name), texts) &&
+				!checkName(NONE, location, name, expression.getArrayNames().contains(name), texts) &&
 					!(expression.getArrayNames().contains(name) && fillsArray(body, name))
 			) {
 				add(
@@ -282,20 +270,6 @@ final class AwkCheck {
 			case SANDBOX -> "a command or a file";
 			default -> "a compile error";
 		};
-	}
-
-	/**
-	 * Logs the compiler message of a failing expression at DEBUG: connector code, never run-time data.
-	 */
-	private void logCompileError(final String location, final boolean metrics, final String body) {
-		if (!log.isDebugEnabled()) {
-			return;
-		}
-		try {
-			(metrics ? METRICS_ENGINE : BASE_ENGINE).compileExpression(body);
-		} catch (Exception e) {
-			log.debug("Connector {} - The expression at {} does not compile: {}", connectorId, location, e.getMessage());
-		}
 	}
 
 	/**

@@ -82,11 +82,7 @@ public class ConnectorVariableProcessor extends AbstractNodeProcessor {
 		JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 			.withJsonNode(node)
 			.withPredicate(isMatchingConnectorVariableRegex)
-			.withUpdater(
-				(value, path) -> MappingValueReplacement.isMappingValue(path)
-					? MappingValueReplacement.replace(value, variableValueUpdater)
-					: variableValueUpdater.apply(value)
-			)
+			.withUpdater(MappingValueReplacement.updater(variableValueUpdater))
 			.build()
 			.update();
 

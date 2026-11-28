@@ -46,7 +46,8 @@ class MappingValueReplacementTest {
 	@Test
 	void awkStringLiteralRoundTrip() {
 		assertEquals("\"a\\\\b\\\"c\\n\\r\\t\"", MappingValueReplacement.awkStringLiteral("a\\b\"c\n\r\t"));
-		for (final String text : new String[] { "=x", "=a\"b\\c", "=line1\nline2" }) {
+		assertEquals("\"a\\0001\"", MappingValueReplacement.awkStringLiteral("a\0" + "1"));
+		for (final String text : new String[] { "=x", "=a\"b\\c", "=line1\nline2", "=a\0" + "1b" }) {
 			final MappingExpression expression = MappingExpression.of(
 				false,
 				"= " + MappingValueReplacement.awkStringLiteral(text)

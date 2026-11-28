@@ -1,7 +1,6 @@
 package org.metricshub.engine.awk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -99,7 +98,6 @@ class MappingExtensionForJawkTest {
 		final MappingExtensionForJawk extension = new MappingExtensionForJawk(
 			TelemetryManager.builder().build(),
 			HOSTNAME,
-			"connector",
 			collectTime
 		);
 		extension.prepare(monitor, KEY);
@@ -164,7 +162,6 @@ class MappingExtensionForJawkTest {
 		final MappingExtensionForJawk extension = new MappingExtensionForJawk(
 			TelemetryManager.builder().monitors(Map.of("enclosure", Map.of("1", withId, "2", emptyId))).build(),
 			HOSTNAME,
-			"connector",
 			0L
 		);
 		final String lookup = "= lookup(\"enclosure\", \"id\", \"serial\", $1)";
@@ -224,7 +221,6 @@ class MappingExtensionForJawkTest {
 		final MappingExtensionForJawk extension = extension(twice, 240000L);
 		final Throwable second = failure(extension, true, "= rate($1) + rate($2)", "3000", "4000");
 		assertSame(NoValue.SECOND_STATE_CALL, second);
-		assertTrue(((NoValue) second).isSecondStateCall());
 		assertEquals(3000.0, CollectHelper.getNumberMetricValue(twice, "__k.rate_from", false));
 
 		// No state written for an argument that is not a number
@@ -260,13 +256,11 @@ class MappingExtensionForJawkTest {
 		final MappingExtensionForJawk extension = new MappingExtensionForJawk(
 			TelemetryManager.builder().build(),
 			HOSTNAME,
-			"connector",
 			0L
 		);
 		extension.prepare(Monitor.builder().build(), "hw.vm.power_ratio");
 		final Throwable thrown = failure(extension, true, "= computePowerShareRatio($1)", "10");
 		assertSame(NoValue.POWER_SHARE, thrown);
-		assertTrue(((NoValue) thrown).isSilent());
 		assertEquals(10.0, extension.getPowerShare());
 
 		extension.prepare(Monitor.builder().build(), "hw.vm.power_ratio");
@@ -286,7 +280,6 @@ class MappingExtensionForJawkTest {
 		assertNoValue(NoValue.NO_MONITOR, extension, "= legacyLedStatus($1)", "on");
 		assertNoValue(NoValue.NO_MONITOR, extension, "= rate($1)", "1");
 		assertNoValue(NoValue.NO_MONITOR, extension, "= accumulate($1)", "1");
-		assertFalse(NoValue.NO_MONITOR.isSilent());
 	}
 
 	@Test
