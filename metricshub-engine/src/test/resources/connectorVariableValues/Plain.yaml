@@ -1,0 +1,10 @@
+connector:
+  displayName: Plain
+  platforms: Test
+  reliesOn: Test
+  information: Declares no variable
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: commandLine
+      commandLine: echo

@@ -1,0 +1,19 @@
+connector:
+  displayName: Declared
+  platforms: Test
+  reliesOn: Test
+  information: Declares three variables and uses one with ${var::}
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: commandLine
+      commandLine: echo ${var::a}
+  variables:
+    a:
+      description: With a default
+      defaultValue: 1
+    b:
+      description: With a default, configured by a resource
+      defaultValue: 2
+    c:
+      description: Without a default

@@ -71,14 +71,27 @@ public class ConstantsProcessor extends AbstractNodeProcessor {
 
 			final Predicate<String> replacementPredicate = Objects::nonNull;
 
-			JsonNodeUpdater.jsonNodeUpdaterBuilder()
+			JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 				.withJsonNode(node)
 				.withPredicate(replacementPredicate)
-				.withUpdater(updater)
+				.withUpdater(
+					(value, path) -> MappingValueReplacement.isMappingValue(path)
+						? MappingValueReplacement.replace(value, updater)
+						: updater.apply(value)
+				)
 				.build()
 				.update();
 
-			((ObjectNode) node).remove("constants");
+			// Keep the constants, as texts, for the AWK expressions and scripts that use them by name.
+			// Lists, maps and nulls cannot be AWK variables.
+			final ObjectNode keptConstants = ((ObjectNode) node).objectNode();
+			node.get("constants").properties().forEach(entry -> {
+				final JsonNode value = entry.getValue();
+				if (value.isValueNode() && !value.isNull()) {
+					keptConstants.put(entry.getKey(), value.asText());
+				}
+			});
+			((ObjectNode) node).set("constants", keptConstants);
 		}
 
 		return node;
