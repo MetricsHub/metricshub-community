@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.awk.MappingExpression;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ContentTypeFinding;
@@ -109,7 +110,8 @@ import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
  * <li>{@link Rule#MIXED_MAPPING_TYPES}: a monitor job whose mappings (discovery, collect) do not all have the same
  * type: a simple mapping makes the monitor type a singleton for the connector;</li>
  * <li>{@link Rule#KEYS_WITH_SIMPLE_MAPPING}: <code>keys</code> written on a job with a simple mapping, whose one
- * instance has no key attribute.</li>
+ * instance has no key attribute;</li>
+ * <li>the AWK rules of mapping expressions, connector values and scripts ({@link AwkCheck}).</li>
  * </ul>
  * The check also records the static types the engine reads at run time: what each <code>copy</code> produces
  * ({@link CopySource#getOutputContentType()}) and whether a tool returns a text (the <code>textResult</code> of a
@@ -246,6 +248,7 @@ public class ContentTypeCheck {
 				copy.setOutputContentType(startType(copy));
 			}
 		});
+		findings.addAll(AwkCheck.check(connector, connectorId, this::typeOf));
 	}
 
 	private void checkSource(final Source source) {
@@ -537,6 +540,13 @@ public class ContentTypeCheck {
 			add(NONE, location, Rule.TABLE_MAPPING_WITHOUT_SOURCE, "a source", NONE);
 		}
 		walk(toTree(task.getMapping()), "", (field, value) -> {
+			// An expression (= ...): a column outside its string literals; its references are AwkCheck's
+			if (isSectionField(field) && MappingExpression.isExpression(value)) {
+				if (simple && readsColumn(MappingExpression.withoutStringLiterals(value.substring(1)))) {
+					add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
+				}
+				return;
+			}
 			// What the mapping reads as a column: $0 too, anywhere
 			if (simple && readsColumn(value)) {
 				add(NONE, location + "." + field, Rule.COLUMN_IN_SIMPLE_MAPPING, "a constant or a text source", "a column");
@@ -560,6 +570,17 @@ public class ContentTypeCheck {
 				}
 			}
 		});
+	}
+
+	/**
+	 * @return whether the field of the mapping is a value of a section: attributes, metrics, conditionalCollection,
+	 *         legacyTextParameters
+	 */
+	private static boolean isSectionField(final String field) {
+		return (field.startsWith("attributes.") ||
+			field.startsWith("metrics.") ||
+			field.startsWith("conditionalCollection.") ||
+			field.startsWith("legacyTextParameters."));
 	}
 
 	/**
