@@ -118,6 +118,19 @@ public class AwkExecutor {
 	}
 
 	/**
+	 * Compiles the specified script into an {@link AwkProgram}, through the cache of the compiled scripts: the program
+	 * a later run of the same script uses.
+	 *
+	 * @param awkScript Script to compile
+	 * @param awkEngine The Awk engine used to compile the script
+	 * @return the corresponding AwkProgram
+	 * @throws AwkException when unable to compile the script
+	 */
+	public static AwkProgram compile(final String awkScript, final Awk awkEngine) throws AwkException {
+		return getAwkProgram(awkScript, awkEngine);
+	}
+
+	/**
 	 * Compiles the specified script into an {@link AwkProgram}.
 	 * <p>
 	 * Retrieves the program from the cache if present to avoid compiling the same
