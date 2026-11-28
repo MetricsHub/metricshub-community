@@ -1,0 +1,125 @@
+connector:
+  displayName: TestConnectorWithExpressions
+  platforms: Test platform
+  reliesOn: SomeCommand
+  information: Mapping expressions and connector values as AWK variables
+  detection:
+    appliesTo: [ Linux ]
+    criteria:
+      - type: deviceType
+        keep: [ linux ]
+  variables:
+    scale:
+      description: Multiplier
+      defaultValue: 2
+constants:
+  BLOCK_SIZE: 512
+  EQ: "=x"
+monitors:
+  disk:
+    discovery:
+      sources:
+        model:                       # a text that runs first
+          type: commandLine
+          commandLine: model
+        disks:                       # id;blocks;status
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1,2"
+          computes:
+            - type: awk              # reads a constant, a connector variable and an earlier text source
+              output: table
+              script: "{ print $1, $2 * BLOCK_SIZE * scale, $3, model }"
+      mapping:
+        source: ${source::disks}
+        attributes:
+          id: = $1
+          name: = sprintf("%s (%s)", $1, model)
+          legacyId: $1               # a legacy value beside expressions
+          eq: ${constant::EQ}        # a text whose constant starts with =
+        metrics:
+          disk.size: = $2
+        conditionalCollection:
+          disk.size: '= $3 == "ok" ? 1 : ""'
+    collect:
+      type: multiInstance
+      sources:
+        counters:                    # id;bytes;milliwatts
+          type: snmpTable
+          oid: 1.3.6.1.2
+          selectColumns: "ID,1,2"
+      mapping:
+        source: ${source::counters}
+        attributes:
+          id: = $1
+        metrics:
+          disk.io: = rate($2) * 8
+          disk.energy: = fakeCounter($3 / 1000)
+  cpu:
+    simple:
+      sources:
+        vendor:
+          type: commandLine
+          commandLine: vendor
+        cpus:                        # id;MHz
+          type: snmpTable
+          oid: 1.3.6.1.3
+          selectColumns: "ID,1"
+      mapping:
+        source: ${source::cpus}
+        attributes:
+          id: = $1
+          info: = vendor " " $1
+        metrics:
+          cpu.speed: = megaHertz2Hertz($2)
+  # Mono-instance collect: each monitor runs its own text source and reads it
+  sensor:
+    discovery:
+      sources:
+        sensors:                     # id
+          type: snmpTable
+          oid: 1.3.6.1.5
+          selectColumns: "ID"
+      mapping:
+        source: ${source::sensors}
+        attributes:
+          id: = $1
+    collect:
+      type: monoInstance
+      sources:
+        reading:
+          type: commandLine
+          commandLine: reading ${attribute::id}
+        one:
+          type: snmpTable
+          oid: 1.3.6.1.6
+          selectColumns: "ID"
+      mapping:
+        source: ${source::one}
+        metrics:
+          sensor.reading: = reading * 1
+  # A key attribute without value: the row is skipped
+  fan:
+    discovery:
+      sources:
+        fans:                        # id
+          type: snmpTable
+          oid: 1.3.6.1.7
+          selectColumns: "ID"
+      mapping:
+        source: ${source::fans}
+        attributes:
+          id: = megaBit2Bit($1)
+    collect:
+      type: multiInstance
+      sources:
+        speeds:                      # id;speed
+          type: snmpTable
+          oid: 1.3.6.1.8
+          selectColumns: "ID,1"
+      mapping:
+        source: ${source::speeds}
+        attributes:
+          id: = megaBit2Bit($1)
+        metrics:
+          fan.speed: = $2

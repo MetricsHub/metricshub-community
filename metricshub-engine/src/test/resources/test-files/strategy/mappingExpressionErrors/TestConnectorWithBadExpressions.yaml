@@ -1,0 +1,35 @@
+connector:
+  displayName: TestConnectorWithBadExpressions
+  platforms: Test platform
+  reliesOn: SomeCommand
+  information: Mapping expressions refused at load
+  detection:
+    appliesTo: [ Linux ]
+    criteria:
+      - type: deviceType
+        keep: [ linux ]
+constants:
+  BLOCK_SIZE: 512
+  REF: "=${source::model}"
+monitors:
+  disk:
+    discovery:
+      sources:
+        model:
+          type: commandLine
+          commandLine: model
+        disks:                       # id;blocks
+          type: snmpTable
+          oid: 1.3.6.1.1
+          selectColumns: "ID,1"
+      mapping:
+        source: ${source::disks}
+        attributes:
+          id: $1
+          size: = ${constant::BLOCK_SIZE} * $2  # a reference in an expression
+          speed: = rate($2)                     # a function of the metrics section
+          model: = unknownName                  # a name that is nothing
+          path: = ENVIRON["PATH"]               # the environment of the agent
+          ref: ${constant::REF}                 # a text that becomes an expression holding a reference
+        metrics:
+          disk.energy: = fakeCounter($2) / 1000 # a state function that is not the whole value
