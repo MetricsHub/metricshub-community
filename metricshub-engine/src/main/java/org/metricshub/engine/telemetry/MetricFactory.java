@@ -203,7 +203,7 @@ public class MetricFactory {
 	 * @param value the metric's value
 	 * @param collectTime the metric's collect time
 	 * @param metricType the OpenTelemetry instrument type (e.g. "Counter", "Gauge", "UpDownCounter")
-	 * @return collected metric
+	 * @return collected metric, <code>null</code> for a value that is not finite (NaN, Infinity): the metric is unchanged
 	 */
 	public NumberMetric collectNumberMetric(
 		final Monitor monitor,
@@ -212,6 +212,19 @@ public class MetricFactory {
 		final Long collectTime,
 		final String metricType
 	) {
+		// NaN and Infinity are not metric values: the metric is left as it is
+		if (!Double.isFinite(value)) {
+			log.debug(
+				"Hostname {} - The {} value {} is not a finite number for monitor id {}. {} won't be collected",
+				hostname,
+				name,
+				value,
+				monitor.getAttributes().get(MONITOR_ATTRIBUTE_ID),
+				name
+			);
+			return null;
+		}
+
 		final NumberMetric metric = monitor.getMetric(name, NumberMetric.class);
 		if (metric == null) {
 			// Add the metric directly in the monitor's metrics
