@@ -3,6 +3,7 @@ package org.metricshub.extension.jawk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -16,10 +17,16 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.metricshub.engine.configuration.ConnectorVariables;
+import org.metricshub.engine.awk.AwkException;
+import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.ContentType;
+import org.metricshub.engine.connector.model.identity.ConnectorDefaultVariable;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
@@ -56,18 +63,24 @@ class JawkSourceExtensionTest {
 
 	@Test
 	void testProcessSource() {
-		final ConnectorVariables connectorVariables = ConnectorVariables.builder()
-			.variableValues(Map.of("myVariable", "myVariableValue"))
-			.build();
+		// The connector variable reaches the script by its name
+		final ConnectorStore connectorStore = new ConnectorStore();
+		connectorStore.getStore()
+			.put(
+				CONNECTOR_ID,
+				Connector.builder()
+					.connectorIdentity(
+						ConnectorIdentity.builder()
+							.variables(Map.of("myVariable", ConnectorDefaultVariable.builder().description("A variable").build()))
+							.build()
+					)
+					.variableValues(Map.of("myVariable", "myVariableValue"))
+					.build()
+			);
 		final JawkSourceExtension jawkExtension = new JawkSourceExtension();
 		final TelemetryManager telemetryManager = TelemetryManager.builder()
-			.hostConfiguration(
-				HostConfiguration.builder()
-					.hostname("test-host")
-					.hostId("test-host")
-					.connectorVariables(Map.of(CONNECTOR_ID, connectorVariables))
-					.build()
-			)
+			.hostConfiguration(HostConfiguration.builder().hostname("test-host").hostId("test-host").build())
+			.connectorStore(connectorStore)
 			.build();
 
 		final List<String> line1 = Arrays.asList("FOO", "1", "2", "3");
@@ -99,7 +112,7 @@ class JawkSourceExtensionTest {
 					    requestArguments["method"] = "get"
 					    requestArguments["path"] = "/ConfigurationManager/v1/objects/storages/" $1
 					    requestArguments["resultContent"] = "body"
-					    requestArguments["header"] = getVariable("myVariable")
+					    requestArguments["header"] = myVariable
 					    json2Table(executeHttpRequest(requestArguments), "/", "myResult", rows)
 					    print rows[0][0], rows[0][1], ""
 					}
@@ -131,8 +144,6 @@ class JawkSourceExtensionTest {
 			.resultContent(ResultContent.BODY)
 			.header("myVariableValue")
 			.build();
-
-		doReturn(telemetryManager).when(sourceProcessorMock).getTelemetryManager();
 
 		when(sourceProcessorMock.process(any(HttpSource.class))).thenReturn(sourceResult1, sourceResult2, sourceResult3);
 
@@ -311,6 +322,15 @@ class JawkSourceExtensionTest {
 
 		assertEquals("1.2.3.4.5.6", snmpTableCaptor.getValue().getOid());
 		assertEquals("1", snmpTableCaptor.getValue().getSelectColumns());
+
+		// getVariable() is gone: a script that calls it does not compile
+		assertThrows(
+			AwkException.class,
+			() -> AwkExecutor.compile(
+				"BEGIN { print getVariable(\"x\") }",
+				AwkExecutor.newAwk(null, MetricsHubExtensionForJawk.builder().build())
+			)
+		);
 	}
 
 	/**

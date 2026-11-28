@@ -49,7 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
-import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.ContentType;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -443,31 +442,5 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 				getJrt()::toInputScalar
 			)
 		);
-	}
-
-	/**
-	 * Return the value of the variable in parameter if it exists.
-	 *
-	 * @param variableNameObj The name of the variable to retrieve.
-	 * @return The value of the variable.
-	 */
-	@JawkFunction("getVariable")
-	public String getVariable(final Object variableNameObj) {
-		final String variableName = toAwkString(variableNameObj);
-		final ConnectorVariables connectorVariables = sourceProcessor.getTelemetryManager()
-			.getHostConfiguration()
-			.getConnectorVariables()
-			.get(connectorId);
-		if (connectorVariables != null) {
-			return connectorVariables.getVariableValues().get(variableName);
-		}
-		return sourceProcessor.getTelemetryManager()
-			.getConnectorStore()
-			.getStore()
-			.get(connectorId)
-			.getConnectorIdentity()
-			.getVariables()
-			.get(variableName)
-			.getDefaultValue();
 	}
 }

@@ -90,6 +90,11 @@ public class SourceProcessor implements ISourceProcessor {
 	 */
 	private Map<String, String> attributes;
 
+	/**
+	 * The text sources that ran before this source in this run of the job, by name: the AWK variables of an awk source.
+	 */
+	private Map<String, String> textSources;
+
 	@WithSpan("Source Copy Exec")
 	@Override
 	public SourceResult process(@SpanAttribute("source.definition") final CopySource copySource) {

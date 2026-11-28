@@ -32,6 +32,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TI
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +54,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.awk.AwkNames;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.SourceFailedException;
@@ -215,11 +217,13 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param cursorRollbacks The caller's list, to which the rollback of the cursors of each incremental source polled
 	 *                        is added: the caller runs them when it skips the mapping, see
 	 *                        {@link #skipMappingIfInterrupted(List, String, String)}
+	 * @return the text sources of this call that did not fail, by AWK name (see {@link AwkNames#textSourceName(String)}),
+	 *         in run order, each one's text without its final line feeds: an unmodifiable map
 	 * @throws SourceFailedException when a failed source stopped the job (see {@link Source#isContinueOnFailure()}).
 	 *                               Otherwise the job goes on to its mapping, unless it is interrupted (see
 	 *                               {@link #skipMappingIfInterrupted(List, String, String)})
 	 */
-	protected void processSourcesAndComputes(
+	protected Map<String, String> processSourcesAndComputes(
 		final List<Source> sources,
 		final Map<String, String> attributes,
 		final JobInfo jobInfo,
@@ -229,6 +233,10 @@ public abstract class AbstractStrategy implements IStrategy {
 		final String monitorType = jobInfo.getMonitorType();
 		final String hostname = jobInfo.getHostname();
 
+		// Each source and compute sees the texts recorded before it: a source is recorded after its last compute
+		final Map<String, String> recordedTexts = new LinkedHashMap<>();
+		final Map<String, String> textSources = Collections.unmodifiableMap(recordedTexts);
+
 		if (sources == null || sources.isEmpty()) {
 			log.debug(
 				"Hostname {} - No sources found from connector {} with monitor {}.",
@@ -236,7 +244,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				connectorId,
 				monitorType
 			);
-			return;
+			return textSources;
 		}
 
 		// Loop over all the sources and accept the SourceProcessor which is going to
@@ -246,7 +254,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			// a session. Then a beforeAll whose caller is interrupted starts no other source
 			final boolean stop = sourceIndex > 0 ? ThreadHelper.isStopping() : isInterrupted();
 			if (stop && skipSources(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)) {
-				return;
+				return textSources;
 			}
 
 			final Source source = sources.get(sourceIndex);
@@ -265,9 +273,9 @@ public abstract class AbstractStrategy implements IStrategy {
 			// fails or gives nothing while it gave data before: the last attempt is the result
 			SourceResult sourceResult = failureOfReferences(source, connectorNamespace);
 			if (sourceResult == null) {
-				sourceResult = runSource(connectorId, attributes, source);
+				sourceResult = runSource(connectorId, attributes, source, textSources);
 				if (sourceResult.isEmpty() && !isNullOrEmptySourceResult(previousSourceResult) && waitBeforeRetry(sourceKey)) {
-					sourceResult = runSource(connectorId, attributes, source);
+					sourceResult = runSource(connectorId, attributes, source, textSources);
 				}
 			}
 
@@ -283,7 +291,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			if (
 				skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
 			) {
-				return;
+				return textSources;
 			}
 
 			// Remembered for the jobs that read this source through a reference, which then remove no monitor: the source
@@ -334,6 +342,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				telemetryManager.getHostProperties()
 					.getConnectorNamespace(connectorId)
 					.addSourceResult(sourceKey, sourceResult);
+				recordTextSource(recordedTexts, source, sourceResult, failed);
 				continue;
 			}
 
@@ -345,6 +354,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				.clientsExecutor(clientsExecutor)
 				.telemetryManager(telemetryManager)
 				.attributes(attributes)
+				.textSources(textSources)
 				.build();
 
 			final ComputeUpdaterProcessor computeUpdaterProcessor = ComputeUpdaterProcessor.builder()
@@ -355,6 +365,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				.build();
 
 			// Loop over the computes to process each compute
+			boolean computeFailed = false;
 			for (int index = 0; index < computes.size(); index++) {
 				final Compute compute = computes.get(index);
 				computeProcessor.setIndex(index);
@@ -370,13 +381,14 @@ public abstract class AbstractStrategy implements IStrategy {
 				if (
 					skipSourcesIfInterrupted(sources.subList(sourceIndex, sources.size()), cursorRollbacks, connectorId, hostname)
 				) {
-					return;
+					return textSources;
 				}
 
 				// A compute that leaves a failed result fails its source, as a source that fails does: the job stops, or
 				// goes on with the empty result of that compute when the source continues on failure
 				final SourceResult computed = computeProcessor.getSourceResult();
 				if (computed.isFailed()) {
+					computeFailed = true;
 					connectorNamespace.getUnansweredSourceKeys().add(sourceKey);
 					if (!source.isContinueOnFailure()) {
 						throw stopJob(sources.subList(sourceIndex, sources.size()), computed, jobInfo, cursorRollbacks);
@@ -409,6 +421,29 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager.getHostProperties()
 				.getConnectorNamespace(connectorId)
 				.addSourceResult(sourceKey, computeProcessor.getSourceResult());
+			recordTextSource(recordedTexts, source, computeProcessor.getSourceResult(), failed || computeFailed);
+		}
+		return textSources;
+	}
+
+	/**
+	 * Records the stored result of a source among the text sources of the run, unless it failed, it is not a text or
+	 * the source has no AWK name.
+	 *
+	 * @param textSources The text sources of the run, by name
+	 * @param source      The source
+	 * @param stored      The result stored for the source
+	 * @param failed      Whether the source or one of its computes failed
+	 */
+	private static void recordTextSource(
+		final Map<String, String> textSources,
+		final Source source,
+		final SourceResult stored,
+		final boolean failed
+	) {
+		final String name = AwkNames.textSourceName(source.getKey());
+		if (!failed && name != null && stored.getContentType() == ContentType.TEXT) {
+			textSources.put(name, AwkNames.textValue(stored.getText()));
 		}
 	}
 
@@ -816,15 +851,22 @@ public abstract class AbstractStrategy implements IStrategy {
 	 * @param attributes          Key-value pairs of the monitor's attributes used
 	 *                            in the mono instance processing
 	 * @param source              The source we want to run
+	 * @param textSources         The text sources that ran before this source in this run of the job, by name
 	 * @return new {@link SourceResult} instance, a failed one when the source processor gave nothing
 	 */
-	private SourceResult runSource(final String connectorId, final Map<String, String> attributes, final Source source) {
+	private SourceResult runSource(
+		final String connectorId,
+		final Map<String, String> attributes,
+		final Source source,
+		final Map<String, String> textSources
+	) {
 		final ISourceProcessor sourceProcessor = SourceProcessor.builder()
 			.connectorId(connectorId)
 			.clientsExecutor(clientsExecutor)
 			.telemetryManager(telemetryManager)
 			.extensionManager(extensionManager)
 			.attributes(attributes)
+			.textSources(textSources)
 			.build();
 
 		final Supplier<SourceResult> executable = () -> source.accept(

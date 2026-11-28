@@ -26,6 +26,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import io.jawk.AwkProgram;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.ResourceHelper;
@@ -2561,9 +2562,12 @@ class ComputeProcessorTest {
 		sourceResult.setText(EMPTY);
 
 		final String embeddedFileName = "${file::1}";
+		// The compute compiles the script to find the names it uses
+		final AwkProgram program = AwkExecutor.compile(BAZ, AwkExecutor.getUtilityEngine());
 
 		try (MockedStatic<AwkExecutor> awkStatic = Mockito.mockStatic(AwkExecutor.class)) {
 			final Awk awkOK = Awk.builder().script(embeddedFileName).build();
+			awkStatic.when(() -> AwkExecutor.compile(any(), any())).thenReturn(program);
 
 			// 1) Return a multi-line string: the text is what the script printed
 			awkStatic.when(() -> AwkExecutor.executeAwk(any(), anyString(), any(), any()))
