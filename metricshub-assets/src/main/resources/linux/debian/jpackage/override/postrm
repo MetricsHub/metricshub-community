@@ -57,6 +57,10 @@ if [ -d /opt/metricshub ]; then
     rm -f /opt/metricshub/extensions
   fi
 
+  if [ -L /opt/metricshub/alert-rules ]; then
+    rm -f /opt/metricshub/alert-rules
+  fi
+
 fi
 
 # Remove the upgrade staging directory on package removal (not on upgrade, where a pending
